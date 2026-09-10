@@ -1,7 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { compareVersions, versionWithin, versionsInRange } from "../lib/runtime/version-range.js";
+import {
+  compareVersions,
+  rangeLabel,
+  rangeUnsatisfied,
+  versionWithin,
+  versionsInRange,
+} from "../lib/runtime/version-range.js";
 import { preselectVersion } from "../lib/runtime/preselect-version.js";
 
 const v = (...list) => list.map((version) => ({ version }));
@@ -46,11 +52,12 @@ test("no range means every installed version, untouched", () => {
   assert.equal(versionsInRange(installed, { min: null, max: null }), installed);
 });
 
-test("an unsatisfiable range offers everything rather than nothing", () => {
-  // Mirrors installedPhpVersionsInRange(): a select with no options explains
-  // nothing, while a version the server refuses at least names the problem.
+test("an unsatisfiable range offers NOTHING, never a version that will be refused", () => {
+  // This used to return the whole list, which is what made the filter look
+  // broken on a server with only PHP 8.4: PrestaShop wants 7.2–8.1, nothing
+  // qualified, and the picker offered 8.4 anyway.
   const installed = v("8.4", "8.3");
-  assert.deepEqual(versionsInRange(installed, PRESTASHOP), installed);
+  assert.deepEqual(versionsInRange(installed, PRESTASHOP), []);
 });
 
 test("junk in never empties the dropdown or throws", () => {
@@ -78,4 +85,115 @@ test("the form filters the pickers and drops a version the new type refuses", ()
       source.indexOf("preselectVersion(typePhpVersions"),
     "the type-change reset runs after the preselect, so a cleared version stays empty",
   );
+});
+
+
+// --- The block a server with no usable version has to show ---
+
+test("an unsatisfiable range is reported, so the picker can say so before the click", () => {
+  assert.equal(rangeUnsatisfied(v("8.4"), PRESTASHOP), true, "8.4 against 7.2–8.1");
+  // Version lists and ranges are paired by the caller; this only compares
+  // numbers, so it is never told which runtime it is looking at.
+  assert.equal(rangeUnsatisfied(v("20", "21"), NODEBB), true, "no installed Node reaches 22");
+});
+
+test("no range and no runtime are both 'not this problem'", () => {
+  assert.equal(rangeUnsatisfied(v("8.4"), null), false, "most types run on anything installed");
+  assert.equal(rangeUnsatisfied(v("8.4"), { min: null, max: null }), false);
+  assert.equal(
+    rangeUnsatisfied([], PRESTASHOP),
+    false,
+    "nothing installed is a different problem with a different fix, reported elsewhere",
+  );
+  assert.equal(rangeUnsatisfied(null, PRESTASHOP), false);
+});
+
+test("one usable version is enough", () => {
+  assert.equal(rangeUnsatisfied(v("8.4", "8.0"), PRESTASHOP), false);
+  assert.equal(rangeUnsatisfied(v("20", "22"), NODEBB), false);
+  assert.equal(rangeUnsatisfied(v("20", "21"), NODEBB), true);
+});
+
+test("the range reads the way the backend says it", () => {
+  assert.equal(rangeLabel(PRESTASHOP), "7.2 – 8.1");
+  assert.equal(rangeLabel(NODEBB), "22+");
+  assert.equal(rangeLabel({ min: null, max: "8.1" }), "≤ 8.1");
+  assert.equal(rangeLabel(null), "");
+});
+
+test("a blocked type is marked the way the picker already greys them", async () => {
+  const { runtimeBlock, withRuntimeAvailability } = await import(
+    "../lib/applications/runtime-readiness.js"
+  );
+
+  const prestashop = { name: "prestashop", available: true, php_version_range: PRESTASHOP };
+  const wordpress = { name: "wordpress", available: true, php_version_range: null };
+  const runtimes = { phpVersions: v("8.4"), nodeVersions: v("24") };
+
+  const block = runtimeBlock({ type: prestashop, ...runtimes });
+  assert.equal(block.runtime, "php");
+  assert.equal(block.label, "7.2 – 8.1");
+  assert.deepEqual(block.installed, ["8.4"]);
+  assert.equal(runtimeBlock({ type: wordpress, ...runtimes }), null);
+
+  const marked = withRuntimeAvailability([prestashop, wordpress], runtimes, () => "reason");
+  assert.equal(marked[0].available, false);
+  assert.equal(marked[0].unavailable_code, "runtime");
+  assert.equal(marked[0].unavailable_reason, "reason");
+  assert.equal(
+    marked[0].installable_runtime,
+    null,
+    "PHP is installed — the fix is another version of it, not the runtime",
+  );
+  assert.equal(marked[1], wordpress, "an unaffected type is returned untouched");
+});
+
+test("a failed runtime lookup greys nothing", async () => {
+  const { runtimeBlock } = await import("../lib/applications/runtime-readiness.js");
+  const type = { name: "prestashop", available: true, php_version_range: PRESTASHOP };
+  assert.equal(
+    runtimeBlock({ type, phpVersions: v("8.4"), failed: true }),
+    null,
+    "one endpoint's wobble must not empty the catalogue",
+  );
+});
+
+test("a type the backend already blocked keeps the backend's reason", async () => {
+  const { runtimeBlock } = await import("../lib/applications/runtime-readiness.js");
+  const type = { name: "prestashop", available: false, php_version_range: PRESTASHOP };
+  assert.equal(runtimeBlock({ type, phpVersions: v("8.4") }), null);
+});
+
+test("the node range blocks on node versions, never on php ones", async () => {
+  const { runtimeBlock } = await import("../lib/applications/runtime-readiness.js");
+  const nodebb = { name: "nodebb", available: true, node_version_range: NODEBB };
+  assert.equal(runtimeBlock({ type: nodebb, phpVersions: v("8.4"), nodeVersions: v("20") }).runtime, "node");
+  assert.equal(runtimeBlock({ type: nodebb, phpVersions: v("8.4"), nodeVersions: v("24") }), null);
+});
+
+// --- The same bug on the site's own PHP screen ---
+
+test("the per-site PHP screen warns when the chosen version is out of range", async () => {
+  const fs = await import("node:fs");
+  const panel = fs.readFileSync("components/applications/php/php-panel.jsx", "utf8");
+
+  // Both modes: the shared-mode switcher and the isolated form's field.
+  assert.equal(
+    (panel.match(/versionUnsupported/g) ?? []).length,
+    2,
+    "shared and dedicated both change the version, so both have to say it",
+  );
+  assert.match(
+    panel,
+    /!versionWithin\(version, phpRange\)/,
+    "the warning is derived from the range, never from a list of type names",
+  );
+});
+
+test("the PHP page reads the range from the catalogue and survives losing it", async () => {
+  const fs = await import("node:fs");
+  const page = fs.readFileSync("app/(app)/applications/[application]/php/page.jsx", "utf8");
+  assert.match(page, /getSiteTypes\(\)\.catch/, "the warning is a nicety; the page is not");
+  assert.match(page, /type\.name === application\.site_type/);
+  assert.match(page, /siteTypeTitle=/, "the PHP payload carries no site type, so the page passes it");
 });

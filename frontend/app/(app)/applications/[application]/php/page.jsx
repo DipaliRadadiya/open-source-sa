@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/page-header";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getApplication, getApplicationPhp } from "@/lib/applications/get-applications";
+import { getApplication, getApplicationPhp, getSiteTypes } from "@/lib/applications/get-applications";
 import { getTimezones } from "@/lib/settings/get-timezones";
 import { PhpPanel } from "@/components/applications/php/php-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -46,9 +46,27 @@ export default async function ApplicationPhpPage({ params }) {
   // the memory budget all come from it — so a failure is a load failure, not
   // an empty form. The timezone list is a nicety by comparison: it fills one
   // Advanced picker, and losing it must not take the page down with it.
-  const [phpResult, timezones] = settled
-    ? await Promise.all([getApplicationPhp(id), getTimezones().catch(() => [])])
-    : [null, []];
+  const [phpResult, timezones, catalogue] = settled
+    ? await Promise.all([
+        getApplicationPhp(id),
+        getTimezones().catch(() => []),
+        // Only for the range below. `cache`d, and a failure costs the warning
+        // rather than the page — the same weight as the timezone list.
+        getSiteTypes().catch(() => ({ siteTypes: [] })),
+      ])
+    : [null, [], { siteTypes: [] }];
+
+  /*
+   * The PHP versions this site's application actually runs on.
+   *
+   * The create form refuses an unsupported version; this screen never did, and
+   * neither does the API — `SavePhpSettingsRequest` only checks the version is
+   * installed. So a PrestaShop site created correctly on 8.0 could be moved to
+   * 8.4 here, and the first sign would be the site failing.
+   */
+  const phpRange =
+    (catalogue.siteTypes ?? []).find((type) => type.name === application.site_type)
+      ?.php_version_range ?? null;
 
   // The permission middleware answers 404 for a site type that does not serve
   // PHP. That is an answer, not a fault: this screen should not exist there.
@@ -71,6 +89,8 @@ export default async function ApplicationPhpPage({ params }) {
         <PhpPanel
           appId={id}
           php={phpResult.php}
+          phpRange={phpRange}
+          siteTypeTitle={application.site_type_title ?? application.site_type ?? ""}
           timezones={timezones}
           canManage={canManage}
         />

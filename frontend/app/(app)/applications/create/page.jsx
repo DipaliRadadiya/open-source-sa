@@ -14,6 +14,7 @@ import {
   noDatabaseEngine,
   withDatabaseAvailability,
 } from "@/lib/applications/database-readiness";
+import { withRuntimeAvailability } from "@/lib/applications/runtime-readiness";
 import { NoDatabaseEngineNotice } from "@/components/applications/no-database-engine-notice";
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -70,7 +71,19 @@ export default async function CreateApplicationPage({ searchParams }) {
   // list: the prefill below reads the same `available` the grid greys on, and
   // a link to ?type=wordpress on a server that cannot host it lands on an
   // empty picker instead of a card that is disabled and selected at once.
-  const siteTypes = withDatabaseAvailability(types.siteTypes, engines, (block) =>
+  // Runtime first, then database: a type can fail both, and "install a PHP
+  // version this can run on" is the more specific of the two answers.
+  const withRuntime = withRuntimeAvailability(
+    types.siteTypes,
+    { phpVersions, nodeVersions, failed: php.failed || node.failed },
+    (block) =>
+      t(`unavailableRuntime.${block.runtime}`, {
+        range: block.label,
+        installed: format.list(block.installed, { type: "conjunction" }),
+      }),
+  );
+
+  const siteTypes = withDatabaseAvailability(withRuntime, engines, (block) =>
     t(`unavailableDatabase.${block.state}`, {
       // `t.has`, so an engine the backend adds before we have a label for it
       // prints its own name rather than throwing on the create page.

@@ -31,6 +31,7 @@ import {
   updateApplicationPhp,
 } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
+import { rangeLabel, versionWithin } from "@/lib/runtime/version-range";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { Badge } from "@/components/ui/badge";
 import { ScrollFade } from "@/components/ui/scroll-fade";
@@ -130,7 +131,7 @@ const TAB_FIELDS = {
  * group rather than one per field, and the header keeps a live count of what
  * the site is actually set to.
  */
-export function PhpPanel({ appId, php, timezones = [], canManage }) {
+export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", timezones = [], canManage }) {
   const t = useTranslations("applications.php");
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -168,6 +169,8 @@ export function PhpPanel({ appId, php, timezones = [], canManage }) {
           <DedicatedPhpPanel
             appId={appId}
             php={php}
+            phpRange={phpRange}
+            siteTypeTitle={siteTypeTitle}
             timezones={timezones}
             canManage={canManage}
             saving={saving}
@@ -176,7 +179,14 @@ export function PhpPanel({ appId, php, timezones = [], canManage }) {
           />
         ) : (
           /** Shared mode — clean locked state */
-          <SharedPhpState php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
+          <SharedPhpState
+            php={php}
+            phpRange={phpRange}
+            siteTypeTitle={siteTypeTitle}
+            canManage={canManage}
+            busy={busy}
+            onIsolate={isolate}
+          />
         )}
       </div>
     </DisabledReasonProvider>
@@ -185,7 +195,7 @@ export function PhpPanel({ appId, php, timezones = [], canManage }) {
 
 // ─── Shared PHP mode ────────────────────────────────────────────────────────
 
-function SharedPhpState({ php, canManage, busy, onIsolate }) {
+function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, busy, onIsolate }) {
   const t = useTranslations("applications.php");
   const tShared = useTranslations("applications.php.shared");
   const tIsolation = useTranslations("applications.php.isolation");
@@ -208,6 +218,10 @@ function SharedPhpState({ php, canManage, busy, onIsolate }) {
   const [savingVersion, setSavingVersion] = useState(false);
   const versions = php.available_versions ?? [];
   const versionChanged = version !== serverVersion;
+  // Whether the version now selected is one this application supports. The
+  // create form refuses these; this screen used to accept them silently.
+  const unsupportedVersion =
+    Boolean(phpRange) && Boolean(version) && !versionWithin(version, phpRange);
 
   async function saveVersion() {
     setSavingVersion(true);
@@ -290,7 +304,20 @@ function SharedPhpState({ php, canManage, busy, onIsolate }) {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">{tShared("versionHint")}</p>
+            {unsupportedVersion ? (
+              /* The API accepts this — `SavePhpSettingsRequest` only checks the
+                 version is installed — so nothing else in the stack will stop
+                 it. The site just breaks after the save. */
+              <p className="flex items-start gap-1.5 text-xs text-warning">
+                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                {t("versionUnsupported", {
+                  type: siteTypeTitle,
+                  range: rangeLabel(phpRange),
+                })}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">{tShared("versionHint")}</p>
+            )}
           </div>
           {canManage ? (
             <Button type="button" onClick={saveVersion} disabled={!versionChanged || savingVersion}>
@@ -341,7 +368,7 @@ function SharedPhpState({ php, canManage, busy, onIsolate }) {
 
 // ─── Dedicated PHP mode ──────────────────────────────────────────────────────
 
-function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving, onIsolate }) {
+function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", timezones, canManage, saving, setSaving, onIsolate }) {
   const t = useTranslations("applications.php");
   const router = useRouter();
   const [tab, setTab] = useState("basic");
@@ -381,6 +408,8 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
   useWatchUnsaved("app-php-settings", form.formState.isDirty);
 
   const version = useWatch({ control: form.control, name: "php_version" });
+  const unsupportedVersion =
+    Boolean(phpRange) && Boolean(version) && !versionWithin(version, phpRange);
   const memoryLimit = useWatch({ control: form.control, name: "memory_limit" });
   const maxChildren = useWatch({
     control: form.control,
@@ -543,7 +572,22 @@ function DedicatedPhpPanel({ appId, php, timezones, canManage, saving, setSaving
               <SectionTitle icon={Cpu} title={t("sections.runtime")} />
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Stack label={t("fields.version")} name="php_version" directive="php_version">
+                <Stack
+                  label={t("fields.version")}
+                  name="php_version"
+                  directive="php_version"
+                  // Same warning as the shared-mode switcher. The API checks
+                  // only that the version is installed, so an unsupported one
+                  // saves cleanly and breaks the site instead of the request.
+                  warning={
+                    unsupportedVersion
+                      ? t("versionUnsupported", {
+                          type: siteTypeTitle,
+                          range: rangeLabel(phpRange),
+                        })
+                      : null
+                  }
+                >
                   <ValueSelect
                     form={form}
                     name="php_version"
@@ -1138,7 +1182,7 @@ function formatBytes(bytes) {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 }
 
-function Stack({ label, name, directive, error, hint, children }) {
+function Stack({ label, name, directive, error, hint, warning, children }) {
   return (
     <FormItem>
       <Label label={label} name={name} directive={directive} />
@@ -1148,6 +1192,11 @@ function Stack({ label, name, directive, error, hint, children }) {
           reading. */}
       {error ? (
         <p className="text-sm text-destructive">{error}</p>
+      ) : warning ? (
+        <p className="flex items-start gap-1.5 text-xs text-warning">
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+          {warning}
+        </p>
       ) : hint ? (
         <p className="text-xs text-muted-foreground">{hint}</p>
       ) : null}

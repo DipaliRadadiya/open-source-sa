@@ -6,11 +6,19 @@
  * ignored it, offering every installed version for every type. Picking Node 20
  * for NodeBB was one click away, and nothing said no until the install failed.
  *
- * Mirrors `AbstractSiteType::installedPhpVersionsInRange()`: both ends are
- * INCLUSIVE, a null end is unbounded, and a range that excludes everything
- * installed falls back to the full list rather than emptying the dropdown. That
- * last rule is the important one — a select with no options tells the reader
- * nothing, while a version the server then refuses at least names the problem.
+ * Both ends are INCLUSIVE and a null end is unbounded, matching
+ * `AbstractSiteType::installedPhpVersionsInRange()`.
+ *
+ * It does NOT copy that method's fallback. The backend returns the whole
+ * unfiltered list when nothing installed is in range, and this did too — which
+ * is why the filter looked broken on a server with only PHP 8.4: PrestaShop
+ * wants 7.2 to 8.1, nothing qualified, and the dropdown quietly offered 8.4
+ * anyway. Identical to doing nothing, and the server then refuses the create.
+ *
+ * So an empty result is returned as an empty result, and `rangeUnsatisfied`
+ * below lets the caller say so before anyone fills the form in. A select with
+ * no options IS useless — the answer is a sentence naming the range and what
+ * is installed, not a wrong option to pick.
  */
 
 /**
@@ -25,9 +33,32 @@ export function versionsInRange(versions, range) {
   const max = range?.max ?? null;
   if (min === null && max === null) return list;
 
-  const within = list.filter((item) => versionWithin(item?.version, range));
-  // Never leave nothing to choose from — see the note above.
-  return within.length > 0 ? within : list;
+  return list.filter((item) => versionWithin(item?.version, range));
+}
+
+/**
+ * A declared range that no installed version satisfies.
+ *
+ * The distinction that matters: false when there is no range (most types run
+ * on anything) and false when nothing is installed at all (a different
+ * problem, with a different fix, already reported elsewhere). True only for
+ * "this server has runtimes, and none of them will do".
+ */
+export function rangeUnsatisfied(versions, range) {
+  const list = Array.isArray(versions) ? versions : [];
+  if (list.length === 0) return false;
+  if ((range?.min ?? null) === null && (range?.max ?? null) === null) return false;
+  return versionsInRange(list, range).length === 0;
+}
+
+/** A range as a phrase: "7.2 – 8.1", "8.2+", "up to 8.1". */
+export function rangeLabel(range, { upTo } = {}) {
+  const min = range?.min ?? null;
+  const max = range?.max ?? null;
+  if (min !== null && max !== null) return `${min} – ${max}`;
+  if (min !== null) return `${min}+`;
+  if (max !== null) return upTo ? `${upTo} ${max}` : `≤ ${max}`;
+  return "";
 }
 
 /** Whether one version satisfies a range, both ends inclusive. */

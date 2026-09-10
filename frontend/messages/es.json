@@ -4383,7 +4383,8 @@
       "maxInputTimePlaceholder": "60",
       "sessionGcMaxlifetimePlaceholder": "1440",
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
-      "postMaxSizePlaceholder": "128M"
+      "postMaxSizePlaceholder": "128M",
+      "versionUnsupported": "{type} admite PHP {range}. Cambiar este sitio a otra versión probablemente lo romperá."
     },
     "fail2ban": {
       "pageTitle": "Protección contra ataques",
@@ -4644,6 +4645,10 @@
       "resumed": "{name} vuelve a estar en línea.",
       "failed": "No pudimos pausar el sitio.",
       "resumeFailed": "No pudimos reanudar el sitio."
+    },
+    "unavailableRuntime": {
+      "php": "Este sitio necesita PHP {range} y este servidor tiene {installed}. Instala antes una versión de PHP compatible.",
+      "node": "Este sitio necesita Node {range} y este servidor tiene {installed}. Instala antes una versión de Node compatible."
     }
   },
   "panelUpdate": {

@@ -4383,7 +4383,8 @@
       "maxInputTimePlaceholder": "60",
       "sessionGcMaxlifetimePlaceholder": "1440",
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
-      "postMaxSizePlaceholder": "128M"
+      "postMaxSizePlaceholder": "128M",
+      "versionUnsupported": "{type} supports PHP {range}. Moving this site to another version is likely to break it."
     },
     "fail2ban": {
       "pageTitle": "Attack protection",
@@ -4644,6 +4645,10 @@
       "resumed": "{name} is back online.",
       "failed": "We couldn't pause the site.",
       "resumeFailed": "We couldn't resume the site."
+    },
+    "unavailableRuntime": {
+      "php": "This site needs PHP {range}, and this server has {installed}. Install a supported PHP version first.",
+      "node": "This site needs Node {range}, and this server has {installed}. Install a supported Node version first."
     }
   },
   "panelUpdate": {

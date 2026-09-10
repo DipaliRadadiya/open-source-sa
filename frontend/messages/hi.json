@@ -4383,7 +4383,8 @@
       "maxInputTimePlaceholder": "60",
       "sessionGcMaxlifetimePlaceholder": "1440",
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
-      "postMaxSizePlaceholder": "128M"
+      "postMaxSizePlaceholder": "128M",
+      "versionUnsupported": "{type} PHP {range} को सपोर्ट करता है। इस साइट को दूसरे वर्शन पर ले जाने से वह टूट सकती है।"
     },
     "fail2ban": {
       "pageTitle": "हमलों से सुरक्षा",
@@ -4644,6 +4645,10 @@
       "resumed": "{name} फिर से ऑनलाइन है।",
       "failed": "हम साइट को रोक नहीं सके।",
       "resumeFailed": "हम साइट को फिर चालू नहीं कर सके।"
+    },
+    "unavailableRuntime": {
+      "php": "इस साइट को PHP {range} चाहिए, और इस सर्वर पर {installed} है। पहले कोई समर्थित PHP वर्शन इंस्टॉल करें।",
+      "node": "इस साइट को Node {range} चाहिए, और इस सर्वर पर {installed} है। पहले कोई समर्थित Node वर्शन इंस्टॉल करें।"
     }
   },
   "panelUpdate": {
