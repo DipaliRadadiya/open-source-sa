@@ -731,6 +731,7 @@
     "regionFormat": "Use letters, numbers and dashes only",
     "prefixFormat": "Use letters, numbers, dots, dashes, underscores and slashes only",
     "endpointFormat": "Must be a full https:// address",
+    "endpointInsecure": "Use https://, not http:// — your keys would be sent unencrypted.",
     "endpointPlaceholder": "Replace the part in <angle brackets> with your own value",
     "required_application": "Choose a site",
     "required_destination": "Choose where to store the backups",

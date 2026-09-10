@@ -215,6 +215,7 @@
     "regionFormat": "Usa solo letras, números y guiones",
     "prefixFormat": "Usa solo letras, números, puntos, guiones, guiones bajos y barras",
     "endpointFormat": "Debe ser una dirección https:// completa",
+    "endpointInsecure": "Usa https://, no http:// — tus claves se enviarían sin cifrar.",
     "endpointPlaceholder": "Sustituye la parte entre <corchetes angulares> por tu propio valor",
     "required_application": "Elige un sitio",
     "required_destination": "Elige dónde guardar las copias",

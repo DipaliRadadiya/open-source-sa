@@ -215,6 +215,7 @@
     "regionFormat": "सिर्फ़ अक्षर, अंक और डैश इस्तेमाल करें",
     "prefixFormat": "सिर्फ़ अक्षर, अंक, डॉट, डैश, अंडरस्कोर और स्लैश इस्तेमाल करें",
     "endpointFormat": "पूरा https:// पता होना चाहिए",
+    "endpointInsecure": "https:// इस्तेमाल करें, http:// नहीं — आपकी keys बिना एन्क्रिप्शन के भेजी जाएंगी।",
     "endpointPlaceholder": "<कोण कोष्ठक> वाले हिस्से की जगह अपना मान डालें",
     "required_application": "एक साइट चुनें",
     "required_destination": "चुनें कि बैकअप कहाँ रखे जाएँ",

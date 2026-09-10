@@ -102,6 +102,14 @@ const endpointField = z
       .string()
       .trim()
       .max(255, "max255")
+      /*
+       * `http://` gets its own message. The generic one — "must be a full
+       * https:// address" — is true and unhelpful when someone HAS typed a
+       * full address and the only thing wrong is a missing "s": they read it,
+       * look at their perfectly complete URL, and try again. Naming the scheme
+       * and why it matters is the difference between one attempt and three.
+       */
+      .refine((value) => !/^http:\/\//i.test(value.trim()), "endpointInsecure")
       .regex(/^https:\/\/[^\s/$.?#].[^\s]*$/i, "endpointFormat")
       // An endpoint still containing <…> is the example copied verbatim with
       // the account id or region never filled in. It passes every other check

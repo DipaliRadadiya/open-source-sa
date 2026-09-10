@@ -38,3 +38,22 @@ test("editing demands nothing a destination never had", () => {
   assert.deepEqual(editRequirements({}), { endpoint: false, region: false });
   assert.deepEqual(editRequirements(null), { endpoint: false, region: false });
 });
+
+test("an http endpoint is told which scheme is wrong, not just that it is", async () => {
+  const fs = await import("node:fs");
+  const schema = fs.readFileSync("lib/schemas/storage.js", "utf8");
+
+  // Ordered before the generic regex, because react-hook-form renders the
+  // first issue and "must be a full https:// address" is what someone with a
+  // perfectly full http:// address reads and disagrees with.
+  const insecure = schema.indexOf("endpointInsecure");
+  const generic = schema.indexOf('"endpointFormat"');
+  assert.ok(insecure > 0 && insecure < generic, "the specific message must come first");
+  assert.match(schema, /\^http:\\\/\\\/\/i/, "matched on the scheme, not on the absence of https");
+
+  for (const locale of ["en", "es", "hi"]) {
+    const messages = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8"));
+    const found = JSON.stringify(messages).includes("endpointInsecure");
+    assert.ok(found, `${locale} is missing endpointInsecure`);
+  }
+});
