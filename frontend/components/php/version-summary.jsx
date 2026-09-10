@@ -6,7 +6,8 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
-import { setDefaultPhpVersion, removePhpVersion } from "@/lib/api/php";
+import { setDefaultPhpVersion, removePhpVersion, installPhpVersion } from "@/lib/api/php";
+import { failedWithNothingInstalled } from "@/lib/runtime/failed-install";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -102,6 +103,19 @@ export function VersionSummary({
     }
   }
 
+  async function retry() {
+    setRunning("retry");
+    try {
+      await installPhpVersion(version.version);
+      toast.success(t("versions.retrying", { version: version.version }));
+      router.refresh();
+    } catch (error) {
+      toast.error(apiMessage(error, t("versions.installFailedShort")));
+    } finally {
+      setRunning(null);
+    }
+  }
+
   async function remove() {
     setRunning("remove");
     try {
@@ -124,7 +138,14 @@ export function VersionSummary({
   // Each action appears only when it genuinely applies: the default version
   // cannot be made default again, and the panel`s own version cannot go.
   const showMakeDefault = !version.is_default;
-  const showRemove = !version.in_use_by_panel;
+  /*
+   * A failed install put nothing on disk, and `destroy()` refuses a version
+   * that is not installed — so Remove there could only ever answer 404. The
+   * action that clears the row is installing again, which is what is offered
+   * in its place.
+   */
+  const nothingToRemove = failedWithNothingInstalled(version);
+  const showRemove = !version.in_use_by_panel && !nothingToRemove;
 
   return (
     <Card>
@@ -200,6 +221,20 @@ export function VersionSummary({
                 >
                   {running === "default" ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("versions.makeDefault")}
+                </Button>
+              </ReasonTooltip>
+            )}
+
+            {!nothingToRemove ? null : (
+              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!canManage || pending}
+                  onClick={retry}
+                >
+                  {running === "retry" ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {t("versions.retry")}
                 </Button>
               </ReasonTooltip>
             )}

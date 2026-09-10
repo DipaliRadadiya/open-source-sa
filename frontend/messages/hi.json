@@ -1849,7 +1849,9 @@
       "moreCount": "+{count} और",
       "removingTitle": "PHP {version} हटाया जा रहा है",
       "removingBody": "इसमें कुछ मिनट लगते हैं। पेज अपने आप अपडेट होता है।",
-      "removingSince": "{when} शुरू हुआ। पेज अपने आप अपडेट होता है।"
+      "removingSince": "{when} शुरू हुआ। पेज अपने आप अपडेट होता है।",
+      "retry": "फिर कोशिश करें",
+      "retrying": "PHP {version} फिर से इंस्टॉल हो रहा है…"
     },
     "extensions": {
       "title": "एक्सटेंशन",
@@ -2012,7 +2014,9 @@
       "installFailedTitle": "Node.js {version} इंस्टॉल नहीं हुआ",
       "installFailedBody": "सर्वर ने कारण नहीं बताया। दोबारा इंस्टॉल करके देखें।",
       "removing": "Node.js {version} हटाया जा रहा है…",
-      "removingSince": "{when} शुरू हुआ। पेज अपने आप अपडेट होता है।"
+      "removingSince": "{when} शुरू हुआ। पेज अपने आप अपडेट होता है।",
+      "retry": "फिर कोशिश करें",
+      "retrying": "Node {version} फिर से इंस्टॉल हो रहा है…"
     },
     "install": {
       "action": "वर्शन इंस्टॉल करें",

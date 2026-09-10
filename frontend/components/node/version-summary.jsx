@@ -7,7 +7,13 @@ import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 import { RuntimeStatusBadge, versionState } from "@/components/runtime/version-status";
 import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
-import { setDefaultNodeVersion, removeNodeVersion, updateNodeNpm } from "@/lib/api/node";
+import {
+  setDefaultNodeVersion,
+  removeNodeVersion,
+  installNodeVersion,
+  updateNodeNpm,
+} from "@/lib/api/node";
+import { failedWithNothingInstalled } from "@/lib/runtime/failed-install";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -96,6 +102,11 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
           ? t("versions.installFailedShort")
           : null;
 
+  // Same as PHP: a failed install left nothing on disk, and the remove
+  // endpoint refuses a version that is not installed. Offering it there is
+  // offering a 404.
+  const nothingToRemove = failedWithNothingInstalled(version);
+
   const removeReason = !canManage
     ? t("noPermission")
     : installState === "installing" || installState === "removing"
@@ -105,6 +116,19 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
         : usedBy > 0
           ? t("versions.usedBy", { count: usedBy })
           : null;
+
+  async function retry() {
+    setRunning("retry");
+    try {
+      await installNodeVersion(version.version);
+      toast.success(t("versions.retrying", { version: version.version }));
+      router.refresh();
+    } catch (error) {
+      toast.error(apiMessage(error, t("versions.installFailedShort")));
+    } finally {
+      setRunning(null);
+    }
+  }
 
   async function makeDefault() {
     setRunning("default");
@@ -240,17 +264,31 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
               </ReasonTooltip>
             )}
 
-            <ReasonTooltip reason={removeReason}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
-                disabled={Boolean(removeReason) || pending}
-                onClick={() => setConfirming(true)}
-              >
-                {t("versions.remove")}
-              </Button>
-            </ReasonTooltip>
+            {nothingToRemove ? (
+              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!canManage || pending}
+                  onClick={retry}
+                >
+                  {running === "retry" ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {t("versions.retry")}
+                </Button>
+              </ReasonTooltip>
+            ) : (
+              <ReasonTooltip reason={removeReason}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
+                  disabled={Boolean(removeReason) || pending}
+                  onClick={() => setConfirming(true)}
+                >
+                  {t("versions.remove")}
+                </Button>
+              </ReasonTooltip>
+            )}
           </div>
         </div>
 

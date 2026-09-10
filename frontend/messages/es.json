@@ -1849,7 +1849,9 @@
       "moreCount": "+{count} más",
       "removingTitle": "Eliminando PHP {version}",
       "removingBody": "Esto tarda unos minutos. La página se actualiza sola.",
-      "removingSince": "Empezó {when}. La página se actualiza sola."
+      "removingSince": "Empezó {when}. La página se actualiza sola.",
+      "retry": "Reintentar",
+      "retrying": "Instalando PHP {version} de nuevo…"
     },
     "extensions": {
       "title": "Extensiones",
@@ -2012,7 +2014,9 @@
       "installFailedTitle": "Node.js {version} no se instaló",
       "installFailedBody": "El servidor no dijo por qué. Prueba a instalarlo de nuevo.",
       "removing": "Eliminando Node.js {version}…",
-      "removingSince": "Empezó {when}. La página se actualiza sola."
+      "removingSince": "Empezó {when}. La página se actualiza sola.",
+      "retry": "Reintentar",
+      "retrying": "Instalando Node {version} de nuevo…"
     },
     "install": {
       "action": "Instalar versión",

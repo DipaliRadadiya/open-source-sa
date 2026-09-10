@@ -55,3 +55,46 @@ test("the option-shaped list follows the same rule", () => {
   assert.equal(preselectOption([]), undefined);
   assert.equal(preselectOption(), undefined);
 });
+
+// --- A failed install has nothing to remove ---
+
+test("a failed install with nothing on disk is not offered a Remove that 404s", async () => {
+  const { failedWithNothingInstalled } = await import("../lib/runtime/failed-install.js");
+
+  // The shape RuntimeProgress emits for a version the tracker knows and the
+  // disk does not: a version plus progress fields, no path.
+  assert.equal(failedWithNothingInstalled({ version: "8.2", status: "failed" }), true);
+
+  // Halfway through, apt can leave files behind. That row came off disk, so
+  // Remove can genuinely succeed and stays offered.
+  assert.equal(
+    failedWithNothingInstalled({ version: "8.2", status: "failed", path: "/usr/bin/php8.2" }),
+    false,
+  );
+
+  for (const status of ["ready", "installing", "removing", undefined]) {
+    assert.equal(
+      failedWithNothingInstalled({ version: "8.4", status }),
+      false,
+      `${status} is not a failed install`,
+    );
+  }
+  assert.equal(failedWithNothingInstalled(null), false);
+});
+
+test("both runtimes offer Try again there, and neither offers Remove", async () => {
+  const fs = await import("node:fs");
+  for (const path of [
+    "components/php/version-summary.jsx",
+    "components/node/version-summary.jsx",
+  ]) {
+    const source = fs.readFileSync(path, "utf8");
+    assert.match(source, /failedWithNothingInstalled\(version\)/, `${path} asks the question`);
+    assert.match(source, /versions\.retry/, `${path} offers the action that actually clears it`);
+    assert.match(
+      source,
+      /nothingToRemove/,
+      `${path} must gate Remove on it, not merely add a button beside it`,
+    );
+  }
+});
