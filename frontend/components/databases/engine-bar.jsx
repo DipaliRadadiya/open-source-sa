@@ -177,6 +177,10 @@ export function EngineBar({ engines = [], canManage, summary }) {
           label={t(`engines.${progressEngine.engine}`)}
           slow={slow && installingEngine === progressEngine.engine}
           pollIssue={pollIssue && installingEngine === progressEngine.engine}
+          // Straight through the same confirmation the Install button uses:
+          // it names the engine and states what an install costs, and a retry
+          // is the same operation.
+          onRetry={canManage ? () => setPending(progressEngine) : undefined}
           className="basis-full"
         />
       ) : failureMessage ? (

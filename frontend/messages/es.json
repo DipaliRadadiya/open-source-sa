@@ -2197,7 +2197,8 @@
     "pollIssue": "Hemos perdido temporalmente las actualizaciones de progreso. La instalación puede seguir en marcha y esta página continuará comprobándolo.",
     "failureFallback": "La instalación no terminó. Puedes intentarlo de nuevo.",
     "reference": "Referencia de soporte: {reference}",
-    "output": "Salida de la instalación"
+    "output": "Salida de la instalación",
+    "retry": "Reintentar"
   },
   "databases": {
     "title": "Bases de datos",

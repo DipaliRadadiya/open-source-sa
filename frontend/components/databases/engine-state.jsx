@@ -229,6 +229,9 @@ function EngineRow({
           label={name}
           slow={slow}
           pollIssue={pollIssue}
+          // `deadEnd` is this row's own reading of whether a retry can help;
+          // withholding the handler is how the failure block learns it.
+          onRetry={deadEnd || conflicted || busy ? undefined : onInstall}
           className="basis-full"
         />
       ) : null}

@@ -240,3 +240,35 @@ test("form validation derives labels without reading refs during render", () => 
   assert.match(form, /field \?\? detectedLabel \?\? null/);
   assert.doesNotMatch(form, /labelRef\.current/);
 });
+
+// --- A failure has to offer something (reported 2026-09-10) ---
+
+test("a retryable install failure offers the retry; a dead end does not", async () => {
+  const fs = await import("node:fs");
+  const progress = fs.readFileSync("components/databases/database-install-progress.jsx", "utf8");
+
+  // The server's own verdict, not ours: `port_in_use_by_mariadb` fails the
+  // same way a second time, and a button that repeats a known failure costs
+  // minutes of apt to learn nothing.
+  assert.match(progress, /onRetry && progress\.retryable !== false/);
+  assert.match(progress, /t\("retry"\)/);
+
+  for (const path of [
+    "components/databases/engine-bar.jsx",
+    "components/databases/engine-state.jsx",
+  ]) {
+    assert.match(fs.readFileSync(path, "utf8"), /onRetry=/, `${path} must hand one in`);
+  }
+
+  // The engine-state row already knows when a retry cannot help; withholding
+  // the handler is how the failure block learns it.
+  assert.match(
+    fs.readFileSync("components/databases/engine-state.jsx", "utf8"),
+    /onRetry=\{deadEnd \|\| conflicted \|\| busy \? undefined : onInstall\}/,
+  );
+
+  for (const locale of ["en", "es", "hi"]) {
+    const messages = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8"));
+    assert.ok(messages.databaseInstallProgress.retry, `${locale} missing the retry label`);
+  }
+});

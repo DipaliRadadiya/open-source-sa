@@ -2197,7 +2197,8 @@
     "pollIssue": "We temporarily lost progress updates. Installation may still be running, and this page will keep checking.",
     "failureFallback": "The installation did not finish. You can try again.",
     "reference": "Support reference: {reference}",
-    "output": "Installation output"
+    "output": "Installation output",
+    "retry": "Try again"
   },
   "databases": {
     "title": "Databases",

@@ -3,6 +3,7 @@ import {
   ChevronDown,
   CircleAlert,
   Loader2,
+  RotateCw,
   SquareTerminal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,20 @@ export function DatabaseInstallProgress({
   label,
   slow = false,
   pollIssue = false,
+  /*
+   * What to do about a failure.
+   *
+   * A failed install used to be a title, a sentence and a wall of apt output
+   * with nothing to press — which reads as "this is broken and you are stuck",
+   * even when the server has said `retryable: true`. The message explains what
+   * went wrong; this is the part that says what to do about it.
+   *
+   * Passed in rather than done here: each screen that shows this already owns
+   * an install action, and a second one inside this component would be a
+   * second code path to keep in step with the first.
+   */
+  onRetry,
+  retrying = false,
   className,
 }) {
   const t = useTranslations("databaseInstallProgress");
@@ -84,7 +99,7 @@ export function DatabaseInstallProgress({
       ) : null}
 
       {failed ? (
-        <div className="space-y-1">
+        <div className="space-y-2">
           <p className="text-sm text-destructive">
             {progress.message || t("failureFallback")}
           </p>
@@ -92,6 +107,24 @@ export function DatabaseInstallProgress({
             <p className="font-mono text-xs break-words text-muted-foreground">
               {t("reference", { reference: progress.reference })}
             </p>
+          ) : null}
+          {/*
+            * Offered only when the SERVER says the failure is retryable.
+            * `port_in_use_by_mariadb` will fail exactly the same way a second
+            * time, and a button that repeats a known failure is worse than
+            * none — it costs minutes of apt to learn nothing.
+            */}
+          {onRetry && progress.retryable !== false ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onRetry}
+              disabled={retrying}
+            >
+              {retrying ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
+              {t("retry")}
+            </Button>
           ) : null}
         </div>
       ) : (
