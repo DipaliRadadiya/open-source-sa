@@ -215,6 +215,14 @@ test("a runtime-blocked row carries its own way out, beside the reason", async (
   assert.match(picker, /const Row = disabled \? "div" : "button"/);
   assert.doesNotMatch(picker, /"aria-disabled": true/, "it takes the nested link down with it");
 
+  // And the row must not dim wholesale: `opacity-60` on the row faded the
+  // link too, so the one clickable thing looked as switched off as the rest.
+  assert.doesNotMatch(
+    picker,
+    /disabled && "opacity-60 hover:bg-transparent/,
+    "fade the choice — icon, name, tagline — never the reason or its link",
+  );
+
   for (const locale of ["en", "es", "hi"]) {
     const messages = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8")).applications;
     assert.ok(messages.form.installPhpVersion, `${locale} missing installPhpVersion`);

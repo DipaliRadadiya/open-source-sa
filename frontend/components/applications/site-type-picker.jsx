@@ -206,7 +206,12 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                     "flex w-full items-start gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
                     "hover:bg-accent hover:text-accent-foreground",
                     isSelected && "bg-accent/60",
-                    disabled && "opacity-60 hover:bg-transparent hover:text-inherit",
+                    // NOT `opacity-60` on the row. Dimming the whole thing
+                    // dimmed the link inside the reason too, so the one part
+                    // that IS clickable looked as switched off as the rest.
+                    // What is unavailable is the choice — the icon, the name
+                    // and the tagline — and those are faded individually below.
+                    disabled && "hover:bg-transparent hover:text-inherit",
                   )}
                 >
                   <span
@@ -215,12 +220,13 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                       isSelected
                         ? "bg-primary text-primary-foreground"
                         : "bg-primary/10 text-primary",
+                      disabled && "opacity-50",
                     )}
                   >
                     <TypeIcon type={type} className="size-4" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
+                    <span className={cn("flex items-center gap-2", disabled && "opacity-60")}>
                       <span className="truncate text-sm font-medium">
                         {type.title}
                       </span>
@@ -235,7 +241,12 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                       ) : null}
                     </span>
                     {type.tagline ? (
-                      <span className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground">
+                      <span
+                        className={cn(
+                          "mt-0.5 block truncate text-xs leading-5 text-muted-foreground",
+                          disabled && "opacity-60",
+                        )}
+                      >
                         {type.tagline}
                       </span>
                     ) : null}
