@@ -617,6 +617,30 @@ return [
             | rest with a reason.
             */
             'vhost_root' => env('SERVER_OLS_VHOST_ROOT', '/usr/local/lsws/conf/vhosts'),
+
+            /*
+            | LSAPI pool size, per site.
+            |
+            | Rendered into BOTH `maxConns` and `PHP_LSAPI_CHILDREN` -- one
+            | value, because the web server's connection limit and the number
+            | of workers LSPHP forks to answer them describe the same pool, and
+            | setting one without the other leaves the two halves disagreeing.
+            |
+            | Ten rather than the 35 ServerAvatar v7 uses: this is per SITE, so
+            | thirty-five on a box with twenty sites is seven hundred potential
+            | PHP processes. php-fpm pools on the other two stacks run
+            | `pm = ondemand` with a similar ceiling. Raise it deliberately on
+            | a box that needs it.
+            */
+            'lsapi_children' => (int) env('SERVER_OLS_LSAPI_CHILDREN', 10),
+
+            /*
+            | Recycle an LSPHP worker after this many requests -- the analogue
+            | of `pm.max_requests`, which every FPM pool the panel writes
+            | already sets. Without it a worker lives until the server
+            | restarts and any per-request leak accumulates for its lifetime.
+            */
+            'lsapi_max_requests' => (int) env('SERVER_OLS_LSAPI_MAX_REQUESTS', 5000),
             'shared_config' => env('SERVER_OLS_CONFIG', '/usr/local/lsws/conf/httpd_config.conf'),
             // A `map` is only legal inside a listener, and this names which.
             'listener' => env('SERVER_OLS_LISTENER', 'Default'),

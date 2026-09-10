@@ -191,11 +191,80 @@ class PhpIsolationCheck implements DoctorCheck
             ];
         }
 
+        // Interpreter present is not the same as isolation present. On this
+        // stack they are two separate silent failures, and the second is the
+        // dangerous one.
+        $shared = $this->vhostsRunningAsNobody();
+
+        if ($shared !== []) {
+            return [
+                'status' => 'fail',
+                'detail' => 'no extUser in the OpenLiteSpeed vhost for '.implode(', ', $shared)
+                    .' — those sites run as nobody, so each can read the others\' files',
+                'fix' => 'doctor.fixes.ols_missing_extuser',
+            ];
+        }
+
         return [
             'status' => 'pass',
-            'detail' => $stack->key().' — no FPM pools; every PHP site has its interpreter',
+            'detail' => $stack->key().' — no FPM pools; every PHP site has its interpreter and its own user',
             'fix' => null,
         ];
+    }
+
+    /**
+     * OpenLiteSpeed vhosts with no `extUser`, which therefore run as nobody.
+     *
+     * The runtime half of the guard in `OlsDriver::assertHasSystemUser()`.
+     * That one stops the panel writing such a vhost; this one finds the ones
+     * already on disk — written before the guard existed, adopted from a
+     * brownfield server, or edited by hand.
+     *
+     * Worth being precise about what it costs when it is missing: every site
+     * without it runs as the server's own user, so it is not one site losing
+     * its boundary but all of them sharing one. Any of them can read the
+     * others' `.env`, database credentials and uploads. Nothing about such a
+     * server looks wrong from the outside.
+     *
+     * Read from disk rather than from the database on purpose: the question is
+     * what OpenLiteSpeed will actually do, and the file is the only thing that
+     * answers it.
+     *
+     * @return array<int, string>
+     */
+    private function vhostsRunningAsNobody(): array
+    {
+        $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', ''), '/');
+
+        if ($root === '' || ! is_dir($root)) {
+            return [];
+        }
+
+        $offenders = [];
+
+        foreach ((array) glob($root.'/*/vhconf.conf') as $path) {
+            $contents = @file_get_contents((string) $path);
+
+            // Unreadable is not the same as missing. Reporting a permissions
+            // problem as an isolation failure would send whoever reads it to
+            // rewrite a vhost that is fine.
+            if ($contents === false) {
+                continue;
+            }
+
+            // Only vhosts that actually run PHP. A static or proxy site has no
+            // extprocessor and needs no extUser.
+            if (! str_contains($contents, 'type                    lsapi')
+                && ! str_contains($contents, 'type lsapi')) {
+                continue;
+            }
+
+            if (preg_match('/^\s*extUser\s+\S+/m', $contents) !== 1) {
+                $offenders[] = basename(dirname((string) $path));
+            }
+        }
+
+        return $offenders;
     }
 
     private function human(int $bytes): string

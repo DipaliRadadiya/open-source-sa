@@ -22,6 +22,7 @@ return [
         'php_isolation_memory' => '分離済みサイトの合計がサーバーのメモリを超える可能性があります。混雑しているサイトのワーカー数かメモリ上限を下げてください。',
         'php_isolation_shared' => 'これらのサイトは他のサイトと同じ www-data で動作しています。サイトの PHP 画面から分離して専用ユーザーを割り当ててください。',
         'php_interpreter_missing' => 'サイトに、このサーバーにインストールされていない PHP バージョンが設定されています。OpenLiteSpeed は lsphp バイナリをパスで指定し、設定テストでは存在を確認しないため、サイトは「稼働中」と表示されたまま、すべてのリクエストに 503 を返します。PHP 画面からそのバージョンをインストールするか、インストール済みのバージョンに変更してください。',
+        'ols_missing_extuser' => 'Every OpenLiteSpeed site needs its own `extUser`, or it runs as `nobody` and can read every other site\'s files. Re-save the site in the panel to rewrite its vhost.',
         'privilege' => 'パネルが root としてコマンドを実行できません。/etc/sudoers.d/ にパネルの許可があり、visudo -c を通ることを確認してください。',
         'privilege_outdated' => 'このサーバーの sudo 許可は、動作しているパネルより古いものです。上記のコマンドはこのビルドが実行しようとし、sudo が拒否するものです。設定済みに見える機能で「a password is required」として失敗します。サーバー上で `sudo php artisan panel:sudoers` を実行して、パネル自身の一覧から /etc/sudoers.d/ を書き直してください。インストール前に visudo で検証されます。',
         'privilege_unknown_user' => 'パネルは専用の非特権アカウントで動作していますが、それを特定できなかったため sudo アクセスを確認できませんでした。',

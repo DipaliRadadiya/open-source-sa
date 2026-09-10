@@ -1024,3 +1024,121 @@ it('still resolves FPM on an nginx server', function () {
     // normal box does.
     expect((new PhpStackManager(app(ServerCapabilities::class)))->stack()->key())->toBe('fpm');
 });
+
+/*
+ * The isolation boundary on this stack.
+ *
+ * On nginx and Apache a site is confined by its own php-fpm pool: `user =` is
+ * mandatory and a pool without one is refused by the master at startup. On
+ * OpenLiteSpeed the equivalent is `extUser` in the vhost's own extprocessor,
+ * and nothing refuses a vhost that omits it — OLS quietly runs the process as
+ * the server's default user, `nobody`, which every other site also falls back
+ * to. One identity for the whole box: each site can read every other site's
+ * `.env`, and nothing about the server looks wrong.
+ *
+ * These are the assertions that stop that shipping.
+ */
+describe('site isolation', function () {
+    beforeEach(function () {
+        $user = SystemUser::create([
+            'username' => 'shopuser', 'home_path' => '/home/shopuser',
+            'shell' => '/bin/bash', 'sudo' => false,
+        ]);
+
+        $this->app_ = Application::forceCreate([
+            'system_user_id' => $user->id, 'name' => 'Shop',
+            'slug' => 'shop', 'domain' => 'shop.test',
+            'site_type' => 'wordpress', 'serving_profile' => 'php', 'web_root' => '/',
+            'status' => 'pending', 'php_version' => '8.4',
+        ]);
+    });
+
+    it('gives each site its own user and group', function () {
+        fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_->fresh(['phpSettings', 'systemUser']), '/home/shopuser/shop/public_html');
+
+        $vhost = collect(test()->files)
+            ->first(fn ($contents, $path) => str_ends_with((string) $path, 'vhconf.conf'));
+
+        expect($vhost)
+            ->toContain('extUser                 shopuser')
+            ->toContain('extGroup                shopuser');
+    });
+
+    it('refuses to write a vhost for an application with no system user', function () {
+        fakeOls(olsConfig());
+
+        // Not a hypothetical shape: an application row can outlive its system
+        // user, and the vhost writer runs from more than one path.
+        $orphan = $this->app_->fresh(['phpSettings']);
+        $orphan->setRelation('systemUser', null);
+
+        expect(fn () => app(OlsDriver::class)->apply($orphan, '/home/shopuser/shop/public_html'))
+            ->toThrow(RuntimeException::class, 'refusing to write an OpenLiteSpeed vhost that would run as nobody');
+    });
+});
+
+/*
+ * LSAPI pool sizing.
+ *
+ * `maxConns` is how many connections OpenLiteSpeed will open to the pool;
+ * PHP_LSAPI_CHILDREN is how many workers LSPHP forks to answer them. They
+ * describe one pool and must agree — this template set the first and never
+ * told PHP about it.
+ */
+describe('LSAPI pool', function () {
+    beforeEach(function () {
+        $user = SystemUser::create([
+            'username' => 'shopuser', 'home_path' => '/home/shopuser',
+            'shell' => '/bin/bash', 'sudo' => false,
+        ]);
+
+        $this->app_ = Application::forceCreate([
+            'system_user_id' => $user->id, 'name' => 'Shop',
+            'slug' => 'shop', 'domain' => 'shop.test',
+            'site_type' => 'wordpress', 'serving_profile' => 'php', 'web_root' => '/',
+            'status' => 'pending', 'php_version' => '8.4',
+        ]);
+    });
+
+    it('tells LSPHP the same pool size it gives OpenLiteSpeed', function () {
+        config()->set('server.web_server_drivers.openlitespeed.lsapi_children', 17);
+        fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_->fresh(['phpSettings', 'systemUser']), '/home/shopuser/shop/public_html');
+
+        $vhost = collect(test()->files)
+            ->first(fn ($contents, $path) => str_ends_with((string) $path, 'vhconf.conf'));
+
+        expect($vhost)
+            ->toContain('maxConns                17')
+            ->toContain('PHP_LSAPI_CHILDREN=17');
+    });
+
+    it('recycles workers, the way every fpm pool the panel writes does', function () {
+        config()->set('server.web_server_drivers.openlitespeed.lsapi_max_requests', 1234);
+        fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_->fresh(['phpSettings', 'systemUser']), '/home/shopuser/shop/public_html');
+
+        $vhost = collect(test()->files)
+            ->first(fn ($contents, $path) => str_ends_with((string) $path, 'vhconf.conf'));
+
+        expect($vhost)->toContain('PHP_LSAPI_MAX_REQUESTS=1234');
+    });
+
+    it('never renders a pool that accepts nothing', function () {
+        // maxConns 0 is a vhost that answers no PHP request at all, and a
+        // misconfigured or empty env value is the way to reach it.
+        config()->set('server.web_server_drivers.openlitespeed.lsapi_children', 0);
+        fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_->fresh(['phpSettings', 'systemUser']), '/home/shopuser/shop/public_html');
+
+        $vhost = collect(test()->files)
+            ->first(fn ($contents, $path) => str_ends_with((string) $path, 'vhconf.conf'));
+
+        expect($vhost)->not->toContain('maxConns                0');
+    });
+});

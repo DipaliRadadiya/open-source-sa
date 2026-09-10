@@ -699,3 +699,83 @@ it('asks systemd which web server is running rather than trusting config order',
     expect($report['checks'][0]['status'])->not->toBe('fail')
         ->and($report['checks'][0]['detail'])->not->toContain('nginx');
 });
+
+/*
+ * The OpenLiteSpeed isolation boundary, checked on disk.
+ *
+ * OlsDriver refuses to write a vhost with no `extUser`. This is the other
+ * half: the ones already on the server — written before that guard, adopted
+ * from a brownfield box, or hand-edited. Without extUser a site's PHP runs as
+ * the server's own user, and so does every other site's, so any one of them
+ * can read the others' `.env`, database credentials and uploads. Nothing about
+ * such a server looks wrong.
+ */
+it('fails when an OpenLiteSpeed site has no extUser', function () {
+    $root = sys_get_temp_dir().'/ols-vhosts-'.Str::random(8);
+
+    mkdir($root.'/isolated', 0755, true);
+    mkdir($root.'/shared', 0755, true);
+
+    file_put_contents($root.'/isolated/vhconf.conf', <<<'CONF'
+    extprocessor lsphp84 {
+      type                    lsapi
+      extUser                 siteowner
+      extGroup                siteowner
+    }
+    CONF);
+
+    // The same vhost with the one line that matters missing.
+    file_put_contents($root.'/shared/vhconf.conf', <<<'CONF'
+    extprocessor lsphp84 {
+      type                    lsapi
+    }
+    CONF);
+
+    config()->set('server.web_server_drivers.openlitespeed.vhost_root', $root);
+    config()->set('server.doctor.checks', [PhpIsolationCheck::class]);
+
+    ServerCapability::query()->delete();
+    ServerCapability::query()->create([
+        'stack' => 'ols', 'web_server' => 'openlitespeed',
+        'capabilities' => ['php' => true, 'node' => false],
+        'source' => 'installer', 'verified_at' => now(),
+    ]);
+
+    Process::fake(fn () => Process::result(output: ''));
+
+    $report = app(Doctor::class)->run();
+
+    File::deleteDirectory($root);
+
+    expect($report['checks'][0]['status'])->toBe('fail')
+        ->and($report['checks'][0]['detail'])->toContain('shared')
+        // The site that is configured correctly must not be named.
+        ->and($report['checks'][0]['detail'])->not->toContain('isolated');
+});
+
+// A static or proxy vhost has no PHP process and needs no extUser. Reporting
+// one would train people to ignore this check.
+it('does not ask a non-PHP OpenLiteSpeed vhost for an extUser', function () {
+    $root = sys_get_temp_dir().'/ols-static-'.Str::random(8);
+
+    mkdir($root.'/staticsite', 0755, true);
+    file_put_contents($root.'/staticsite/vhconf.conf', "docRoot \$VH_ROOT\nenableGzip 1\n");
+
+    config()->set('server.web_server_drivers.openlitespeed.vhost_root', $root);
+    config()->set('server.doctor.checks', [PhpIsolationCheck::class]);
+
+    ServerCapability::query()->delete();
+    ServerCapability::query()->create([
+        'stack' => 'ols', 'web_server' => 'openlitespeed',
+        'capabilities' => ['php' => true, 'node' => false],
+        'source' => 'installer', 'verified_at' => now(),
+    ]);
+
+    Process::fake(fn () => Process::result(output: ''));
+
+    $report = app(Doctor::class)->run();
+
+    File::deleteDirectory($root);
+
+    expect($report['checks'][0]['status'])->not->toBe('fail');
+});

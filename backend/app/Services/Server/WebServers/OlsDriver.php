@@ -66,6 +66,8 @@ class OlsDriver extends AbstractWebServerDriver
         $data = parent::viewData($application, $documentRoot);
         $version = (string) $data['phpVersion'];
 
+        $driver = 'server.web_server_drivers.openlitespeed';
+
         return [
             ...$data,
             // Site types whose cache or rewrite integration goes through
@@ -83,7 +85,38 @@ class OlsDriver extends AbstractWebServerDriver
             // below, in the same pass that renders this template, so the file
             // and the `env` line naming it cannot drift apart.
             'phpIniScanDir' => $this->phpIni->scanDir($application),
+            // One value, two directives -- see the config note. Floored at 1
+            // because `maxConns 0` is a vhost that accepts no PHP at all.
+            'lsapiChildren' => max(1, (int) config($driver.'.lsapi_children', 10)),
+            'lsapiMaxRequests' => max(1, (int) config($driver.'.lsapi_max_requests', 5000)),
         ];
+    }
+
+    /**
+     * Refuse to write a vhost that would run as nobody.
+     *
+     * `extUser` is the isolation boundary on this stack. Omit it and
+     * OpenLiteSpeed runs the site's PHP as the server's own user -- `nobody`
+     * -- which every other site also falls back to. One identity for the whole
+     * box: each site can read every other site's `.env`, its database
+     * credentials and its uploads. Nothing looks wrong; the vhost is valid and
+     * the site serves.
+     *
+     * php-fpm cannot reach that state. A pool with no `user =` is refused by
+     * the master at startup, so the mistake is impossible there. This template
+     * has no equivalent backstop, so it is here -- first thing in apply(),
+     * ahead of every write, rather than left to surface as a TypeError halfway
+     * through rendering.
+     */
+    private function assertHasSystemUser(Application $application): void
+    {
+        $username = trim((string) ($application->systemUser?->username ?? ''));
+
+        if ($username === '') {
+            throw new \RuntimeException(
+                "application {$application->id} has no system user; refusing to write an OpenLiteSpeed vhost that would run as nobody"
+            );
+        }
     }
 
     /**
@@ -127,6 +160,8 @@ class OlsDriver extends AbstractWebServerDriver
      */
     public function apply(Application $application, string $documentRoot): ServerOpsResult
     {
+        $this->assertHasSystemUser($application);
+
         $context = ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id];
         $fallback = $this->ensureTlsFallback($application);
 

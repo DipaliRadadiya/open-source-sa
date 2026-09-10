@@ -107,13 +107,21 @@ index {
 extprocessor lsphp{{ $lsphpVersion }} {
   type                    lsapi
   address                 uds://tmp/lshttpd/lsphp{{ $lsphpVersion }}-{{ $domain }}.sock
-  maxConns                10
+  maxConns                {{ $lsapiChildren }}
   initTimeout             60
   retryTimeout            0
   persistConn             1
   respBuffer              0
   autoStart               2
   path                    {{ $lsphpBinary }}
+{{-- The site's own identity, and the whole isolation boundary on this stack.
+
+     Without extUser OpenLiteSpeed runs the process as the server's default
+     user -- `nobody` -- and every site on the box shares one identity: each
+     one can read the others' `.env`. It would not look broken. `OlsDriver`
+     refuses to render this template without a username for exactly that
+     reason, and `panel:doctor` asserts no lsphp is running as nobody or
+     root. --}}
   extUser                 {{ $user }}
   extGroup                {{ $user }}
 {{-- This site's own PHP settings — memory_limit, upload limits, open_basedir,
@@ -126,6 +134,20 @@ extprocessor lsphp{{ $lsphpVersion }} {
      every extension's ini lives. Without it this REPLACES that directory and
      the site loses mysqli, curl and opcache. --}}
   env                     PHP_INI_SCAN_DIR={{ $phpIniScanDir }}
+{{-- LSAPI needs to be told the pool size it is being given. `maxConns` is what
+     OpenLiteSpeed will open; PHP_LSAPI_CHILDREN is how many workers LSPHP
+     forks to answer them. Setting one and not the other -- which this template
+     did -- leaves the two halves disagreeing about the same pool.
+
+     They are rendered from one value so they cannot drift. --}}
+  env                     PHP_LSAPI_CHILDREN={{ $lsapiChildren }}
+{{-- Recycle a worker after this many requests.
+
+     Without it an LSPHP child lives until the server restarts, so any
+     per-request leak in a plugin accumulates for the life of the process.
+     php-fpm's equivalent is `pm.max_requests`, which every pool this panel
+     writes already sets; OLS sites had no counterpart. --}}
+  env                     PHP_LSAPI_MAX_REQUESTS={{ $lsapiMaxRequests }}
   runOnStartUp            1
   memSoftLimit            2047M
   memHardLimit            2047M

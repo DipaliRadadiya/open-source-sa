@@ -22,6 +22,7 @@ return [
         'php_isolation_memory' => 'सभी पृथक साइटें मिलकर सर्वर की उपलब्ध मेमोरी से अधिक ले सकती हैं। व्यस्ततम साइटों पर वर्कर संख्या या मेमोरी सीमा घटाएँ।',
         'php_isolation_shared' => 'ये साइटें अब भी बाकी सबके साथ www-data के रूप में चलती हैं। किसी साइट की PHP स्क्रीन खोलकर उसे पृथक करें।',
         'php_interpreter_missing' => 'एक साइट ऐसे PHP संस्करण पर सेट है जो इस सर्वर पर स्थापित नहीं है। OpenLiteSpeed lsphp बाइनरी को पथ से नाम देता है और कॉन्फ़िगरेशन जाँच में उसे नहीं देखता, इसलिए साइट सक्रिय दिखती है और हर अनुरोध पर 503 देती है। PHP स्क्रीन से वह संस्करण स्थापित करें, या साइट को किसी स्थापित संस्करण पर बदलें।',
+        'ols_missing_extuser' => 'Every OpenLiteSpeed site needs its own `extUser`, or it runs as `nobody` and can read every other site\'s files. Re-save the site in the panel to rewrite its vhost.',
         'privilege' => 'पैनल root के रूप में कमांड नहीं चला सकता। जाँचें कि /etc/sudoers.d/ में पैनल की अनुमति है और फ़ाइल visudo -c पास करती है।',
         'privilege_outdated' => 'इस सर्वर की sudo अनुमति चल रहे पैनल से पुरानी है: ऊपर सूचीबद्ध कमांड वही हैं जिन्हें यह बिल्ड चलाना चाहेगा और sudo मना कर देगा। वे उन सुविधाओं पर «a password is required» के साथ विफल होते हैं जो कॉन्फ़िगर दिखती हैं। /etc/sudoers.d/ को पैनल की अपनी सूची से फिर से लिखने के लिए सर्वर पर `sudo php artisan panel:sudoers` चलाएँ; यह इंस्टॉल करने से पहले फ़ाइल को visudo से जाँचता है।',
         'privilege_unknown_user' => 'पैनल अपने ही अनप्रिविलेज्ड खाते से चलता है, लेकिन वह कौन सा है यह पता नहीं चला, इसलिए उसकी sudo पहुँच जाँची नहीं गई।',
