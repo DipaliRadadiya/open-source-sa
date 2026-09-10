@@ -1074,7 +1074,11 @@
       "body": "El servidor no respondió. Puede que el archivo esté bien: inténtalo de nuevo."
     },
     "clearSearch": "Borrar filtro",
-    "sourceNotReadable": "El panel no puede leer este archivo. Comprueba que existe y que sus permisos permiten leerlo al usuario del panel."
+    "sourceNotReadable": "El panel no puede leer este archivo. Comprueba que existe y que sus permisos permiten leerlo al usuario del panel.",
+    "linesCustom": "Personalizado…",
+    "linesUnit": "líneas",
+    "orderNewestFirst": "Más recientes primero",
+    "orderOldestFirst": "Más antiguos primero"
   },
   "services": {
     "title": "Servicios",

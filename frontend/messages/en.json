@@ -1074,7 +1074,11 @@
       "body": "The server did not answer. The file may still be fine — try again."
     },
     "clearSearch": "Clear filter",
-    "sourceNotReadable": "The panel cannot read this file. Check that it exists and that its permissions allow the panel's user to read it."
+    "sourceNotReadable": "The panel cannot read this file. Check that it exists and that its permissions allow the panel's user to read it.",
+    "linesCustom": "Custom…",
+    "linesUnit": "lines",
+    "orderNewestFirst": "Newest first",
+    "orderOldestFirst": "Oldest first"
   },
   "services": {
     "title": "Services",

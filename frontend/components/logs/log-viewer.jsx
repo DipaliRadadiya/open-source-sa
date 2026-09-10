@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowDown, FileWarning, Lock, Inbox, TriangleAlert } from "lucide-react";
@@ -32,6 +32,20 @@ export function LogViewer({
   // this is undefined there and the wording stays as it was.
   searchCapped = false,
   searchedLines,
+  /*
+   * Newest line at the TOP rather than the bottom.
+   *
+   * A console reads oldest-first because that is how a terminal appends, and
+   * that is still the default. But most visits to this screen are "what just
+   * happened", and answering that by scrolling to the far end of a 5000-line
+   * file is a strange way to lead with the answer.
+   *
+   * Reversing the list is not enough on its own: every "stick to the end"
+   * behaviour below anchors on the bottom, and with the newest line at the top
+   * the end to stick to is the top. So the anchor is chosen from this rather
+   * than hardcoded, and live tailing keeps working in both orders.
+   */
+  newestFirst = false,
 }) {
   const t = useTranslations("logs");
   const scrollRef = useRef(null);
@@ -41,28 +55,39 @@ export function LogViewer({
   const lastCount = useRef(lines.length);
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual's useVirtualizer is the same known false positive as useReactTable
+  // Reversed for rendering only. `lines` stays chronological everywhere else —
+  // the unseen counter, the follow logic and the parent all count appends, and
+  // an array that flipped underneath them would count them at the wrong end.
+  const rows = useMemo(
+    () => (newestFirst ? [...lines].reverse() : lines),
+    [lines, newestFirst],
+  );
+
   const virtualizer = useVirtualizer({
-    count: lines.length,
+    count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 24,
   });
 
-  const scrollToBottom = useCallback(() => {
+  // "The newest end", whichever end that is.
+  const scrollToNewest = useCallback(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el) el.scrollTop = newestFirst ? 0 : el.scrollHeight;
     setUnseen(0);
-  }, []);
+  }, [newestFirst]);
 
   const onScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const bottom = el.scrollHeight - el.clientHeight - el.scrollTop <= BOTTOM_SLACK;
+    const bottom = newestFirst
+      ? el.scrollTop <= BOTTOM_SLACK
+      : el.scrollHeight - el.clientHeight - el.scrollTop <= BOTTOM_SLACK;
     setAtBottom(bottom);
     setScrolled(el.scrollTop > 4);
     onAtBottomChange?.(bottom);
     if (bottom) setUnseen(0);
-  }, [onAtBottomChange]);
+  }, [onAtBottomChange, newestFirst]);
 
   // Appends land after paint; stick to the bottom only if the reader was
   // already there, otherwise count what they haven't seen.
@@ -70,15 +95,15 @@ export function LogViewer({
     const added = lines.length - lastCount.current;
     lastCount.current = lines.length;
     if (added === 0) return;
-    if (atBottom) scrollToBottom();
+    if (atBottom) scrollToNewest();
     else if (added > 0) setUnseen((n) => n + added);
-  }, [lines.length, atBottom, scrollToBottom]);
+  }, [lines.length, atBottom, scrollToNewest]);
 
   // A new source (or a new filter) starts at the newest line.
   useEffect(() => {
-    scrollToBottom();
+    scrollToNewest();
     setAtBottom(true);
-  }, [group, term, severity, scrollToBottom]);
+  }, [group, term, severity, newestFirst, scrollToNewest]);
 
   if (status === "locked") {
     return <Notice icon={Lock} title={t("locked.title")} body={t("locked.body")} />;
@@ -144,14 +169,20 @@ export function LogViewer({
                 transform: `translateY(${item.start}px)`,
               }}
             >
+              {/* The line's place in the FILE, not its place on the screen.
+                  Reversed, row 0 holds the last line, and numbering it 1 says
+                  the newest line is the first line of the file — which is the
+                  one thing the gutter exists to tell you. */}
               <LogLine
-                index={item.index + 1}
-                text={lines[item.index]}
+                index={newestFirst ? rows.length - item.index : item.index + 1}
+                text={rows[item.index]}
                 group={group}
                 term={term}
                 wrap={wrap}
                 onCopy={onCopyLine}
-                copyLabel={t("copyLine", { index: item.index + 1 })}
+                copyLabel={t("copyLine", {
+                  index: newestFirst ? rows.length - item.index : item.index + 1,
+                })}
               />
             </div>
           ))}
@@ -179,7 +210,7 @@ export function LogViewer({
 
       {!atBottom ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-          <Button size="sm" className="pointer-events-auto shadow-md" onClick={scrollToBottom}>
+          <Button size="sm" className="pointer-events-auto shadow-md" onClick={scrollToNewest}>
             <ArrowDown className="size-4" />
             {unseen > 0 ? t("jumpWithCount", { count: unseen }) : t("jump")}
           </Button>

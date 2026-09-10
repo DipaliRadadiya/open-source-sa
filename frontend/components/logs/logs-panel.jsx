@@ -58,6 +58,9 @@ export function LogsPanel({
   const [debouncedTerm, setDebouncedTerm] = useState("");
   const [severity, setSeverity] = useState("all");
   const [wrap, setWrap] = useState(false);
+  // Which end the newest line sits at. Oldest-first is the default because
+  // that is how a console reads and how a live tail appends.
+  const [newestFirst, setNewestFirst] = useState(false);
   const [follow, setFollow] = useState(() => resolveFollow(followPreference, source));
   const [busy, setBusy] = useState(false);
 
@@ -328,6 +331,8 @@ export function LogsPanel({
           follow={follow}
           onFollowChange={changeFollow}
           wrap={wrap}
+          newestFirst={newestFirst}
+          onNewestFirstChange={setNewestFirst}
           onWrapChange={setWrap}
           onReload={() => load()}
           onCopyVisible={() =>
@@ -373,6 +378,7 @@ export function LogsPanel({
           severity={severity}
           filtered={Boolean(debouncedTerm) || severity !== "all"}
           wrap={wrap}
+          newestFirst={newestFirst}
           status={status}
           following={follow && !debouncedTerm}
           onCopyLine={(text) => copy(text, t("copiedLine"))}

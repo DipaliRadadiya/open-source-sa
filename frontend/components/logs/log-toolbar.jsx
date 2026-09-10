@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
+  ArrowDownNarrowWide,
+  ArrowUpNarrowWide,
   RotateCw,
   Download,
   WrapText,
@@ -25,8 +28,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { LINE_OPTIONS } from "@/lib/schemas/log";
+import { LINE_OPTIONS, MAX_LINES, MIN_LINES, normalizeLineCount } from "@/lib/schemas/log";
 import { SEVERITY_FILTERS } from "@/lib/logs/severity";
+
+// Not a line count, so it can never collide with one.
+const CUSTOM_LINES = "custom";
 
 /**
  * Viewer controls. The source's name lives here as the pane heading.
@@ -51,6 +57,8 @@ export function LogToolbar({
   onFollowChange,
   wrap,
   onWrapChange,
+  newestFirst,
+  onNewestFirstChange,
   onReload,
   onCopyVisible,
   downloadUrl,
@@ -63,6 +71,8 @@ export function LogToolbar({
   onResume,
 }) {
   const t = useTranslations("logs");
+  // Swaps the preset selector for a number field, and back once applied.
+  const [customLines, setCustomLines] = useState(false);
 
   return (
     // Tinted like a window title bar, so the card reads as one terminal —
@@ -222,26 +232,94 @@ export function LogToolbar({
             ))}
           </div>
 
-          <Select
-            value={String(lines)}
-            onValueChange={(v) => onLinesChange(Number(v))}
-            disabled={disabled}
-          >
-            <SelectTrigger aria-label={t("linesLabel")} className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              {LINE_OPTIONS.map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {t("linesOption", { count: n })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/*
+            * Five presets cover the usual windows, and the sixth option hands
+            * the field over: someone chasing one incident wants the last 40
+            * lines, not the last 100, and someone reading a whole morning
+            * wants 2500. The API takes any integer up to its own cap, so the
+            * only reason the number was a fixed list is that nobody offered
+            * the box.
+            *
+            * A value that is not a preset — arrived at by typing, or restored
+            * from a previous visit — is shown as its own item, or the trigger
+            * would render empty and the selector would look broken.
+            */}
+          {customLines ? (
+            <div className="flex items-center gap-1.5">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={MIN_LINES}
+                max={MAX_LINES}
+                defaultValue={lines}
+                aria-label={t("linesLabel")}
+                autoFocus
+                disabled={disabled}
+                className="w-28"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    event.currentTarget.blur();
+                  }
+                  if (event.key === "Escape") {
+                    setCustomLines(false);
+                  }
+                }}
+                // Applied on leaving the field, not on every keystroke: each
+                // change refetches the log, and typing "500" would fetch 5,
+                // then 50, then 500.
+                onBlur={(event) => {
+                  const next = normalizeLineCount(event.target.value);
+                  if (next !== null && next !== lines) onLinesChange(next);
+                  setCustomLines(false);
+                }}
+              />
+              <span className="text-xs text-muted-foreground">{t("linesUnit")}</span>
+            </div>
+          ) : (
+            <Select
+              value={String(lines)}
+              onValueChange={(v) => {
+                if (v === CUSTOM_LINES) {
+                  setCustomLines(true);
+                  return;
+                }
+                onLinesChange(Number(v));
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger aria-label={t("linesLabel")} className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {LINE_OPTIONS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {t("linesOption", { count: n })}
+                  </SelectItem>
+                ))}
+                {LINE_OPTIONS.includes(lines) ? null : (
+                  <SelectItem value={String(lines)}>
+                    {t("linesOption", { count: lines })}
+                  </SelectItem>
+                )}
+                <SelectItem value={CUSTOM_LINES}>{t("linesCustom")}</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
 
           {/* One segmented group, not four floating squares: these are view
               actions on the same object, so they read as a single control. */}
           <div className="flex items-center overflow-hidden rounded-lg border divide-x">
+            {/* Which end the newest line is at. A view action on the same
+                object as wrap, so it belongs in the same group rather than as
+                a seventh floating control. */}
+            <IconAction
+              icon={newestFirst ? ArrowUpNarrowWide : ArrowDownNarrowWide}
+              label={newestFirst ? t("orderOldestFirst") : t("orderNewestFirst")}
+              onClick={() => onNewestFirstChange(!newestFirst)}
+              active={newestFirst}
+              disabled={disabled}
+            />
             <IconAction
               icon={WrapText}
               label={wrap ? t("wrapOff") : t("wrapOn")}
