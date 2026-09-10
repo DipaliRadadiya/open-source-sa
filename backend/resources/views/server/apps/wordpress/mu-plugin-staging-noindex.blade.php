@@ -1,7 +1,6 @@
 {!! '<?php' !!}
 /**
  * Plugin Name: Staging Search Engine Block
- * Plugin URI:  https://serveravatar.com/docs/staging
  * Description: Stops search engines indexing this staging site, so a copy of a live site cannot compete with the original in search results. Added automatically by your hosting control panel when this staging site was created. This is not malware and was not added by an attacker — see the notes below. It is never copied to your live site.
  * Version:     1.0.0
  * Author:      Your hosting control panel

@@ -94,6 +94,22 @@ DRY_RUN=0          # --dry-run
 STACK=""           # --stack=lemp|lamp|mern|ols  (prompted, or lemp)
 WEB_SERVER=""      # derived from STACK
 
+# The PHP the PANEL itself runs on: composer, artisan, the queue worker, cron
+# and the web SAPI, all the same binary.
+#
+# One build, deliberately. Two would mean the CLI that installs the code and
+# the SAPI that serves it having different extension sets, and the failure mode
+# is the API answering 500 on a missing extension while the CLI that installed
+# it works perfectly.
+#
+# On lemp/lamp/mern that is ondrej's `/usr/bin/php8.4` with php-fpm behind the
+# web server. On ols it is LiteSpeed's lsphp, because OpenLiteSpeed spawns PHP
+# itself over LSAPI and a second PHP from a second repository would be the two
+# builds this exists to avoid. Set by derive_php_runtime() once the stack is
+# known.
+PANEL_PHP_BIN=""   # CLI: artisan, composer, queue worker, cron
+PANEL_PHP_SAPI=""  # what the web server talks to: "fpm" or "lsapi"
+
 # ─── Output ──────────────────────────────────────────────────────────────────
 
 if [[ -t 1 ]]; then
@@ -359,6 +375,8 @@ resolve_stack() {
         *) die "unknown stack: ${STACK}  (expected lemp, lamp, mern or ols)" ;;
     esac
 
+    derive_php_runtime
+
     # PHP and Node are installed regardless of the stack: the panel's API is PHP
     # and its own interface is a Next.js build. The stack decides what *sites*
     # get, and which web server owns port 80.
@@ -568,6 +586,23 @@ configure_swap() {
 # The releases already in the wild keep the PPA they were installed with: an
 # existing install has ondrej sources on disk, and switching mechanism under it
 # would leave two sources for the same packages.
+# Which PHP the panel runs on, decided once from the stack.
+#
+# LSPHP names its tree by the compacted version -- `lsphp84`, never `lsphp8.4`
+# -- and assuming the dot produces a path that does not exist, which OLS does
+# not check when the configuration is tested: the panel would be reported up
+# and answer 503 on every request.
+derive_php_runtime() {
+    if [[ "$WEB_SERVER" == "openlitespeed" ]]; then
+        LSPHP_COMPACT="${PHP_VERSION//./}"
+        PANEL_PHP_BIN="/usr/local/lsws/lsphp${LSPHP_COMPACT}/bin/php"
+        PANEL_PHP_SAPI="lsapi"
+    else
+        PANEL_PHP_BIN="/usr/bin/php${PHP_VERSION}"
+        PANEL_PHP_SAPI="fpm"
+    fi
+}
+
 add_php_repository() {
     if [[ "$OS_VERSION_ID" == "26.04" ]]; then
         local keyring=/etc/apt/keyrings/sury-php.gpg
@@ -833,23 +868,54 @@ install_packages() {
     # neither. Cheap, and it is the same source Ubuntu's own MOTD uses.
     run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common
 
-    add_php_repository
-    assert_php_available
+    local php_pkgs=()
 
-    # Matches the extensions the panel actually loads. Kept explicit rather than
-    # pulling php${V} — the metapackage drags in apache2 as a dependency, which
-    # would fight nginx for port 80.
-    local php_pkgs=(
-        "php${PHP_VERSION}-fpm" "php${PHP_VERSION}-cli" "php${PHP_VERSION}-common"
-        "php${PHP_VERSION}-bcmath" "php${PHP_VERSION}-curl" "php${PHP_VERSION}-intl"
-        "php${PHP_VERSION}-mbstring" "php${PHP_VERSION}-xml" "php${PHP_VERSION}-zip"
-        "php${PHP_VERSION}-gd" "php${PHP_VERSION}-sqlite3" "php${PHP_VERSION}-mysql"
-        # pgsql alongside mysql: the panel can manage a PostgreSQL server, and
-        # without this extension no PHP application on the box can connect to
-        # one — the databases would be creatable and unusable.
-        "php${PHP_VERSION}-pgsql"
-        "php${PHP_VERSION}-redis" "php${PHP_VERSION}-igbinary" "php${PHP_VERSION}-opcache"
-    )
+    if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
+        # OpenLiteSpeed: the panel runs on LSPHP, the same build its hosted
+        # sites use. ondrej's PHP is not installed at all on this stack.
+        #
+        # Two builds is the thing being avoided. Pointing only the web SAPI at
+        # lsphp while composer and artisan stayed on /usr/bin/php would give the
+        # panel two PHPs with two extension sets, and the failure mode is the
+        # API answering 500 on an extension the CLI that installed the code has.
+        #
+        # A side effect worth naming: /etc/apache2 comes from `phpX.Y-fpm`, so
+        # an OLS box that never installs it never grows the phantom directory
+        # that made every OpenLiteSpeed server detect as Apache.
+        #
+        # Brought forward from configure_web_server, and the ordering is the
+        # reason: composer is fetched a few lines below and run with
+        # PANEL_PHP_BIN, which on this stack is lsphp. Leaving the LiteSpeed
+        # packages until configure_ols would mean running composer with a PHP
+        # that is not installed yet.
+        #
+        # install_ols_packages guards itself, so the later call from
+        # configure_ols is a no-op rather than a second apt run.
+        install_ols_packages
+
+        # gd, xml, zip, mbstring and bcmath have no packages -- they are
+        # compiled into lsphp, verified by extracting the .deb, which ships no
+        # .so files at all. The rest are separate packages and are added by
+        # install_ols_packages alongside the ones hosted sites need.
+    else
+        add_php_repository
+        assert_php_available
+
+        # Matches the extensions the panel actually loads. Kept explicit rather
+        # than pulling php${V} — the metapackage drags in apache2 as a
+        # dependency, which would fight nginx for port 80.
+        php_pkgs=(
+            "php${PHP_VERSION}-fpm" "php${PHP_VERSION}-cli" "php${PHP_VERSION}-common"
+            "php${PHP_VERSION}-bcmath" "php${PHP_VERSION}-curl" "php${PHP_VERSION}-intl"
+            "php${PHP_VERSION}-mbstring" "php${PHP_VERSION}-xml" "php${PHP_VERSION}-zip"
+            "php${PHP_VERSION}-gd" "php${PHP_VERSION}-sqlite3" "php${PHP_VERSION}-mysql"
+            # pgsql alongside mysql: the panel can manage a PostgreSQL server, and
+            # without this extension no PHP application on the box can connect to
+            # one — the databases would be creatable and unusable.
+            "php${PHP_VERSION}-pgsql"
+            "php${PHP_VERSION}-redis" "php${PHP_VERSION}-igbinary" "php${PHP_VERSION}-opcache"
+        )
+    fi
     # Only the chosen web server. Installing both would have them fight over
     # port 80, and apt starts them on install.
     local web_pkgs=()
@@ -863,7 +929,10 @@ install_packages() {
 
     if ! command -v composer >/dev/null 2>&1; then
         run curl -fsSL -o /tmp/composer-setup.php https://getcomposer.org/installer
-        run php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+        # PANEL_PHP_BIN, not a bare `php`: on OpenLiteSpeed there is no
+        # /usr/bin/php at all, and a bare invocation would either fail or --
+        # worse -- find some other PHP and install composer against it.
+        run "$PANEL_PHP_BIN" /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
         rm -f /tmp/composer-setup.php
         ok "composer"
     else
@@ -1158,7 +1227,17 @@ setup_backend() {
     # can be updated onto a newer PHP without moving every site onto it — but
     # at install time there is only one PHP, so they start out agreeing.
     set_env "${dir}/.env" SERVER_DEFAULT_PHP_VERSION "$PHP_VERSION"
-    set_env "${dir}/.env" PANEL_PHP_FPM_SERVICE "${PANEL_SLUG}-fpm.service"
+    # Which unit the update path reloads to pick up new PHP code.
+    #
+    # On OpenLiteSpeed there is no php-fpm at all: lshttpd spawns the panel's
+    # LSPHP itself, so restarting the web server is what recycles PHP. Naming a
+    # service that does not exist would make every panel update report a failed
+    # step for work that was never needed.
+    if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
+        set_env "${dir}/.env" PANEL_PHP_FPM_SERVICE "lshttpd.service"
+    else
+        set_env "${dir}/.env" PANEL_PHP_FPM_SERVICE "${PANEL_SLUG}-fpm.service"
+    fi
     set_env "${dir}/.env" PANEL_FRONTEND_SERVICE "${PANEL_SLUG}-frontend.service"
     set_env "${dir}/.env" PANEL_QUEUE_SERVICE "${PANEL_SLUG}-queue.service"
     set_env "${dir}/.env" PANEL_NODE_BIN_DIR "$(dirname "$NODE_BIN")"
@@ -1171,17 +1250,17 @@ setup_backend() {
     chmod -R 775 "${dir}/storage" "${dir}/bootstrap/cache"
 
     grep -q '^APP_KEY=base64:' "${dir}/.env" \
-        || run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan key:generate --force' -- "$dir" "/usr/bin/php${PHP_VERSION}"
+        || run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan key:generate --force' -- "$dir" "${PANEL_PHP_BIN}"
     ok "application key set"
 
-    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan migrate --force' -- "$dir" "/usr/bin/php${PHP_VERSION}"
-    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan db:seed --class=PermissionSeeder --force' -- "$dir" "/usr/bin/php${PHP_VERSION}"
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan migrate --force' -- "$dir" "${PANEL_PHP_BIN}"
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan db:seed --class=PermissionSeeder --force' -- "$dir" "${PANEL_PHP_BIN}"
     ok "database migrated and permissions seeded"
 
     # Tell the panel what we built. It can detect that nginx and PHP are here,
     # but not whether that was a deliberate `lemp` build or a box somebody
     # assembled by hand — and the difference matters to the setup page.
-    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan server:record-stack "$3"' -- "$dir" "/usr/bin/php${PHP_VERSION}" "$STACK"
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan server:record-stack "$3"' -- "$dir" "${PANEL_PHP_BIN}" "$STACK"
     ok "stack recorded as ${STACK}"
 
     # Central-management token. Passed in by the central panel's provisioning
@@ -1199,7 +1278,7 @@ setup_backend() {
                 } else {
                     \\DB::table(\\'settings\\')->insert([\\'id\\' => 1, \\'central_token\\' => \$token, \\'created_at\\' => now(), \\'updated_at\\' => now()]);
                 }
-            "' -- "$dir" "/usr/bin/php${PHP_VERSION}"
+            "' -- "$dir" "${PANEL_PHP_BIN}"
         ok "central management token stored"
     fi
 }
@@ -1272,6 +1351,20 @@ build_frontend() {
 # ─── PHP-FPM pool ────────────────────────────────────────────────────────────
 
 configure_fpm() {
+    # Nothing to do on OpenLiteSpeed: there is no php-fpm on this stack at all.
+    #
+    # The dedicated master below exists for one reason -- to escape the distro
+    # unit's ProtectSystem=full, which would stop the panel running `sudo
+    # useradd` -- and OpenLiteSpeed's own unit has no sandboxing to escape. It
+    # ships without ProtectSystem, without ProtectHome, with PrivateTmp=false
+    # and with accounting off, saying so in a comment: "do not want to be
+    # limited in anyway". So the problem this function solves does not exist
+    # here, and lshttpd spawns the panel's LSPHP itself -- see configure_ols.
+    if [[ "$PANEL_PHP_SAPI" == "lsapi" ]]; then
+        skip "php-fpm (OpenLiteSpeed runs the panel on LSPHP)"
+        return 0
+    fi
+
     step "Configuring PHP-FPM"
 
     # The panel runs under its OWN php-fpm master, not the distro's shared
@@ -1434,6 +1527,26 @@ configure_ols() {
 
     install_ols_packages
 
+    # The panel's LSAPI socket directory, and the reason it is not /tmp/lshttpd
+    # with everyone else's.
+    #
+    # 0750 ${APP_USER}:nogroup. lshttpd runs as nobody:nogroup, so it can
+    # traverse and connect; the panel's own user owns it. A hosted site's user
+    # is in neither, so a compromised site cannot reach the socket the panel's
+    # privileged PHP listens on -- and therefore cannot speak LSAPI to it and
+    # get code execution as the one user on this box with a sudoers grant.
+    #
+    # tmpfiles.d as well as mkdir: /run is a tmpfs and does not survive a
+    # reboot, and a panel that comes back with no socket directory is a panel
+    # that does not come back.
+    run mkdir -p "/run/${PANEL_SLUG}"
+    run chown "${APP_USER}:nogroup" "/run/${PANEL_SLUG}"
+    run chmod 0750 "/run/${PANEL_SLUG}"
+
+    printf 'd /run/%s 0750 %s nogroup -\n' "$PANEL_SLUG" "$APP_USER" \
+        >"/etc/tmpfiles.d/${PANEL_SLUG}.conf"
+    run systemd-tmpfiles --create "/etc/tmpfiles.d/${PANEL_SLUG}.conf"
+
     local conf="/usr/local/lsws/conf/httpd_config.conf"
     local vhost_dir="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}"
     local api_vhost_dir="/usr/local/lsws/conf/vhosts/${PANEL_SLUG}-api"
@@ -1548,7 +1661,17 @@ ensure_ols_context_paths() {
 # model and it is not a trade this installer should make on someone else's
 # server. Same treatment the MongoDB source already gets: one keyring, scoped to
 # one source with signed-by.
+OLS_PACKAGES_DONE=0
+
 install_ols_packages() {
+    # Called twice on this stack -- once early from install_packages so the
+    # panel has a PHP to run composer with, once from configure_ols where it
+    # has always lived. The second is a no-op rather than a second apt run.
+    if (( OLS_PACKAGES_DONE )); then
+        return 0
+    fi
+    OLS_PACKAGES_DONE=1
+
     local keyring=/usr/share/keyrings/litespeed.gpg
     local list=/etc/apt/sources.list.d/litespeed.list
 
@@ -1656,7 +1779,15 @@ install_ols_packages() {
     # A version with no -pgsql would have no -mysql and no interpreter either,
     # so this line already fails for it.
     local lsphp="lsphp${PHP_VERSION//./}"
-    if ! apt-get install -y "${lsphp}" "${lsphp}-common" "${lsphp}-mysql" "${lsphp}-pgsql" >>"$LOG_FILE" 2>&1; then
+    # The panel's own extensions are in this list too, because on this stack the
+    # panel runs on the same lsphp its sites do. curl/intl/sqlite3 are what
+    # Laravel and the panel's SQLite database need; redis/igbinary back the
+    # cache and queue; opcache is the difference between a usable panel and a
+    # slow one.
+    if ! apt-get install -y \
+        "${lsphp}" "${lsphp}-common" "${lsphp}-mysql" "${lsphp}-pgsql" \
+        "${lsphp}-curl" "${lsphp}-intl" "${lsphp}-sqlite3" \
+        "${lsphp}-redis" "${lsphp}-igbinary" "${lsphp}-opcache" >>"$LOG_FILE" 2>&1; then
         warn "could not install all of ${lsphp} — hosted PHP sites may be missing extensions"
         warn "check with: apt-cache search lsphp"
     fi
@@ -1693,19 +1824,41 @@ write_ols_vhost() {
     # <VirtualHost> -- and this one is then pure proxy, with no PHP in it at all.
     if (( SINGLE_HOST )); then
         read -r -d '' api_context <<CONF || true
-extprocessor ${PANEL_SLUG}-fpm {
-  type                    fcgi
-  address                 uds://run/php/${PANEL_SLUG}-fpm.sock
+extprocessor ${PANEL_SLUG}-lsphp {
+  type                    lsapi
+# NOT under /tmp/lshttpd, where every hosted site's socket lives.
+#
+# The panel's PHP holds the sudo grant. A site whose PHP could open this socket
+# and speak LSAPI would get code execution as the panel's user, and sudo with
+# it -- the same threat php-fpm answers by owning its socket www-data:www-data.
+#
+# So the panel's socket sits in a directory only two identities can traverse:
+# ${PANEL_SLUG}, which runs it, and nogroup, which lshttpd is in. A site user is
+# in neither, so it cannot reach the path at all -- which holds regardless of
+# what permissions lshttpd gives the socket itself, and LiteSpeed's own
+# packaging chmods 0777 in places, so that is not a default worth trusting.
+  address                 uds://run/${PANEL_SLUG}/lsphp.sock
   maxConns                10
   initTimeout             60
   retryTimeout            0
   persistConn             1
   respBuffer              0
-  autoStart               0
+  autoStart               2
+  path                    ${PANEL_PHP_BIN%/php}/lsphp
+# The panel's own identity. Same directive that isolates every hosted site --
+# see the note in the site template -- and it matters more here, because this
+# is the one user on the box with a sudoers grant. Without it OpenLiteSpeed
+# would run the panel as nobody and every privileged operation would fail.
+  extUser                 ${APP_USER}
+  extGroup                ${APP_USER}
+  env                     PHP_LSAPI_CHILDREN=10
+  env                     PHP_LSAPI_MAX_REQUESTS=500
+  memSoftLimit            2047M
+  memHardLimit            2047M
 }
 
 scripthandler {
-  add                     fcgi:${PANEL_SLUG}-fpm php
+  add                     lsapi:${PANEL_SLUG}-lsphp php
 }
 
 # `context /api` and `context /sanctum` alongside the catch-all proxy: OLS
@@ -1835,19 +1988,41 @@ index {
   indexFiles              index.php
 }
 
-extprocessor ${PANEL_SLUG}-fpm {
-  type                    fcgi
-  address                 uds://run/php/${PANEL_SLUG}-fpm.sock
+extprocessor ${PANEL_SLUG}-lsphp {
+  type                    lsapi
+# NOT under /tmp/lshttpd, where every hosted site's socket lives.
+#
+# The panel's PHP holds the sudo grant. A site whose PHP could open this socket
+# and speak LSAPI would get code execution as the panel's user, and sudo with
+# it -- the same threat php-fpm answers by owning its socket www-data:www-data.
+#
+# So the panel's socket sits in a directory only two identities can traverse:
+# ${PANEL_SLUG}, which runs it, and nogroup, which lshttpd is in. A site user is
+# in neither, so it cannot reach the path at all -- which holds regardless of
+# what permissions lshttpd gives the socket itself, and LiteSpeed's own
+# packaging chmods 0777 in places, so that is not a default worth trusting.
+  address                 uds://run/${PANEL_SLUG}/lsphp.sock
   maxConns                10
   initTimeout             60
   retryTimeout            0
   persistConn             1
   respBuffer              0
-  autoStart               0
+  autoStart               2
+  path                    ${PANEL_PHP_BIN%/php}/lsphp
+# The panel's own identity. Same directive that isolates every hosted site --
+# see the note in the site template -- and it matters more here, because this
+# is the one user on the box with a sudoers grant. Without it OpenLiteSpeed
+# would run the panel as nobody and every privileged operation would fail.
+  extUser                 ${APP_USER}
+  extGroup                ${APP_USER}
+  env                     PHP_LSAPI_CHILDREN=10
+  env                     PHP_LSAPI_MAX_REQUESTS=500
+  memSoftLimit            2047M
+  memHardLimit            2047M
 }
 
 scripthandler {
-  add                     fcgi:${PANEL_SLUG}-fpm php
+  add                     lsapi:${PANEL_SLUG}-lsphp php
 }
 
 context / {
@@ -2413,7 +2588,7 @@ WorkingDirectory=${backend}
 # therefore not name a queue: one sent elsewhere is accepted, stored and
 # never run -- no error, no failed_jobs row, it simply never happens.
 # Backups shipped that way and never once executed on a real install.
-ExecStart=/usr/bin/php${PHP_VERSION} ${backend}/artisan queue:work --sleep=3 --tries=1 --max-time=3600
+ExecStart=${PANEL_PHP_BIN} ${backend}/artisan queue:work --sleep=3 --tries=1 --max-time=3600
 Restart=always
 RestartSec=5
 # Longer than the longest job, so a stop during a 30-minute install waits
@@ -2429,7 +2604,7 @@ UNIT
     # The scheduler tick. Without it the metrics collector never samples and the
     # disk cleaner never runs — features that look built but do nothing.
     cat >/etc/cron.d/${PANEL_SLUG}-scheduler <<CRON
-* * * * * ${APP_USER} /usr/bin/php${PHP_VERSION} ${backend}/artisan schedule:run >> /dev/null 2>&1
+* * * * * ${APP_USER} ${PANEL_PHP_BIN} ${backend}/artisan schedule:run >> /dev/null 2>&1
 CRON
     chmod 644 /etc/cron.d/${PANEL_SLUG}-scheduler
 
@@ -2494,7 +2669,7 @@ configure_sudoers() {
     #
     # setup_backend has already run (see main), so vendor/ exists.
     if ! sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:sudoers --print' \
-        -- "${APP_DIR}/backend" "/usr/bin/php${PHP_VERSION}" >/etc/sudoers.d/${PANEL_SLUG} 2>>"$LOG_FILE"; then
+        -- "${APP_DIR}/backend" "${PANEL_PHP_BIN}" >/etc/sudoers.d/${PANEL_SLUG} 2>>"$LOG_FILE"; then
         rm -f /etc/sudoers.d/${PANEL_SLUG}
         die "could not render the sudoers grant from config/server.php"
     fi
@@ -2550,7 +2725,7 @@ configure_firewall() {
     # them. Records only; it never runs ufw, so the "we do not enable someone's
     # firewall for them" rule above still holds. Idempotent.
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan firewall:record-defaults' \
-        -- "${APP_DIR}/backend" "/usr/bin/php${PHP_VERSION}"
+        -- "${APP_DIR}/backend" "${PANEL_PHP_BIN}"
     ok "rules recorded in the panel"
 }
 
@@ -2876,8 +3051,8 @@ finish() {
 
     # Last, because it freezes whatever .env says at this moment. Anything that
     # edits .env after this must re-run it.
-    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan config:cache' -- "$backend" "/usr/bin/php${PHP_VERSION}"
-    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan route:cache' -- "$backend" "/usr/bin/php${PHP_VERSION}"
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan config:cache' -- "$backend" "${PANEL_PHP_BIN}"
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan route:cache' -- "$backend" "${PANEL_PHP_BIN}"
     ok "configuration cached"
 
     # Prove the panel actually works before claiming the install succeeded.
@@ -2892,7 +3067,7 @@ finish() {
     step "Checking the installation"
     if (( DRY_RUN )); then
         printf '     %s$ artisan panel:doctor%s\n' "$DIM" "$RESET"
-    elif sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:doctor' -- "$backend" "/usr/bin/php${PHP_VERSION}"; then
+    elif sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:doctor' -- "$backend" "${PANEL_PHP_BIN}"; then
         ok "all checks passed"
     else
         warn "some checks failed — see above. The panel is installed but parts of it will not work until these are fixed."

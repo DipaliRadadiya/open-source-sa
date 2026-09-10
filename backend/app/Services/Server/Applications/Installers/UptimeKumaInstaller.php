@@ -119,7 +119,7 @@ class UptimeKumaInstaller extends AbstractNodeInstaller
         try {
             $response = Http::timeout(15)
                 // GitHub answers 403 to a request with no User-Agent.
-                ->withHeaders(['Accept' => 'application/vnd.github+json', 'User-Agent' => 'serveravatar-panel'])
+                ->withHeaders(['Accept' => 'application/vnd.github+json', 'User-Agent' => 'control-panel'])
                 ->get($endpoint, ['per_page' => 100]);
         } catch (\Throwable) {
             // A DNS failure or a timeout is not a reason to refuse the install

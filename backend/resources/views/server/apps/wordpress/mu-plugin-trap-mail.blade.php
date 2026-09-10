@@ -1,7 +1,6 @@
 {!! '<?php' !!}
 /**
  * Plugin Name: Staging Mail Trap
- * Plugin URI:  https://serveravatar.com/docs/staging
  * Description: Blocks ALL outgoing email from this staging site so a copy of a live site cannot email real customers. Added automatically by your hosting control panel when this staging site was created. This is not malware and was not added by an attacker — see the notes below. It is never copied to your live site.
  * Version:     1.0.0
  * Author:      Your hosting control panel
