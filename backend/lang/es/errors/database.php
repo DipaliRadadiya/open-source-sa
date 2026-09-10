@@ -7,7 +7,7 @@ return [
     'application_already_attached' => ':application ya tiene vinculada la base de datos :database. Desvincula esa primero o vincula esta base de datos a otra aplicación.',
     'engine_not_accepted' => ':application no puede usar una base de datos :engine. Acepta :accepted.',
     'engine_not_installable' => 'El panel aún no puede instalar este motor de base de datos. Instálelo usted mismo y el panel lo detectará.',
-    'phpmyadmin_mongo_not_supported' => 'phpMyAdmin no es compatible con las bases de datos MongoDB.',
+    'phpmyadmin_engine_not_supported' => 'phpMyAdmin no admite bases de datos :engine.',
     'phpmyadmin_not_deployed' => 'No hay ningún sitio phpMyAdmin instalado en este servidor.',
     'phpmyadmin_no_users' => 'Cree un usuario de base de datos antes de acceder a phpMyAdmin.',
     'remote_users_unsupported' => 'El acceso remoto no está disponible para :engine: sus cuentas no están vinculadas a un host. Usa localhost.',

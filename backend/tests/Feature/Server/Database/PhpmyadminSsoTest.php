@@ -334,6 +334,20 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
             ->assertJsonFragment(['message' => 'phpMyAdmin does not support MongoDB databases.']);
     });
 
+    it('names the engine it is refusing, not whichever was the only one at the time', function () {
+        grantDatabasePermission($this->user);
+
+        // The message was hardcoded to MongoDB, the only non-SQL engine when it
+        // was written. A PostgreSQL database was then refused with a sentence
+        // about a database it has nothing to do with — which reads as a panel
+        // bug rather than as an answer. Reported by the frontend, 2026-09-10.
+        $postgres = Database::factory()->create(['engine' => 'postgresql']);
+
+        $this->postJson("/api/databases/{$postgres->id}/phpmyadmin-sso")
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'phpMyAdmin does not support PostgreSQL databases.']);
+    });
+
     it('returns 422 when no phpMyAdmin site is deployed', function () {
         grantDatabasePermission($this->user);
 

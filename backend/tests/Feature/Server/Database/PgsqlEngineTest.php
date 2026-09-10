@@ -261,3 +261,25 @@ it('ships the postgres client extension on every php stack', function () {
             ->and($stack->versionPackages('8.4'))->toContain($expected);
     }
 });
+
+it('publishes whether an engine can have remote users, so no client has to name engines', function () {
+    // Reported by the frontend, 2026-09-10: my own handoff told them "for
+    // PostgreSQL, show only localhost", which is an engine name typed into
+    // client code — exactly what 3ceb3452 removed from the backend. The value
+    // already existed; it just was not sent.
+    $capabilities = collect(app(DatabaseManager::class)->capabilities())->keyBy('engine');
+
+    expect($capabilities['postgresql']['supports_remote_users'])->toBeFalse()
+        ->and($capabilities['mysql']['supports_remote_users'])->toBeTrue()
+        ->and($capabilities['mongodb']['supports_remote_users'])->toBeTrue();
+});
+
+it('reports an unmeasured counter as nothing, not as zero', function () {
+    // PostgreSQL has no slow-query counter without pg_stat_statements, which
+    // the panel does not install. Zero renders as "no slow queries" — good
+    // news the panel has not earned. MongoEngine already answered null here;
+    // zero was an inconsistency I introduced.
+    Process::fake(fn () => Process::result(output: "5\t100\t1\t2000\t3600"));
+
+    expect(pgEngine()->status()['slow_queries'])->toBeNull();
+});

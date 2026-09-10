@@ -420,10 +420,14 @@ class PgsqlEngine implements DatabaseEngine
             // statements globally, and a made-up number would be worse than
             // the nearest true one.
             'queries' => (int) ($c[3] ?? 0),
-            // No slow-query counter exists without pg_stat_statements, which
-            // is an extension this panel does not install. Zero, rather than a
-            // guess dressed as a measurement.
-            'slow_queries' => 0,
+            // Null, not zero. PostgreSQL has no slow-query counter without
+            // `pg_stat_statements`, an extension the panel does not install —
+            // so there is nothing to report, and a screen rendering `0`
+            // presents "we never looked" as "none happened", which is the
+            // better news of the two and the false one. MongoEngine already
+            // answers null here for the same reason; zero was my
+            // inconsistency, reported by the frontend on the day it shipped.
+            'slow_queries' => null,
             'uptime_seconds' => (int) ($c[4] ?? 0),
         ];
     }

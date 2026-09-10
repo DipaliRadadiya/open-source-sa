@@ -7,7 +7,7 @@ return [
     'application_already_attached' => ':application already has the database :database attached. Detach that one first, or attach this database to another application.',
     'engine_not_accepted' => ':application cannot use a :engine database. It accepts :accepted.',
     'engine_not_installable' => 'The panel cannot install this database engine yet. Install it yourself and the panel will detect it.',
-    'phpmyadmin_mongo_not_supported' => 'phpMyAdmin does not support MongoDB databases.',
+    'phpmyadmin_engine_not_supported' => 'phpMyAdmin does not support :engine databases.',
     'phpmyadmin_not_deployed' => 'No phpMyAdmin site is installed on this server.',
     'phpmyadmin_no_users' => 'Create a database user before accessing phpMyAdmin.',
     'remote_users_unsupported' => 'Remote access is not available for :engine — its accounts are not tied to a host. Use localhost.',

@@ -3141,7 +3141,9 @@ Capability list for every engine the panel knows. **Four as of 2026-09-10** — 
 
 **`charsets` are PostgreSQL's, not MySQL's.** `UTF8` / `LATIN1` / `SQL_ASCII`, with LC_COLLATE values (`C`, `C.UTF-8`, `en_US.UTF-8`) in place of MySQL collations. Read them from this endpoint per engine; `utf8mb4` is not a value PostgreSQL has ever heard of, and a create using one is refused.
 
-**Remote database users are refused** with a `422` on `create_user.connection_preference` / `connection_preference`. A PostgreSQL role is cluster-wide and carries no host — which addresses may reach it is decided by `pg_hba.conf`, a file this panel does not manage, and opening 5432 in the firewall achieves nothing on its own. `localhost` is the only accepted value for this engine. The API refuses rather than storing a preference nothing would apply.
+**`supports_remote_users`** (added 2026-09-10) is on every engine row — `false` for `postgresql`, `true` for the rest. **Branch on this field, never on the engine name.** It is why the panel knows the answer and the client does not have to.
+
+**Remote database users are refused** with a `422` on `create_user.connection_preference` / `connection_preference` for any engine whose `supports_remote_users` is `false`. A PostgreSQL role is cluster-wide and carries no host — which addresses may reach it is decided by `pg_hba.conf`, a file this panel does not manage, and opening 5432 in the firewall achieves nothing on its own. `localhost` is the only accepted value for this engine. The API refuses rather than storing a preference nothing would apply.
 
 `install_status` is only ever `installing | failed | null` — never `installed`. A finished install removes its row.
 
@@ -3616,6 +3618,10 @@ Kill a process/op (`KILL`).
   "uptime_seconds": 864000
 }}
 ```
+
+**Any field may be `null`, and `null` is not `0`.** It means the engine does not expose that counter, and the two must render differently — "0 slow queries" reads as good news the panel has not earned.
+
+Today: `slow_queries` is `null` on **PostgreSQL** (no counter without `pg_stat_statements`, which the panel does not install) and on **MongoDB**. `queries` on PostgreSQL counts *transactions*, not statements — PostgreSQL keeps no global statement counter, and the nearest true number was preferred to a made-up one.
 
 ---
 

@@ -7,7 +7,7 @@ return [
     'application_already_attached' => 'К :application уже привязана база данных :database. Сначала отвяжите её или привяжите эту базу данных к другому приложению.',
     'engine_not_accepted' => ':application не может использовать базу данных :engine. Поддерживается: :accepted.',
     'engine_not_installable' => 'Панель пока не может установить этот движок базы данных. Установите его сами, и панель его обнаружит.',
-    'phpmyadmin_mongo_not_supported' => 'phpMyAdmin не поддерживает базы данных MongoDB.',
+    'phpmyadmin_engine_not_supported' => 'phpMyAdmin не поддерживает базы данных :engine.',
     'phpmyadmin_not_deployed' => 'На этом сервере не установлен сайт phpMyAdmin.',
     'phpmyadmin_no_users' => 'Создайте пользователя базы данных перед доступом к phpMyAdmin.',
     'remote_users_unsupported' => 'Удалённый доступ недоступен для :engine — его учётные записи не привязаны к хосту. Используйте localhost.',

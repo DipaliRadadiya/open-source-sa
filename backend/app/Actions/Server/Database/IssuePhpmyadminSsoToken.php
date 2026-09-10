@@ -15,7 +15,8 @@ use App\Services\Server\Applications\PhpMyAdminSso;
  * Mints a one-time SSO token for phpMyAdmin auto-login.
  *
  * The flow:
- *  1. Validate the DB is MySQL/MariaDB (phpMyAdmin does not support MongoDB).
+ *  1. Validate the DB is MySQL/MariaDB — phpMyAdmin supports neither
+ *     MongoDB nor PostgreSQL, and the refusal names whichever it is.
  *  2. Find a running phpMyAdmin application on this server.
  *  3. Resolve the DB user (explicit or first available).
  *  4. Put the sign-in script in place, then drop a short-lived token beside it.
@@ -96,7 +97,14 @@ class IssuePhpmyadminSsoToken
     {
         if ($database->driver() !== 'sql') {
             throw new PhpmyadminSsoException(
-                message: __('errors/database.phpmyadmin_mongo_not_supported'),
+                // Names the engine the database actually uses. The message was
+                // hardcoded to MongoDB, which was the only non-SQL engine when
+                // it was written — so a PostgreSQL database was refused with a
+                // sentence about a database it has nothing to do with, which
+                // reads as a panel bug rather than an answer.
+                message: __('errors/database.phpmyadmin_engine_not_supported', [
+                    'engine' => (string) config("server.databases.engines.{$database->engine}.label", $database->engine),
+                ]),
                 feature: 'database',
             );
         }

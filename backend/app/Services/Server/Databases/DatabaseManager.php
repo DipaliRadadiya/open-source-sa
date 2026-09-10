@@ -86,6 +86,17 @@ class DatabaseManager
                 'version' => $version,
                 'installed' => $this->installed($engine, $version !== null),
                 'charsets' => $this->charsets($engine),
+                // Whether an account on this engine can be reached from
+                // another host. False where the host is not part of the
+                // account — a PostgreSQL role is cluster-wide, and which
+                // addresses may reach it lives in `pg_hba.conf`, which the
+                // panel does not manage.
+                //
+                // Published because the alternative is the client naming the
+                // engine in its own code, which is exactly what 3ceb3452 took
+                // out of this class: a fact the API already holds is not the
+                // client's to re-derive.
+                'supports_remote_users' => $this->supportsRemoteUsers($engine),
             ];
         }, $this->engineNames());
     }

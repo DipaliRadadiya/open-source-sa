@@ -7,7 +7,7 @@ return [
     'application_already_attached' => ':application にはすでに :database データベースが紐付いています。先にそちらの紐付けを解除するか、このデータベースを別のアプリケーションに紐付けてください。',
     'engine_not_accepted' => ':application は :engine データベースを使用できません。使用できるのは :accepted です。',
     'engine_not_installable' => 'このデータベースエンジンはまだパネルからインストールできません。ご自身でインストールすればパネルが検出します。',
-    'phpmyadmin_mongo_not_supported' => 'phpMyAdminはMongoDBデータベースをサポートしていません。',
+    'phpmyadmin_engine_not_supported' => 'phpMyAdmin は :engine データベースに対応していません。',
     'phpmyadmin_not_deployed' => 'このサーバーにphpMyAdminサイトがインストールされていません。',
     'phpmyadmin_no_users' => 'phpMyAdminにアクセスする前にデータベースユーザーを作成してください。',
     'remote_users_unsupported' => ':engine ではリモートアクセスを利用できません。アカウントがホストに紐づかないためです。localhost を使用してください。',
