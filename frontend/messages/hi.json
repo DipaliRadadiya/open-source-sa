@@ -3123,7 +3123,9 @@
       "buildCommandSuperseded": "यह नहीं चलेगा — डिप्लॉय स्क्रिप्ट इसकी जगह ले लेती है।",
       "moreLines": "{count, plural, one {+# और पंक्ति} other {+# और पंक्तियाँ}}",
       "needsSystemUser": "अभी कोई सिस्टम यूज़र नहीं है। ऊपर “सिस्टम यूज़र बनाएँ” से एक बनाएँ।",
-      "needsGitAccount": "कोई Git खाता कनेक्ट नहीं है। नीचे “Connect Git” इस्तेमाल करें, फिर रिफ़्रेश करें।"
+      "needsGitAccount": "कोई Git खाता कनेक्ट नहीं है। नीचे “Connect Git” इस्तेमाल करें, फिर रिफ़्रेश करें।",
+      "installPhpVersion": "PHP वर्शन इंस्टॉल करें",
+      "installNodeVersion": "Node वर्शन इंस्टॉल करें"
     },
     "actions": {
       "label": "क्रियाएं",
@@ -4653,8 +4655,8 @@
       "resumeFailed": "हम साइट को फिर चालू नहीं कर सके।"
     },
     "unavailableRuntime": {
-      "php": "इस साइट को PHP {range} चाहिए, और इस सर्वर पर {installed} है। पहले कोई समर्थित PHP वर्शन इंस्टॉल करें।",
-      "node": "इस साइट को Node {range} चाहिए, और इस सर्वर पर {installed} है। पहले कोई समर्थित Node वर्शन इंस्टॉल करें।"
+      "php": "इस साइट को PHP {range} चाहिए, और इस सर्वर पर {installed} है।",
+      "node": "इस साइट को Node {range} चाहिए, और इस सर्वर पर {installed} है।"
     }
   },
   "panelUpdate": {

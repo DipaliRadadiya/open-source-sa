@@ -3123,7 +3123,9 @@
       "buildCommandSuperseded": "Esto no se ejecutará: el script de despliegue lo sustituye.",
       "moreLines": "{count, plural, one {+# línea más} other {+# líneas más}}",
       "needsSystemUser": "Todavía no existe ningún usuario del sistema. Usa «Crear usuario del sistema» arriba para crear uno.",
-      "needsGitAccount": "No hay ninguna cuenta de Git conectada. Usa «Conectar Git» abajo y luego Actualizar."
+      "needsGitAccount": "No hay ninguna cuenta de Git conectada. Usa «Conectar Git» abajo y luego Actualizar.",
+      "installPhpVersion": "Instalar una versión de PHP",
+      "installNodeVersion": "Instalar una versión de Node"
     },
     "actions": {
       "label": "Acciones",
@@ -4653,8 +4655,8 @@
       "resumeFailed": "No pudimos reanudar el sitio."
     },
     "unavailableRuntime": {
-      "php": "Este sitio necesita PHP {range} y este servidor tiene {installed}. Instala antes una versión de PHP compatible.",
-      "node": "Este sitio necesita Node {range} y este servidor tiene {installed}. Instala antes una versión de Node compatible."
+      "php": "Este sitio necesita PHP {range} y este servidor tiene {installed}.",
+      "node": "Este sitio necesita Node {range} y este servidor tiene {installed}."
     }
   },
   "panelUpdate": {

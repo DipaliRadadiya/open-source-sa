@@ -3123,7 +3123,9 @@
       "buildCommandSuperseded": "This will not run — the deploy script replaces it.",
       "moreLines": "{count, plural, one {+# more line} other {+# more lines}}",
       "needsSystemUser": "No system user exists yet. Use “Create system user” above to make one.",
-      "needsGitAccount": "No Git account is connected. Use “Connect Git” below, then Refresh."
+      "needsGitAccount": "No Git account is connected. Use “Connect Git” below, then Refresh.",
+      "installPhpVersion": "Install a PHP version",
+      "installNodeVersion": "Install a Node version"
     },
     "actions": {
       "label": "Actions",
@@ -4653,8 +4655,8 @@
       "resumeFailed": "We couldn't resume the site."
     },
     "unavailableRuntime": {
-      "php": "This site needs PHP {range}, and this server has {installed}. Install a supported PHP version first.",
-      "node": "This site needs Node {range}, and this server has {installed}. Install a supported Node version first."
+      "php": "This site needs PHP {range}, and this server has {installed}.",
+      "node": "This site needs Node {range}, and this server has {installed}."
     }
   },
   "panelUpdate": {

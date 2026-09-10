@@ -197,3 +197,35 @@ test("the PHP page reads the range from the catalogue and survives losing it", a
   assert.match(page, /type\.name === application\.site_type/);
   assert.match(page, /siteTypeTitle=/, "the PHP payload carries no site type, so the page passes it");
 });
+
+test("a runtime-blocked row carries its own way out, beside the reason", async () => {
+  const fs = await import("node:fs");
+  const picker = fs.readFileSync("components/applications/site-type-picker.jsx", "utf8");
+
+  assert.match(picker, /type\?\.unavailable_code !== "runtime"/, "only types blocked BY a runtime");
+  assert.match(picker, /href: "\/php", label: "form\.installPhpVersion"/);
+  assert.match(picker, /href: "\/node", label: "form\.installNodeVersion"/);
+
+  // The link lives with the sentence, not in a footer under the list.
+  const reasonBlock = picker.slice(picker.indexOf("type.unavailable_reason ?"));
+  assert.match(reasonBlock.slice(0, 900), /runtimeFix\(type\)/, "the link renders inside the reason");
+
+  // An unavailable row cannot be a disabled button, or the link inside it is
+  // unreachable — by a mouse, by a screen reader, and by Playwright.
+  assert.match(picker, /const Row = disabled \? "div" : "button"/);
+  assert.doesNotMatch(picker, /"aria-disabled": true/, "it takes the nested link down with it");
+
+  for (const locale of ["en", "es", "hi"]) {
+    const messages = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8")).applications;
+    assert.ok(messages.form.installPhpVersion, `${locale} missing installPhpVersion`);
+    assert.ok(messages.form.installNodeVersion, `${locale} missing installNodeVersion`);
+    // The instruction moved into the link, so the sentence must not repeat
+    // it. Matched on the clause that was removed rather than the word
+    // "install", which the `{installed}` placeholder contains.
+    assert.doesNotMatch(
+      messages.unavailableRuntime.php,
+      /version first/i,
+      `${locale} reason still gives the instruction the link now carries`,
+    );
+  }
+});

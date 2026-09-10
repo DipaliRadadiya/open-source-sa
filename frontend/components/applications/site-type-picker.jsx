@@ -44,6 +44,22 @@ function TypeIcon({ type, className }) {
  * popular-first ordering, and a type this server can't run shown disabled with
  * the reason rather than hidden.
  */
+/**
+ * Where to go and install a runtime this type needs, or null.
+ *
+ * Only for a type blocked BY a runtime. A card the backend greyed for a web
+ * server has nothing to install here, and a link that cannot help is worse
+ * than none. Which runtime is read off the type's own range rather than a
+ * field added for this: a type blocked on `runtime` that declares a PHP range
+ * was blocked by PHP.
+ */
+function runtimeFix(type) {
+  if (type?.unavailable_code !== "runtime") return null;
+  if (type.php_version_range) return { href: "/php", label: "form.installPhpVersion" };
+  if (type.node_version_range) return { href: "/node", label: "form.installNodeVersion" };
+  return null;
+}
+
 export function SiteTypePicker({ types = [], value, onChange }) {
   const t = useTranslations("applications");
   const tc = useTranslations("common");
@@ -163,19 +179,34 @@ export function SiteTypePicker({ types = [], value, onChange }) {
             filtered.map((type) => {
               const isSelected = type.name === value;
               const disabled = !type.available;
+              /*
+               * An unavailable row is a `div`, not a disabled `button`.
+               *
+               * It cannot be chosen either way, and the reason underneath it
+               * now carries a link to the page that fixes it — an anchor
+               * inside a button is invalid markup, and inside a DISABLED one
+               * the click is swallowed before it reaches the link.
+               */
+              const Row = disabled ? "div" : "button";
+              // No `aria-disabled` on the unavailable row. It is a `div`, not a
+              // control, so there is nothing to mark disabled — and marking it
+              // takes the LINK inside it down with it: assistive tech announces
+              // a descendant of an aria-disabled element as unavailable, and
+              // Playwright refuses to click it for the same reason. The greying
+              // and the sentence are what say it cannot be chosen.
+              const rowProps = disabled
+                ? {}
+                : { type: "button", "aria-pressed": isSelected, onClick: () => pick(type.name) };
+
               return (
-                <button
+                <Row
                   key={type.name}
-                  type="button"
-                  disabled={disabled}
-                  aria-pressed={isSelected}
-                  onClick={() => pick(type.name)}
+                  {...rowProps}
                   className={cn(
                     "flex w-full items-start gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
                     "hover:bg-accent hover:text-accent-foreground",
                     isSelected && "bg-accent/60",
-                    disabled &&
-                      "cursor-not-allowed opacity-60 hover:bg-transparent hover:text-inherit",
+                    disabled && "opacity-60 hover:bg-transparent hover:text-inherit",
                   )}
                 >
                   <span
@@ -211,7 +242,24 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                     {disabled && type.unavailable_reason ? (
                       <span className="mt-0.5 flex items-start gap-1 text-xs leading-5 text-destructive">
                         <TriangleAlert className="mt-0.5 size-3 shrink-0" />
-                        {type.unavailable_reason}
+                        <span>
+                          {type.unavailable_reason}
+                          {/* The fix, next to the fact. The sentence says which
+                              version is needed; this is where to go and get
+                              one, so the reader does not have to work out that
+                              PHP versions live on a page called PHP. */}
+                          {runtimeFix(type) ? (
+                            <>
+                              {" "}
+                              <Link
+                                href={runtimeFix(type).href}
+                                className="font-medium underline underline-offset-2 hover:no-underline"
+                              >
+                                {t(runtimeFix(type).label)}
+                              </Link>
+                            </>
+                          ) : null}
+                        </span>
                       </span>
                     ) : null}
                   </span>
@@ -221,7 +269,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                       isSelected ? "opacity-100" : "opacity-0",
                     )}
                   />
-                </button>
+                </Row>
               );
             })
           ) : (
