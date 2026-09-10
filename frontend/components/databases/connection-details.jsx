@@ -28,7 +28,7 @@ import { PhpmyadminButton } from "@/components/databases/phpmyadmin-button";
  */
 const WIDE_FIELDS = new Set(["database", "username"]);
 
-export function ConnectionDetails({ database, canManage = false, phpmyadminInstalled = null }) {
+export function ConnectionDetails({ database, canManage = false, phpmyadminSites = null }) {
   const t = useTranslations("databases.credentials");
   const user = primaryUser(database);
   if (!user) return null;
@@ -79,7 +79,7 @@ export function ConnectionDetails({ database, canManage = false, phpmyadminInsta
           <PhpmyadminButton
             database={database}
             canManage={canManage}
-            installed={phpmyadminInstalled}
+            sites={phpmyadminSites}
           />
         </div>
       </div>

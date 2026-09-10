@@ -2631,7 +2631,8 @@
       "blocked": "आपके ब्राउज़र ने नया टैब ब्लॉक कर दिया।",
       "openAnyway": "phpMyAdmin खोलें",
       "install": "phpMyAdmin इंस्टॉल करें",
-      "needsUser": "पहले एक डेटाबेस उपयोगकर्ता जोड़ें — phpMyAdmin उसी के रूप में साइन इन करता है।"
+      "needsUser": "पहले एक डेटाबेस उपयोगकर्ता जोड़ें — phpMyAdmin उसी के रूप में साइन इन करता है।",
+      "choose": "कौन-सा phpMyAdmin?"
     },
     "usedBy": {
       "title": "द्वारा उपयोग",

@@ -139,8 +139,9 @@ export default async function DatabasesPage({ searchParams }) {
             // A failed exports request must not read as "never backed up" —
             // that is the one wrong answer this column can give.
             backupsUnknown={exportList.failed}
-            // false only when we actually looked and found none.
-            phpmyadminInstalled={phpmyadmin.known ? Boolean(phpmyadmin.site) : null}
+            // An empty list only when we actually looked and found none; null
+            // when the lookup failed, which must not read as "there isn't one".
+            phpmyadminSites={phpmyadmin.known ? phpmyadmin.sites : null}
             applications={appList.applications}
             databaseCounts={dbCounts.counts}
             databasesKnown={dbCounts.known}

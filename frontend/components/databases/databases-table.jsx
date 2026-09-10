@@ -186,7 +186,7 @@ function RowActionsCell({ row, table }) {
       database={row.original}
       onDelete={table.options.meta.onDelete}
       canManage={table.options.meta.canManage}
-      phpmyadminInstalled={table.options.meta.phpmyadminInstalled}
+      phpmyadminSites={table.options.meta.phpmyadminSites}
     />
   );
 }
@@ -215,7 +215,7 @@ function DatabasesList({
   lastBackup = {},
   backupsUnknown = false,
   // null when the lookup failed — see getPhpmyadminSite.
-  phpmyadminInstalled = null,
+  phpmyadminSites = null,
   // For the create dialog's site picker.
   applications = [],
   databaseCounts = null,
@@ -411,7 +411,7 @@ function DatabasesList({
             databases={data}
             canManage={canManage}
             onDelete={setDeleting}
-            phpmyadminInstalled={phpmyadminInstalled}
+            phpmyadminSites={phpmyadminSites}
             showEngine={showEngine}
             engineName={(engine) => t(`engines.${engine}`)}
             lastBackup={lastBackup}
@@ -430,7 +430,7 @@ function DatabasesList({
             engineName: (engine) => t(`engines.${engine}`),
             lastBackup,
             backupsUnknown,
-            phpmyadminInstalled,
+            phpmyadminSites,
           }}
         />
         </div>

@@ -98,9 +98,7 @@ export default async function DatabasePage({ params, searchParams }) {
         <ConnectionDetails
           database={data}
           canManage={canManage}
-          phpmyadminInstalled={
-            phpmyadmin.known ? Boolean(phpmyadmin.site) : null
-          }
+          phpmyadminSites={phpmyadmin.known ? phpmyadmin.sites : null}
         />
 
         <UsedByCard

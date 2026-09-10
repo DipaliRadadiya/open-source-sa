@@ -32,7 +32,7 @@ export function DatabaseRowActions({
   database,
   onDelete,
   canManage,
-  phpmyadminInstalled,
+  phpmyadminSites,
   className = TABLE_ROW,
 }) {
   const t = useTranslations("databases");
@@ -55,7 +55,7 @@ export function DatabaseRowActions({
       <PhpmyadminButton
         database={database}
         canManage={canManage}
-        installed={phpmyadminInstalled}
+        sites={phpmyadminSites}
         compact
       />
 

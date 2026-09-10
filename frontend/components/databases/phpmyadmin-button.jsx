@@ -3,11 +3,18 @@ import { useTranslations } from "next-intl";
 import { DisabledReasonProvider, ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Download, Loader2, TableProperties } from "lucide-react";
+import { ChevronDown, Download, Loader2, TableProperties } from "lucide-react";
 import { phpmyadminSso } from "@/lib/api/databases";
 import { phpmyadminState, userCount } from "@/lib/databases/phpmyadmin-state";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Open this database in phpMyAdmin, already logged in.
@@ -42,12 +49,21 @@ export function PhpmyadminButton({
   database,
   canManage,
   compact = false,
-  // true / false / null — null means the lookup failed, which is not the same
-  // as "there isn't one" and must not change what the button offers.
-  installed = null,
+  /*
+   * Every active phpMyAdmin site on this server, or null when the lookup
+   * failed — which is NOT the same as "there isn't one" and must not change
+   * what the button offers.
+   *
+   * The list rather than a boolean, because the button has to know whether
+   * there is a choice to offer before anyone clicks it. A boolean could only
+   * say that one exists, and the panel would go on opening whichever the API
+   * picked.
+   */
+  sites = null,
 }) {
   const t = useTranslations("databases.phpmyadmin");
   const [opening, setOpening] = useState(false);
+  const installed = sites === null ? null : sites.length > 0;
 
   /*
    * The two refusals the panel can see coming, taken from the SSO endpoint's
@@ -103,7 +119,7 @@ export function PhpmyadminButton({
     );
   }
 
-  async function open() {
+  async function open(applicationId) {
     setOpening(true);
     // Opened synchronously off the click, then pointed somewhere once the
     // token arrives. Opening it after the await is a popup the browser did
@@ -116,7 +132,7 @@ export function PhpmyadminButton({
       // already disowned — a throw here used to take the whole click with it.
       if (tab) tab.opener = null;
 
-      const { data } = await phpmyadminSso(database.id);
+      const { data } = await phpmyadminSso(database.id, undefined, applicationId);
       const url = data?.redirect_url;
       if (!url) throw new Error("no url");
 
@@ -153,26 +169,64 @@ export function PhpmyadminButton({
   // the icon for "opens a site", so it read as a link to the database's own
   // page — and the tooltip that explained it needs a hover, which a phone
   // does not have. A word costs a little width and removes the guessing.
-  if (compact) {
+  const label = compact ? "phpMyAdmin" : t("open");
+
+  /*
+   * More than one installation: the button asks which, instead of silently
+   * opening whichever has the lowest id.
+   *
+   * A menu rather than a dialog. There is one thing to decide and no way to
+   * get it wrong — the wrong choice costs a click, not data — and a modal for
+   * that is heavier than the decision.
+   *
+   * `onSelect` still counts as the click that opened the tab, which is the
+   * whole reason the choice can live here at all: a tab opened outside a
+   * gesture is a blocked popup.
+   */
+  if (sites !== null && sites.length > 1) {
     return (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={open}
-        disabled={!canManage || opening}
-      >
-        {icon}
-        phpMyAdmin
-      </Button>
+      <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline" size="sm" disabled={!canManage || opening}>
+              {icon}
+              {label}
+              <ChevronDown className="size-4 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-w-[min(20rem,90vw)]">
+            <DropdownMenuLabel>{t("choose")}</DropdownMenuLabel>
+            {sites.map((site) => (
+              <DropdownMenuItem
+                key={site.id}
+                onSelect={() => open(site.id)}
+                // The domain is the only thing that tells two installations
+                // apart — the name is whatever someone typed, and both are
+                // called phpMyAdmin often enough to be useless here.
+                className="font-mono text-xs wrap-anywhere"
+              >
+                {site.domain}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </DisabledReasonProvider>
     );
   }
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
-      <Button type="button" variant="outline" size="sm" onClick={open} disabled={!canManage || opening}>
+      {/* Arrow function, not a bare reference: `onClick={open}` hands the
+          click event straight to the site-id parameter. */}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => open()}
+        disabled={!canManage || opening}
+      >
         {icon}
-        {t("open")}
+        {label}
       </Button>
     </DisabledReasonProvider>
   );

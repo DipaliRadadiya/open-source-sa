@@ -164,8 +164,16 @@ export function getTables(databaseId, { signal } = {}) {
  * MySQL and MariaDB only, and only when a phpMyAdmin site exists on this
  * server. Both refusals come back as 422 with the reason in the message.
  */
-export function phpmyadminSso(databaseId, databaseUserId) {
+export function phpmyadminSso(databaseId, databaseUserId, applicationId) {
+  const params = {};
+  if (databaseUserId) params.database_user_id = databaseUserId;
+  // Which installation to sign into, on a server with more than one. Omitted,
+  // the API takes the lowest id — stable, but not necessarily the one meant.
+  // It has to be named here: the token is written into the chosen site's own
+  // directory, so no redirect afterwards can reach a different one.
+  if (applicationId) params.application_id = applicationId;
+
   return api.post(`/databases/${databaseId}/phpmyadmin-sso`, null, {
-    params: databaseUserId ? { database_user_id: databaseUserId } : undefined,
+    params: Object.keys(params).length > 0 ? params : undefined,
   });
 }

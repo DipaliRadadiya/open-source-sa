@@ -2631,7 +2631,8 @@
       "blocked": "Your browser blocked the new tab.",
       "openAnyway": "Open phpMyAdmin",
       "install": "Install phpMyAdmin",
-      "needsUser": "Add a database user first — phpMyAdmin signs in as one."
+      "needsUser": "Add a database user first — phpMyAdmin signs in as one.",
+      "choose": "Which phpMyAdmin?"
     },
     "usedBy": {
       "title": "Used by",

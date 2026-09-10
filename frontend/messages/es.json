@@ -2631,7 +2631,8 @@
       "blocked": "Tu navegador bloqueó la nueva pestaña.",
       "openAnyway": "Abrir phpMyAdmin",
       "install": "Instalar phpMyAdmin",
-      "needsUser": "Añade primero un usuario de la base de datos — phpMyAdmin inicia sesión como uno."
+      "needsUser": "Añade primero un usuario de la base de datos — phpMyAdmin inicia sesión como uno.",
+      "choose": "¿Qué phpMyAdmin?"
     },
     "usedBy": {
       "title": "Usada por",

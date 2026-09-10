@@ -33,7 +33,7 @@ export function DatabasesCards({
   engineName,
   lastBackup = {},
   backupsUnknown = false,
-  phpmyadminInstalled = null,
+  phpmyadminSites = null,
   onDelete,
   // The site each database belongs to. The table has had a column for this
   // since it was added; the cards did not, so on a phone the link that decides
@@ -168,7 +168,7 @@ export function DatabasesCards({
                 database={database}
                 onDelete={onDelete}
                 canManage={canManage}
-                phpmyadminInstalled={phpmyadminInstalled}
+                phpmyadminSites={phpmyadminSites}
               />
             </div>
           </CardListItem>

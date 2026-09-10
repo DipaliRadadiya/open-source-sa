@@ -187,7 +187,7 @@ export async function getApplicationStaging(id) {
 }
 
 /**
- * The active phpMyAdmin site, if this server has one.
+ * Every active phpMyAdmin site on this server.
  *
  * Asks the same question the SSO endpoint asks before it will issue a token:
  *
@@ -202,15 +202,21 @@ export async function getApplicationStaging(id) {
  * isn't one" are different, and only the second should change what the button
  * says. Callers treat null as "carry on as before".
  *
+ * The whole list, not just the first: a server can have several, and the
+ * button has to know whether there is a choice to offer before it is clicked.
+ * The SSO endpoint takes the lowest id when none is named, so an unasked
+ * choice is stable but not necessarily the one meant.
+ *
  * `cache`d and argument-free so the list page and a detail page on the same
  * request share one call.
  */
 export const getPhpmyadminSite = cache(async function getPhpmyadminSite() {
   const result = await read("/applications", applicationsResponseSchema, {
-    searchParams: { "filter[site_type]": "phpmyadmin", "filter[status]": "active", per_page: 1 },
+    searchParams: { "filter[site_type]": "phpmyadmin", "filter[status]": "active", per_page: 100 },
   });
 
-  if (result.failed) return { site: null, known: false };
+  if (result.failed) return { sites: null, site: null, known: false };
 
-  return { site: result.data?.applications?.[0] ?? null, known: true };
+  const sites = result.data?.applications ?? [];
+  return { sites, site: sites[0] ?? null, known: true };
 });

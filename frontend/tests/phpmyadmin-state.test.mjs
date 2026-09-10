@@ -110,3 +110,66 @@ test("the schema never invents a user count the API did not send", () => {
     "users_count defaults again — an absent count becomes 0 and phpMyAdmin locks on every detail page",
   );
 });
+
+// --- The picker, added when the SSO endpoint learned `application_id` ---
+
+test("a server with several installations is asked which one, not guessed at", () => {
+  const button = fs.readFileSync(path.join(root, "components/databases/phpmyadmin-button.jsx"), "utf8");
+  assert.match(
+    button,
+    /sites !== null && sites\.length > 1/,
+    "one installation must still open on the first click; the menu is only for a real choice",
+  );
+  assert.match(button, /onSelect=\{\(\) => open\(site\.id\)\}/, "each entry opens its own installation");
+});
+
+test("the plain button does not hand its click event to the site id", () => {
+  const button = fs.readFileSync(path.join(root, "components/databases/phpmyadmin-button.jsx"), "utf8");
+  assert.match(
+    button,
+    /onClick=\{\(\) => open\(\)\}/,
+    "`onClick={open}` passes the React event as application_id, which the API rejects as a non-integer",
+  );
+});
+
+test("the tab is still opened inside the click that asked for it", () => {
+  const button = fs.readFileSync(path.join(root, "components/databases/phpmyadmin-button.jsx"), "utf8");
+  const body = button.slice(button.indexOf("async function open("));
+  const openTab = body.indexOf('window.open("", "_blank")');
+  // The call itself, not the word — a comment above the function says "after
+  // the await" and matched before the code did.
+  const firstAwait = body.indexOf("await phpmyadminSso(");
+  assert.ok(openTab !== -1 && openTab < firstAwait, "a tab opened after an await is a blocked popup");
+});
+
+test("the id reaches the API as application_id, beside the user id it already sent", () => {
+  const client = fs.readFileSync(path.join(root, "lib/api/databases.js"), "utf8");
+  const fn = client.slice(client.indexOf("export function phpmyadminSso"));
+  assert.match(fn, /params\.application_id = applicationId/);
+  assert.match(fn, /params\.database_user_id = databaseUserId/, "the existing parameter must survive");
+  assert.match(
+    fn,
+    /Object\.keys\(params\)\.length > 0 \? params : undefined/,
+    "neither given, no query string — the API's own fallback picks the site",
+  );
+});
+
+test("the lookup fetches every installation, not just the first", () => {
+  const fetcher = fs.readFileSync(path.join(root, "lib/applications/get-applications.js"), "utf8");
+  const fn = fetcher.slice(fetcher.indexOf("export const getPhpmyadminSite"));
+  assert.doesNotMatch(
+    fn.slice(0, fn.indexOf("});")),
+    /per_page: 1\b/,
+    "per_page 1 cannot tell one installation from five",
+  );
+  assert.match(fn, /sites,/, "callers need the list to know whether there is a choice");
+});
+
+test("a failed lookup stays unknown rather than becoming an empty server", () => {
+  const fetcher = fs.readFileSync(path.join(root, "lib/applications/get-applications.js"), "utf8");
+  assert.match(
+    fetcher,
+    /if \(result\.failed\) return \{ sites: null, site: null, known: false \}/,
+    "an empty array would offer to install a second phpMyAdmin because one request timed out",
+  );
+});
