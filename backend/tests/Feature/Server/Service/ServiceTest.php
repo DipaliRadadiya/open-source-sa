@@ -282,3 +282,99 @@ it('denies a viewer without manage from running an action', function () {
         ->putJson('/api/services/mariadb', ['action' => 'restart'])
         ->assertForbidden();
 });
+
+/**
+ * PostgreSQL is the one service whose status cannot come from systemd.
+ *
+ * `postgresql.service` is a meta unit — `Type=oneshot`, `ExecStart=/bin/true`,
+ * `RemainAfterExit=on` — so `ActiveState` is `active` because /bin/true
+ * succeeded, whatever the clusters are doing; and `postgresql@.service`
+ * prefixes its ExecStart with `-`, so systemd ignores a cluster that failed to
+ * start. Both read from the shipped package, 2026-09-10.
+ *
+ * Every fake here has systemd reporting `active`, because that is what a real
+ * box reports even with the database completely down.
+ *
+ * @param  array<string, array{load: string, active: string, file: string}>  $units
+ */
+function fakeServicesWithPostgres(array $units, bool $postgresAnswers): void
+{
+    Process::fake(function ($process) use ($units, $postgresAnswers) {
+        $binary = $process->command[0] ?? '';
+
+        if ($binary === 'pg_isready') {
+            return $postgresAnswers
+                ? Process::result(output: '127.0.0.1:5432 - accepting connections')
+                : Process::result(exitCode: 2, errorOutput: 'no response');
+        }
+
+        if (($process->command[1] ?? null) === 'show') {
+            $unit = $process->command[2] ?? '';
+            $s = $units[$unit] ?? ['load' => 'not-found', 'active' => 'inactive', 'file' => 'disabled'];
+
+            return Process::result(output: "Id={$unit}.service\nLoadState={$s['load']}\nActiveState={$s['active']}\nUnitFileState={$s['file']}\nCanReload=no\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+}
+
+function postgresServiceRow(): ?array
+{
+    return collect(
+        test()->withHeader('Authorization', 'Bearer '.test()->token)
+            ->getJson('/api/services')->assertOk()->json('services')
+    )->firstWhere('key', 'postgresql');
+}
+
+it('lists PostgreSQL among the services once it is installed', function () {
+    // It was absent entirely: MySQL and MongoDB had start/stop/restart here and
+    // PostgreSQL did not, so a database installed from the panel could not be
+    // restarted from the screen that restarts databases.
+    fakeServicesWithPostgres(['postgresql' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']], true);
+
+    expect(postgresServiceRow())->not->toBeNull()
+        ->and(postgresServiceRow()['label'])->toBe('PostgreSQL')
+        ->and(postgresServiceRow()['status'])->toBe('active');
+});
+
+it('reports PostgreSQL as down when the cluster does not answer, however cheerful systemd is', function () {
+    // The reason this feature is more than a config line. systemd says active —
+    // it always does — and the cluster is dead. Reporting "Running" here would
+    // contradict the Databases screen, which asks pg_isready and gets the truth.
+    fakeServicesWithPostgres(['postgresql' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']], false);
+
+    expect(postgresServiceRow()['status'])->toBe('inactive')
+        // Still installed and still enabled: systemd answers those correctly,
+        // and only the one field it cannot answer is overridden.
+        ->and(postgresServiceRow()['state'])->toBe('installed')
+        ->and(postgresServiceRow()['enabled'])->toBeTrue();
+});
+
+it('does not probe a service that has no health command', function () {
+    $probed = [];
+
+    Process::fake(function ($process) use (&$probed) {
+        $probed[] = $process->command[0] ?? '';
+
+        if (($process->command[1] ?? null) === 'show') {
+            $unit = $process->command[2] ?? '';
+
+            // Only nginx is on this box. The first version of this test
+            // reported every unit as loaded, so PostgreSQL was installed too
+            // and its probe ran — correctly. A fake that installs everything
+            // cannot show that something was skipped.
+            $load = $unit === 'nginx' ? 'loaded' : 'not-found';
+
+            return Process::result(output: "Id={$unit}.service\nLoadState={$load}\nActiveState=active\nUnitFileState=enabled\nCanReload=yes\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")->getJson('/api/services')->assertOk();
+
+    // Every other service still costs exactly what it did — the override runs
+    // only where the catalog asks for it.
+    expect($probed)->not->toContain('pg_isready');
+});

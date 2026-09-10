@@ -118,6 +118,8 @@ class ServiceManager
             return $this->describePendingInstall($service);
         }
 
+        $state = $this->withHealthCheck($service, $state);
+
         return [
             'key' => $service['key'],
             'label' => $service['label'],
@@ -383,6 +385,49 @@ class ServiceManager
      *
      * @return array{installed: bool, id: ?string, status: string, enabled: bool, can_reload: bool, properties: array<string, string|null>}
      */
+    /**
+     * Replace systemd's verdict where systemd cannot give one.
+     *
+     * Only for services carrying a `health` command in the catalog, which today
+     * is PostgreSQL alone. Its `postgresql.service` is a meta unit —
+     * `Type=oneshot`, `ExecStart=/bin/true`, `RemainAfterExit=on` — so
+     * `ActiveState` reports `active` because /bin/true succeeded, and
+     * `postgresql@.service` prefixes its ExecStart with `-`, so systemd ignores
+     * a cluster that failed to start. Neither can say the database is down.
+     *
+     * Without this the Services screen would show "Running" at the same moment
+     * the Databases screen, which asks `pg_isready`, says it is not — two
+     * screens with opposite answers, and the reassuring one wrong.
+     *
+     * The exit code is the whole answer, which is why the probe runs
+     * `--quiet`: `pg_isready` returns 0 only when the server is accepting
+     * connections.
+     *
+     * Deliberately narrow. `installed`, `enabled`, `id` and the resource
+     * figures still come from systemd, which answers those correctly — this
+     * overrides the one field it cannot.
+     *
+     * @param  array<string, mixed>  $service
+     * @param  array<string, mixed>  $state
+     * @return array<string, mixed>
+     */
+    private function withHealthCheck(array $service, array $state): array
+    {
+        $health = $service['health'] ?? null;
+
+        if (! is_array($health) || $health === []) {
+            return $state;
+        }
+
+        $state['status'] = $this->serverOps->run(
+            $health,
+            ['feature' => 'service', 'op' => 'health', 'unit' => $service['unit']],
+            timeout: 15,
+        )->ok ? 'active' : 'inactive';
+
+        return $state;
+    }
+
     private function inspect(string $unit): array
     {
         $output = $this->serverOps->run(

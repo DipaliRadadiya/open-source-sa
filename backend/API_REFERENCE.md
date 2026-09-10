@@ -4058,6 +4058,8 @@ Live status of every managed systemd service. Compatibility aliases are collapse
 **Every row has the same shape, whatever kind of service it is** — a database engine, a PHP-FPM version, nginx. Two fields, two jobs:
 
 - **`status`** — how it is doing, in systemd's three words: `active`, `inactive`, `failed`. Never null, never anything else. Render it the same way for every row.
+
+  **PostgreSQL's status does not come from systemd** (added 2026-09-10), and the row is otherwise identical — nothing to special-case client side. `postgresql.service` is a meta unit (`Type=oneshot`, `ExecStart=/bin/true`, `RemainAfterExit=on`), so systemd reports `active` whatever the clusters are doing, and `postgresql@.service` ignores a failed start. The panel asks `pg_isready` instead, so this screen and the Databases screen give the same answer. Start/stop/restart still go through the meta unit, which works — the per-cluster units are `PartOf` it.
 - **`state`** — what kind of row it is: `installed | installing | install_failed`. Switch on this for behaviour.
 
 | `state` | `status` | meaning |

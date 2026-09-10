@@ -1421,6 +1421,30 @@ return [
         ['key' => 'mysql', 'unit' => 'mysql', 'label' => 'MySQL', 'install' => ['database', 'mysql']],
         ['key' => 'mariadb', 'unit' => 'mariadb', 'label' => 'MariaDB', 'install' => ['database', 'mariadb']],
         ['key' => 'mongodb', 'unit' => 'mongod', 'label' => 'MongoDB', 'install' => ['database', 'mongodb']],
+        /*
+        | PostgreSQL, and the one entry in this list whose status cannot come
+        | from systemd.
+        |
+        | `postgresql.service` is a meta unit — `Type=oneshot`,
+        | `ExecStart=/bin/true`, `RemainAfterExit=on` — so `ActiveState` is
+        | `active` because /bin/true succeeded, whatever the clusters are
+        | doing. `postgresql@.service` prefixes its ExecStart with `-`, which
+        | tells systemd to ignore a failed start, so it cannot report a dead
+        | cluster either. Both read from the shipped package, 2026-09-10.
+        |
+        | Listing it without `health` would put "Running" on this screen while
+        | the Databases screen — which asks pg_isready — says it is down. Two
+        | screens, opposite answers, and the reassuring one wrong.
+        |
+        | The unit is still the meta unit, because start/stop/restart through
+        | it *do* work: the per-cluster units are `PartOf=postgresql.service`.
+        | Only the status is untrustworthy, and only the status is overridden.
+        |
+        | The port comes from the same env var as the engine's `default_port`
+        | above, so the probe and the connection cannot drift apart.
+        */
+        ['key' => 'postgresql', 'unit' => 'postgresql', 'label' => 'PostgreSQL', 'install' => ['database', 'postgresql'],
+            'health' => ['pg_isready', '--quiet', '--host=127.0.0.1', '--port='.(int) env('SERVER_POSTGRES_PORT', 5432)]],
         ['key' => 'redis', 'unit' => 'redis-server', 'label' => 'Redis'],
         ['key' => 'supervisor', 'unit' => 'supervisor', 'label' => 'Supervisor'],
         ['key' => 'fail2ban', 'unit' => 'fail2ban', 'label' => 'Fail2ban', 'install' => ['fail2ban', 'latest']],
@@ -1892,7 +1916,7 @@ return [
             // The default socket is a *directory*. libpq takes the directory
             // holding `.s.PGSQL.5432` as its host, not the socket file, and
             // naming the file is an error rather than a nicety.
-            'postgresql' => ['label' => 'PostgreSQL', 'driver' => 'pgsql', 'client' => env('SERVER_PSQL_CLIENT', 'psql'), 'dump_client' => env('SERVER_PGDUMP', 'pg_dump'), 'restore_client' => env('SERVER_PGRESTORE', 'pg_restore'), 'default_port' => 5432, 'default_socket' => '/var/run/postgresql', 'dump_extension' => 'sql', 'uri_scheme' => 'postgresql', 'installer' => PostgresInstaller::class],
+            'postgresql' => ['label' => 'PostgreSQL', 'driver' => 'pgsql', 'client' => env('SERVER_PSQL_CLIENT', 'psql'), 'dump_client' => env('SERVER_PGDUMP', 'pg_dump'), 'restore_client' => env('SERVER_PGRESTORE', 'pg_restore'), 'default_port' => (int) env('SERVER_POSTGRES_PORT', 5432), 'default_socket' => '/var/run/postgresql', 'dump_extension' => 'sql', 'uri_scheme' => 'postgresql', 'installer' => PostgresInstaller::class],
         ],
 
         /*
