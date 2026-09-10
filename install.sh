@@ -1543,6 +1543,33 @@ configure_ols() {
     run chown "${APP_USER}:nogroup" "/run/${PANEL_SLUG}"
     run chmod 0750 "/run/${PANEL_SLUG}"
 
+    # The panel's own PHP settings.
+    #
+    # On the other stacks these are php_admin_value lines in the panel's fpm
+    # pool. There is no pool here, so they go in an ini of the panel's own and
+    # LSPHP is pointed at it -- the same mechanism SitePhpIni uses for hosted
+    # sites on this stack.
+    #
+    # Not optional. The pool comment records what happens without them: the
+    # panel falls back to PHP's defaults, upload_max_filesize=2M and
+    # post_max_size=8M, while the web server allows 64M and the file manager
+    # advertises 50M -- so every upload over 2M is rejected by PHP before
+    # Laravel ever sees the request. That bug was fixed once on fpm; moving to
+    # LSAPI without carrying these would reintroduce it here.
+    run mkdir -p "/etc/${PANEL_SLUG}/php"
+    cat >"/etc/${PANEL_SLUG}/php/zz-panel.ini" <<PANELINI
+; Managed by the installer. Overwritten on every run.
+error_log = /var/log/php-${PANEL_SLUG}.log
+log_errors = On
+; Sized to match maxReqBodySize below, not to enable large uploads: anything
+; bigger goes through the resumable chunked endpoint, which never sends more
+; than one chunk per request.
+upload_max_filesize = 64M
+post_max_size = 64M
+memory_limit = 256M
+PANELINI
+    run chmod 0644 "/etc/${PANEL_SLUG}/php/zz-panel.ini"
+
     printf 'd /run/%s 0750 %s nogroup -\n' "$PANEL_SLUG" "$APP_USER" \
         >"/etc/tmpfiles.d/${PANEL_SLUG}.conf"
     run systemd-tmpfiles --create "/etc/tmpfiles.d/${PANEL_SLUG}.conf"
@@ -1853,6 +1880,14 @@ extprocessor ${PANEL_SLUG}-lsphp {
   extGroup                ${APP_USER}
   env                     PHP_LSAPI_CHILDREN=10
   env                     PHP_LSAPI_MAX_REQUESTS=500
+# The panel's own settings, written by configure_ols.
+#
+# THE LEADING COLON IS NOT A TYPO. An empty entry means "also scan the
+# directory PHP was compiled with", which is where every extension's ini
+# lives. Without it this REPLACES that directory and the panel loses pdo_sqlite,
+# curl, redis and opcache -- which would not look like a settings problem, it
+# would look like PHP had been installed wrong.
+  env                     PHP_INI_SCAN_DIR=:/etc/${PANEL_SLUG}/php
   memSoftLimit            2047M
   memHardLimit            2047M
 }
@@ -1940,6 +1975,11 @@ CONF
 # Managed by the Control panel installer.
 docRoot                   ${doc_root}
 vhDomain                  ${PANEL_HOST}
+# Matches client_max_body_size on the nginx panel vhost. OpenLiteSpeed's default
+# is effectively unlimited, so this is not a 413 fix -- it is one panel
+# behaving the same whichever web server serves it, and a bound on how much a
+# stranger can make the panel buffer.
+maxReqBodySize            64M
 enableGzip                1
 
 $(ols_log_blocks)
@@ -1979,6 +2019,10 @@ write_ols_api_vhost() {
 # Managed by the Control panel installer.
 docRoot                   ${APP_DIR}/backend/public
 vhDomain                  ${API_HOST}
+# Same bound as the panel vhost. This is the one that actually receives
+# uploads in a two-host install, so leaving it off here would be the half that
+# mattered.
+maxReqBodySize            64M
 enableGzip                1
 
 $(ols_log_blocks)
@@ -2017,6 +2061,14 @@ extprocessor ${PANEL_SLUG}-lsphp {
   extGroup                ${APP_USER}
   env                     PHP_LSAPI_CHILDREN=10
   env                     PHP_LSAPI_MAX_REQUESTS=500
+# The panel's own settings, written by configure_ols.
+#
+# THE LEADING COLON IS NOT A TYPO. An empty entry means "also scan the
+# directory PHP was compiled with", which is where every extension's ini
+# lives. Without it this REPLACES that directory and the panel loses pdo_sqlite,
+# curl, redis and opcache -- which would not look like a settings problem, it
+# would look like PHP had been installed wrong.
+  env                     PHP_INI_SCAN_DIR=:/etc/${PANEL_SLUG}/php
   memSoftLimit            2047M
   memHardLimit            2047M
 }
