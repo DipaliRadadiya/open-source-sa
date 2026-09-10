@@ -19,6 +19,7 @@ return [
         'port_in_use_by_mysql' => 'O MySQL já está instalado e ocupa esta porta. Remova-o primeiro ou continue a usá-lo.',
         'port_in_use_by_mariadb' => 'O MariaDB já está instalado e ocupa esta porta. Remova-o primeiro ou continue a usá-lo.',
         'root_unreachable' => 'Está instalado, mas o painel não conseguiu entrar. O acesso de administrador foi alterado em relação ao padrão, então o painel precisa desses dados para continuar.',
+        'cluster_missing' => 'O PostgreSQL está instalado, mas não existe nenhum cluster neste servidor. Ele pode ter sido removido ou sua configuração não foi concluída.',
         'grant_failed' => 'Está instalado, mas o painel não conseguiu criar a própria conta nele.',
         'repository_failed' => 'Não foi possível adicionar o repositório de pacotes do MongoDB. Verifique se o servidor alcança repo.mongodb.org.',
         'unreachable' => 'Foi instalado mas não chegou a responder. Indique a referência abaixo ao suporte.',

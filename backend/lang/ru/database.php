@@ -13,6 +13,7 @@ return [
         'unpacking' => 'Распаковка пакетов',
         'configuring' => 'Настройка пакетов',
         'starting_service' => 'Запуск службы базы данных',
+        'verifying_cluster' => 'Проверка кластера базы данных',
         'verifying_connection' => 'Проверка подключения к базе данных',
         'creating_panel_account' => 'Создание учётной записи базы данных для панели',
     ],

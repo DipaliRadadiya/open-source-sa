@@ -19,6 +19,7 @@ return [
         'port_in_use_by_mysql' => 'MySQL is already installed and owns this port. Remove it first, or keep using it.',
         'port_in_use_by_mariadb' => 'MariaDB is already installed and owns this port. Remove it first, or keep using it.',
         'root_unreachable' => 'It is installed but the panel could not sign in to it. Its administrator login has been changed from the default, so the panel needs those details to continue.',
+        'cluster_missing' => 'PostgreSQL is installed but no cluster exists on this server. It may have been removed, or its setup did not finish.',
         'grant_failed' => 'It is installed but the panel could not create its own account on it.',
         'repository_failed' => 'The MongoDB package repository could not be added. Check the server has network access to repo.mongodb.org.',
         'unreachable' => 'It installed but did not start answering. Quote the reference below to support.',

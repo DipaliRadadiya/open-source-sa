@@ -3105,7 +3105,7 @@ Poll `GET /restores/{id}` until `status` is `succeeded` or `failed`.
 
 Capability list for every engine the panel knows. **Four as of 2026-09-10** — PostgreSQL joined MySQL, MariaDB and MongoDB.
 
-**PostgreSQL is operable but not installable yet** (`installable: false`), the position MongoDB held until it got an installer: the panel manages databases and users on a PostgreSQL that already exists, and the catalog says so rather than offering a button that cannot work.
+**PostgreSQL is installable** (added 2026-09-10) from Ubuntu's own archive — no third-party repository, unlike MongoDB. `POST /databases/engines/postgresql` installs it, starts its cluster and provisions the panel's own role.
 
 ```json
 {"engines": [{
@@ -3125,7 +3125,7 @@ Capability list for every engine the panel knows. **Four as of 2026-09-10** — 
   "install_progress": null
 }, {
   "engine": "postgresql", "driver": "pgsql", "running": true, "version": "16.4",
-  "installed": true, "installable": false,
+  "installed": true, "installable": true,
   "install_status": null, "install_reason": null, "install_message": null,
   "install_progress": null
 }]}
@@ -3156,7 +3156,7 @@ While an install is queued, running, or failed, `install_progress` carries the d
 }
 ```
 
-`current_step` is one of `queued`, `checking_conflicts`, `preparing_repository`, `updating_package_index`, `waiting_for_package_manager`, `preparing`, `downloading`, `unpacking`, `configuring`, `starting_service`, `verifying_connection`, or `creating_panel_account`. MongoDB uses the repository steps; MySQL and MariaDB use the conflict check. `waiting_for_package_manager` means Ubuntu is holding the package lock — usually a freshly booted server running its own unattended upgrades. **The install is not stuck**: the panel waits up to ten minutes and continues on its own. A step that never appeared before will now show on a busy server instead of a failure. Package phases are parsed from APT's real output rather than advanced on a timer. `output` is an 8 KB tail of APT output and contains no command arguments or credentials. `current_step_title` and failure `message` are localized for the viewer. On failure, the last real step remains in place and `retryable` becomes `true`.
+`current_step` is one of `queued`, `checking_conflicts`, `preparing_repository`, `updating_package_index`, `waiting_for_package_manager`, `preparing`, `downloading`, `unpacking`, `configuring`, `starting_service`, `verifying_cluster`, `verifying_connection`, or `creating_panel_account`. MongoDB uses the repository steps; MySQL and MariaDB use the conflict check; **PostgreSQL uses `verifying_cluster`** — a step of its own because neither of its systemd units can report a cluster that failed to start (`postgresql.service` is `ExecStart=/bin/true`, and `postgresql@.service` ignores its own exit code), so the panel asks `pg_isready` instead. It is a different failure from `verifying_connection`, which is about credentials, and telling someone with a dead cluster to check their password would send them the wrong way. `waiting_for_package_manager` means Ubuntu is holding the package lock — usually a freshly booted server running its own unattended upgrades. **The install is not stuck**: the panel waits up to ten minutes and continues on its own. A step that never appeared before will now show on a busy server instead of a failure. Package phases are parsed from APT's real output rather than advanced on a timer. `output` is an 8 KB tail of APT output and contains no command arguments or credentials. `current_step_title` and failure `message` are localized for the viewer. On failure, the last real step remains in place and `retryable` becomes `true`.
 
 The database component returned by `GET /setup` exposes the same object as `progress`. Once installation succeeds, the transient row is deleted, both progress objects become `null`, and `installed`/`running` are derived from the server itself.
 

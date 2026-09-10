@@ -13,6 +13,7 @@ return [
         'unpacking' => 'Unpacking packages',
         'configuring' => 'Configuring packages',
         'starting_service' => 'Starting the database service',
+        'verifying_cluster' => 'Verifying the database cluster',
         'verifying_connection' => 'Verifying the database connection',
         'creating_panel_account' => 'Creating the panel database account',
     ],

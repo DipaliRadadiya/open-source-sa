@@ -13,6 +13,7 @@ return [
         'unpacking' => 'Desempaquetando paquetes',
         'configuring' => 'Configurando paquetes',
         'starting_service' => 'Iniciando el servicio de base de datos',
+        'verifying_cluster' => 'Verificando el clúster de base de datos',
         'verifying_connection' => 'Verificando la conexión con la base de datos',
         'creating_panel_account' => 'Creando la cuenta de base de datos del panel',
     ],

@@ -45,6 +45,7 @@ use App\Services\Server\Backups\Steps\VerifyArtifact;
 use App\Services\Server\Databases\Installers\MariaDbInstaller;
 use App\Services\Server\Databases\Installers\MongoDbInstaller;
 use App\Services\Server\Databases\Installers\MySqlInstaller;
+use App\Services\Server\Databases\Installers\PostgresInstaller;
 use App\Services\Server\DiskCleaner\Targets\AptCacheTarget;
 use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
 use App\Services\Server\DiskCleaner\Targets\JournalTarget;
@@ -178,7 +179,7 @@ return [
             // psql is a pg_wrapper symlink rather than the binary itself; sudo
             // matches it by the path given, the same way it already matches
             // /usr/bin/mysql, which is a symlink to mariadb on this very box.
-            'psql', 'pg_dump', 'pg_restore', 'pg_isready',
+            'psql', 'pg_dump', 'pg_restore', 'pg_isready', 'pg_lsclusters',
             'ufw', 'fail2ban-client', 'sshd',
             'fallocate', 'mkswap', 'swapon', 'swapoff',
             'hostnamectl', 'timedatectl', 'shutdown', 'df', 'du',
@@ -1871,9 +1872,8 @@ return [
             'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mysql', 'installer' => MySqlInstaller::class],
             'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mariadb', 'installer' => MariaDbInstaller::class],
             'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'dump_extension' => 'archive.gz', 'uri_scheme' => 'mongodb', 'installer' => MongoDbInstaller::class],
-            // No installer yet — the panel operates a PostgreSQL that already
-            // exists, and the catalog says so rather than offering a button
-            // that cannot work. Same position MongoDB held until it got one.
+            // Installable from Ubuntu's own archive — no third-party
+            // repository, unlike MongoDB.
             //
             // `uri_scheme` is `postgresql`, not the engine name: that is the
             // scheme libpq and every client library accept, and `pgsql://`
@@ -1882,7 +1882,7 @@ return [
             // The default socket is a *directory*. libpq takes the directory
             // holding `.s.PGSQL.5432` as its host, not the socket file, and
             // naming the file is an error rather than a nicety.
-            'postgresql' => ['label' => 'PostgreSQL', 'driver' => 'pgsql', 'client' => env('SERVER_PSQL_CLIENT', 'psql'), 'dump_client' => env('SERVER_PGDUMP', 'pg_dump'), 'restore_client' => env('SERVER_PGRESTORE', 'pg_restore'), 'default_port' => 5432, 'default_socket' => '/var/run/postgresql', 'dump_extension' => 'sql', 'uri_scheme' => 'postgresql', 'installer' => null],
+            'postgresql' => ['label' => 'PostgreSQL', 'driver' => 'pgsql', 'client' => env('SERVER_PSQL_CLIENT', 'psql'), 'dump_client' => env('SERVER_PGDUMP', 'pg_dump'), 'restore_client' => env('SERVER_PGRESTORE', 'pg_restore'), 'default_port' => 5432, 'default_socket' => '/var/run/postgresql', 'dump_extension' => 'sql', 'uri_scheme' => 'postgresql', 'installer' => PostgresInstaller::class],
         ],
 
         /*
@@ -1920,6 +1920,27 @@ return [
             'server_package' => env('SERVER_MONGO_SERVER_PACKAGE', 'mongodb-org-server'),
             'service' => env('SERVER_MONGO_SERVICE', 'mongod'),
             'config_file' => env('SERVER_MONGO_CONFIG', '/etc/mongod.conf'),
+        ],
+
+        /*
+        | PostgreSQL's packages.
+        |
+        | Ubuntu's own archive, so there is no repository to add and no key to
+        | trust — the whole `mongodb` block above exists because MongoDB is not
+        | in the archive, and none of it is needed here.
+        |
+        | `postgresql` is the version-tracking metapackage: it pulls whatever
+        | major the distribution ships, which is what a panel wants. Pinning a
+        | major here would mean shipping an install that stops working when the
+        | distribution moves on.
+        |
+        | Detection targets the same name, and that is deliberate: the client
+        | packages sit on plenty of boxes that run no server, and treating one
+        | of those as installed would offer databases the panel cannot make.
+        */
+        'postgresql' => [
+            'packages' => ['postgresql'],
+            'server_package' => env('SERVER_POSTGRES_SERVER_PACKAGE', 'postgresql'),
         ],
 
         // Engine installs pull a few hundred MB and run their own post-install

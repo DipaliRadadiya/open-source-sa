@@ -26,6 +26,14 @@ class DatabaseInstallProgress
         'unpacking',
         'configuring',
         'starting_service',
+        // PostgreSQL only, and it earns its own step because it is a different
+        // failure from the one below with a different fix. `verifying_cluster`
+        // is "the database process is up", answered by pg_isready because
+        // neither of PostgreSQL's systemd units can report a cluster that
+        // failed to start. `verifying_connection` is "the panel can
+        // authenticate". Collapsing them would tell someone whose cluster
+        // never started to go and check their credentials.
+        'verifying_cluster',
         'verifying_connection',
         'creating_panel_account',
     ];

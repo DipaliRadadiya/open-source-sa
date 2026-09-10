@@ -13,6 +13,7 @@ return [
         'unpacking' => 'パッケージを展開しています',
         'configuring' => 'パッケージを設定しています',
         'starting_service' => 'データベースサービスを起動しています',
+        'verifying_cluster' => 'データベースクラスタを確認しています',
         'verifying_connection' => 'データベース接続を確認しています',
         'creating_panel_account' => 'パネル用データベースアカウントを作成しています',
     ],

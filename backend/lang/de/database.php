@@ -13,6 +13,7 @@ return [
         'unpacking' => 'Pakete werden entpackt',
         'configuring' => 'Pakete werden konfiguriert',
         'starting_service' => 'Datenbankdienst wird gestartet',
+        'verifying_cluster' => 'Datenbank-Cluster wird überprüft',
         'verifying_connection' => 'Datenbankverbindung wird geprüft',
         'creating_panel_account' => 'Datenbankkonto für das Panel wird erstellt',
     ],
