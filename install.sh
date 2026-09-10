@@ -58,6 +58,12 @@ NODE_VERSION="${NODE_VERSION:-24}"
 FRONTEND_PORT="${FRONTEND_PORT:-3100}"
 FNM_DIR="/opt/fnm"
 FNM_BIN="/usr/local/bin/fnm"
+# The identity OpenLiteSpeed's workers run as, from its own httpd_config.conf
+# defaults. Named once because two places need it -- the panel's fpm socket on
+# the other stacks, and the panel's LSAPI socket directory on this one -- and
+# they disagreed about it for as long as both existed.
+OLS_USER="nobody"
+OLS_GROUP="nogroup"
 LOG_FILE="/var/log/${PANEL_SLUG}-install.log"
 
 # How long to wait for another package manager before giving up. A fresh cloud
@@ -1430,8 +1436,8 @@ configure_fpm() {
     local socket_owner="www-data"
     local socket_group="www-data"
     if [[ "$WEB_SERVER" == "openlitespeed" ]]; then
-        socket_owner="nobody"
-        socket_group="nogroup"
+        socket_owner="$OLS_USER"
+        socket_group="$OLS_GROUP"
     fi
 
     # Its own pool on its own socket, owned by the panel's user. `ondemand`
@@ -1572,17 +1578,36 @@ configure_ols() {
     # The panel's LSAPI socket directory, and the reason it is not /tmp/lshttpd
     # with everyone else's.
     #
-    # 0750 ${APP_USER}:nogroup. lshttpd runs as nobody:nogroup, so it can
-    # traverse and connect; the panel's own user owns it. A hosted site's user
-    # is in neither, so a compromised site cannot reach the socket the panel's
-    # privileged PHP listens on -- and therefore cannot speak LSAPI to it and
-    # get code execution as the one user on this box with a sudoers grant.
+    # 0750 ${OLS_USER}:${APP_USER} -- lshttpd owns it, the panel's user is the
+    # group. Both identities can reach it; a hosted site's user is in neither,
+    # so a compromised site cannot reach the socket the panel's privileged PHP
+    # listens on, and therefore cannot speak LSAPI to it and get code execution
+    # as the one user on this box with a sudoers grant. That is the whole point
+    # of the directory and it survives the ownership below unchanged.
+    #
+    # OWNER IS THE WEB SERVER, NOT THE PANEL. This was the other way round and
+    # the API returned 503 on every OpenLiteSpeed install ever made. With
+    # autoStart, lshttpd does not connect to this socket -- it CREATES it, plus
+    # lsphp.sock.pid beside it, and creating a file needs write on the
+    # directory. As ${APP_USER}:${OLS_GROUP} the server got r-x from the group
+    # and could not create either, so the external app never started:
+    #
+    #   [panel-lsphp]: Failed to lock pid file for [/run/panel/lsphp.sock]:
+    #   Permission denied ... Can not start this external application.
+    #
+    # The rule is the one configure_fpm already states forty lines up -- the
+    # web server has to be able to write to the socket. Under fpm that lands on
+    # listen.owner, because fpm creates the socket. Under LSAPI the server
+    # creates it, so it lands on the directory instead. Same rule, different
+    # file, and the difference is easy to miss: it looks like a permissions
+    # nicety and it is the difference between a working panel and a dead one.
     #
     # tmpfiles.d as well as mkdir: /run is a tmpfs and does not survive a
     # reboot, and a panel that comes back with no socket directory is a panel
-    # that does not come back.
+    # that does not come back. Keep the two in step -- a mismatch is a panel
+    # that works until the first reboot.
     run mkdir -p "/run/${PANEL_SLUG}"
-    run chown "${APP_USER}:nogroup" "/run/${PANEL_SLUG}"
+    run chown "${OLS_USER}:${APP_USER}" "/run/${PANEL_SLUG}"
     run chmod 0750 "/run/${PANEL_SLUG}"
 
     # The panel's own PHP settings.
@@ -1612,7 +1637,7 @@ memory_limit = 256M
 PANELINI
     run chmod 0644 "/etc/${PANEL_SLUG}/php/zz-panel.ini"
 
-    printf 'd /run/%s 0750 %s nogroup -\n' "$PANEL_SLUG" "$APP_USER" \
+    printf 'd /run/%s 0750 %s %s -\n' "$PANEL_SLUG" "$OLS_USER" "$APP_USER" \
         >"/etc/tmpfiles.d/${PANEL_SLUG}.conf"
     run systemd-tmpfiles --create "/etc/tmpfiles.d/${PANEL_SLUG}.conf"
 
@@ -1901,11 +1926,16 @@ extprocessor ${PANEL_SLUG}-lsphp {
 # and speak LSAPI would get code execution as the panel's user, and sudo with
 # it -- the same threat php-fpm answers by owning its socket www-data:www-data.
 #
-# So the panel's socket sits in a directory only two identities can traverse:
-# ${PANEL_SLUG}, which runs it, and nogroup, which lshttpd is in. A site user is
-# in neither, so it cannot reach the path at all -- which holds regardless of
-# what permissions lshttpd gives the socket itself, and LiteSpeed's own
-# packaging chmods 0777 in places, so that is not a default worth trusting.
+# So the panel's socket sits in a directory only two identities can reach:
+# ${OLS_USER}, which owns it because lshttpd CREATES the socket here, and
+# ${PANEL_SLUG} as the group, which runs the PHP behind it. A site user is in
+# neither, so it cannot reach the path at all -- which holds regardless of what
+# permissions lshttpd gives the socket itself, and LiteSpeed's own packaging
+# chmods 0777 in places, so that is not a default worth trusting.
+#
+# Owner is the web server. See configure_ols for why the reverse -- which looks
+# more natural, the panel owning the panel's directory -- meant the API 503'd
+# on every OpenLiteSpeed install.
   address                 uds://run/${PANEL_SLUG}/lsphp.sock
   maxConns                10
   initTimeout             60
@@ -2082,11 +2112,16 @@ extprocessor ${PANEL_SLUG}-lsphp {
 # and speak LSAPI would get code execution as the panel's user, and sudo with
 # it -- the same threat php-fpm answers by owning its socket www-data:www-data.
 #
-# So the panel's socket sits in a directory only two identities can traverse:
-# ${PANEL_SLUG}, which runs it, and nogroup, which lshttpd is in. A site user is
-# in neither, so it cannot reach the path at all -- which holds regardless of
-# what permissions lshttpd gives the socket itself, and LiteSpeed's own
-# packaging chmods 0777 in places, so that is not a default worth trusting.
+# So the panel's socket sits in a directory only two identities can reach:
+# ${OLS_USER}, which owns it because lshttpd CREATES the socket here, and
+# ${PANEL_SLUG} as the group, which runs the PHP behind it. A site user is in
+# neither, so it cannot reach the path at all -- which holds regardless of what
+# permissions lshttpd gives the socket itself, and LiteSpeed's own packaging
+# chmods 0777 in places, so that is not a default worth trusting.
+#
+# Owner is the web server. See configure_ols for why the reverse -- which looks
+# more natural, the panel owning the panel's directory -- meant the API 503'd
+# on every OpenLiteSpeed install.
   address                 uds://run/${PANEL_SLUG}/lsphp.sock
   maxConns                10
   initTimeout             60
