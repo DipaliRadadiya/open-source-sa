@@ -900,6 +900,28 @@ install_packages() {
         # compiled into lsphp, verified by extracting the .deb, which ships no
         # .so files at all. The rest are separate packages and are added by
         # install_ols_packages alongside the ones hosted sites need.
+
+        # `php` on PATH, pointing at LSPHP's CLI.
+        #
+        # Found on real hardware, and it stopped the install dead:
+        #
+        #   env: 'php': No such file or directory
+        #
+        # composer and wp-cli are PHARs whose shebang is `#!/usr/bin/env php`.
+        # Installing them with an explicit interpreter is not enough -- the
+        # moment anything EXECUTES them, the kernel reads that line and looks
+        # for `php` on PATH. There is none on this stack, because ondrej's PHP
+        # is deliberately not installed.
+        #
+        # wp-cli is the one that matters beyond the install: the panel drives
+        # every WordPress operation through /usr/local/bin/wp, so without this
+        # a WordPress site could not be created, updated or backed up on an
+        # OpenLiteSpeed server.
+        #
+        # /usr/local/bin comes before /usr/bin on the default PATH, and this is
+        # only created on this stack, so it cannot shadow ondrej's php
+        # elsewhere.
+        run ln -sfn "$PANEL_PHP_BIN" /usr/local/bin/php
     else
         add_php_repository
         assert_php_available
@@ -1164,7 +1186,10 @@ setup_backend() {
     # written here have to match what the server actually answers on.
     local scheme="$SCHEME"
 
-    run sudo -u "$APP_USER" -H composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d "$dir"
+    # Through the interpreter rather than relying on composer's own shebang.
+    # The `php` symlink above makes the shebang work too, but naming the binary
+    # here means this step does not depend on PATH at all.
+    run sudo -u "$APP_USER" -H "$PANEL_PHP_BIN" /usr/local/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d "$dir"
     ok "dependencies installed"
 
     [[ -f "${dir}/.env" ]] || cp "${dir}/.env.example" "${dir}/.env"
