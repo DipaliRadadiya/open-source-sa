@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'database_engine_not_used' => 'Cette application n\'utilise pas de base de données.',
+    'database_engine_unsupported' => 'Cette application ne peut pas utiliser ce moteur de base de données. :application en prend en charge un autre.',
+    'database_engine_unavailable' => 'Ce moteur de base de données ne fonctionne pas sur ce serveur. Installez-le ou démarrez-le d\'abord.',
+
     'primary_domain_not_removable' => 'Le domaine principal ne peut pas être supprimé. Définissez d\'abord un autre domaine comme principal.',
     'unsupported_web_server' => 'Le panneau ne peut pas écrire la configuration du site pour :web_server.',
     'no_web_server' => 'aucun serveur web détecté',

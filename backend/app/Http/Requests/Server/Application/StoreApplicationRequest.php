@@ -9,6 +9,8 @@ use App\Rules\StartCommand;
 use App\Rules\SupportedNodeVersion;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Applications\InstallerManager;
+use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Closure;
@@ -108,6 +110,45 @@ class StoreApplicationRequest extends FormRequest
             // not stat a binary when a unit is written. The site is created,
             // reported Active, and the unit fails on every start with a 502
             // from the vhost in front of a port nobody is listening on.
+            // Which database engine to provision, where the application
+            // accepts more than one and the server actually has more than one.
+            //
+            // Optional, and absent means the old behaviour exactly: the first
+            // accepted engine the server has. That keeps every existing client
+            // working and makes this a choice rather than a new obligation.
+            //
+            // Validated against the *installer's* list rather than the whole
+            // catalog of engines, the same rule the attach-database endpoint
+            // follows: the panel must never accept a pairing that provisioning
+            // would refuse a moment later.
+            'database_engine' => [
+                'nullable', 'string',
+                function (string $attribute, mixed $value, Closure $fail) use ($type) {
+                    $installer = app(InstallerManager::class)->installerForType($type->name());
+
+                    if ($installer === null || ! $installer->needsDatabase()) {
+                        $fail(__('errors/application.database_engine_not_used'));
+
+                        return;
+                    }
+
+                    if (! in_array($value, $installer->acceptedEngines(), true)) {
+                        $fail(__('errors/application.database_engine_unsupported', [
+                            'application' => __("application.types.{$type->name()}.title"),
+                        ]));
+
+                        return;
+                    }
+
+                    // Accepted by the application, but not present here. Told
+                    // apart from the case above deliberately: one is "this app
+                    // cannot use that", the other is "install it first", and
+                    // they send the user to different screens.
+                    if (! app(DatabaseManager::class)->engine($value)->available()) {
+                        $fail(__('errors/application.database_engine_unavailable'));
+                    }
+                },
+            ],
             'node_version' => [
                 'nullable', 'string', 'max:10', 'regex:/^\d+(\.\d+)*$/',
                 function (string $attribute, mixed $value, Closure $fail) {

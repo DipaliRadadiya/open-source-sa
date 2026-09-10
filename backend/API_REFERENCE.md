@@ -568,6 +568,12 @@ One entry per installable site type. Each carries its own field schema — the f
 }]}
 ```
 
+**`database_engine`** (added 2026-09-10) appears in `fields` **only when the server has two or more of the engines this type accepts** — a `select` with `options`, a `default`, and `required: false`. Absent means there is nothing to choose and the panel decides; send `database_engine` on `POST /applications` to choose.
+
+Today that is NodeBB alone, on a server with both MongoDB and PostgreSQL. The eight types listing `mysql, mariadb` never get the field: those two cannot coexist on one server, so exactly one is ever usable.
+
+`POST /applications` answers `422` on `database_engine` for two distinct cases — an engine the application does not accept, and one the server does not have. They are separate messages on purpose: one means pick again, the other means install it first.
+
 `accepted_engines` is which engines this type can be installed against — `[]` when it needs no database, so "no constraint" and "no database" are the same value rather than a null to special-case. Do not infer this list from the type's name. There are now three distinct lists, and **NodeBB accepts `["mongodb", "postgresql"]`** (2026-09-10) — the first type in the catalog naming two unrelated engines, which is exactly the case any inference gets wrong. Order is meaningful: the first engine the server actually has is the one used, so a box with both MongoDB and PostgreSQL keeps making Mongo-backed forums.
 
 **`available: false` with `unavailable_code: "database"` now covers every database-backed type, not just NodeBB.** Until 2026-09-09 the check returned early for anything accepting MySQL or MariaDB — nearly the whole catalog — so on a MongoDB-only server WordPress and the rest reported themselves available, took a filled-in form and failed at provisioning. `unavailable_reason` names the engines, so the card can say what to install.

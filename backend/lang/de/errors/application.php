@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'database_engine_not_used' => 'Diese Anwendung verwendet keine Datenbank.',
+    'database_engine_unsupported' => 'Diese Anwendung kann diese Datenbank-Engine nicht verwenden. :application unterstützt eine andere.',
+    'database_engine_unavailable' => 'Diese Datenbank-Engine läuft auf diesem Server nicht. Installiere oder starte sie zuerst.',
+
     'primary_domain_not_removable' => 'Die primäre Domain kann nicht entfernt werden. Machen Sie zuerst eine andere Domain zur primären.',
     'unsupported_web_server' => 'Das Panel kann für :web_server keine Website-Konfiguration schreiben.',
     'no_web_server' => 'kein Webserver erkannt',

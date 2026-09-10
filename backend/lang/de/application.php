@@ -49,6 +49,7 @@ return [
     ],
 
     'fields' => [
+        'database_engine' => 'Datenbank-Engine',
         'company_name' => 'Firmenname',
         'company_email' => 'Firmen-E-Mail',
         'locale' => 'Gebietsschema',

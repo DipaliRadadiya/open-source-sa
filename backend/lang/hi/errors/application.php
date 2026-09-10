@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'database_engine_not_used' => 'यह एप्लिकेशन डेटाबेस का उपयोग नहीं करता।',
+    'database_engine_unsupported' => 'यह एप्लिकेशन उस डेटाबेस इंजन का उपयोग नहीं कर सकता। :application किसी अन्य का समर्थन करता है।',
+    'database_engine_unavailable' => 'वह डेटाबेस इंजन इस सर्वर पर नहीं चल रहा है। पहले उसे इंस्टॉल या शुरू करें।',
+
     'primary_domain_not_removable' => 'प्राथमिक डोमेन हटाया नहीं जा सकता। पहले किसी अन्य डोमेन को प्राथमिक बनाएं।',
     'unsupported_web_server' => ':web_server के लिए पैनल साइट कॉन्फ़िग नहीं लिख सकता।',
     'no_web_server' => 'कोई वेब सर्वर नहीं मिला',

@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'database_engine_not_used' => 'Este aplicativo não usa banco de dados.',
+    'database_engine_unsupported' => 'Este aplicativo não pode usar esse mecanismo de banco de dados. :application é compatível com outro.',
+    'database_engine_unavailable' => 'Esse mecanismo de banco de dados não está em execução neste servidor. Instale-o ou inicie-o primeiro.',
+
     'primary_domain_not_removable' => 'O domínio principal não pode ser removido. Defina outro domínio como principal primeiro.',
     'unsupported_web_server' => 'O painel não consegue gravar a configuração do site para :web_server.',
     'no_web_server' => 'nenhum servidor web detectado',

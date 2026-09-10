@@ -149,6 +149,22 @@ class CreateApplication
         $columns = (new Application)->getFillable();
         $settings = [];
 
+        // Which database engine to provision, where the user was offered a
+        // choice. Carried here rather than picked up by the loop below, which
+        // reads the *type's* declared fields — and this is not one of them:
+        // the catalog adds it only on a server that has two of the engines the
+        // application accepts, because only the catalog knows what the server
+        // has. Left to the loop it would be dropped silently.
+        //
+        // A setting rather than a column because it is the *request*, not the
+        // record: what was actually provisioned is on the `databases` row,
+        // which carries its own `engine` and points at this application.
+        // Absent means "decide at provisioning time" — what every existing
+        // client already gets.
+        if (isset($data['database_engine'])) {
+            $settings['database_engine'] = (string) $data['database_engine'];
+        }
+
         foreach ($fields as $field) {
             $name = (string) $field['name'];
 

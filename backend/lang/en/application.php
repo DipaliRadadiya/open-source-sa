@@ -54,6 +54,7 @@ return [
     ],
 
     'fields' => [
+        'database_engine' => 'Database engine',
         'company_name' => 'Company name',
         'company_email' => 'Company email',
         'locale' => 'Locale',

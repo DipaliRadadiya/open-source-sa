@@ -136,7 +136,7 @@ class SiteTypeManager
                 // reporting `available` instead of failing at submit.
                 'node_version_range' => $type->supportedNodeRange(),
                 'php_version_range' => $type->supportedPhpRange(),
-                'fields' => $type->fields(),
+                'fields' => [...$type->fields(), ...$this->engineField($type)],
             ];
         }, $this->all());
     }
@@ -281,6 +281,58 @@ class SiteTypeManager
      * catalog. The three states the card grid distinguishes come from
      * `DatabaseManager::capabilities()`, which separates them properly.
      */
+    /**
+     * A database-engine picker, but only where there is genuinely a choice.
+     *
+     * Zero or one usable engine means no field at all: a dropdown with one
+     * option is a decision the user cannot make, on seventeen of the eighteen
+     * types, and the create form is long enough already.
+     *
+     * Two or more means the panel would otherwise be choosing silently — and
+     * that choice is permanent. Nothing moves a forum from MongoDB to
+     * PostgreSQL afterwards; it would be delete and start again.
+     *
+     * The pairs that make this real only appeared with PostgreSQL. Eight types
+     * list `mysql, mariadb`, which reads like a choice and is not: the two
+     * cannot coexist — they fight over 3306 and the installer refuses the
+     * second — so exactly one is ever usable and this returns nothing for
+     * them. NodeBB's `mongodb, postgresql` is the first pairing a server can
+     * genuinely have both halves of.
+     *
+     * Built here rather than in the site type because only this class knows
+     * what the *server* has. The type knows what the application supports.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function engineField(SiteType $type): array
+    {
+        $usable = array_values(array_filter(
+            $this->acceptedEngines($type),
+            fn (string $engine): bool => $this->engineUsable($engine),
+        ));
+
+        if (count($usable) < 2) {
+            return [];
+        }
+
+        return [[
+            'name' => 'database_engine',
+            'label' => __('application.fields.database_engine'),
+            'type' => 'select',
+            'required' => false,
+            'advanced' => false,
+            // The first accepted engine that this server has, which is exactly
+            // what provisioning falls back to when the field is absent. The
+            // form and the fallback cannot disagree, because they are the same
+            // list in the same order.
+            'default' => $usable[0],
+            'options' => array_map(fn (string $engine): array => [
+                'value' => $engine,
+                'label' => (string) config("server.databases.engines.{$engine}.label", $engine),
+            ], $usable),
+        ]];
+    }
+
     private function engineUsable(string $engine): bool
     {
         if (! array_key_exists($engine, $this->usableEngines)) {

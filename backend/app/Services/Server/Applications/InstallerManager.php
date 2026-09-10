@@ -120,7 +120,7 @@ class InstallerManager
      */
     private function provisionDatabase(Application $application, array $accepted): array
     {
-        $engine = $this->firstAvailableEngine($accepted);
+        $engine = $this->chosenEngine($application, $accepted) ?? $this->firstAvailableEngine($accepted);
 
         if ($engine === null) {
             // Fail here rather than half-installing: without a database the
@@ -223,6 +223,34 @@ class InstallerManager
      *
      * @param  array<int, string>  $accepted
      */
+    /**
+     * The engine the user asked for, when they were offered the choice.
+     *
+     * Null whenever the request did not carry one, which is every existing
+     * client and every type with only one usable engine — so the fallback
+     * below stays the normal path rather than a legacy branch.
+     *
+     * Re-checked here rather than trusted from validation: the request was
+     * validated when it was made, and provisioning runs later in a queued job.
+     * An engine that was stopped or removed in between must fall back to one
+     * that answers, not fail the whole install on a stale choice.
+     *
+     * @param  array<int, string>  $accepted
+     */
+    private function chosenEngine(Application $application, array $accepted): ?string
+    {
+        $chosen = (string) (($application->settings['database_engine'] ?? '') ?: '');
+
+        if ($chosen === '' || ! in_array($chosen, $accepted, true)) {
+            return null;
+        }
+
+        return in_array($chosen, $this->databases->engineNames(), true)
+            && $this->databases->engine($chosen)->available()
+                ? $chosen
+                : null;
+    }
+
     private function firstAvailableEngine(array $accepted): ?string
     {
         $installed = $this->databases->engineNames();

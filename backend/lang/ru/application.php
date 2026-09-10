@@ -49,6 +49,7 @@ return [
     ],
 
     'fields' => [
+        'database_engine' => 'СУБД',
         'company_name' => 'Название компании',
         'company_email' => 'Эл. почта компании',
         'locale' => 'Локаль',

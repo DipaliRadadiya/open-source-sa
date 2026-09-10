@@ -49,6 +49,7 @@ return [
     ],
 
     'fields' => [
+        'database_engine' => 'डेटाबेस इंजन',
         'company_name' => 'कंपनी का नाम',
         'company_email' => 'कंपनी का ईमेल',
         'locale' => 'लोकेल',

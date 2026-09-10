@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'database_engine_not_used' => 'このアプリケーションはデータベースを使用しません。',
+    'database_engine_unsupported' => 'このアプリケーションはそのデータベースエンジンを使用できません。:application は別のものに対応しています。',
+    'database_engine_unavailable' => 'そのデータベースエンジンはこのサーバーで実行されていません。先にインストールまたは起動してください。',
+
     'primary_domain_not_removable' => 'プライマリドメインは削除できません。先に別のドメインをプライマリに設定してください。',
     'unsupported_web_server' => ':web_server 用のサイト設定は作成できません。',
     'no_web_server' => 'ウェブサーバーが検出されません',

@@ -49,6 +49,7 @@ return [
     ],
 
     'fields' => [
+        'database_engine' => 'Motor de base de datos',
         'company_name' => 'Nombre de la empresa',
         'company_email' => 'Correo de la empresa',
         'locale' => 'Configuración regional',

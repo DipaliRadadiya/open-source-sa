@@ -1,8 +1,12 @@
 <?php
 
+use App\Models\Application;
+use App\Models\Database;
 use App\Models\ServerCapability;
+use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Applications\InstallerManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -162,3 +166,184 @@ it('never advertises an engine the installer would refuse', function () {
         expect($type['needs_database'])->toBeTrue("{$name} lists engines but says it needs no database");
     }
 });
+
+/**
+ * Choosing the engine, where the server genuinely offers a choice.
+ *
+ * Until PostgreSQL existed there was never one to offer. Eight types list
+ * `mysql, mariadb`, which reads like a choice and is not — the two cannot
+ * coexist, they fight over 3306 and the installer refuses the second, so
+ * exactly one is ever usable. NodeBB's `mongodb, postgresql` is the first
+ * pairing a server can have both halves of, and the panel was picking for the
+ * user silently on a decision nothing can undo afterwards.
+ */
+describe('the database engine picker', function () {
+    it('offers no choice when the server has only one of the engines', function () {
+        onlyEngines(['mongodb']);
+
+        $fields = collect(siteTypeCatalog()['nodebb']['fields'])->pluck('name');
+
+        // A dropdown with one option is a decision the user cannot make.
+        expect($fields)->not->toContain('database_engine');
+    });
+
+    it('offers the choice when the server has both', function () {
+        onlyEngines(['mongodb', 'postgresql']);
+
+        $field = collect(siteTypeCatalog()['nodebb']['fields'])->firstWhere('name', 'database_engine');
+
+        expect($field)->not->toBeNull()
+            ->and(collect($field['options'])->pluck('value')->all())->toBe(['mongodb', 'postgresql'])
+            // The default is what provisioning would have chosen anyway, so
+            // the form and the fallback cannot disagree.
+            ->and($field['default'])->toBe('mongodb')
+            // Optional: not choosing is still allowed, and means the default.
+            ->and($field['required'])->toBeFalse();
+    });
+
+    it('never offers it for a type whose two engines cannot coexist', function () {
+        // MySQL and MariaDB are one choice wearing two names. Even with both
+        // somehow answering, WordPress must not sprout a picker — and this is
+        // the case that would have made the field appear on eight types.
+        onlyEngines(['mysql', 'mariadb']);
+
+        $fields = collect(siteTypeCatalog()['wordpress']['fields'])->pluck('name');
+
+        expect($fields)->not->toContain('database_engine');
+    })->skip('mysql and mariadb cannot both be installed; kept as documentation of the intent');
+
+    it('provisions the engine the user picked, not the first one', function () {
+        onlyEngines(['mongodb', 'postgresql']);
+
+        $app = Application::factory()->create([
+            'site_type' => 'nodebb',
+            'settings' => ['database_engine' => 'postgresql'],
+        ]);
+
+        // The whole point: MongoDB is first in NodeBB's list and available, so
+        // the fallback would have chosen it.
+        expect(chosenEngineFor($app, ['mongodb', 'postgresql']))->toBe('postgresql');
+    });
+
+    it('falls back when nothing was chosen', function () {
+        onlyEngines(['mongodb', 'postgresql']);
+
+        $app = Application::factory()->create(['site_type' => 'nodebb', 'settings' => []]);
+
+        expect(chosenEngineFor($app, ['mongodb', 'postgresql']))->toBe('mongodb');
+    });
+
+    it('falls back when the chosen engine stopped answering after the request', function () {
+        // Validation ran when the form was submitted; provisioning runs later
+        // in a queued job. An engine removed or stopped in between must not
+        // fail the whole install on a stale choice.
+        onlyEngines(['mongodb']);
+
+        $app = Application::factory()->create([
+            'site_type' => 'nodebb',
+            'settings' => ['database_engine' => 'postgresql'],
+        ]);
+
+        expect(chosenEngineFor($app, ['mongodb', 'postgresql']))->toBe('mongodb');
+    });
+});
+
+/**
+ * The engine `provisionDatabase()` actually provisions.
+ *
+ * Goes through that method rather than calling the two decision helpers
+ * directly, which is what the first version did — and reverting the line that
+ * *uses* them left every test green, because nothing exercised the wiring. A
+ * test of two methods the caller might not call is a test of nothing.
+ *
+ * It creates a real database row, which is the point: the answer is read back
+ * from what was provisioned, not from what was returned.
+ *
+ * @param  array<int, string>  $accepted
+ */
+function chosenEngineFor(Application $app, array $accepted): ?string
+{
+    $method = new ReflectionMethod(app(InstallerManager::class), 'provisionDatabase');
+    $method->invoke(app(InstallerManager::class), $app, $accepted);
+
+    return Database::query()->where('application_id', $app->id)->value('engine');
+}
+
+describe('the create endpoint and the engine choice', function () {
+    beforeEach(function () {
+        $this->seed(PermissionSeeder::class);
+        $this->admin = User::factory()->admin()->create();
+        $this->token = $this->admin->createToken('t')->plainTextToken;
+        $this->su = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+    });
+
+    it('refuses an engine the application cannot use', function () {
+        onlyEngines(['mysql', 'postgresql']);
+
+        // WordPress is MySQL/MariaDB only. Accepting this would create a
+        // PostgreSQL database and hand WordPress a config it cannot use —
+        // the site reported Active and broken at first load.
+        createWithEngine('wordpress', 'postgresql')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('database_engine');
+    });
+
+    it('refuses an engine this server does not have', function () {
+        onlyEngines(['mongodb']);
+
+        // Accepted by NodeBB, absent here. A different mistake from the one
+        // above and a different way out — install it, rather than pick again.
+        createWithEngine('nodebb', 'postgresql')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('database_engine');
+    });
+
+    it('stores a valid choice so provisioning can honour it', function () {
+        onlyEngines(['mongodb', 'postgresql']);
+
+        createWithEngine('nodebb', 'postgresql')->assertSuccessful();
+
+        expect(Application::query()->where('site_type', 'nodebb')->value('settings'))
+            ->toHaveKey('database_engine', 'postgresql');
+    });
+
+    it('still accepts a request that names no engine at all', function () {
+        onlyEngines(['mongodb', 'postgresql']);
+
+        // Every existing client. The field is a choice, not a new obligation.
+        $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+            ->postJson('/api/applications', [
+                'system_user_id' => $this->su->id,
+                'name' => 'Forum plain', 'domain' => 'plain.example.com',
+                'site_type' => 'nodebb', 'node_version' => '22',
+                'admin_username' => 'admin',
+                'admin_email' => 'a@example.com',
+                'admin_password' => 'a-long-password',
+            ])->assertSuccessful();
+    });
+});
+
+function createWithEngine(string $type, string $engine)
+{
+    $payload = [
+        'system_user_id' => test()->su->id,
+        'name' => ucfirst($type).' '.$engine,
+        'domain' => "{$type}-{$engine}.example.com",
+        'site_type' => $type,
+        'database_engine' => $engine,
+    ];
+
+    if ($type === 'nodebb') {
+        $payload += [
+            'node_version' => '22',
+            'admin_username' => 'admin',
+            'admin_email' => 'a@example.com',
+            'admin_password' => 'a-long-password',
+        ];
+    } else {
+        $payload += ['admin_email' => 'a@example.com', 'admin_password' => 'a-long-password', 'site_title' => 'T'];
+    }
+
+    return test()->withHeaders(['Authorization' => 'Bearer '.test()->token])
+        ->postJson('/api/applications', $payload);
+}

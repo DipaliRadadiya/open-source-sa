@@ -49,6 +49,7 @@ return [
     ],
 
     'fields' => [
+        'database_engine' => 'データベースエンジン',
         'company_name' => '会社名',
         'company_email' => '会社のメールアドレス',
         'locale' => 'ロケール',
