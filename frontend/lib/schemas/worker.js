@@ -4,22 +4,37 @@ import { z } from "zod";
 // redirect would be passed to the binary as a literal argument instead of doing
 // what it looks like — the API 422s on these, this just catches it before the
 // round-trip.
-const SHELL_METACHARACTERS = /[|;&`$<>]/;
+//
+// The parentheses are part of it: `SaveWorkerRequest` refuses `()` for the same
+// reason it refuses `$` — `$(…)` is the substitution people reach for first, and
+// leaving them out here meant the form accepted a command the server then
+// rejected.
+const SHELL_METACHARACTERS = /[|;&`$<>()]/;
+
+/*
+ * The two checks Laravel spells `not_regex:/\.\./` and `new SingleLine`.
+ *
+ * Both apply to every path the panel writes into a supervisord config that runs
+ * as root: traversal so the path cannot climb out of the site, single-line so
+ * one value cannot become two directives.
+ */
+const noTraversal = (v) => !v.includes("..");
+const singleLine = (v) => !/[\r\n]/.test(v);
 
 const commandField = z
   .string()
   .trim()
   .min(1, "required_command")
-  .max(2000, "max2000")
-  .refine((v) => !/[\r\n]/.test(v), "noLineBreaks")
+  .max(500, "max500")
+  .refine(singleLine, "noLineBreaks")
   .refine((v) => !SHELL_METACHARACTERS.test(v), "shellMetacharacters");
 
 const nameField = z
   .string()
   .trim()
   .min(1, "required_name")
-  .max(255, "max255")
-  .refine((v) => !/[\r\n]/.test(v), "noLineBreaks");
+  .max(60, "max60")
+  .refine(singleLine, "noLineBreaks");
 
 const advancedDefaults = {
   directory: "",
@@ -41,8 +56,17 @@ export const workerFormSchema = z.object({
   command: commandField,
   kind: z.enum(["queue", "horizon", "custom"]),
   processes: z.coerce.number().int().min(1, "min1").max(16, "max16"),
-  directory: z.string().trim().max(500, "max500").optional(),
-  stop_wait_seconds: z.coerce.number().int().min(1, "min1").max(300, "max300"),
+  directory: z
+    .string()
+    .trim()
+    .max(255, "max255")
+    .refine(noTraversal, "noTraversal")
+    .refine(singleLine, "noLineBreaks")
+    .optional(),
+  // 600, not 300. This was the one rule stricter than the API's, so a worker
+  // that genuinely needs eight minutes to drain could be configured through the
+  // API and then never saved again from this form.
+  stop_wait_seconds: z.coerce.number().int().min(1, "min1").max(600, "max600"),
   auto_restart: z.boolean(),
   restart_on_deploy: z.boolean(),
   enabled: z.boolean(),
@@ -61,13 +85,26 @@ export const workerFormSchema = z.object({
     .trim()
     .max(255, "max255")
     .startsWith("/", "absolutePath")
+    // `noTraversalPath`, not the `noTraversal` the folder fields use: that one
+    // reads "Folders cannot contain ..", and this is a file.
+    .refine(noTraversal, "noTraversalPath")
+    .refine(singleLine, "noLineBreaks")
     .optional()
     .or(z.literal("")),
   log_level: z
     .enum(["critical", "error", "warn", "info", "debug", "trace", "blather"])
     .optional()
     .or(z.literal("")),
-  extra_config: z.string().trim().max(2000, "max2000").optional().or(z.literal("")),
+  // These lines are appended verbatim inside this worker's program block, so a
+  // `[` would open a SECOND program — one the panel never wrote, cannot see and
+  // would never stop. It is the one character the API refuses here.
+  extra_config: z
+    .string()
+    .trim()
+    .max(2000, "max2000")
+    .refine((v) => !v.includes("["), "noSectionHeader")
+    .optional()
+    .or(z.literal("")),
   auto_start: z.boolean().optional(),
 });
 

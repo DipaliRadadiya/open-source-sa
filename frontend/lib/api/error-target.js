@@ -7,11 +7,21 @@
  * came from the three answers below.
  *
  * `fields` is the form's own value object, `sent` is the submitted body.
+ *
+ * `unrendered` is the fourth answer, and the one the other three cannot reach:
+ * a field that is in the form's values AND in the body AND still has no control
+ * on screen. A worker's `kind` is set by picking a preset rather than by an
+ * input, so "you can't run Horizon and a queue worker on the same app" passed
+ * both tests above and landed on nothing — Save did nothing, silently, every
+ * time. A form that holds a value it never renders has to say so; there is no
+ * way to detect it from here.
  */
-export function errorTarget(field, fields = {}, sent = {}) {
+export function errorTarget(field, fields = {}, sent = {}, unrendered = []) {
   // Nested keys arrive dotted (`settings.token`); the root is what was sent.
   const parts = field.split(".");
   const root = parts[0];
+
+  if (unrendered.includes(root)) return null;
 
   const rendered = Object.prototype.hasOwnProperty.call(fields, root);
   const wasSent = Object.prototype.hasOwnProperty.call(sent, root);

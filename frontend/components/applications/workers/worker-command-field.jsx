@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { ChevronDown, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { conflictingKind } from "@/lib/applications/worker-kind";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
@@ -17,16 +18,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Horizon supervises its own queue workers, so having both is a same-site
-// conflict the API 422s on — greying the incompatible preset out here means
-// that error never has to round-trip.
-const MUTUALLY_EXCLUSIVE_KIND = { queue: "horizon", horizon: "queue" };
-
-function conflictingKind(presetKind, workers) {
-  const other = MUTUALLY_EXCLUSIVE_KIND[presetKind];
-  if (!other) return null;
-  return workers.some((w) => w.kind === other) ? other : null;
-}
+// The rule lives in lib/applications/worker-kind.js: the kind select sets the
+// same field from the same list, and two copies of "which kinds cannot coexist"
+// is how one ends up greying out an option the other still offers.
 
 /**
  * Command field with a "Use template" dropdown into the preset list. The API

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2, Cog, ChevronDown } from "lucide-react";
+import { Loader2, Cog, ChevronDown, TriangleAlert } from "lucide-react";
 import { Caution } from "@/components/ui/caution";
 import { workerFormSchema, WORKER_FORM_DEFAULTS } from "@/lib/schemas/worker";
 import { createWorker } from "@/lib/api/workers";
@@ -29,6 +29,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { WorkerCommandField } from "@/components/applications/workers/worker-command-field";
+import { WorkerKindField } from "@/components/applications/workers/worker-kind-field";
 
 /**
  * Presets prefill both name and command, but stay a starting point, not a
@@ -84,6 +85,8 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
     // and leaving a stale "installing" above a fresh validation error reads as
     // two contradictory explanations for one press.
     setInstalling(null);
+    // Same reasoning: it belongs to no field, so nothing else clears it.
+    form.clearErrors("root.server");
 
     const payload = {
       ...values,
@@ -123,11 +126,15 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
       onOpenChange?.(false);
       router.refresh();
     } catch (error) {
-      handleValidationError(error, form);
+      // `kind` has no control here either — picking the Horizon preset on a
+      // site that already has a queue worker is the exact path to the API's
+      // conflict, and it landed nowhere.
+      handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
     }
   }
 
   const isSubmitting = form.formState.isSubmitting;
+  const serverError = form.formState.errors.root?.server?.message;
 
   function handleOpenChange(next) {
     if (!next) {
@@ -168,6 +175,16 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
             and still here. */}
         {installing ? <Caution>{installing}</Caution> : null}
 
+        {serverError ? (
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive"
+          >
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            {serverError}
+          </p>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -206,6 +223,10 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
             )}
           />
         </div>
+
+        {/* No filtering here: nothing has been created yet, so every worker on
+            the site counts against the choice. */}
+        <WorkerKindField form={form} workers={workers} />
 
         <WorkerCommandField form={form} presets={presets} workers={workers} onPick={onPickPreset} />
 

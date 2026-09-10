@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2, Pencil, ChevronDown } from "lucide-react";
+import { Loader2, Pencil, ChevronDown, TriangleAlert } from "lucide-react";
 import { workerFormSchema } from "@/lib/schemas/worker";
 import { updateWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
@@ -28,6 +28,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { WorkerCommandField } from "@/components/applications/workers/worker-command-field";
+import { WorkerKindField } from "@/components/applications/workers/worker-kind-field";
 
 function valuesFrom(worker) {
   return {
@@ -84,6 +85,10 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
   }
 
   async function onSubmit(values) {
+    // Last attempt's refusal, cleared before this one. It belongs to no field,
+    // so nothing else clears it, and a stale conflict sitting above a worker
+    // you have since changed is worse than no message.
+    form.clearErrors("root.server");
     const payload = {
       ...values,
       name: values.name.trim(),
@@ -105,11 +110,20 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
       onOpenChange?.(false);
       router.refresh();
     } catch (error) {
-      handleValidationError(error, form);
+      /*
+       * `kind` is sent and is in the form's values, but has no control — it is
+       * set by picking a preset. So the API's "you can't run Horizon and a
+       * queue worker on the same app" was stored against an input that does not
+       * exist, and Save failed in total silence. Naming it here puts the
+       * refusal on the form, where it stays put while the dialog does.
+       */
+      handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
     }
   }
 
   const isSubmitting = form.formState.isSubmitting;
+  const serverError = form.formState.errors.root?.server?.message;
+  const others = workers.filter((w) => w.id !== worker.id);
 
   function handleOpenChange(next) {
     if (!next) form.reset(valuesFrom(worker));
@@ -143,6 +157,16 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
           </>
         }
       >
+        {serverError ? (
+          <p
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive"
+          >
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            {serverError}
+          </p>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -182,10 +206,15 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
           />
         </div>
 
+        {/* Both controls set `kind`, and both must exclude this worker from the
+            conflict check — changing a site's only queue worker into a Horizon
+            one is the edit that is always safe. */}
+        <WorkerKindField form={form} workers={others} />
+
         <WorkerCommandField
           form={form}
           presets={presets}
-          workers={workers.filter((w) => w.id !== worker.id)}
+          workers={others}
           onPick={onPickPreset}
         />
 

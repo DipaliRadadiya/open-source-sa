@@ -712,8 +712,7 @@
     "max500": "Must be 500 characters or fewer",
     "min1": "Must be at least 1",
     "max16": "Must be 16 or fewer",
-    "max300": "Must be 300 or fewer",
-    "shellMetacharacters": "Pipes, redirects and shell operators (| ; & $ ` > <) aren't supported — this command runs directly, not through a shell",
+    "shellMetacharacters": "Pipes, redirects and shell operators aren't supported: | ; & ` $ < > ( ) — this command runs directly, not through a shell",
     "invalidName": "Use only letters, numbers, dots, dashes and underscores",
     "noSlashes": "This field is a name, not a path — no / characters",
     "required_target": "Enter a path",
@@ -746,7 +745,11 @@
     "gitRef": "Use letters, numbers, dots, dashes and slashes only",
     "max65535": "That script is too long",
     "noTraversal": "Folders cannot contain ..",
-    "mustBeArchive": "The name has to end in .zip or .tar.gz"
+    "mustBeArchive": "The name has to end in .zip or .tar.gz",
+    "max60": "Must be 60 characters or fewer",
+    "max600": "Must be 600 or fewer",
+    "noTraversalPath": "The path cannot contain ..",
+    "noSectionHeader": "Can't contain [ — that would start another program block"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -3904,7 +3907,7 @@
         "nameHint": "A short label to identify this worker.",
         "useTemplate": "Use template",
         "command": "Command",
-        "commandHint": "Runs as this site's own user. Pipes, redirects, and shell operators (| ; & $ ` > <) aren't supported — supervisord runs this command directly, not through a shell.",
+        "commandHint": "Runs as this site's own user. supervisord runs the command directly, not through a shell.",
         "processes": "Processes",
         "processesHint": "How many copies to run at once, for handling more jobs in parallel.",
         "restartOnDeploy": "Restart after deploy",
@@ -3915,8 +3918,8 @@
         "enabledHint": "Turn off to keep the worker configured but not running.",
         "advanced": "Advanced settings",
         "directory": "Working directory",
-        "directoryPlaceholder": "Defaults to the site's document root",
-        "directoryHint": "Where the command runs from. Leave empty to use the site's document root.",
+        "directoryPlaceholder": "Defaults to the site's code folder",
+        "directoryHint": "Where the command runs from. Leave empty to use the site's code folder — for most frameworks that is the folder containing the site's code, not the one the web server serves.",
         "stopWaitSeconds": "Stop timeout (seconds)",
         "stopWaitSecondsHint": "How long to let it finish what it's doing before forcing it to stop.",
         "conflict": {
@@ -3928,7 +3931,7 @@
         "userHint": "Leave empty to run as this site's own user, which is almost always right.",
         "logFile": "Log file",
         "logFilePlaceholder": "/var/log/my-worker.log",
-        "logFileHint": "Absolute path. Leave empty and supervisord chooses one.",
+        "logFileHint": "Absolute path, and it can't contain .. — leave empty and supervisord chooses one.",
         "logLevel": "Log level",
         "logLevelDefault": "Server default",
         "logLevelHint": "How much supervisord itself writes about this worker.",
@@ -3945,7 +3948,14 @@
         "autoStartHint": "Off means it only runs when you start it by hand.",
         "extraConfig": "Extra supervisord settings",
         "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
-        "extraConfigHint": "One setting per line, added to this worker only. Section headers in [brackets] are refused."
+        "extraConfigHint": "One setting per line, added to this worker only. Section headers in [brackets] are refused.",
+        "kind": "Type",
+        "kindHint": "Decides how it gets restarted. Queue and Horizon are asked to finish the job they're on first; Custom is stopped and started.",
+        "kinds": {
+          "queue": "Queue worker",
+          "horizon": "Horizon",
+          "custom": "Custom"
+        }
       },
       "runsAsTooltip": "Runs as {user}, not this site's own user."
     },

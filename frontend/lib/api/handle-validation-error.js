@@ -17,7 +17,7 @@ import { errorTarget } from "@/lib/api/error-target";
  * is the honest test — not the form's field list, which still holds the keys of
  * branches the user is not using.
  */
-export function handleValidationError(error, form, { formError = false } = {}) {
+export function handleValidationError(error, form, { formError = false, unrendered = [] } = {}) {
   const errors = error.response?.data?.errors;
 
   if (errors && form) {
@@ -40,9 +40,9 @@ export function handleValidationError(error, form, { formError = false } = {}) {
     const orphaned = [];
     Object.entries(errors).forEach(([field, messages]) => {
       // Which name to set it on, or null for "nothing here would render it".
-      // Pure and tested in lib/api/error-target.js — the three ways a message
+      // Pure and tested in lib/api/error-target.js — the four ways a message
       // can vanish are all decided there.
-      const target = errorTarget(field, fields, sent);
+      const target = errorTarget(field, fields, sent, unrendered);
       if (target) form.setError(target, { message: messages[0] });
       else orphaned.push(messages[0]);
     });

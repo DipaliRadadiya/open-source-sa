@@ -196,8 +196,7 @@
     "max500": "Debe tener 500 caracteres o menos",
     "min1": "Debe ser al menos 1",
     "max16": "Debe ser 16 o menos",
-    "max300": "Debe ser 300 o menos",
-    "shellMetacharacters": "No se admiten tuberías, redirecciones ni operadores de shell (| ; & $ ` > <): este comando se ejecuta directamente, no a través de un shell",
+    "shellMetacharacters": "No se admiten tuberías, redirecciones ni operadores de shell: | ; & ` $ < > ( ): este comando se ejecuta directamente, no a través de un shell",
     "invalidName": "Usa solo letras, números, puntos, guiones y guiones bajos",
     "noSlashes": "Este campo es un nombre, no una ruta — sin caracteres /",
     "required_target": "Introduce una ruta",
@@ -230,7 +229,11 @@
     "gitRef": "Usa solo letras, números, puntos, guiones y barras",
     "max65535": "Ese script es demasiado largo",
     "noTraversal": "Las carpetas no pueden contener ..",
-    "mustBeArchive": "El nombre debe terminar en .zip o .tar.gz"
+    "mustBeArchive": "El nombre debe terminar en .zip o .tar.gz",
+    "max60": "Debe tener 60 caracteres o menos",
+    "max600": "Debe ser 600 o menos",
+    "noTraversalPath": "La ruta no puede contener ..",
+    "noSectionHeader": "No puede contener [ — eso iniciaría otro bloque de programa"
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -3904,7 +3907,7 @@
         "nameHint": "Una etiqueta corta para identificar este worker.",
         "useTemplate": "Usar plantilla",
         "command": "Comando",
-        "commandHint": "Se ejecuta como el propio usuario de este sitio. No se admiten tuberías, redirecciones ni operadores de shell (| ; & $ ` > <): supervisord ejecuta este comando directamente, no a través de un shell.",
+        "commandHint": "Se ejecuta con el propio usuario de este sitio. supervisord ejecuta el comando directamente, no a través de un shell.",
         "processes": "Procesos",
         "processesHint": "Cuántas copias ejecutar a la vez, para procesar más trabajos en paralelo.",
         "restartOnDeploy": "Reiniciar tras el despliegue",
@@ -3915,8 +3918,8 @@
         "enabledHint": "Desactívalo para mantener el worker configurado pero sin ejecutarse.",
         "advanced": "Ajustes avanzados",
         "directory": "Directorio de trabajo",
-        "directoryPlaceholder": "Por defecto, el directorio raíz del sitio",
-        "directoryHint": "Desde dónde se ejecuta el comando. Déjalo vacío para usar el directorio raíz del sitio.",
+        "directoryPlaceholder": "Por defecto, la carpeta de código del sitio",
+        "directoryHint": "Desde dónde se ejecuta el comando. Déjalo vacío para usar la carpeta de código del sitio: en la mayoría de los frameworks es la carpeta que contiene el código, no la que sirve el servidor web.",
         "stopWaitSeconds": "Tiempo de espera al detener (segundos)",
         "stopWaitSecondsHint": "Cuánto tiempo dejarlo terminar lo que está haciendo antes de forzar su detención.",
         "conflict": {
@@ -3928,7 +3931,7 @@
         "userHint": "Déjalo vacío para usar el usuario propio del sitio, que casi siempre es lo correcto.",
         "logFile": "Archivo de registro",
         "logFilePlaceholder": "/var/log/mi-worker.log",
-        "logFileHint": "Ruta absoluta. Si lo dejas vacío, supervisord elige una.",
+        "logFileHint": "Ruta absoluta y sin «..». Déjalo vacío y supervisord elegirá una.",
         "logLevel": "Nivel de registro",
         "logLevelDefault": "Predeterminado del servidor",
         "logLevelHint": "Cuánto escribe supervisord sobre este worker.",
@@ -3945,7 +3948,14 @@
         "autoStartHint": "Desactivado, solo se ejecuta cuando lo inicias a mano.",
         "extraConfig": "Ajustes adicionales de supervisord",
         "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
-        "extraConfigHint": "Un ajuste por línea, solo para este worker. No se admiten encabezados entre [corchetes]."
+        "extraConfigHint": "Un ajuste por línea, solo para este worker. No se admiten encabezados entre [corchetes].",
+        "kind": "Tipo",
+        "kindHint": "Decide cómo se reinicia. A Queue y Horizon se les pide que terminen primero el trabajo en curso; Custom se detiene y se inicia.",
+        "kinds": {
+          "queue": "Worker de cola",
+          "horizon": "Horizon",
+          "custom": "Personalizado"
+        }
       },
       "runsAsTooltip": "Se ejecuta como {user}, no como el usuario propio del sitio."
     },

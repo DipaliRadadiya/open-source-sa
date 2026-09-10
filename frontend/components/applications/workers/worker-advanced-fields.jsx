@@ -152,7 +152,7 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
                 type="number"
                 inputMode="numeric"
                 min={1}
-                max={300}
+                max={600}
                 disabled={disabled}
                 {...field}
               />
