@@ -1644,15 +1644,19 @@ install_ols_packages() {
     # Not `run`: the extension packages are the known-shaky part (see the note
     # on configure_ols). A missing -gd should not abort an otherwise good
     # install, because the panel can install PHP packages itself afterwards.
-    # Deliberately no `-pgsql` here, unlike the PHP-FPM list above. apt fails
-    # the whole command if any one package is missing, so adding a package that
-    # may not exist in LiteSpeed's repository for this version would take
-    # `-mysql` down with it and leave OLS sites unable to reach *any* database.
-    # The cost is that a PostgreSQL-backed site on OpenLiteSpeed needs
-    # `lsphpXX-pgsql` installed by hand; the cost of the alternative is every
-    # MySQL site on the stack.
+    # `-pgsql` alongside `-mysql`, for the same reason the PHP-FPM list above
+    # carries it: the panel can manage a PostgreSQL server, and without the
+    # client extension no site on this stack could connect to a database the
+    # panel had just made for it.
+    #
+    # Checked rather than assumed, because apt fails the whole command if one
+    # package is missing and that would take `-mysql` with it: LiteSpeed's
+    # repository carries lsphpXX-pgsql for every version it ships (8.0–8.4 on
+    # both jammy and noble, verified 2026-09-10 against their Packages index).
+    # A version with no -pgsql would have no -mysql and no interpreter either,
+    # so this line already fails for it.
     local lsphp="lsphp${PHP_VERSION//./}"
-    if ! apt-get install -y "${lsphp}" "${lsphp}-common" "${lsphp}-mysql" >>"$LOG_FILE" 2>&1; then
+    if ! apt-get install -y "${lsphp}" "${lsphp}-common" "${lsphp}-mysql" "${lsphp}-pgsql" >>"$LOG_FILE" 2>&1; then
         warn "could not install all of ${lsphp} — hosted PHP sites may be missing extensions"
         warn "check with: apt-cache search lsphp"
     fi

@@ -1346,7 +1346,7 @@ return [
             | here is what the user is stuck with. A base set smaller than
             | FPM's would be a real difference in what the two can run.
             */
-            'base_packages' => ['common', 'mysql', 'curl', 'mbstring', 'xml', 'zip', 'gd', 'intl', 'bcmath', 'soap'],
+            'base_packages' => ['common', 'mysql', 'pgsql', 'curl', 'mbstring', 'xml', 'zip', 'gd', 'intl', 'bcmath', 'soap'],
         ],
     ],
 
@@ -1696,7 +1696,7 @@ return [
             // version means installing something usable.
             'base_packages' => array_values(array_filter(explode(',', (string) env(
                 'SERVER_PHP_BASE_PACKAGES',
-                'fpm,cli,common,mysql,curl,mbstring,xml,zip,gd,intl,bcmath,soap'
+                'fpm,cli,common,mysql,pgsql,curl,mbstring,xml,zip,gd,intl,bcmath,soap'
             )))),
             'install_timeout' => (int) env('SERVER_PHP_INSTALL_TIMEOUT', 900),
 

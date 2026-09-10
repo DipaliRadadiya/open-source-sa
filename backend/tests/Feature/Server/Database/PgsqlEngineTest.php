@@ -5,6 +5,8 @@ use App\Models\DatabaseConnection;
 use App\Models\User;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\PgsqlEngine;
+use App\Services\Server\Php\Stacks\FpmPhpStack;
+use App\Services\Server\Php\Stacks\LsphpPhpStack;
 use App\Services\Server\ServerOps;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
@@ -235,4 +237,27 @@ it('still allows remote access on the engines that support it', function () {
     expect(app(DatabaseManager::class)->supportsRemoteUsers('mysql'))->toBeTrue()
         ->and(app(DatabaseManager::class)->supportsRemoteUsers('mongodb'))->toBeTrue()
         ->and(app(DatabaseManager::class)->supportsRemoteUsers('postgresql'))->toBeFalse();
+});
+
+it('ships the postgres client extension on every php stack', function () {
+    // The panel supports four web servers and two PHP stacks. A PostgreSQL
+    // database the panel can create is useless to a site whose PHP cannot
+    // connect to it, and the package name differs per stack — php8.4-pgsql
+    // against lsphp84-pgsql.
+    //
+    // Asserted through the stack abstraction rather than by reading the config
+    // list, because that mapping is the part that would silently be wrong.
+    $ops = app(ServerOps::class);
+
+    $stacks = [
+        'php8.4-pgsql' => new FpmPhpStack($ops),
+        'lsphp84-pgsql' => new LsphpPhpStack($ops),
+    ];
+
+    foreach ($stacks as $expected => $stack) {
+        expect($stack->extensionPackage('8.4', 'pgsql'))->toBe($expected)
+            // In the base set, so a newly installed PHP version carries it
+            // rather than the user discovering the gap from a driver error.
+            ->and($stack->versionPackages('8.4'))->toContain($expected);
+    }
 });
