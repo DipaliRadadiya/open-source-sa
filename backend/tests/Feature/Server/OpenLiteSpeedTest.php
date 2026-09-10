@@ -960,7 +960,7 @@ describe('the site type catalog', function () {
         // takes MongoDB alone, and this fixture answers only for SQL.
         expect($catalog->where('available', false)->pluck('name')->all())->toBe(['nodebb'])
             ->and($catalog->firstWhere('name', 'nodebb')['unavailable_reason'])
-            ->toBe('This application needs MongoDB, which this server does not have.')
+            ->toBe('This application needs MongoDB / PostgreSQL, which this server does not have.')
             ->and($catalog)->toHaveCount(17);
     });
 

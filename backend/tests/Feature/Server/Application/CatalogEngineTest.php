@@ -44,7 +44,7 @@ function onlyEngines(array $engines): void
     Process::fake(function ($process) use ($engines) {
         $command = implode(' ', (array) $process->command);
 
-        foreach (['mysql' => 'mysql', 'mariadb' => 'mariadb', 'mongodb' => 'mongosh'] as $engine => $client) {
+        foreach (['mysql' => 'mysql', 'mariadb' => 'mariadb', 'mongodb' => 'mongosh', 'postgresql' => 'psql'] as $engine => $client) {
             if (str_contains($command, $client)) {
                 $GLOBALS['engineProbes'][] = $engine;
 
@@ -141,7 +141,9 @@ it('publishes the engines each type accepts', function () {
     $types = siteTypeCatalog();
 
     expect($types['wordpress']['accepted_engines'])->toContain('mysql')
-        ->and($types['nodebb']['accepted_engines'])->toBe(['mongodb'])
+        // MongoDB first: the first available engine wins, so a server
+        // with both keeps making Mongo-backed forums.
+        ->and($types['nodebb']['accepted_engines'])->toBe(['mongodb', 'postgresql'])
         // Empty rather than null for a type that needs none, so "no
         // constraint" is not a special case for the caller.
         ->and($types['php']['accepted_engines'])->toBe([]);

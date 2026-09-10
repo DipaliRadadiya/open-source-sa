@@ -283,20 +283,25 @@ it('gives Node-RED a password, because it ships without one', function () {
             .' --userDir /home/apps/nodered/public_html --settings /home/apps/nodered/public_html/settings.js');
 });
 
-it('greys NodeBB on a server with no MongoDB, rather than offering MySQL', function () {
-    // No mongo client on this box, which is how the engine reports itself
-    // absent.
-    Process::fake(fn ($process) => ($process->command[0] ?? '') === 'mongosh'
+it('greys NodeBB on a server with neither engine it can use, rather than offering MySQL', function () {
+    // Neither client answers, which is how both engines report themselves
+    // absent. Both are named now that NodeBB accepts PostgreSQL too: faking
+    // only mongosh away would leave psql apparently working, and the card
+    // would be offered for the right reason by accident.
+    Process::fake(fn ($process) => in_array($process->command[0] ?? '', ['mongosh', 'psql'], true)
         ? Process::result(exitCode: 1)
         : Process::result(output: ''));
 
     $nodebb = collect(app(SiteTypeManager::class)->catalog())->firstWhere('name', 'nodebb');
 
-    // NodeBB speaks MongoDB, Redis or PostgreSQL — never MySQL. Offering the
-    // card and then failing inside its setup would send the user to install
-    // the one database that cannot help.
+    // NodeBB speaks MongoDB or PostgreSQL — never MySQL. Offering the card and
+    // then failing inside its setup would send the user to install the one
+    // database that cannot help.
     expect($nodebb['available'])->toBeFalse()
         ->and($nodebb['unavailable_reason'])->toContain('MongoDB')
+        // Both ways out are named, so the user is not sent to install MongoDB
+        // when PostgreSQL would do.
+        ->and($nodebb['unavailable_reason'])->toContain('PostgreSQL')
         // Distinguishable from a runtime or web-server block without parsing
         // prose: the way out of this one is the Databases screen.
         ->and($nodebb['unavailable_code'])->toBe('database')
@@ -312,7 +317,10 @@ it('starts NodeBB in the foreground, so systemd keeps hold of it', function () {
     // die and kills the children it left behind in the cgroup.
     expect($installer->startCommand($app, '/home/apps/nodebb/public_html'))
         ->toBe('node /home/apps/nodebb/public_html/loader.js --no-daemon --no-silent')
-        ->and($installer->acceptedEngines())->toBe(['mongodb']);
+        // MongoDB first: the first available engine wins, so a server with
+        // both keeps making Mongo-backed forums and nothing changes for
+        // anyone who already had one.
+        ->and($installer->acceptedEngines())->toBe(['mongodb', 'postgresql']);
 });
 
 /**
@@ -896,3 +904,84 @@ describe('the Uptime Kuma releases API', function () {
             ->and(ranCommands())->not->toContain('ls-remote');
     });
 });
+
+/**
+ * The config NodeBB actually reads, for a PostgreSQL-backed forum.
+ *
+ * Every key here was taken from NodeBB v4.x's own source rather than its docs
+ * (2026-09-10) — that is the branch the panel clones:
+ *
+ *  - `src/database/index.js` loads the driver as `require('./' + database)`,
+ *    so the value is a **filename**: `postgres`, never `postgresql`.
+ *  - `src/database/postgres.js`'s `questions` name `postgres:host|port|
+ *    username|password|database|ssl`.
+ *  - `src/database/postgres/connection.js` maps `postgres.username` onto
+ *    node-postgres's `user`, and reads ssl as `String(ssl) === 'true'`.
+ *
+ * The list of accepted engines is not a label: it decides which database the
+ * panel *creates*, while this decides what the forum is *told*. If they
+ * disagree the site is created, reported Active, and broken at first load with
+ * an error naming the other database.
+ */
+it('writes a NodeBB config PostgreSQL can actually be reached with', function () {
+    $app = oneClickApp('nodebb');
+
+    $config = json_decode(nodeBbConfigFor($app, [
+        'engine' => 'postgresql',
+        'db_host' => '127.0.0.1',
+        'db_port' => 5432,
+        'db_user' => 'forum_abc123',
+        'db_password' => 'a-long-password',
+        'database' => 'forum_abc123',
+    ]), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($config['database'])->toBe('postgres')
+        ->and($config)->not->toHaveKey('mongo')
+        ->and($config['postgres']['host'])->toBe('127.0.0.1')
+        // An int, which is NodeBB's own default type for this field.
+        ->and($config['postgres']['port'])->toBe(5432)
+        // `username`, not `user` — connection.js does that mapping itself, and
+        // getting it wrong connects as nobody.
+        ->and($config['postgres']['username'])->toBe('forum_abc123')
+        ->and($config['postgres']['password'])->toBe('a-long-password')
+        ->and($config['postgres']['database'])->toBe('forum_abc123')
+        // Explicit: the panel's PostgreSQL listens on the loopback only, so
+        // there is nothing to encrypt between two processes on one box.
+        ->and($config['postgres']['ssl'])->toBeFalse();
+});
+
+it('still writes a MongoDB config when that is the engine', function () {
+    // The other half. A branch that only ever produced the new shape would
+    // break every forum the panel has already made.
+    $app = oneClickApp('nodebb');
+
+    $config = json_decode(nodeBbConfigFor($app, [
+        'engine' => 'mongodb',
+        'db_host' => '127.0.0.1',
+        'db_port' => 27017,
+        'db_user' => 'forum_abc123',
+        'db_password' => 'a-long-password',
+        'database' => 'forum_abc123',
+    ]), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($config['database'])->toBe('mongo')
+        ->and($config)->not->toHaveKey('postgres')
+        ->and($config['mongo']['username'])->toBe('forum_abc123')
+        // Mongo's port stays a string, as it always was.
+        ->and($config['mongo']['port'])->toBe('27017');
+});
+
+/**
+ * `config()` is private, and deliberately so — nothing outside the installer
+ * should be composing this file. Reached through reflection rather than made
+ * public for the test, which would widen the class's surface to suit us.
+ *
+ * @param  array<string, mixed>  $context
+ */
+function nodeBbConfigFor(Application $app, array $context): string
+{
+    $installer = app(NodeBbInstaller::class);
+    $method = new ReflectionMethod($installer, 'config');
+
+    return $method->invoke($installer, $app, '/home/apps/nodebb/public_html', $context);
+}

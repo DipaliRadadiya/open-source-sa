@@ -47,13 +47,24 @@ class NodeBbInstaller extends AbstractNodeInstaller
     }
 
     /**
-     * MongoDB only, of the engines this panel manages. Redis and PostgreSQL
-     * would also work for NodeBB; neither is something the panel creates
-     * databases and users in today.
+     * MongoDB and PostgreSQL, in that order — the first available engine wins,
+     * so MongoDB stays the default on a server that has both and nothing
+     * changes for existing forums.
+     *
+     * This list is not a label. `config()` writes the driver name *and* its
+     * settings block, so an engine named here without a matching block would
+     * produce a forum configured for the other database with these
+     * credentials written nowhere — created, reported Active, and broken at
+     * first load. Both blocks exist; see `postgresConfig()` for where its
+     * keys come from.
+     *
+     * Redis would also work for NodeBB and is deliberately still absent: the
+     * panel does not create Redis databases or users, so there would be
+     * nothing to hand it.
      */
     public function acceptedEngines(): array
     {
-        return ['mongodb'];
+        return ['mongodb', 'postgresql'];
     }
 
     /**
@@ -307,24 +318,74 @@ class NodeBbInstaller extends AbstractNodeInstaller
      */
     private function config(Application $application, string $documentRoot, array $context): string
     {
+        // NodeBB loads its driver as `require('./' + nconf.get('database'))`
+        // against `src/database/`, so this string is a filename, not a label:
+        // `postgres`, never `postgresql`. Read from NodeBB v4.x's own
+        // `src/database/index.js` (2026-09-10), which is the branch the panel
+        // clones.
+        $engine = (string) ($context['engine'] ?? 'mongodb');
+        $driver = $engine === 'postgresql' ? 'postgres' : 'mongo';
+
         return json_encode([
             // NodeBB builds every absolute link from this, so a wrong value is
             // a forum whose links all point somewhere else.
             'url' => $application->url(),
             'secret' => Str::random(40),
-            'database' => 'mongo',
+            'database' => $driver,
             'port' => (int) ($application->app_port ?: 4567),
             // Reached through the reverse proxy only.
             'bind_address' => '127.0.0.1',
-            'mongo' => [
-                'host' => (string) ($context['db_host'] ?? '127.0.0.1'),
-                'port' => (string) ($context['db_port'] ?? 27017),
-                'username' => (string) ($context['db_user'] ?? ''),
-                'password' => (string) ($context['db_password'] ?? ''),
-                'database' => (string) ($context['database'] ?? ''),
-                'uri' => '',
-            ],
+            $driver => $driver === 'postgres'
+                ? $this->postgresConfig($context)
+                : $this->mongoConfig($context),
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n";
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    private function mongoConfig(array $context): array
+    {
+        return [
+            'host' => (string) ($context['db_host'] ?? '127.0.0.1'),
+            'port' => (string) ($context['db_port'] ?? 27017),
+            'username' => (string) ($context['db_user'] ?? ''),
+            'password' => (string) ($context['db_password'] ?? ''),
+            'database' => (string) ($context['database'] ?? ''),
+            'uri' => '',
+        ];
+    }
+
+    /**
+     * The keys NodeBB actually reads, taken from its own source rather than
+     * from its docs: `postgresModule.questions` in `src/database/postgres.js`
+     * names `postgres:host|port|username|password|database|ssl`, and
+     * `src/database/postgres/connection.js` maps `postgres.username` onto
+     * node-postgres's `user`. Getting that one wrong would connect as nobody.
+     *
+     * `port` as an int, unlike the mongo block's string: that is NodeBB's own
+     * default type for this field, and `connection.js` passes it straight to
+     * node-postgres.
+     *
+     * `ssl` false and explicit. The panel's PostgreSQL only listens on the
+     * loopback, so there is nothing to encrypt between two processes on one
+     * box — and connection.js reads it as `String(postgres.ssl) === 'true'`,
+     * so an absent value would work by accident rather than by decision.
+     *
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    private function postgresConfig(array $context): array
+    {
+        return [
+            'host' => (string) ($context['db_host'] ?? '127.0.0.1'),
+            'port' => (int) ($context['db_port'] ?? 5432),
+            'username' => (string) ($context['db_user'] ?? ''),
+            'password' => (string) ($context['db_password'] ?? ''),
+            'database' => (string) ($context['database'] ?? ''),
+            'ssl' => false,
+        ];
     }
 
     public function syncUrl(Application $application, string $url): void
