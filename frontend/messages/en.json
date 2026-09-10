@@ -1425,7 +1425,7 @@
       "emptyTitle": "No rules yet",
       "emptyBody": "Add a rule to let something through — a website on 443, or SSH from your office only.",
       "protectedHint": "Added automatically so you cannot be locked out of this server.",
-      "protectedReason": "This one keeps you connected. Turn the firewall off first if you really want to remove it.",
+      "protectedReason": "This one keeps you connected — switching it off can lock you out of the server or take your sites offline.",
       "confirmTitle": "Delete this rule?",
       "confirmBodyOn": "{rule} — this takes effect straight away. Whatever it was letting through will be blocked.",
       "confirmBodyOff": "{rule} — the firewall is off, so nothing changes today, but the rule will not come back when you turn it on.",

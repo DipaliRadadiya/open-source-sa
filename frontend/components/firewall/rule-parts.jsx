@@ -1,5 +1,6 @@
 import { Lock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { protectedReasonFor } from "@/lib/firewall/protected-rule";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -103,29 +104,20 @@ export function SourceText({ rule, labels }) {
 }
 
 /**
- * Why a seeded rule cannot be changed right now, or null.
- *
- * One helper because the guard is one rule: `ProtectedRuleGuard` locks
- * port_from, port_to, protocol, action, source_ip AND `enabled` on a
- * panel-seeded rule, but only while the firewall is enforcing. Delete used to
- * be the only control that asked — so the toggle, whose effect on a running
- * ufw is identical to a delete, was offered and then refused with a 422.
- */
-export function protectedReasonFor({ rule, enabled, canManage, labels }) {
-  if (!canManage) return labels.noPermission;
-  return Boolean(rule.protected) && enabled ? labels.protectedReason : null;
-}
-
-/**
  * Delete, with the reason it's unavailable when it is.
  *
  * A system-seeded rule can't be removed while the firewall is on — that's the
  * lockout guard, and it's the most confusing disabled button on the page, so it
  * explains itself rather than just being grey.
  */
+export { protectedReasonFor };
+
 export function DeleteRuleButton({ rule, enabled, canManage, pending, onDelete, labels }) {
+  // Deleting a seeded rule sets the same trap as switching it off — ufw sees
+  // one and the same thing — so it is refused whether or not the firewall is
+  // currently enforcing.
   const reason = protectedReasonFor({ rule, enabled, canManage, labels });
-  const lockedByGuard = Boolean(rule.protected) && enabled;
+  const lockedByGuard = Boolean(rule.protected);
 
   return (
     <ReasonTooltip reason={reason}>

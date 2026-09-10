@@ -1425,7 +1425,7 @@
       "emptyTitle": "Todavía no hay reglas",
       "emptyBody": "Añade una regla para dejar pasar algo — una web en el 443, o SSH solo desde tu oficina.",
       "protectedHint": "Añadida automáticamente para que no te quedes fuera de este servidor.",
-      "protectedReason": "Esta te mantiene conectado. Apaga el cortafuegos primero si de verdad quieres quitarla.",
+      "protectedReason": "Esta te mantiene conectado: desactivarla puede dejarte fuera del servidor o tumbar tus sitios.",
       "confirmTitle": "¿Eliminar esta regla?",
       "confirmBodyOn": "{rule} — tiene efecto de inmediato. Lo que dejaba pasar quedará bloqueado.",
       "confirmBodyOff": "{rule} — el cortafuegos está apagado, así que hoy no cambia nada, pero la regla no volverá cuando lo actives.",

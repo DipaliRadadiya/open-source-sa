@@ -68,7 +68,16 @@ function ActionsCell({ row, table }) {
   const busy = pending === rule.id;
   // Same guard the API applies. Switching a seeded rule off is, to ufw, the
   // delete this row already refuses — so offering it only bought a 422.
-  const guarded = protectedReasonFor({ rule, enabled, canManage, labels });
+  // `turningOff` is what the switch would DO, not what the rule is: a
+  // protected rule that is currently off can be switched back on, and that is
+  // the only way off a server already locked into the trap.
+  const guarded = protectedReasonFor({
+    rule,
+    enabled,
+    canManage,
+    labels,
+    turningOff: shownEnabled(rule),
+  });
 
   return (
     <div className="flex items-center justify-end gap-1">
