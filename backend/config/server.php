@@ -524,9 +524,19 @@ return [
     */
 
     'web_servers' => [
-        'nginx' => ['/etc/nginx/sites-available'],
+        // Narrow FIRST, broad second: the first path that exists wins, so
+        // listing both is strictly more permissive than either alone.
+        //
+        // Only Apache needs the narrow form. `/etc/apache2` is shipped by
+        // `phpX.Y-fpm`, which every stack installs, so it exists on machines
+        // that have never had Apache -- and `sites-available` is the part only
+        // the apache2 package brings. Nothing ships a decoy `/etc/nginx` or
+        // `/usr/local/lsws`, so narrowing those bought nothing and cost two new
+        // ways to answer "no web server found" on a server plainly running one.
+        // Which is what it did, on a real OpenLiteSpeed box.
+        'nginx' => ['/etc/nginx/sites-available', '/etc/nginx'],
         'apache' => ['/etc/apache2/sites-available', '/etc/httpd/conf.d'],
-        'openlitespeed' => ['/usr/local/lsws/conf/vhosts'],
+        'openlitespeed' => ['/usr/local/lsws/conf/vhosts', '/usr/local/lsws'],
     ],
 
     'node_binary' => env('SERVER_NODE_BINARY', 'node'),

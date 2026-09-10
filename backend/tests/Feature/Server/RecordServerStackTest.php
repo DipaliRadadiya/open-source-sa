@@ -301,3 +301,37 @@ it('does not re-probe once it has looked', function () {
     // several features do — must not turn into repeated subprocesses.
     Process::assertNothingRan();
 });
+
+/*
+ * Detection must not depend on one exact directory.
+ *
+ * Narrowing every web server to the directory the panel writes vhosts into
+ * fixed the Apache phantom and broke OpenLiteSpeed on a real server: doctor
+ * reported "none of nginx, apache, openlitespeed found" on a box plainly
+ * running one. Only Apache has a decoy directory; nginx and OpenLiteSpeed
+ * never needed the narrowing.
+ */
+describe('detection tolerates either directory', function () {
+    it('finds OpenLiteSpeed from the server root alone', function () {
+        fakeDetectedWebServer(running: ['lshttpd'], dirs: ['/usr/local/lsws']);
+
+        expect(app(ServerCapabilities::class)->webServer())->toBe('openlitespeed');
+    });
+
+    it('finds nginx from /etc/nginx alone', function () {
+        fakeDetectedWebServer(running: ['nginx'], dirs: ['/etc/nginx']);
+
+        expect(app(ServerCapabilities::class)->webServer())->toBe('nginx');
+    });
+
+    // The one that must stay narrow. php-fpm ships /etc/apache2, so a bare
+    // one is not an Apache installation and must never be read as one.
+    it('still refuses to call php-fpm\'s /etc/apache2 an Apache install', function () {
+        fakeDetectedWebServer(
+            running: ['lshttpd'],
+            dirs: ['/etc/apache2', '/etc/apache2/conf-available', '/usr/local/lsws'],
+        );
+
+        expect(app(ServerCapabilities::class)->webServer())->toBe('openlitespeed');
+    });
+});
