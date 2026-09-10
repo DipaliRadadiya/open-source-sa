@@ -4924,7 +4924,8 @@
       "endpointAws": "Déjalo vacío para Amazon S3: la región determina el endpoint.",
       "prefix": "Carpeta",
       "prefixPlaceholder": "backups/",
-      "prefixHint": "Opcional. Mantiene las copias en su propia carpeta dentro del bucket."
+      "prefixHint": "Opcional. Mantiene las copias en su propia carpeta dentro del bucket.",
+      "prefixChangeWarning": "Cambiarlo no mueve nada. Las copias ya guardadas en la carpeta anterior dejan de encontrarse."
     },
     "connect": {
       "title": "Añadir un destino de almacenamiento",

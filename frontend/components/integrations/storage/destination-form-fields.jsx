@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { TriangleAlert } from "lucide-react";
 import { STORAGE_PROVIDERS } from "@/lib/schemas/storage";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,6 +28,9 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/comp
  * edit, so the asterisk is a claim about this form rather than decoration.
  */
 export function DestinationFormFields({
+  // True on a destination that already exists, where changing the folder has
+  // consequences for archives already in it.
+  existing = false,
   form,
   provider,
   onProviderChange,
@@ -158,6 +162,23 @@ export function DestinationFormFields({
               />
             </FormControl>
             <p className="text-xs text-muted-foreground">{t("prefixHint")}</p>
+            {/*
+              * The folder is the disk's ROOT, and a backup's stored key is
+              * relative to it (`DestinationDisk`: 'root' => $destination->prefix).
+              * So changing it does not move anything — it repoints the panel at
+              * a different place, and every archive already written stops being
+              * found. Said where the change is made, because afterwards the only
+              * symptom is a download that reports the file missing.
+              *
+              * Only when editing: on a destination that does not exist yet there
+              * is nothing to strand, and a warning there is just noise.
+              */}
+            {existing ? (
+              <p className="flex items-start gap-1.5 text-xs text-warning">
+                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                {t("prefixChangeWarning")}
+              </p>
+            ) : null}
             <FormMessage />
           </FormItem>
         )}

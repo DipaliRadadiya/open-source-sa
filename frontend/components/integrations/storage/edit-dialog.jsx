@@ -96,7 +96,7 @@ export function EditDestinationDialog({ destination, open, onOpenChange }) {
           </>
         }
       >
-        <DestinationFormFields form={form} disabled={submitting} required={required} />
+        <DestinationFormFields form={form} disabled={submitting} required={required} existing />
         <p className="text-xs text-muted-foreground">{t("credentialsUntouched")}</p>
       </FormModal>
     </Form>

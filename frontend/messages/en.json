@@ -4924,7 +4924,8 @@
       "endpointAws": "Leave empty for Amazon S3 — the region decides the endpoint.",
       "prefix": "Folder",
       "prefixPlaceholder": "backups/",
-      "prefixHint": "Optional. Keeps backups in their own folder inside the bucket."
+      "prefixHint": "Optional. Keeps backups in their own folder inside the bucket.",
+      "prefixChangeWarning": "Changing this does not move anything. Backups already stored under the old folder stop being found."
     },
     "connect": {
       "title": "Add a storage destination",
