@@ -116,13 +116,28 @@ export function applicationById(applications = [], applicationId) {
   ) ?? null;
 }
 
-export function applicationOptions(applications = [], counts = null, known = false, reason = "") {
-  return (applications ?? []).map((application) => ({
-    value: String(application.id),
-    label: application.name,
-    hint: application.domain ?? undefined,
-    // Unknown counts block nothing: see `hasNoDatabase`. Better to allow a
-    // second attach the API may refuse than to bar a site that is actually free.
-    disabledReason: known && (counts?.[application.id] ?? 0) > 0 ? reason : undefined,
-  }));
+export function applicationOptions(
+  applications = [],
+  counts = null,
+  known = false,
+  reason = "",
+  // Why this site cannot speak the engine in question, or undefined. Passed as
+  // a function because the create dialog's engine changes while the dialog is
+  // open — a precomputed list would answer for the engine chosen a moment ago.
+  engineReason = null,
+) {
+  return (applications ?? []).map((application) => {
+    // The taken check first: "it already has one" is the more actionable of
+    // the two, and a site can trip both.
+    const taken = known && (counts?.[application.id] ?? 0) > 0 ? reason : undefined;
+
+    return {
+      value: String(application.id),
+      label: application.name,
+      hint: application.domain ?? undefined,
+      // Unknown counts block nothing: see `hasNoDatabase`. Better to allow a
+      // second attach the API may refuse than to bar a site that is free.
+      disabledReason: taken ?? engineReason?.(application) ?? undefined,
+    };
+  });
 }

@@ -6,6 +6,7 @@ import { Link2, Loader2 } from "lucide-react";
 import { attachDatabase } from "@/lib/api/databases";
 import { apiMessage } from "@/lib/api/error-message";
 import { applicationOptions } from "@/lib/backups/database-availability";
+import { acceptedEnginesFor, engineAccepted } from "@/lib/databases/engine-acceptance";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { FormModal } from "@/components/ui/form-modal";
@@ -30,8 +31,10 @@ export function AttachApplicationDialog({
   applications = [],
   databaseCounts = null,
   databasesKnown = false,
+  siteTypes = [],
 }) {
   const t = useTranslations("databases.attach");
+  const tEngines = useTranslations("databases.engines");
   const router = useRouter();
   // null means untouched, so the field simply reads the database. Holding the
   // current site in state instead would need an effect to re-seed it, and an
@@ -136,6 +139,16 @@ export function AttachApplicationDialog({
               excludeSelf(databaseCounts, current),
               databasesKnown,
               t("taken"),
+              // The API refuses this pairing outright, so it is a blocked
+              // option with the reason rather than a refusal after the choice.
+              (application) =>
+                engineAccepted({ application, siteTypes, engine: database?.engine })
+                  ? undefined
+                  : t("engineNotAccepted", {
+                      engines: acceptedEnginesFor({ application, siteTypes })
+                        .map((name) => (tEngines.has(name) ? tEngines(name) : name))
+                        .join(" / "),
+                    }),
             ),
           ]}
         />

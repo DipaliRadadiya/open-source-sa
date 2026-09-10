@@ -2298,7 +2298,8 @@
       "applicationNone": "Not linked to a site",
       "applicationSearch": "Search sites…",
       "applicationTaken": "Already has a database",
-      "applicationHint": "Decides which site backs this database up. It does not connect your site to it — the site keeps using whatever its own configuration says."
+      "applicationHint": "Decides which site backs this database up. It does not connect your site to it — the site keeps using whatever its own configuration says.",
+      "applicationEngine": "This site runs on {engines}."
     },
     "access": {
       "localhost": {
@@ -2657,7 +2658,8 @@
       "attached": "Database linked to the site.",
       "detached": "Database is no longer linked to a site.",
       "failed": "Could not change which site uses this database.",
-      "unchanged": "Pick a different site first."
+      "unchanged": "Pick a different site first.",
+      "engineNotAccepted": "This site runs on {engines}."
     },
     "unlinked": {
       "title": "{count, plural, one {# database is not linked to a site} other {# databases are not linked to a site}}",

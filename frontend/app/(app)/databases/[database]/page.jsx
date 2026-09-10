@@ -8,6 +8,7 @@ import { getDatabaseCounts } from "@/lib/databases/get-databases";
 import {
   getAllApplications,
   getPhpmyadminSite,
+  getSiteTypes,
 } from "@/lib/applications/get-applications";
 import { getTables } from "@/lib/databases/get-monitor";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ export default async function DatabasePage({ params, searchParams }) {
     phpmyadmin,
     appList,
     dbCounts,
+    catalogue,
   ] = await Promise.all([
     getPermissions(),
     getTranslations("databases"),
@@ -56,6 +58,9 @@ export default async function DatabasePage({ params, searchParams }) {
     // to be joined in here. The counts drive the picker's "already has one".
     getAllApplications(),
     getDatabaseCounts(),
+    // Only so the site picker can grey a site whose application cannot speak
+    // this database's engine. A failure costs the greying, not the page.
+    getSiteTypes().catch(() => ({ siteTypes: [] })),
   ]);
   const { data, failed, status, failure } = live;
 
@@ -107,6 +112,7 @@ export default async function DatabasePage({ params, searchParams }) {
           applications={appList.applications}
           databaseCounts={dbCounts.counts}
           databasesKnown={dbCounts.known}
+          siteTypes={catalogue.siteTypes}
         />
 
         <DatabaseTabs

@@ -216,6 +216,7 @@ function DatabasesList({
   backupsUnknown = false,
   // null when the lookup failed — see getPhpmyadminSite.
   phpmyadminSites = null,
+  siteTypes = [],
   // For the create dialog's site picker.
   applications = [],
   databaseCounts = null,
@@ -448,6 +449,7 @@ function DatabasesList({
             applications={applications}
             databaseCounts={databaseCounts}
             databasesKnown={databasesKnown}
+            siteTypes={siteTypes}
           />
           {/* Reached from the "Not linked" badge, so the fix is where the
               problem is announced. */}
@@ -458,6 +460,7 @@ function DatabasesList({
             applications={applications}
             databaseCounts={databaseCounts}
             databasesKnown={databasesKnown}
+            siteTypes={siteTypes}
           />
           <DeleteDatabaseDialog
             database={deleting}

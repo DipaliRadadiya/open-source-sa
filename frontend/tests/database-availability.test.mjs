@@ -159,3 +159,51 @@ test("nothing in, empty set out", () => {
   assert.equal(sitesMissingDatabase([], TYPES, {}, true).size, 0);
   assert.equal(sitesMissingDatabase(undefined, undefined, {}, true).size, 0);
 });
+
+// --- A site whose application cannot speak this engine ---
+
+test("a MongoDB database cannot be attached to a MySQL-only site, and the picker says so", async () => {
+  const { engineAccepted, acceptedEnginesFor } = await import(
+    "../lib/databases/engine-acceptance.js"
+  );
+
+  const types = [
+    { name: "wordpress", needs_database: true, accepted_engines: ["mysql", "mariadb"] },
+    { name: "nodebb", needs_database: true, accepted_engines: ["mongodb"] },
+    { name: "custom", needs_database: false, accepted_engines: [] },
+  ];
+  const wp = { id: 1, site_type: "wordpress" };
+  const forum = { id: 2, site_type: "nodebb" };
+  const custom = { id: 3, site_type: "custom" };
+
+  assert.equal(engineAccepted({ application: wp, siteTypes: types, engine: "mongodb" }), false);
+  assert.equal(engineAccepted({ application: wp, siteTypes: types, engine: "mariadb" }), true);
+  assert.equal(engineAccepted({ application: forum, siteTypes: types, engine: "mongodb" }), true);
+  assert.equal(
+    engineAccepted({ application: custom, siteTypes: types, engine: "mongodb" }),
+    true,
+    "a type that needs no database accepts anything — the backend's own rule",
+  );
+
+  assert.deepEqual(acceptedEnginesFor({ application: wp, siteTypes: types }), ["mysql", "mariadb"]);
+});
+
+test("nothing is blocked on a catalogue we could not load", async () => {
+  const { engineAccepted } = await import("../lib/databases/engine-acceptance.js");
+  const wp = { id: 1, site_type: "wordpress" };
+  assert.equal(engineAccepted({ application: wp, siteTypes: [], engine: "mongodb" }), true);
+  assert.equal(engineAccepted({ application: wp, siteTypes: null, engine: "mongodb" }), true);
+  assert.equal(engineAccepted({ application: wp, siteTypes: [], engine: null }), true);
+});
+
+test("'already has one' outranks the engine reason", async () => {
+  const { applicationOptions } = await import("../lib/backups/database-availability.js");
+  const options = applicationOptions(
+    [{ id: 1, name: "shop", domain: "shop.test" }],
+    { 1: 1 },
+    true,
+    "taken",
+    () => "wrong engine",
+  );
+  assert.equal(options[0].disabledReason, "taken", "the more actionable of the two wins");
+});

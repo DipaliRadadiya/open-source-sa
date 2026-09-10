@@ -8,6 +8,7 @@ import { ChevronDown, DatabasePlus, Loader2 } from "lucide-react";
 import { createDatabaseSchema } from "@/lib/schemas/database";
 import { randomUsername } from "@/lib/databases/random";
 import { applicationOptions } from "@/lib/backups/database-availability";
+import { acceptedEnginesFor, engineAccepted } from "@/lib/databases/engine-acceptance";
 import { createDatabase } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -60,11 +61,15 @@ export function CreateDatabaseDialog({
   applications = [],
   databaseCounts = null,
   databasesKnown = false,
+  // The catalogue, only so the picker can say which sites cannot speak the
+  // engine chosen above. Empty means no pairing is blocked.
+  siteTypes = [],
   // Opened from a site's own page: the site is already the answer, so the
   // picker is not a question worth asking. Sent all the same.
   applicationId = null,
 }) {
   const t = useTranslations("databases");
+  const tEngines = useTranslations("databases.engines");
   const router = useRouter();
   const [advanced, setAdvanced] = useState(false);
   // Set on success. The dialog then shows the credential instead of the form —
@@ -277,6 +282,17 @@ export function CreateDatabaseDialog({
                         databaseCounts,
                         databasesKnown,
                         t("create.applicationTaken"),
+                        // Reads the engine chosen above, so switching engine
+                        // re-answers this — the pairing the API refuses
+                        // depends on both halves.
+                        (application) =>
+                          engineAccepted({ application, siteTypes, engine: values.engine })
+                            ? undefined
+                            : t("create.applicationEngine", {
+                                engines: acceptedEnginesFor({ application, siteTypes })
+                                  .map((name) => (tEngines.has(name) ? tEngines(name) : name))
+                                  .join(" / "),
+                              }),
                       ),
                     ]}
                     className="w-full"

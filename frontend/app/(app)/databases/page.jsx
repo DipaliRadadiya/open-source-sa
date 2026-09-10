@@ -9,7 +9,7 @@ import {
   getConnections,
 } from "@/lib/databases/get-databases";
 import { getExports } from "@/lib/databases/get-exports";
-import { getAllApplications, getPhpmyadminSite } from "@/lib/applications/get-applications";
+import { getAllApplications, getPhpmyadminSite, getSiteTypes } from "@/lib/applications/get-applications";
 import { getDatabaseCounts, getUnlinkedCount } from "@/lib/databases/get-databases";
 import { formatBytes } from "@/lib/format/bytes";
 import { parseApiDate } from "@/lib/format/api-date";
@@ -52,7 +52,7 @@ export default async function DatabasesPage({ searchParams }) {
   // table that then invites you to create a database nothing could store.
   const usable = engines.some((engine) => engine.running);
 
-  const [{ databases, meta: dbMeta, failed: dbFailed, status: dbStatus, failure: dbFailure }, untracked, connections, exportList, phpmyadmin, appList, dbCounts, unlinkedCount] = await Promise.all([
+  const [{ databases, meta: dbMeta, failed: dbFailed, status: dbStatus, failure: dbFailure }, untracked, connections, exportList, phpmyadmin, appList, dbCounts, unlinkedCount, catalogue] = await Promise.all([
     usable ? getDatabases(query) : Promise.resolve({ databases: [], failed: false }),
     usable && canManage ? getUntracked(engines) : Promise.resolve([]),
     // Needed most when nothing is reachable — that is when someone has to look
@@ -70,6 +70,10 @@ export default async function DatabasesPage({ searchParams }) {
     usable && canManage ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
     // Server-wide, so it survives the search and paging the table is under.
     usable ? getUnlinkedCount() : Promise.resolve(0),
+    // `cache`d, and a failure costs the greying rather than the page.
+    usable && canManage
+      ? getSiteTypes().catch(() => ({ siteTypes: [] }))
+      : Promise.resolve({ siteTypes: [] }),
   ]);
 
   if (dbFailed) return <LoadFailed description={t("loadFailed")} status={dbStatus} failure={dbFailure} />;
@@ -145,6 +149,9 @@ export default async function DatabasesPage({ searchParams }) {
             applications={appList.applications}
             databaseCounts={dbCounts.counts}
             databasesKnown={dbCounts.known}
+            // Only so the site picker can grey a site whose application cannot
+            // speak the chosen engine — the pairing the attach endpoint refuses.
+            siteTypes={catalogue.siteTypes}
           />
         </div>
       ) : (

@@ -2298,7 +2298,8 @@
       "applicationNone": "Sin vincular a ningún sitio",
       "applicationSearch": "Buscar sitios…",
       "applicationTaken": "Ya tiene una base de datos",
-      "applicationHint": "Determina qué sitio respalda esta base de datos. No conecta tu sitio con ella: el sitio sigue usando lo que indique su propia configuración."
+      "applicationHint": "Determina qué sitio respalda esta base de datos. No conecta tu sitio con ella: el sitio sigue usando lo que indique su propia configuración.",
+      "applicationEngine": "Este sitio funciona con {engines}."
     },
     "access": {
       "localhost": {
@@ -2657,7 +2658,8 @@
       "attached": "Base de datos vinculada al sitio.",
       "detached": "La base de datos ya no está vinculada a ningún sitio.",
       "failed": "No se pudo cambiar qué sitio usa esta base de datos.",
-      "unchanged": "Elige primero otro sitio."
+      "unchanged": "Elige primero otro sitio.",
+      "engineNotAccepted": "Este sitio funciona con {engines}."
     },
     "unlinked": {
       "title": "{count, plural, one {# base de datos no está vinculada a ningún sitio} other {# bases de datos no están vinculadas a ningún sitio}}",

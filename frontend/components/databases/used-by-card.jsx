@@ -26,6 +26,7 @@ export function UsedByCard({
   applications = [],
   databaseCounts = null,
   databasesKnown = false,
+  siteTypes = [],
 }) {
   const t = useTranslations("databases.usedBy");
   const [open, setOpen] = useState(false);
@@ -78,6 +79,7 @@ export function UsedByCard({
           applications={applications}
           databaseCounts={databaseCounts}
           databasesKnown={databasesKnown}
+          siteTypes={siteTypes}
         />
       ) : null}
     </>
