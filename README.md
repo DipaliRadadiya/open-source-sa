@@ -29,8 +29,9 @@ Uptime Kuma, n8n, Node-RED, NodeBB, plus plain PHP, static, and deploy-from-git.
 a public repository. Push to the tracked branch and it deploys — signature-verified
 webhooks, one queued deploy per burst rather than one per commit.
 
-**Databases.** MariaDB, MySQL or MongoDB. The panel installs the engine, creates
-its own credentialed account, and manages databases and users per site.
+**Databases.** MariaDB, MySQL, PostgreSQL or MongoDB. The panel installs the
+engine, creates its own credentialed account, and manages databases and users per
+site.
 
 **Runtimes.** Multiple PHP versions side by side, and Node versions through fnm, so
 each site pins what it needs.
@@ -86,8 +87,9 @@ application ships in its own `.htaccess`.
 
 Everything else is the same: vhosts, certificates (OLS binds them to a listener
 rather than a vhost, which the panel handles), per-site logs, staging, clone and
-Sync. The panel's own PHP runs on PHP-FPM on every stack including this one;
-hosted sites on OLS get LSAPI (`lsphp`).
+Sync. On this stack **everything runs on LSPHP** -- the panel and its hosted
+sites alike, one PHP build per box. The other stacks run the panel and their
+sites on PHP-FPM.
 
 One thing to keep in mind whichever stack you choose: the web server the
 installer picks is the one serving the panel itself, so if it misbehaves there is
@@ -120,19 +122,26 @@ Node on every server because the panel itself needs them.
 | WordPress, Nextcloud, Joomla, Moodle, Mautic, Craft CMS, Akaunting, PrestaShop | PHP | MySQL or MariaDB |
 | Statamic, phpMyAdmin, git deploy, plain PHP | PHP | — |
 | Uptime Kuma, n8n, Node-RED | Node | — |
-| NodeBB | Node | **MongoDB only** |
+| NodeBB | Node | MongoDB **or** PostgreSQL |
 | Static site | — | — |
 
 NodeBB is the only one that can be greyed out on an otherwise working server: it
-takes MongoDB and nothing else, so on a MySQL-only box the card says so rather
-than failing halfway through its setup. Everything else needs either no database
-or the MySQL/MariaDB pair, which the panel can install for you.
+speaks MongoDB or PostgreSQL and neither flavour of MySQL, so on a MySQL-only box
+the card says so rather than failing halfway through its setup. Everything else
+needs either no database or the MySQL/MariaDB pair, which the panel can install
+for you.
 
-Databases are independent of the web server — MySQL, MariaDB and MongoDB install
-the same way on all four stacks.
+NodeBB is also the only application where you get a **choice** of engine, and the
+create form offers one only when the server actually has both — MySQL and MariaDB
+cannot coexist on one box, so listing both of those is not a choice. The choice is
+permanent: nothing moves a forum from one engine to the other afterwards.
 
-**One OpenLiteSpeed caveat.** Hosted PHP sites there run LiteSpeed's own `lsphp`
-build, and LiteSpeed publishes a smaller extension set than `ppa:ondrej/php`. Most
+Databases are independent of the web server — all four engines install the same
+way on all four stacks.
+
+**One OpenLiteSpeed caveat.** On that stack *everything* runs LiteSpeed's own
+`lsphp` build -- hosted sites and the panel alike -- and LiteSpeed publishes a
+smaller extension set than `ppa:ondrej/php`. Most
 of the difference is not real — `gd`, `mbstring`, `xml` and `zip` are compiled into
 `lsphp` rather than shipped as separate packages — but there is genuinely **no
 `lsphp*-mongodb`**, so a PHP application that needs the MongoDB *driver* would have
@@ -159,10 +168,10 @@ Honest about what has and has not been exercised:
 
 | | |
 |---|---|
-| Backend features | 2,567 passing tests (6 known failures, all in rollback) |
+| Backend features | passing; 3 tests skipped, naming an endpoint that was never built (`POST /applications/{id}/rollback`) |
 | `install.sh` | confirmed end to end on real hardware 2026-09-01, on the OpenLiteSpeed stack |
 | nginx / Apache / MERN stacks | exercised by the installer |
-| OpenLiteSpeed | installs and serves the panel (2026-09-01); ⚠️ **no site created on one yet** |
+| OpenLiteSpeed | installs and served the panel on PHP-FPM (2026-09-01); ⚠️ the LSPHP move (2026-09-10) has **not run on hardware**, and **no site has been created on one yet** |
 | MongoDB | installable from the panel |
 | Licence | ⚠️ **not chosen yet** — see below |
 

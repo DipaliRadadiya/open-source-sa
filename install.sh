@@ -82,8 +82,11 @@ DRY_RUN=0          # --dry-run
 # Two decisions from that period are still load-bearing and should not be
 # undone casually:
 #
-#   * The panel's own PHP stays on PHP-FPM, the same as every other stack, so
-#     the panel does not also depend on the lsphp packages it has never used.
+#   * The panel runs on LSPHP here, the same build its hosted sites use, and
+#     ondrej's PHP is not installed at all. Reversed on 2026-09-10: the earlier
+#     note said the panel stayed on PHP-FPM "so the panel does not also depend
+#     on the lsphp packages it has never used", which traded one dependency for
+#     two PHP builds on one box. See the note above configure_ols().
 #   * The panel's own vhost is written OUTSIDE the panel-managed markers in
 #     httpd_config.conf — see configure_ols() for why that is load-bearing.
 #
@@ -1517,11 +1520,25 @@ configure_web_server() {
 # What is still unproven is behaviour: that these files, being syntactically
 # right, actually serve the panel. A path existing is not a config working.
 #
-# The choice to keep the panel on PHP-FPM is deliberate. `/usr/bin/php8.4` from
-# ondrej is what composer, artisan and the queue worker already run; pointing the
-# web SAPI at lsphp84 would give the panel two different PHP builds with two
-# different extension sets, and the failure mode is the API 500ing on a missing
-# extension while the CLI that installed it works fine.
+# The panel runs on LSPHP, not PHP-FPM, and one binary does both jobs.
+#
+# This reverses an earlier decision, and the reasoning is worth keeping because
+# the danger it named is real. That note said pointing the web SAPI at lsphp84
+# "would give the panel two different PHP builds with two different extension
+# sets, and the failure mode is the API 500ing on a missing extension while the
+# CLI that installed it works fine". Correct -- but only for moving HALF of it.
+#
+# So both halves moved. PANEL_PHP_BIN is lsphp for composer, artisan, the queue
+# worker, cron and the web SAPI alike, and ondrej's PHP is not installed on this
+# stack at all. That is one build, not two, and it removes the second PHP
+# instead of adding one: an OLS box used to carry both.
+#
+# Two things follow, both checked rather than assumed. Every extension the panel
+# needs exists for LSPHP (curl, intl, sqlite3, pgsql, mysql, redis, igbinary,
+# opcache as packages; gd, xml, zip, mbstring and bcmath compiled in -- the .deb
+# ships no .so at all). And `configure_fpm` has nothing to do here, because the
+# dedicated master it builds exists only to escape the distro unit's
+# ProtectSystem=full, and OpenLiteSpeed's own unit has no sandboxing to escape.
 configure_ols() {
     step "Configuring OpenLiteSpeed"
 
