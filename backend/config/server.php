@@ -175,6 +175,10 @@ return [
             // required" on a feature that looks configured.
             'mysql', 'mysqldump', 'mariadb', 'mariadb-dump', 'redis-cli',
             'mongosh', 'mongodump', 'mongorestore',
+            // psql is a pg_wrapper symlink rather than the binary itself; sudo
+            // matches it by the path given, the same way it already matches
+            // /usr/bin/mysql, which is a symlink to mariadb on this very box.
+            'psql', 'pg_dump', 'pg_restore', 'pg_isready',
             'ufw', 'fail2ban-client', 'sshd',
             'fallocate', 'mkswap', 'swapon', 'swapoff',
             'hostnamectl', 'timedatectl', 'shutdown', 'df', 'du',
@@ -1843,6 +1847,18 @@ return [
             'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mysql', 'installer' => MySqlInstaller::class],
             'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mariadb', 'installer' => MariaDbInstaller::class],
             'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'dump_extension' => 'archive.gz', 'uri_scheme' => 'mongodb', 'installer' => MongoDbInstaller::class],
+            // No installer yet — the panel operates a PostgreSQL that already
+            // exists, and the catalog says so rather than offering a button
+            // that cannot work. Same position MongoDB held until it got one.
+            //
+            // `uri_scheme` is `postgresql`, not the engine name: that is the
+            // scheme libpq and every client library accept, and `pgsql://`
+            // would be a connection string nothing can open.
+            //
+            // The default socket is a *directory*. libpq takes the directory
+            // holding `.s.PGSQL.5432` as its host, not the socket file, and
+            // naming the file is an error rather than a nicety.
+            'postgresql' => ['label' => 'PostgreSQL', 'driver' => 'pgsql', 'client' => env('SERVER_PSQL_CLIENT', 'psql'), 'dump_client' => env('SERVER_PGDUMP', 'pg_dump'), 'restore_client' => env('SERVER_PGRESTORE', 'pg_restore'), 'default_port' => 5432, 'default_socket' => '/var/run/postgresql', 'dump_extension' => 'sql', 'uri_scheme' => 'postgresql', 'installer' => null],
         ],
 
         /*
@@ -1930,11 +1946,58 @@ return [
                 // at once needs a second statement. Mongo has no rename: it
                 // drops and recreates, and the new password is applied there.
                 'rename_keeps_password' => true,
+                // MySQL and MongoDB both carry the host in the account itself,
+                // so a remote user is created by creating it.
+                'supports_remote_users' => true,
             ],
             'mongo' => [
                 'system_schemas' => ['admin', 'config', 'local'],
                 'charsets' => [],
                 'rename_keeps_password' => false,
+                // MySQL and MongoDB both carry the host in the account itself,
+                // so a remote user is created by creating it.
+                'supports_remote_users' => true,
+            ],
+            'pgsql' => [
+                // The cluster's own databases. `template0` cannot even be
+                // connected to, and `postgres` is the maintenance database
+                // every administrative statement is issued against — dropping
+                // it would take the panel's own access with it.
+                'system_schemas' => ['postgres', 'template0', 'template1'],
+                // PostgreSQL's ENCODING, and LC_COLLATE as the "collation".
+                // Nothing here overlaps MySQL's list, which is the reason this
+                // is per driver: `utf8mb4` is not an encoding PostgreSQL has
+                // ever heard of, and offering it would produce a create that
+                // the engine refuses after the form said it was fine.
+                //
+                // The locale values assume a glibc cluster initialised with
+                // UTF-8, which is what every Debian/Ubuntu package does. `C`
+                // is always present and never wrong.
+                'charsets' => [
+                    'UTF8' => ['C', 'C.UTF-8', 'en_US.UTF-8'],
+                    'LATIN1' => ['C'],
+                    'SQL_ASCII' => ['C'],
+                ],
+                // Measured on PostgreSQL 16: `ALTER ROLE … RENAME` keeps the
+                // password under scram-sha-256, the default. So a rename plus
+                // a password change needs the second statement, exactly as
+                // MySQL does.
+                'rename_keeps_password' => true,
+                // False, and this is the one capability that changes what the
+                // API accepts rather than how it behaves.
+                //
+                // In MySQL the host is half the account's identity and `CREATE
+                // USER 'a'@'10.0.0.5'` grants access from there. A PostgreSQL
+                // role is cluster-wide and has no host: access from a given
+                // address is decided by `pg_hba.conf`, a file this panel does
+                // not own, parse or reload. Opening 5432 in the firewall
+                // achieves nothing on its own either.
+                //
+                // So the request refuses `remote`/`anywhere` for this engine
+                // instead of storing a preference nothing applies. Accepting
+                // it would be the OpenLiteSpeed PHP screen again: a 200, a
+                // saved value, and no effect on the server.
+                'supports_remote_users' => false,
             ],
         ],
         'system_users' => ['root', 'mysql.sys', 'mysql.session', 'mysql.infoschema', 'debian-sys-maint', 'mariadb.sys'],

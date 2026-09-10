@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Database;
 
+use App\Rules\SupportsRemoteDatabaseUsers;
 use App\Services\Server\Databases\DatabaseManager;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -43,7 +44,10 @@ class StoreDatabaseRequest extends FormRequest
                 Rule::notIn((array) config('server.databases.system_users', [])),
             ],
             'create_user.password' => ['nullable', 'string', 'min:8', 'max:255'],
-            'create_user.connection_preference' => ['nullable', Rule::in(['localhost', 'remote', 'anywhere'])],
+            'create_user.connection_preference' => [
+                'nullable', Rule::in(['localhost', 'remote', 'anywhere']),
+                new SupportsRemoteDatabaseUsers((string) $this->input('engine')),
+            ],
             'create_user.host' => [
                 'nullable',
                 Rule::requiredIf(fn () => $this->input('create_user.connection_preference') === 'remote'),

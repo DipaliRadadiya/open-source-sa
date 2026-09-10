@@ -10,6 +10,7 @@ return [
     'phpmyadmin_mongo_not_supported' => 'phpMyAdminはMongoDBデータベースをサポートしていません。',
     'phpmyadmin_not_deployed' => 'このサーバーにphpMyAdminサイトがインストールされていません。',
     'phpmyadmin_no_users' => 'phpMyAdminにアクセスする前にデータベースユーザーを作成してください。',
+    'remote_users_unsupported' => ':engine ではリモートアクセスを利用できません。アカウントがホストに紐づかないためです。localhost を使用してください。',
     'phpmyadmin_not_selectable' => '選択されたサイトは有効な phpMyAdmin インストールではありません。',
     'phpmyadmin_user_not_found' => '指定されたデータベースユーザーはこのデータベースに属していません。',
     'phpmyadmin_not_isolated' => 'このphpMyAdminサイトはサーバー全体のPHPプールを共有しているため、サインインリンクが他のすべてのサイトから読み取れてしまいます。専用のPHPプールを割り当てるか、phpMyAdminを開いてデータベースの認証情報でサインインしてください。',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Database;
 
+use App\Rules\SupportsRemoteDatabaseUsers;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +25,10 @@ class UpdateDatabaseUserRequest extends FormRequest
                 'sometimes', 'string', 'regex:/^[A-Za-z0-9_]{1,32}$/',
                 Rule::notIn((array) config('server.databases.system_users', [])),
             ],
-            'connection_preference' => ['sometimes', Rule::in(['localhost', 'remote', 'anywhere'])],
+            'connection_preference' => [
+                'sometimes', Rule::in(['localhost', 'remote', 'anywhere']),
+                new SupportsRemoteDatabaseUsers($this->route('database')?->engine),
+            ],
             'host' => [
                 Rule::requiredIf(fn () => $this->input('connection_preference') === 'remote'),
                 'nullable', 'regex:/^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/',

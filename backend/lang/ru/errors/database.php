@@ -10,6 +10,7 @@ return [
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin не поддерживает базы данных MongoDB.',
     'phpmyadmin_not_deployed' => 'На этом сервере не установлен сайт phpMyAdmin.',
     'phpmyadmin_no_users' => 'Создайте пользователя базы данных перед доступом к phpMyAdmin.',
+    'remote_users_unsupported' => 'Удалённый доступ недоступен для :engine — его учётные записи не привязаны к хосту. Используйте localhost.',
     'phpmyadmin_not_selectable' => 'Выбранный сайт не является активной установкой phpMyAdmin.',
     'phpmyadmin_user_not_found' => 'Указанный пользователь базы данных не принадлежит этой базе данных.',
     'phpmyadmin_not_isolated' => 'Этот сайт phpMyAdmin использует общесерверный пул PHP, поэтому ссылку для входа смогли бы прочитать все остальные сайты. Выделите ему собственный пул PHP или откройте phpMyAdmin и войдите с учётными данными базы данных.',

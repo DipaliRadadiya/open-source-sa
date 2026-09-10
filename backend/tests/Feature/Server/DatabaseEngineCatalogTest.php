@@ -28,7 +28,7 @@ it('gives every engine a driver that is described in full', function () {
         // [system_schemas]" is the whole point of the failure.
         $this->assertIsArray($block, "engine [{$engine}] has driver [{$driver}] with no drivers block");
 
-        foreach (['system_schemas', 'charsets', 'rename_keeps_password'] as $key) {
+        foreach (['system_schemas', 'charsets', 'rename_keeps_password', 'supports_remote_users'] as $key) {
             $this->assertArrayHasKey($key, $block, "driver [{$driver}] is missing [{$key}]");
         }
     }

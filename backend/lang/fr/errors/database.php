@@ -10,6 +10,7 @@ return [
     'phpmyadmin_mongo_not_supported' => 'phpMyAdmin ne prend pas en charge les bases de données MongoDB.',
     'phpmyadmin_not_deployed' => 'Aucun site phpMyAdmin n\'est installé sur ce serveur.',
     'phpmyadmin_no_users' => 'Créez un utilisateur de base de données avant d\'accéder à phpMyAdmin.',
+    'remote_users_unsupported' => 'L\'accès distant n\'est pas disponible pour :engine — ses comptes ne sont pas liés à un hôte. Utilisez localhost.',
     'phpmyadmin_not_selectable' => 'Le site sélectionné n\'est pas une installation phpMyAdmin active.',
     'phpmyadmin_user_not_found' => 'L\'utilisateur de base de données spécifié n\'appartient pas à cette base de données.',
     'phpmyadmin_not_isolated' => 'Ce site phpMyAdmin partage le pool PHP de tout le serveur : un lien de connexion serait donc lisible par tous les autres sites. Attribuez-lui son propre pool PHP, ou ouvrez phpMyAdmin et connectez-vous avec les identifiants de la base de données.',

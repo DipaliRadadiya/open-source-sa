@@ -844,6 +844,10 @@ install_packages() {
         "php${PHP_VERSION}-bcmath" "php${PHP_VERSION}-curl" "php${PHP_VERSION}-intl"
         "php${PHP_VERSION}-mbstring" "php${PHP_VERSION}-xml" "php${PHP_VERSION}-zip"
         "php${PHP_VERSION}-gd" "php${PHP_VERSION}-sqlite3" "php${PHP_VERSION}-mysql"
+        # pgsql alongside mysql: the panel can manage a PostgreSQL server, and
+        # without this extension no PHP application on the box can connect to
+        # one — the databases would be creatable and unusable.
+        "php${PHP_VERSION}-pgsql"
         "php${PHP_VERSION}-redis" "php${PHP_VERSION}-igbinary" "php${PHP_VERSION}-opcache"
     )
     # Only the chosen web server. Installing both would have them fight over
@@ -1640,6 +1644,13 @@ install_ols_packages() {
     # Not `run`: the extension packages are the known-shaky part (see the note
     # on configure_ols). A missing -gd should not abort an otherwise good
     # install, because the panel can install PHP packages itself afterwards.
+    # Deliberately no `-pgsql` here, unlike the PHP-FPM list above. apt fails
+    # the whole command if any one package is missing, so adding a package that
+    # may not exist in LiteSpeed's repository for this version would take
+    # `-mysql` down with it and leave OLS sites unable to reach *any* database.
+    # The cost is that a PostgreSQL-backed site on OpenLiteSpeed needs
+    # `lsphpXX-pgsql` installed by hand; the cost of the alternative is every
+    # MySQL site on the stack.
     local lsphp="lsphp${PHP_VERSION//./}"
     if ! apt-get install -y "${lsphp}" "${lsphp}-common" "${lsphp}-mysql" >>"$LOG_FILE" 2>&1; then
         warn "could not install all of ${lsphp} — hosted PHP sites may be missing extensions"

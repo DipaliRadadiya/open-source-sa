@@ -3103,7 +3103,9 @@ Poll `GET /restores/{id}` until `status` is `succeeded` or `failed`.
 ### GET `/databases/engines`
 **Permission:** `database` (view)
 
-Capability list for all three engines.
+Capability list for every engine the panel knows. **Four as of 2026-09-10** — PostgreSQL joined MySQL, MariaDB and MongoDB.
+
+**PostgreSQL is operable but not installable yet** (`installable: false`), the position MongoDB held until it got an installer: the panel manages databases and users on a PostgreSQL that already exists, and the catalog says so rather than offering a button that cannot work.
 
 ```json
 {"engines": [{
@@ -3121,8 +3123,19 @@ Capability list for all three engines.
   "installed": false, "installable": true,
   "install_status": null, "install_reason": null, "install_message": null,
   "install_progress": null
+}, {
+  "engine": "postgresql", "driver": "pgsql", "running": true, "version": "16.4",
+  "installed": true, "installable": false,
+  "install_status": null, "install_reason": null, "install_message": null,
+  "install_progress": null
 }]}
 ```
+
+**Two things differ for `postgresql`, and both change what the API accepts.**
+
+**`charsets` are PostgreSQL's, not MySQL's.** `UTF8` / `LATIN1` / `SQL_ASCII`, with LC_COLLATE values (`C`, `C.UTF-8`, `en_US.UTF-8`) in place of MySQL collations. Read them from this endpoint per engine; `utf8mb4` is not a value PostgreSQL has ever heard of, and a create using one is refused.
+
+**Remote database users are refused** with a `422` on `create_user.connection_preference` / `connection_preference`. A PostgreSQL role is cluster-wide and carries no host — which addresses may reach it is decided by `pg_hba.conf`, a file this panel does not manage, and opening 5432 in the firewall achieves nothing on its own. `localhost` is the only accepted value for this engine. The API refuses rather than storing a preference nothing would apply.
 
 `install_status` is only ever `installing | failed | null` — never `installed`. A finished install removes its row.
 

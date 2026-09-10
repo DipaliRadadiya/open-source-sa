@@ -54,9 +54,18 @@ class DatabaseManager
     {
         $connection = $this->connection($engine);
 
-        return $this->driver($engine) === 'mongo'
-            ? new MongoEngine($connection, $this->serverOps)
-            : new SqlEngine($connection, $this->serverOps);
+        // Matched on the driver rather than falling through to SqlEngine,
+        // which is the shape the rest of this class was corrected to in
+        // 3ceb3452: an unmatched driver must be a loud failure, not a MySQL
+        // client pointed at an engine that does not speak MySQL.
+        return match ($this->driver($engine)) {
+            'mongo' => new MongoEngine($connection, $this->serverOps),
+            'pgsql' => new PgsqlEngine($connection, $this->serverOps),
+            'sql' => new SqlEngine($connection, $this->serverOps),
+            default => throw new InvalidArgumentException(
+                "No engine driver for [{$engine}] (driver [{$this->driver($engine)}])."
+            ),
+        };
     }
 
     /**
@@ -144,6 +153,19 @@ class DatabaseManager
     public function renameKeepsPassword(string $engine): bool
     {
         return (bool) config("server.databases.drivers.{$this->driver($engine)}.rename_keeps_password", false);
+    }
+
+    /**
+     * Can an account on this engine be reached from a named host?
+     *
+     * False where the host is not part of the account — a PostgreSQL role is
+     * cluster-wide and access from an address is decided by `pg_hba.conf`,
+     * which the panel does not manage. The request refuses rather than storing
+     * a preference nothing applies.
+     */
+    public function supportsRemoteUsers(string $engine): bool
+    {
+        return (bool) config("server.databases.drivers.{$this->driver($engine)}.supports_remote_users", false);
     }
 
     /**
