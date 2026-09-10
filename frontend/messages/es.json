@@ -2797,7 +2797,7 @@
       "nameHelp": "Así aparece esta cuenta al crear una aplicación.",
       "workspaceLabel": "Espacio de trabajo",
       "hostLabel": "Dirección del servidor",
-      "hostHelp": "Déjalo vacío para gitlab.com.",
+      "hostHelp": "Solo para un GitLab autoalojado. Déjalo vacío para gitlab.com. Usa la dirección con la que inicias sesión, como https://gitlab.example.com, no la de un proyecto.",
       "cancel": "Cancelar",
       "submit": "Guardar",
       "saved": "Cuenta actualizada.",

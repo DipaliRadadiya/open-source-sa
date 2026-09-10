@@ -2797,7 +2797,7 @@
       "nameHelp": "How this account appears when you create an application.",
       "workspaceLabel": "Workspace",
       "hostLabel": "Server address",
-      "hostHelp": "Leave empty for gitlab.com.",
+      "hostHelp": "Only for a self-hosted GitLab. Leave empty for gitlab.com. Use the address you sign in at, like https://gitlab.example.com — not the address of a project.",
       "cancel": "Cancel",
       "submit": "Save",
       "saved": "Account updated.",

@@ -35,6 +35,9 @@ import {
  */
 export function ReplaceTokenDialog({ account, open, onOpenChange }) {
   const t = useTranslations("git.replace");
+  // The connect form already names each provider's token; reuse rather than
+  // write a second set that can drift from it.
+  const tConnect = useTranslations("git.connect");
   const { name: brand } = useBranding();
   const router = useRouter();
   const [failure, setFailure] = useState(null);
@@ -112,7 +115,20 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
               <FormControl>
                 <PasswordInput
                   autoComplete="off"
-                  placeholder={t("tokenPlaceholder")}
+                  /*
+                   * The provider's own token, named the way that provider
+                   * names it. "Paste the new token" is true of all three and
+                   * useful for none: GitHub has two kinds with different
+                   * prefixes, GitLab calls it a personal access token, and
+                   * Bitbucket wants an API token with a scope. The connect
+                   * form has said so since it shipped; replacing a token asks
+                   * exactly the same question and had the generic sentence.
+                   */
+                  placeholder={
+                    tConnect.has(`placeholders.token_${account?.provider}`)
+                      ? tConnect(`placeholders.token_${account?.provider}`)
+                      : t("tokenPlaceholder")
+                  }
                   spellCheck={false}
                   {...field}
                   onChange={(event) => field.onChange(event.target.value.trim())}

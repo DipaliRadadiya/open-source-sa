@@ -2797,7 +2797,7 @@
       "nameHelp": "ऐप्लिकेशन बनाते समय यह खाता इसी नाम से दिखेगा।",
       "workspaceLabel": "वर्कस्पेस",
       "hostLabel": "सर्वर का पता",
-      "hostHelp": "gitlab.com के लिए खाली छोड़ें।",
+      "hostHelp": "सिर्फ़ self-hosted GitLab के लिए। gitlab.com के लिए खाली छोड़ें। वही पता डालें जिससे आप साइन इन करते हैं, जैसे https://gitlab.example.com — किसी प्रोजेक्ट का पता नहीं।",
       "cancel": "रद्द करें",
       "submit": "सहेजें",
       "saved": "खाता अपडेट हो गया।",
