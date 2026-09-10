@@ -330,6 +330,7 @@ function ConfigField({
   const isPassword = config.type === "password";
   const isPort = config.name === "app_port";
   const isStartCommand = config.name === "start_command";
+  const isDatabaseEngine = config.name === "database_engine";
   const isToggle = config.type === "toggle";
   /**
    * Declared by the API for anything multi-line.
@@ -602,6 +603,22 @@ function ConfigField({
             <FormDescription className="flex items-start gap-1.5 text-warning">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               {t("form.buildCommandSuperseded")}
+            </FormDescription>
+          ) : isDatabaseEngine ? (
+            /*
+             * The one choice on this form that cannot be revised. No operation
+             * moves a site from one engine to another — it would be delete and
+             * start again — and the field itself gives no sign of that. It only
+             * appears when the server genuinely has two of the engines this
+             * type accepts, so it is a real decision every time it is shown.
+             *
+             * Keyed on the field NAME, which the API defines, not on an engine
+             * name. There is no capability that says "irreversible", and the
+             * sentence is ours rather than the server's.
+             */
+            <FormDescription className="flex items-start gap-1.5 text-warning">
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+              {t("form.databaseEnginePermanent")}
             </FormDescription>
           ) : config.help ? (
             <FormDescription>{config.help}</FormDescription>

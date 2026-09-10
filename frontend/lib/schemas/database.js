@@ -9,15 +9,34 @@ import { listMetaSchema } from "./list.js";
  * users are always nested rather than a resource of their own.
  */
 
-/** Names the server owns. Creating one is refused, so say so before the 422. */
+/*
+ * Names the server owns. Creating one is refused, so say so before the 422.
+ *
+ * The union across every engine, not one engine's list. The check runs before
+ * an engine is necessarily chosen, and a name that collides on ANY engine the
+ * server might have is a name worth steering away from — refusing `postgres`
+ * on a MariaDB server costs nobody anything, while allowing `template1` on a
+ * PostgreSQL one collides with a database that cannot even be connected to.
+ *
+ * PostgreSQL's three come from `databases.drivers.pgsql.system_schemas`; the
+ * API does not publish that list yet, and these three have been fixed since
+ * PostgreSQL 7. The day it does publish them, this becomes a read.
+ */
 export const RESERVED_NAMES = [
+  // MySQL / MariaDB
   "mysql",
   "information_schema",
   "performance_schema",
   "sys",
+  // MongoDB
   "admin",
   "local",
   "config",
+  // PostgreSQL — `template0` cannot be connected to at all, and `postgres` is
+  // the maintenance database every administrative statement is issued against.
+  "postgres",
+  "template0",
+  "template1",
 ];
 
 export const DATABASE_NAME = /^[A-Za-z0-9_]{1,63}$/;
@@ -57,6 +76,19 @@ const charsetsSchema = z
 export const engineSchema = z.object({
   engine: z.string(),
   driver: z.string().nullable().optional(),
+  /*
+   * Whether an account on this engine can be reached from another host.
+   *
+   * False for PostgreSQL: a role is cluster-wide and carries no host, so which
+   * addresses may reach it lives in `pg_hba.conf`, a file the panel does not
+   * manage. The API refuses `remote`/`anywhere` there, and this is what lets
+   * the form say so before the click instead of collecting a 422.
+   *
+   * Declared, or Zod strips it and every screen silently falls back to the
+   * default. Defaults TRUE so a panel pointed at an older API keeps offering
+   * the choice rather than hiding a working control.
+   */
+  supports_remote_users: z.boolean().default(true),
   // Reachable with the configured connection — NOT the same as installed.
   running: z.boolean().nullable().optional().default(false),
   // Present on the server, whether or not it is up. The field that separates

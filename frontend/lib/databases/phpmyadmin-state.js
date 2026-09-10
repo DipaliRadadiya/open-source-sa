@@ -5,7 +5,12 @@
  * knowable from data the page already holds, and those are the two that used
  * to be discovered by being told no:
  *
- *   hidden      MongoDB. phpMyAdmin does not speak it, and the API answers 422.
+ *   hidden      Any engine phpMyAdmin cannot speak. The API asks the same
+ *               question the same way — `IssuePhpmyadminSsoToken` refuses any
+ *               driver that is not `sql` — so this branches on the DRIVER, not
+ *               on a list of engine names. It used to name MongoDB, which was
+ *               the only non-SQL engine when it was written; PostgreSQL
+ *               arrived with driver `pgsql` and walked straight past it.
  *   install     No active phpMyAdmin site on the server. Same condition the
  *               backend checks: site_type=phpmyadmin AND status=active.
  *   needs-user  phpMyAdmin signs in AS a database user. With none, there is no
@@ -19,8 +24,11 @@
  * copy because one request timed out would be worse than the error it replaces.
  * Unknown behaves exactly as the old code did.
  */
-export function phpmyadminState({ engine, installed = null, users = null } = {}) {
-  if (engine === "mongodb") return "hidden";
+export function phpmyadminState({ engine, driver = null, installed = null, users = null } = {}) {
+  // The driver when the row carries one, the name only as the fallback for a
+  // payload that predates it. A `driver` we have never heard of is still not
+  // `sql`, so a fifth engine hides correctly the day it appears.
+  if (driver ? driver !== "sql" : engine === "mongodb") return "hidden";
   if (installed === false) return "install";
   // Only when we positively counted zero. A missing count is not zero users.
   if (users === 0) return "needs-user";

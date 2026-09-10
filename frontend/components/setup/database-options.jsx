@@ -27,6 +27,7 @@ const PURPOSE = {
   mysql: "purposeMysql",
   mariadb: "purposeMariadb",
   mongodb: "purposeMongodb",
+  postgresql: "purposePostgresql",
 };
 
 export function DatabaseOptions({ options, failed = false, disabled = false, disabledReason, onInstall }) {
@@ -42,7 +43,7 @@ export function DatabaseOptions({ options, failed = false, disabled = false, dis
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {options.map((option) => {
           // Not the `disabled` prop: an engine is off because of what it is, and
           // it says so in its own subtitle below — no tooltip needed. Picking an

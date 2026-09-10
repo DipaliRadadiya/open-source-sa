@@ -237,3 +237,23 @@ test("a runtime-blocked row carries its own way out, beside the reason", async (
     );
   }
 });
+
+test("the irreversible engine choice says so, keyed on the field not the engine", async () => {
+  const fs = await import("node:fs");
+  const form = fs.readFileSync("components/applications/create-application-form.jsx", "utf8");
+
+  assert.match(form, /config\.name === "database_engine"/, "the API names the field; we do not name engines");
+  assert.match(form, /form\.databaseEnginePermanent/);
+
+  for (const locale of ["en", "es", "hi"]) {
+    const messages = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8"));
+    assert.ok(messages.applications.form.databaseEnginePermanent, `${locale} missing the warning`);
+  }
+});
+
+test("a failed PostgreSQL install lands on the databases page like the others", async () => {
+  const { installHome } = await import("../lib/services/install-home.js");
+  for (const key of ["mysql", "mariadb", "mongodb", "postgresql"]) {
+    assert.equal(installHome(key)?.href, "/databases", `${key} has a screen that handles its failure`);
+  }
+});

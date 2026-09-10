@@ -2206,7 +2206,8 @@
     "engines": {
       "mysql": "MySQL",
       "mariadb": "MariaDB",
-      "mongodb": "MongoDB"
+      "mongodb": "MongoDB",
+      "postgresql": "PostgreSQL"
     },
     "status": {
       "running": "चल रहा है",
@@ -2295,16 +2296,26 @@
       "charset": "वर्ण सेट",
       "collation": "कोलेशन",
       "defaultOption": "सर्वर का डिफ़ॉल्ट",
-      "chooseCharsetFirst": "पहले वर्ण सेट चुनें",
       "noEngine": "पहले एक डेटाबेस इंजन इंस्टॉल करें।",
       "usernamePlaceholder": "my_app_user",
-      "needsCharset": "पहले कैरेक्टर सेट चुनें — उसके कोलेशन उसी के साथ लोड होते हैं।",
       "application": "द्वारा उपयोग",
       "applicationNone": "किसी साइट से जुड़ी नहीं",
       "applicationSearch": "साइटें खोजें…",
       "applicationTaken": "पहले से एक डेटाबेस मौजूद है",
       "applicationHint": "यह तय करता है कि कौन-सी साइट इस डेटाबेस का बैकअप लेगी। यह आपकी साइट को इससे नहीं जोड़ता — साइट अपने कॉन्फ़िगरेशन के अनुसार ही काम करती रहती है।",
-      "applicationEngine": "यह साइट {engines} पर चलती है।"
+      "applicationEngine": "यह साइट {engines} पर चलती है।",
+      "sqlWords": {
+        "charset": "कैरेक्टर सेट",
+        "collation": "कोलेशन",
+        "needsCharset": "पहले कैरेक्टर सेट चुनें — उसके कोलेशन उसी के साथ आते हैं।",
+        "chooseFirst": "पहले कैरेक्टर सेट चुनें"
+      },
+      "pgsqlWords": {
+        "charset": "एन्कोडिंग",
+        "collation": "लोकेल",
+        "needsCharset": "पहले एन्कोडिंग चुनें — उसके लोकेल उसी के साथ आते हैं।",
+        "chooseFirst": "पहले एन्कोडिंग चुनें"
+      }
     },
     "access": {
       "localhost": {
@@ -3126,7 +3137,8 @@
       "needsSystemUser": "अभी कोई सिस्टम यूज़र नहीं है। ऊपर “सिस्टम यूज़र बनाएँ” से एक बनाएँ।",
       "needsGitAccount": "कोई Git खाता कनेक्ट नहीं है। नीचे “Connect Git” इस्तेमाल करें, फिर रिफ़्रेश करें।",
       "installPhpVersion": "PHP वर्शन इंस्टॉल करें",
-      "installNodeVersion": "Node वर्शन इंस्टॉल करें"
+      "installNodeVersion": "Node वर्शन इंस्टॉल करें",
+      "databaseEnginePermanent": "इसे बाद में बदला नहीं जा सकता — दूसरे इंजन पर ले जाने का मतलब है साइट दोबारा बनाना।"
     },
     "actions": {
       "label": "क्रियाएं",
@@ -4841,7 +4853,8 @@
     "sectionOptionalHint": "इनकी ज़रूरत कुछ ही साइटों को होती है।",
     "alreadyInstalledHint": "ये पहले से इस सर्वर पर हैं। यहाँ कुछ करना नहीं है।",
     "chooseEngineFirst": "पहले एक डेटाबेस इंजन चुनें",
-    "oneSqlOnly": "एक सर्वर पर केवल एक SQL इंजन चलता है। इंस्टॉल होने के बाद दूसरे पर जाने के लिए सर्वर दोबारा बनाना पड़ेगा।"
+    "oneSqlOnly": "एक सर्वर पर केवल एक SQL इंजन चलता है। इंस्टॉल होने के बाद दूसरे पर जाने के लिए सर्वर दोबारा बनाना पड़ेगा।",
+    "purposePostgresql": "उन ऐप्स के लिए जो खास तौर पर Postgres मांगती हैं"
   },
   "storage": {
     "title": "स्टोरेज",

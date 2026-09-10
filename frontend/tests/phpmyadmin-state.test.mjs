@@ -173,3 +173,104 @@ test("a failed lookup stays unknown rather than becoming an empty server", () =>
     "an empty array would offer to install a second phpMyAdmin because one request timed out",
   );
 });
+
+// --- PostgreSQL, the fourth engine (2026-09-10) ---
+
+test("the button hides for any driver phpMyAdmin cannot speak, not a list of names", () => {
+  // `IssuePhpmyadminSsoToken` refuses anything whose driver is not `sql`, so
+  // this asks the same question the same way.
+  assert.equal(phpmyadminState({ engine: "postgresql", driver: "pgsql", users: 1 }), "hidden");
+  assert.equal(phpmyadminState({ engine: "mongodb", driver: "mongo", users: 1 }), "hidden");
+  assert.equal(
+    phpmyadminState({ engine: "cockroach", driver: "crdb", users: 1 }),
+    "hidden",
+    "a driver we have never heard of is still not sql",
+  );
+  assert.equal(phpmyadminState({ engine: "mariadb", driver: "sql", installed: true, users: 1 }), "open");
+});
+
+test("a payload with no driver still hides MongoDB", () => {
+  // The fallback for an API that predates the field. It cannot know about
+  // PostgreSQL, which is why the driver is preferred whenever it is there.
+  assert.equal(phpmyadminState({ engine: "mongodb", users: 1 }), "hidden");
+  assert.equal(phpmyadminState({ engine: "mariadb", installed: true, users: 1 }), "open");
+});
+
+test("every engine's system databases are refused before the 422", async () => {
+  const { RESERVED_NAMES } = await import("../lib/schemas/database.js");
+  for (const name of ["mysql", "information_schema", "admin", "postgres", "template0", "template1"]) {
+    assert.ok(RESERVED_NAMES.includes(name), `${name} is a name the server owns`);
+  }
+});
+
+test("an unmeasured slow-query count is not a rate of zero", async () => {
+  const { slowQueryRate, slowQueriesTone } = await import("../lib/databases/health.js");
+
+  // PostgreSQL has no such counter without pg_stat_statements. `Number(null)`
+  // is 0 and 0 is finite, so without the guard this read as "no slow queries".
+  assert.equal(slowQueryRate({ slow_queries: null, uptime_seconds: 3600 }), null);
+  assert.equal(slowQueryRate({ uptime_seconds: 3600 }), null);
+  assert.equal(slowQueriesTone({ slow_queries: null, uptime_seconds: 3600 }), "normal");
+
+  // A real zero is still a real measurement.
+  assert.equal(slowQueryRate({ slow_queries: 0, uptime_seconds: 3600 }), 0);
+  assert.equal(slowQueryRate({ slow_queries: 10, uptime_seconds: 3600 }), 10);
+});
+
+test("the engines payload keeps the capability, and it defaults to permissive", async () => {
+  const { engineSchema } = await import("../lib/schemas/database.js");
+
+  const pg = engineSchema.parse({ engine: "postgresql", driver: "pgsql", supports_remote_users: false });
+  assert.equal(pg.supports_remote_users, false, "Zod strips what is not declared");
+
+  const older = engineSchema.parse({ engine: "mariadb", driver: "sql" });
+  assert.equal(
+    older.supports_remote_users,
+    true,
+    "an API that predates the field must not hide a control that works",
+  );
+});
+
+test("every engine the API can name has a label in every locale", async () => {
+  const fs = await import("node:fs");
+  for (const locale of ["en", "es", "hi"]) {
+    const engines = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8")).databases.engines;
+    for (const engine of ["mysql", "mariadb", "mongodb", "postgresql"]) {
+      // Built as `engines.${name}` from data, so check-i18n cannot catch a
+      // missing one — it renders the raw key path instead.
+      assert.ok(engines[engine], `${locale} is missing a label for ${engine}`);
+    }
+  }
+});
+
+test("remote access is offered from the capability, never from the engine name", async () => {
+  const fs = await import("node:fs");
+  const dialog = fs.readFileSync("components/databases/create-database-dialog.jsx", "utf8");
+
+  assert.match(dialog, /engine\?\.supports_remote_users !== false/);
+  assert.match(dialog, /\.\.\.\(remoteUsers/, "the two options are spread in, not rendered disabled");
+  assert.doesNotMatch(dialog, /=== "postgresql"/, "the engine name must not appear in this decision");
+
+  // Switching engine has to clear a preference the new one cannot honour, or
+  // an invisible `remote` stays in the form and the API refuses it.
+  assert.match(dialog, /form\.setValue\("connection_preference", "localhost"\)/);
+});
+
+test("the charset selects use each engine's own two words", async () => {
+  const fs = await import("node:fs");
+  const dialog = fs.readFileSync("components/databases/create-database-dialog.jsx", "utf8");
+  assert.match(dialog, /engine\?\.driver === "pgsql" \? "pgsqlWords" : "sqlWords"/);
+
+  for (const locale of ["en", "es", "hi"]) {
+    const create = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8")).databases.create;
+    for (const words of ["sqlWords", "pgsqlWords"]) {
+      assert.ok(create[words]?.charset, `${locale}.${words}.charset`);
+      assert.ok(create[words]?.collation, `${locale}.${words}.collation`);
+    }
+  }
+  assert.notEqual(
+    JSON.parse(fs.readFileSync("messages/en.json", "utf8")).databases.create.pgsqlWords.charset,
+    "Character set",
+    "PostgreSQL has an encoding, not a character set",
+  );
+});

@@ -25,7 +25,29 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-const DEFAULT_PORT = { mongodb: 27017 };
+/*
+ * Where each engine listens, for the field's starting value.
+ *
+ * MySQL and MariaDB share 3306, which is the fallback. The others are here
+ * because a blank or wrong port is the difference between this dialog fixing a
+ * server and appearing to do nothing.
+ *
+ * The API does not publish `default_port` — it is in the backend's engine
+ * config and reaches no response — so these are the well-known ones. A wrong
+ * guess is visible and editable; the alternative is an empty field.
+ */
+const DEFAULT_PORT = { mongodb: 27017, postgresql: 5432 };
+
+/*
+ * And where each keeps its unix socket. Only a placeholder — the value is the
+ * user's — but a MySQL path shown to someone connecting PostgreSQL is a wrong
+ * example, which is worse than none.
+ */
+const SOCKET_HINT = {
+  mongodb: "/tmp/mongodb-27017.sock",
+  postgresql: "/var/run/postgresql/.s.PGSQL.5432",
+};
+const DEFAULT_SOCKET = "/var/run/mysqld/mysqld.sock";
 
 /**
  * How the panel itself signs in to an engine.
@@ -198,7 +220,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
                     className="font-mono"
                     autoComplete="off"
                     spellCheck={false}
-                    placeholder="/var/run/mysqld/mysqld.sock"
+                    placeholder={SOCKET_HINT[engine?.engine] ?? DEFAULT_SOCKET}
                     {...field}
                   />
                 </FormControl>

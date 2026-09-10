@@ -50,7 +50,13 @@ export function connectionsTone(status) {
  * rate, which is a thing you can actually judge.
  */
 export function slowQueryRate(status) {
-  const slow = Number(status?.slow_queries);
+  // `null` means the engine does not measure this — PostgreSQL has no such
+  // counter without `pg_stat_statements`, which the panel does not install.
+  // `Number(null)` is 0 and 0 is finite, so without this the rate came out as
+  // zero and the tone as "normal": "we never looked" rendered as good news.
+  if (status?.slow_queries == null) return null;
+
+  const slow = Number(status.slow_queries);
   const uptime = Number(status?.uptime_seconds);
   if (!Number.isFinite(slow) || !Number.isFinite(uptime) || uptime <= 0) return null;
   return slow / (uptime / 3600);

@@ -42,8 +42,10 @@ import {
  * phpMyAdmin. A blocked popup can only be reopened by a real click, so the
  * toast carries one — the token is still good for the rest of its minute.
  *
- * Hidden entirely for MongoDB, which phpMyAdmin does not support. The API says
- * so with a 422, but a button whose only outcome is an error is not a feature.
+ * Hidden entirely for any engine phpMyAdmin cannot speak — MongoDB, and now
+ * PostgreSQL. The API says so with a 422, but a button whose only outcome is
+ * an error is not a feature. The test is the DRIVER, matching the endpoint's
+ * own guard, so a fifth engine hides correctly without this file being touched.
  */
 export function PhpmyadminButton({
   database,
@@ -77,6 +79,7 @@ export function PhpmyadminButton({
    */
   const state = phpmyadminState({
     engine: database.engine,
+    driver: database.driver,
     installed,
     users: userCount(database),
   });

@@ -112,6 +112,22 @@ export function CreateDatabaseDialog({
 
   const values = useWatch({ control: form.control });
   const engine = usable.find((item) => item.engine === values.engine);
+  // Defaults true so an older API — which sends no such field — keeps offering
+  // the choice rather than hiding a control that works.
+  const remoteUsers = engine?.supports_remote_users !== false;
+  /*
+   * Which pair of words this engine uses for the two selects.
+   *
+   * PostgreSQL has neither a "character set" nor a "collation": it has an
+   * ENCODING and an LC_COLLATE, and its values say so — `UTF8` and `C.UTF-8`,
+   * not `utf8mb4` and `utf8mb4_unicode_ci`. Labelling those "Character set"
+   * and "Collation" asks someone to match a documented name against a word
+   * their database has never used.
+   *
+   * Keyed on the driver rather than the engine name, like everything else
+   * here. The lists themselves come from the API and already differ.
+   */
+  const charsetWording = engine?.driver === "pgsql" ? "pgsqlWords" : "sqlWords";
   const charsets = engine?.charsets ?? {};
   const charsetNames = Object.keys(charsets);
   // A collation from the wrong charset is a 422, so the second list is always
@@ -237,7 +253,25 @@ export function CreateDatabaseDialog({
             render={({ field }) => (
               <FormItem>
                 <FormLabel required>{t("create.engine")}</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select
+                  value={field.value}
+                  onValueChange={(next) => {
+                    field.onChange(next);
+                    /*
+                     * Clear a preference the new engine cannot honour. Picking
+                     * "remote" on MariaDB and then switching to PostgreSQL
+                     * left `remote` in the form with no control showing it —
+                     * an invisible value the API then refuses. Reset at the
+                     * point of change rather than in an effect, which would be
+                     * the cascading render the lint rule refuses.
+                     */
+                    const chosen = usable.find((item) => item.engine === next);
+                    if (chosen?.supports_remote_users === false) {
+                      form.setValue("connection_preference", "localhost");
+                      form.setValue("host", "");
+                    }
+                  }}
+                >
                   <FormControl>
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -367,20 +401,36 @@ export function CreateDatabaseDialog({
                           label: t("access.localhost.label"),
                           hint: t("access.localhost.hint"),
                         },
-                        {
-                          value: "remote",
-                          label: t("access.remote.label"),
-                          hint: t("access.remote.hint"),
-                        },
-                        {
-                          // Opens the engine port to every address on the
-                          // internet. That is a sentence people should read
-                          // before choosing it, not discover in the firewall.
-                          value: "anywhere",
-                          label: t("access.anywhere.label"),
-                          hint: t("access.anywhere.hint"),
-                          tone: "warning",
-                        },
+                        /*
+                         * Only where the engine can honour them. A PostgreSQL
+                         * role is cluster-wide and carries no host, so the API
+                         * refuses `remote` and `anywhere` there — offering
+                         * them would collect a 422 after the choice.
+                         *
+                         * Read from `supports_remote_users` on the engine row,
+                         * never from its name: the backend publishes the fact
+                         * precisely so this file does not have to know which
+                         * engine PostgreSQL is.
+                         */
+                        ...(remoteUsers
+                          ? [
+                              {
+                                value: "remote",
+                                label: t("access.remote.label"),
+                                hint: t("access.remote.hint"),
+                              },
+                              {
+                                // Opens the engine port to every address on
+                                // the internet. That is a sentence people
+                                // should read before choosing it, not discover
+                                // in the firewall.
+                                value: "anywhere",
+                                label: t("access.anywhere.label"),
+                                hint: t("access.anywhere.hint"),
+                                tone: "warning",
+                              },
+                            ]
+                          : []),
                       ]}
                     />
                   </FormControl>
@@ -437,7 +487,7 @@ export function CreateDatabaseDialog({
                 name="charset"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("create.charset")}</FormLabel>
+                    <FormLabel>{t(`create.${charsetWording}.charset`)}</FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={(next) => {
@@ -470,12 +520,12 @@ export function CreateDatabaseDialog({
                 name="collation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("create.collation")}</FormLabel>
+                    <FormLabel>{t(`create.${charsetWording}.collation`)}</FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={field.onChange}
                       disabled={collations.length === 0}
-                        disabledReason={t("create.needsCharset")}
+                        disabledReason={t(`create.${charsetWording}.needsCharset`)}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full font-mono data-placeholder:font-sans">
@@ -496,7 +546,7 @@ export function CreateDatabaseDialog({
                         sizes — and a hint no one can finish reading is not a
                         hint. */}
                     {!values.charset ? (
-                      <FormDescription>{t("create.chooseCharsetFirst")}</FormDescription>
+                      <FormDescription>{t(`create.${charsetWording}.chooseFirst`)}</FormDescription>
                     ) : null}
                     <FormMessage />
                   </FormItem>

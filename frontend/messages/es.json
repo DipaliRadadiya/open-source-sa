@@ -2206,7 +2206,8 @@
     "engines": {
       "mysql": "MySQL",
       "mariadb": "MariaDB",
-      "mongodb": "MongoDB"
+      "mongodb": "MongoDB",
+      "postgresql": "PostgreSQL"
     },
     "status": {
       "running": "En ejecución",
@@ -2295,16 +2296,26 @@
       "charset": "Juego de caracteres",
       "collation": "Cotejamiento",
       "defaultOption": "Predeterminado del servidor",
-      "chooseCharsetFirst": "Elige primero un juego de caracteres",
       "noEngine": "Instala primero un motor de base de datos.",
       "usernamePlaceholder": "usuario_mi_app",
-      "needsCharset": "Elige primero un conjunto de caracteres: sus colaciones se cargan con él.",
       "application": "Usada por",
       "applicationNone": "Sin vincular a ningún sitio",
       "applicationSearch": "Buscar sitios…",
       "applicationTaken": "Ya tiene una base de datos",
       "applicationHint": "Determina qué sitio respalda esta base de datos. No conecta tu sitio con ella: el sitio sigue usando lo que indique su propia configuración.",
-      "applicationEngine": "Este sitio funciona con {engines}."
+      "applicationEngine": "Este sitio funciona con {engines}.",
+      "sqlWords": {
+        "charset": "Juego de caracteres",
+        "collation": "Colación",
+        "needsCharset": "Elige primero un juego de caracteres: sus colaciones se cargan con él.",
+        "chooseFirst": "Elige primero un juego de caracteres"
+      },
+      "pgsqlWords": {
+        "charset": "Codificación",
+        "collation": "Configuración regional",
+        "needsCharset": "Elige primero una codificación: sus configuraciones regionales se cargan con ella.",
+        "chooseFirst": "Elige primero una codificación"
+      }
     },
     "access": {
       "localhost": {
@@ -3126,7 +3137,8 @@
       "needsSystemUser": "Todavía no existe ningún usuario del sistema. Usa «Crear usuario del sistema» arriba para crear uno.",
       "needsGitAccount": "No hay ninguna cuenta de Git conectada. Usa «Conectar Git» abajo y luego Actualizar.",
       "installPhpVersion": "Instalar una versión de PHP",
-      "installNodeVersion": "Instalar una versión de Node"
+      "installNodeVersion": "Instalar una versión de Node",
+      "databaseEnginePermanent": "Esto no se puede cambiar después: mover un sitio a otro motor significa crearlo de nuevo."
     },
     "actions": {
       "label": "Acciones",
@@ -4841,7 +4853,8 @@
     "sectionOptionalHint": "Solo los necesitan algunos sitios.",
     "alreadyInstalledHint": "Ya están en este servidor. Aquí no hay nada que hacer.",
     "chooseEngineFirst": "Elige primero un motor de base de datos",
-    "oneSqlOnly": "Un servidor ejecuta un solo motor SQL. Una vez instalado, cambiar al otro implica reconstruir el servidor."
+    "oneSqlOnly": "Un servidor ejecuta un solo motor SQL. Una vez instalado, cambiar al otro implica reconstruir el servidor.",
+    "purposePostgresql": "Para apps que piden Postgres expresamente"
   },
   "storage": {
     "title": "Almacenamiento",

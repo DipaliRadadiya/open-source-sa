@@ -19,7 +19,7 @@
  * that handles the failure properly — the server's own reason, and a retry that
  * works:
  *
- *   mysql/mariadb/mongodb  /databases  engine-state.jsx renders one row per
+ *   the four engines       /databases  engine-state.jsx renders one row per
  *                                      engine, so a failed one shows even while
  *                                      another engine runs
  *   php{version}-fpm       /php        version-summary.jsx prints apt's output
@@ -39,7 +39,9 @@
  */
 const HOMES = [
   {
-    match: /^(mysql|mariadb|mongodb)$/,
+    // `postgresql` is the service key, not `postgres` — the engines payload
+    // names it that way and the services list agrees.
+    match: /^(mysql|mariadb|mongodb|postgresql)$/,
     href: "/databases",
     label: "openDatabases",
     retryLabel: "retryOnDatabases",
