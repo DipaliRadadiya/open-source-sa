@@ -131,7 +131,10 @@ export function BanRulesCard({ settings, presets, canManage }) {
               id="f2b-maxretry"
               placeholder="5"
               type="number"
+              // The API's own bounds. Without the ceiling the stepper walked
+              // straight past what it accepts, and the only sign was a 422.
               min={2}
+              max={100}
               value={maxretry}
               onChange={(e) => setMaxretry(e.target.value)}
               // Locked mid-save: the refresh that follows would overwrite an
@@ -148,6 +151,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
               placeholder="600"
               type="number"
               min={30}
+              max={86400}
               value={findtime}
               onChange={(e) => setFindtime(e.target.value)}
               disabled={!canManage || pending}
