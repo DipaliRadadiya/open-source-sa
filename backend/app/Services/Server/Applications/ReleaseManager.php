@@ -203,6 +203,31 @@ class ReleaseManager
         // Atomic swap.
         $this->run(['ln', '-sTf', $previousPath, $symlink]);
 
+        // The release we just left is the one that was rolled back.
+        //
+        // `markRolledBack()` existed with no callers, so this never happened:
+        // a release the operator rolled away from kept `status = deployed`
+        // forever, and the releases list could not tell it apart from the one
+        // actually serving traffic. Which is the whole question that list is
+        // there to answer after a bad deploy.
+        //
+        // Marked here rather than in the controller so it holds for every
+        // caller of rollback(), and by path because that is the only handle
+        // this method has on the release it is leaving.
+        if (is_string($currentTarget) && $currentTarget !== '') {
+            $left = Release::query()
+                ->where('application_id', $application->id)
+                ->where(function ($query) use ($currentTarget) {
+                    $query->where('path', $currentTarget)
+                        ->orWhere('path', $this->releasePublicPath($currentTarget));
+                })
+                ->first();
+
+            if ($left !== null) {
+                $this->markRolledBack($left);
+            }
+        }
+
         // The new previous is what we just rolled back from.
         $application->updateQuietly([
             'previous_release_path' => $currentTarget,
