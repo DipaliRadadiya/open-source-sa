@@ -2706,16 +2706,39 @@ configure_firewall() {
         return
     fi
 
+    # The port SSH is actually on, resolved the same way the panel resolves it
+    # (App\Support\SshPort): the first `Port` in a sshd_config.d drop-in, else
+    # 22. Asking the same question the same way is the point — this used to
+    # hardcode 22 while `firewall:record-defaults` below recorded the real
+    # port, so on a server whose SSH had been moved the panel's rule list and
+    # the box disagreed from the moment of install.
+    #
+    # Deliberately not `sshd -T`, which is more authoritative: it needs
+    # /run/sshd to exist, and reading the same files as the panel keeps the two
+    # answers identical even where both are wrong. A drop-in is also where the
+    # panel *writes* a port change, so it is the file that matters here.
+    local ssh_port=22
+    local drop_in
+    for drop_in in /etc/ssh/sshd_config.d/*.conf; do
+        [[ -f "$drop_in" ]] || continue
+        local found
+        found=$(grep -oPi '^\s*Port\s+\K[0-9]+' "$drop_in" 2>/dev/null | head -1) || true
+        if [[ -n "$found" ]]; then
+            ssh_port="$found"
+            break
+        fi
+    done
+
     # Rules are added but ufw is never enabled here. Enabling a firewall on
     # someone's server as a side effect of an install is how people lose SSH.
-    run ufw allow 22/tcp
+    run ufw allow "${ssh_port}/tcp"
     run ufw allow 80/tcp
     run ufw allow 443/tcp
 
     if [[ "$(ufw status 2>/dev/null)" == *inactive* ]]; then
-        ok "rules added for 22, 80, 443 (ufw is inactive — not enabling it)"
+        ok "rules added for ${ssh_port}, 80, 443 (ufw is inactive — not enabling it)"
     else
-        ok "rules added for 22, 80, 443"
+        ok "rules added for ${ssh_port}, 80, 443"
     fi
 
     # Tell the panel what we just allowed. Without this the firewall screen
