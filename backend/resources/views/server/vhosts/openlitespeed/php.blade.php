@@ -106,7 +106,7 @@ index {
      warranted. --}}
 extprocessor lsphp{{ $lsphpVersion }} {
   type                    lsapi
-  address                 uds://tmp/lshttpd/lsphp{{ $lsphpVersion }}-{{ $domain }}.sock
+  address                 uds://tmp/lshttpd/lsphp{{ $lsphpVersion }}-{{ $socketName }}.sock
   maxConns                {{ $lsapiChildren }}
   initTimeout             60
   retryTimeout            0

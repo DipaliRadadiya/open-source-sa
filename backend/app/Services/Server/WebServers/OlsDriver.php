@@ -61,6 +61,38 @@ class OlsDriver extends AbstractWebServerDriver
      *
      * @return array<string, mixed>
      */
+    /**
+     * How long the slug may be before the socket path stops being bindable.
+     *
+     * A unix socket path is capped by `sun_path`, 108 bytes including the
+     * terminator. Measured on a real server rather than taken from the header:
+     * 99 characters bound, 109 failed with EINVAL "AF_UNIX path too long".
+     *
+     * `/tmp/lshttpd/lsphp84-` and `.sock` spend 26 of it, so ~81 remain, and a
+     * site name may be 255 characters. 40 leaves room for a three-digit LSPHP
+     * version and still fits with margin.
+     *
+     * Truncation alone would reintroduce the collision this change exists to
+     * remove -- two long slugs sharing a prefix would share a socket -- so the
+     * hash of the full slug goes on the end. It is for uniqueness, not
+     * secrecy; the socket is only reachable by the two users who own it.
+     */
+    private const SOCKET_NAME_LIMIT = 40;
+
+    /**
+     * Keyed on the slug, and short enough to bind.
+     */
+    private function socketName(Application $application): string
+    {
+        $name = $this->fileName($application);
+
+        if (strlen($name) <= self::SOCKET_NAME_LIMIT) {
+            return $name;
+        }
+
+        return substr($name, 0, self::SOCKET_NAME_LIMIT - 9).'-'.substr(md5($name), 0, 8);
+    }
+
     protected function viewData(Application $application, string $documentRoot): array
     {
         $data = parent::viewData($application, $documentRoot);
@@ -79,6 +111,17 @@ class OlsDriver extends AbstractWebServerDriver
                 true,
             ),
             'lsphpVersion' => str_replace('.', '', $version),
+            // The LSAPI socket's identity. Slug, never domain.
+            //
+            // This was `{domain}`, which the schema says is "mutable and not
+            // unique" in the same breath as explaining why the vhost file is
+            // not named that way. Two applications on one domain shared the
+            // socket their isolation depends on, an app with no domain named
+            // it `lsphp84-.sock`, and renaming a domain orphaned the old one.
+            // Every other per-site artifact -- the app directory, the vhost
+            // file, the logs -- is keyed by slug already; the socket is the
+            // one that wandered off.
+            'socketName' => $this->socketName($application),
             // The LSAPI binary, not the CLI — this is what OLS spawns.
             'lsphpBinary' => $this->stack->handlerPath($version),
             // Where this site's own php settings live. Written by `apply()`

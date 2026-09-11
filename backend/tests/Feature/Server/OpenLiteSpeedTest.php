@@ -1108,6 +1108,58 @@ describe('site isolation', function () {
             ->toContain('extGroup                shopuser');
     });
 
+    it('names the socket by slug, never by domain', function () {
+        // `domain` is nullable and NOT unique -- the applications migration
+        // says so in the same comment that explains why the vhost file is not
+        // named after it. Two sites on one domain shared the socket their
+        // isolation depends on, and a site with no domain bound
+        // `lsphp84-.sock`, which every other domainless site would also want.
+        $config = app(OlsDriver::class)
+            ->renderConfig($this->app_, '/home/shopuser/shop/public_html');
+
+        expect($config)->toContain('uds://tmp/lshttpd/lsphp84-shop.sock')
+            ->not->toContain('shop.test.sock');
+    });
+
+    it('keeps the socket bindable when the slug is long', function () {
+        // sun_path caps a unix socket at 108 bytes including the terminator.
+        // Measured on a real server: 99 characters bound, 109 failed with
+        // "AF_UNIX path too long". A site name may be 255, so an unbounded
+        // slug produces a vhost OpenLiteSpeed cannot start -- the same silent
+        // 503 as the panel's own socket bug, one layer down.
+        // forceFill, not update: `slug` is not fillable, so update() is a
+        // silent no-op here and this test passed against the short slug.
+        $this->app_->forceFill(['slug' => str_repeat('a', 120)])->save();
+
+        $config = app(OlsDriver::class)
+            ->renderConfig($this->app_->fresh(['phpSettings', 'systemUser']), '/home/shopuser/shop/public_html');
+
+        preg_match('#uds://(\S+\.sock)#', $config, $matches);
+
+        expect($matches)->not->toBeEmpty();
+        expect(strlen('/'.$matches[1]))->toBeLessThan(100);
+    });
+
+    it('does not let two long slugs collide onto one socket', function () {
+        // Truncation alone would reintroduce exactly the sharing this change
+        // removes: two 120-character slugs with the same first 40 characters
+        // would be the same socket.
+        $shared = str_repeat('a', 110);
+
+        $this->app_->forceFill(['slug' => $shared.'one'])->save();
+        $first = app(OlsDriver::class)
+            ->renderConfig($this->app_->fresh(['phpSettings', 'systemUser']), '/home/shopuser/shop/public_html');
+
+        $this->app_->forceFill(['slug' => $shared.'two'])->save();
+        $second = app(OlsDriver::class)
+            ->renderConfig($this->app_->fresh(['phpSettings', 'systemUser']), '/home/shopuser/shop/public_html');
+
+        preg_match('#uds://(\S+\.sock)#', $first, $a);
+        preg_match('#uds://(\S+\.sock)#', $second, $b);
+
+        expect($a[1])->not->toBe($b[1]);
+    });
+
     it('refuses to write a vhost for an application with no system user', function () {
         fakeOls(olsConfig());
 
