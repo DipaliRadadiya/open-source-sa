@@ -310,3 +310,47 @@ it('hands the frontend build a tree it can still write to', function () {
     expect($body)->toContain('chown -R "${APP_USER}:${APP_USER}"')
         ->and($body)->toContain('${APP_DIR}/frontend/.next');
 });
+
+it('installs from the panel exactly what install.sh installs', function () {
+    // "Install PHP 8.3" from the panel installed NOTHING on OpenLiteSpeed.
+    // config/server.php listed the FPM extension names, five of which do not
+    // exist as lsphp packages -- and apt fails a whole transaction on one
+    // missing name, so mysql, pgsql and curl went down with the phantoms.
+    //
+    // install.sh's list is the one proven on hardware, so it is the source of
+    // truth and this test is the thing that keeps the two from drifting again.
+    // Whichever a future edit changes, the other has to move with it.
+    preg_match_all(
+        '/\$\{lsphp\}-([a-z0-9]+)/',
+        implode("\n", installerFunction('install_ols_packages')),
+        $matches,
+    );
+
+    $fromInstaller = array_values(array_unique($matches[1]));
+    $fromConfig = (array) config('server.php_stacks.lsphp.base_packages');
+
+    expect($fromInstaller)->not->toBeEmpty('install.sh installs no lsphp packages?');
+
+    sort($fromInstaller);
+    $sortedConfig = $fromConfig;
+    sort($sortedConfig);
+
+    expect($sortedConfig)->toBe($fromInstaller);
+});
+
+it('never lists an extension that LiteSpeed compiles into the interpreter', function () {
+    // These have no package because they are built in -- verified with
+    // `lsphp84/bin/php -m` on a real server, where all six are loaded on a box
+    // that has none of them installed. Naming one is not a harmless extra: it
+    // is an apt error that takes the whole install with it.
+    //
+    // `gd` is the nastiest of the six. It resolves as a name with no
+    // installation candidate rather than as unknown, so it looks real in a
+    // search and still kills the transaction.
+    $compiledIn = ['mbstring', 'xml', 'zip', 'gd', 'bcmath', 'soap'];
+
+    expect(array_intersect(
+        (array) config('server.php_stacks.lsphp.base_packages'),
+        $compiledIn,
+    ))->toBe([]);
+});

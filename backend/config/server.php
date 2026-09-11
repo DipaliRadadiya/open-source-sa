@@ -1376,12 +1376,37 @@ return [
             'reload_command' => ['/usr/local/lsws/bin/lswsctrl', 'restart'],
             'sapis' => ['litespeed'],
             /*
-            | Matches the FPM set deliberately. On OpenLiteSpeed the extension
-            | toggles are refused — LSPHP has no phpenmod — so whatever ships
-            | here is what the user is stuck with. A base set smaller than
-            | FPM's would be a real difference in what the two can run.
+            | The packages LiteSpeed actually ships, which is NOT the FPM set.
+            |
+            | This used to mirror FPM's names on the reasoning that a smaller
+            | base set would be a real difference in what the two stacks can
+            | run. The reasoning was right and the conclusion was wrong: five
+            | of those names do not exist in any repository.
+            |
+            |   E: Unable to locate package lsphp84-mbstring
+            |   E: Unable to locate package lsphp84-xml
+            |   E: Unable to locate package lsphp84-zip
+            |   E: Unable to locate package lsphp84-bcmath
+            |   E: Unable to locate package lsphp84-soap
+            |
+            | apt fails a whole transaction on one missing name, so "install
+            | PHP 8.3" from the panel installed NOTHING on OpenLiteSpeed --
+            | mysql, pgsql and curl went down with the five phantoms.
+            |
+            | There is no capability lost, which is why the names are absent:
+            | mbstring, xml, zip, gd, bcmath and soap are COMPILED INTO the
+            | interpreter. Verified with `lsphp84/bin/php -m` on a real server
+            | -- all six are loaded on a box with none of those packages
+            | installed. `lsphp84-gd` resolves as a name with no installation
+            | candidate, which is worse than absent: it looks real in a search
+            | and still kills the transaction.
+            |
+            | This is install.sh's list, and deliberately so. A version added
+            | from the panel should be the same interpreter the installer
+            | would have built, and that set is the one proven on hardware.
+            | OpenLiteSpeedTest asserts the two stay in step.
             */
-            'base_packages' => ['common', 'mysql', 'pgsql', 'curl', 'mbstring', 'xml', 'zip', 'gd', 'intl', 'bcmath', 'soap'],
+            'base_packages' => ['common', 'mysql', 'pgsql', 'curl', 'intl', 'sqlite3', 'redis', 'igbinary', 'opcache'],
         ],
     ],
 
