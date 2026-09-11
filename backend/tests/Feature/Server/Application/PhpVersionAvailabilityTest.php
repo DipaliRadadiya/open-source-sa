@@ -330,4 +330,57 @@ describe('the version the application itself can run on', function () {
         createPhpVersionSite(['php_version' => '8.5', 'domain' => 'blank.example.com'])
             ->assertSuccessful();
     });
+
+    describe('an empty version field', function () {
+        it('is checked against the version it will actually resolve to', function () {
+            // The hole the range had: an empty field is not "no version", it
+            // is `server.default_php_version` — the newest PHP on the box, and
+            // therefore the exact version a ceiling exists to exclude. The rule
+            // returned early on blank, so clearing the field walked past it:
+            // green form, no error, install dead inside PrestaShop's vendored
+            // Symfony.
+            config(['server.default_php_version' => '8.5']);
+
+            $response = createPhpVersionSite([
+                'site_type' => 'prestashop',
+                'domain' => 'shop-blank.example.com',
+                'admin_email' => 'admin@example.com',
+                'admin_password' => 'a-long-password',
+                'shop_name' => 'Shop',
+                'admin_first_name' => 'Admin',
+                'admin_last_name' => 'User',
+            ])->assertJsonValidationErrors('php_version');
+
+            // Naming the default is the whole message: the user did not choose
+            // anything, so an error about "the version you picked" is about
+            // something they cannot see.
+            expect($response->json('errors.php_version.0'))
+                ->toContain('8.5')
+                ->toContain('7.2 – 8.1');
+
+            expect(Application::query()->where('site_type', 'prestashop')->count())->toBe(0);
+        });
+
+        it('is accepted when the default is inside the range', function () {
+            config(['server.default_php_version' => '8.1']);
+
+            createPhpVersionSite([
+                'site_type' => 'prestashop',
+                'domain' => 'shop-default-ok.example.com',
+                'admin_email' => 'admin@example.com',
+                'admin_password' => 'a-long-password',
+                'shop_name' => 'Shop',
+                'admin_first_name' => 'Admin',
+                'admin_last_name' => 'User',
+            ])->assertSuccessful();
+        });
+
+        it('stays accepted for a type with no range at all', function () {
+            // A server default out of *somebody's* range must not start
+            // refusing types that never declared one.
+            config(['server.default_php_version' => '8.5']);
+
+            createPhpVersionSite(['domain' => 'plain-default.example.com'])->assertSuccessful();
+        });
+    });
 });

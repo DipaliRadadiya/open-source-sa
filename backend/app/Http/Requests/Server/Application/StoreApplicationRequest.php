@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Contracts\SiteType;
 use App\Enums\DomainOrigin;
 use App\Rules\AvailablePort;
 use App\Rules\SingleLine;
@@ -219,12 +220,8 @@ class StoreApplicationRequest extends FormRequest
         // inside its own vendored Symfony. Appended for the same reason: the
         // shape and is-it-installed checks above still run first, and this one
         // answers only "will the application run on it".
-        if (($range = $type->supportedPhpRange()) !== null) {
-            $rules['php_version'][] = new SupportedPhpVersion(
-                $range['min'] ?? null,
-                $range['max'] ?? null,
-                __("application.types.{$type->name()}.title"),
-            );
+        if (($rule = $this->phpRangeRule($type)) !== null) {
+            $rules['php_version'][] = $rule;
         }
 
         return $rules;
@@ -235,6 +232,34 @@ class StoreApplicationRequest extends FormRequest
         if ($this->has('domain')) {
             $this->merge(['domain' => strtolower(trim((string) $this->input('domain')))]);
         }
+    }
+
+    /**
+     * The type's supported PHP range, as a rule — carrying the version an
+     * empty field resolves to.
+     *
+     * Built here rather than inline because `after()` needs the same object:
+     * a `ValidationRule` is **not implicit**, so Laravel skips it entirely
+     * when the attribute is empty, and empty is exactly the case that was
+     * broken. Two constructions of the same rule would be two chances to pass
+     * a different range.
+     */
+    private function phpRangeRule(?SiteType $type): ?SupportedPhpVersion
+    {
+        if ($type === null || ($range = $type->supportedPhpRange()) === null) {
+            return null;
+        }
+
+        return new SupportedPhpVersion(
+            $range['min'] ?? null,
+            $range['max'] ?? null,
+            __("application.types.{$type->name()}.title"),
+            // What an empty field will actually run on: the field is
+            // `nullable` and provisioning resolves a blank one to the server
+            // default, so without this the range is enforced on every value
+            // except the one the user gets by touching nothing.
+            (string) config('server.default_php_version', '') ?: null,
+        );
     }
 
     /**
@@ -283,6 +308,25 @@ class StoreApplicationRequest extends FormRequest
                 if (($blocked = $manager->unavailable($type)) !== null) {
                     $validator->errors()->add('site_type', $blocked['reason']);
                 }
+            },
+
+            // The PHP range, for the one value `rules()` cannot reach: a
+            // custom rule is skipped when the attribute is empty, and an empty
+            // `php_version` is not "no version" — it is the server default,
+            // which is the newest PHP on the box and therefore the exact
+            // version a ceiling exists to exclude.
+            function (Validator $validator) {
+                if (filled($this->input('php_version'))) {
+                    return;
+                }
+
+                $type = app(SiteTypeManager::class)->find((string) $this->input('site_type'));
+
+                $this->phpRangeRule($type)?->validate(
+                    'php_version',
+                    null,
+                    fn (string $message) => $validator->errors()->add('php_version', $message),
+                );
             },
         ];
     }
