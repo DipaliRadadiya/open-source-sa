@@ -127,6 +127,12 @@ class SitePhpIni
             return $sessions;
         }
 
+        $errorLog = $this->ensureErrorLog($application);
+
+        if ($errorLog !== null && $errorLog->failed()) {
+            return $errorLog;
+        }
+
         return $this->files->put(
             $this->path($application),
             $this->render($application, $settings ?? $this->settingsFor($application)),
@@ -152,6 +158,64 @@ class SitePhpIni
      * access to its own `disable_functions` and `open_basedir` -- it could
      * lift every restriction placed on it by editing one file it owns.
      */
+    /**
+     * The PHP error log this file names, created so LSPHP can write to it.
+     *
+     * `logs/` is root-owned, group the site user, 0750 -- read and traverse
+     * for the site, write for nobody but root. ApplicationLogDirectory explains
+     * why at length, and the reasoning is sound: write permission on a
+     * directory is permission to unlink what is inside it, so a user-owned log
+     * directory lets a compromised site replace access.log with a symlink to
+     * /etc/cron.d and have a root process append attacker-chosen text into it.
+     *
+     * Its corollary is the part LSAPI breaks. It says "every writer here is a
+     * root master process handing a descriptor down... nothing running as the
+     * site user ever needs to create a file in here" -- true of nginx, Apache
+     * and php-fpm, which opens a pool's error_log before dropping privileges.
+     * lshttpd spawns LSPHP *as* extUser and hands it no such descriptor, so
+     * PHP opened the path itself, was refused, and fell back to stderr. The
+     * panel's PHP error log viewer was empty on every OpenLiteSpeed site, and
+     * looked like a site that had never errored.
+     *
+     * Creating the FILE rather than loosening the DIRECTORY is what keeps both
+     * properties. The site can write to a file it owns; it still cannot create,
+     * delete or replace anything in `logs/`, so the symlink swap that ownership
+     * model exists to prevent stays impossible. It is the same arrangement
+     * php-fpm produces -- a site-writable log inside a root-owned directory --
+     * reached by the panel opening the file instead of a master process.
+     *
+     * Only on this stack: SitePhpIni exists because OpenLiteSpeed has no pools.
+     * On FPM the master still opens the descriptor and nothing here runs.
+     */
+    private function ensureErrorLog(Application $application): ?ServerOpsResult
+    {
+        $user = $application->systemUser?->username;
+
+        if ($user === null) {
+            return null;
+        }
+
+        $context = ['feature' => 'php', 'op' => 'site_php_error_log', 'application' => $application->id];
+        $path = $this->pools->errorLogPath($application);
+
+        // `touch` rather than a write: an existing log must keep its contents.
+        $made = $this->serverOps->run(['touch', $path], $context, timeout: 15);
+
+        if ($made->failed()) {
+            return $made;
+        }
+
+        $owned = $this->serverOps->run(['chown', $user.':'.$user, $path], $context, timeout: 15);
+
+        if ($owned->failed()) {
+            return $owned;
+        }
+
+        // 0644, not 0600: an error log is the one file a site owner most needs
+        // to read, and the directory above already decides who gets that far.
+        return $this->serverOps->run(['chmod', '0644', $path], $context, timeout: 15);
+    }
+
     private function ensureSessionDirectory(Application $application): ?ServerOpsResult
     {
         $user = $application->systemUser?->username;

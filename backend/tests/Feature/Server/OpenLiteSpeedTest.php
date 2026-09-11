@@ -544,6 +544,49 @@ describe('the driver', function () {
         }
     });
 
+    it('creates the PHP error log it names, owned by the site', function () {
+        // logs/ is root-owned 0750 with the site as group -- read and traverse
+        // for the site, write for nobody but root. That works everywhere else
+        // because a root master opens the file first: nginx and Apache in
+        // their masters, php-fpm before it drops to the pool user. lshttpd
+        // spawns LSPHP *as* extUser and hands it nothing, so PHP opened the
+        // path itself, was refused, and fell back to stderr -- the panel's PHP
+        // error log viewer was empty on every OLS site.
+        $runs = fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
+
+        $commands = collect((array) $runs)->pluck('command')->map(
+            fn ($c) => implode(' ', (array) $c),
+        );
+
+        expect($commands)->toContain('touch /home/shopuser/shop/logs/php-error.log')
+            ->toContain('chown shopuser:shopuser /home/shopuser/shop/logs/php-error.log');
+    });
+
+    it('creates the file without making the log directory writable', function () {
+        // THE POINT OF DOING IT THIS WAY. Write permission on a directory is
+        // permission to unlink what is inside it, so a site that owned logs/
+        // could replace access.log with a symlink to /etc/cron.d and have a
+        // root process append attacker-chosen text into it. Owning one file
+        // it already writes gives it nothing it did not have.
+        $runs = fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
+
+        $chowns = collect((array) $runs)
+            ->pluck('command')
+            ->map(fn ($c) => implode(' ', (array) $c))
+            ->filter(fn (string $c) => str_starts_with($c, 'chown') || str_starts_with($c, 'chmod'));
+
+        foreach ($chowns as $command) {
+            // The directory itself must never be handed over or loosened.
+            expect($command)->not->toBe('chown shopuser:shopuser /home/shopuser/shop/logs')
+                ->and($command)->not->toBe('chmod 0770 /home/shopuser/shop/logs')
+                ->and($command)->not->toBe('chmod 0777 /home/shopuser/shop/logs');
+        }
+    });
+
     it('adds its ini directory to the default one rather than replacing it', function () {
         $config = app(OlsDriver::class)->renderConfig($this->app_, '/home/shopuser/shop/public_html');
 
