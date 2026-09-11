@@ -39,18 +39,23 @@ import {
  * itself every 4s while any site is provisioning, so an inline actions cell threw
  * away its own state four seconds after you opened the delete dialog. */
 
+/* `block` before `truncate`: on an inline span the ellipsis never appears,
+ * because there is no box to overflow. The title carries the whole value —
+ * clipping a username without one hides which account a site runs as. */
 function TypeCell({ row }) {
+  const value = row.original.site_type_title ?? row.original.site_type;
   return (
-    <span className="text-muted-foreground">
-      {row.original.site_type_title ?? row.original.site_type}
+    <span className="block truncate text-muted-foreground" title={value}>
+      {value}
     </span>
   );
 }
 
 function OwnerCell({ row }) {
+  const value = row.original.system_user?.username ?? "—";
   return (
-    <span className="font-mono text-xs text-muted-foreground">
-      {row.original.system_user?.username ?? "—"}
+    <span className="block truncate font-mono text-xs text-muted-foreground" title={value}>
+      {value}
     </span>
   );
 }
@@ -138,7 +143,7 @@ function ActionsCell({ row, table }) {
 
 function NameCell({ row, missingDatabase = false }) {
   const t = useTranslations("applications");
-  return <div className="flex min-w-0 items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Globe2 className="size-4" /></span><div className="min-w-0"><div className="flex min-w-0 items-center gap-2"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate">{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1"><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
+  return <div className="flex min-w-0 items-center gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Globe2 className="size-4" /></span><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate" title={row.original.name}>{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1"><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
 }
 
 
@@ -257,18 +262,37 @@ function ApplicationsList({
       // handed one page, so sorting here reordered ten rows and presented that
       // as the order of the list. The server has the whole set, and pins
       // never-measured to the small end itself.
-      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} /> },
-      { accessorKey: "site_type_title", header: () => <SortHeader col="site_type">{t("columns.type")}</SortHeader>, cell: TypeCell },
-      { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, cell: StatusCell },
+      //
+      // The percentages are what stop a long site name taking the table with
+      // it. Every cell here already carried `truncate`, and none of it ever
+      // fired: in the browser's default `auto` layout a column is as wide as
+      // its longest cell, so a 61-character name simply made the Application
+      // column 657px and pushed the table 547px past its container — a
+      // sideways scrollbar with Size, Created and the row menu off the end of
+      // it. Truncation needs a bound to truncate against, and `fixedLayout`
+      // below is what gives the columns one. Measured at the four content
+      // widths this table can have (704 / 960 / 1120 / 1216px — the shell is a
+      // 16rem sidebar plus `max-w-screen-xl p-8`, so the viewport is not the
+      // container); below 1024 the cards render instead.
+      //
+      // Created hides below xl, and the rest re-base to 100% without it. Seven
+      // columns do not fit 704px: sharing it evenly truncated Type to "Next…"
+      // and Owner to "akaunti…", which is not a narrower column but a column
+      // that has stopped saying anything. Created is the one whose absence
+      // costs least — it is not actionable, it never changes, and the detail
+      // page carries it.
+      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[32%] xl:w-[30%]" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} /> },
+      { accessorKey: "site_type_title", header: () => <SortHeader col="site_type">{t("columns.type")}</SortHeader>, meta: { className: "w-[15%] xl:w-[11%]" }, cell: TypeCell },
+      { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: "w-[16%] xl:w-[14%]" }, cell: StatusCell },
       // Not sortable, and deliberately so on the API's side: the owner lives on
       // a relation, so ordering by it would mean a join, and the list can
       // already be searched by username.
-      { id: "owner", header: t("columns.owner"), cell: OwnerCell },
+      { id: "owner", header: t("columns.owner"), meta: { className: "w-[16%] xl:w-[13%]" }, cell: OwnerCell },
       // descFirst on both: nobody opens a size column to find their smallest
       // site, or a date column to find the oldest.
-      { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, cell: SizeCell },
-      { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, cell: CreatedCell },
-      { id: "actions", header: "", cell: ActionsCell },
+      { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, meta: { className: "w-[14%] xl:w-[11%]" }, cell: SizeCell },
+      { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, meta: { className: "hidden xl:table-cell xl:w-[14%]" }, cell: CreatedCell },
+      { id: "actions", header: "", meta: { className: "w-[7%]" }, cell: ActionsCell },
     ],
     // `missingDatabase` belongs here: attaching a database refreshes the route,
     // and without it the columns keep the closure from the previous render and
@@ -319,7 +343,10 @@ function ApplicationsList({
           workers. Six columns cannot fit a phone, and the table quietly hid
           five of them. */}
       <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} /></div>
-      <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage }} /></div>
+      {/* fixedLayout, so the percentages above are obeyed instead of treated as
+          hints the browser is free to ignore — the same fix services-table
+          needed, for the same reason. */}
+      <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage }} fixedLayout /></div>
       <DataTablePagination meta={meta} />
     </div>
   );
