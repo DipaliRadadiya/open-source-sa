@@ -8,6 +8,7 @@ import {
   engineSchema,
 } from "../lib/schemas/database.js";
 import { backupSchema } from "../lib/schemas/backup.js";
+import { supportsRemoteUsers } from "../lib/databases/engine-capabilities.js";
 
 /*
  * Three fields the backend shipped on 2026-09-11 after the frontend asked for
@@ -19,9 +20,10 @@ import { backupSchema } from "../lib/schemas/backup.js";
 
 // GET /databases/engines — the engine's own databases, per engine.
 const ENGINES = [
-  { engine: "mariadb", driver: "sql", running: true, system_schemas: ["information_schema", "mysql", "performance_schema", "sys"] },
-  { engine: "mongodb", driver: "mongo", running: true, system_schemas: ["admin", "config", "local"] },
-  { engine: "postgresql", driver: "pgsql", running: true, system_schemas: ["postgres", "template0", "template1"] },
+  { engine: "mariadb", driver: "sql", running: true, supports_remote_users: true, system_schemas: ["information_schema", "mysql", "performance_schema", "sys"] },
+  { engine: "mongodb", driver: "mongo", running: true, supports_remote_users: true, system_schemas: ["admin", "config", "local"] },
+  // PostgreSQL roles carry no host — this is the one that reports false.
+  { engine: "postgresql", driver: "pgsql", running: true, supports_remote_users: false, system_schemas: ["postgres", "template0", "template1"] },
 ];
 
 test("the engine's system databases survive parsing", () => {
@@ -143,4 +145,46 @@ test("every new message key resolves in every locale", () => {
     // The placeholder the count is printed through — a typo here renders raw.
     assert.match(messages.serverDashboard.processes.summaryOfTotal, /\{total\}/);
   }
+});
+
+test("the engine lookup takes the fetcher's real shape, not the one I assumed", () => {
+  /*
+   * This shipped broken. The page called `.find()` straight on `getEngines()`,
+   * which returns `{ engines, failed }` — so every /databases/{id} rendered
+   * "engines.find is not a function", and the `.catch` on the fetcher never
+   * fired because nothing rejected: it succeeded, handed back an object, and
+   * the crash came later at the point of use.
+   */
+  const wrapped = { engines: ENGINES, failed: false };
+  assert.equal(supportsRemoteUsers(wrapped, "postgresql"), false);
+  assert.equal(supportsRemoteUsers(wrapped, "mariadb"), true);
+
+  // A bare array works too — the shape is handled here, once, not guessed.
+  assert.equal(supportsRemoteUsers(ENGINES, "postgresql"), false);
+
+  // Every way the lookup can come up empty must keep the choice offered.
+  for (const empty of [undefined, null, [], { engines: [] }, { failed: true }]) {
+    assert.equal(supportsRemoteUsers(empty, "postgresql"), true, JSON.stringify(empty));
+  }
+  // An engine the row does not mention, and one with no such field.
+  assert.equal(supportsRemoteUsers(wrapped, "cockroach"), true);
+  assert.equal(supportsRemoteUsers({ engines: [{ engine: "mysql" }] }, "mysql"), true);
+});
+
+test("the fetcher still wraps its list — the assumption this pins", () => {
+  // If getEngines ever returns a bare array, `supportsRemoteUsers` already
+  // copes; this exists so the change is noticed rather than silently relied on.
+  const fetcher = readFileSync(
+    new URL("../lib/databases/get-databases.js", import.meta.url),
+    "utf8",
+  );
+  assert.match(fetcher, /return \{ engines: data\?\.engines \?\? \[\], failed \}/);
+
+  // And the page must go through the helper, not dig into the shape inline.
+  const page = readFileSync(
+    new URL("../app/(app)/databases/[database]/page.jsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(page, /supportsRemoteUsers\(engines, data\.engine\)/);
+  assert.doesNotMatch(page, /engines\.find\(/, "the shape is being guessed again");
 });

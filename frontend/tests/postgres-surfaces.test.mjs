@@ -106,7 +106,10 @@ test("an engine with no host on its accounts is not offered remote access", () =
     new URL("../app/(app)/databases/[database]/page.jsx", import.meta.url),
     "utf8",
   );
-  assert.match(page, /supports_remote_users !== false/);
+  // The lookup lives in lib/databases/engine-capabilities.js now — it is
+  // behaviour, and an inline expression here could not be tested. It was not,
+  // and it shipped calling `.find()` on an object.
+  assert.match(page, /supportsRemoteUsers\(engines, data\.engine\)/);
   assert.match(page, /getEngines\(\)\.catch/, "a failed lookup must not take the page down");
 });
 

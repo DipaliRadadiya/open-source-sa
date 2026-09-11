@@ -5,6 +5,7 @@ import { can } from "@/lib/permissions/can";
 import { getDatabase } from "@/lib/databases/get-database";
 import { getExports } from "@/lib/databases/get-exports";
 import { getDatabaseCounts, getEngines } from "@/lib/databases/get-databases";
+import { supportsRemoteUsers } from "@/lib/databases/engine-capabilities";
 import {
   getAllApplications,
   getPhpmyadminSite,
@@ -62,9 +63,17 @@ export default async function DatabasePage({ params, searchParams }) {
     // Only so the site picker can grey a site whose application cannot speak
     // this database's engine. A failure costs the greying, not the page.
     getSiteTypes().catch(() => ({ siteTypes: [] })),
-    // Only for `supports_remote_users`. A failure costs the narrowing, not the
-    // page — the user dialogs then offer the full choice, as they always did.
-    getEngines().catch(() => []),
+    /*
+     * Only for `supports_remote_users`. A failure costs the narrowing, not the
+     * page — the user dialogs then offer the full choice, as they always did.
+     *
+     * `{ engines, failed }`, NOT an array: this fetcher wraps its list like the
+     * others here. Assuming the array shape took every `/databases/{id}` page
+     * down with `engines.find is not a function`, and the `.catch` did not
+     * save it — nothing rejected, it returned an object and the crash came
+     * later, at the call site.
+     */
+    getEngines().catch(() => ({ engines: [] })),
   ]);
   const { data, failed, status, failure } = live;
 
@@ -134,9 +143,7 @@ export default async function DatabasePage({ params, searchParams }) {
               canManage={canManage}
               /* PostgreSQL roles carry no host, so `remote` and `anywhere` are
                  refused by the API. Read from the engine row, never the name. */
-              remoteUsers={
-                engines.find((e) => e.engine === data.engine)?.supports_remote_users !== false
-              }
+              remoteUsers={supportsRemoteUsers(engines, data.engine)}
             />
           }
           tables={<DatabaseTables database={data} tables={tables} />}
