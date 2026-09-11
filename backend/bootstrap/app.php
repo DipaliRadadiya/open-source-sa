@@ -8,7 +8,10 @@ use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -37,7 +40,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // valid central token is presented — see the middleware itself.
         $middleware->prepend(CentralSystemGuard::class);
 
-        $middleware->api(prepend: ['throttle:api'], append: [SetLocale::class]);
+        // SetLocale is PREPENDED, not appended.
+        //
+        // Appended, it ran after SubstituteBindings -- so every exception route
+        // model binding raises was rendered before the locale had been read.
+        // A French client asking for a row that does not exist got the English
+        // 404, and no amount of translating the message would have changed it.
+        // Nothing here depends on running after the binding, and reading one
+        // request header is safe as early as possible.
+        $middleware->api(prepend: ['throttle:api', SetLocale::class]);
 
         // The panel takes itself down to update, and these are the routes that
         // have to keep answering while it does.
@@ -79,4 +90,47 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        // A 404 must not name the class it failed to load.
+        //
+        // `prepareException` rewrites ModelNotFoundException as
+        // `new NotFoundHttpException($e->getMessage())` -- carrying "No query
+        // results for model [App\Models\Application] 99999" into the HTTP
+        // exception. `convertExceptionToArray` then returns the message of any
+        // HttpException *regardless of app.debug*, so APP_DEBUG=false does not
+        // cover this: every bound route on the panel was answering 404 with an
+        // internal FQCN and a primary key.
+        //
+        // REGISTERED AGAINST NotFoundHttpException, NOT ModelNotFoundException.
+        // Render callbacks run after prepareException has already converted it,
+        // so a callback typed on the model exception never fires -- it reads
+        // correctly and silently does nothing.
+        //
+        // Deliberately vague about *why* it was not found. Binding raises the
+        // same exception for a row that does not exist and a row a scoped
+        // binding excluded, so separating them would answer "does this id
+        // exist?" for records the caller cannot read.
+        //
+        // Nothing is lost by discarding the original text. ApiErrorLogWriter
+        // ignores anything under 500, so a 404 was never recorded anywhere
+        // either way -- and the message only ever held the model class and the
+        // id, both of which the request line already gives an operator.
+        $exceptions->render(function (NotFoundHttpException $e, Request $request): ?JsonResponse {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            return response()->json(['message' => __('errors/http.not_found')], 404);
+        });
+
+        // Same leak, smaller blast radius: the default names the matched route
+        // pattern and every verb it accepts, which maps the API for anyone
+        // probing it.
+        $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request): ?JsonResponse {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            return response()->json(['message' => __('errors/http.method_not_allowed')], 405);
+        });
     })->create();
