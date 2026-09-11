@@ -262,8 +262,22 @@ class UpdateScript
         # empty table. That backfill can only happen here, and it has to,
         # because otherwise the fix reaches new installs and none of the
         # servers that already have the problem. Records only; never runs ufw.
+        # Never fatal, for the same reason panel:sudoers is not.
+        #
+        # This runs `artisan` from the release just checked out, and the
+        # command only exists from the release that introduced it. Any target
+        # older than that -- which the API is supposed to refuse and, on a
+        # shallow clone, did not -- answers "There are no commands defined in
+        # the \"firewall\" namespace", exits non-zero, and `set -e` turns a
+        # records-only backfill into a failed update that rolls back a release
+        # which had already installed, migrated and resynced successfully.
+        #
+        # It is a backfill. Not running it leaves the firewall screen reading
+        # its rules from an empty table, exactly as before the update; failing
+        # over it costs the whole update. The first is recoverable by running
+        # one command, the second is not recoverable by the user at all.
         note record_firewall_defaults
-        {$asUser}{$php} {$backend}/artisan firewall:record-defaults
+        {$asUser}{$php} {$backend}/artisan firewall:record-defaults || echo "WARNING: firewall defaults not recorded; run 'artisan firewall:record-defaults' if the firewall screen shows no rules"
 
         note optimize
         {$asUser}{$php} {$backend}/artisan optimize:clear

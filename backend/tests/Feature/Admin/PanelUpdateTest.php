@@ -504,3 +504,51 @@ it('keeps the update routes answering while the panel is down', function () {
         @unlink($down);
     }
 });
+
+/*
+ * Steps that must not cost the whole update.
+ *
+ * The in-place script runs `artisan` from the release it just checked out, so
+ * any step it invokes has to exist *there*. A backfill added in release N does
+ * not exist in anything older, and under `set -e` its absence rolled back a
+ * release that had already installed, migrated and resynced successfully:
+ *
+ *   ERROR There are no commands defined in the "firewall" namespace.
+ */
+
+function inPlaceScript(): string
+{
+    return app(UpdateScript::class)->render(
+        new PanelUpdate(['id' => 1, 'from_commit' => str_repeat('a', 40)]),
+        '1.0.17',
+    );
+}
+
+it('does not fail the update when the firewall backfill is missing', function () {
+    $line = collect(explode("\n", inPlaceScript()))
+        ->first(fn (string $l): bool => str_contains($l, 'firewall:record-defaults'));
+
+    expect($line)->not->toBeNull()
+        // `|| echo` rather than a bare call: the script runs under `set -e`.
+        ->and($line)->toContain('||');
+});
+
+it('warns rather than going quiet when that backfill is skipped', function () {
+    // Silently swallowing it would leave the firewall screen reading an empty
+    // table with nothing anywhere saying why.
+    $line = collect(explode("\n", inPlaceScript()))
+        ->first(fn (string $l): bool => str_contains($l, 'firewall:record-defaults'));
+
+    expect($line)->toContain('WARNING')
+        // And it names the command, so the fix is copy-pasteable.
+        ->and($line)->toContain('artisan firewall:record-defaults');
+});
+
+it('still refuses a target contained in the live commit', function () {
+    // The guard that should have stopped this update before any of it ran.
+    // Kept asserted here because the fix above makes one symptom of a
+    // downgrade survivable, and a survivable symptom must not become the
+    // reason nobody notices the downgrade.
+    expect(inPlaceScript())->toContain('merge-base --is-ancestor')
+        ->and(inPlaceScript())->toContain('target_not_newer');
+});
