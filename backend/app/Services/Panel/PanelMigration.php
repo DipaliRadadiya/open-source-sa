@@ -35,6 +35,7 @@ class PanelMigration
     public function __construct(
         private PanelLayout $layout,
         private PanelReleases $releases,
+        private PanelPhpBinary $phpBinary,
     ) {}
 
     /**
@@ -240,7 +241,7 @@ class PanelMigration
 
     private function php(): string
     {
-        return '/usr/bin/php'.config('panel_update.php_version');
+        return $this->phpBinary->path();
     }
 
     private function service(string $key): string

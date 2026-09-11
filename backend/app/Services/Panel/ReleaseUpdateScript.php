@@ -65,6 +65,7 @@ class ReleaseUpdateScript
     public function __construct(
         private PanelLayout $layout,
         private PanelReleases $releases,
+        private PanelPhpBinary $phpBinary,
     ) {}
 
     public function render(PanelUpdate $update, string $version, bool $dryRun = false): string
@@ -77,7 +78,7 @@ class ReleaseUpdateScript
         $release = $this->layout->newReleasePath($stamp);
         $state = rtrim((string) config('panel_update.state_dir'), '/').'/update-'.$update->getKey().'.json';
 
-        $php = '/usr/bin/php'.config('panel_update.php_version');
+        $php = $this->phpBinary->path();
         $user = (string) config('panel_update.app_user');
         $node = (string) config('panel_update.node_bin_dir');
         $currentCommit = escapeshellarg((string) $update->from_commit);

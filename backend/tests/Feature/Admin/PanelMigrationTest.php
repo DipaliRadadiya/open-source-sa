@@ -2,6 +2,7 @@
 
 use App\Services\Panel\PanelLayout;
 use App\Services\Panel\PanelMigration;
+use App\Services\Panel\PanelPhpBinary;
 use App\Services\Panel\PanelReleases;
 use Illuminate\Support\Facades\Process;
 
@@ -47,7 +48,7 @@ function migrationFor(string $root): PanelMigration
 
     $layout = new PanelLayout($root.'/backend');
 
-    return new PanelMigration($layout, new PanelReleases($layout));
+    return new PanelMigration($layout, new PanelReleases($layout), new PanelPhpBinary);
 }
 
 afterEach(function () {

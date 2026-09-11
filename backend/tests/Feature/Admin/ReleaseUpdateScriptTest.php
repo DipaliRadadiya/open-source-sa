@@ -2,6 +2,7 @@
 
 use App\Models\PanelUpdate;
 use App\Services\Panel\PanelLayout;
+use App\Services\Panel\PanelPhpBinary;
 use App\Services\Panel\PanelReleases;
 use App\Services\Panel\ReleaseUpdateScript;
 
@@ -15,7 +16,7 @@ function releaseScript(): ReleaseUpdateScript
 {
     $layout = new PanelLayout('/var/www/panel/current/backend');
 
-    return new ReleaseUpdateScript($layout, new PanelReleases($layout));
+    return new ReleaseUpdateScript($layout, new PanelReleases($layout), new PanelPhpBinary);
 }
 
 function renderedScript(bool $dryRun = false): string

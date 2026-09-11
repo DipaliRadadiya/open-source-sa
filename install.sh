@@ -1246,6 +1246,20 @@ setup_backend() {
     set_env "${dir}/.env" PANEL_UPDATE_STATE_DIR "$UPDATE_STATE_DIR"
     set_env "${dir}/.env" PANEL_PHP_VERSION "$PHP_VERSION"
 
+    # The interpreter itself, not just its version.
+    #
+    # The self-updater built `/usr/bin/php${PANEL_PHP_VERSION}` from the line
+    # above, which is right on nginx and Apache and names nothing at all on
+    # OpenLiteSpeed: that stack installs no ondrej PHP, and the panel runs on
+    # LSPHP under /usr/local/lsws. Every self-update on every OLS install
+    # called a binary that does not exist — so an OLS panel could not update
+    # itself, and could not ship a security fix.
+    #
+    # This value has been computed correctly by derive_php_runtime since the
+    # LSPHP work landed; it was simply never written down. Writing it removes
+    # the guess on both stacks rather than only the broken one.
+    set_env "${dir}/.env" PANEL_PHP_BIN "$PANEL_PHP_BIN"
+
     # The same version again, under the key the *sites* use. `PANEL_PHP_VERSION`
     # above is the panel's own interpreter and is read by the self-updater
     # alone; `SERVER_DEFAULT_PHP_VERSION` is what a site that names no version

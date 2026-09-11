@@ -56,6 +56,19 @@ return [
     'php_version' => env('PANEL_PHP_VERSION', '8.4'),
 
     /*
+     * The binary itself, when the version is not enough to find it.
+     *
+     * Empty on nginx and Apache, where `/usr/bin/php{version}` is correct and
+     * always has been. Written by install.sh on OpenLiteSpeed, where there is
+     * no ondrej PHP and the panel runs on LSPHP under /usr/local/lsws — an
+     * absolute path is the only thing that can name it.
+     *
+     * Resolution, including what happens on an OLS box installed before this
+     * key existed, lives in PanelPhpBinary.
+     */
+    'php_binary' => env('PANEL_PHP_BIN', ''),
+
+    /*
      * Directory holding the node binary install.sh placed on the box. Pinned
      * into PATH for the frontend build: npm's shebang is `env node`, so an
      * unpinned PATH silently builds with whatever node is first.

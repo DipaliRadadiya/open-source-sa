@@ -45,7 +45,10 @@ class UpdateScript
         'health_check',
     ];
 
-    public function __construct(private InstalledPanelInfo $installed) {}
+    public function __construct(
+        private InstalledPanelInfo $installed,
+        private PanelPhpBinary $php,
+    ) {}
 
     /**
      * A release version is only ever a dotted number, optionally v-prefixed.
@@ -61,7 +64,7 @@ class UpdateScript
         $repo = $this->installed->repositoryPath();
         $backend = $repo.'/backend';
         $frontend = $repo.'/frontend';
-        $php = '/usr/bin/php'.config('panel_update.php_version');
+        $php = $this->php->path();
         $tag = 'v'.ltrim($version, 'vV');
         $state = $this->statePath($update);
         $rollbackTo = (string) $update->from_commit;
