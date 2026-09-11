@@ -62,7 +62,19 @@ export function ScheduleField({ form, presets, timezone }) {
     setCustomMode(key === CUSTOM);
     const preset = presets.find((p) => p.key === key);
     if (preset?.expression) {
-      form.setValue("expression", preset.expression, { shouldValidate: true });
+      /*
+       * `shouldDirty`, or Save never wakes up.
+       *
+       * The edit dialog gates Save on `isDirty`, and setValue leaves that flag
+       * alone unless asked. So changing ONLY the schedule on an existing job
+       * updated the expression, redrew the dropdown, and left the button dead —
+       * and typing in the Custom box worked, because that input is registered
+       * normally, which made the whole thing look intermittent.
+       */
+      form.setValue("expression", preset.expression, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
     }
   }
 

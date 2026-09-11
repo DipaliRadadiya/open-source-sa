@@ -71,7 +71,12 @@ export function CommandField({
     const resolved = dir.trim()
       ? tpl.replaceAll(placeholder, dir.trim().replace(/\/+$/, ""))
       : tpl;
-    form.setValue("command", resolved, { shouldValidate: Boolean(dir.trim()) });
+    // Dirty on every path into here — a template picked, a path typed, a site
+    // chosen — because each one is the user editing the command.
+    form.setValue("command", resolved, {
+      shouldValidate: Boolean(dir.trim()),
+      shouldDirty: true,
+    });
   }
 
   function onPick(preset) {
@@ -83,13 +88,18 @@ export function CommandField({
       // cleared — then the next template resolved {path} against nothing and
       // Create refused it for a missing directory that was visibly selected.
       setSource("");
-      form.setValue("command", "", { shouldValidate: false });
+      // Clearing it is an edit too: on an existing job this is how you take a
+      // template off, and Save has to be reachable afterwards.
+      form.setValue("command", "", { shouldValidate: false, shouldDirty: true });
       return;
     }
     setTemplate(preset.command);
     applyTemplate(preset.command, path);
     if (preset.expression) {
-      form.setValue("expression", preset.expression, { shouldValidate: true });
+      form.setValue("expression", preset.expression, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
     }
   }
 
@@ -114,12 +124,20 @@ export function CommandField({
     // user writes root-owned files into the site and the next deploy fails on
     // them — but a choice already made is the user's, not ours to overwrite.
     if (!form.getValues("run_as") && site.system_user?.id) {
-      form.setValue("run_as", String(site.system_user.id), { shouldValidate: true });
+      form.setValue("run_as", String(site.system_user.id), {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
     }
   }
 
   // A quick-start template has to write itself into the form; seeding local
   // state alone left the command box empty while the path field appeared.
+  //
+  // No `shouldDirty` here, deliberately, unlike every other setValue in this
+  // file: a starter only ever opens the CREATE dialog, and this runs on mount
+  // rather than off a control. Marking a form dirty before it has been touched
+  // is what makes a leave-guard cry wolf.
   useEffect(() => {
     if (!starter) return;
     form.setValue("command", starter.command, { shouldValidate: false });
