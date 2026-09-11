@@ -116,6 +116,31 @@ it('returns the server process table', function () {
     ]);
 });
 
+it('counts every process, not the rows it returns', function () {
+    // The list is a top-N by CPU. Before this the only number the panel had
+    // was the row count, which is the limit — so the count could not move when
+    // a process was stopped, and the screen looked frozen.
+    config(['server.metrics.processes_limit' => 1]);
+    fakeDashboard();
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/server/processes')->assertOk();
+
+    expect($response->json('processes'))->toHaveCount(1)
+        ->and($response->json('meta.total'))->toBe(2)
+        ->and($response->json('meta.limit'))->toBe(1);
+});
+
+it('leaves its own ps out of the count as well as the list', function () {
+    // The probe is filtered from the rows, so counting it would report a
+    // process the user cannot find anywhere on the screen.
+    fakeDashboard();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/server/processes')->assertOk()
+        ->assertJsonPath('meta.total', 2);
+});
+
 it('samples metrics into the table and prunes old rows', function () {
     Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
     fakeDashboard();

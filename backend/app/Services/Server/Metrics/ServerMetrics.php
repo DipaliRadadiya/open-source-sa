@@ -147,9 +147,19 @@ class ServerMetrics
     }
 
     /**
-     * Top processes by CPU (server process table).
+     * Top processes by CPU (server process table), and how many there are.
      *
-     * @return array<int, array<string, mixed>>
+     * `total` is every process the box is running, not the length of the list
+     * returned. Without it the panel's only number was the row count, which is
+     * the limit — so stopping a process left "25" on screen and the screen
+     * looked broken. The list is a top-N by design; the count has to come from
+     * somewhere that is not the list, or it cannot ever change.
+     *
+     * Counting costs one extra pass over the rows `ps` already printed rather
+     * than a second `ps`, which would be a different moment in time from the
+     * list it is describing.
+     *
+     * @return array{processes: array<int, array<string, mixed>>, total: int, limit: int}
      */
     public function processes(): array
     {
@@ -161,11 +171,23 @@ class ServerMetrics
         )->output();
 
         $processes = [];
+        $total = 0;
+
         foreach (array_slice(preg_split('/\r?\n/', trim($output)) ?: [], 1) as $line) {
             $parts = preg_split('/\s+/', trim($line), 5);
             if (count($parts) < 5 || $this->isProcessProbe($parts[4])) {
                 continue;
             }
+
+            // Counted before the limit is applied, and only for rows that
+            // would have been shown — the probe row is excluded from the list,
+            // so counting it would report one process nobody can find.
+            $total++;
+
+            if (count($processes) >= $limit) {
+                continue;
+            }
+
             $processes[] = [
                 'pid' => (int) $parts[0],
                 'user' => $parts[1],
@@ -175,12 +197,9 @@ class ServerMetrics
                 // credential-bearing option cross the API boundary.
                 'command' => CommandRedactor::line($parts[4]),
             ];
-            if (count($processes) >= $limit) {
-                break;
-            }
         }
 
-        return $processes;
+        return ['processes' => $processes, 'total' => $total, 'limit' => $limit];
     }
 
     /**

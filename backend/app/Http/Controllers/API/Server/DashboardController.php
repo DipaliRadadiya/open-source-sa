@@ -36,10 +36,23 @@ class DashboardController extends Controller
 
     /**
      * Top server processes (server process table).
+     *
+     * `meta.total` is how many processes the box is running; the list itself
+     * is the top `meta.limit` by CPU. Both are sent because the row count is
+     * the limit and says nothing about the server — the panel had no other
+     * number to show, so the count never moved when a process was stopped.
      */
     public function processes(ServerMetrics $metrics): JsonResponse
     {
-        return response()->json(['processes' => $metrics->processes()]);
+        $result = $metrics->processes();
+
+        return response()->json([
+            'processes' => $result['processes'],
+            'meta' => [
+                'total' => $result['total'],
+                'limit' => $result['limit'],
+            ],
+        ]);
     }
 
     /**
