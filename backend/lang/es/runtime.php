@@ -9,7 +9,7 @@ return [
     */
 
     'install_failed' => [
-        'package_not_found' => 'No hay paquete para :version. Comprueba que el repositorio de PHP esté configurado y accesible.',
+        'package_not_found' => 'No hay ningún paquete para :version en las fuentes de paquetes de este servidor.',
         'apt_lock' => 'Ya se está ejecutando otra operación de paquetes. Inténtalo de nuevo en un momento.',
         'network' => 'No se pudo acceder al repositorio de paquetes. Comprueba que el servidor tenga acceso a la red.',
         'no_space' => 'El servidor se ha quedado sin espacio en disco.',
@@ -53,4 +53,32 @@ return [
         'unknown' => 'La instalación de fail2ban falló. Indica la referencia de abajo al soporte.',
     ],
 
+
+    /*
+    | Per-runtime overrides, consulted before the shared groups above.
+    |
+    | `install_failed` is shared by PHP, Node, database engines and
+    | fail2ban. It used to be worded for PHP alone, so a failed MongoDB
+    | install told the user to check the PHP repository. Only the reasons
+    | that genuinely differ per runtime belong here; everything else
+    | still falls through.
+    */
+
+    'php_install_failed' => [
+        'package_not_found' => 'No hay paquete para :version. Comprueba que el repositorio de PHP esté configurado y accesible.',
+    ],
+
+    'node_install_failed' => [
+        'package_not_found' => 'No se encontró Node :version. Comprueba el número de versión o elige una de la lista.',
+    ],
+
+    'database_install_failed' => [
+        'package_not_found' => 'No hay paquete para :version en este servidor. Comprueba que su repositorio de paquetes esté configurado y accesible.',
+        // The repository was added and its index fetched successfully;
+        // the engine simply has no build for this Ubuntu release.
+        'os_unsupported' => ':version aún no publica paquetes para :os. No pasa nada con este servidor: el panel es compatible con :os, pero :version todavía no ha publicado una versión para ese sistema. Usa otro motor de base de datos o inténtalo de nuevo cuando lo haga.',
+    ],
+
+    // Used for :os when /etc/os-release cannot be read.
+    'this_server' => 'el sistema operativo de este servidor',
 ];

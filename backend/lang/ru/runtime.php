@@ -9,7 +9,7 @@ return [
     */
 
     'install_failed' => [
-        'package_not_found' => 'Пакет для :version не найден. Проверьте, что репозиторий PHP настроен и доступен.',
+        'package_not_found' => 'В источниках пакетов этого сервера нет пакета для :version.',
         'apt_lock' => 'Уже выполняется другая операция с пакетами. Повторите попытку через мгновение.',
         'network' => 'Не удалось связаться с репозиторием пакетов. Проверьте сетевой доступ сервера.',
         'no_space' => 'На сервере закончилось место на диске.',
@@ -53,4 +53,32 @@ return [
         'unknown' => 'Не удалось установить fail2ban. Сообщите в поддержку код ниже.',
     ],
 
+
+    /*
+    | Per-runtime overrides, consulted before the shared groups above.
+    |
+    | `install_failed` is shared by PHP, Node, database engines and
+    | fail2ban. It used to be worded for PHP alone, so a failed MongoDB
+    | install told the user to check the PHP repository. Only the reasons
+    | that genuinely differ per runtime belong here; everything else
+    | still falls through.
+    */
+
+    'php_install_failed' => [
+        'package_not_found' => 'Пакет для :version не найден. Проверьте, что репозиторий PHP настроен и доступен.',
+    ],
+
+    'node_install_failed' => [
+        'package_not_found' => 'Node :version не найден. Проверьте номер версии или выберите её из списка.',
+    ],
+
+    'database_install_failed' => [
+        'package_not_found' => 'Пакета для :version на этом сервере нет. Проверьте, что его репозиторий настроен и доступен.',
+        // The repository was added and its index fetched successfully;
+        // the engine simply has no build for this Ubuntu release.
+        'os_unsupported' => ':version пока не выпускает пакеты для :os. С сервером всё в порядке: панель поддерживает :os, но :version ещё не собрала версию для этой системы. Выберите другую СУБД или повторите попытку позже.',
+    ],
+
+    // Used for :os when /etc/os-release cannot be read.
+    'this_server' => 'операционной системы этого сервера',
 ];

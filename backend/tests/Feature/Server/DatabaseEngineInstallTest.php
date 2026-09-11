@@ -363,6 +363,44 @@ describe('the endpoint', function () {
         expect(collect($body)->firstWhere('engine', 'mongodb')['installable'])->toBeTrue();
     });
 
+    it('blames the Ubuntu release, not the apt sources, when MongoDB has no build for it', function () {
+        // Ubuntu 26.04 (resolute), the reported case: MongoDB publishes the
+        // tools for it and not the server, so the repository adds cleanly, the
+        // index fetches cleanly, and `apt-get install` finds nothing.
+        //
+        // Classified generically that is `package_not_found`, whose remedy is
+        // "fix your sources" — sources the panel wrote itself and which are
+        // correct. Everything before this point having succeeded is what makes
+        // the narrower reason true.
+        Process::fake(function ($process) {
+            $command = $process->command;
+
+            if (($command[0] ?? '') === 'dpkg-query') {
+                return Process::result(output: 'unknown ok not-installed');
+            }
+
+            if (($command[0] ?? '') === 'cat') {
+                return Process::result(output: '-----BEGIN PGP PUBLIC KEY BLOCK-----');
+            }
+
+            if (($command[0] ?? '') === 'apt-get' && in_array('install', $command, true)) {
+                return Process::result(
+                    exitCode: 100,
+                    errorOutput: 'E: Unable to locate package mongodb-org',
+                );
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        try {
+            installer('mongodb')->install();
+            $this->fail('the install should not have reported success');
+        } catch (EngineInstallException $e) {
+            expect($e->reason)->toBe('os_unsupported');
+        }
+    });
+
     it('does not queue anything when the engine is already installed', function () {
         Queue::fake();
         $seen = [];

@@ -9,7 +9,7 @@ return [
     */
 
     'install_failed' => [
-        'package_not_found' => ':version のパッケージがありません。PHP リポジトリが設定され、到達可能か確認してください。',
+        'package_not_found' => 'このサーバーのパッケージソースに :version のパッケージがありません。',
         'apt_lock' => '別のパッケージ操作が実行中です。しばらくしてからもう一度お試しください。',
         'network' => 'パッケージリポジトリに接続できませんでした。サーバーのネットワーク接続を確認してください。',
         'no_space' => 'サーバーのディスク容量が不足しています。',
@@ -53,4 +53,32 @@ return [
         'unknown' => 'fail2ban のインストールに失敗しました。下記の参照番号をサポートにお伝えください。',
     ],
 
+
+    /*
+    | Per-runtime overrides, consulted before the shared groups above.
+    |
+    | `install_failed` is shared by PHP, Node, database engines and
+    | fail2ban. It used to be worded for PHP alone, so a failed MongoDB
+    | install told the user to check the PHP repository. Only the reasons
+    | that genuinely differ per runtime belong here; everything else
+    | still falls through.
+    */
+
+    'php_install_failed' => [
+        'package_not_found' => ':version のパッケージがありません。PHP リポジトリが設定され、到達可能か確認してください。',
+    ],
+
+    'node_install_failed' => [
+        'package_not_found' => 'Node :version が見つかりませんでした。バージョン番号を確認するか、一覧から選んでください。',
+    ],
+
+    'database_install_failed' => [
+        'package_not_found' => 'このサーバーに :version のパッケージがありません。そのパッケージリポジトリが設定され、到達可能か確認してください。',
+        // The repository was added and its index fetched successfully;
+        // the engine simply has no build for this Ubuntu release.
+        'os_unsupported' => ':version はまだ :os 向けのパッケージを公開していません。このサーバーに問題はありません。パネルは :os に対応していますが、:version がまだ対応ビルドを出していないためです。別のデータベースエンジンを使うか、公開後に再度お試しください。',
+    ],
+
+    // Used for :os when /etc/os-release cannot be read.
+    'this_server' => 'このサーバーの OS',
 ];

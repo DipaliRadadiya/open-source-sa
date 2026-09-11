@@ -9,7 +9,7 @@ return [
     */
 
     'install_failed' => [
-        'package_not_found' => 'No package for :version. Check the PHP repository is configured and reachable.',
+        'package_not_found' => 'No package for :version is available from this server\'s package sources.',
         'apt_lock' => 'Another package operation is already running. Try again in a moment.',
         'network' => 'The package repository could not be reached. Check the server has network access.',
         'no_space' => 'The server has run out of disk space.',
@@ -53,4 +53,32 @@ return [
         'unknown' => 'Installing fail2ban failed. Quote the reference below to support.',
     ],
 
+
+    /*
+    | Per-runtime overrides, consulted before the shared groups above.
+    |
+    | `install_failed` is shared by PHP, Node, database engines and
+    | fail2ban. It used to be worded for PHP alone, so a failed MongoDB
+    | install told the user to check the PHP repository. Only the reasons
+    | that genuinely differ per runtime belong here; everything else
+    | still falls through.
+    */
+
+    'php_install_failed' => [
+        'package_not_found' => 'No package for :version. Check the PHP repository is configured and reachable.',
+    ],
+
+    'node_install_failed' => [
+        'package_not_found' => 'Node :version could not be found. Check the version number, or pick one from the list.',
+    ],
+
+    'database_install_failed' => [
+        'package_not_found' => 'No package for :version is available on this server. Check that its package repository is configured and reachable.',
+        // The repository was added and its index fetched successfully;
+        // the engine simply has no build for this Ubuntu release.
+        'os_unsupported' => ':version has not published packages for :os yet. Nothing is wrong with this server — the panel supports :os, but :version has not released a build for it. Use another database engine, or try again once it does.',
+    ],
+
+    // Used for :os when /etc/os-release cannot be read.
+    'this_server' => 'this server\'s operating system',
 ];

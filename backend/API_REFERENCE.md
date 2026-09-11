@@ -3204,6 +3204,10 @@ Capability list for every engine the panel knows. **Four as of 2026-09-10** — 
 
 `install_status` is only ever `installing | failed | null` — never `installed`. A finished install removes its row.
 
+**`install_reason` = `os_unsupported` is the one failure a retry cannot fix.** It means the engine's vendor has not published a build for this server's Ubuntu release — MongoDB on Ubuntu 26.04 (resolute) is the live case: it ships the tools and not the server, so the repository adds, the index fetches, and the package is simply not there. Nothing on the server is broken and nothing in the panel can be configured to change it. `install_message` names the release (read live from `/etc/os-release`) and says so. **Don't offer a retry button for this reason** — every other failure here is worth one, this one is not until the vendor releases.
+
+`install_message` is worded per runtime. Until 2026-09-11 the whole panel shared one set of install-failure sentences, written for PHP, so a failed MongoDB install said "check the PHP repository is configured and reachable". It no longer does, and neither does a failed Node install.
+
 While an install is queued, running, or failed, `install_progress` carries the detailed lifecycle:
 
 ```json

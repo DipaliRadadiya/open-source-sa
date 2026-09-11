@@ -9,7 +9,7 @@ return [
     */
 
     'install_failed' => [
-        'package_not_found' => 'Kein Paket für :version. Prüfe, ob das PHP-Repository konfiguriert und erreichbar ist.',
+        'package_not_found' => 'In den Paketquellen dieses Servers gibt es kein Paket für :version.',
         'apt_lock' => 'Es läuft bereits ein anderer Paketvorgang. Versuche es gleich noch einmal.',
         'network' => 'Das Paket-Repository war nicht erreichbar. Prüfe die Netzwerkverbindung des Servers.',
         'no_space' => 'Auf dem Server ist kein Speicherplatz mehr frei.',
@@ -53,4 +53,32 @@ return [
         'unknown' => 'Die Installation von fail2ban ist fehlgeschlagen. Nennen Sie dem Support die Referenz unten.',
     ],
 
+
+    /*
+    | Per-runtime overrides, consulted before the shared groups above.
+    |
+    | `install_failed` is shared by PHP, Node, database engines and
+    | fail2ban. It used to be worded for PHP alone, so a failed MongoDB
+    | install told the user to check the PHP repository. Only the reasons
+    | that genuinely differ per runtime belong here; everything else
+    | still falls through.
+    */
+
+    'php_install_failed' => [
+        'package_not_found' => 'Kein Paket für :version. Prüfe, ob das PHP-Repository konfiguriert und erreichbar ist.',
+    ],
+
+    'node_install_failed' => [
+        'package_not_found' => 'Node :version wurde nicht gefunden. Prüfe die Versionsnummer oder wähle eine aus der Liste.',
+    ],
+
+    'database_install_failed' => [
+        'package_not_found' => 'Für :version gibt es auf diesem Server kein Paket. Prüfe, ob dessen Paket-Repository konfiguriert und erreichbar ist.',
+        // The repository was added and its index fetched successfully;
+        // the engine simply has no build for this Ubuntu release.
+        'os_unsupported' => ':version veröffentlicht noch keine Pakete für :os. Mit diesem Server ist alles in Ordnung — das Panel unterstützt :os, aber :version hat dafür noch keinen Build veröffentlicht. Nutze eine andere Datenbank-Engine oder versuche es später erneut.',
+    ],
+
+    // Used for :os when /etc/os-release cannot be read.
+    'this_server' => 'dem Betriebssystem dieses Servers',
 ];

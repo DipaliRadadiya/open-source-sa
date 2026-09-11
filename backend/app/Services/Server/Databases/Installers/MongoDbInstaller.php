@@ -240,10 +240,32 @@ class MongoDbInstaller implements EngineInstaller
         if ($result->failed()) {
             // Both streams: apt splits its errors between them inconsistently,
             // and "No space left on device" in particular arrives on stdout.
-            throw EngineInstallException::because(
-                $this->classify($result->errorOutput().' '.$result->output()),
-                $result->reference,
-            );
+            $reason = $this->classify($result->errorOutput().' '.$result->output());
+
+            /*
+             * "Unable to locate package" means something specific here, and it
+             * is not what the generic reason says.
+             *
+             * Everywhere else `package_not_found` means the sources are wrong
+             * or unreachable and the remedy is to fix them. Not here: the panel
+             * wrote this source list itself, from the codename it read off the
+             * box, and `addRepository()` has already run `apt-get update`
+             * successfully against it. The index was fetched. The package is
+             * simply not in it — which happens because MongoDB publishes per
+             * Ubuntu codename and has not built for this one yet. Ubuntu 26.04
+             * (resolute) is the live example: MongoDB ships the tools for it
+             * and not the server.
+             *
+             * The panel supports that release; MongoDB does not, and there is
+             * no second source to point at the way PHP has sury.org. So the
+             * honest answer is to name the release and stop, rather than send
+             * somebody to audit apt sources that are correct.
+             */
+            if ($reason === 'package_not_found') {
+                $reason = 'os_unsupported';
+            }
+
+            throw EngineInstallException::because($reason, $result->reference);
         }
     }
 

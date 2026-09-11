@@ -9,7 +9,7 @@ return [
     */
 
     'install_failed' => [
-        'package_not_found' => ':version के लिए कोई पैकेज नहीं है। जाँचें कि PHP रिपॉज़िटरी कॉन्फ़िगर और उपलब्ध है।',
+        'package_not_found' => 'इस सर्वर के पैकेज स्रोतों में :version के लिए कोई पैकेज नहीं है।',
         'apt_lock' => 'एक अन्य पैकेज कार्य पहले से चल रहा है। थोड़ी देर बाद फिर कोशिश करें।',
         'network' => 'पैकेज रिपॉज़िटरी तक नहीं पहुँचा जा सका। सर्वर की नेटवर्क पहुँच जाँचें।',
         'no_space' => 'सर्वर पर डिस्क स्थान समाप्त हो गया है।',
@@ -53,4 +53,32 @@ return [
         'unknown' => 'fail2ban इंस्टॉल करना विफल रहा। नीचे दिया संदर्भ सपोर्ट को बताएं।',
     ],
 
+
+    /*
+    | Per-runtime overrides, consulted before the shared groups above.
+    |
+    | `install_failed` is shared by PHP, Node, database engines and
+    | fail2ban. It used to be worded for PHP alone, so a failed MongoDB
+    | install told the user to check the PHP repository. Only the reasons
+    | that genuinely differ per runtime belong here; everything else
+    | still falls through.
+    */
+
+    'php_install_failed' => [
+        'package_not_found' => ':version के लिए कोई पैकेज नहीं है। जाँचें कि PHP रिपॉज़िटरी कॉन्फ़िगर और उपलब्ध है।',
+    ],
+
+    'node_install_failed' => [
+        'package_not_found' => 'Node :version नहीं मिला। वर्शन नंबर जाँचें, या सूची में से कोई चुनें।',
+    ],
+
+    'database_install_failed' => [
+        'package_not_found' => 'इस सर्वर पर :version के लिए कोई पैकेज नहीं है। जाँचें कि उसकी पैकेज रिपॉज़िटरी कॉन्फ़िगर और उपलब्ध है।',
+        // The repository was added and its index fetched successfully;
+        // the engine simply has no build for this Ubuntu release.
+        'os_unsupported' => ':version ने अभी :os के लिए पैकेज प्रकाशित नहीं किए हैं। इस सर्वर में कोई गड़बड़ी नहीं है — पैनल :os को सपोर्ट करता है, पर :version ने इसके लिए बिल्ड जारी नहीं किया है। कोई दूसरा डेटाबेस इंजन चुनें, या बाद में दोबारा कोशिश करें।',
+    ],
+
+    // Used for :os when /etc/os-release cannot be read.
+    'this_server' => 'इस सर्वर का ऑपरेटिंग सिस्टम',
 ];
