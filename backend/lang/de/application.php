@@ -178,6 +178,7 @@ return [
         'serving_error' => 'Die Anwendung wurde gestartet, beantwortet aber jede Anfrage mit einem Fehler. Wahrscheinlich wurden ihre Assets nicht vollständig gebaut — Einzelheiten im Anwendungsprotokoll.',
         'not_answering' => 'Die Anwendung wurde gestartet, hat aber nie auf eine Anfrage geantwortet. Im Anwendungsprotokoll steht, warum sie nicht lauscht.',
         'out_of_memory' => 'Dem Server ging bei diesem Schritt der Speicher aus und das System hat ihn beendet. Geben Sie Speicher frei oder fügen Sie Swap hinzu und versuchen Sie es erneut.',
+        'no_build_tools' => 'Für diesen Schritt musste ein natives Modul kompiliert werden, und auf diesem Server ist kein Compiler installiert. Installieren Sie die Build-Tools, oder erstellen Sie die Site mit einer Node-LTS-Version — diese liefern in der Regel fertige Binärdateien und benötigen keinen Compiler.',
     ],
 
     'port_free' => 'Port :port ist frei.',

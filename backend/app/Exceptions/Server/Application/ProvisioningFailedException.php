@@ -54,6 +54,21 @@ class ProvisioningFailedException extends Exception
      */
     private static function classify(ServerOpsResult $result): ?string
     {
+        // A native addon needed compiling and this server has no compiler.
+        //
+        // Checked before the exit status because npm exits 1, which says
+        // nothing on its own. node-gyp's wording is the unambiguous part:
+        // "not found: make" is emitted only by its own `which` lookup for the
+        // build tool, so there is no honest way to read it as anything else.
+        //
+        // Worth naming rather than leaving to the log, because the log is the
+        // problem. npm writes thousands of peer-dependency warnings around
+        // this one line, which is how a missing build-essential presented as
+        // a dependency-resolution failure for two attempts on a real server.
+        if (self::mentionsMissingBuildTool($result)) {
+            return 'no_build_tools';
+        }
+
         $exitCode = $result->result?->exitCode();
 
         if ($exitCode !== self::EXIT_KILLED) {
@@ -68,5 +83,30 @@ class ProvisioningFailedException extends Exception
         }
 
         return 'out_of_memory';
+    }
+
+    /**
+     * Did node-gyp fail to find a build tool?
+     *
+     * Matched against both streams: npm puts its own summary on stderr and the
+     * gyp transcript can land on either depending on how the install was run.
+     *
+     * `make` and `g++` by name rather than a looser "gyp ERR" match, because
+     * gyp reports compile errors with the same prefix -- and a source file
+     * that will not compile is a different problem with a different fix. This
+     * is the class's own rule: a wrong reason sends someone to fix something
+     * that was never broken.
+     */
+    private static function mentionsMissingBuildTool(ServerOpsResult $result): bool
+    {
+        $output = $result->errorOutput()."\n".$result->output();
+
+        foreach (['not found: make', 'not found: g++', 'not found: cc', 'not found: gcc'] as $needle) {
+            if (str_contains($output, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

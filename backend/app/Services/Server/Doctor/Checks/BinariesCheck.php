@@ -42,6 +42,13 @@ class BinariesCheck implements DoctorCheck
         'timedatectl' => 'timezone setting',
         'zip' => 'compressing files in the Files feature',
         'rsync' => 'the Staging Area feature',
+        // Only needed when an npm dependency has no prebuilt binary for the
+        // Node version a site was created on -- which is most of the time on
+        // a non-LTS Node, and rarely on an LTS one. Named here because the
+        // alternative is finding out four minutes into an n8n install, from
+        // a gyp error buried in thousands of npm warnings.
+        'make' => 'building native Node modules (n8n, NodeBB)',
+        'g++' => 'building native Node modules (n8n, NodeBB)',
     ];
 
     public function key(): string

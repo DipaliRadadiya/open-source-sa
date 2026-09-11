@@ -178,6 +178,7 @@ return [
         'serving_error' => 'La aplicación se inició pero responde a cada solicitud con un error. Lo más probable es que sus recursos no se compilaran por completo; consulte el registro de la aplicación.',
         'not_answering' => 'La aplicación se inició pero nunca respondió a una solicitud. Consulte el registro de la aplicación para ver por qué no está escuchando.',
         'out_of_memory' => 'El servidor se quedó sin memoria durante este paso y el sistema lo detuvo. Libere memoria, o añada swap, e inténtelo de nuevo.',
+        'no_build_tools' => 'Este paso necesitaba compilar un módulo nativo y este servidor no tiene ningún compilador instalado. Instale las herramientas de compilación, o cree el sitio con una versión LTS de Node: normalmente incluyen binarios ya compilados y no necesitan compilador.',
     ],
 
     'port_free' => 'El puerto :port está libre.',

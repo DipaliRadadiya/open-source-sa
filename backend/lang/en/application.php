@@ -183,6 +183,7 @@ return [
         'serving_error' => 'The application started but answers every request with an error. Its assets were most likely not built completely — check the application log for details.',
         'not_answering' => 'The application started but never answered a request. Check the application log for why it is not listening.',
         'out_of_memory' => 'The server ran out of memory during this step and it was stopped by the system. Free some memory, or add swap, and try again.',
+        'no_build_tools' => 'This step needed to compile a native module, and this server has no compiler installed. Either install the build tools, or create the site on a long-term-support Node version — those usually ship ready-built binaries and need no compiler at all.',
     ],
 
     'port_free' => 'Port :port is free.',

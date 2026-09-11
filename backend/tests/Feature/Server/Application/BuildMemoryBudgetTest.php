@@ -186,3 +186,85 @@ it('has the reason translated in every locale', function () {
             ->and($line)->not->toBeEmpty();
     }
 });
+
+/*
+ * The second failure this classifier exists for: a native module that needed
+ * compiling on a server with no compiler. Unlike the OOM case there IS output
+ * -- thousands of lines of it -- which is exactly why the one line that
+ * matters has to be named rather than left in the log.
+ */
+
+it('names a missing build tool from the gyp transcript', function () {
+    Process::fake();
+
+    $result = new ServerOpsResult(
+        ok: false,
+        reference: 'ref-200',
+        result: Process::result(
+            output: '',
+            errorOutput: "gyp ERR! build error \ngyp ERR! stack Error: not found: make\ngyp ERR! not ok",
+            exitCode: 1,
+        ),
+    );
+
+    expect(ProvisioningFailedException::fromResult('install_app', $result)->reason)
+        ->toBe('no_build_tools');
+});
+
+it('finds it under the npm warnings that buried it in production', function () {
+    Process::fake();
+
+    // Shaped like the real failure: npm writes thousands of peer-dependency
+    // warnings around the gyp transcript, and exits 1, which says nothing.
+    $noise = str_repeat("npm warn ERESOLVE overriding peer dependency\n", 500);
+
+    $result = new ServerOpsResult(
+        ok: false,
+        reference: 'ref-201',
+        result: Process::result(
+            output: '',
+            errorOutput: $noise."gyp ERR! stack Error: not found: make\n".$noise,
+            exitCode: 1,
+        ),
+    );
+
+    expect(ProvisioningFailedException::fromResult('install_app', $result)->reason)
+        ->toBe('no_build_tools');
+});
+
+it('does not blame the compiler for a compile that failed', function () {
+    Process::fake();
+
+    // gyp prefixes real compilation errors the same way. A source file that
+    // will not build is a different problem with a different fix, and naming
+    // the toolchain would send someone to install what they already have.
+    $result = new ServerOpsResult(
+        ok: false,
+        reference: 'ref-202',
+        result: Process::result(
+            output: '',
+            errorOutput: "gyp ERR! build error\n../src/thing.cc:42:7: error: expected ';'\ngyp ERR! not ok",
+            exitCode: 1,
+        ),
+    );
+
+    expect(ProvisioningFailedException::fromResult('install_app', $result)->reason)->toBeNull();
+});
+
+it('has the missing-build-tool reason translated in every locale', function () {
+    foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
+        $line = __('application.failure_reason.no_build_tools', [], $locale);
+
+        expect($line)->not->toBe('application.failure_reason.no_build_tools')
+            ->and($line)->not->toBeEmpty();
+    }
+});
+
+it('offers the Node version as a fix, not only the compiler', function () {
+    // The cheaper fix, and the one that would have avoided this entirely:
+    // isolated-vm ships prebuilt binaries for the LTS ABIs and none for the
+    // odd-numbered releases between them. A message that only said "install
+    // build tools" would push every user toward a 300 MB toolchain they do
+    // not need.
+    expect(__('application.failure_reason.no_build_tools'))->toContain('Node');
+});
