@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Str;
 
 class ApiErrorLogResource extends JsonResource
 {
@@ -50,6 +49,29 @@ class ApiErrorLogResource extends JsonResource
         return $error !== '' ? $this->redactedSummary($error) : null;
     }
 
+    /**
+     * The TAIL of the output, not the head.
+     *
+     * `Str::limit()` keeps the first N characters, which is the wrong end of a
+     * failed command. ServerOps already settled this for stdout -- "the tail
+     * rather than the head, because a command that printed progress before
+     * dying puts the reason last" -- but stderr never went through it, and
+     * this resource prefers stderr. So the one stream most likely to be noisy
+     * was the one bounded from the wrong end.
+     *
+     * What that cost, concretely: `npm install n8n` writes ~15,000 lines of
+     * peer-dependency warnings to stderr and puts the actual failure last. The
+     * screen showed 1,000 characters of `@browserbasehq/stagehand` noise and
+     * discarded `gyp ERR! stack Error: not found: make` -- so a missing
+     * build-essential read as a dependency-resolution problem, and finding it
+     * meant opening a 1 MB npm debug log on the server.
+     *
+     * The limit is 4000, not 1000, and that is measured rather than tidied:
+     * against the real log from that failure, the last 1000 characters still
+     * do not contain "not found: make" and the last 4000 do. Tail-keeping
+     * alone would have looked like a fix and hidden the same cause. Sharing
+     * ServerOps' key keeps the two ends of the same pipe in step.
+     */
     private function redactedSummary(string $error): string
     {
         $patterns = [
@@ -58,8 +80,12 @@ class ApiErrorLogResource extends JsonResource
             '#\b(gh[pousr]_|glpat-|npm_)[A-Za-z0-9_\-]{8,}#' => '$1***',
         ];
 
-        $redacted = preg_replace(array_keys($patterns), array_values($patterns), $error) ?? $error;
+        $redacted = trim(preg_replace(array_keys($patterns), array_values($patterns), $error) ?? $error);
 
-        return Str::limit(trim($redacted), 1000);
+        $limit = max(0, (int) config('server.log_output_limit', 4000));
+
+        return mb_strlen($redacted) > $limit
+            ? '…'.mb_substr($redacted, -$limit)
+            : $redacted;
     }
 }

@@ -276,3 +276,67 @@ it('denies non-admins', function () {
         ->getJson('/api/admin/error-logs')
         ->assertForbidden();
 });
+
+it('keeps the end of a noisy stderr, where the reason is', function () {
+    // Shaped like the failure that motivated this: `npm install n8n` writes
+    // thousands of peer-dependency warnings and puts the cause last. Head
+    // truncation showed the warnings and threw the cause away.
+    $reference = '4f2b8c71-0d3a-4e55-9b21-7c6e5a1d2f80';
+    $noise = str_repeat("npm warn ERESOLVE overriding peer dependency\n", 400);
+    $cause = 'gyp ERR! stack Error: not found: make';
+
+    // THE TRAILING NOISE IS THE TEST. npm does not stop at the error -- it
+    // prints unfinished timers and an upgrade notice after it, about 2 KB
+    // worth. Measured against the real 1 MB log from that failure: the last
+    // 1000 characters do not contain the cause, the last 4000 do. Without
+    // this tail the fixture passes at any limit, because the cause would be
+    // the final thing in the string -- which is precisely what made the bug
+    // survive in production.
+    $trailing = str_repeat("npm silly unfinished npm timer reify 1789040712600\n", 40);
+
+    File::put($this->logDir.'/server-ops.log', json_encode([
+        'message' => 'api.error',
+        'context' => [
+            'reference' => $reference,
+            'status' => 500,
+            'stderr' => $noise.$cause."\n".$trailing,
+        ],
+        'level_name' => 'ERROR',
+        'datetime' => '2026-09-10T11:31:44+00:00',
+    ]).PHP_EOL);
+
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $error = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson("/api/admin/error-logs?reference={$reference}")
+        ->assertOk()
+        ->json('error_logs.0.error');
+
+    // The point of the whole change.
+    expect($error)->toContain($cause);
+
+    // And it is still bounded -- an unbounded field would also "pass" the
+    // assertion above while putting a megabyte of npm output on the screen.
+    expect(mb_strlen($error))->toBeLessThanOrEqual(4001);
+    expect($error)->toStartWith('…');
+});
+
+it('does not truncate a stderr that already fits', function () {
+    $reference = '8a1d0e44-6b92-4f18-a3c7-1e90bb52d4aa';
+
+    File::put($this->logDir.'/server-ops.log', json_encode([
+        'message' => 'api.error',
+        'context' => ['reference' => $reference, 'status' => 500, 'stderr' => 'short and complete'],
+        'level_name' => 'ERROR',
+        'datetime' => '2026-09-10T11:31:44+00:00',
+    ]).PHP_EOL);
+
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson("/api/admin/error-logs?reference={$reference}")
+        ->assertOk()
+        ->assertJsonPath('error_logs.0.error', 'short and complete');
+});
