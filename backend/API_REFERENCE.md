@@ -1021,7 +1021,11 @@ place to hide one file.
 
 Delete the application record. Optionally delete its data.
 
-**Request body (all optional):** `{"remove_files": false}`
+**Request body (all optional):** `{"remove_files": false, "remove_databases": false}`
+
+Both flags are accepted as query parameters too (`?remove_files=true`), and both
+accept `true`/`false`/`1`/`0`. Anything else is a `422` — until now `remove_files`
+was not validated at all, so a typo silently meant "keep".
 
 **Always removed**, whatever `remove_files` says — these are the panel's own artefacts, and every one of them breaks something if it outlives the site:
 
@@ -1038,7 +1042,42 @@ Delete the application record. Optionally delete its data.
 
 So `remove_files: true` means **"destroy this site's data"**, not "tidy up the directory". Confirm it in the UI accordingly.
 
+**Removed only with `remove_databases: true`:**
+
+- every database attached to this site (`GET /databases?filter[application_id]=…` is the same list the dialog should show)
+
+Needs `database` (manage) **as well as** `application` (manage). Without it the
+whole request is refused `403` **before anything is deleted** — the site is still
+there. Dropping a database is a separate destructive act on a separate resource,
+not a consequence of deleting a site.
+
+**Order is site first, databases after**, never the reverse: a database dropped
+before a site delete that then failed is the data of a site still serving traffic.
+
+Each database is removed independently — one that fails does not stop the rest,
+and it **keeps its panel row**, detached (`application_id` becomes `null`), so the
+same delete can be retried from the Databases screen.
+
 **Response `200`:** `{"deleted": true}`
+
+With `remove_databases: true`:
+
+```json
+{
+  "deleted": true,
+  "databases": {
+    "deleted": ["shop_live"],
+    "failed": [{ "name": "shop_logs", "engine": "mysql", "reference": "a1b2c3d4-…" }]
+  },
+  "message": "The site was deleted, but these databases are still on the server: shop_logs. …"
+}
+```
+
+`databases` is absent entirely when the flag was not sent. `message` is present
+**only** when `failed` is non-empty, and is already translated. Still `200` in that
+case, deliberately: the site really is gone, and an error status would tell the
+panel nothing happened when most of it did. `reference` correlates to the raw
+failure in the server-ops log.
 
 ---
 

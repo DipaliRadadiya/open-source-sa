@@ -6,6 +6,12 @@ return [
     'database_engine_unavailable' => 'वह डेटाबेस इंजन इस सर्वर पर नहीं चल रहा है। पहले उसे इंस्टॉल या शुरू करें।',
     'database_engine_too_old' => ':application के लिए इस सर्वर का :engine बहुत पुराना है, इसे :minimum या नया चाहिए। इसे अपग्रेड करें या कोई दूसरा डेटाबेस इंजन चुनें।',
 
+    // Deleting a site can take its databases with it (`remove_databases`).
+    // The first refusal is the caller lacking `database` manage; the second
+    // is the honest half-success — the site went, a database did not.
+    'database_removal_not_permitted' => 'आप यह साइट हटा सकते हैं, लेकिन इसके डेटाबेस नहीं। किसी एडमिन से डेटाबेस का एक्सेस माँगें, या डेटाबेस हटाए बिना साइट हटाएँ।',
+    'databases_not_removed' => 'साइट हटा दी गई, लेकिन ये डेटाबेस अब भी सर्वर पर हैं: :databases। इन्हें डेटाबेस स्क्रीन से हटाएँ, या सपोर्ट को रेफ़रेंस बताएँ।',
+
     'primary_domain_not_removable' => 'प्राथमिक डोमेन हटाया नहीं जा सकता। पहले किसी अन्य डोमेन को प्राथमिक बनाएं।',
     'unsupported_web_server' => ':web_server के लिए पैनल साइट कॉन्फ़िग नहीं लिख सकता।',
     'no_web_server' => 'कोई वेब सर्वर नहीं मिला',

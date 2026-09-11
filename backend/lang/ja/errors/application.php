@@ -6,6 +6,12 @@ return [
     'database_engine_unavailable' => 'そのデータベースエンジンはこのサーバーで実行されていません。先にインストールまたは起動してください。',
     'database_engine_too_old' => 'このサーバーの :engine は :application には古すぎます。:minimum 以降が必要です。アップグレードするか、別のデータベースエンジンを選んでください。',
 
+    // Deleting a site can take its databases with it (`remove_databases`).
+    // The first refusal is the caller lacking `database` manage; the second
+    // is the honest half-success — the site went, a database did not.
+    'database_removal_not_permitted' => 'このサイトは削除できますが、データベースは削除できません。管理者にデータベースの権限を依頼するか、データベースを残したままサイトを削除してください。',
+    'databases_not_removed' => 'サイトは削除されましたが、次のデータベースはサーバーに残っています: :databases。データベース画面から削除するか、参照 ID をサポートにお伝えください。',
+
     'primary_domain_not_removable' => 'プライマリドメインは削除できません。先に別のドメインをプライマリに設定してください。',
     'unsupported_web_server' => ':web_server 用のサイト設定は作成できません。',
     'no_web_server' => 'ウェブサーバーが検出されません',

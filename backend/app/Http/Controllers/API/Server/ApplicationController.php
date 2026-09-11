@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\Application\CreateApplication;
 use App\Actions\Server\Application\DeleteApplication;
+use App\Actions\Server\Application\DeleteApplicationDatabases;
 use App\Actions\Server\Application\DeprovisionApplication;
 use App\Actions\Server\Application\DisableApplication;
 use App\Actions\Server\Application\EnableApplication;
@@ -12,6 +13,7 @@ use App\Actions\Server\Application\UpdateApplication;
 use App\Enums\ApplicationStatus;
 use App\Enums\DeploymentTrigger;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Application\DestroyApplicationRequest;
 use App\Http\Requests\Server\Application\IndexApplicationsRequest;
 use App\Http\Requests\Server\Application\StoreApplicationRequest;
 use App\Http\Requests\Server\Application\UpdateApplicationRequest;
@@ -269,23 +271,44 @@ class ApplicationController extends Controller
 
     /**
      * Removing an application also stops it being served. The site's files are
-     * kept unless `remove_files=true` is asked for explicitly — deleting a
-     * panel record must not silently destroy someone's code.
+     * kept unless `remove_files=true` is asked for explicitly, and its
+     * databases unless `remove_databases=true` is — deleting a panel record
+     * must not silently destroy someone's code or their data.
+     *
+     * Answers 200 even when a database could not be dropped: the site really
+     * is gone, and a 500 would tell the panel nothing happened when most of it
+     * did. What survived is named in the body instead.
      */
     public function destroy(
         Application $application,
-        Request $request,
+        DestroyApplicationRequest $request,
         DeprovisionApplication $deprovision,
         DeleteApplication $action,
+        DeleteApplicationDatabases $databases,
     ): JsonResponse {
         // A queued worker can still be writing this site's files and config.
         // Deleting its record now would leave those mutations untracked.
         abort_if($application->status === ApplicationStatus::Provisioning, 503, __('errors/server.busy'));
 
+        // Read before the record goes. `databases.application_id` is
+        // `nullOnDelete`, so the moment the application row is deleted nothing
+        // points at these any more and the databases this call was asked to
+        // remove can no longer be found.
+        $attached = $request->boolean('remove_databases')
+            ? $application->databases()->with('users')->get()
+            : null;
+
         $deprovision->execute($application, $request->boolean('remove_files'));
         $action->execute($application);
 
-        return response()->json(['deleted' => true]);
+        // Site first, databases after — never the reverse. A database dropped
+        // before a site delete that then failed is the data of a site still
+        // serving traffic.
+        $outcome = $attached === null
+            ? null
+            : $databases->execute($attached, $application->id);
+
+        return response()->json(['deleted' => true] + ($outcome?->toArray() ?? []));
     }
 
     /**

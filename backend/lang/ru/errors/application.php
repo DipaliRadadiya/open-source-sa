@@ -6,6 +6,12 @@ return [
     'database_engine_unavailable' => 'Эта СУБД не запущена на этом сервере. Сначала установите или запустите её.',
     'database_engine_too_old' => 'Версия :engine на этом сервере слишком старая для :application: требуется :minimum или новее. Обновите её или выберите другую СУБД.',
 
+    // Deleting a site can take its databases with it (`remove_databases`).
+    // The first refusal is the caller lacking `database` manage; the second
+    // is the honest half-success — the site went, a database did not.
+    'database_removal_not_permitted' => 'Вы можете удалить этот сайт, но не его базы данных. Запросите доступ к базам данных у администратора или удалите сайт, не трогая их.',
+    'databases_not_removed' => 'Сайт удалён, но эти базы данных остались на сервере: :databases. Удалите их на странице баз данных или сообщите ссылку в поддержку.',
+
     'primary_domain_not_removable' => 'Основной домен нельзя удалить. Сначала сделайте основным другой домен.',
     'unsupported_web_server' => 'Панель не может записать конфигурацию сайта для :web_server.',
     'no_web_server' => 'веб-сервер не обнаружен',

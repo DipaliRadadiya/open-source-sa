@@ -6,6 +6,12 @@ return [
     'database_engine_unavailable' => 'Ese motor de base de datos no se está ejecutando en este servidor. Instálalo o inícialo primero.',
     'database_engine_too_old' => 'El :engine de este servidor es demasiado antiguo para :application, que necesita :minimum o posterior. Actualízalo o elige otro motor de base de datos.',
 
+    // Deleting a site can take its databases with it (`remove_databases`).
+    // The first refusal is the caller lacking `database` manage; the second
+    // is the honest half-success — the site went, a database did not.
+    'database_removal_not_permitted' => 'Puedes eliminar este sitio, pero no sus bases de datos. Pide acceso a bases de datos a un administrador o elimina el sitio sin borrarlas.',
+    'databases_not_removed' => 'El sitio se eliminó, pero estas bases de datos siguen en el servidor: :databases. Elimínalas desde la pantalla de bases de datos o indica la referencia al soporte.',
+
     'primary_domain_not_removable' => 'No se puede eliminar el dominio principal. Haga principal otro dominio primero.',
     'unsupported_web_server' => 'El panel no puede escribir la configuración del sitio para :web_server.',
     'no_web_server' => 'ningún servidor web detectado',
