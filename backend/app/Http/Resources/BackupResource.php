@@ -13,6 +13,13 @@ class BackupResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            // The name this archive has in the bucket. `id` is an
+            // autoincrement meaningful only inside one panel's database, so it
+            // cannot identify an object to anyone looking at the destination
+            // directly — which is the whole reason `uid` exists (2026-09-09).
+            // Exposed read-only: it is assigned in `Backup::booted()` and is
+            // not fillable.
+            'uid' => $this->uid,
             'application_id' => $this->application_id,
             'application_name' => $this->resource->application?->name,
             'application_domain' => $this->resource->application?->domain,

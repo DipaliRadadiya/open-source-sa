@@ -225,6 +225,28 @@ it('lists backups across every application', function () {
     expect($response->json('backups.0.status_title'))->toBe('Complete');
 });
 
+it('sends the uid the archive is stored under', function () {
+    // `id` is an autoincrement that means nothing outside this database, so it
+    // cannot match a row to an object in the bucket — which is what `uid` was
+    // added for (2026-09-09) and then not exposed.
+    $target = BackupTarget::create(array_merge(
+        ['application_id' => $this->application->id],
+        targetPayload(),
+    ));
+
+    $backup = Backup::create([
+        'backup_target_id' => $target->id,
+        'application_id' => $this->application->id,
+        'type' => 'full',
+        'status' => BackupStatus::Verified,
+    ]);
+
+    $response = $this->withHeaders(backupHeaders())->getJson('/api/backups');
+
+    expect($backup->uid)->not->toBeNull()
+        ->and($response->json('backups.0.uid'))->toBe($backup->uid);
+});
+
 describe('filtering the restore list', function () {
     beforeEach(function () {
         $this->target = BackupTarget::create(array_merge(
