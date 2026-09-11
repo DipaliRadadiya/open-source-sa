@@ -70,10 +70,46 @@ export function slowQueriesTone(status) {
   return "normal";
 }
 
+/*
+ * A connection that is holding still.
+ *
+ * `Sleep` is MySQL's word and was the only one here, so on PostgreSQL — which
+ * says `idle` — every parked connection counted as work. The page then showed
+ * "8 running" under a caption promising idle ones were counted and not listed,
+ * on a server where the true number of running queries was zero.
+ */
+const IDLE_COMMANDS = new Set(["sleep", "idle"]);
+
+export function isIdle(process) {
+  return IDLE_COMMANDS.has((process?.command ?? "").toLowerCase());
+}
+
+/**
+ * PostgreSQL's own background workers — checkpointer, walwriter, autovacuum
+ * launcher and friends.
+ *
+ * `pg_stat_activity` lists them beside real connections, and they arrive with
+ * no database and no statement: five rows of nothing, each offering a "Stop
+ * query" button for a query that does not exist and a process the panel must
+ * not kill. They are the server itself, not something anyone connected.
+ *
+ * NOT keyed on a missing user. The autovacuum launcher runs as `postgres` and
+ * is every bit as internal as the anonymous ones — that assumption cost this
+ * function its first version. A connection is made TO a database, so having
+ * neither a database nor a statement is what actually marks one as the
+ * server's own.
+ *
+ * Recognised by what it lacks rather than by engine, so MySQL's system threads
+ * would fall out the same way if they ever appeared.
+ */
+export function isBackgroundWorker(process) {
+  return !process?.db && !process?.query;
+}
+
 /** Non-idle connections, longest first — the shape the whole page reads by. */
 export function activeQueries(processes = []) {
   return processes
-    .filter((p) => (p?.command ?? "").toLowerCase() !== "sleep")
+    .filter((p) => !isIdle(p) && !isBackgroundWorker(p))
     .sort((a, b) => (b?.time ?? 0) - (a?.time ?? 0));
 }
 

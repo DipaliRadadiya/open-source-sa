@@ -4,7 +4,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getDatabase } from "@/lib/databases/get-database";
 import { getExports } from "@/lib/databases/get-exports";
-import { getDatabaseCounts } from "@/lib/databases/get-databases";
+import { getDatabaseCounts, getEngines } from "@/lib/databases/get-databases";
 import {
   getAllApplications,
   getPhpmyadminSite,
@@ -45,6 +45,7 @@ export default async function DatabasePage({ params, searchParams }) {
     appList,
     dbCounts,
     catalogue,
+    engines,
   ] = await Promise.all([
     getPermissions(),
     getTranslations("databases"),
@@ -61,6 +62,9 @@ export default async function DatabasePage({ params, searchParams }) {
     // Only so the site picker can grey a site whose application cannot speak
     // this database's engine. A failure costs the greying, not the page.
     getSiteTypes().catch(() => ({ siteTypes: [] })),
+    // Only for `supports_remote_users`. A failure costs the narrowing, not the
+    // page — the user dialogs then offer the full choice, as they always did.
+    getEngines().catch(() => []),
   ]);
   const { data, failed, status, failure } = live;
 
@@ -124,7 +128,17 @@ export default async function DatabasePage({ params, searchParams }) {
               (row) => row.database_id === data.id,
             ).length,
           }}
-          users={<DatabaseUsers database={data} canManage={canManage} />}
+          users={
+            <DatabaseUsers
+              database={data}
+              canManage={canManage}
+              /* PostgreSQL roles carry no host, so `remote` and `anywhere` are
+                 refused by the API. Read from the engine row, never the name. */
+              remoteUsers={
+                engines.find((e) => e.engine === data.engine)?.supports_remote_users !== false
+              }
+            />
+          }
           tables={<DatabaseTables database={data} tables={tables} />}
           exports={
             <DatabaseExports

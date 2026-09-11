@@ -16,6 +16,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { useConfirmAction } from "@/hooks/use-confirm-action";
 import { isPanelProcess, panelUsernames } from "@/lib/databases/own-connection";
+import { activeQueries, isIdle } from "@/lib/databases/health";
 
 const POLL_MS = 5000;
 
@@ -125,13 +126,15 @@ export function ProcessList({ engine, processes: initial = [], canManage, connec
   const [slowOnly, setSlowOnly] = useState(false);
 
   const all = polled ?? initial;
-  const idle = all.filter((p) => (p.command ?? "").toLowerCase() === "sleep");
+  const idle = all.filter(isIdle);
   // Longest-running first. The query you opened this page to find is the one
   // that has been going the longest, and it should never be the one you have
   // to hunt for down the list.
-  const running = all
-    .filter((p) => (p.command ?? "").toLowerCase() !== "sleep")
-    .sort((a, b) => (b.time ?? 0) - (a.time ?? 0));
+  //
+  // Both tests come from lib/databases/health.js, which the stat cards above
+  // read by: two copies of "what counts as running" is how the headline and the
+  // list below it end up disagreeing, which is exactly what PostgreSQL exposed.
+  const running = activeQueries(all);
 
   // Search covers everything a row displays — the statement, the database, the
   // user and the host — because "which of these is the reporting job" is asked

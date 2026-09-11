@@ -47,7 +47,7 @@ const ACCESS_TONE = {
  * A database with no users is not finished — nothing can connect to it — so the
  * empty state here is a prompt rather than a shrug.
  */
-export function DatabaseUsers({ database, canManage }) {
+export function DatabaseUsers({ database, canManage, remoteUsers = true }) {
   const t = useTranslations("databases.users");
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -120,11 +120,13 @@ export function DatabaseUsers({ database, canManage }) {
               database={database}
               open={adding}
               onOpenChange={setAdding}
+              remoteUsers={remoteUsers}
             />
             {editing ? (
               <EditUserDialog
                 database={database}
                 user={editing}
+                remoteUsers={remoteUsers}
                 open
                 onOpenChange={(next) => !next && setEditing(null)}
               />

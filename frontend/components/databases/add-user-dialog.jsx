@@ -15,7 +15,7 @@ import { Form } from "@/components/ui/form";
 import { UserFields } from "@/components/databases/user-fields";
 import { CreatedCredentials } from "@/components/databases/created-credentials";
 
-export function AddUserDialog({ database, open, onOpenChange }) {
+export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true }) {
   const t = useTranslations("databases.users");
   const router = useRouter();
   // Set on success: the new credential replaces the form, because a password
@@ -109,7 +109,7 @@ export function AddUserDialog({ database, open, onOpenChange }) {
           </>
         }
       >
-        <UserFields form={form} access={values.connection_preference} />
+        <UserFields form={form} access={values.connection_preference} remoteUsers={remoteUsers} />
         <p className="text-xs text-muted-foreground">{t("passwordGenerated")}</p>
       </FormModal>
     </Form>

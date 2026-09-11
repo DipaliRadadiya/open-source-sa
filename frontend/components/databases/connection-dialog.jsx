@@ -260,7 +260,11 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
                       className="font-mono"
                       inputMode="numeric"
                       autoComplete="off"
-                      placeholder="3306"
+                      // The engine's own port, not MySQL's. `DEFAULT_PORT`
+                      // already holds it for the field's value; the placeholder
+                      // was the one place still suggesting 3306 to a PostgreSQL
+                      // connection whose field had been cleared.
+                      placeholder={String(DEFAULT_PORT[engine?.engine] ?? 3306)}
                       {...field}
                     />
                   </FormControl>

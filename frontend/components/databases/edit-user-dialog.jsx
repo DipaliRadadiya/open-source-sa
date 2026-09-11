@@ -30,7 +30,7 @@ import { UserFields } from "@/components/databases/user-fields";
  * user is dropped and recreated — which is why renaming there needs a password,
  * and why the warning below only appears for Mongo.
  */
-export function EditUserDialog({ database, user, open, onOpenChange }) {
+export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers = true }) {
   const t = useTranslations("databases.users");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -133,7 +133,7 @@ export function EditUserDialog({ database, user, open, onOpenChange }) {
           </>
         }
       >
-        <UserFields form={form} access={values.connection_preference} />
+        <UserFields form={form} access={values.connection_preference} remoteUsers={remoteUsers} />
 
         {/* Only Mongo loses the credential on a rename, so only Mongo is
             warned — a warning shown to everyone is a warning nobody reads. */}
