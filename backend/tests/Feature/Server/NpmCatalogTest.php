@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\NpmRelease;
+use App\Services\Panel\UpdateScript;
 use App\Services\Runtime\NpmCatalog;
 use Illuminate\Support\Facades\Http;
 
@@ -130,4 +131,46 @@ it('asks the registry for the abbreviated document', function () {
     // Without the header the registry returns every release's full metadata,
     // README included — five times the bytes for two fields.
     Http::assertSent(fn ($request) => $request->hasHeader('Accept', 'application/vnd.npm.install-v1+json'));
+});
+
+it('is primed by both the installer and the panel update script', function () {
+    // `npm_latest` is read from this table, and an empty table is reported as
+    // null — which the panel correctly reads as "we do not know" and so keeps
+    // the Update button offered on an npm that is already current. This
+    // command is the only thing that fills it, and it was scheduled daily and
+    // called from nowhere else, so every fresh install and every update spent
+    // up to a day in exactly that state.
+    expect(file_get_contents(base_path('../install.sh')))->toContain('artisan runtimes:refresh-npm')
+        ->and(UpdateScript::STEPS)->toContain('refresh_npm_catalogue');
+
+    // After `migrate`, because the table it writes to has to exist first.
+    $steps = array_flip(UpdateScript::STEPS);
+    expect($steps['refresh_npm_catalogue'])->toBeGreaterThan($steps['migrate']);
+});
+
+it('does not fail an install or an update when the registry is unreachable', function () {
+    // The npm registry is a third party. A panel that refuses to finish
+    // updating because someone else's API was down is worse than one whose
+    // Update button is briefly over-eager, so both call sites guard the exit
+    // code — and the command itself must not report failure either.
+    Http::fake(fn () => Http::response('', 500));
+
+    $this->artisan('runtimes:refresh-npm')->assertSuccessful();
+
+    // And the guard is present at both call sites, so a future command that
+    // *does* exit non-zero still cannot take the update down with it.
+    expect(file_get_contents(base_path('app/Services/Panel/UpdateScript.php')))
+        ->toContain('artisan runtimes:refresh-npm || echo');
+});
+
+it('keeps what it already had when a refresh fails', function () {
+    // The failure that matters most: a comparison that was correct yesterday
+    // must not be blanked into "we do not know" by one bad night.
+    NpmRelease::create(['major' => '11', 'version' => '11.19.1', 'node_range' => '^20.17.0 || >=22.9.0']);
+
+    Http::fake(fn () => Http::response('', 500));
+
+    $this->artisan('runtimes:refresh-npm')->assertSuccessful();
+
+    expect(app(NpmCatalog::class)->latestFor('20.17.0'))->toBe('11.19.1');
 });

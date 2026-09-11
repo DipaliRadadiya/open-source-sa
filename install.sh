@@ -1305,6 +1305,24 @@ setup_backend() {
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan db:seed --class=PermissionSeeder --force' -- "$dir" "${PANEL_PHP_BIN}"
     ok "database migrated and permissions seeded"
 
+    # Prime the npm catalogue. `npm_latest` on the Node screen is read from
+    # this table, and an empty table is reported as null — which the panel
+    # correctly reads as "we do not know" and so keeps offering the Update
+    # button on an npm that is already current. Only this command fills it and
+    # it is otherwise scheduled daily, so without this a brand-new server
+    # spends up to a day telling the user to update something that is current.
+    #
+    # Deliberately not `run`: that aborts the install on a non-zero exit, and
+    # this reaches out to the npm registry. A third party being down must not
+    # fail somebody's server install — the daily schedule will retry, and the
+    # only cost in the meantime is the over-eager button described above.
+    if sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan runtimes:refresh-npm' \
+        -- "$dir" "${PANEL_PHP_BIN}" >>"$LOG_FILE" 2>&1; then
+        ok "npm catalogue primed"
+    else
+        warn "npm catalogue not primed; the Node screen may offer an npm update that is not needed until the daily refresh runs"
+    fi
+
     # Tell the panel what we built. It can detect that nginx and PHP are here,
     # but not whether that was a deliberate `lemp` build or a box somebody
     # assembled by hand — and the difference matters to the setup page.

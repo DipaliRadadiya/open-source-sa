@@ -37,6 +37,7 @@ class UpdateScript
         'configure_services',
         'resync_site_configs',
         'record_firewall_defaults',
+        'refresh_npm_catalogue',
         'optimize',
         'frontend_build',
         'sync_privileges',
@@ -278,6 +279,25 @@ class UpdateScript
         # one command, the second is not recoverable by the user at all.
         note record_firewall_defaults
         {$asUser}{$php} {$backend}/artisan firewall:record-defaults || echo "WARNING: firewall defaults not recorded; run 'artisan firewall:record-defaults' if the firewall screen shows no rules"
+
+        # The npm catalogue is what `npm_latest` is read from, and until it has
+        # a row the Node screen cannot tell "npm is current" from "we do not
+        # know" -- so it reports null, the panel correctly treats null as the
+        # second, and the Update button stays offered on a version that is
+        # already up to date. Only `runtimes:refresh-npm` writes that table and
+        # it was scheduled daily and called from nowhere, so every fresh
+        # install and every update spent up to a day in exactly that state.
+        #
+        # Non-fatal for the same reason as the backfill above, and with the
+        # same `||`: the npm registry is a third party, and a panel that
+        # refuses to finish updating because someone else's API was down is
+        # worse than one whose Update button is briefly over-eager. The daily
+        # schedule retries either way. (`refresh()` already keeps what is
+        # stored rather than blanking it on a network failure, so this guard is
+        # for the harder errors -- an older release with no such command, as
+        # happened above.)
+        note refresh_npm_catalogue
+        {$asUser}{$php} {$backend}/artisan runtimes:refresh-npm || echo "WARNING: npm catalogue not refreshed; the Node screen may offer an update that is not needed until the daily refresh runs"
 
         note optimize
         {$asUser}{$php} {$backend}/artisan optimize:clear
