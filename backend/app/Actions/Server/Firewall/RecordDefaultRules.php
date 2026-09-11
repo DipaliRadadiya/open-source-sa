@@ -41,7 +41,13 @@ class RecordDefaultRules
         foreach ($this->ports() as $port) {
             $rules[] = FirewallRule::firstOrCreate(
                 ['port_from' => $port, 'port_to' => null, 'protocol' => 'tcp', 'action' => 'allow', 'source_ip' => null],
-                ['origin' => 'default'],
+                // `enabled` is stated rather than left to the column default.
+                // The default applies in the database; the model this method
+                // hands back does not carry it, so a caller reading
+                // `$rule->enabled` on a freshly created row gets null — which
+                // is falsy, and reads as "the user switched this off". Every
+                // rule recorded here is on, and now says so.
+                ['origin' => 'default', 'enabled' => true],
             );
         }
 

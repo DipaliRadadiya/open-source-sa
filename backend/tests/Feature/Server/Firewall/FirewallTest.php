@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ActivityLog;
 use App\Models\FirewallRule;
 use App\Models\User;
 use App\Services\Server\Firewall\ProtectedRuleGuard;
@@ -240,6 +241,93 @@ it('refuses to enable the firewall when a default recovery rule cannot be applie
     Process::assertNotRan(fn ($p) => in_array('ufw', $p->command, true)
         && in_array('--force', $p->command, true)
         && in_array('enable', $p->command, true));
+});
+
+describe('enabling with a default rule switched off', function () {
+    /*
+     * `ProtectedRuleGuard` lets a seeded rule be switched off while the
+     * firewall is not enforcing — that escape hatch is deliberate, and is the
+     * only way to shut port 80 on a server that needs it shut. But enabling
+     * used to apply every default rule regardless of its `enabled` flag, so
+     * the port came back open while the panel still showed the rule off, and
+     * the guard then locked it in that state the moment ufw was enforcing.
+     * A screen saying a port is closed while it is open is the 2026-09-08 bug
+     * with the direction reversed.
+     */
+    it('leaves a web port the user switched off closed', function () {
+        fakeUfw('active');
+        FirewallRule::create([
+            'port_from' => 80, 'protocol' => 'tcp', 'action' => 'allow',
+            'origin' => 'default', 'enabled' => false,
+        ]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/firewall/toggle', ['enabled' => true])
+            ->assertOk();
+
+        // Not re-opened on the box…
+        Process::assertNotRan(fn ($p) => $p->command === ['ufw', 'allow', '80/tcp']);
+        // …and not quietly re-enabled in the table either, so the two agree.
+        expect(FirewallRule::where('port_from', 80)->value('enabled'))->toBeFalsy();
+
+        // The other defaults are untouched by one rule being off.
+        Process::assertRan(fn ($p) => $p->command === ['ufw', 'allow', '443/tcp']);
+        Process::assertRan(fn ($p) => $p->command === ['ufw', '--force', 'enable']);
+    });
+
+    it('switches the SSH rule back on rather than enforcing without it', function () {
+        // The exception, and it has to be one: SSH is the way back in, and a
+        // box whose only door is recorded shut is one `ufw enable` away from
+        // being unreachable.
+        fakeUfw('active');
+        FirewallRule::create([
+            'port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow',
+            'origin' => 'default', 'enabled' => false,
+        ]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/firewall/toggle', ['enabled' => true])
+            ->assertOk();
+
+        Process::assertRan(fn ($p) => $p->command === ['ufw', 'allow', '22/tcp']);
+        expect(FirewallRule::where('port_from', 22)->value('enabled'))->toBeTruthy();
+    });
+
+    it('follows SSH to the port it is actually on', function () {
+        // The recovery rule is identified by the resolved port, the same way
+        // `RecordDefaultRules` seeds it — so on a moved SSH the exception
+        // still lands on the door and not on port 22.
+        moveSshTo(2222);
+        fakeUfw('active');
+        FirewallRule::create([
+            'port_from' => 2222, 'protocol' => 'tcp', 'action' => 'allow',
+            'origin' => 'default', 'enabled' => false,
+        ]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/firewall/toggle', ['enabled' => true])
+            ->assertOk();
+
+        Process::assertRan(fn ($p) => $p->command === ['ufw', 'allow', '2222/tcp']);
+        expect(FirewallRule::where('port_from', 2222)->value('enabled'))->toBeTruthy();
+    });
+
+    it('records the SSH rule it switched back on', function () {
+        // Made in the user's name without being asked, so it goes in the
+        // activity trail rather than happening silently.
+        fakeUfw('active');
+        FirewallRule::create([
+            'port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow',
+            'origin' => 'default', 'enabled' => false,
+        ]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/firewall/toggle', ['enabled' => true])
+            ->assertOk();
+
+        expect(ActivityLog::where('type', 'firewall')->where('action', 'rule_enabled')->exists())
+            ->toBeTrue();
+    });
 });
 
 it('disables the firewall but keeps the rules', function () {
