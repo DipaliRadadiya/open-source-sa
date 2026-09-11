@@ -54,6 +54,84 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     }
 
     /**
+     * Most applications name no minimum: they run on any version of an engine
+     * they accept, and the panel has nothing to check.
+     *
+     * @return array<string, string>
+     */
+    public function minimumEngineVersions(): array
+    {
+        return [];
+    }
+
+    /**
+     * The port the application has to be told about, or null when telling it
+     * would say nothing it does not already assume.
+     *
+     * 🔴 The panel's database connection is editable — `PUT
+     * /databases/connections/{engine}` sets host, port and socket — so a panel
+     * pointed at a managed MySQL on 25060 hands every new site a config
+     * naming 3306. The site provisions, reports Active, and cannot reach its
+     * own database.
+     *
+     * The comparison is against what the *application* assumes when told
+     * nothing, deliberately NOT against
+     * `config("server.databases.engines.{$engine}.default_port")`: that value
+     * is the panel's and is env-overridable (`SERVER_POSTGRES_PORT`). Move
+     * PostgreSQL to 5433 and the panel's default becomes 5433, while the
+     * application still assumes 5432 — so the one case that most needs the
+     * port written is exactly the case comparing against the panel's own
+     * default would stay silent about.
+     *
+     * Null rather than the number when they match, because both Joomla and
+     * PrestaShop document the port as the thing you add *when it differs*,
+     * and Joomla treats `host` and `host:3306` as two distinct connections
+     * even though they address the same server. Saying nothing is what every
+     * site the panel has already made says.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    protected function enginePort(array $context): ?int
+    {
+        $assumed = match ($context['engine'] ?? '') {
+            'mysql', 'mariadb' => 3306,
+            'postgresql' => 5432,
+            'mongodb' => 27017,
+            default => null,
+        };
+
+        $port = (int) ($context['db_port'] ?? 0);
+
+        // An engine we have no assumption for: write whatever we were given,
+        // since silence would be a guess about software we know nothing about.
+        if ($port <= 0 || $port === $assumed) {
+            return null;
+        }
+
+        return $port;
+    }
+
+    /**
+     * The database host with the port appended, for the applications whose
+     * only channel for a port is the host field.
+     *
+     * Joomla's CLI has no `--db-port` at all and PrestaShop's has no
+     * `--db_port`; both document `host:port` as the way — "if your MySQL
+     * server is configured on a different port than 3306, please specify it
+     * in the db_server argument". WordPress parses the same shape in
+     * `DB_HOST`.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    protected function hostWithPort(array $context): string
+    {
+        $host = (string) ($context['db_host'] ?? '127.0.0.1');
+        $port = $this->enginePort($context);
+
+        return $port === null ? $host : "{$host}:{$port}";
+    }
+
+    /**
      * Most installers persist no canonical URL. Applications that do own the
      * exact, application-native reconciliation command in their class.
      */

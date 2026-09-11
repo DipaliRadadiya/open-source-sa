@@ -407,6 +407,48 @@ it('locks down wp-config.php, which holds live database credentials', function (
         && str_contains((string) $p->command[2], 'wp-config.php'));
 });
 
+/** The wp-config.php WordPress will read, as written. */
+function wpConfigWritten(): string
+{
+    $config = '';
+
+    Process::fake(function ($process) use (&$config) {
+        if (($process->command[0] ?? '') === 'tee' && str_contains((string) $process->command[1], 'wp-config.php')) {
+            $config = (string) $process->input;
+        }
+
+        // The name-availability probe: a bare exitCode-0 answers "" here,
+        // which reads as "taken" and exhausts the allocator before a config
+        // is ever written.
+        return ($process->command[0] ?? '') === 'mysql'
+            ? Process::result(output: '1')
+            : Process::result(exitCode: 0);
+    });
+
+    runProvision(wpApp());
+
+    return $config;
+}
+
+it('writes a moved database port into DB_HOST, which wpdb parses itself', function () {
+    fakeSaltService();
+    // 🔴 The panel's connection is editable (PUT /databases/connections/mysql),
+    // so a managed MySQL on 25060 used to be handed a wp-config naming the
+    // default port: a site that provisions, reports Active, and cannot reach
+    // its own database.
+    moveDatabasePort('mysql', 25060);
+
+    expect(wpConfigWritten())->toContain("define('DB_HOST', '127.0.0.1:25060');");
+});
+
+it('leaves DB_HOST bare on a stock database, as every existing site has it', function () {
+    fakeSaltService();
+
+    // 3306 is what wpdb assumes, so naming it would change the config every
+    // WordPress the panel has ever installed carries, to say nothing new.
+    expect(wpConfigWritten())->toContain("define('DB_HOST', '127.0.0.1');");
+});
+
 it('gives every install its own salts', function () {
     // No salt service reachable — the local fallback must still be unique.
     fakeSaltService(reachable: false);

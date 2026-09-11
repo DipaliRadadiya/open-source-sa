@@ -44,9 +44,16 @@ beforeEach(function () {
 /**
  * Provision, capturing every command with its stdin and working directory.
  */
-function installNextcloud(?string $engine = null): ArrayObject
+/**
+ * @param  int|null  $port  a port the engine is NOT assumed to be on
+ */
+function installNextcloud(?string $engine = null, ?int $port = null): ArrayObject
 {
     $runs = new ArrayObject;
+
+    if ($port !== null) {
+        moveDatabasePort($engine ?? 'mysql', $port);
+    }
 
     if ($engine !== null) {
         test()->application->forceFill([
@@ -205,24 +212,37 @@ it('tells occ which database the site was actually given, not a configured const
         ->not->toContain('mysql');
 });
 
-it('passes the PostgreSQL port, which occ does have an option for', function () {
-    $command = occRun(installNextcloud('postgresql'), 'maintenance:install')['command'];
+it('passes a moved MySQL port, which occ does have an option for', function () {
+    $command = occRun(installNextcloud(null, 25060), 'maintenance:install')['command'];
     $at = array_search('--database-port', $command, true);
 
     expect($at)->not->toBeFalse()
         // Off the engine's connection record, not a literal.
-        ->and($command[$at + 1])->toBe('5432');
+        ->and($command[$at + 1])->toBe('25060');
 });
 
-it('leaves the MySQL command line exactly as it was', function () {
-    // Both halves of "don't touch the MySQL path" (operator, 2026-09-11): the
-    // driver still comes from config, and no port option appears where none
-    // appeared before. occ *has* `--database-port` and we have never passed
-    // it — a real gap, filed as its own task, because closing it changes the
-    // install of every existing Nextcloud.
+it('passes a moved PostgreSQL port too', function () {
+    $command = occRun(installNextcloud('postgresql', 6432), 'maintenance:install')['command'];
+    $at = array_search('--database-port', $command, true);
+
+    expect($at)->not->toBeFalse()
+        ->and($command[$at + 1])->toBe('6432');
+});
+
+it('leaves the stock MySQL command line exactly as it was', function () {
+    // The driver still comes from config, and no port option appears where
+    // none appeared before: 3306 is what occ's driver assumes, so naming it
+    // would change the install of every existing Nextcloud to say nothing new.
     $command = occRun(installNextcloud(), 'maintenance:install')['command'];
 
     expect($command)->toContain('mysql')
         ->not->toContain('pgsql')
+        ->not->toContain('--database-port');
+});
+
+it('leaves a stock PostgreSQL command line without a port as well', function () {
+    $command = occRun(installNextcloud('postgresql'), 'maintenance:install')['command'];
+
+    expect($command)->toContain('pgsql')
         ->not->toContain('--database-port');
 });

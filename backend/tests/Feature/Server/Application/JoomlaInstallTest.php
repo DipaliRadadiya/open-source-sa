@@ -59,9 +59,16 @@ function fakeJoomlaReleases(bool $ok = true): void
  * @param  string|null  $engine  the engine the site asked for, on a server
  *                               that has only that one
  */
-function installJoomla(?string $engine = null): ArrayObject
+/**
+ * @param  int|null  $port  a port the engine is NOT assumed to be on
+ */
+function installJoomla(?string $engine = null, ?int $port = null): ArrayObject
 {
     $runs = new ArrayObject;
+
+    if ($port !== null) {
+        moveDatabasePort($engine ?? 'mysql', $port);
+    }
 
     if ($engine !== null) {
         test()->application->forceFill([
@@ -189,14 +196,14 @@ it('tells Joomla to speak PostgreSQL when that is the database it was given', fu
         ->not->toContain('--db-type=mysqli');
 });
 
-it('carries the PostgreSQL port inside the host, because Joomla has no --db-port', function () {
+it('carries a moved port inside the host, because Joomla has no --db-port', function () {
     fakeJoomlaReleases();
-    $command = joomlaInstallRun(installJoomla('postgresql'))['command'];
+    $command = joomlaInstallRun(installJoomla(null, 25060))['command'];
 
-    // Joomla's setup form defines no db_port field at all, so `host:port` is
-    // the only channel there is. 5432 comes off the engine's connection
-    // record, not from a literal here.
-    expect($command)->toContain('--db-host=127.0.0.1:5432')
+    // Joomla's setup form defines no db_port field at all; its own docs say a
+    // non-standard port "can be specified by adding it to the end of the host
+    // name". 25060 comes off the connection record, not a literal here.
+    expect($command)->toContain('--db-host=127.0.0.1:25060')
         // Proof the option really is absent from the CLI rather than just
         // unused: passing one would be silently ignored, which is the failure
         // this shape exists to avoid.
@@ -204,14 +211,28 @@ it('carries the PostgreSQL port inside the host, because Joomla has no --db-port
         ->toBeFalse();
 });
 
-it('leaves the MySQL host exactly as it was, port and all', function () {
-    // Deliberately not fixed here (operator, 2026-09-11): every Joomla site
-    // the panel has made was given a bare host, and a MySQL on a moved port
-    // has always been written a config pointing at 3306. Closing that touches
-    // the install path of every existing site, so it is its own task. This
-    // pins the current behaviour so the PostgreSQL branch cannot leak into it.
+it('carries a moved PostgreSQL port the same way', function () {
+    fakeJoomlaReleases();
+    $command = joomlaInstallRun(installJoomla('postgresql', 6432))['command'];
+
+    expect($command)->toContain('--db-host=127.0.0.1:6432');
+});
+
+it('leaves a stock host bare, as every existing Joomla site has it', function () {
+    // 3306 is what Joomla's driver assumes, and Joomla treats `host` and
+    // `host:3306` as two distinct connections to the same server — so naming
+    // the default is not free, and saying nothing is what works today.
     fakeJoomlaReleases();
     $command = joomlaInstallRun(installJoomla())['command'];
+
+    expect($command)->toContain('--db-host=127.0.0.1')
+        ->and(collect($command)->contains(fn ($a) => str_contains((string) $a, '127.0.0.1:')))
+        ->toBeFalse();
+});
+
+it('leaves a stock PostgreSQL host bare too', function () {
+    fakeJoomlaReleases();
+    $command = joomlaInstallRun(installJoomla('postgresql'))['command'];
 
     expect($command)->toContain('--db-host=127.0.0.1')
         ->and(collect($command)->contains(fn ($a) => str_contains((string) $a, '127.0.0.1:')))

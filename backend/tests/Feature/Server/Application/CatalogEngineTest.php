@@ -39,22 +39,38 @@ beforeEach(function () {
  * `available()` is a live query through ServerOps either way, so a server
  * without MySQL is one where the `mysql` client's query does not succeed.
  */
-function onlyEngines(array $engines): void
+/**
+ * @param  array<string, string>  $versions  what an engine reports for its
+ *                                           version, where the default 16.4 /
+ *                                           8.0.36 is not what the test is about
+ */
+function onlyEngines(array $engines, array $versions = []): void
 {
     // Counted in the fake rather than read back from `Process::recorded()`,
     // which is not reachable through the facade here.
     $GLOBALS['engineProbes'] = [];
 
-    Process::fake(function ($process) use ($engines) {
+    Process::fake(function ($process) use ($engines, $versions) {
         $command = implode(' ', (array) $process->command);
 
         foreach (['mysql' => 'mysql', 'mariadb' => 'mariadb', 'mongodb' => 'mongosh', 'postgresql' => 'psql'] as $engine => $client) {
             if (str_contains($command, $client)) {
                 $GLOBALS['engineProbes'][] = $engine;
 
-                return in_array($engine, $engines, true)
-                    ? Process::result(output: '1')
-                    : Process::result(exitCode: 1, errorOutput: 'command not found');
+                if (! in_array($engine, $engines, true)) {
+                    return Process::result(exitCode: 1, errorOutput: 'command not found');
+                }
+
+                // A version query needs a version: answering `1` describes a
+                // server running PostgreSQL 1, which every type with a
+                // minimum reads as unusable.
+                $sql = (string) $process->input;
+
+                if (str_contains($sql, 'server_version') || str_contains($sql, 'VERSION()')) {
+                    return Process::result(output: $versions[$engine] ?? fakeEngineVersionAnswer($process)?->output() ?? '1');
+                }
+
+                return Process::result(output: '1');
             }
         }
 
@@ -225,6 +241,19 @@ describe('the database engine picker', function () {
         expect(chosenEngineFor($app, ['mongodb', 'postgresql']))->toBe('postgresql');
     });
 
+    it('skips an engine that is too old when it is the one picking', function () {
+        // The implicit half of the version gate. The explicit choice is
+        // refused by StoreApplicationRequest with a message; here nobody
+        // chose, so the fallback must walk past the PostgreSQL it cannot use
+        // and land on MySQL — exactly as it does for one that is not
+        // installed at all.
+        onlyEngines(['mysql', 'postgresql'], ['postgresql' => '13.15']);
+
+        $app = Application::factory()->create(['site_type' => 'moodle', 'settings' => []]);
+
+        expect(chosenEngineFor($app, ['postgresql', 'mysql'], ['postgresql' => '14']))->toBe('mysql');
+    });
+
     it('falls back when nothing was chosen', function () {
         onlyEngines(['mongodb', 'postgresql']);
 
@@ -261,10 +290,10 @@ describe('the database engine picker', function () {
  *
  * @param  array<int, string>  $accepted
  */
-function chosenEngineFor(Application $app, array $accepted): ?string
+function chosenEngineFor(Application $app, array $accepted, array $minimums = []): ?string
 {
     $method = new ReflectionMethod(app(InstallerManager::class), 'provisionDatabase');
-    $method->invoke(app(InstallerManager::class), $app, $accepted);
+    $method->invoke(app(InstallerManager::class), $app, $accepted, $minimums);
 
     return Database::query()->where('application_id', $app->id)->value('engine');
 }
@@ -341,7 +370,20 @@ function createWithEngine(string $type, string $engine)
             'admin_password' => 'a-long-password',
         ];
     } else {
-        $payload += ['admin_email' => 'a@example.com', 'admin_password' => 'a-long-password', 'site_title' => 'T'];
+        // Superset of what the marketplace types require: each installer's
+        // FormRequest picks the fields it declares and ignores the rest, so
+        // one payload serves wordpress, moodle and joomla alike.
+        $payload += [
+            'admin_email' => 'a@example.com',
+            // Moodle enforces its own complexity rule; the others accept it.
+            'admin_password' => 'A-long-Passw0rd!',
+            'site_title' => 'T',
+            'site_name' => 'T',
+            'short_name' => 'tshort',
+            'admin_user' => 'admin',
+            'admin_username' => 'admin',
+            'admin_name' => 'Admin Person',
+        ];
     }
 
     return test()->withHeaders(['Authorization' => 'Bearer '.test()->token])
@@ -373,4 +415,71 @@ it('keeps the four MySQL-only types MySQL-only', function () {
     foreach (['wordpress', 'prestashop', 'mautic', 'akaunting'] as $type) {
         expect($types[$type]['accepted_engines'])->toBe(['mysql', 'mariadb'], $type);
     }
+});
+
+it('drops a too-old engine out of the catalog for the types that cannot use it', function () {
+    // The card must not offer a form that the create endpoint will refuse.
+    onlyEngines(['postgresql'], ['postgresql' => '13.15']);
+
+    $types = siteTypeCatalog();
+
+    expect($types['moodle']['available'])->toBeFalse()
+        ->and($types['moodle']['unavailable_code'])->toBe('database')
+        // Joomla's floor is 12, so the same server is fine for it.
+        ->and($types['joomla']['available'])->toBeTrue();
+});
+
+describe('the minimum engine version', function () {
+    beforeEach(function () {
+        $this->seed(PermissionSeeder::class);
+        $this->admin = User::factory()->admin()->create();
+        $this->token = $this->admin->createToken('t')->plainTextToken;
+        $this->su = SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+    });
+
+    it('refuses a PostgreSQL older than the application will run on', function () {
+        // Moodle 5.0 raised its minimum to 14. On 13 the site would be created,
+        // provisioned, and die inside Moodle's own installer — the failure
+        // acceptedEngines() exists to prevent, one level down.
+        onlyEngines(['mysql', 'postgresql'], ['postgresql' => '13.15']);
+
+        createWithEngine('moodle', 'postgresql')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('database_engine');
+    });
+
+    it('accepts a PostgreSQL that meets the minimum exactly', function () {
+        // 14 is the floor, not something above it — and it is what Ubuntu 22.04,
+        // the oldest release the installer supports, carries.
+        onlyEngines(['mysql', 'postgresql'], ['postgresql' => '14.11']);
+
+        createWithEngine('moodle', 'postgresql')->assertSuccessful();
+    });
+
+    it('holds each application to its own minimum, not a shared one', function () {
+        // 🔴 The reason the number lives on the installer. Joomla's own
+        // requirements table enforces 12, so refusing it on 13 would be the panel
+        // inventing a requirement — the failure a version gate is likeliest to
+        // cause, and the one a single shared floor of 14 would have caused here.
+        onlyEngines(['mysql', 'postgresql'], ['postgresql' => '13.15']);
+
+        createWithEngine('joomla', 'postgresql')->assertSuccessful();
+    });
+
+    it('leaves a type that names no minimum alone', function () {
+        // NodeBB accepts PostgreSQL and declares no floor. A blanket rule would
+        // refuse it a database it is perfectly happy with.
+        onlyEngines(['postgresql'], ['postgresql' => '13.15']);
+
+        createWithEngine('nodebb', 'postgresql')->assertSuccessful();
+    });
+
+    it('does not refuse an engine whose version cannot be read', function () {
+        // 🔴 An engine that will not answer is a question we could not ask, not
+        // an answer of "too old". Refusing on it would turn an unreadable
+        // database into a server that cannot host a site.
+        onlyEngines(['postgresql'], ['postgresql' => '']);
+
+        createWithEngine('moodle', 'postgresql')->assertSuccessful();
+    });
 });

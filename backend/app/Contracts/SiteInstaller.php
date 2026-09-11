@@ -36,6 +36,21 @@ interface SiteInstaller
     public function acceptedEngines(): array;
 
     /**
+     * The oldest version of an accepted engine this application will run on,
+     * keyed by engine name — empty when it has no such requirement.
+     *
+     * Separate from {@see acceptedEngines()} because the two answer different
+     * questions: that one is "can this application speak to that engine at
+     * all", this one is "is the one on this server new enough". Accepting an
+     * engine and then failing inside the application's own installer is
+     * exactly the outcome the accepted list exists to prevent, so the version
+     * belongs at the same gate.
+     *
+     * @return array<string, string>
+     */
+    public function minimumEngineVersions(): array;
+
+    /**
      * The command that runs this application, for the ones that are a process
      * rather than a directory of files — null for everything served by PHP.
      *

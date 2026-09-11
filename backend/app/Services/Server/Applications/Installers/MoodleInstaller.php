@@ -63,6 +63,21 @@ class MoodleInstaller extends AbstractPhpInstaller
     }
 
     /**
+     * Moodle 5.0 raised its PostgreSQL minimum to 14 — its release notes mark
+     * it "increased in this Moodle version" — and the panel installs whatever
+     * Moodle's own download serves, which is current.
+     *
+     * MySQL and MariaDB carry no entry: their minimums are old enough that no
+     * server the panel will run on can fall below them.
+     *
+     * @return array<string, string>
+     */
+    public function minimumEngineVersions(): array
+    {
+        return ['postgresql' => '14'];
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     public function install(Application $application, string $documentRoot, array $context): void
@@ -90,11 +105,9 @@ class MoodleInstaller extends AbstractPhpInstaller
             // PostgreSQL connection `utf8mb4_unicode_ci` names a collation
             // that does not exist there.
             'collation' => $isPostgres ? null : 'utf8mb4_unicode_ci',
-            // PostgreSQL-only, for the reason given on Joomla's dbHost():
-            // every Moodle the panel has made carries an empty `dbport`, and
-            // filling it in for MySQL too is its own task. New ground starts
-            // correct.
-            'port' => $isPostgres ? (string) ($context['db_port'] ?? '') : '',
+            // Empty unless the port differs from the one Moodle's driver
+            // assumes, which is what every Moodle the panel has made carries.
+            'port' => (string) ($this->enginePort($context) ?? ''),
             'host' => $context['db_host'] ?? '127.0.0.1',
             'database' => $context['database'],
             'username' => $context['db_user'],

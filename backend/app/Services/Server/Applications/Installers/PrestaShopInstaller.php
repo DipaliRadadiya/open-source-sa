@@ -60,7 +60,9 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             $this->phpBinary($application), 'install/index_cli.php',
             '--domain='.$application->domain,
             '--base_uri=/',
-            '--db_server='.($context['db_host'] ?? '127.0.0.1'),
+            // PrestaShop's CLI has no --db_port; its own docs say to put a
+            // non-3306 port here as `host:port`.
+            '--db_server='.$this->hostWithPort($context),
             '--db_name='.$context['database'],
             '--db_user='.$context['db_user'],
             // See the class note: PrestaShop's installer has no prompt, so

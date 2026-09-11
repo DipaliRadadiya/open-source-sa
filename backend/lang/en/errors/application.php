@@ -4,6 +4,7 @@ return [
     'database_engine_not_used' => 'This application does not use a database.',
     'database_engine_unsupported' => 'This application cannot use that database engine. :application supports a different one.',
     'database_engine_unavailable' => 'That database engine is not running on this server. Install or start it first.',
+    'database_engine_too_old' => 'This server\'s :engine is too old for :application, which needs :minimum or newer. Upgrade it, or choose another database engine.',
 
     'primary_domain_not_removable' => 'A primary domain cannot be removed. Make another domain primary first.',
     'unsupported_web_server' => 'The panel cannot write site configuration for :web_server.',

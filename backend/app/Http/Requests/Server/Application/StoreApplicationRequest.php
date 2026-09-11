@@ -10,6 +10,7 @@ use App\Rules\StartCommand;
 use App\Rules\SupportedNodeVersion;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Applications\EngineVersionSupport;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Php\PhpVersionManager;
@@ -147,6 +148,25 @@ class StoreApplicationRequest extends FormRequest
                     // they send the user to different screens.
                     if (! app(DatabaseManager::class)->engine($value)->available()) {
                         $fail(__('errors/application.database_engine_unavailable'));
+
+                        return;
+                    }
+
+                    // Present and reachable, but older than the application
+                    // will run on. A third distinct case for a third distinct
+                    // remedy: not "pick another app", not "install it", but
+                    // "upgrade the one you have" — and without this the site
+                    // is created and dies inside the application's own
+                    // installer.
+                    $minimum = app(EngineVersionSupport::class)
+                        ->shortfall($value, $installer->minimumEngineVersions());
+
+                    if ($minimum !== null) {
+                        $fail(__('errors/application.database_engine_too_old', [
+                            'application' => __("application.types.{$type->name()}.title"),
+                            'engine' => (string) config("server.databases.engines.{$value}.label", $value),
+                            'minimum' => $minimum,
+                        ]));
                     }
                 },
             ],

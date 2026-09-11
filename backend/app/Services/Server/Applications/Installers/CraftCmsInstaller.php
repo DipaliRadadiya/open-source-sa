@@ -59,6 +59,22 @@ class CraftCmsInstaller extends AbstractPhpInstaller
     }
 
     /**
+     * Craft 5's requirements say "PostgreSQL 13+", and 16+ under recommended.
+     * The minimum is what goes here: refusing a 13 that Craft documents as
+     * supported would be the panel inventing a requirement, which is the
+     * failure a version gate is most likely to cause.
+     *
+     * 📌 Deliberately 13 and not the 14 Moodle and Nextcloud name. One shared
+     * floor would be less code and would refuse installs that work.
+     *
+     * @return array<string, string>
+     */
+    public function minimumEngineVersions(): array
+    {
+        return ['postgresql' => '13'];
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     public function install(Application $application, string $documentRoot, array $context): void

@@ -47,6 +47,17 @@ class NextcloudInstaller extends AbstractPhpInstaller
     }
 
     /**
+     * Nextcloud's system requirements list PostgreSQL 14 through 18; 13 and
+     * below are off the supported set entirely.
+     *
+     * @return array<string, string>
+     */
+    public function minimumEngineVersions(): array
+    {
+        return ['postgresql' => '14'];
+    }
+
+    /**
      * Upstream publishes bzip2 and zip only — there is no gzip build.
      *
      * The bzip2 tarball was the original choice and it cost a server: `tar`
@@ -145,24 +156,20 @@ class NextcloudInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * `--database-port`, for PostgreSQL only.
+     * `--database-port`, which occ has and Joomla does not.
      *
-     * occ has the option — unlike Joomla — and we have never passed it, so a
-     * MySQL on a moved port has always been written a config pointing at
-     * 3306. That gap is real and filed as its own task rather than fixed
-     * here, because closing it touches the install of every existing site
-     * (operator, 2026-09-11). PostgreSQL is new ground and starts correct.
+     * Absent when the port is the one the driver already assumes, so the
+     * command line for a stock local database is the one every existing
+     * Nextcloud was installed with.
      *
      * @param  array<string, mixed>  $context
      * @return array<int, string>
      */
     private function portOption(array $context): array
     {
-        $port = (int) ($context['db_port'] ?? 0);
+        $port = $this->enginePort($context);
 
-        return ($context['engine'] ?? '') === 'postgresql' && $port > 0
-            ? ['--database-port', (string) $port]
-            : [];
+        return $port === null ? [] : ['--database-port', (string) $port];
     }
 
     public function syncUrl(Application $application, string $url): void

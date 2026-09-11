@@ -572,7 +572,9 @@ One entry per installable site type. Each carries its own field schema — the f
 
 Today that is NodeBB alone, on a server with both MongoDB and PostgreSQL. The eight types listing `mysql, mariadb` never get the field: those two cannot coexist on one server, so exactly one is ever usable.
 
-`POST /applications` answers `422` on `database_engine` for two distinct cases — an engine the application does not accept, and one the server does not have. They are separate messages on purpose: one means pick again, the other means install it first.
+`POST /applications` answers `422` on `database_engine` for three distinct cases — an engine the application does not accept, one the server does not have, and (since 2026-09-11) one that is **installed and too old**. They are separate messages on purpose: pick again, install it first, upgrade what you have.
+
+The version floor is per site type, not global: `moodle` and `nextcloud` need PostgreSQL **14+**, `craftcms` **13+**, `joomla` **12+**, and every other type names no minimum at all — so the same PostgreSQL 13 refuses Moodle and accepts Joomla on one server. A type whose floor is not met is also dropped from the `database_engine` picker in `fields`, and reports `available: false` with `unavailable_code: "database"` when it is the only engine — the card and the create endpoint cannot disagree. An engine whose version cannot be read is never refused.
 
 `accepted_engines` is which engines this type can be installed against — `[]` when it needs no database, so "no constraint" and "no database" are the same value rather than a null to special-case. Do not infer this list from the type's name. There are now four distinct lists, and **NodeBB accepts `["mongodb", "postgresql"]`** (2026-09-10) — the first type in the catalog naming two unrelated engines, which is exactly the case any inference gets wrong. Order is meaningful: the first engine the server actually has is the one used, so a box with both MongoDB and PostgreSQL keeps making Mongo-backed forums.
 

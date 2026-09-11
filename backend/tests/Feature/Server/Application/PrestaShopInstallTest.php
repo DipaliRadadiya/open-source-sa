@@ -66,9 +66,16 @@ function fakePrestaShopFeed(bool $ok = true): void
     ]);
 }
 
-function installPrestaShop(): ArrayObject
+/**
+ * @param  int|null  $port  a port MySQL is NOT assumed to be on
+ */
+function installPrestaShop(?int $port = null): ArrayObject
 {
     $runs = new ArrayObject;
+
+    if ($port !== null) {
+        moveDatabasePort('mysql', $port);
+    }
 
     Process::fake(function ($process) use ($runs) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input, 'path' => $process->path];
@@ -172,6 +179,28 @@ it('passes the passwords as arguments, which is documented and deliberate', func
     // rather than being mistaken for an oversight.
     expect($command)->toContain('--password=ShopPass1234!')
         ->and(collect($command)->contains(fn ($a) => str_starts_with((string) $a, '--db_password=')))->toBeTrue();
+});
+
+it('puts a moved port in --db_server, which is where PrestaShop wants it', function () {
+    fakePrestaShopFeed();
+    $command = collect(installPrestaShop(25060))
+        ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
+
+    // PrestaShop's CLI has no --db_port; its own docs say "if your MySQL
+    // server is configured on a different port than 3306, please specify it
+    // in the db_server argument like this: --db_server=sql.example.com:3307".
+    expect($command)->toContain('--db_server=127.0.0.1:25060')
+        ->and(collect($command)->contains(fn ($a) => str_starts_with((string) $a, '--db_port')))->toBeFalse();
+});
+
+it('leaves --db_server bare on a stock database', function () {
+    fakePrestaShopFeed();
+    $command = collect(installPrestaShop())
+        ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
+
+    // 3306 is the port PrestaShop assumes, and every shop the panel has
+    // installed was given a bare host.
+    expect($command)->toContain('--db_server=127.0.0.1');
 });
 
 it('ignores the autoupgrade module, which the feed lists last', function () {

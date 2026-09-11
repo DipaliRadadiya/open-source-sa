@@ -39,7 +39,9 @@ class WordPressInstaller extends AbstractPhpInstaller
             'database' => $context['database'],
             'username' => $context['db_user'],
             'password' => $context['db_password'],
-            'host' => $context['db_host'] ?? '127.0.0.1',
+            // `host:port` when the port is not the one WordPress assumes —
+            // wpdb parses that shape out of DB_HOST itself.
+            'host' => $this->hostWithPort($context),
             'prefix' => $settings['table_prefix'] ?? 'wp_',
             'salts' => $this->salts(),
         ])->render());

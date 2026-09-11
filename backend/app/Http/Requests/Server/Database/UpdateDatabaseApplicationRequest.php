@@ -94,6 +94,13 @@ class UpdateDatabaseApplicationRequest extends FormRequest
      * a reverse proxy — declares nothing and accepts anything: the link is
      * bookkeeping there, and the panel does not know better than the user what
      * their own code connects to.
+     *
+     * 📌 Deliberately checks the engine and not `minimumEngineVersions()`.
+     * That gate exists because an application dies inside its own installer
+     * when the engine is too old, and attaching runs no installer — the
+     * database is already there, possibly already in use. Refusing the link
+     * would withhold bookkeeping over a version that only matters at install
+     * time.
      */
     private function refuseUnusableEngine(Validator $validator, Application $application): void
     {

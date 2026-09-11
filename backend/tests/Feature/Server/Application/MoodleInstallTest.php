@@ -44,10 +44,15 @@ beforeEach(function () {
 /**
  * @param  string|null  $engine  the engine the site asked for, on a server
  *                               that has only that one
+ * @param  int|null  $port  a port the engine is NOT assumed to be on
  */
-function installMoodle(?string $engine = null): ArrayObject
+function installMoodle(?string $engine = null, ?int $port = null): ArrayObject
 {
     $runs = new ArrayObject;
+
+    if ($port !== null) {
+        moveDatabasePort($engine ?? 'mysql', $port);
+    }
 
     if ($engine !== null) {
         test()->application->forceFill([
@@ -221,17 +226,20 @@ it('keeps dbcollation on MySQL, where it is the reason the option is there', fun
     expect(moodleConfig(installMoodle()))->toContain("'dbcollation' => 'utf8mb4_unicode_ci'");
 });
 
-it('fills in the port for PostgreSQL, off the engine\'s own connection record', function () {
-    // New ground, so it starts correct — 5432 comes from the connection row,
-    // not from a literal here.
-    expect(moodleConfig(installMoodle('postgresql')))->toContain("'dbport' => '5432'");
+it('writes a moved MySQL port, which Moodle would otherwise assume is 3306', function () {
+    // The bug this fixes: the panel's connection is editable, so a managed
+    // MySQL on 25060 was handed a config saying 3306 — a site that provisions,
+    // reports Active, and cannot reach its own database.
+    expect(moodleConfig(installMoodle(null, 25060)))->toContain("'dbport' => '25060'");
 });
 
-it('leaves MySQL\'s port empty, as it has always been', function () {
-    // A real gap and its own task (operator, 2026-09-11): filling it in here
-    // would change the config every existing Moodle install path writes, to
-    // fix a case nobody has reported. Pinned so the PostgreSQL branch cannot
-    // leak into it.
+it('writes a moved PostgreSQL port too', function () {
+    expect(moodleConfig(installMoodle('postgresql', 6432)))->toContain("'dbport' => '6432'");
+});
+
+it('leaves the port empty on a stock MySQL, as every existing Moodle has it', function () {
+    // 3306 is what Moodle's driver assumes, so naming it says nothing and
+    // would change the config on every install path that works today.
     //
     // Separate test rather than one assertion per engine on purpose: the two
     // engines cannot share a `Process::fake`. With psql falling through to a
@@ -240,4 +248,19 @@ it('leaves MySQL\'s port empty, as it has always been', function () {
     // allocation walks twenty candidates and the install dies at
     // create_database — which is what happened when these were one test.
     expect(moodleConfig(installMoodle()))->toContain("'dbport' => ''");
+});
+
+it('leaves the port empty on a stock PostgreSQL as well', function () {
+    // 5432 is PostgreSQL's own default; the rule is one rule for every engine.
+    expect(moodleConfig(installMoodle('postgresql')))->toContain("'dbport' => ''");
+});
+
+it('writes the port when only the PANEL\'s default has moved, not the application\'s', function () {
+    // 🔴 The guard on the comparison itself. `default_port` is the panel's and
+    // is env-overridable (SERVER_POSTGRES_PORT); Moodle's driver still assumes
+    // 5432. Compare against the panel's value and this exact case — the one
+    // that most needs the port written — is the one that stays silent.
+    config(['server.databases.engines.postgresql.default_port' => 5433]);
+
+    expect(moodleConfig(installMoodle('postgresql')))->toContain("'dbport' => '5433'");
 });

@@ -4,6 +4,7 @@ return [
     'database_engine_not_used' => 'Esta aplicación no usa una base de datos.',
     'database_engine_unsupported' => 'Esta aplicación no puede usar ese motor de base de datos. :application admite uno diferente.',
     'database_engine_unavailable' => 'Ese motor de base de datos no se está ejecutando en este servidor. Instálalo o inícialo primero.',
+    'database_engine_too_old' => 'El :engine de este servidor es demasiado antiguo para :application, que necesita :minimum o posterior. Actualízalo o elige otro motor de base de datos.',
 
     'primary_domain_not_removable' => 'No se puede eliminar el dominio principal. Haga principal otro dominio primero.',
     'unsupported_web_server' => 'El panel no puede escribir la configuración del sitio para :web_server.',

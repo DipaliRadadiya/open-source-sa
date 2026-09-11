@@ -29,6 +29,7 @@ class InstallerManager
         private DatabaseManager $databases,
         private DatabaseIdentifier $databaseIdentifiers,
         private ProvisionProgress $progress,
+        private EngineVersionSupport $versions,
     ) {}
 
     /**
@@ -79,7 +80,11 @@ class InstallerManager
         $context = [];
 
         if ($installer->needsDatabase()) {
-            $context = $this->provisionDatabase($application, $installer->acceptedEngines());
+            $context = $this->provisionDatabase(
+                $application,
+                $installer->acceptedEngines(),
+                $installer->minimumEngineVersions(),
+            );
         }
 
         $installer->install($application, $documentRoot, $context);
@@ -114,13 +119,19 @@ class InstallerManager
      * own config file.
      *
      * @param  array<int, string>  $accepted  engines this application can use
+     * @param  array<string, string>  $minimums  its minimum version per engine
      * @return array<string, mixed>
      *
      * @throws ProvisioningFailedException
      */
-    private function provisionDatabase(Application $application, array $accepted): array
+    private function provisionDatabase(Application $application, array $accepted, array $minimums = []): array
     {
-        $engine = $this->chosenEngine($application, $accepted) ?? $this->firstAvailableEngine($accepted);
+        // An engine the user chose was already held to the minimum by
+        // StoreApplicationRequest, so this honours a validated choice rather
+        // than re-deciding it. Only the fallback — where the panel is the one
+        // picking — consults the version.
+        $engine = $this->chosenEngine($application, $accepted)
+            ?? $this->firstAvailableEngine($accepted, $minimums);
 
         if ($engine === null) {
             // Fail here rather than half-installing: without a database the
@@ -251,12 +262,23 @@ class InstallerManager
                 : null;
     }
 
-    private function firstAvailableEngine(array $accepted): ?string
+    /**
+     * @param  array<int, string>  $accepted
+     * @param  array<string, string>  $minimums
+     */
+    private function firstAvailableEngine(array $accepted, array $minimums = []): ?string
     {
         $installed = $this->databases->engineNames();
 
         foreach ($accepted as $engine) {
-            if (in_array($engine, $installed, true) && $this->databases->engine($engine)->available()) {
+            // Too old counts as not available here rather than as a failure:
+            // an application that accepts three engines and finds the first
+            // one below its minimum should fall through to the next, exactly
+            // as it does for one that is not installed. Only when nothing
+            // qualifies does this return null and provisioning stop.
+            if (in_array($engine, $installed, true)
+                && $this->databases->engine($engine)->available()
+                && $this->versions->meets($engine, $minimums)) {
                 return $engine;
             }
         }

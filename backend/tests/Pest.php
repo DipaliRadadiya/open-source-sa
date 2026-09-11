@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\DatabaseConnection;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -66,9 +67,53 @@ function userPayload(array $overrides = []): array
  */
 function fakeDatabaseAnswer(mixed $process): ?FakeProcessResult
 {
-    return in_array($process->command[0] ?? '', ['mysql', 'mariadb'], true)
-        ? Process::result(output: '1')
-        : null;
+    if (! in_array($process->command[0] ?? '', ['mysql', 'mariadb'], true)) {
+        return null;
+    }
+
+    return fakeEngineVersionAnswer($process) ?? Process::result(output: '1');
+}
+
+/**
+ * A version query's answer, for the fakes that otherwise reply `1` to
+ * everything.
+ *
+ * 🔴 `1` is not a version. Applications that declare a minimum engine version
+ * compare what the engine reports, so a fake answering `1` describes a server
+ * running PostgreSQL 1 — and every type with a minimum reads as unusable, in
+ * tests that are about something else entirely. SQL reaches these clients on
+ * **stdin**, not argv, which is why this reads `input` rather than the
+ * command.
+ */
+function fakeEngineVersionAnswer(mixed $process): ?FakeProcessResult
+{
+    $sql = (string) $process->input;
+
+    if (str_contains($sql, 'server_version')) {
+        // The shape Ubuntu's build reports, parenthetical and all, so the
+        // parsing is exercised rather than assumed.
+        return Process::result(output: '16.4 (Ubuntu 16.4-0ubuntu0.24.04.2)');
+    }
+
+    return str_contains($sql, 'VERSION()') ? Process::result(output: '8.0.36') : null;
+}
+
+/**
+ * Move the panel's connection for an engine onto a port the application does
+ * not assume — what `PUT /databases/connections/{engine}` does when someone
+ * points the panel at a managed database.
+ *
+ * This is the whole reason the installers have to write a port at all: the
+ * connection is editable, so "the database is on 3306" is an assumption, not
+ * a fact. Tests that do not call this describe a stock local server, and
+ * their assertions pin the config every existing site was installed with.
+ */
+function moveDatabasePort(string $engine, int $port): void
+{
+    DatabaseConnection::updateOrCreate(
+        ['engine' => $engine],
+        ['connection_type' => 'tcp', 'host' => '127.0.0.1', 'port' => $port, 'username' => 'root'],
+    );
 }
 
 /**
@@ -93,7 +138,7 @@ function fakePostgresOnlyAnswer(mixed $process): ?FakeProcessResult
     $binary = $process->command[0] ?? '';
 
     if ($binary === 'psql') {
-        return Process::result(output: '1');
+        return fakeEngineVersionAnswer($process) ?? Process::result(output: '1');
     }
 
     return in_array($binary, ['mysql', 'mariadb'], true)

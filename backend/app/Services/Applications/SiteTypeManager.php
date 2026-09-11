@@ -3,6 +3,7 @@
 namespace App\Services\Applications;
 
 use App\Contracts\SiteType;
+use App\Services\Server\Applications\EngineVersionSupport;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Databases\DatabaseManager;
@@ -30,6 +31,7 @@ class SiteTypeManager
         private ServerCapabilities $capabilities,
         private InstallerManager $installers,
         private DatabaseManager $databases,
+        private EngineVersionSupport $versions,
     ) {}
 
     /**
@@ -231,7 +233,7 @@ class SiteTypeManager
         }
 
         foreach ($accepted as $engine) {
-            if ($this->engineUsable($engine)) {
+            if ($this->engineUsableFor($type, $engine)) {
                 return null;
             }
         }
@@ -308,7 +310,7 @@ class SiteTypeManager
     {
         $usable = array_values(array_filter(
             $this->acceptedEngines($type),
-            fn (string $engine): bool => $this->engineUsable($engine),
+            fn (string $engine): bool => $this->engineUsableFor($type, $engine),
         ));
 
         if (count($usable) < 2) {
@@ -331,6 +333,28 @@ class SiteTypeManager
                 'label' => (string) config("server.databases.engines.{$engine}.label", $engine),
             ], $usable),
         ]];
+    }
+
+    /**
+     * Usable *for this application*: installed, reachable, and new enough.
+     *
+     * The version belongs here rather than in {@see engineUsable()} because it
+     * is the only one of the three that depends on which application is
+     * asking — a PostgreSQL 13 is unusable for Moodle and perfectly fine for
+     * NodeBB, on the same server in the same request. Keeping them apart is
+     * what lets the reachability answer stay memoized across every type in the
+     * catalog while the version answer varies by type.
+     */
+    private function engineUsableFor(SiteType $type, string $engine): bool
+    {
+        if (! $this->engineUsable($engine)) {
+            return false;
+        }
+
+        $installer = $this->installers->installerForType($type->name());
+
+        return $installer === null
+            || $this->versions->meets($engine, $installer->minimumEngineVersions());
     }
 
     private function engineUsable(string $engine): bool
