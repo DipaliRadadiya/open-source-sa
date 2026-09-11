@@ -19,6 +19,7 @@ export const PROVISION_STEPS = new Set([
   "placeholder",
   "set_ownership",
   "create_php_pool",
+  "harden_php",
   "create_database",
   "write_config",
   "test_config",

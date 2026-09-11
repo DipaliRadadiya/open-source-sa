@@ -3030,6 +3030,7 @@
         "placeholder": "Adding a placeholder page",
         "set_ownership": "Setting file permissions",
         "create_php_pool": "Setting up PHP for this site",
+        "harden_php": "Locking down PHP functions",
         "create_database": "Creating the database",
         "write_config": "Writing the web server configuration",
         "test_config": "Checking the web server configuration",

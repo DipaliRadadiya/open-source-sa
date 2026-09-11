@@ -3,6 +3,7 @@
 use App\Exceptions\Server\Application\UnsupportedWebServerException;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
+use App\Models\ApplicationPhpSettings;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -74,7 +75,7 @@ it('creates the directory, writes a tested config and reloads', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     expect($app->steps)->toBe([
-        'check_account', 'create_directory', 'placeholder', 'set_ownership', 'create_php_pool', 'write_config', 'test_config', 'reload',
+        'check_account', 'create_directory', 'placeholder', 'set_ownership', 'harden_php', 'create_php_pool', 'write_config', 'test_config', 'reload',
     ]);
 
     // `{home}/{slug}/public_html` — the document root, not the site directory:
@@ -319,4 +320,68 @@ it('denies provisioning with view-only access', function () {
         ->assertForbidden();
 
     Queue::assertNothingPushed();
+});
+
+/*
+ * A new PHP site starts with dangerous functions disabled.
+ *
+ * The default was `null`, so every freshly created site could call exec,
+ * shell_exec, system, passthru, proc_open and popen — what a web shell needs
+ * and what almost no application does. Both lists and the UI presets for them
+ * already existed; nothing applied either unless someone went looking.
+ */
+
+function provisionApp(array $overrides = []): Application
+{
+    Process::fake();
+    $app = makeApp($overrides);
+
+    (new ProvisionApplication($app->id))->handle(
+        app(ApplicationProvisioner::class),
+        app(ActivityLogger::class),
+    );
+
+    return $app->fresh(['phpSettings']);
+}
+
+it('disables the strict function list on a new PHP site', function () {
+    $app = provisionApp();
+
+    expect($app->phpSettings)->not->toBeNull()
+        ->and($app->phpSettings->disable_functions)
+        ->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS);
+});
+
+it('disables it before the config that carries it is written', function () {
+    // FPM renders these into the pool and OpenLiteSpeed into the site's ini.
+    // Written after either, a new site would ship its first config without the
+    // list and pick it up only on some later, unrelated change.
+    $steps = provisionApp()->steps;
+
+    expect(array_search('harden_php', $steps, true))
+        ->toBeLessThan(array_search('create_php_pool', $steps, true))
+        ->and(array_search('harden_php', $steps, true))
+        ->toBeLessThan(array_search('write_config', $steps, true));
+});
+
+it('leaves a site that already exists exactly as it was', function () {
+    // THE REASON THIS IS NOT IN defaults(). That method fills every value a
+    // site has not set, so putting the list there would reach existing sites
+    // on whatever unrelated event next re-rendered their configuration — a
+    // resync, a domain change, a certificate — and a working site would start
+    // refusing calls it made yesterday with nothing connecting the two.
+    $existing = makeApp(['slug' => 'old', 'domain' => 'old.example.com']);
+
+    expect(ApplicationPhpSettings::query()->where('application_id', $existing->id)->exists())
+        ->toBeFalse()
+        ->and(ApplicationPhpSettings::defaults()['disable_functions'])->toBeNull();
+});
+
+it('does not write PHP settings for a site that does not run PHP', function () {
+    // A static or proxy site has no interpreter to restrict, and a row here
+    // would show PHP settings on a screen for a site that has none.
+    $app = provisionApp(['serving_profile' => 'static', 'site_type' => 'static']);
+
+    expect($app->steps)->not->toContain('harden_php')
+        ->and($app->phpSettings)->toBeNull();
 });

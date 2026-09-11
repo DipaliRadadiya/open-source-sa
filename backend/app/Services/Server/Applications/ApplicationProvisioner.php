@@ -198,6 +198,46 @@ class ApplicationProvisioner
         // this *before* write_config, not after, means the vhost picks up
         // the isolated socket on its first render instead of needing a
         // second write+reload the way the manual isolate() action does.
+        // Every PHP site starts with the strict list disabled.
+        //
+        // The default was `null`, so a freshly created site could call exec,
+        // shell_exec, system, passthru, proc_open and popen — which is what a
+        // web shell needs and what almost no application does. The two lists
+        // and the UI presets for them already existed; nothing applied either
+        // one unless somebody went looking for the setting.
+        //
+        // PERSISTED HERE, NOT CHANGED IN defaults().
+        //
+        // `defaults()` fills every value a site has not set, so moving the
+        // list there would apply it to sites that already exist, silently, on
+        // whatever unrelated event next re-rendered their configuration — a
+        // resync, a domain change, a certificate. A working site would start
+        // refusing calls it made yesterday and nothing would connect the two.
+        // Writing a row at creation confines it to new sites, which is the
+        // whole request, and leaves the row visible and editable afterwards.
+        //
+        // Before create_php_pool and before write_config, deliberately: FPM
+        // renders these into the pool and OpenLiteSpeed into the site's ini,
+        // and both of those happen below. Written after them, the first render
+        // of a new site would ship without the list and only pick it up on the
+        // next unrelated change.
+        if ($application->serving_profile === 'php') {
+            $this->step('harden_php', function () use ($application) {
+                ApplicationPhpSettings::updateOrCreate(
+                    ['application_id' => $application->id],
+                    ['disable_functions' => ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS],
+                );
+
+                // The relation was loaded before the row existed; the pool
+                // step below reads it, and a stale null there would write a
+                // pool without the list and leave the database disagreeing
+                // with the file.
+                $application->unsetRelation('phpSettings');
+
+                return new ServerOpsResult(true, '', null);
+            });
+        }
+
         if ($application->serving_profile === 'php' && $this->pools->supported()) {
             $this->step('create_php_pool', function () use ($application) {
                 $settings = $application->phpSettings
