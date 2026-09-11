@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ChevronDown, DatabasePlus, Loader2 } from "lucide-react";
-import { createDatabaseSchema } from "@/lib/schemas/database";
+import { createDatabaseSchema, reservedNames } from "@/lib/schemas/database";
 import { randomUsername } from "@/lib/databases/random";
 import { applicationOptions } from "@/lib/backups/database-availability";
 import { acceptedEnginesFor, engineAccepted } from "@/lib/databases/engine-acceptance";
@@ -93,8 +93,15 @@ export function CreateDatabaseDialog({
     host: "",
   };
 
+  /*
+   * The names the server owns, read from the engines it reported rather than
+   * from a list compiled into this bundle. Memoised on the engine rows because
+   * a new resolver on every render resets the form.
+   */
+  const schema = useMemo(() => createDatabaseSchema(reservedNames(engines)), [engines]);
+
   const form = useForm({
-    resolver: zodResolver(createDatabaseSchema),
+    resolver: zodResolver(schema),
     // Not onBlur: tabbing from an empty Database name into Username marked the
     // name invalid before anyone had finished filling the form in. Errors wait
     // for a submit attempt, then clear as each one is fixed.

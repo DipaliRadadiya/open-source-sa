@@ -36,7 +36,7 @@ const PREVIEW_COUNT = 3;
  * was pushed off-screen, and a five-column table wants the page width it can
  * only get inline.
  */
-function ProcessesCardInner({ data, failed, canManage }) {
+function ProcessesCardInner({ data, failed, total, canManage }) {
   const t = useTranslations("serverDashboard");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -92,6 +92,7 @@ function ProcessesCardInner({ data, failed, canManage }) {
             data={data}
             query={query}
             failed={failed}
+            total={total}
             canManage={canManage}
             limit={open ? null : PREVIEW_COUNT}
           />
@@ -101,10 +102,10 @@ function ProcessesCardInner({ data, failed, canManage }) {
   );
 }
 
-export function ProcessesCard({ data, failed, canManage }) {
+export function ProcessesCard({ data, failed, total, canManage }) {
   return (
     <NavTransitionProvider>
-      <ProcessesCardInner data={data} failed={failed} canManage={canManage} />
+      <ProcessesCardInner data={data} failed={failed} total={total} canManage={canManage} />
     </NavTransitionProvider>
   );
 }

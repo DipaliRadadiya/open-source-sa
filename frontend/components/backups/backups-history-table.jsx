@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
+import { CopyButton } from "@/components/ui/copy-button";
 import { CircleAlert, History, RotateCw, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format/bytes";
@@ -103,7 +104,8 @@ function TypeCell({ row }) {
  * send someone to the wrong bucket at exactly the wrong moment.
  */
 function DestinationCell({ row }) {
-  const name = row.original.storage_destination_name;
+  const t = useTranslations("backups.history");
+  const { storage_destination_name: name, uid } = row.original;
   if (!name) return <span className="text-sm text-muted-foreground">—</span>;
   /*
    * The column flexes rather than holding a fixed width — pinning it gave the
@@ -112,9 +114,23 @@ function DestinationCell({ row }) {
    * `title` rather than a Tooltip: this column only renders from xl up, which
    * is a pointer, and a native title needs no provider around a table cell.
    */
+  /*
+   * The destination says WHICH bucket; `uid` says which object in it. They
+   * belong together — on their own, "Cloudflare" and a list of UUIDs in a
+   * bucket cannot be matched up, which is the whole reason the backend started
+   * sending it. Copy rather than display: it is 36 characters nobody reads,
+   * and the only useful thing to do with it is paste it somewhere else.
+   */
   return (
-    <span className="block truncate text-sm" title={name}>
-      {name}
+    <span className="flex min-w-0 items-center gap-1">
+      <span className="truncate text-sm" title={name}>
+        {name}
+      </span>
+      {/* Named, not a bare "Copy": the icon sits beside the DESTINATION, so
+          an unlabelled one reads as copying the bucket's name. */}
+      {uid ? (
+        <CopyButton value={uid} label={t("copyUid")} className="size-6 shrink-0" />
+      ) : null}
     </span>
   );
 }

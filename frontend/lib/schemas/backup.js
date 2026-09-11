@@ -64,6 +64,17 @@ export const BACKUP_STATUSES = ["verified", "verifying", "running", "pending", "
 export const backupSchema = z
   .object({
     id: z.number(),
+    /*
+     * The name this archive has in the bucket.
+     *
+     * `id` is an autoincrement that means nothing outside this panel's own
+     * database, so it cannot match a row on screen to an object in the
+     * destination — which is the question asked when someone is looking at the
+     * bucket directly and needs to know which file is which.
+     *
+     * Nullish, not required: rows written before the column existed have none.
+     */
+    uid: z.string().nullish(),
     application_id: z.number().nullish(),
     type: z.string(),
     type_title: z.string().nullish(),

@@ -814,6 +814,7 @@
       "noMatch": "No processes match your search.",
       "clear": "Clear search",
       "summary": "Top {count} by CPU · {cpu}% CPU and {memory}% memory between them",
+      "summaryOfTotal": "Top {count} of {total} by CPU · {cpu}% CPU and {memory}% memory between them",
       "actions": "Actions",
       "topDescription": "The busiest right now — not every process on the server.",
       "viewAll": "View all processes",
@@ -5256,7 +5257,8 @@
             "failed": "The server refused this one and did not say why."
           }
         }
-      }
+      },
+      "copyUid": "Copy this archive's file name in the bucket"
     },
     "restore": {
       "title": "Restore {name}",

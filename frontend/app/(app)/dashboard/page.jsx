@@ -75,6 +75,9 @@ export default async function DashboardPage() {
           <ProcessesCard
             data={processResult.data}
             failed={processResult.failed}
+            /* How many the server is running, not how many rows came back.
+               Null on an API that predates `meta.total`. */
+            total={processResult.total}
             canManage={canManage}
           />
         </>

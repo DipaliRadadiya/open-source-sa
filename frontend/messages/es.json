@@ -814,6 +814,7 @@
       "noMatch": "Ningún proceso coincide con tu búsqueda.",
       "clear": "Borrar búsqueda",
       "summary": "Los {count} que más CPU usan · entre ellos suman {cpu}% de CPU y {memory}% de memoria",
+      "summaryOfTotal": "Los {count} de {total} con más CPU · {cpu}% de CPU y {memory}% de memoria entre ellos",
       "actions": "Acciones",
       "topDescription": "Los más ocupados ahora mismo, no todos los procesos del servidor.",
       "viewAll": "Ver todos los procesos",
@@ -5256,7 +5257,8 @@
             "failed": "El servidor rechazó esta copia y no indicó por qué."
           }
         }
-      }
+      },
+      "copyUid": "Copiar el nombre de archivo de esta copia en el bucket"
     },
     "restore": {
       "title": "Restaurar {name}",

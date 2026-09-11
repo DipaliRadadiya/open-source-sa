@@ -18,9 +18,11 @@ import { listMetaSchema } from "./list.js";
  * on a MariaDB server costs nobody anything, while allowing `template1` on a
  * PostgreSQL one collides with a database that cannot even be connected to.
  *
- * PostgreSQL's three come from `databases.drivers.pgsql.system_schemas`; the
- * API does not publish that list yet, and these three have been fixed since
- * PostgreSQL 7. The day it does publish them, this becomes a read.
+ * This is now the FALLBACK only. `GET /databases/engines` publishes each
+ * engine's `system_schemas`, so `reservedNames()` below reads the server's own
+ * answer and keeps this list for an API that predates the field. A hardcoded
+ * copy is wrong the first time an engine is added and nothing tells anyone —
+ * which is exactly why the backend published it.
  */
 export const RESERVED_NAMES = [
   // MySQL / MariaDB
@@ -38,6 +40,21 @@ export const RESERVED_NAMES = [
   "template0",
   "template1",
 ];
+
+/**
+ * Names the server owns, as the server reports them.
+ *
+ * The union across every engine it has, for the reason above: the check runs
+ * before an engine is necessarily chosen. Falls back to the fixed list when no
+ * engine carries `system_schemas`, so an older API loses nothing.
+ */
+export function reservedNames(engines = []) {
+  const published = engines.flatMap((engine) =>
+    Array.isArray(engine?.system_schemas) ? engine.system_schemas : [],
+  );
+  const names = published.length ? published : RESERVED_NAMES;
+  return new Set(names.map((name) => String(name).toLowerCase()));
+}
 
 export const DATABASE_NAME = /^[A-Za-z0-9_]{1,63}$/;
 
@@ -89,6 +106,13 @@ export const engineSchema = z.object({
    * the choice rather than hiding a working control.
    */
   supports_remote_users: z.boolean().default(true),
+  /*
+   * The engine's own databases — the ones it creates and the panel must never
+   * make, drop or alter. Zod strips what is not declared, so without this line
+   * the list would arrive and vanish, and `reservedNames()` would quietly keep
+   * using the hardcoded fallback while looking like it read the server.
+   */
+  system_schemas: z.array(z.string()).nullish(),
   // Reachable with the configured connection — NOT the same as installed.
   running: z.boolean().nullable().optional().default(false),
   // Present on the server, whether or not it is up. The field that separates
@@ -165,7 +189,13 @@ export const untrackedResponseSchema = z.object({
  * A database with no user cannot be connected to, so the user is opt-out rather
  * than a second errand. Messages are key tokens the form translates.
  */
-export const createDatabaseSchema = z
+/**
+ * A factory rather than a constant, so the reserved list can come from the
+ * engines the server actually reported. Called with no argument it behaves
+ * exactly as the constant did.
+ */
+export const createDatabaseSchema = (reserved = reservedNames()) =>
+  z
   .object({
     name: z
       .string()
@@ -173,10 +203,7 @@ export const createDatabaseSchema = z
       .min(1, "required_name")
       .max(63, "tooLong")
       .regex(DATABASE_NAME, "databaseName")
-      .refine(
-        (value) => !RESERVED_NAMES.includes(value.toLowerCase()),
-        "databaseNameReserved",
-      ),
+      .refine((value) => !reserved.has(value.toLowerCase()), "databaseNameReserved"),
     engine: z.string().min(1, "required_engine"),
     // "" is the "not linked to a site" choice, which is a legitimate answer —
     // a database need not belong to one. Coerced to null at submit rather than

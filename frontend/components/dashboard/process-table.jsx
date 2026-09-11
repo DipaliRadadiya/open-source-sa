@@ -122,6 +122,9 @@ export function ProcessTable({
   data,
   query = "",
   failed = false,
+  // How many processes the box is running. The rows are the heaviest `limit`
+  // of them, so without this the footer could only count itself.
+  total = null,
   canManage = false,
   limit = null,
 }) {
@@ -248,8 +251,13 @@ export function ProcessTable({
             : null}
         </p>
         <p className="text-sm tabular-nums text-muted-foreground">
-          {t("processes.summary", {
+          {/* "Top 25 of 160" once the server says how many there are. It said
+              "Top 25" on every server, and stopping a process never moved it,
+              because the only number available was the row count — which is
+              the limit, and says nothing about the machine. */}
+          {t(total != null && total > data.length ? "processes.summaryOfTotal" : "processes.summary", {
             count: data.length,
+            total,
             cpu: format.number(data.reduce((sum, p) => sum + num(p.cpu), 0), { maximumFractionDigits: 1 }),
             memory: format.number(data.reduce((sum, p) => sum + num(p.memory), 0), { maximumFractionDigits: 1 }),
           })}
