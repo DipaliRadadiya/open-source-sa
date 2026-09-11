@@ -124,3 +124,47 @@ test("each finding sits with its own action, not in a joined sentence", () => {
     "the server sends whole sentences; joined, nothing says which button belongs to which",
   );
 });
+
+test("the row is the target, not a button parked at the far edge", () => {
+  /*
+   * `justify-between` across a full-width band left "SSL not installed" at one
+   * edge and "Issue SSL" at the other with most of a screen between them, and
+   * two of those stacked gave four things floating in a rectangle with nothing
+   * to say which action belonged to which finding. Outline buttons of differing
+   * widths made the right edge ragged on top of it.
+   *
+   * The whole row is now the link, the way the admin attention list already
+   * works, so the pairing is made by the object lighting up rather than by
+   * being roughly level.
+   */
+  const strip = fs.readFileSync("components/applications/attention-strip.jsx", "utf8");
+  // Comments out first: this file EXPLAINS why justify-between was wrong, so
+  // searching the raw source finds the explanation and calls it the bug.
+  const code = strip.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(code, /justify-between/, "the label and its action drift apart again");
+  assert.match(code, /hover:bg-warning\/10/, "nothing marks the row as one object");
+  assert.match(strip, /divide-y/, "without dividers, which action belongs to which line is a guess");
+  // Stacked below sm, side by side above: wrapping on measurement showed the
+  // same two rows in two different shapes on one phone screen. Asserted as two
+  // fragments because ROW is a concatenation, so quotes fall between them.
+  assert.match(code, /flex-col items-start/);
+  assert.match(code, /sm:flex-row/);
+  assert.doesNotMatch(code, /flex-wrap/, "per-row wrapping gives one screen two shapes");
+});
+
+test("a finding with nowhere to go renders without a hover it cannot honour", () => {
+  const strip = fs.readFileSync("components/applications/attention-strip.jsx", "utf8");
+  // The no-action branch is a plain <p>, so it carries neither the link nor the
+  // hover tint — a row that lights up and then does nothing is worse than flat.
+  assert.match(strip, /<p className="px-4 py-2\.5 text-sm/);
+});
+
+test("the section-jump link can be the row as well as a button", () => {
+  // The protections finding jumps to #security, so it needs the same row shape
+  // as the others — it was only available wrapped in a Button before.
+  const jump = fs.readFileSync("components/ui/section-jump-link.jsx", "utf8");
+  assert.match(jump, /if \(className\)/);
+  assert.match(jump, /className=\{className\}/);
+  // And the default call sites keep their button.
+  assert.match(jump, /<Button asChild variant=\{variant\} size=\{size\}>/);
+});

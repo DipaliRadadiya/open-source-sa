@@ -1,8 +1,50 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 import { SectionJumpLink } from "@/components/ui/section-jump-link";
+
+/*
+ * The row, and why it is a row rather than a label with a button parked at the
+ * far right.
+ *
+ * `justify-between` across a full-width band put "SSL not installed" at one
+ * edge and "Issue SSL" at the other with ~900px of nothing between them, and
+ * two of those stacked gave four things floating in a rectangle: nothing said
+ * which button belonged to which sentence except being roughly level with it.
+ * Outline buttons of different widths made the right edge ragged on top of it.
+ *
+ * So the whole row is the target, the way the admin dashboard's attention list
+ * already does it. The distance stops mattering once the thing being pointed at
+ * lights up as one object, and the action can drop to a text link — which also
+ * ends the ragged-width problem, because there is no box to be ragged.
+ *
+ * Stacked below `sm`, side by side above it, rather than letting flex-wrap
+ * decide per row: wrapping on measurement meant a short finding kept its action
+ * inline while the next one dropped it to a second line, so one phone screen
+ * showed the same two rows in two different shapes.
+ */
+const ROW =
+  "group flex flex-col items-start gap-1 px-4 py-2.5 transition-colors " +
+  "sm:flex-row sm:items-center sm:gap-x-4 " +
+  "hover:bg-warning/10 focus-visible:bg-warning/10 focus-visible:outline-none " +
+  "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+
+function Finding({ label, action }) {
+  return (
+    <>
+      {/* min-w-48, not min-w-0: beside a shrink-0 action, min-w-0 lets a whole
+          sentence squeeze into one word per line. */}
+      <span className="min-w-48 flex-1 text-sm leading-snug wrap-anywhere">{label}</span>
+      <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
+        {action}
+        <ArrowRight
+          className="size-3.5 transition-transform group-hover:translate-x-0.5"
+          aria-hidden
+        />
+      </span>
+    </>
+  );
+}
 
 /**
  * What is not right about this site, above everything that is.
@@ -36,7 +78,7 @@ export async function AttentionStrip({ items }) {
 
   return (
     /*
-     * One finding per row, each beside its own button.
+     * One finding per row, each row its own target.
      *
      * The findings used to be joined into a single sentence with the buttons
      * gathered at the right, which worked while every label was three words
@@ -45,39 +87,36 @@ export async function AttentionStrip({ items }) {
      * together above five unattached buttons leaves no way to tell which button
      * belongs to which sentence.
      *
-     * Rows are dense enough that one finding still reads as a band rather than
-     * a list of one.
+     * `overflow-hidden` so the first and last rows' hover tint is clipped by
+     * the rounded border instead of squaring off its corners.
      */
-    <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-2.5 sm:py-3">
-      <div className="flex items-center gap-2.5">
+    <div className="overflow-hidden rounded-xl border border-warning/30 bg-warning/5">
+      <div className="flex items-center gap-2.5 px-4 py-2.5">
         <AlertTriangle className="size-4 shrink-0 text-warning" />
         <p className="text-sm font-semibold leading-tight">{t("title")}</p>
       </div>
 
-      <ul className="mt-1.5 space-y-1.5 sm:ml-[26px] sm:mt-1">
+      {/* Dividers, not spacing: the rows are a list of separate problems, and a
+          gap alone left it ambiguous whether the action on the right belonged to
+          the line above it or below. */}
+      <ul className="divide-y divide-warning/20 border-t border-warning/20">
         {items.map((item) => (
-          <li
-            key={item.key}
-            className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-          >
-            {/* min-w-48 rather than min-w-0: beside a shrink-0 button, a plain
-                min-w-0 lets the sentence squeeze to one word per line. */}
-            <span className="min-w-48 text-sm leading-snug wrap-anywhere text-muted-foreground">
-              {item.label}
-            </span>
+          <li key={item.key}>
             {item.action && item.href ? (
-              <span className="shrink-0">
-                {item.href.startsWith("#") ? (
-                  <SectionJumpLink href={item.href}>{item.action}</SectionJumpLink>
-                ) : (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={item.href} prefetch={false}>
-                      {item.action}
-                    </Link>
-                  </Button>
-                )}
-              </span>
-            ) : null}
+              item.href.startsWith("#") ? (
+                <SectionJumpLink href={item.href} className={ROW}>
+                  <Finding label={item.label} action={item.action} />
+                </SectionJumpLink>
+              ) : (
+                <Link href={item.href} prefetch={false} className={ROW}>
+                  <Finding label={item.label} action={item.action} />
+                </Link>
+              )
+            ) : (
+              // An issue kind the panel has no screen for still gets its row.
+              // No hover, because there is nowhere to go.
+              <p className="px-4 py-2.5 text-sm leading-snug wrap-anywhere">{item.label}</p>
+            )}
           </li>
         ))}
       </ul>

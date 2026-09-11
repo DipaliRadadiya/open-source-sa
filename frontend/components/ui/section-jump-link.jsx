@@ -13,7 +13,12 @@ const HIGHLIGHT_MS = 1200;
  * section before hydration or when JavaScript is unavailable. Once hydrated,
  * the extra cue confirms the jump even when the target was already nearby.
  */
-export function SectionJumpLink({ href, children, variant = "outline", size = "sm" }) {
+/**
+ * `className` opts out of the Button wrapper entirely, for callers whose link
+ * IS the row rather than a control sitting inside one. Without it the jump
+ * behaviour was only available in button shape.
+ */
+export function SectionJumpLink({ href, children, variant = "outline", size = "sm", className }) {
   const highlightTimer = useRef(null);
   const highlightFrame = useRef(null);
 
@@ -57,6 +62,14 @@ export function SectionJumpLink({ href, children, variant = "outline", size = "s
         target.removeAttribute("data-jump-highlight");
       }, HIGHLIGHT_MS);
     });
+  }
+
+  if (className) {
+    return (
+      <Link href={href} prefetch={false} onClick={jump} className={className}>
+        {children}
+      </Link>
+    );
   }
 
   return (
