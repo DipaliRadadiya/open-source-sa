@@ -404,6 +404,58 @@ it('can retry cleanup after the database was dropped but a user cleanup failed',
     expect(Database::find($db->id))->toBeNull();
 });
 
+it('deletes a PostgreSQL database whose role cleanup would have needed it', function () {
+    // psql behaves as a real cluster does: once the database is gone, any
+    // connection aimed at it fails. That is the whole bug — role cleanup used
+    // to run inside the database the line before had dropped, so deletion
+    // returned 500 and left the panel row pointing at nothing.
+    $dropped = false;
+    Process::fake(function ($process) use (&$dropped) {
+        $cmd = implode(' ', (array) $process->command);
+        $sql = (string) ($process->input ?? '');
+
+        if (str_contains($sql, 'DROP DATABASE')) {
+            $dropped = true;
+        }
+
+        if ($dropped && str_contains($cmd, '--dbname=shop_db')) {
+            return Process::result(exitCode: 2, errorOutput: 'FATAL: database "shop_db" does not exist');
+        }
+
+        return Process::result(output: '1');
+    });
+
+    $db = Database::create(['name' => 'shop_db', 'engine' => 'postgresql']);
+    $user = $db->users()->create(['username' => 'shop_user', 'password' => 'p', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/{$db->id}")->assertNoContent();
+
+    expect(Database::find($db->id))->toBeNull()
+        ->and(DatabaseUser::find($user->id))->toBeNull();
+});
+
+it('clears a PostgreSQL row stranded by the old delete, on a plain retry', function () {
+    // The three rows left on the test server by the bug above: the real
+    // database is already gone, only the panel row survives. There is no
+    // repair endpoint and there should not be one — DROP DATABASE IF EXISTS
+    // and DROP ROLE IF EXISTS both succeed against nothing, so pressing
+    // delete a second time is what clears it.
+    Process::fake(function ($process) {
+        $cmd = implode(' ', (array) $process->command);
+
+        return str_contains($cmd, '--dbname=pgverify_tmp')
+            ? Process::result(exitCode: 2, errorOutput: 'FATAL: database "pgverify_tmp" does not exist')
+            : Process::result(output: '1');
+    });
+
+    $db = Database::create(['name' => 'pgverify_tmp', 'engine' => 'postgresql']);
+    $db->users()->create(['username' => 'pgverify_tmp', 'password' => 'p', 'connection_preference' => 'localhost', 'host' => 'localhost']);
+
+    test()->withHeaders(dbAuth())->deleteJson("/api/databases/{$db->id}")->assertNoContent();
+
+    expect(Database::find($db->id))->toBeNull();
+});
+
 it('lists untracked server databases', function () {
     fakeDb();
     Database::create(['name' => 'app_db', 'engine' => 'mysql']); // tracked

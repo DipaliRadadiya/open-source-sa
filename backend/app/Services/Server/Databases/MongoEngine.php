@@ -125,6 +125,28 @@ class MongoEngine implements DatabaseEngine
         $this->must('db.getSiblingDB('.$this->js($name).').dropDatabase();');
     }
 
+    /**
+     * Database first, then its users — matching the SQL engines.
+     *
+     * Unchanged from the loop this replaced, deliberately: the reported bug is
+     * PostgreSQL's, and nothing here was observed to be wrong. Mongo is
+     * understood to keep accounts outside the database they authenticate
+     * against, so `dropDatabase()` above would not remove them and each still
+     * has to be dropped by name — but that is read, not measured, and there is
+     * no MongoDB on the machine this was written on. Treat it as the reason
+     * the loop was kept rather than as a fact to build on.
+     *
+     * @param  array<int, array{username: string, host: string}>  $users
+     */
+    public function teardownDatabase(string $name, array $users): void
+    {
+        $this->dropDatabase($name);
+
+        foreach ($users as $user) {
+            $this->dropUser($user['username'], $user['host'], $name);
+        }
+    }
+
     public function databaseSize(string $name): int
     {
         $result = $this->run('print(db.getSiblingDB('.$this->js($name).').stats().dataSize);');

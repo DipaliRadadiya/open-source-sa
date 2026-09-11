@@ -125,6 +125,55 @@ it('clears what a role owns before dropping it', function () {
     expect($reassign)->toBeLessThan($drop);
 });
 
+it('does not reassign into a database it has just dropped', function () {
+    pgEngine()->teardownDatabase('shop_db', [
+        ['username' => 'shop_user', 'host' => 'localhost'],
+    ]);
+
+    $sql = pgStatements();
+
+    // The bug this replaces: teardown called dropUser() in a loop, and that
+    // method's REASSIGN OWNED / DROP OWNED has to run *inside* the database
+    // whose objects are owned — which the line before had just dropped. psql
+    // could not connect, so the cleanup meant to make DROP ROLE possible was
+    // itself what failed, with a 500 and a panel row left behind.
+    //
+    // WITH (FORCE) takes the owned objects with the database, so there is
+    // nothing left to reassign and a plain DROP ROLE succeeds.
+    expect($sql)->not->toContain('REASSIGN OWNED BY')
+        ->and($sql)->not->toContain('DROP OWNED BY')
+        ->and($sql)->toContain('DROP DATABASE IF EXISTS "shop_db" WITH (FORCE)')
+        ->and($sql)->toContain('DROP ROLE IF EXISTS "shop_user"');
+
+    // Database first: a role dropped before the database that failed to drop
+    // would leave a live database nobody can reach.
+    expect(strpos($sql, 'DROP DATABASE'))->toBeLessThan(strpos($sql, 'DROP ROLE'));
+
+    // psql must never be pointed at the database being torn down.
+    foreach (test()->ran as $call) {
+        expect($call['command'])->not->toContain('--dbname=shop_db');
+    }
+});
+
+it('drops every user of the database, not only the first', function () {
+    pgEngine()->teardownDatabase('shop_db', [
+        ['username' => 'shop_user', 'host' => 'localhost'],
+        ['username' => 'shop_readonly', 'host' => '%'],
+    ]);
+
+    expect(pgStatements())->toContain('DROP ROLE IF EXISTS "shop_user"')
+        ->and(pgStatements())->toContain('DROP ROLE IF EXISTS "shop_readonly"');
+});
+
+it('still clears what a role owns when only the user is being removed', function () {
+    // The counterpart to the test above, and the reason the two paths are not
+    // the same method: here the database must survive its owner, so the
+    // reassign is required rather than impossible.
+    pgEngine()->dropUser('shop_user', 'localhost', 'shop_db');
+
+    expect(pgStatements())->toContain('REASSIGN OWNED BY "shop_user" TO "panel_admin"');
+});
+
 it('keeps the password off argv and in a file only its owner can read', function () {
     pgEngine()->version();
 

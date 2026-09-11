@@ -173,6 +173,28 @@ class SqlEngine implements DatabaseEngine
         $this->must('DROP DATABASE IF EXISTS '.$this->ident($name).';');
     }
 
+    /**
+     * Database first, then its users — the order this engine has always used.
+     * Removing the users first can leave a live database unreachable if its
+     * drop then fails, which is the worse of the two half-finished states.
+     *
+     * MySQL's `DROP USER` needs nothing from the database it granted access
+     * to, so it survives the drop above unchanged. ({@see PgsqlEngine} is the
+     * engine where that is not true — a separate implementation of this
+     * interface, not a subclass, so it states its own teardown rather than
+     * inheriting this one.)
+     *
+     * @param  array<int, array{username: string, host: string}>  $users
+     */
+    public function teardownDatabase(string $name, array $users): void
+    {
+        $this->dropDatabase($name);
+
+        foreach ($users as $user) {
+            $this->dropUser($user['username'], $user['host'], $name);
+        }
+    }
+
     public function databaseSize(string $name): int
     {
         $result = $this->run(

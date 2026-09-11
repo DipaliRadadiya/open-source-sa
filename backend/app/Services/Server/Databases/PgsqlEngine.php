@@ -236,6 +236,31 @@ class PgsqlEngine implements DatabaseEngine
         $this->must('DROP DATABASE IF EXISTS '.$this->ident($name).' WITH (FORCE);');
     }
 
+    /**
+     * Drop the database, then the roles — with **no** `REASSIGN OWNED` /
+     * `DROP OWNED`, which is the one thing that separates this from calling
+     * `dropUser()` in a loop.
+     *
+     * Those two statements have to run *inside* the database whose objects are
+     * owned, and by this point that database no longer exists: psql cannot
+     * connect, so the cleanup that was meant to make `DROP ROLE` possible is
+     * what fails instead. Skipping it is not a workaround. `WITH (FORCE)`
+     * above takes the owned objects with the database, so the role that owned
+     * them owns nothing by the time it is dropped — `DatabaseUser` is scoped
+     * to exactly one database, so there is nowhere else for it to own
+     * anything the panel gave it.
+     *
+     * @param  array<int, array{username: string, host: string}>  $users
+     */
+    public function teardownDatabase(string $name, array $users): void
+    {
+        $this->dropDatabase($name);
+
+        foreach ($users as $user) {
+            $this->must('DROP ROLE IF EXISTS '.$this->ident($user['username']).';');
+        }
+    }
+
     public function databaseSize(string $name): int
     {
         $result = $this->run(sprintf(

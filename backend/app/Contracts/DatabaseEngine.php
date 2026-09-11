@@ -53,6 +53,25 @@ interface DatabaseEngine
 
     public function dropDatabase(string $name): void;
 
+    /**
+     * Remove a database and the users that exist only to reach it.
+     *
+     * Teardown order and teardown *statements* are the engine's to decide, not
+     * the caller's, because the two are not separable. MySQL removes the
+     * database first so a failed drop cannot leave a live database with no way
+     * in; PostgreSQL keeps that same order and must then drop its roles
+     * *differently* from `dropUser()`, because that method's cleanup runs
+     * inside the database it was handed and the database is by then gone.
+     *
+     * A user cleanup that fails deliberately leaves the panel record intact,
+     * so the same delete can be retried. Every engine's database drop is
+     * `IF EXISTS` for that reason — a retry has to finish the cleanup rather
+     * than fail on the database it already removed.
+     *
+     * @param  array<int, array{username: string, host: string}>  $users
+     */
+    public function teardownDatabase(string $name, array $users): void;
+
     /** Size in bytes (0 when unknown). */
     public function databaseSize(string $name): int;
 

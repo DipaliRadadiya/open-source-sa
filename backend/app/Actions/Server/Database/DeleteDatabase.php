@@ -17,16 +17,16 @@ class DeleteDatabase
     {
         $engine = $this->manager->engine($database->engine);
 
-        // Keep the database and its credentials together until the database
-        // drop has succeeded. Removing users first can leave a live database
-        // unreachable if its drop then fails.
-        $engine->dropDatabase($database->name);
-
-        // A failed user cleanup deliberately leaves the panel record intact.
-        // SQL drops are idempotent, so a retry can finish cleanup safely.
-        foreach ($database->users as $user) {
-            $engine->dropUser($user->username, $user->host, $database->name);
-        }
+        // Teardown order — and which statements it takes — belongs to the
+        // engine. This action had both inlined, in the order MySQL needs;
+        // PostgreSQL needs the same order and different statements, and
+        // discovering that here would mean an `if` on the engine name.
+        //
+        // A failed cleanup deliberately leaves the panel record intact, so the
+        // same delete can be retried until it finishes.
+        $engine->teardownDatabase($database->name, $database->users
+            ->map(fn ($user) => ['username' => $user->username, 'host' => $user->host])
+            ->all());
 
         $this->activityLogger->log('database.deleted', null, ['name' => $database->name, 'engine' => $database->engine]);
 
