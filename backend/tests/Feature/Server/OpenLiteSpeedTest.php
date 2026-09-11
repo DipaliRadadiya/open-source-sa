@@ -502,6 +502,48 @@ describe('the driver', function () {
             ->not->toContain('/home/shopuser/shop/public_html/zz-panel.ini');
     });
 
+    it('creates the session directory the ini points at', function () {
+        // The ini named session.save_path and nothing created it. FPM refuses
+        // to start a pool whose session path is missing, so on that stack the
+        // mistake is loud; LSPHP starts happily and every site dies later at
+        // session_start() with "No such file or directory". Seen in the wild
+        // on phpMyAdmin, which cannot show a login page without a session.
+        $runs = fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
+
+        $commands = collect((array) $runs)->pluck('command')->map(
+            fn ($c) => implode(' ', (array) $c),
+        );
+
+        expect($commands)->toContain('mkdir -p /home/shopuser/shop/.panel/sessions')
+            ->toContain('chown shopuser:shopuser /home/shopuser/shop/.panel/sessions')
+            // As sensitive as the cookies that name the files in it.
+            ->toContain('chmod 0700 /home/shopuser/shop/.panel/sessions');
+    });
+
+    it('hands the site its sessions without handing it its own limits', function () {
+        // The pool builder chowns -R from .panel down, which is safe on FPM
+        // because the limits live in a pool file under /etc. Here they live in
+        // .panel/php/zz-panel.ini. A recursive chown would let a site rewrite
+        // its own disable_functions and open_basedir -- lifting every
+        // restriction placed on it by editing a file it owns.
+        $runs = fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop/public_html');
+
+        $chowns = collect((array) $runs)
+            ->pluck('command')
+            ->map(fn ($c) => implode(' ', (array) $c))
+            ->filter(fn (string $c) => str_starts_with($c, 'chown'));
+
+        expect($chowns)->not->toContain('chown -R shopuser:shopuser /home/shopuser/shop/.panel');
+
+        foreach ($chowns as $chown) {
+            expect($chown)->not->toContain('/home/shopuser/shop/.panel/php');
+        }
+    });
+
     it('adds its ini directory to the default one rather than replacing it', function () {
         $config = app(OlsDriver::class)->renderConfig($this->app_, '/home/shopuser/shop/public_html');
 

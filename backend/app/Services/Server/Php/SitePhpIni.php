@@ -121,11 +121,62 @@ class SitePhpIni
             return $directory;
         }
 
+        $sessions = $this->ensureSessionDirectory($application);
+
+        if ($sessions !== null && $sessions->failed()) {
+            return $sessions;
+        }
+
         return $this->files->put(
             $this->path($application),
             $this->render($application, $settings ?? $this->settingsFor($application)),
             $context,
         );
+    }
+
+    /**
+     * The session directory this file's `session.save_path` names.
+     *
+     * On FPM the pool builder creates it, because FPM refuses to start a pool
+     * whose session path is missing — so the mistake is loud. There is no pool
+     * on this stack and nothing refuses anything: the ini was written naming a
+     * directory that did not exist, LSPHP started happily, and every site died
+     * at `session_start()` with "No such file or directory". phpMyAdmin and
+     * WordPress are both unusable in that state, and nothing in the panel says
+     * why. Whoever writes the path owns creating it.
+     *
+     * ONLY THE SESSION DIRECTORY IS HANDED TO THE SITE, not `.panel` around
+     * it. The pool builder chowns `-R` from `.panel` down, which is harmless
+     * on FPM because the limits live in a pool file under /etc. Here they live
+     * in `.panel/php/zz-panel.ini`, so the same `-R` would give a site write
+     * access to its own `disable_functions` and `open_basedir` -- it could
+     * lift every restriction placed on it by editing one file it owns.
+     */
+    private function ensureSessionDirectory(Application $application): ?ServerOpsResult
+    {
+        $user = $application->systemUser?->username;
+
+        if ($user === null) {
+            return null;
+        }
+
+        $context = ['feature' => 'php', 'op' => 'site_sessions', 'application' => $application->id];
+        $path = $this->pools->sessionPath($application);
+
+        $made = $this->serverOps->run(['mkdir', '-p', $path], $context, timeout: 30);
+
+        if ($made->failed()) {
+            return $made;
+        }
+
+        $owned = $this->serverOps->run(['chown', $user.':'.$user, $path], $context, timeout: 30);
+
+        if ($owned->failed()) {
+            return $owned;
+        }
+
+        // 0700: session files are as sensitive as the cookies that name them.
+        return $this->serverOps->run(['chmod', '0700', $path], $context, timeout: 15);
     }
 
     /**
