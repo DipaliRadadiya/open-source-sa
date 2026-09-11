@@ -72,6 +72,36 @@ function fakeDatabaseAnswer(mixed $process): ?FakeProcessResult
 }
 
 /**
+ * A database client's answer on a server whose only SQL engine is PostgreSQL.
+ *
+ * MySQL and MariaDB are made to *fail* rather than left to fall through, and
+ * that is the point of the helper. With MySQL still answering, an installer
+ * that ignored the chosen engine would be handed a MySQL database and write a
+ * MySQL-shaped config — which an assertion looking for PostgreSQL's shape
+ * would catch, but one checking "did it write a driver at all" would not. On a
+ * server with nothing else, the only database the site can have been given is
+ * the one under test.
+ *
+ * `psql` answers `1` because two different callers read that value: the
+ * engine's `available()` wants a successful query, and `identifierAvailable()`
+ * reads the output and treats anything but `1` as "name taken" — twenty times,
+ * and then the install fails on identifier allocation rather than on anything
+ * to do with the test.
+ */
+function fakePostgresOnlyAnswer(mixed $process): ?FakeProcessResult
+{
+    $binary = $process->command[0] ?? '';
+
+    if ($binary === 'psql') {
+        return Process::result(output: '1');
+    }
+
+    return in_array($binary, ['mysql', 'mariadb'], true)
+        ? Process::result(exitCode: 1)
+        : null;
+}
+
+/**
  * Answer as a server whose SQL engine is reachable.
  *
  * The catalog asks `available()` — a live query — before offering any type

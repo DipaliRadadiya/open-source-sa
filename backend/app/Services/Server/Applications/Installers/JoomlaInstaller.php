@@ -41,6 +41,21 @@ class JoomlaInstaller extends AbstractPhpInstaller
     }
 
     /**
+     * PostgreSQL last, so MySQL stays the first available engine and nothing
+     * changes for a server that already makes Joomla sites.
+     *
+     * Taken from Joomla's own `installation/forms/setup.xml`, where the
+     * `db_type` field declares `supported="mysql,mysqli,pgsql"` — so `pgsql`
+     * is a value its installer accepts, not a guess.
+     *
+     * @return array<int, string>
+     */
+    public function acceptedEngines(): array
+    {
+        return ['mysql', 'mariadb', 'postgresql'];
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     public function install(Application $application, string $documentRoot, array $context): void
@@ -59,14 +74,11 @@ class JoomlaInstaller extends AbstractPhpInstaller
             '--admin-user='.($settings['admin_name'] ?? 'Administrator'),
             '--admin-username='.($settings['admin_user'] ?? 'admin'),
             '--admin-email='.($settings['admin_email'] ?? ''),
-            // mysqli covers both MySQL and MariaDB — the engine the site was
-            // actually given, not a configured default that could disagree
-            // with it.
-            // mysqli speaks to both SQL engines the panel supports, so there
-            // is nothing to branch on — a helper here would have had two
-            // identical arms.
-            '--db-type=mysqli',
-            '--db-host='.(string) ($context['db_host'] ?? '127.0.0.1'),
+            // The engine the site was actually given, not a configured default
+            // that could disagree with it. mysqli speaks to both SQL engines
+            // the panel had until PostgreSQL, which is why this was a literal.
+            '--db-type='.$this->dbType($context),
+            '--db-host='.$this->dbHost($context),
             '--db-user='.(string) $context['db_user'],
             '--db-name='.(string) $context['database'],
             '--db-prefix='.$this->tablePrefix($settings),
@@ -113,6 +125,53 @@ class JoomlaInstaller extends AbstractPhpInstaller
         }
 
         return $url;
+    }
+
+    /**
+     * The driver name Joomla's installer expects.
+     *
+     * `mysqli` covers MySQL and MariaDB alike; `pgsql` is PostgreSQL's, per
+     * the `supported` list on its own `db_type` field.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function dbType(array $context): string
+    {
+        return ($context['engine'] ?? '') === 'postgresql' ? 'pgsql' : 'mysqli';
+    }
+
+    /**
+     * `--db-host`, carrying the port for PostgreSQL only.
+     *
+     * 🔴 **Joomla's CLI has no `--db-port` option.** Its setup form defines no
+     * `db_port` field at all; the port travels inside the host as
+     * `host:port`, which is the only channel there is.
+     *
+     * PostgreSQL-only on purpose (operator, 2026-09-11). Every Joomla site the
+     * panel has ever made was given a bare host, and MySQL's gap is real but
+     * old: a MySQL on a non-default port has always been written a config
+     * pointing at 3306. Widening this to every engine would touch the install
+     * path of every existing Joomla site to fix a case nobody has reported,
+     * so that half is filed as its own task — Moodle has the same gap.
+     *
+     * Here it is new ground, so it starts correct.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function dbHost(array $context): string
+    {
+        $host = (string) ($context['db_host'] ?? '127.0.0.1');
+
+        if (($context['engine'] ?? '') !== 'postgresql') {
+            return $host;
+        }
+
+        $port = (int) ($context['db_port'] ?? 0);
+
+        // A port we were not told is left off rather than guessed: Joomla then
+        // uses PostgreSQL's own default, which is what a guess would have
+        // written anyway, without claiming to know it.
+        return $port > 0 ? "{$host}:{$port}" : $host;
     }
 
     /**

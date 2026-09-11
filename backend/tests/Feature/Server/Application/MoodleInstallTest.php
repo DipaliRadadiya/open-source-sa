@@ -41,14 +41,25 @@ beforeEach(function () {
     ]);
 });
 
-function installMoodle(): ArrayObject
+/**
+ * @param  string|null  $engine  the engine the site asked for, on a server
+ *                               that has only that one
+ */
+function installMoodle(?string $engine = null): ArrayObject
 {
     $runs = new ArrayObject;
 
-    Process::fake(function ($process) use ($runs) {
+    if ($engine !== null) {
+        test()->application->forceFill([
+            'settings' => array_merge(test()->application->settings, ['database_engine' => $engine]),
+        ])->save();
+    }
+
+    Process::fake(function ($process) use ($runs, $engine) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input, 'path' => $process->path];
 
-        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
+        return ($engine === 'postgresql' ? fakePostgresOnlyAnswer($process) : fakeDatabaseAnswer($process))
+            ?? Process::result(exitCode: 0);
     });
 
     app(ApplicationProvisioner::class)->provision(test()->application);
@@ -170,4 +181,63 @@ it('raises max_input_vars on the interpreter, which Moodle refuses to install wi
         // Before the script, or PHP reads it as one of the script's own
         // arguments and applies nothing.
         ->and($flag)->toBeLessThan(array_search('admin/cli/install_database.php', $install['command'], true));
+});
+
+/** The config.php Moodle will read, as written. */
+function moodleConfig(ArrayObject $runs): string
+{
+    return collect($runs)
+        ->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), 'config.php'))['input'];
+}
+
+it('writes PostgreSQL\'s driver, and a config that is still valid PHP', function () {
+    $config = moodleConfig(installMoodle('postgresql'));
+
+    // `pgsql` per config-dist.php's own list. Moodle distinguishes engines
+    // where most applications don't, so there is no value that covers both.
+    expect($config)->toContain("\$CFG->dbtype    = 'pgsql'")
+        ->not->toContain('mysqli');
+
+    // The collation branch is inside a Blade @if in a generated PHP file —
+    // the one place a stray directive would produce a config.php that parses
+    // nowhere but looks fine in a diff.
+    $path = tempnam(sys_get_temp_dir(), 'mdlpg').'.php';
+    file_put_contents($path, $config);
+    exec('php -l '.escapeshellarg($path).' 2>&1', $out, $status);
+    expect($status)->toBe(0);
+    @unlink($path);
+});
+
+it('drops dbcollation for PostgreSQL, which upstream says to remove', function () {
+    // config-dist.php:66 says the option "should be removed for all other
+    // databases". Left in, a PostgreSQL connection is handed
+    // `utf8mb4_unicode_ci` — a collation that does not exist there.
+    expect(moodleConfig(installMoodle('postgresql')))->not->toContain('dbcollation');
+});
+
+it('keeps dbcollation on MySQL, where it is the reason the option is there', function () {
+    // The half a new branch quietly breaks: every Moodle the panel has made
+    // is on MySQL and needs this line.
+    expect(moodleConfig(installMoodle()))->toContain("'dbcollation' => 'utf8mb4_unicode_ci'");
+});
+
+it('fills in the port for PostgreSQL, off the engine\'s own connection record', function () {
+    // New ground, so it starts correct — 5432 comes from the connection row,
+    // not from a literal here.
+    expect(moodleConfig(installMoodle('postgresql')))->toContain("'dbport' => '5432'");
+});
+
+it('leaves MySQL\'s port empty, as it has always been', function () {
+    // A real gap and its own task (operator, 2026-09-11): filling it in here
+    // would change the config every existing Moodle install path writes, to
+    // fix a case nobody has reported. Pinned so the PostgreSQL branch cannot
+    // leak into it.
+    //
+    // Separate test rather than one assertion per engine on purpose: the two
+    // engines cannot share a `Process::fake`. With psql falling through to a
+    // bare success, `available()` reads the engine as reachable while
+    // `identifierAvailable()` reads its empty output as "name taken", so
+    // allocation walks twenty candidates and the install dies at
+    // create_database — which is what happened when these were one test.
+    expect(moodleConfig(installMoodle()))->toContain("'dbport' => ''");
 });

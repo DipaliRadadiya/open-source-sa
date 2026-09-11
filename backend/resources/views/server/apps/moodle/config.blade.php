@@ -20,9 +20,11 @@ $CFG->dbpass    = '{{ $password }}';
 $CFG->prefix    = '{{ $prefix }}';
 $CFG->dboptions = [
     'dbpersist' => 0,
-    'dbport' => '',
+    'dbport' => '{{ $port }}',
     'dbsocket' => '',
-    'dbcollation' => 'utf8mb4_unicode_ci',
+@if ($collation !== null)
+    'dbcollation' => '{{ $collation }}',
+@endif
 ];
 
 $CFG->wwwroot   = '{{ $wwwroot }}';

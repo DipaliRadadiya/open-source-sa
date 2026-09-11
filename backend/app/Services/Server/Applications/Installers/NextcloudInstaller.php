@@ -32,6 +32,21 @@ class NextcloudInstaller extends AbstractPhpInstaller
     }
 
     /**
+     * PostgreSQL last, so MySQL stays the first available engine and no
+     * existing server changes the database it gives a new Nextcloud.
+     *
+     * Upstream lists PostgreSQL among its supported engines and recommends it
+     * for larger instances; `pgsql` is the value its own
+     * `core/Command/Maintenance/Install.php` accepts for `--database`.
+     *
+     * @return array<int, string>
+     */
+    public function acceptedEngines(): array
+    {
+        return ['mysql', 'mariadb', 'postgresql'];
+    }
+
+    /**
      * Upstream publishes bzip2 and zip only — there is no gzip build.
      *
      * The bzip2 tarball was the original choice and it cost a server: `tar`
@@ -80,8 +95,9 @@ class NextcloudInstaller extends AbstractPhpInstaller
         // answers go in on stdin in the order it asks: database, then admin.
         $this->runAsSiteUser('install_app', $application, [
             $php, 'occ', 'maintenance:install',
-            '--database', (string) config('server.installers.nextcloud.database', 'mysql'),
+            '--database', $this->databaseDriver($context),
             '--database-host', (string) ($context['db_host'] ?? '127.0.0.1'),
+            ...$this->portOption($context),
             '--database-name', (string) $context['database'],
             '--database-user', (string) $context['db_user'],
             '--admin-user', (string) ($application->settings['admin_user'] ?? 'admin'),
@@ -103,6 +119,50 @@ class NextcloudInstaller extends AbstractPhpInstaller
             $php, 'occ', 'config:system:set', 'overwrite.cli.url',
             '--value='.$application->url(),
         ], null, $documentRoot);
+    }
+
+    /**
+     * The value for `--database`.
+     *
+     * 🔴 This used to be `config('server.installers.nextcloud.database')`
+     * alone — **a configured constant, not the engine the site was given.**
+     * Harmless while every Nextcloud got MySQL; the moment PostgreSQL is
+     * accepted it would hand a PostgreSQL database the string `mysql`, and
+     * the site dies inside occ's own install. Joomla's `--db-type` carried a
+     * comment warning about exactly this shape.
+     *
+     * PostgreSQL branches; everything else still reads the config, so the
+     * MySQL path is byte-identical to what it wrote before — including for
+     * anyone who has set `SERVER_NEXTCLOUD_DATABASE` deliberately.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function databaseDriver(array $context): string
+    {
+        return ($context['engine'] ?? '') === 'postgresql'
+            ? 'pgsql'
+            : (string) config('server.installers.nextcloud.database', 'mysql');
+    }
+
+    /**
+     * `--database-port`, for PostgreSQL only.
+     *
+     * occ has the option — unlike Joomla — and we have never passed it, so a
+     * MySQL on a moved port has always been written a config pointing at
+     * 3306. That gap is real and filed as its own task rather than fixed
+     * here, because closing it touches the install of every existing site
+     * (operator, 2026-09-11). PostgreSQL is new ground and starts correct.
+     *
+     * @param  array<string, mixed>  $context
+     * @return array<int, string>
+     */
+    private function portOption(array $context): array
+    {
+        $port = (int) ($context['db_port'] ?? 0);
+
+        return ($context['engine'] ?? '') === 'postgresql' && $port > 0
+            ? ['--database-port', (string) $port]
+            : [];
     }
 
     public function syncUrl(Application $application, string $url): void

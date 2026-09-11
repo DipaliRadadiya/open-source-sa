@@ -42,14 +42,25 @@ beforeEach(function () {
     $this->projectRoot = "{$this->home}/craft-site/public_html";
 });
 
-function installCraft(): ArrayObject
+/**
+ * @param  string|null  $engine  the engine the site asked for, on a server
+ *                               that has only that one
+ */
+function installCraft(?string $engine = null): ArrayObject
 {
     $runs = new ArrayObject;
 
-    Process::fake(function ($process) use ($runs) {
+    if ($engine !== null) {
+        test()->application->forceFill([
+            'settings' => array_merge(test()->application->settings, ['database_engine' => $engine]),
+        ])->save();
+    }
+
+    Process::fake(function ($process) use ($runs, $engine) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input, 'path' => $process->path];
 
-        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
+        return ($engine === 'postgresql' ? fakePostgresOnlyAnswer($process) : fakeDatabaseAnswer($process))
+            ?? Process::result(exitCode: 0);
     });
 
     app(ApplicationProvisioner::class)->provision(test()->application);
@@ -162,4 +173,34 @@ it('runs Craft from the project root, as the site user', function () {
 
     expect($install['path'])->toBe($this->projectRoot)
         ->and(array_slice($install['command'], 0, 4))->toBe(['runuser', '-u', 'crftuser', '--']);
+});
+
+it('tells Craft to speak PostgreSQL when that is the database it was given', function () {
+    $runs = installCraft('postgresql');
+
+    $env = collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), '.env'))['input'];
+
+    // `pgsql` is DbConfig::DRIVER_PGSQL — Craft validates this value against
+    // its own two constants, so anything else stops its installer.
+    expect($env)->toContain('CRAFT_DB_DRIVER=pgsql')
+        // Widening acceptedEngines() without this line would hand a
+        // PostgreSQL database to a site configured for MySQL: created,
+        // reported Active, and dead at Craft's own setup.
+        ->not->toContain('CRAFT_DB_DRIVER=mysql')
+        // The real port off the engine's connection record, not MySQL's.
+        ->toContain('CRAFT_DB_PORT=5432')
+        // PostgreSQL's own default schema, and the reason this line could sit
+        // in the template unused until now.
+        ->toContain('CRAFT_DB_SCHEMA=public');
+});
+
+it('still tells Craft to speak MySQL on a MySQL server', function () {
+    // The half that a new branch quietly breaks. Every Craft site the panel
+    // has already made is on MySQL, and a driver that only ever produces the
+    // new value would take all of them down on the next install.
+    $env = collect(installCraft())
+        ->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), '.env'))['input'];
+
+    expect($env)->toContain('CRAFT_DB_DRIVER=mysql')
+        ->not->toContain('CRAFT_DB_DRIVER=pgsql');
 });

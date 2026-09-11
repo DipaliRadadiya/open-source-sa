@@ -44,18 +44,25 @@ beforeEach(function () {
 /**
  * Provision, capturing every command with its stdin and working directory.
  */
-function installNextcloud(): ArrayObject
+function installNextcloud(?string $engine = null): ArrayObject
 {
     $runs = new ArrayObject;
 
-    Process::fake(function ($process) use ($runs) {
+    if ($engine !== null) {
+        test()->application->forceFill([
+            'settings' => array_merge(test()->application->settings, ['database_engine' => $engine]),
+        ])->save();
+    }
+
+    Process::fake(function ($process) use ($runs, $engine) {
         $runs[] = [
             'command' => $process->command,
             'input' => (string) $process->input,
             'path' => $process->path,
         ];
 
-        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
+        return ($engine === 'postgresql' ? fakePostgresOnlyAnswer($process) : fakeDatabaseAnswer($process))
+            ?? Process::result(exitCode: 0);
     });
 
     app(ApplicationProvisioner::class)->provision(test()->application);
@@ -183,4 +190,39 @@ it('allows longer than the shared default for a 280 MB download', function () {
 
     // The shared 300s default would time this out on any ordinary connection.
     expect($maxTime)->toBe(1800);
+});
+
+it('tells occ which database the site was actually given, not a configured constant', function () {
+    // 🔴 `--database` used to come from config alone — harmless while every
+    // Nextcloud got MySQL, and a broken site the moment PostgreSQL is
+    // accepted: occ would be handed `mysql` for a PostgreSQL database and die
+    // inside its own install, past the point where acceptedEngines() could
+    // have refused anything.
+    $install = occRun(installNextcloud('postgresql'), 'maintenance:install');
+
+    // `pgsql` is the value occ's own Install command accepts.
+    expect($install['command'])->toContain('pgsql')
+        ->not->toContain('mysql');
+});
+
+it('passes the PostgreSQL port, which occ does have an option for', function () {
+    $command = occRun(installNextcloud('postgresql'), 'maintenance:install')['command'];
+    $at = array_search('--database-port', $command, true);
+
+    expect($at)->not->toBeFalse()
+        // Off the engine's connection record, not a literal.
+        ->and($command[$at + 1])->toBe('5432');
+});
+
+it('leaves the MySQL command line exactly as it was', function () {
+    // Both halves of "don't touch the MySQL path" (operator, 2026-09-11): the
+    // driver still comes from config, and no port option appears where none
+    // appeared before. occ *has* `--database-port` and we have never passed
+    // it — a real gap, filed as its own task, because closing it changes the
+    // install of every existing Nextcloud.
+    $command = occRun(installNextcloud(), 'maintenance:install')['command'];
+
+    expect($command)->toContain('mysql')
+        ->not->toContain('pgsql')
+        ->not->toContain('--database-port');
 });

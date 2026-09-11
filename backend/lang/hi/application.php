@@ -15,7 +15,7 @@ return [
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'अपटाइम निगरानी और स्टेटस पेज'],
         'n8n' => ['title' => 'n8n', 'tagline' => 'वर्कफ़्लो स्वचालन (fair-code लाइसेंस)'],
         'nodered' => ['title' => 'Node-RED', 'tagline' => 'डिवाइस, API और सेवाओं को जोड़ें'],
-        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'फ़ोरम सॉफ़्टवेयर — MongoDB चाहिए'],
+        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'फ़ोरम सॉफ़्टवेयर — MongoDB या PostgreSQL चाहिए'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'निजी फ़ाइल सिंक और साझाकरण'],
         'joomla' => ['title' => 'Joomla', 'tagline' => 'लचीली सामग्री प्रबंधन प्रणाली'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'ऑनलाइन पाठ्यक्रम और शिक्षण'],

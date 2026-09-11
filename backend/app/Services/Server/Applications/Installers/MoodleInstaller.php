@@ -47,6 +47,22 @@ class MoodleInstaller extends AbstractPhpInstaller
     }
 
     /**
+     * PostgreSQL last, so MySQL remains the first available engine and every
+     * existing server keeps making the Moodle it already made.
+     *
+     * Moodle names all three in `config-dist.php`, and unlike most of the
+     * marketplace it distinguishes MySQL from MariaDB — see {@see dbType()}.
+     * Naming PostgreSQL here also commits to dropping `dbcollation`, which is
+     * a MySQL-only option; the config template does that.
+     *
+     * @return array<int, string>
+     */
+    public function acceptedEngines(): array
+    {
+        return ['mysql', 'mariadb', 'postgresql'];
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     public function install(Application $application, string $documentRoot, array $context): void
@@ -65,8 +81,20 @@ class MoodleInstaller extends AbstractPhpInstaller
         ], $application);
         $this->run('configure', ['chmod', '0750', $dataDir], $application);
 
+        $isPostgres = ($context['engine'] ?? '') === 'postgresql';
+
         $this->writeSecretFile($application, "{$documentRoot}/config.php", View::make('server.apps.moodle.config', [
             'dbType' => $this->dbType($context),
+            // `dbcollation` is MySQL's; config-dist.php says in as many words
+            // that it "should be removed for all other databases". Handing a
+            // PostgreSQL connection `utf8mb4_unicode_ci` names a collation
+            // that does not exist there.
+            'collation' => $isPostgres ? null : 'utf8mb4_unicode_ci',
+            // PostgreSQL-only, for the reason given on Joomla's dbHost():
+            // every Moodle the panel has made carries an empty `dbport`, and
+            // filling it in for MySQL too is its own task. New ground starts
+            // correct.
+            'port' => $isPostgres ? (string) ($context['db_port'] ?? '') : '',
             'host' => $context['db_host'] ?? '127.0.0.1',
             'database' => $context['database'],
             'username' => $context['db_user'],
@@ -146,8 +174,13 @@ class MoodleInstaller extends AbstractPhpInstaller
      */
     private function dbType(array $context): string
     {
-        // Moodle distinguishes the two where most applications don't, and
-        // picks a different driver for each.
-        return ($context['engine'] ?? '') === 'mariadb' ? 'mariadb' : 'mysqli';
+        // Moodle distinguishes MySQL from MariaDB where most applications
+        // don't, and picks a different driver for each. `pgsql` is its
+        // PostgreSQL driver, per config-dist.php's own list.
+        return match ($context['engine'] ?? '') {
+            'mariadb' => 'mariadb',
+            'postgresql' => 'pgsql',
+            default => 'mysqli',
+        };
     }
 }

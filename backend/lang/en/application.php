@@ -20,7 +20,7 @@ return [
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Uptime monitoring and status pages'],
         'n8n' => ['title' => 'n8n', 'tagline' => 'Workflow automation (fair-code licence)'],
         'nodered' => ['title' => 'Node-RED', 'tagline' => 'Wire up devices, APIs and services'],
-        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'Forum software — needs MongoDB'],
+        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'Forum software — needs MongoDB or PostgreSQL'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'Private file sync and share'],
         'joomla' => ['title' => 'Joomla', 'tagline' => 'Flexible content management system'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'Online courses and learning'],

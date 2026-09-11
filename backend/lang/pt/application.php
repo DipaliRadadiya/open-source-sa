@@ -15,7 +15,7 @@ return [
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Monitorização de disponibilidade e páginas de estado'],
         'n8n' => ['title' => 'n8n', 'tagline' => 'Automação de fluxos de trabalho (licença fair-code)'],
         'nodered' => ['title' => 'Node-RED', 'tagline' => 'Ligue dispositivos, APIs e serviços'],
-        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'Software de fóruns — precisa de MongoDB'],
+        'nodebb' => ['title' => 'NodeBB', 'tagline' => 'Software de fóruns — precisa de MongoDB ou PostgreSQL'],
         'nextcloud' => ['title' => 'Nextcloud', 'tagline' => 'Sincronização e partilha de ficheiros privados'],
         'joomla' => ['title' => 'Joomla', 'tagline' => 'Sistema flexível de gestão de conteúdos'],
         'moodle' => ['title' => 'Moodle', 'tagline' => 'Cursos e aprendizagem online'],

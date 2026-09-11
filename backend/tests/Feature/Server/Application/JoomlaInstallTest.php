@@ -55,14 +55,25 @@ function fakeJoomlaReleases(bool $ok = true): void
     ]);
 }
 
-function installJoomla(): ArrayObject
+/**
+ * @param  string|null  $engine  the engine the site asked for, on a server
+ *                               that has only that one
+ */
+function installJoomla(?string $engine = null): ArrayObject
 {
     $runs = new ArrayObject;
 
-    Process::fake(function ($process) use ($runs) {
+    if ($engine !== null) {
+        test()->application->forceFill([
+            'settings' => array_merge(test()->application->settings, ['database_engine' => $engine]),
+        ])->save();
+    }
+
+    Process::fake(function ($process) use ($runs, $engine) {
         $runs[] = ['command' => $process->command, 'input' => (string) $process->input, 'path' => $process->path];
 
-        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
+        return ($engine === 'postgresql' ? fakePostgresOnlyAnswer($process) : fakeDatabaseAnswer($process))
+            ?? Process::result(exitCode: 0);
     });
 
     app(ApplicationProvisioner::class)->provision(test()->application);
@@ -166,4 +177,43 @@ it('generates a table prefix when none is given', function () {
     // Joomla's own installer randomises this so tables stay apart if the
     // database is ever shared.
     expect($prefix)->toMatch('/^--db-prefix=[a-z0-9]{5}_$/');
+});
+
+it('tells Joomla to speak PostgreSQL when that is the database it was given', function () {
+    fakeJoomlaReleases();
+    $command = joomlaInstallRun(installJoomla('postgresql'))['command'];
+
+    // `pgsql` is one of the three values Joomla's own db_type field declares
+    // as supported; mysqli is not a superset of it.
+    expect($command)->toContain('--db-type=pgsql')
+        ->not->toContain('--db-type=mysqli');
+});
+
+it('carries the PostgreSQL port inside the host, because Joomla has no --db-port', function () {
+    fakeJoomlaReleases();
+    $command = joomlaInstallRun(installJoomla('postgresql'))['command'];
+
+    // Joomla's setup form defines no db_port field at all, so `host:port` is
+    // the only channel there is. 5432 comes off the engine's connection
+    // record, not from a literal here.
+    expect($command)->toContain('--db-host=127.0.0.1:5432')
+        // Proof the option really is absent from the CLI rather than just
+        // unused: passing one would be silently ignored, which is the failure
+        // this shape exists to avoid.
+        ->and(collect($command)->contains(fn ($a) => str_starts_with((string) $a, '--db-port')))
+        ->toBeFalse();
+});
+
+it('leaves the MySQL host exactly as it was, port and all', function () {
+    // Deliberately not fixed here (operator, 2026-09-11): every Joomla site
+    // the panel has made was given a bare host, and a MySQL on a moved port
+    // has always been written a config pointing at 3306. Closing that touches
+    // the install path of every existing site, so it is its own task. This
+    // pins the current behaviour so the PostgreSQL branch cannot leak into it.
+    fakeJoomlaReleases();
+    $command = joomlaInstallRun(installJoomla())['command'];
+
+    expect($command)->toContain('--db-host=127.0.0.1')
+        ->and(collect($command)->contains(fn ($a) => str_contains((string) $a, '127.0.0.1:')))
+        ->toBeFalse();
 });

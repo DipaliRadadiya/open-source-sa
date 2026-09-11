@@ -347,3 +347,30 @@ function createWithEngine(string $type, string $engine)
     return test()->withHeaders(['Authorization' => 'Bearer '.test()->token])
         ->postJson('/api/applications', $payload);
 }
+
+it('lists PostgreSQL last for every type that now takes it', function () {
+    onlyEngines(['mysql']);
+
+    $types = siteTypeCatalog();
+
+    // Order is behaviour, not presentation: provisioning takes the first
+    // accepted engine the server actually has, so PostgreSQL ahead of MySQL
+    // would silently move every new site on an existing server onto a
+    // different database. Last is what keeps them where they are.
+    foreach (['craftcms', 'joomla', 'moodle', 'nextcloud'] as $type) {
+        expect($types[$type]['accepted_engines'])->toBe(['mysql', 'mariadb', 'postgresql'], $type);
+    }
+});
+
+it('keeps the four MySQL-only types MySQL-only', function () {
+    onlyEngines(['mysql']);
+
+    $types = siteTypeCatalog();
+
+    // Upstream has no supported PostgreSQL path for any of these, so a card
+    // offering it would be an install that fails at the application's own
+    // setup — which is the failure acceptedEngines() exists to prevent.
+    foreach (['wordpress', 'prestashop', 'mautic', 'akaunting'] as $type) {
+        expect($types[$type]['accepted_engines'])->toBe(['mysql', 'mariadb'], $type);
+    }
+});

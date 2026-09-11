@@ -43,6 +43,22 @@ class CraftCmsInstaller extends AbstractPhpInstaller
     }
 
     /**
+     * PostgreSQL last, so the first available engine on an existing server is
+     * still MySQL and no site the panel already makes moves database.
+     *
+     * Naming it here is only half the work: `CRAFT_DB_DRIVER` in the `.env`
+     * below has to say `pgsql` as well, or the site is handed a PostgreSQL
+     * database and told to speak MySQL — which fails inside Craft's own
+     * install, past the point where this list could have said anything.
+     *
+     * @return array<int, string>
+     */
+    public function acceptedEngines(): array
+    {
+        return ['mysql', 'mariadb', 'postgresql'];
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     public function install(Application $application, string $documentRoot, array $context): void
@@ -60,9 +76,7 @@ class CraftCmsInstaller extends AbstractPhpInstaller
         $this->writeSecretFile($application, "{$projectRoot}/.env", View::make('server.apps.craftcms.env', [
             'appId' => 'CraftCMS--'.Str::uuid(),
             'securityKey' => Str::random(32),
-            // mysql covers MySQL and MariaDB, which is every SQL engine
-            // the panel supports.
-            'driver' => 'mysql',
+            'driver' => $this->driver($context),
             'host' => $context['db_host'] ?? '127.0.0.1',
             'port' => $context['db_port'] ?? 3306,
             'database' => $context['database'],
@@ -85,6 +99,25 @@ class CraftCmsInstaller extends AbstractPhpInstaller
             // means the setting never arrived rather than a user choosing one.
             '--password='.($settings['admin_password'] ?? ''),
         ], null, $projectRoot);
+    }
+
+    /**
+     * The value of `CRAFT_DB_DRIVER`, which Craft validates against its own
+     * two constants.
+     *
+     * Read from `craftcms/cms` `src/config/DbConfig.php`: `DRIVER_MYSQL` is
+     * `mysql` and `DRIVER_PGSQL` is `pgsql`. `mysql` covers MariaDB too —
+     * Craft has no third constant for it — so only PostgreSQL branches.
+     *
+     * `CRAFT_DB_SCHEMA=public` was already in the `.env` template and is
+     * PostgreSQL's own default; MySQL ignores it, which is why it could sit
+     * there unused until now.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function driver(array $context): string
+    {
+        return ($context['engine'] ?? '') === 'postgresql' ? 'pgsql' : 'mysql';
     }
 
     public function syncUrl(Application $application, string $url): void
