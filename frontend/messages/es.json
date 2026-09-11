@@ -3149,7 +3149,11 @@
       "needsGitAccount": "No hay ninguna cuenta de Git conectada. Usa «Conectar Git» abajo y luego Actualizar.",
       "installPhpVersion": "Instalar una versión de PHP",
       "installNodeVersion": "Instalar una versión de Node",
-      "databaseEnginePermanent": "Esto no se puede cambiar después: mover un sitio a otro motor significa crearlo de nuevo."
+      "databaseEnginePermanent": "Esto no se puede cambiar después: mover un sitio a otro motor significa crearlo de nuevo.",
+      "refreshVersions": "Actualizar",
+      "refreshVersionsHint": "Actualizar las versiones de {runtime} instaladas en este servidor",
+      "versionsAdded": "{runtime} {versions} ya {count, plural, one {está disponible} other {están disponibles}}.",
+      "versionsUnchanged": "Todavía no hay versiones nuevas de {runtime}. Una que siga instalándose aparecerá cuando termine."
     },
     "actions": {
       "label": "Acciones",

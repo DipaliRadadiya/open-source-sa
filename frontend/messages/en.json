@@ -3149,7 +3149,11 @@
       "needsGitAccount": "No Git account is connected. Use “Connect Git” below, then Refresh.",
       "installPhpVersion": "Install a PHP version",
       "installNodeVersion": "Install a Node version",
-      "databaseEnginePermanent": "This cannot be changed later — moving a site to another engine means creating it again."
+      "databaseEnginePermanent": "This cannot be changed later — moving a site to another engine means creating it again.",
+      "refreshVersions": "Refresh",
+      "refreshVersionsHint": "Refresh the {runtime} versions installed on this server",
+      "versionsAdded": "{runtime} {versions} {count, plural, one {is} other {are}} now available.",
+      "versionsUnchanged": "No new {runtime} versions yet. One that is still installing will appear when it finishes."
     },
     "actions": {
       "label": "Actions",

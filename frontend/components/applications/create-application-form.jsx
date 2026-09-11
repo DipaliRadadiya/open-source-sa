@@ -79,6 +79,7 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
+import { RuntimeRefresh } from "@/components/applications/runtime-refresh";
 import {
   orphanFieldNames,
   sharedFieldNames,
@@ -441,6 +442,16 @@ function ConfigField({
                   <CopyButton value={String(field.value)} className="size-6" />
                 ) : null}
               </div>
+            ) : null}
+            {/* PHP and Node both: the version is installed on another screen,
+                and coming back to a stale list is the same problem either way.
+                `runtimeVersions` is the whole installed list, not the subset
+                this site type can use — the diff is about what the server has. */}
+            {isRuntime ? (
+              <RuntimeRefresh
+                runtime={config.source === "php_versions" ? "PHP" : "Node.js"}
+                versions={runtimeVersions}
+              />
             ) : null}
           </div>
           {isAccount ? (

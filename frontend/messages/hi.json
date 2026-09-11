@@ -3149,7 +3149,11 @@
       "needsGitAccount": "कोई Git खाता कनेक्ट नहीं है। नीचे “Connect Git” इस्तेमाल करें, फिर रिफ़्रेश करें।",
       "installPhpVersion": "PHP वर्शन इंस्टॉल करें",
       "installNodeVersion": "Node वर्शन इंस्टॉल करें",
-      "databaseEnginePermanent": "इसे बाद में बदला नहीं जा सकता — दूसरे इंजन पर ले जाने का मतलब है साइट दोबारा बनाना।"
+      "databaseEnginePermanent": "इसे बाद में बदला नहीं जा सकता — दूसरे इंजन पर ले जाने का मतलब है साइट दोबारा बनाना।",
+      "refreshVersions": "रिफ़्रेश करें",
+      "refreshVersionsHint": "इस सर्वर पर इंस्टॉल {runtime} वर्शन रिफ़्रेश करें",
+      "versionsAdded": "{runtime} {versions} अब उपलब्ध {count, plural, one {है} other {हैं}}।",
+      "versionsUnchanged": "अभी {runtime} का कोई नया वर्शन नहीं है। जो अब भी इंस्टॉल हो रहा है, वह पूरा होने पर दिखेगा।"
     },
     "actions": {
       "label": "क्रियाएं",
