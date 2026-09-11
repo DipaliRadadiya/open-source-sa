@@ -7,6 +7,9 @@ return [
     'application_already_attached' => "La base de données :database est déjà rattachée à :application. Détachez-la d'abord, ou rattachez cette base de données à une autre application.",
     'engine_not_accepted' => ':application ne peut pas utiliser une base de données :engine. Elle accepte :accepted.',
     'engine_not_installable' => 'Le panneau ne peut pas encore installer ce moteur de base de données. Installez-le vous-même et le panneau le détectera.',
+    // The vendor publishes nothing for this Ubuntu release. Refused
+    // before the install rather than discovered two minutes into apt.
+    'engine_os_unsupported' => ':engine ne publie pas encore de paquets pour :os, le panneau ne peut donc pas l\'installer ici. Ce serveur n\'a aucun problème : le panneau prend en charge :os, mais :engine n\'a pas encore publié de version pour ce système. Utilisez un autre moteur de base de données, ou réessayez lorsqu\'elle sera disponible.',
     'phpmyadmin_engine_not_supported' => 'phpMyAdmin ne prend pas en charge les bases de données :engine.',
     'phpmyadmin_not_deployed' => 'Aucun site phpMyAdmin n\'est installé sur ce serveur.',
     'phpmyadmin_no_users' => 'Créez un utilisateur de base de données avant d\'accéder à phpMyAdmin.',

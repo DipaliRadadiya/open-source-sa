@@ -7,6 +7,9 @@ return [
     'application_already_attached' => ':application já tem o banco de dados :database vinculado. Desvincule aquele primeiro ou vincule este banco de dados a outra aplicação.',
     'engine_not_accepted' => ':application não pode usar um banco de dados :engine. Ele aceita :accepted.',
     'engine_not_installable' => 'O painel ainda não consegue instalar este motor de banco de dados. Instale-o você mesmo e o painel o detectará.',
+    // The vendor publishes nothing for this Ubuntu release. Refused
+    // before the install rather than discovered two minutes into apt.
+    'engine_os_unsupported' => 'O :engine ainda não publica pacotes para :os, então o painel não consegue instalá-lo aqui. Não há nada de errado com este servidor — o painel é compatível com :os, mas o :engine ainda não lançou uma versão para ele. Use outro mecanismo de banco de dados ou tente de novo quando lançar.',
     'phpmyadmin_engine_not_supported' => 'O phpMyAdmin não é compatível com bancos de dados :engine.',
     'phpmyadmin_not_deployed' => 'Nenhum site phpMyAdmin está instalado neste servidor.',
     'phpmyadmin_no_users' => 'Crie um usuário de banco de dados antes de acessar o phpMyAdmin.',

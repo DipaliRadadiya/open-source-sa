@@ -1930,7 +1930,33 @@ return [
             // showing a button that cannot work.
             'mysql' => ['label' => 'MySQL', 'driver' => 'sql', 'client' => env('SERVER_MYSQL_CLIENT', 'mysql'), 'dump_client' => env('SERVER_MYSQLDUMP', 'mysqldump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mysql', 'installer' => MySqlInstaller::class],
             'mariadb' => ['label' => 'MariaDB', 'driver' => 'sql', 'client' => env('SERVER_MARIADB_CLIENT', 'mariadb'), 'dump_client' => env('SERVER_MARIADBDUMP', 'mariadb-dump'), 'default_port' => 3306, 'default_socket' => '/var/run/mysqld/mysqld.sock', 'dump_extension' => 'sql', 'uri_scheme' => 'mariadb', 'installer' => MariaDbInstaller::class],
-            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'dump_extension' => 'archive.gz', 'uri_scheme' => 'mongodb', 'installer' => MongoDbInstaller::class],
+            /*
+            | `unsupported_codenames` — Ubuntu releases this engine's vendor has
+            | not published for.
+            |
+            | MongoDB publishes per Ubuntu codename from its own repository, and
+            | for `resolute` (26.04) it ships `mongodb-database-tools` and
+            | nothing else: no `mongodb-org`, no `mongodb-org-server`, not even
+            | `mongodb-mongosh`. Measured 2026-09-11 against
+            | dists/resolute/mongodb-org/8.0 — one package, where noble carries
+            | thirteen.
+            |
+            | Listed here so the setup page can grey the card instead of
+            | offering a button that writes an apt source and a signing key to
+            | the box, waits two minutes, and then fails. The panel supports
+            | 26.04; MongoDB does not, and unlike PHP (where sury.org publishes
+            | what ondrej does not) there is no second source to point at.
+            |
+            | **This list goes stale by design.** It is a statement about what a
+            | vendor has published today, and the day MongoDB ships for resolute
+            | this entry is wrong in the direction of refusing something that
+            | would work. Overridable per-server with SERVER_MONGO_UNSUPPORTED
+            | (comma-separated, empty string to clear) so nobody is stuck behind
+            | our release cycle, and the install itself still classifies the
+            | real failure as `os_unsupported` if this list is ever too
+            | optimistic instead.
+            */
+            'mongodb' => ['label' => 'MongoDB', 'driver' => 'mongo', 'client' => env('SERVER_MONGO_CLIENT', 'mongosh'), 'dump_client' => env('SERVER_MONGODUMP', 'mongodump'), 'restore_client' => env('SERVER_MONGORESTORE', 'mongorestore'), 'default_port' => 27017, 'default_socket' => null, 'dump_extension' => 'archive.gz', 'uri_scheme' => 'mongodb', 'installer' => MongoDbInstaller::class, 'unsupported_codenames' => array_filter(array_map('trim', explode(',', (string) env('SERVER_MONGO_UNSUPPORTED', 'resolute'))))],
             // Installable from Ubuntu's own archive — no third-party
             // repository, unlike MongoDB.
             //

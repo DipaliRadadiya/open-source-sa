@@ -7,6 +7,9 @@ return [
     'application_already_attached' => 'Mit :application ist bereits die Datenbank :database verknüpft. Heben Sie diese Verknüpfung zuerst auf, oder verknüpfen Sie diese Datenbank mit einer anderen Anwendung.',
     'engine_not_accepted' => ':application kann keine :engine-Datenbank verwenden. Akzeptiert wird :accepted.',
     'engine_not_installable' => 'Das Panel kann diese Datenbank-Engine noch nicht installieren. Installieren Sie sie selbst, das Panel erkennt sie dann.',
+    // The vendor publishes nothing for this Ubuntu release. Refused
+    // before the install rather than discovered two minutes into apt.
+    'engine_os_unsupported' => ':engine veröffentlicht noch keine Pakete für :os, deshalb kann das Panel es hier nicht installieren. Mit diesem Server ist alles in Ordnung — das Panel unterstützt :os, aber :engine hat dafür noch keinen Build veröffentlicht. Nutze eine andere Datenbank-Engine oder versuche es später erneut.',
     'phpmyadmin_engine_not_supported' => 'phpMyAdmin unterstützt keine :engine-Datenbanken.',
     'phpmyadmin_not_deployed' => 'Keine phpMyAdmin-Site ist auf diesem Server installiert.',
     'phpmyadmin_no_users' => 'Erstellen Sie einen Datenbankbenutzer, bevor Sie auf phpMyAdmin zugreifen.',

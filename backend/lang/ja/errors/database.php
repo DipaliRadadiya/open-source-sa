@@ -7,6 +7,9 @@ return [
     'application_already_attached' => ':application にはすでに :database データベースが紐付いています。先にそちらの紐付けを解除するか、このデータベースを別のアプリケーションに紐付けてください。',
     'engine_not_accepted' => ':application は :engine データベースを使用できません。使用できるのは :accepted です。',
     'engine_not_installable' => 'このデータベースエンジンはまだパネルからインストールできません。ご自身でインストールすればパネルが検出します。',
+    // The vendor publishes nothing for this Ubuntu release. Refused
+    // before the install rather than discovered two minutes into apt.
+    'engine_os_unsupported' => ':engine はまだ :os 向けのパッケージを公開していないため、パネルからはインストールできません。このサーバーに問題はありません。パネルは :os に対応していますが、:engine がまだ対応ビルドを出していないためです。別のデータベースエンジンを使うか、公開後に再度お試しください。',
     'phpmyadmin_engine_not_supported' => 'phpMyAdmin は :engine データベースに対応していません。',
     'phpmyadmin_not_deployed' => 'このサーバーにphpMyAdminサイトがインストールされていません。',
     'phpmyadmin_no_users' => 'phpMyAdminにアクセスする前にデータベースユーザーを作成してください。',

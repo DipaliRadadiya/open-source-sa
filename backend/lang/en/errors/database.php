@@ -7,6 +7,9 @@ return [
     'application_already_attached' => ':application already has the database :database attached. Detach that one first, or attach this database to another application.',
     'engine_not_accepted' => ':application cannot use a :engine database. It accepts :accepted.',
     'engine_not_installable' => 'The panel cannot install this database engine yet. Install it yourself and the panel will detect it.',
+    // The vendor publishes nothing for this Ubuntu release. Refused
+    // before the install rather than discovered two minutes into apt.
+    'engine_os_unsupported' => ':engine has not published packages for :os yet, so the panel cannot install it here. Nothing is wrong with this server — the panel supports :os, but :engine has not released a build for it. Use another database engine, or try again once it does.',
     'phpmyadmin_engine_not_supported' => 'phpMyAdmin does not support :engine databases.',
     'phpmyadmin_not_deployed' => 'No phpMyAdmin site is installed on this server.',
     'phpmyadmin_no_users' => 'Create a database user before accessing phpMyAdmin.',

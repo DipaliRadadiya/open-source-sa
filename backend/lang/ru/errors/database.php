@@ -7,6 +7,9 @@ return [
     'application_already_attached' => 'К :application уже привязана база данных :database. Сначала отвяжите её или привяжите эту базу данных к другому приложению.',
     'engine_not_accepted' => ':application не может использовать базу данных :engine. Поддерживается: :accepted.',
     'engine_not_installable' => 'Панель пока не может установить этот движок базы данных. Установите его сами, и панель его обнаружит.',
+    // The vendor publishes nothing for this Ubuntu release. Refused
+    // before the install rather than discovered two minutes into apt.
+    'engine_os_unsupported' => ':engine пока не выпускает пакеты для :os, поэтому панель не может установить её здесь. С сервером всё в порядке: панель поддерживает :os, но :engine ещё не собрала версию для этой системы. Выберите другую СУБД или повторите попытку позже.',
     'phpmyadmin_engine_not_supported' => 'phpMyAdmin не поддерживает базы данных :engine.',
     'phpmyadmin_not_deployed' => 'На этом сервере не установлен сайт phpMyAdmin.',
     'phpmyadmin_no_users' => 'Создайте пользователя базы данных перед доступом к phpMyAdmin.',

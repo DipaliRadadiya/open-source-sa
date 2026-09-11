@@ -3238,6 +3238,25 @@ Install a database engine. All three are installable now — MongoDB was the las
 
 Do not hardcode which engines are installable: read `installable` from `GET /databases/engines`. It is driven by config, so an engine can be *operable* (the panel manages databases on one that already exists) before it is *installable*, and a `false` there means the button must not be offered.
 
+**`installable: false` now also covers "not on this OS"**, and when that is the reason the row carries an `unavailable` object:
+
+```json
+{
+  "engine": "mongodb",
+  "installable": false,
+  "unavailable": {
+    "code": "os_unsupported",
+    "reason": "MongoDB has not published packages for Ubuntu 26.04 yet. …"
+  }
+}
+```
+
+`unavailable` is `null` for every engine that can be installed. The shape is deliberately the same one a blocked **site-type** card carries (`{code, reason}`), so both render the same way: `reason` is already translated for the viewer, `code` is stable to branch on.
+
+**Render this as a disabled card with `reason` as its subtext, and no retry.** `POST /databases/engines/{engine}` refuses the same case with **`422`** and the same sentence in `message` — it will not queue a job that cannot succeed, so the client never sees a progress bar for it.
+
+The current case is MongoDB on Ubuntu 26.04 (resolute): MongoDB publishes per Ubuntu codename and ships only `mongodb-database-tools` there — no server, and no `mongosh` either. The panel supports 26.04; MongoDB has not built for it.
+
 **Response `202`:** `{"queued": true}` — poll `GET /databases/engines`.
 
 Already installed → `200` with the engine list.

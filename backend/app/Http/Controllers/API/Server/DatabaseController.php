@@ -62,6 +62,10 @@ class DatabaseController extends Controller
             return $engine + [
                 'system_schemas' => $manager->systemSchemas($name),
                 'installable' => $installers->canInstall($name),
+                // Why not, when not — `{code, reason}`, the same shape a blocked
+                // site-type card carries, so the frontend renders both the same
+                // way. Null whenever `installable` is true.
+                'unavailable' => $installers->unavailableReason($name),
                 // Only ever `installing` or `failed`: a finished install deletes
                 // its row, so "installed" is answered by detection above and
                 // there is no second copy of that fact to go stale.
@@ -87,6 +91,16 @@ class DatabaseController extends Controller
         EngineInstallerManager $installers,
         InstallTracker $installs,
     ): JsonResponse {
+        // Refused here rather than discovered two minutes into apt. The engine's
+        // vendor publishes nothing for this Ubuntu release, so the install would
+        // write a source list and a signing key to the box and then fail on a
+        // package that was never going to be there. Its own sentence, not the
+        // generic "not installable" — the user is entitled to know it is the OS
+        // and not a missing feature.
+        if (($unavailable = $installers->unavailableReason($engine)) !== null) {
+            abort(422, $unavailable['reason']);
+        }
+
         abort_unless($installers->canInstall($engine), 422, __('errors/database.engine_not_installable'));
 
         // "The package is present" is not "the panel can use it".
