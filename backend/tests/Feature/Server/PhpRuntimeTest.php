@@ -35,11 +35,11 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->phpDir));
 
-function fakePhp(string $default = '8.4', bool $ok = true): ArrayObject
+function fakePhp(string $default = '8.4', bool $ok = true, array $absent = []): ArrayObject
 {
     $runs = new ArrayObject;
 
-    Process::fake(function ($process) use ($runs, $default, $ok) {
+    Process::fake(function ($process) use ($runs, $default, $ok, $absent) {
         $runs[] = ['command' => $process->command, 'env' => $process->environment ?? []];
         $command = $process->command;
 
@@ -52,6 +52,19 @@ function fakePhp(string $default = '8.4', bool $ok = true): ArrayObject
         return match (true) {
             ($command[0] ?? '') === 'update-alternatives' && in_array('--query', $command, true) => Process::result(
                 output: "Name: php\nLink: /usr/bin/php\nStatus: auto\nBest: /usr/bin/php{$default}\nValue: /usr/bin/php{$default}\n"
+            ),
+            // `apt-cache policy <pkg>` — the availability check install()
+            // makes before handing a name to apt. Answered per package from
+            // $absent, so a test can model a name the index does not have.
+            //
+            // The shape matters: an unknown package prints NOTHING and still
+            // exits 0, and a known-but-uninstallable one prints
+            // `Candidate: (none)`. A fake that answered with an exit code
+            // would prove the opposite of what happens on a server.
+            ($command[0] ?? '') === 'apt-cache' && ($command[1] ?? '') === 'policy' => Process::result(
+                output: in_array($command[2] ?? '', $absent, true)
+                    ? ''
+                    : "{$command[2]}:\n  Installed: (none)\n  Candidate: 1.0\n"
             ),
             ($command[0] ?? '') === 'apt-cache' => Process::result(
                 output: "php8.2-fpm - server-side scripting\nphp8.3-fpm - server-side scripting\nphp8.4-fpm - server-side scripting\n"
@@ -221,20 +234,75 @@ it('does not clear the directory when the purge failed', function () {
 });
 
 it('installs a usable PHP, not a bare interpreter', function () {
-    fakePhp();
-    app(PhpRuntime::class)->install('8.2');
-
     // A bare php8.2-fpm has no mysql, no curl, no mbstring — every
     // application in the marketplace would fail on it.
-    $runs = new ArrayObject;
-    Process::fake(function ($process) use ($runs) {
-        $runs[] = $process->command;
+    //
+    // Through fakePhp(), which answers `apt-cache policy`. An earlier version
+    // re-faked Process with a stub that returned nothing for every command,
+    // and once install() started checking availability that stub meant "the
+    // index has none of these" — so the assertion failed for a reason that
+    // had nothing to do with the base set. A fake that answers less than the
+    // real thing tests the fake.
+    $runs = fakePhp();
 
-        return Process::result(exitCode: 0);
-    });
     app(PhpRuntime::class)->install('8.2');
 
-    $install = collect($runs)->first(fn ($c) => ($c[0] ?? '') === 'apt-get');
+    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get');
+    expect($install)->toContain('php8.2-fpm', 'php8.2-mysql', 'php8.2-curl', 'php8.2-mbstring');
+});
+
+it('drops a package this server cannot install, and keeps the rest', function () {
+    // The reported failure: `E: Unable to locate package lsphp85-opcache`.
+    // apt fails the WHOLE transaction on one unknown name, so a single gap in
+    // LiteSpeed's per-version package set meant "install PHP 8.5" installed
+    // nothing at all — mysql and curl went down with the missing one.
+    $runs = fakePhp(absent: ['php8.2-mbstring']);
+
+    app(PhpRuntime::class)->install('8.2');
+
+    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get');
+
+    expect($install)->not->toContain('php8.2-mbstring')
+        // ...and the ones that DO exist still get installed, which is the
+        // whole point: one absent name must not cost the others.
+        ->and($install)->toContain('php8.2-fpm', 'php8.2-mysql', 'php8.2-curl');
+});
+
+it('never drops the interpreter itself', function () {
+    // Filtering the thing being installed would turn "this version is not
+    // available on this server" into a successful install of nothing.
+    // Extensions are degradable; the interpreter is not.
+    $runs = fakePhp(absent: ['php8.2-fpm', 'php8.2-cli', 'php8.2-common', 'php8.2-mysql']);
+
+    app(PhpRuntime::class)->install('8.2');
+
+    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get');
+
+    // Still handed to apt, so apt refuses out loud rather than the panel
+    // quietly installing an empty set and calling it done.
+    expect($install)->toContain('php8.2-fpm');
+});
+
+it('installs the full set when the availability check itself fails', function () {
+    // A filter that cannot see must not filter. If apt-cache cannot run --
+    // lock held, index broken, binary missing -- reading "cannot confirm" as
+    // "not there" would strip every extension and report success, which is
+    // the same silent half-install this filtering exists to prevent.
+    //
+    // Degrading to the previous behaviour puts apt back in charge: if a
+    // package really is missing it says so, loudly, as it always did.
+    $runs = new ArrayObject;
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = ['command' => $process->command];
+
+        return ($process->command[0] ?? '') === 'apt-cache'
+            ? Process::result(exitCode: 100, errorOutput: 'E: Could not open cache file')
+            : Process::result(exitCode: 0);
+    });
+
+    app(PhpRuntime::class)->install('8.2');
+
+    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get');
     expect($install)->toContain('php8.2-fpm', 'php8.2-mysql', 'php8.2-curl', 'php8.2-mbstring');
 });
 

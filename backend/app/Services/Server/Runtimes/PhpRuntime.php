@@ -10,6 +10,7 @@ use App\Services\Runtime\InstallFailureClassifier;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Log;
 
 /**
  * PHP versions, managed with apt.
@@ -138,6 +139,107 @@ class PhpRuntime implements Runtime
     }
 
     /**
+     * The base set, minus anything this server's package index does not have.
+     *
+     * The same principle `installable()` states for versions — read the index
+     * rather than hardcode, because that is the truth in both cases — applied
+     * to the packages themselves. It was not, and the difference cost two
+     * separate failures:
+     *
+     *   E: Unable to locate package lsphp84-mbstring   (the FPM names)
+     *   E: Unable to locate package lsphp85-opcache    (a per-version gap)
+     *
+     * apt fails the WHOLE transaction on one unknown name, so a single missing
+     * extension took mysql, pgsql and curl down with it and "install PHP 8.5"
+     * installed nothing at all.
+     *
+     * A static list cannot be right here. LiteSpeed's package set differs
+     * between versions — 8.2, 8.3 and 8.4 ship 26 packages and 8.5 ships 25 —
+     * so any list correct for one version is wrong for another, and correcting
+     * it for 8.5 today would break on 8.6.
+     *
+     * **The interpreter itself is never filtered.** Dropping `lsphp85` because
+     * the index does not have it would turn "this version is unavailable" into
+     * a successful install of nothing. Extensions are degradable; the thing
+     * being installed is not.
+     *
+     * @return array<int, string>
+     */
+    private function installablePackages(string $version): array
+    {
+        $packages = $this->stack->versionPackages($version);
+        $interpreter = array_shift($packages);
+
+        $available = array_values(array_filter(
+            $packages,
+            fn (string $package): bool => $this->packageExists($package),
+        ));
+
+        $missing = array_values(array_diff($packages, $available));
+
+        if ($missing !== []) {
+            // Recorded, not swallowed. A site missing an extension it expected
+            // is a real difference in what it can run, and "the panel quietly
+            // decided not to install opcache" must be answerable afterwards.
+            Log::channel('server-ops')->info('php.packages_unavailable', [
+                'feature' => 'runtime',
+                'op' => 'php_install',
+                'version' => $version,
+                'skipped' => $missing,
+            ]);
+        }
+
+        return [$interpreter, ...$available];
+    }
+
+    /**
+     * Does the index have something installable under this name?
+     *
+     * `apt-cache policy` rather than `show` or an exit code, and both halves
+     * of that are learned from a real failure:
+     *
+     *   - `apt-cache policy <unknown>` prints nothing and exits **0**, so the
+     *     exit status answers nothing.
+     *   - `apt-cache show lsphp84-gd` **succeeds** for a package apt then
+     *     refuses with "has no installation candidate" — a name the index
+     *     knows and cannot install. It looks real in a search and still kills
+     *     the transaction.
+     *
+     * A `Candidate:` line that is not `(none)` is the only thing that
+     * distinguishes all three cases.
+     */
+    private function packageExists(string $package): bool
+    {
+        $result = $this->serverOps->run(
+            ['apt-cache', 'policy', $package],
+            ['feature' => 'runtime', 'op' => 'php_package_check', 'package' => $package],
+            timeout: 30,
+        );
+
+        // DEGRADE TO THE OLD BEHAVIOUR, NOT TO A WORSE ONE.
+        //
+        // If the check itself could not run -- apt lock, a broken index, no
+        // apt-cache at all -- this must not read "cannot confirm" as "not
+        // there". Stripping every extension on a failed lookup would install
+        // a bare interpreter and report success, which is the same silent
+        // half-install this filter exists to prevent, wearing a new hat.
+        //
+        // Passing the name through instead puts us exactly where we were
+        // before this method existed: apt decides, and if the package really
+        // is missing it says so loudly. A filter that cannot see is a filter
+        // that should not filter.
+        if ($result->failed()) {
+            return true;
+        }
+
+        if (! preg_match('/^\s*Candidate:\s*(.+)$/m', $result->output(), $matches)) {
+            return false;
+        }
+
+        return trim($matches[1]) !== '(none)';
+    }
+
+    /**
      * Install a version, with the extensions a site is unusable without.
      *
      * A bare `phpX.Y-fpm` has no mysql, no curl, no mbstring — every
@@ -149,7 +251,7 @@ class PhpRuntime implements Runtime
     public function install(string $version, ?callable $onOutput = null): void
     {
         $result = $this->serverOps->apt(
-            ['apt-get', 'install', '-y', '--no-install-recommends', ...$this->stack->versionPackages($version)],
+            ['apt-get', 'install', '-y', '--no-install-recommends', ...$this->installablePackages($version)],
             ['feature' => 'runtime', 'op' => 'php_install', 'version' => $version],
             timeout: (int) config('server.runtimes.php.install_timeout', 900),
             // apt refuses to run unattended without this, and a prompt with
