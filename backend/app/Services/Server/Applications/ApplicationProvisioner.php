@@ -223,10 +223,29 @@ class ApplicationProvisioner
         // next unrelated change.
         if ($application->serving_profile === 'php') {
             $this->step('harden_php', function () use ($application) {
-                ApplicationPhpSettings::updateOrCreate(
+                $settings = ApplicationPhpSettings::firstOrNew(
                     ['application_id' => $application->id],
-                    ['disable_functions' => ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS],
                 );
+
+                // A DEFAULT, NOT AN OVERRIDE.
+                //
+                // A clone arrives here with its source's settings already
+                // copied onto it, and provisioning must not undo that. This
+                // used to `updateOrCreate` the list unconditionally, which
+                // would have reset a cloned site to strict — including one
+                // whose owner had deliberately relaxed it to make a plugin
+                // work. They clone a working site and get a broken one, with
+                // nothing on the screen explaining why.
+                //
+                // `=== null` rather than `empty()` or `blank()`: an empty
+                // string is a real answer here — "this site disables nothing",
+                // set by somebody who meant it. Treating that as unset would
+                // re-harden the one site whose owner had explicitly said no.
+                if ($settings->disable_functions === null) {
+                    $settings->disable_functions = ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS;
+                }
+
+                $settings->save();
 
                 // The relation was loaded before the row existed; the pool
                 // step below reads it, and a stale null there would write a

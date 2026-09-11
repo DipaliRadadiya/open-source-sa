@@ -118,6 +118,34 @@ class CloneManager
             $target->save();
         }
 
+        // The source's PHP settings, before provisioning reads them.
+        //
+        // The clone copied php_version and stopped there, so a cloned site
+        // came up with the interpreter its source used and none of the
+        // configuration around it: memory_limit, the upload limits,
+        // open_basedir, disable_functions, the timezone. A site cloned to
+        // reproduce a problem did not reproduce the environment the problem
+        // lived in, and one cloned as a staging copy quietly ran on different
+        // limits than the site it was standing in for.
+        //
+        // `replicate()` rather than naming columns: it carries every attribute
+        // the model has, so a setting added to the table later is cloned
+        // without anyone remembering to come back here. The two excluded keys
+        // are the two that must not travel — the identity of the row and its
+        // owner.
+        //
+        // Before provision(), deliberately. The harden_php step reads this row
+        // and fills disable_functions only when it is null, so a copy that
+        // landed afterwards would be written over by the strict default and
+        // the inheritance would silently not happen.
+        if ($source->phpSettings !== null) {
+            $settings = $source->phpSettings->replicate(['id', 'application_id']);
+            $settings->application_id = $target->id;
+            $settings->save();
+
+            $target->unsetRelation('phpSettings');
+        }
+
         $target->load('systemUser');
 
         // Everything from here can fail on the server, and the row already

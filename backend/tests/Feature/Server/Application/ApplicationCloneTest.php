@@ -4,6 +4,7 @@ use App\Enums\DomainType;
 use App\Jobs\RunClone;
 use App\Models\ActivityLog;
 use App\Models\Application;
+use App\Models\ApplicationPhpSettings;
 use App\Models\Database;
 use App\Models\DatabaseUser;
 use App\Models\ServerCapability;
@@ -427,4 +428,101 @@ it('keeps serving its own domain after an alias is added', function () {
     expect($clone->fresh()->load('domains')->serverNames())
         ->toContain('docs-alias-clone.test')
         ->toContain('extra.docs-alias.test');
+});
+
+/*
+ * PHP settings travel with the clone.
+ *
+ * The clone copied `php_version` and stopped there, so a cloned site came up
+ * with the interpreter its source used and none of the configuration around
+ * it. A site cloned to reproduce a problem did not reproduce the environment
+ * the problem lived in, and one cloned as a staging copy ran on different
+ * limits than the site it stood in for.
+ */
+
+function phpSourceApp(array $settings = []): Application
+{
+    $source = Application::forceCreate([
+        'system_user_id' => test()->systemUser->id,
+        'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test',
+        'site_type' => 'php', 'serving_profile' => 'php', 'php_version' => '8.4',
+        'status' => 'active', 'web_root' => '/',
+    ]);
+
+    if ($settings !== []) {
+        ApplicationPhpSettings::create(['application_id' => $source->id, ...$settings]);
+    }
+
+    return $source->fresh(['phpSettings']);
+}
+
+it('carries the source PHP settings onto the clone', function () {
+    fakeCloneServer();
+
+    $source = phpSourceApp([
+        'memory_limit' => '1024M',
+        'upload_max_filesize' => '512M',
+        'post_max_size' => '512M',
+        'max_execution_time' => 120,
+        'php_timezone' => 'Asia/Kolkata',
+    ]);
+
+    $clone = Application::find(runClone($source, 'shop-clone.test')->target_application_id)
+        ->fresh(['phpSettings']);
+
+    expect($clone->phpSettings)->not->toBeNull()
+        ->and($clone->phpSettings->memory_limit)->toBe('1024M')
+        ->and($clone->phpSettings->upload_max_filesize)->toBe('512M')
+        ->and($clone->phpSettings->post_max_size)->toBe('512M')
+        ->and($clone->phpSettings->max_execution_time)->toBe(120)
+        ->and($clone->phpSettings->php_timezone)->toBe('Asia/Kolkata')
+        // Its own row, not the source's reassigned.
+        ->and($clone->phpSettings->id)->not->toBe($source->phpSettings->id)
+        ->and($source->fresh(['phpSettings'])->phpSettings)->not->toBeNull();
+});
+
+it('does not re-harden a clone whose source had relaxed the list', function () {
+    // THE INTERACTION. Provisioning fills disable_functions when it is null,
+    // which is right for a new site and wrong for a clone: someone who
+    // relaxed the list to make a plugin work clones a site that works and
+    // must not get one that does not.
+    fakeCloneServer();
+
+    $source = phpSourceApp(['disable_functions' => 'exec']);
+
+    $clone = Application::find(runClone($source, 'shop-clone.test')->target_application_id)
+        ->fresh(['phpSettings']);
+
+    expect($clone->phpSettings->disable_functions)->toBe('exec')
+        ->and($clone->phpSettings->disable_functions)
+        ->not->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS);
+});
+
+it('keeps an explicitly empty list empty on the clone', function () {
+    // An empty string is an answer, not an absence — "this site disables
+    // nothing", set by someone who meant it. `empty()` instead of a null
+    // check here would re-harden the one site whose owner said no.
+    fakeCloneServer();
+
+    $source = phpSourceApp(['disable_functions' => '']);
+
+    $clone = Application::find(runClone($source, 'shop-clone.test')->target_application_id)
+        ->fresh(['phpSettings']);
+
+    expect($clone->phpSettings->disable_functions)->toBe('');
+});
+
+it('still hardens a clone whose source had no settings at all', function () {
+    // An older site may predate the settings row entirely. Inheriting nothing
+    // means inheriting nothing to protect it either, so the default applies.
+    fakeCloneServer();
+
+    $source = phpSourceApp();
+
+    $clone = Application::find(runClone($source, 'shop-clone.test')->target_application_id)
+        ->fresh(['phpSettings']);
+
+    expect($clone->phpSettings)->not->toBeNull()
+        ->and($clone->phpSettings->disable_functions)
+        ->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS);
 });
