@@ -238,6 +238,26 @@ describe('refusing', function () {
 });
 
 describe('the endpoint', function () {
+    it('publishes each engine\'s system databases', function () {
+        // The frontend needs this list to grey the rows out, and without it
+        // being sent it had hardcoded PostgreSQL's three — a copy that is
+        // wrong the first time an engine is added and tells nobody.
+        $engines = collect(
+            $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+                ->getJson('/api/databases/engines')->assertOk()->json('engines'),
+        )->keyBy('engine');
+
+        expect($engines['mysql']['system_schemas'])->toBe(['information_schema', 'mysql', 'performance_schema', 'sys'])
+            ->and($engines['mongodb']['system_schemas'])->toBe(['admin', 'config', 'local'])
+            // The driver is shared with MySQL, and answering per driver is the
+            // point — a per-engine copy is what drifts.
+            ->and($engines['mariadb']['system_schemas'])->toBe($engines['mysql']['system_schemas']);
+
+        if (isset($engines['postgresql'])) {
+            expect($engines['postgresql']['system_schemas'])->toBe(['postgres', 'template0', 'template1']);
+        }
+    });
+
     it('queues the install and reports progress', function () {
         Queue::fake();
         $seen = [];

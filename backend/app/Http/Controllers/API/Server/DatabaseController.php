@@ -44,16 +44,23 @@ class DatabaseController extends Controller
      * of MongoDB gaining `MongoDbInstaller`; the field stays because an engine
      * can be operable without being installable, and the catalog saying so is
      * what stops the setup page offering a button that cannot work.
+     *
+     * `system_schemas` is the engine's own databases, which the panel never
+     * creates, drops or alters. Published because the frontend needs the same
+     * list to grey them out, and the alternative is it hardcoding one — which
+     * it had already done for PostgreSQL's three. A hardcoded copy is wrong
+     * the first time an engine is added, and nothing tells anyone.
      */
     public function engines(DatabaseManager $manager, EngineInstallerManager $installers): JsonResponse
     {
         $progress = app(InstallTracker::class)->versions('database')->keyBy('version');
 
-        $engines = array_map(function (array $engine) use ($installers, $progress) {
+        $engines = array_map(function (array $engine) use ($manager, $installers, $progress) {
             $name = (string) $engine['engine'];
             $row = $progress->get($name);
 
             return $engine + [
+                'system_schemas' => $manager->systemSchemas($name),
                 'installable' => $installers->canInstall($name),
                 // Only ever `installing` or `failed`: a finished install deletes
                 // its row, so "installed" is answered by detection above and

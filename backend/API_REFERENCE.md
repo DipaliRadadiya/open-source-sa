@@ -728,6 +728,8 @@ Take the version list from `GET /site-types` (the `php_version` / `node_version`
 
 **And, as of 2026-09-08, against the version the application itself runs on.** A site type may publish a `php_version_range` (`{"min": "7.2", "max": "8.1"}`, either end nullable), alongside the `node_version_range` that has always been there. Sending a version outside it is a `422` naming the range, and the `php_version` field's `default` is the newest installed version *within* the range rather than the newest on the box.
 
+**Omitting `php_version` is checked too, as of 2026-09-11.** An empty field is not "no version" — provisioning resolves it to the server default, which is the newest PHP on the box and therefore the version a ceiling exists to exclude. If that default falls outside the type's range the request is a `422` on `php_version` naming both the range and the default, so send a version in range or leave the field only where the default fits.
+
 This closes the counterpart of the hole above: installed is not the same question as supported. A server whose newest PHP was 8.5 pre-selected 8.5 for PrestaShop, whose current release vendors the old monolithic `symfony/symfony` — the install died inside a Symfony cache warmer during kernel boot, after the archive had been downloaded, unpacked, chowned and handed a database. Ranges are published only where upstream states one: PrestaShop (`7.2`–`8.1`) and Statamic (`8.3`+) today. Every other type sends `null` and accepts any installed version, which is the honest answer for a blank PHP site or a git deployment running the user's own code.
 
 Never send the raw field list — `GET /site-types` publishes the fields for each type, including this one, with localized labels and help text.
@@ -2120,6 +2122,8 @@ Update PHP version and/or pool settings.
 
 **Response `200`:** `{"php": {...updated...}}`
 
+**`php_version` is checked against the application's supported range (added 2026-09-11), not only against what is installed.** Until then the range was enforced when a site was *created* and never again, so a site correctly created on a version its application supports could be moved here to one it does not and simply break. A version outside the range is `422` on `php_version` naming the range. The range comes from the site type; types that declare none are unaffected.
+
 **`post_max_size` also sets the web server's request-body limit**, as of
 2026-09-08 — `client_max_body_size` on nginx, `LimitRequestBody` on Apache,
 `maxReqBodySize` on OpenLiteSpeed — and changing it rewrites the vhost as well
@@ -2903,6 +2907,7 @@ Every backup across every application — paginated, filterable.
 ```json
 {"backups": [{
   "id": 15,
+  "uid": "9c1f0b1e-6d3a-4c2b-9a77-1f2e3d4c5b6a",
   "application_id": 1,
   "application_name": "shop", "application_domain": "shop.example.com",
   "storage_destination_name": "S3 Backup",
@@ -2923,6 +2928,8 @@ Every backup across every application — paginated, filterable.
 **`status` is `pending` · `running` · `verifying` · `verified` · `failed`.** There is no `completed` — a finished, checked backup is `verified`, and `filter[status]=completed` is rejected as an invalid enum value. (The `meta.counts` key *is* spelled `completed`, and counts the `verified` rows. That inconsistency is in the response; it is not a typo here.)
 
 `verified_at` is when the archive was checked after upload, which is the only timestamp that means the backup is actually restorable. `finished_at` only means the process stopped.
+
+**`uid` (added 2026-09-11)** is the name this archive has in the destination — show it wherever someone may go looking in the bucket. `id` cannot serve: it is an autoincrement meaningful only inside one panel's database, so it identifies nothing to anyone reading the storage directly. Read-only.
 
 The application is flattened as `application_name` / `application_domain` — there is no nested `application` object, and **no `size_human`**: format `size_bytes` yourself.
 
@@ -3113,9 +3120,12 @@ Capability list for every engine the panel knows. **Four as of 2026-09-10** — 
 
 **PostgreSQL is installable** (added 2026-09-10) from Ubuntu's own archive — no third-party repository, unlike MongoDB. `POST /databases/engines/postgresql` installs it, starts its cluster and provisions the panel's own role.
 
+**`system_schemas` added 2026-09-11** — the engine's own databases, which the panel never creates, drops or alters. Read it from here rather than hardcoding a list: it is per *driver*, so MySQL and MariaDB answer identically, and a new engine arrives with its own set.
+
 ```json
 {"engines": [{
   "engine": "mysql", "driver": "mysql", "running": false, "version": null,
+  "system_schemas": ["information_schema", "mysql", "performance_schema", "sys"],
   "installed": false, "installable": true,
   "install_status": null, "install_reason": null, "install_message": null,
   "install_progress": null
@@ -3126,11 +3136,13 @@ Capability list for every engine the panel knows. **Four as of 2026-09-10** — 
   "install_progress": null
 }, {
   "engine": "mongodb", "driver": "mongodb", "running": false, "version": null,
+  "system_schemas": ["admin", "config", "local"],
   "installed": false, "installable": true,
   "install_status": null, "install_reason": null, "install_message": null,
   "install_progress": null
 }, {
   "engine": "postgresql", "driver": "pgsql", "running": true, "version": "16.4",
+  "system_schemas": ["postgres", "template0", "template1"],
   "installed": true, "installable": true,
   "install_status": null, "install_reason": null, "install_message": null,
   "install_progress": null
@@ -4014,11 +4026,13 @@ Current snapshot — poll every 2–5s for live gauges. **Network and disk I/O a
 
 Top processes by CPU.
 
+**`meta` added 2026-09-11.** `meta.total` is how many processes the server is running; the list is the top `meta.limit` by CPU. Label the table with `meta.total` — the row count is the limit, so it never changes and the screen looks frozen when a process is stopped.
+
 ```json
 {"processes": [
   {"pid": 1234, "user": "www-data", "cpu": 25.3, "memory": 4.2, "command": "php-fpm: pool www"},
   {"pid": 5678, "user": "siteowner", "cpu": 8.1, "memory": 1.5, "command": "node /home/siteowner/shop.example.com/server.js"}
-]}
+], "meta": {"total": 187, "limit": 25}}
 ```
 
 ---
@@ -4249,6 +4263,10 @@ Enable or disable the firewall entirely.
 **Response `200`:** flat, no wrapper — `{"enabled": false, "default_policy": {"incoming": "deny", "outgoing": "allow"}}`
 
 Enabling seeds allow rules for the web ports and for **the port SSH is actually listening on**, read from the live sshd configuration rather than from a stored default. If any of those cannot be applied, enabling is refused with a `500` rather than leaving the box behind a deny-incoming policy with no way in.
+
+**A seeded rule the user switched off stays off (changed 2026-09-11).** Enabling used to apply every default rule regardless of its `enabled` flag, so a web port closed while the firewall was down came back open on the next enable while the panel still showed the rule as off — and, because a seeded rule is locked while the firewall is enforcing, it could not then be corrected. The rules list and the box now agree.
+
+**SSH is the exception.** If the rule for the SSH port is recorded as off, enabling switches it back on, applies it, and writes a `firewall.rule_enabled` entry to the activity log. A box whose only way in is recorded shut is one enable away from being unreachable, so this is not left to the user's last click.
 
 ---
 
