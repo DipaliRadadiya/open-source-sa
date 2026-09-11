@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
+use App\Rules\SupportedPhpVersion;
+use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Php\PhpVersionManager;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -38,14 +41,14 @@ class SavePhpSettingsRequest extends FormRequest
             // does not exist — a failure the user could not read as "that
             // version is not installed". Resolved lazily so a save that does
             // not touch the version costs nothing.
-            'php_version' => [
+            'php_version' => array_merge([
                 'sometimes', 'string', 'max:8',
                 function (string $attribute, mixed $value, Closure $fail) {
                     if (! app(PhpVersionManager::class)->exists((string) $value)) {
                         $fail(__('php_settings.errors.version_not_installed', ['version' => $value]));
                     }
                 },
-            ],
+            ], $this->supportedRangeRules()),
 
             'memory_limit' => $size,
             'upload_max_filesize' => $size,
@@ -111,6 +114,44 @@ class SavePhpSettingsRequest extends FormRequest
             // that would silently start a second pool inside this file.
             'additional_directives' => ['sometimes', 'nullable', 'string', 'max:4000', 'not_regex:/^\s*\[/m'],
         ];
+    }
+
+    /**
+     * The site type's supported PHP range, as a rule — or nothing, for a type
+     * that declares no range.
+     *
+     * The same rule object `StoreApplicationRequest` appends, deliberately:
+     * until this existed the range was enforced when a site was *created* and
+     * never again, so a PrestaShop site correctly created on 8.0 could be
+     * moved to 8.4 from the PHP screen and simply break. One field, two paths,
+     * one of them validated — the same shape as the 2026-09-03 bug where the
+     * settings screen refused an uninstalled version and creation did not.
+     *
+     * No fallback version is passed: unlike creation there is no empty case to
+     * resolve. The field is `sometimes`, so not sending it changes nothing,
+     * and sending a blank one fails the is-it-installed check above.
+     *
+     * @return array<int, SupportedPhpVersion>
+     */
+    private function supportedRangeRules(): array
+    {
+        $application = $this->route('application');
+
+        if (! $application instanceof Application) {
+            return [];
+        }
+
+        $type = app(SiteTypeManager::class)->find((string) $application->site_type);
+
+        if ($type === null || ($range = $type->supportedPhpRange()) === null) {
+            return [];
+        }
+
+        return [new SupportedPhpVersion(
+            $range['min'] ?? null,
+            $range['max'] ?? null,
+            __("application.types.{$type->name()}.title"),
+        )];
     }
 
     /**

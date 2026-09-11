@@ -470,6 +470,65 @@ describe('a version change that fails', function () {
     });
 });
 
+describe('a version the application itself cannot run on', function () {
+    /*
+     * The range was enforced when a site was *created* and never again:
+     * `SupportedPhpVersion` was used by `StoreApplicationRequest` alone, and
+     * this screen only ever asked whether the version was installed. So a
+     * PrestaShop site correctly created on 8.1 could be moved to 8.4 here and
+     * simply break — one field, two paths, one of them validated, which is the
+     * same shape as the 2026-09-03 bug in the opposite direction.
+     */
+    beforeEach(function () {
+        // The fixture's `php` type declares no range, so it cannot exercise
+        // one. PrestaShop's ceiling is 8.1.
+        $this->application->forceFill(['site_type' => 'prestashop'])->save();
+    });
+
+    it('refuses it, and names the range', function () {
+        fakePhpServer();
+
+        $response = $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['php_version' => '8.3'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('php_version');
+
+        expect($response->json('errors.php_version.0'))->toContain('7.2 – 8.1');
+
+        // Installed, and still refused: being on the box is a different
+        // question from the application running on it.
+        expect($this->application->fresh()->php_version)->toBe('8.4');
+    });
+
+    it('accepts a version inside the range', function () {
+        fakePhpServer();
+
+        // The box carries an in-range version too, so the only thing left that
+        // can refuse this request is the range check itself.
+        $versions = Mockery::mock(PhpVersionManager::class);
+        $versions->shouldReceive('exists')
+            ->andReturnUsing(fn (string $version): bool => in_array($version, ['8.1', '8.3', '8.4'], true));
+        app()->instance(PhpVersionManager::class, $versions);
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['php_version' => '8.1'])
+            ->assertOk();
+
+        expect($this->application->fresh()->php_version)->toBe('8.1');
+    });
+
+    it('says nothing about a type that declares no range', function () {
+        $this->application->forceFill(['site_type' => 'php'])->save();
+        fakePhpServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['php_version' => '8.3'])
+            ->assertOk();
+
+        expect($this->application->fresh()->php_version)->toBe('8.3');
+    });
+});
+
 it('removes the old pool only once the new one is live', function () {
     fakePhpServer();
     $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
