@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { DisabledReasonProvider, ReasonTooltip } from "@/components/ui/reason-tooltip";
+import {
+  DisabledReasonProvider,
+  ReasonTooltip,
+} from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
 import Link from "next/link";
 import { ChevronDown, Download, Loader2, TableProperties } from "lucide-react";
 import { phpmyadminSso } from "@/lib/api/databases";
 import { phpmyadminState, userCount } from "@/lib/databases/phpmyadmin-state";
+import { placeholderDocument } from "@/lib/databases/phpmyadmin-placeholder";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +19,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+/**
+ * `document.write` rather than DOM building: the handle is an `about:blank`
+ * that has never navigated, and this is the one API that reliably replaces its
+ * document before `location.replace` follows. It inherits this page's origin,
+ * so writing to it is permitted — severing `opener` does not change that.
+ */
+function paintPlaceholder(tab, message) {
+  tab.document.write(placeholderDocument(message));
+  tab.document.close();
+}
 
 /**
  * Open this database in phpMyAdmin, already logged in.
@@ -92,7 +107,12 @@ export function PhpmyadminButton({
   if (state === "install") {
     return (
       <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-        <Button asChild={canManage} variant="outline" size="sm" disabled={!canManage}>
+        <Button
+          asChild={canManage}
+          variant="outline"
+          size="sm"
+          disabled={!canManage}
+        >
           {canManage ? (
             <Link href="/applications/create?type=phpmyadmin">
               <Download className="size-4" />
@@ -135,7 +155,23 @@ export function PhpmyadminButton({
       // already disowned — a throw here used to take the whole click with it.
       if (tab) tab.opener = null;
 
-      const { data } = await phpmyadminSso(database.id, undefined, applicationId);
+      // Give the placeholder something to say.
+      //
+      // The blank frame cannot be removed — the tab has to exist before the
+      // await or the browser blocks it, and the URL does not exist until after
+      // — but it does not have to be `about:blank`. Unexplained, it reads as a
+      // tab that opened by mistake, which is what it was reported as.
+      //
+      // Same reason as the line above for being inside the try: this touches a
+      // document in a window the browser may already have disowned, and a
+      // throw here would cost the click that is fetching a 60-second token.
+      if (tab) paintPlaceholder(tab, t("signingIn"));
+
+      const { data } = await phpmyadminSso(
+        database.id,
+        undefined,
+        applicationId,
+      );
       const url = data?.redirect_url;
       if (!url) throw new Error("no url");
 
@@ -150,7 +186,10 @@ export function PhpmyadminButton({
       // browser can see is the only way to open the tab now.
       toast.error(t("blocked"), {
         duration: 20000,
-        action: { label: t("openAnyway"), onClick: () => window.open(url, "_blank", "noopener") },
+        action: {
+          label: t("openAnyway"),
+          onClick: () => window.open(url, "_blank", "noopener"),
+        },
       });
     } catch (error) {
       tab?.close();
@@ -191,7 +230,12 @@ export function PhpmyadminButton({
       <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="sm" disabled={!canManage || opening}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!canManage || opening}
+            >
               {icon}
               {label}
               <ChevronDown className="size-4 opacity-60" />

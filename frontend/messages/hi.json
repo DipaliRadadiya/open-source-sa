@@ -2651,6 +2651,7 @@
     },
     "phpmyadmin": {
       "open": "phpMyAdmin में खोलें",
+      "signingIn": "phpMyAdmin में साइन इन किया जा रहा है…",
       "failed": "phpMyAdmin नहीं खोला जा सका।",
       "noPermission": "आपकी भूमिका में डेटाबेस का Manage एक्सेस नहीं है। इसे देने के लिए किसी एडमिन से कहें।",
       "blocked": "आपके ब्राउज़र ने नया टैब ब्लॉक कर दिया।",

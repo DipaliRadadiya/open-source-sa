@@ -2651,6 +2651,7 @@
     },
     "phpmyadmin": {
       "open": "Open in phpMyAdmin",
+      "signingIn": "Signing you in to phpMyAdmin…",
       "failed": "phpMyAdmin could not be opened.",
       "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
       "blocked": "Your browser blocked the new tab.",

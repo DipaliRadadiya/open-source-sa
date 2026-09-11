@@ -2651,6 +2651,7 @@
     },
     "phpmyadmin": {
       "open": "Abrir en phpMyAdmin",
+      "signingIn": "Iniciando sesión en phpMyAdmin…",
       "failed": "No se pudo abrir phpMyAdmin.",
       "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
       "blocked": "Tu navegador bloqueó la nueva pestaña.",
