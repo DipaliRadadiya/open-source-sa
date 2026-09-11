@@ -914,6 +914,26 @@ describe('the lsphp stack', function () {
         Process::assertNotRan(fn ($p) => str_contains((string) ($p->command[0] ?? ''), 'phpenmod'));
     });
 
+    it('restarts the web server so the new extension is actually loaded', function () {
+        // The install put the package on disk, logged `extension_enabled` and
+        // showed it enabled in the UI -- while every running LSPHP worker went
+        // on without it until 5000 requests recycled them. A setting that
+        // reports success and changes nothing is the bug this stack's PHP work
+        // keeps being about.
+        //
+        // The cause was a guard testing `serviceName()`, which is null here
+        // because LSPHP has no per-version unit. It does not need one: it
+        // reloads by restarting the web server that spawns it. The test above
+        // asserts what must NOT run; without this one, nothing asserted that
+        // anything must.
+        Process::fake(fn ($process) => Process::result(output: ''));
+
+        app(PhpExtensionManager::class)->install('8.4', 'redis');
+
+        Process::assertRan(fn ($p) => str_contains((string) ($p->command[0] ?? ''), 'lswsctrl')
+            && in_array('restart', (array) $p->command, true));
+    });
+
     it('refuses to toggle extensions rather than pretending to', function () {
         // phpenmod only understands /etc/php; pointed at the lsws tree it
         // exits zero having changed nothing. Saying so beats reporting a

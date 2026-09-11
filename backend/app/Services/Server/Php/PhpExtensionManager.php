@@ -260,12 +260,27 @@ class PhpExtensionManager
      */
     private function reload(string $version): void
     {
-        // LSPHP has no per-version unit at all, so there is nothing here to
-        // reload — the stack decides what applying a change means.
-        if ($this->stack->serviceName($version) === null) {
-            return;
-        }
-
+        // Asked of the stack, not inferred from whether it has a systemd unit.
+        //
+        // This used to return early when `serviceName()` was null, on the
+        // reasoning that a stack with no per-version unit has nothing to
+        // reload. That is true of the unit and false of the interpreter:
+        // LSPHP has no unit and reloads perfectly well, by restarting the web
+        // server that spawns it. The two docblocks said so in opposite
+        // directions -- install() called this because there was "only the
+        // running processes to restart", and this refused because there was
+        // "nothing here to reload".
+        //
+        // What it cost on OpenLiteSpeed: installing a PHP extension put the
+        // package on disk, logged `extension_enabled`, showed it enabled in
+        // the UI, and left every running worker without it until 5000
+        // requests recycled them or somebody restarted by hand. A setting
+        // that reports success and changes nothing is the bug this whole
+        // stack's PHP work keeps being about.
+        //
+        // Every stack implements reload() -- it is on the contract, described
+        // as "apply a configuration change for a version" -- so there is no
+        // stack this is unsafe to call for.
         $this->stack->reload($version);
     }
 
