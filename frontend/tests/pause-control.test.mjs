@@ -95,3 +95,30 @@ test("pausing asks first; resuming does not", () => {
   assert.match(failureBranch, /setError\(/, "the failure branch no longer records a reason");
   assert.doesNotMatch(failureBranch, /onOpenChange\(false\)/, "a failed pause closes the dialog and loses the reason");
 });
+
+test("the row menu closes when the row's state changes under it", () => {
+  /*
+   * Retry holds the menu open on purpose, so its item can say "Retrying…" —
+   * the trigger's spinner alone was easy to miss on a long row. But the moment
+   * the server accepts the retry the status leaves `failed`, the Retry item
+   * disappears, and what stays open is a menu about a site in a state it is no
+   * longer in: Visit greyed out, Delete offered while the API answers 503 for
+   * a provisioning site. That is what Krishna screenshotted.
+   *
+   * Keyed on status, not on the retry: the list polls every four seconds, so
+   * provisioning finishing or somebody else pausing the site lands the same way.
+   *
+   * Driven to confirm — menu opened while failed (showing Retry setup), status
+   * arrived as provisioning on its own, menu closed.
+   */
+  const source = fs.readFileSync(
+    new URL("../components/applications/application-row-actions.jsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /<DropdownMenu open=\{menuOpen\} onOpenChange=\{setMenuOpen\}>/, "an uncontrolled menu cannot be closed");
+  assert.match(source, /if \(seenStatus !== application\.status\) \{/);
+  assert.match(source, /if \(menuOpen\) setMenuOpen\(false\)/);
+  // The retry item must still hold the menu open while the request is in
+  // flight, or the "Retrying…" label it exists for is unreachable again.
+  assert.match(source, /event\.preventDefault\(\);\s*\n\s*retry\(\);/);
+});

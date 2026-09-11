@@ -76,6 +76,28 @@ export function ApplicationRowActions({
   const t = useTranslations("applications");
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  /*
+   * Close when the row changes underneath an open menu.
+   *
+   * Retry holds the menu open on purpose so the item can say "Retrying…"
+   * (see its onSelect). The moment the server accepts it the status leaves
+   * `failed`, the Retry item disappears — and what is left open is a menu
+   * about a site in a state it is no longer in: Visit greyed, Delete offered
+   * while the API refuses it with a 503 for a provisioning site.
+   *
+   * Keyed on status rather than on the retry, so the same holds when
+   * provisioning finishes, or somebody else pauses the site — the list polls
+   * every four seconds, so any of those can land while the menu is open.
+   *
+   * Render-phase sync, the same shape `workers-panel` uses: an effect would
+   * paint the stale menu once before closing it.
+   */
+  const [seenStatus, setSeenStatus] = useState(application.status);
+  if (seenStatus !== application.status) {
+    setSeenStatus(application.status);
+    if (menuOpen) setMenuOpen(false);
+  }
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [webRootOpen, setWebRootOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
@@ -121,7 +143,7 @@ export function ApplicationRowActions({
 
   return (
     <div className="text-right">
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="size-8">
             {retrying ? (
