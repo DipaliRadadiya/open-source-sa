@@ -3169,14 +3169,18 @@
       "removeFiles": "Eliminar también los archivos y las copias de seguridad del sitio",
       "removeFilesOn": "Se eliminan el directorio del sitio y todas sus copias de seguridad, incluidos los archivos guardados en tu almacenamiento.",
       "removeFilesOff": "Los archivos permanecen en el servidor. Las copias de seguridad del sitio desaparecen del panel junto con él, pero sus archivos siguen en tu almacenamiento: elimínalos allí si ya no los quieres.",
-      "databaseNote": "La base de datos creada para esta aplicación se conserva. Elimínala desde Bases de datos si ya no la necesitas.",
       "confirmLabel": "Escribe <code>{domain}</code> para confirmar",
       "submit": "Eliminar aplicación",
       "deleting": "Eliminando…",
       "done": "{name} se eliminó.",
       "failed": "No pudimos eliminar esta aplicación.",
       "cancel": "Cancelar",
-      "copyDomain": "Copiar dominio"
+      "copyDomain": "Copiar dominio",
+      "removeDatabases": "{count, plural, one {Eliminar también la base de datos de este sitio} other {Eliminar también las # bases de datos de este sitio}}",
+      "removeDatabasesOn": "{count, plural, one {{databases} se eliminará del servidor, junto con los usuarios que se conectan a ella.} other {{databases} se eliminarán del servidor, junto con los usuarios que se conectan a ellas.}}",
+      "removeDatabasesOff": "{count, plural, one {{databases} permanece en el servidor, sin vincular a ningún sitio. Elimínala desde Bases de datos si ya no la necesitas.} other {{databases} permanecen en el servidor, sin vincular a ningún sitio. Elimínalas desde Bases de datos si ya no las necesitas.}}",
+      "databasesFailed": "El sitio se eliminó, pero no se pudo eliminar {databases}.",
+      "goToDatabases": "Abrir Bases de datos"
     },
     "facts": {
       "title": "Aplicación",

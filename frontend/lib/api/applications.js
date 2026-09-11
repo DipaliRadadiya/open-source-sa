@@ -66,9 +66,22 @@ export function retryProvisioning(id) {
 
 // Files are kept unless `remove_files` is sent — deleting the panel record must
 // not silently destroy someone's code, so the flag is always the user's choice.
-export function deleteApplication(id, { removeFiles = false } = {}) {
+export function deleteApplication(id, { removeFiles = false, removeDatabases = false } = {}) {
+  /*
+   * Both flags are omitted when false rather than sent as `false`. The API
+   * reads them with `boolean()`, so either works — but a delete that carries
+   * no destructive flag at all is the one you want in a request log.
+   *
+   * No database ids: the API resolves the site's databases itself, at the
+   * moment it deletes. What this dialog listed a minute ago is not what the
+   * server should act on.
+   */
+  const params = {};
+  if (removeFiles) params.remove_files = true;
+  if (removeDatabases) params.remove_databases = true;
+
   return api.delete(`/applications/${id}`, {
-    params: removeFiles ? { remove_files: true } : undefined,
+    params: Object.keys(params).length ? params : undefined,
   });
 }
 

@@ -3169,14 +3169,18 @@
       "removeFiles": "Also delete the site’s files and backups",
       "removeFilesOn": "The site’s directory, and every backup it has — including the archives in your storage — are deleted.",
       "removeFilesOff": "The files stay on the server. The site’s backups leave the panel with it, but their archives stay in your storage — delete them there if you no longer want them.",
-      "databaseNote": "A database created for this application is kept. Remove it from Databases if you no longer need it.",
       "confirmLabel": "Type <code>{domain}</code> to confirm",
       "submit": "Delete application",
       "deleting": "Deleting…",
       "done": "{name} was deleted.",
       "failed": "We could not delete this application.",
       "cancel": "Cancel",
-      "copyDomain": "Copy domain"
+      "copyDomain": "Copy domain",
+      "removeDatabases": "{count, plural, one {Also delete this site's database} other {Also delete this site's # databases}}",
+      "removeDatabasesOn": "{count, plural, one {{databases} will be dropped from the server, with the users that connect to it.} other {{databases} will be dropped from the server, with the users that connect to them.}}",
+      "removeDatabasesOff": "{count, plural, one {{databases} stays on the server, no longer linked to any site. Remove it from Databases if you no longer need it.} other {{databases} stay on the server, no longer linked to any site. Remove them from Databases if you no longer need them.}}",
+      "databasesFailed": "The site was deleted, but {databases} could not be removed.",
+      "goToDatabases": "Open Databases"
     },
     "facts": {
       "title": "Application",

@@ -15,6 +15,25 @@ export function installEngine(engine) {
   return api.post(`/databases/engines/${encodeURIComponent(engine)}`);
 }
 
+/**
+ * The databases attached to one site, for the delete dialog's checkbox.
+ *
+ * Server-side filtered — `getApplicationDatabases` does the same thing for
+ * pages. This is the client half, because the dialog only needs it when it
+ * opens and fetching every database on the server to filter three out is a
+ * page of work for one sentence.
+ *
+ * For NAMING them only. The delete call sends a flag, never these ids: the API
+ * resolves the list itself when it deletes, so a database attached since this
+ * dialog opened is still taken.
+ */
+export function getDatabasesForApplication(applicationId, { signal } = {}) {
+  return api.get("/databases", {
+    params: { "filter[application_id]": applicationId, per_page: 100 },
+    signal,
+  });
+}
+
 export function createDatabase(payload) {
   return api.post("/databases", payload);
 }
