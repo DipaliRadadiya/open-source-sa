@@ -170,7 +170,23 @@ it('is idempotent when the job runs twice', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     // mkdir -p and an overwriting tee converge rather than compounding.
-    expect($app->steps)->toHaveCount(8);
+    //
+    // The list rather than a count. `harden_php` was added to the provisioner
+    // without this number following it, and a bare `toHaveCount(8)` reports
+    // that as "9 does not match 8" — which says a step was duplicated, the one
+    // thing this test exists to catch, when in fact a step was added. Naming
+    // them means the next addition fails with a diff that says which.
+    expect($app->steps)->toBe([
+        'check_account',
+        'create_directory',
+        'placeholder',
+        'set_ownership',
+        'harden_php',
+        'create_php_pool',
+        'write_config',
+        'test_config',
+        'reload',
+    ]);
 });
 
 it('writes a static config without a php handler', function () {
