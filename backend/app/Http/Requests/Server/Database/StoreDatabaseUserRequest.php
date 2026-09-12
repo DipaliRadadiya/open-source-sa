@@ -32,6 +32,11 @@ class StoreDatabaseUserRequest extends FormRequest
                 'required', Rule::in(['localhost', 'remote', 'anywhere']),
                 new SupportsRemoteDatabaseUsers($this->route('database')?->engine),
             ],
+            // The caller's agreement to a cluster restart, needed only by
+            // PostgreSQL and only when it is still bound to loopback.
+            // Absent means "not agreed", which is a 409 rather than a
+            // silent restart of somebody's database.
+            'restart_cluster' => ['sometimes', 'boolean'],
             'host' => [
                 Rule::requiredIf(fn () => $this->input('connection_preference') === 'remote'),
                 'nullable',

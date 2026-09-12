@@ -14,6 +14,9 @@ return [
     'phpmyadmin_not_deployed' => 'На этом сервере не установлен сайт phpMyAdmin.',
     'phpmyadmin_no_users' => 'Создайте пользователя базы данных перед доступом к phpMyAdmin.',
     'remote_users_unsupported' => 'Удалённый доступ недоступен для :engine — его учётные записи не привязаны к хосту. Используйте localhost.',
+    // 409, not 422: the request is fine, the cluster is not ready. The
+    // client re-sends with restart_cluster as explicit consent.
+    'remote_access_restart_required' => 'Чтобы разрешить удалённые подключения, PostgreSQL нужно перезапустить: адрес прослушивания меняется только при старте. Приложения, использующие эту базу, на мгновение потеряют соединение. Отправьте запрос повторно с restart_cluster, чтобы продолжить.',
     'phpmyadmin_not_selectable' => 'Выбранный сайт не является активной установкой phpMyAdmin.',
     'phpmyadmin_user_not_found' => 'Указанный пользователь базы данных не принадлежит этой базе данных.',
     'phpmyadmin_not_isolated' => 'Этот сайт phpMyAdmin использует общесерверный пул PHP, поэтому ссылку для входа смогли бы прочитать все остальные сайты. Выделите ему собственный пул PHP или откройте phpMyAdmin и войдите с учётными данными базы данных.',

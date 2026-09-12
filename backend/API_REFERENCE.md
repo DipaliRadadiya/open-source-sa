@@ -3198,9 +3198,29 @@ Capability list for every engine the panel knows. **Four as of 2026-09-10** — 
 
 **`charsets` are PostgreSQL's, not MySQL's.** `UTF8` / `LATIN1` / `SQL_ASCII`, with LC_COLLATE values (`C`, `C.UTF-8`, `en_US.UTF-8`) in place of MySQL collations. Read them from this endpoint per engine; `utf8mb4` is not a value PostgreSQL has ever heard of, and a create using one is refused.
 
-**`supports_remote_users`** (added 2026-09-10) is on every engine row — `false` for `postgresql`, `true` for the rest. **Branch on this field, never on the engine name.** It is why the panel knows the answer and the client does not have to.
+**`supports_remote_users`** (added 2026-09-10) is on every engine row and is **`true` for every engine** as of 2026-09-12 — PostgreSQL was the last `false` and is no longer one. **Branch on this field, never on the engine name.** It stays because the next engine added is the one that will need it, and adding the field then would be a contract change.
 
-**Remote database users are refused** with a `422` on `create_user.connection_preference` / `connection_preference` for any engine whose `supports_remote_users` is `false`. A PostgreSQL role is cluster-wide and carries no host — which addresses may reach it is decided by `pg_hba.conf`, a file this panel does not manage, and opening 5432 in the firewall achieves nothing on its own. `localhost` is the only accepted value for this engine. The API refuses rather than storing a preference nothing would apply.
+**Remote database users are refused** with a `422` on `create_user.connection_preference` / `connection_preference` for any engine whose `supports_remote_users` is `false`. No shipped engine is currently in that state.
+
+### PostgreSQL remote users need a cluster restart the first time
+
+A MySQL account carries its own host, so `CREATE USER 'a'@'10.0.0.5'` **is** the grant. A PostgreSQL role is cluster-wide and has no host, so the same request is three facts that must agree: a `pg_hba.conf` record, `listen_addresses` bound off the loopback, and an open port. The panel now owns all three.
+
+Two of them are free. The third is not: **`listen_addresses` can only be set at server start**, and PostgreSQL clusters default to `localhost`. So the first time remote access is asked for on a cluster still bound to loopback, the API answers:
+
+```json
+{ "message": "Allowing remote connections needs PostgreSQL restarted, …", "code": "restart_required" }
+```
+
+with **`409`** — not 422. Nothing about the request is wrong; the server is in a state that has to change first. **Nothing is written and nothing is restarted** at this point: no role, no `pg_hba.conf` rule, no `ALTER SYSTEM`.
+
+To go ahead, re-send the same request with **`restart_cluster: true`** (or `create_user.restart_cluster` on `POST /databases`). That second request is the consent. Show a confirm dialog first — **every application connected to that cluster loses its connections** for the moment the restart takes.
+
+A cluster that already listens remotely — because the panel widened it earlier, or an operator configured it themselves — skips all of this and never returns `409`.
+
+**What the panel writes.** One `host <database> <role> <cidr> scram-sha-256` line per remote user, inside a marked block appended to `pg_hba.conf`. Everything outside the markers is left byte for byte; the block is re-rendered on every change, so rules never accumulate. `anywhere` writes **two** lines, `0.0.0.0/0` and `::0/0` — one would leave IPv6 clients unable to connect with no setting to blame. Dropping or renaming a user removes or moves its lines.
+
+**Safety.** The new file is validated with `pg_hba_file_rules` — which reports on the file *as it is on disk*, before the server has loaded it — and is only reloaded if every line parses. If any line does not, the previous file is put back and nothing is signalled.
 
 `install_status` is only ever `installing | failed | null` — never `installed`. A finished install removes its row.
 

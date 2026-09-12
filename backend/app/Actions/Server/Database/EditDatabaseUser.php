@@ -6,6 +6,7 @@ use App\Models\DatabaseUser;
 use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseFirewall;
 use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\Databases\RemoteAccessPreparer;
 
 /**
  * Edit an existing DB user's credentials: username, connection_preference/host
@@ -17,11 +18,12 @@ class EditDatabaseUser
     public function __construct(
         private DatabaseManager $manager,
         private DatabaseFirewall $firewall,
+        private RemoteAccessPreparer $remoteAccess,
         private ActivityLogger $activityLogger,
     ) {}
 
     /**
-     * @param  array{username?: string, connection_preference?: string, host?: ?string, password?: ?string}  $data
+     * @param  array{username?: string, connection_preference?: string, host?: ?string, password?: ?string, restart_cluster?: bool}  $data
      */
     public function execute(DatabaseUser $user, array $data): DatabaseUser
     {
@@ -35,6 +37,12 @@ class EditDatabaseUser
 
         $renamed = $newUsername !== $user->username || $newHost !== $user->host;
         $passwordChanged = ! empty($data['password']);
+
+        // Before anything is changed, for the same reason the firewall sync is:
+        // a refusal must not leave the panel describing an account the engine
+        // has already been told about. On PostgreSQL this is where a cluster
+        // restart is asked for and consented to.
+        $this->remoteAccess->prepare($database, $newPreference, (bool) ($data['restart_cluster'] ?? false));
 
         // Firewall setup can fail; perform it before mutating credentials so
         // the panel cannot be left describing an account the engine changed.

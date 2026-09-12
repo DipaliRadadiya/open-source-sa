@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\Server\Database\DatabaseOperationException;
+use App\Models\Database;
 use App\Models\DatabaseConnection;
 use App\Models\User;
 use App\Services\Server\Databases\DatabaseManager;
@@ -257,14 +258,25 @@ it('refuses to protect the wrong system databases', function () {
         ->and($manager->charsets('postgresql'))->not->toHaveKey('utf8mb4');
 });
 
-it('refuses remote access on an engine whose accounts have no host', function () {
-    // Not a cosmetic restriction. A PostgreSQL role is cluster-wide and
-    // carries no host: which addresses may reach it is decided by
-    // pg_hba.conf, which this panel does not own, parse or reload. Accepting
-    // the preference and storing it would be a 200, a saved setting and no
-    // effect on the server — the OpenLiteSpeed PHP screen bug of 2026-09-03.
+it('grants remote access rather than refusing it, now that the panel owns all three locks', function () {
+    // This test used to assert a 422. The refusal was right while the feature
+    // was unimplemented — accepting a preference nothing applies is the
+    // OpenLiteSpeed PHP screen bug of 2026-09-03, a 200 and no effect on the
+    // server. It is implemented now: a pg_hba.conf record, listen_addresses,
+    // and the firewall. So the refusal is gone and what replaces it is a 409
+    // asking permission to restart the cluster, because listen_addresses
+    // cannot be changed without one.
     $admin = User::factory()->admin()->create();
     $this->seed(PermissionSeeder::class);
+
+    // The file-wide fake answers `1` to everything, which reads as a cluster
+    // already bound off-loopback. This case is about the default, so it has to
+    // say so.
+    Process::fake(function ($process) {
+        return str_contains((string) ($process->input ?? ''), 'SHOW listen_addresses')
+            ? Process::result(output: 'localhost')
+            : Process::result(output: '1');
+    });
 
     $this->withHeaders(['Authorization' => 'Bearer '.$admin->createToken('t')->plainTextToken])
         ->postJson('/api/databases', [
@@ -275,17 +287,20 @@ it('refuses remote access on an engine whose accounts have no host', function ()
                 'connection_preference' => 'anywhere',
             ],
         ])
-        ->assertStatus(422)
-        ->assertJsonValidationErrors('create_user.connection_preference');
+        ->assertStatus(409)
+        ->assertJsonPath('code', 'restart_required');
+
+    // And the database it was asked to create alongside the user is not left
+    // behind by the refusal.
+    expect(Database::where('name', 'shop')->exists())->toBeFalse();
 });
 
 it('still allows remote access on the engines that support it', function () {
-    // The other half: engine-scoped must not mean nobody can have a remote
-    // user at all. MySQL carries the host in the account, so creating one is
-    // the grant.
+    // Every engine now does, PostgreSQL included — it was the last one, and it
+    // took owning pg_hba.conf and listen_addresses to get there.
     expect(app(DatabaseManager::class)->supportsRemoteUsers('mysql'))->toBeTrue()
         ->and(app(DatabaseManager::class)->supportsRemoteUsers('mongodb'))->toBeTrue()
-        ->and(app(DatabaseManager::class)->supportsRemoteUsers('postgresql'))->toBeFalse();
+        ->and(app(DatabaseManager::class)->supportsRemoteUsers('postgresql'))->toBeTrue();
 });
 
 it('ships the postgres client extension on every php stack', function () {
@@ -316,9 +331,16 @@ it('publishes whether an engine can have remote users, so no client has to name 
     // PostgreSQL, show only localhost", which is an engine name typed into
     // client code — exactly what 3ceb3452 removed from the backend. The value
     // already existed; it just was not sent.
+    //
+    // Every engine answers `true` as of 2026-09-12, PostgreSQL included. The
+    // field stays, and so does this test: it exists because the client must not
+    // decide by engine name, and that is just as true when the answer is
+    // currently the same everywhere. The next engine the panel adds is the one
+    // that needs it, and a field added then would be a contract change.
     $capabilities = collect(app(DatabaseManager::class)->capabilities())->keyBy('engine');
 
-    expect($capabilities['postgresql']['supports_remote_users'])->toBeFalse()
+    expect($capabilities)->each->toHaveKey('supports_remote_users')
+        ->and($capabilities['postgresql']['supports_remote_users'])->toBeTrue()
         ->and($capabilities['mysql']['supports_remote_users'])->toBeTrue()
         ->and($capabilities['mongodb']['supports_remote_users'])->toBeTrue();
 });

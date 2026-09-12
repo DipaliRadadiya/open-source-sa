@@ -8,6 +8,7 @@ use App\Services\ActivityLogger;
 use App\Services\Server\Databases\DatabaseFirewall;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
+use App\Services\Server\Databases\RemoteAccessPreparer;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -16,17 +17,23 @@ class CreateDatabaseUser
     public function __construct(
         private DatabaseManager $manager,
         private DatabaseFirewall $firewall,
+        private RemoteAccessPreparer $remoteAccess,
         private ActivityLogger $activityLogger,
     ) {}
 
     /**
-     * @param  array{username: string, password?: ?string, connection_preference?: string, host?: ?string}  $data
+     * @param  array{username: string, password?: ?string, connection_preference?: string, host?: ?string, restart_cluster?: bool}  $data
      */
     public function execute(Database $database, array $data): DatabaseUser
     {
         $preference = $data['connection_preference'] ?? 'localhost';
         $host = $this->resolveHost($preference, $data['host'] ?? null);
         $password = ($data['password'] ?? null) ?: DatabasePassword::generate();
+
+        // Before the engine is touched. On PostgreSQL a remote grant needs the
+        // cluster listening off-box, and that needs a restart the caller has to
+        // agree to — refusing here leaves nothing half-made.
+        $this->remoteAccess->prepare($database, $preference, (bool) ($data['restart_cluster'] ?? false));
 
         $engine = $this->manager->engine($database->engine);
         $engineUserCreated = false;

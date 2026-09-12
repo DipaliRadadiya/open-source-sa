@@ -14,6 +14,9 @@ return [
     'phpmyadmin_not_deployed' => 'Aucun site phpMyAdmin n\'est installé sur ce serveur.',
     'phpmyadmin_no_users' => 'Créez un utilisateur de base de données avant d\'accéder à phpMyAdmin.',
     'remote_users_unsupported' => 'L\'accès distant n\'est pas disponible pour :engine — ses comptes ne sont pas liés à un hôte. Utilisez localhost.',
+    // 409, not 422: the request is fine, the cluster is not ready. The
+    // client re-sends with restart_cluster as explicit consent.
+    'remote_access_restart_required' => 'Autoriser les connexions distantes nécessite de redémarrer PostgreSQL, car l\'adresse d\'écoute ne peut être modifiée qu\'au démarrage. Les applications qui utilisent cette base de données perdront leur connexion un instant. Renvoyez la requête avec restart_cluster pour continuer.',
     'phpmyadmin_not_selectable' => 'Le site sélectionné n\'est pas une installation phpMyAdmin active.',
     'phpmyadmin_user_not_found' => 'L\'utilisateur de base de données spécifié n\'appartient pas à cette base de données.',
     'phpmyadmin_not_isolated' => 'Ce site phpMyAdmin partage le pool PHP de tout le serveur : un lien de connexion serait donc lisible par tous les autres sites. Attribuez-lui son propre pool PHP, ou ouvrez phpMyAdmin et connectez-vous avec les identifiants de la base de données.',

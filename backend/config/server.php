@@ -2152,21 +2152,24 @@ return [
                 // a password change needs the second statement, exactly as
                 // MySQL does.
                 'rename_keeps_password' => true,
-                // False, and this is the one capability that changes what the
-                // API accepts rather than how it behaves.
+                // True since 2026-09-12, and it was false for a good reason
+                // that is now handled rather than avoided.
                 //
                 // In MySQL the host is half the account's identity and `CREATE
-                // USER 'a'@'10.0.0.5'` grants access from there. A PostgreSQL
-                // role is cluster-wide and has no host: access from a given
-                // address is decided by `pg_hba.conf`, a file this panel does
-                // not own, parse or reload. Opening 5432 in the firewall
-                // achieves nothing on its own either.
+                // USER 'a'@'10.0.0.5'` grants access from there — one statement
+                // and it is done. A PostgreSQL role is cluster-wide and has no
+                // host, so the same grant is three facts in three places:
+                // `pg_hba.conf` decides who may authenticate, `listen_addresses`
+                // decides whether the cluster is bound off-box at all, and the
+                // firewall decides whether 5432 is reachable. The panel now owns
+                // all three (see PgsqlEngine's remote-access section and
+                // DatabaseFirewall), so the preference is applied rather than
+                // stored and ignored.
                 //
-                // So the request refuses `remote`/`anywhere` for this engine
-                // instead of storing a preference nothing applies. Accepting
-                // it would be the OpenLiteSpeed PHP screen again: a 200, a
-                // saved value, and no effect on the server.
-                'supports_remote_users' => false,
+                // Refusing was right while it was unimplemented: accepting a
+                // setting nothing applies is the OpenLiteSpeed PHP screen again
+                // — a 200, a saved value, and no effect on the server.
+                'supports_remote_users' => true,
             ],
         ],
         'system_users' => ['root', 'mysql.sys', 'mysql.session', 'mysql.infoschema', 'debian-sys-maint', 'mariadb.sys'],

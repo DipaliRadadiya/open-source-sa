@@ -14,6 +14,9 @@ return [
     'phpmyadmin_not_deployed' => 'इस सर्वर पर कोई phpMyAdmin साइट इंस्टॉल नहीं है।',
     'phpmyadmin_no_users' => 'phpMyAdmin एक्सेस करने से पहले एक डेटाबेस उपयोगकर्ता बनाएं।',
     'remote_users_unsupported' => ':engine के लिए रिमोट एक्सेस उपलब्ध नहीं है — इसके खाते किसी होस्ट से बंधे नहीं होते। localhost का उपयोग करें।',
+    // 409, not 422: the request is fine, the cluster is not ready. The
+    // client re-sends with restart_cluster as explicit consent.
+    'remote_access_restart_required' => 'रिमोट कनेक्शन चालू करने के लिए PostgreSQL को पुनः आरंभ करना होगा, क्योंकि इसका लिसनिंग पता केवल स्टार्टअप पर ही बदला जा सकता है। इस डेटाबेस का उपयोग करने वाले ऐप्लिकेशन कुछ पलों के लिए कनेक्शन खो देंगे। आगे बढ़ने के लिए अनुरोध को restart_cluster के साथ दोबारा भेजें।',
     'phpmyadmin_not_selectable' => 'चयनित साइट एक सक्रिय phpMyAdmin इंस्टॉलेशन नहीं है।',
     'phpmyadmin_user_not_found' => 'निर्दिष्ट डेटाबेस उपयोगकर्ता इस डेटाबेस से संबंधित नहीं है।',
     'phpmyadmin_not_isolated' => 'यह phpMyAdmin साइट सर्वर-व्यापी PHP पूल साझा करती है, इसलिए साइन-इन लिंक हर दूसरी साइट पढ़ सकेगी। इसे अपना PHP पूल दें, या phpMyAdmin खोलकर डेटाबेस क्रेडेंशियल से साइन इन करें।',

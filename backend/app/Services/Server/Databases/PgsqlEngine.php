@@ -39,10 +39,16 @@ use App\Services\Server\ServerOpsResult;
  *     panel and still present on the server.
  *
  *  4. **A role is cluster-wide and has no host.** MySQL's identity is
- *     `'user'@'host'`; here the host half lives in `pg_hba.conf`, a file this
- *     panel does not own. Every `$host` argument below is therefore accepted
- *     and ignored, and the request layer refuses to *offer* remote access for
- *     this engine rather than accepting a setting nothing would apply.
+ *     `'user'@'host'` — creating the account *is* the grant. Here the host half
+ *     lives in `pg_hba.conf`, and binding lives in `listen_addresses`, so one
+ *     MySQL statement becomes three facts in three places that must agree.
+ *
+ *     Until 2026-09-12 every `$host` here was accepted and ignored, and the
+ *     request layer refused to offer remote access at all rather than store a
+ *     setting nothing applied. It is now implemented: see the remote-access
+ *     section below. `$host` is no longer decorative, and the only argument
+ *     still ignored is `$newHost`'s counterpart in {@see setPassword()}, where
+ *     a password change genuinely says nothing about addresses.
  *
  * Credentials go in a 0600 `PGPASSFILE` (measured: 0644 is warned about and
  * ignored), never on argv. Identifiers are double-quoted and validated upstream
@@ -306,6 +312,11 @@ class PgsqlEngine implements DatabaseEngine
             $this->ident($username),
             $this->ident($username),
         ));
+
+        // The host half of the account. A role is cluster-wide, so this is the
+        // only place the address is recorded — and without it a user created
+        // as "remote" would be a role that exists and cannot connect.
+        $this->syncHbaRule($database, $username, $host);
     }
 
     /**
@@ -331,6 +342,11 @@ class PgsqlEngine implements DatabaseEngine
             $this->ident($admin),
             $this->ident($username),
         ));
+
+        // Before the role goes, while its name still means something. A `host`
+        // line naming a dropped role is a grant nobody can see and nothing
+        // reports.
+        $this->syncHbaRule($database, $username, null);
 
         $this->must('DROP ROLE IF EXISTS '.$this->ident($username).';');
     }
@@ -361,6 +377,11 @@ class PgsqlEngine implements DatabaseEngine
             $this->ident($username),
             $this->ident($newUsername),
         ));
+
+        // The rule is keyed by role name, so a rename has to move it: left
+        // alone, the old name keeps a grant and the new one has none.
+        $this->syncHbaRule($database, $username, null);
+        $this->syncHbaRule($database, $newUsername, $newHost);
     }
 
     /**
@@ -537,6 +558,240 @@ class PgsqlEngine implements DatabaseEngine
             '--set=ON_ERROR_STOP=1',
             '--file='.$path,
         ], 'restore', 3600);
+    }
+
+    /*
+    |---------------------------------------------------------------------------
+    | Remote access — pg_hba.conf and listen_addresses
+    |---------------------------------------------------------------------------
+    |
+    | A role is cluster-wide and carries no host, so "which addresses may reach
+    | this account" is two separate facts held in two separate places, and both
+    | have to be true:
+    |
+    |   * `pg_hba.conf` decides which client addresses may authenticate. Read on
+    |     start-up and on SIGHUP, so a change takes a reload.
+    |   * `listen_addresses` decides which interfaces are bound at all. Its
+    |     default is `localhost`, and PostgreSQL's documentation is explicit:
+    |     "This parameter can only be set at server start." No reload will do —
+    |     it takes a **restart**, which interrupts every application connected
+    |     to the cluster. That is why granting remote access cannot be a silent
+    |     side effect of creating a user.
+    */
+
+    /**
+     * Where this cluster's `pg_hba.conf` actually is.
+     *
+     * Asked, never assembled from a version and a cluster name. The path is
+     * `/etc/postgresql/<version>/<cluster>/pg_hba.conf` on Ubuntu and something
+     * else everywhere else, and `hba_file` is the server's own answer — the
+     * same reasoning that made the installer discover the cluster with
+     * `pg_lsclusters` rather than assume `16-main`.
+     */
+    private function hbaPath(): ?string
+    {
+        $result = $this->run('SHOW hba_file;');
+
+        return $result->ok ? (trim($result->output()) ?: null) : null;
+    }
+
+    /**
+     * Grant one role remote access to one database, or take it away.
+     *
+     * `$host` is the panel's stored preference: `localhost` (no rule at all),
+     * `%` (anywhere), or an address/CIDR. Null removes the account's rules,
+     * which is what a drop or a move back to localhost-only means.
+     *
+     * The whole block is re-rendered from what is already in the file plus this
+     * one change, so the account's previous rules are replaced rather than
+     * accumulated — a user moved from one address to another must not keep the
+     * old one.
+     */
+    private function syncHbaRule(string $database, string $role, ?string $host): void
+    {
+        $path = $this->hbaPath();
+
+        if ($path === null) {
+            throw new DatabaseOperationException($this->run('SHOW hba_file;')->reference);
+        }
+
+        $contents = $this->readFile($path);
+        $rules = PgHbaFile::rules($contents);
+        $key = PgHbaFile::key($database, $role);
+
+        if ($host === null || $host === 'localhost') {
+            unset($rules[$key]);
+        } else {
+            $rules[$key] = PgHbaFile::lines($database, $role, $host);
+        }
+
+        $rendered = PgHbaFile::render($contents, $rules);
+
+        if ($rendered === $contents) {
+            return;
+        }
+
+        $this->writeHba($path, $contents, $rendered);
+    }
+
+    /**
+     * Write, prove it parses, then reload — and put the old file back if it
+     * does not.
+     *
+     * `pg_hba_file_rules` is what makes this safe rather than hopeful:
+     * PostgreSQL's documentation says it "reports on the current contents of
+     * the file, not on what was last loaded by the server", and recommends it
+     * "for pre-testing changes". So the file on disk can be checked *before*
+     * anything is signalled, and a reload only ever happens against a file
+     * already known to be valid.
+     *
+     * The previous contents are restored on any failure. Not a copy left beside
+     * it under another name: a stale `pg_hba.conf.bak` next to a live one is a
+     * trap for the next person to read the directory.
+     */
+    private function writeHba(string $path, string $previous, string $rendered): void
+    {
+        $this->writeFile($path, $rendered);
+
+        $check = $this->run('SELECT count(*) FROM pg_hba_file_rules WHERE error IS NOT NULL;');
+
+        // A cluster too old for the view, or one that would not answer, is not
+        // a licence to reload an unverified authentication file.
+        if ($check->failed() || (int) trim($check->output()) !== 0) {
+            $this->writeFile($path, $previous);
+
+            throw new DatabaseOperationException($check->reference);
+        }
+
+        $this->must('SELECT pg_reload_conf();');
+    }
+
+    /**
+     * `tee`, not a shell redirect.
+     *
+     * `pg_hba.conf` is `0640 postgres:postgres`. `tee` writes through the
+     * existing inode and leaves owner and mode exactly as they were; a redirect
+     * run as root would create a root-owned file, which the postmaster refuses
+     * to read — turning an authentication change into a cluster that cannot
+     * authenticate anyone.
+     */
+    private function writeFile(string $path, string $contents): void
+    {
+        $result = $this->serverOps->run(
+            ['tee', $path],
+            ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'hba_write'],
+            30,
+            $contents,
+        );
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+    }
+
+    private function readFile(string $path): string
+    {
+        $result = $this->serverOps->run(
+            ['cat', $path],
+            ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'hba_read'],
+        );
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+
+        return $result->output();
+    }
+
+    /**
+     * Which interfaces the cluster is bound to, as the running server sees it.
+     *
+     * `localhost` (the default) means no remote client can connect whatever
+     * `pg_hba.conf` says, so this is what decides whether a restart is needed.
+     */
+    public function listenAddresses(): string
+    {
+        $result = $this->run('SHOW listen_addresses;');
+
+        return $result->ok ? trim($result->output()) : 'localhost';
+    }
+
+    /**
+     * Is the cluster already reachable from off the box?
+     *
+     * Anything that is not the default loopback-only setting counts: an
+     * operator who has already set `listen_addresses` to a specific interface
+     * has made this decision themselves, and the panel has no business
+     * restarting their cluster to widen it further.
+     */
+    public function listensRemotely(): bool
+    {
+        $value = $this->listenAddresses();
+
+        return $value !== '' && $value !== 'localhost' && $value !== '127.0.0.1' && $value !== '::1';
+    }
+
+    /**
+     * Bind every interface, then restart — the only way this setting takes.
+     *
+     * Written with `ALTER SYSTEM`, which lands in `postgresql.auto.conf` rather
+     * than editing `postgresql.conf`: the operator's own file stays theirs, and
+     * the override is visible in one obvious place and removable with
+     * `ALTER SYSTEM RESET`.
+     *
+     * Binding is not granting. A cluster listening on every interface still
+     * authenticates nobody without a matching `pg_hba.conf` record, and the
+     * firewall still has to open 5432 — this is the first of three locks, not
+     * the only one.
+     */
+    public function openRemoteListening(): void
+    {
+        $this->must("ALTER SYSTEM SET listen_addresses = '*';");
+
+        $cluster = $this->cluster();
+
+        if ($cluster === null) {
+            throw new DatabaseOperationException(null);
+        }
+
+        $result = $this->serverOps->run(
+            ['systemctl', 'restart', "postgresql@{$cluster}"],
+            ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'restart_cluster'],
+            120,
+        );
+
+        if ($result->failed()) {
+            throw new DatabaseOperationException($result->reference);
+        }
+    }
+
+    /**
+     * The cluster as `<version>-<name>`, discovered rather than assumed.
+     *
+     * Same source the installer uses. A server whose cluster is not `16-main`
+     * is not exotic — a second cluster on a different port is ordinary — and
+     * restarting the wrong unit would report success having done nothing.
+     */
+    private function cluster(): ?string
+    {
+        $result = $this->serverOps->run(
+            ['pg_lsclusters', '--no-header'],
+            ['feature' => 'database', 'engine' => $this->engine(), 'op' => 'cluster'],
+        );
+
+        if ($result->failed()) {
+            return null;
+        }
+
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            $fields = preg_split('/\s+/', trim($line)) ?: [];
+
+            if (count($fields) >= 2 && $fields[0] !== '') {
+                return $fields[0].'-'.$fields[1];
+            }
+        }
+
+        return null;
     }
 
     private function must(string $sql): void
