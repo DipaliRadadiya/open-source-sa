@@ -360,13 +360,20 @@ export function FilesTable({
       sortingFn: sortByModified,
     },
     {
-      // Sortable, unlike permissions: "show me everything root ended up
-      // owning" is a real question after a restore or an install, and it is
-      // the one this column exists to answer.
+      // Not sortable, like permissions. The argument for it was "show me
+      // everything root ended up owning", and the sort does not answer that:
+      // it orders by `owner` alone while the column shows `owner:group`, so
+      // the halves of one value sort by half of it, and folders are pinned
+      // above files first regardless — which scatters any owner that appears
+      // in both. A control that reorders the list without answering the
+      // question it was added for is worse than no control, because its
+      // presence claims otherwise. Filtering is what that question wants, and
+      // the search box already narrows on the text.
       accessorKey: "owner",
       header: t("columns.owner"),
       meta: { className: "w-[16%] px-6" },
       cell: OwnerCell,
+      enableSorting: false,
     },
     {
       id: "permissions",
