@@ -1083,7 +1083,13 @@
     "linesUnit": "लाइनें",
     "orderNewestFirst": "नए पहले",
     "orderOldestFirst": "पुराने पहले",
-    "clear": "लॉग खाली करें"
+    "clear": "लॉग खाली करें",
+    "clearTitle": "{label} लॉग खाली करें?",
+    "clearBody": "सर्वर पर फ़ाइल खाली कर देता है। अब तक दर्ज सब कुछ चला जाएगा और वापस नहीं आ सकता — लॉग आगे से रिकॉर्ड करता रहेगा।",
+    "clearCancel": "रद्द करें",
+    "clearSubmit": "लॉग खाली करें",
+    "clearDone": "{label} खाली कर दिया।",
+    "clearFailed": "लॉग खाली नहीं किया जा सका।"
   },
   "services": {
     "title": "सेवाएँ",

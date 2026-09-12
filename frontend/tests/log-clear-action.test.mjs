@@ -66,3 +66,41 @@ test("the emptied log is shown emptied, not re-read", () => {
     "clearing must not refetch the log it just emptied",
   );
 });
+
+const serverPanel = read("components/logs/logs-panel.jsx");
+const schema = read("lib/schemas/log.js");
+
+test("the source schema names clearable, or the action disappears on poll", () => {
+  // Zod strips unknown keys. Without this the Clear action rendered from the
+  // server payload and then vanished the moment the source poll replaced the
+  // catalog — a button that disappears while you look at it.
+  assert.match(schema, /clearable: z\.boolean\(\)/);
+  // False by default: a server too old to send the field has no DELETE route
+  // either, so offering the action there would fail at the click.
+  assert.match(
+    schema,
+    /clearable: z\.boolean\(\)\.optional\(\)\.default\(false\)/,
+  );
+});
+
+test("server logs offer the action only where the API says it is allowed", () => {
+  // Never inferred from the key: the registry decides, and a second client must
+  // not be able to offer what the server will refuse.
+  assert.match(
+    serverPanel,
+    /canManage && source\?\.clearable \? \(\) => setConfirmClear\(true\) : null/,
+  );
+});
+
+test("clearing a server log resets the incremental cursor", () => {
+  // It counts bytes into a file that is now zero bytes long. Left alone, the
+  // next poll asks for a range past the end and renders nothing for as long as
+  // the page stays open.
+  const handler = serverPanel.slice(
+    serverPanel.indexOf("const clearSelected"),
+    serverPanel.indexOf("const copy"),
+  );
+
+  assert.match(handler, /cursor\.current = 0/);
+  assert.match(handler, /setLines\(\[\]\)/);
+});

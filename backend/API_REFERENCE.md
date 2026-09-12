@@ -4528,7 +4528,7 @@ All available log sources on the server.
 {"logs": [{
   "key": "nginx_error", "label": "Nginx Error Log", "group": "web",
   "kind": "file", "size": 4096, "modified": "29-07-2026 11:00:00",
-  "readable": true, "follow": true, "downloadable": true
+  "readable": true, "follow": true, "downloadable": true, "clearable": true
 }]}
 ```
 
@@ -4605,6 +4605,25 @@ For live tail: poll with `?after=<cursor>`.
 **Permission:** `logs` (view)
 
 Stream the full file as a download (`Content-Disposition: attachment`).
+
+---
+
+### DELETE `/logs/{key}`
+**Permission:** `logs` (**manage**)
+
+Empty one log. `manage`, not `view`: reading a log and destroying it are not the same trust, and a viewer gets **403**.
+
+**Response `200`:** `{"log": {"key": "nginx_error", "lines": [], "truncated": false}}` — the source still exists, it is simply empty.
+
+**Only sources whose `clearable` is `true`.** That flag is opt-in per registry row, and it is **false** for `syslog`, `auth`, `kernel`, `mail`, `ufw`, `fail2ban`, `letsencrypt` and `journal`. Those record what happened to the machine — what an investigation needs, and the first thing an intruder would erase — so the panel offers no button and the API refuses even when one is named directly. Clearable today: the nginx/Apache/OpenLiteSpeed access and error logs, MySQL error and slow-query, MongoDB, Redis, Supervisor, each PHP-FPM version, each cron job and each worker. **Read `clearable` off the source rather than inferring it from the key** — a client that guesses will offer what the server refuses.
+
+A refused or unknown key both answer **404**, deliberately the same: from the client's side they are equally not on offer, and a 403 would advertise a capability the panel does not intend to have.
+
+**Truncated, never deleted.** An open log that is unlinked keeps its disk space until the writer restarts and breaks its own handle — `rm` would free nothing and leave nginx or MySQL appending to a file no screen can read. `truncate -s 0` reclaims the space with the writer attached and keeps the inode's owner and mode, which the service will not restore on its own. Same mechanism as the Disk Cleaner's service-log target.
+
+Every clear is written to the activity feed as `log.cleared` with the source named.
+
+See also `DELETE /applications/{application}/logs/{key}` for a site's own logs, which is the same operation under the `app_log` grant.
 
 ---
 

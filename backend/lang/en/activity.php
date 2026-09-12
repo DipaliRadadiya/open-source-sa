@@ -160,6 +160,7 @@ return [
     'application.environment_restored' => 'Restored a previous environment file for :name',
     'application.permissions_fixed' => 'Reset file permissions for :name',
     'application.log_cleared' => 'Cleared the :log log for :subject',
+    'log.cleared' => 'Cleared the :log log',
     'application.file_edited' => 'Edited :path on :name',
     'application.file_uploaded' => 'Uploaded :path to :name',
     'application.files_extracted' => 'Extracted :path into :target on :name',

@@ -1083,7 +1083,13 @@
     "linesUnit": "líneas",
     "orderNewestFirst": "Más recientes primero",
     "orderOldestFirst": "Más antiguos primero",
-    "clear": "Vaciar el registro"
+    "clear": "Vaciar el registro",
+    "clearTitle": "¿Vaciar el registro {label}?",
+    "clearBody": "Vacía el archivo en el servidor. Todo lo registrado hasta ahora se pierde y no se puede recuperar; el registro sigue grabando desde ahora.",
+    "clearCancel": "Cancelar",
+    "clearSubmit": "Vaciar el registro",
+    "clearDone": "{label} vaciado.",
+    "clearFailed": "No se pudo vaciar el registro."
   },
   "services": {
     "title": "Servicios",

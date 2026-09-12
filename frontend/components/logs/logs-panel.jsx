@@ -4,7 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { readLog, listLogSources, logDownloadUrl } from "@/lib/api/logs";
+import {
+  clearLog,
+  readLog,
+  listLogSources,
+  logDownloadUrl,
+} from "@/lib/api/logs";
 import { LINE_OPTIONS, logSourcesResponseSchema } from "@/lib/schemas/log";
 import { matchesSeverity } from "@/lib/logs/severity";
 import { LogSourceList } from "@/components/logs/log-source-list";
@@ -12,6 +17,8 @@ import { LogToolbar } from "@/components/logs/log-toolbar";
 import { LogViewer } from "@/components/logs/log-viewer";
 import { FOLLOW_COOKIE, resolveFollow } from "@/lib/logs/follow-preference";
 import { apiMessage } from "@/lib/api/error-message";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Eraser } from "lucide-react";
 
 const POLL_MS = 3000;
 // Long tailing sessions must not grow without bound.
@@ -32,6 +39,7 @@ export function LogsPanel({
   initial,
   initialLines,
   followPreference,
+  canManage = false,
 }) {
   const t = useTranslations("logs");
   const router = useRouter();
@@ -53,6 +61,8 @@ export function LogsPanel({
   const [lines, setLines] = useState(initial?.log?.lines ?? []);
   const [status, setStatus] = useState(initial?.status ?? "ok");
   const [truncated, setTruncated] = useState(Boolean(initial?.log?.truncated));
+  const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [lineCount, setLineCount] = useState(initialLines);
   const [term, setTerm] = useState("");
   const [debouncedTerm, setDebouncedTerm] = useState("");
@@ -285,6 +295,33 @@ export function LogsPanel({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
+  /**
+   * Empty the selected log.
+   *
+   * The server truncates, so the source still exists and the viewer is simply
+   * emptied in place. The incremental cursor is reset with it: it counts bytes
+   * into a file that is now zero bytes long, and leaving it where it was would
+   * make the next poll ask for a range past the end and render nothing for as
+   * long as the page stayed open.
+   */
+  const clearSelected = useCallback(async () => {
+    if (!source) return;
+
+    setClearing(true);
+    try {
+      await clearLog(source.key);
+      setLines([]);
+      setTruncated(false);
+      cursor.current = 0;
+      setConfirmClear(false);
+      toast.success(t("clearDone", { label: source.label }));
+    } catch (error) {
+      toast.error(apiMessage(error, t("clearFailed")));
+    } finally {
+      setClearing(false);
+    }
+  }, [source, t]);
+
   const copy = useCallback(
     async (text, message) => {
       try {
@@ -339,6 +376,10 @@ export function LogsPanel({
             copy(visible.join("\n"), t("copiedLines", { count: visible.length }))
           }
           downloadUrl={source ? logDownloadUrl(source.key) : undefined}
+          onClear={
+            canManage && source?.clearable ? () => setConfirmClear(true) : null
+          }
+          clearing={clearing}
           busy={busy}
           disabled={disabled}
           searchRef={searchRef}
@@ -387,6 +428,21 @@ export function LogsPanel({
           }}
         />
       </section>
+
+      {/* Names the log: "Clear log?" over a list of twenty sources does not say
+          which one, and this cannot be undone. */}
+      <ConfirmDialog
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        icon={Eraser}
+        tone="destructive"
+        title={t("clearTitle", { label: source?.label ?? "" })}
+        description={t("clearBody")}
+        cancelLabel={t("clearCancel")}
+        confirmLabel={t("clearSubmit")}
+        pending={clearing}
+        onConfirm={clearSelected}
+      />
     </div>
   );
 }

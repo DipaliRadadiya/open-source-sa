@@ -12,7 +12,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Read-only access to server log files. The catalog is the configured source
+ * Server log files: read, and — for the sources that opt in — empty.
+ *
+ * This was read-only, and the exception is narrow on purpose. `clearable` is
+ * opt-in per source, and it is absent from auth.log, ufw.log, fail2ban.log,
+ * syslog, kern.log, mail.log, the Let's Encrypt log and the journal: those are
+ * the record of what happened to the machine, the files an investigation needs
+ * and the first ones an intruder would erase. What a service says about its own
+ * traffic is a different thing, and that is all this will empty.
+ *
+ * The catalog is the configured source
  * registry, plus one log per PHP version the stack reports, plus one
  * source per cron job (the only part that reads the DB — a cron log's label
  * is its job's name, which only the DB knows). Everything is filtered at read
@@ -94,6 +103,47 @@ class LogManager
      * @param  array{key: string, label: string, group: string, path: string}  $source
      * @return array<string, mixed>|null
      */
+    /**
+     * Empty one log, when the source allows it.
+     *
+     * **Truncated, never deleted.** An open log that is unlinked keeps its disk
+     * space until the writer restarts and breaks its own handle — `rm` would
+     * free nothing and leave nginx, MySQL or the cron wrapper appending to a
+     * file no screen can read. `truncate -s 0` reclaims the space with the
+     * writer attached and keeps the inode's owner and mode, which the service
+     * will not restore on its own. Same mechanism, and the same reason, as the
+     * Disk Cleaner's ServiceLogsTarget.
+     *
+     * Two refusals, both 404-shaped to the caller rather than 403: a source
+     * that is not `clearable`, and the journal, which is not a file at all —
+     * emptying that means `journalctl --vacuum` against the host's whole
+     * journal, which is a different operation with a different blast radius.
+     *
+     * @throws LogOperationException
+     */
+    public function clear(string $key): bool
+    {
+        $source = $this->find($key);
+
+        if ($source === null
+            || ($source['clearable'] ?? false) !== true
+            || ($source['kind'] ?? 'file') === 'journal') {
+            return false;
+        }
+
+        $result = $this->serverOps->run(
+            ['truncate', '-s', '0', $source['path']],
+            ['feature' => 'log', 'op' => 'clear', 'source' => $key],
+            timeout: 30,
+        );
+
+        if ($result->failed()) {
+            throw new LogOperationException($result->reference);
+        }
+
+        return true;
+    }
+
     public function describe(array $source): ?array
     {
         $kind = $source['kind'] ?? 'file';
@@ -116,6 +166,12 @@ class LogManager
             'label' => $source['label'],
             'group' => $source['group'],
             'kind' => $kind,
+            // Whether the panel will empty this one. Opt-in per source, and
+            // deliberately false for auth, ufw, fail2ban, syslog, kernel, mail,
+            // letsencrypt and the journal — those record what happened to the
+            // machine, which is the thing you need after an intrusion and the
+            // first thing an intruder would erase.
+            'clearable' => ($source['clearable'] ?? false) === true && $kind !== 'journal',
             'size' => $stat['size'],
             'modified' => $stat['modified'] === null ? null : date('d-m-Y H:i:s', $stat['modified']),
             // A privileged source is read through sudo, so "can the panel
@@ -416,6 +472,9 @@ class LogManager
                 'label' => "Cron — {$cronjob->name}",
                 'group' => 'cronjob',
                 'path' => "{$dir}/{$cronjob->slug}.log",
+                // One job's own output. Emptying it loses nothing the machine
+                // is the record of.
+                'clearable' => true,
                 // Read through sudo, unlike every other source here.
                 //
                 // install.sh puts the panel account in `adm`, which is what
@@ -477,6 +536,7 @@ class LogManager
                 'label' => trim(($worker->application?->name ? $worker->application->name.' — ' : '').$worker->name),
                 'group' => 'worker',
                 'path' => $this->workers->logFile($worker),
+                'clearable' => true,
                 'kind' => 'privileged',
             ])
             ->values()
@@ -502,6 +562,7 @@ class LogManager
                 'label' => "PHP {$version} FPM",
                 'group' => 'php',
                 'path' => $path,
+                'clearable' => true,
             ];
         }
 

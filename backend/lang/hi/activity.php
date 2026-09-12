@@ -154,6 +154,7 @@ return [
     'application.environment_restored' => ':name की पिछली एनवायरनमेंट फ़ाइल पुनर्स्थापित की',
     'application.permissions_fixed' => ':name की फ़ाइल अनुमतियाँ रीसेट कीं',
     'application.log_cleared' => ':subject के लिए :log लॉग खाली किया',
+    'log.cleared' => ':log लॉग खाली किया',
     'application.file_edited' => ':name पर :path संपादित की',
     'application.file_uploaded' => ':name पर :path अपलोड की',
     'application.files_extracted' => ':name पर :path को :target में निकाला',

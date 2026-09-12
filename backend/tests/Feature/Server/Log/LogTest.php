@@ -567,3 +567,123 @@ describe('worker logs', function () {
             && in_array('-t', $p->command, true) === false);
     });
 });
+
+/*
+ * Emptying a log.
+ *
+ * Opt-in per source, and the opt-out list is the point: auth.log, ufw.log,
+ * fail2ban.log, syslog, kern.log, mail.log, the Let's Encrypt log and the
+ * journal record what happened to the machine. Those are what an investigation
+ * needs and the first thing an intruder would erase, so the panel offers no
+ * button for them — and the API refuses even if one is asked for directly.
+ */
+
+function clearableLogs(): void
+{
+    config(['server.logs' => [
+        ['key' => 'nginx_error', 'label' => 'Nginx — Error', 'group' => 'web', 'path' => test()->logDir.'/nginx-error.log', 'clearable' => true],
+        ['key' => 'auth', 'label' => 'System — Auth', 'group' => 'system', 'path' => test()->logDir.'/auth.log'],
+        ['key' => 'journal', 'label' => 'System — Journal', 'group' => 'system', 'kind' => 'journal', 'path' => '', 'clearable' => true],
+    ]]);
+}
+
+it('empties a clearable log by truncating it, never by deleting it', function () {
+    clearableLogs();
+    File::put($this->logDir.'/nginx-error.log', "noise\nmore noise\n");
+
+    $runs = new ArrayObject;
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson('/api/logs/nginx_error')
+        ->assertOk();
+
+    $commands = collect($runs)->map(fn ($c) => ($c[0] ?? '') === 'sudo' ? array_slice($c, 2) : $c);
+    $truncate = $commands->first(fn ($c) => ($c[0] ?? '') === 'truncate');
+
+    // `rm` would free nothing while the writer holds the inode, and would leave
+    // nginx appending to a file no screen can read.
+    expect($truncate)->toBe(['truncate', '-s', '0', $this->logDir.'/nginx-error.log'])
+        ->and($commands->pluck(0)->all())->not->toContain('rm');
+});
+
+it('refuses the logs that record what happened to the machine', function () {
+    clearableLogs();
+    File::put($this->logDir.'/auth.log', "sshd: accepted publickey for root\n");
+
+    Process::fake(fn () => Process::result(exitCode: 0));
+
+    // 404, the same answer as a key that does not exist: auth.log is not
+    // offered, and a 403 would advertise a capability the panel does not have.
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson('/api/logs/auth')
+        ->assertNotFound();
+
+    // And nothing was touched.
+    expect(File::get($this->logDir.'/auth.log'))->toContain('accepted publickey');
+    Process::assertNothingRan();
+});
+
+it('refuses the journal, which is not a file', function () {
+    clearableLogs();
+
+    // Marked clearable in this fixture on purpose: emptying the journal means
+    // `journalctl --vacuum` against the host's whole journal, a different
+    // operation with a different blast radius, so the kind check has to refuse
+    // it even when the flag says yes.
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson('/api/logs/journal')
+        ->assertNotFound();
+});
+
+it('records who emptied which log', function () {
+    clearableLogs();
+    File::put($this->logDir.'/nginx-error.log', "noise\n");
+    Process::fake(fn () => Process::result(exitCode: 0));
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson('/api/logs/nginx_error')
+        ->assertOk();
+
+    $entry = ActivityLog::query()->where('action', 'cleared')->where('type', 'log')->first();
+
+    expect($entry)->not->toBeNull()
+        ->and($entry->properties['log'])->toBe('nginx_error');
+});
+
+it('denies a viewer who may read logs but not manage them', function () {
+    clearableLogs();
+    File::put($this->logDir.'/nginx-error.log', "noise\n");
+
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'logs', view: true, manage: false);
+    $token = $viewer->createToken('t')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->deleteJson('/api/logs/nginx_error')
+        ->assertForbidden();
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/logs/nginx_error')
+        ->assertOk();
+});
+
+it('tells the screen which sources it may offer the action for', function () {
+    clearableLogs();
+    File::put($this->logDir.'/nginx-error.log', "noise\n");
+    File::put($this->logDir.'/auth.log', "noise\n");
+
+    $logs = collect(
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs')
+    );
+
+    expect($logs->firstWhere('key', 'nginx_error')['clearable'])->toBeTrue()
+        // Not merely hidden by the client: the API says so, so a second client
+        // cannot offer what the server will refuse.
+        ->and($logs->firstWhere('key', 'auth')['clearable'])->toBeFalse();
+});

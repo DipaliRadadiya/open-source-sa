@@ -1530,24 +1530,35 @@ return [
     |
     */
 
+    /*
+    | `clearable` marks the logs the panel will empty on request (truncate, see
+    | LogManager::clear). It is opt-IN per row on purpose: a source added here
+    | later is not clearable until somebody decides it should be.
+    |
+    | Absent from syslog, auth, kernel, mail, ufw, fail2ban, letsencrypt and the
+    | journal, and that is the point of the flag. Those record what happened to
+    | the machine rather than what a service is chattering about — they are the
+    | files you need after an intrusion and the first ones an intruder would
+    | want erased, so the panel offers no button for them.
+    */
     'logs' => [
         // Web server (only the installed one has files)
-        ['key' => 'nginx_access', 'label' => 'Nginx — Access', 'group' => 'web', 'path' => '/var/log/nginx/access.log'],
-        ['key' => 'nginx_error', 'label' => 'Nginx — Error', 'group' => 'web', 'path' => '/var/log/nginx/error.log'],
-        ['key' => 'apache_access', 'label' => 'Apache — Access', 'group' => 'web', 'path' => '/var/log/apache2/access.log'],
-        ['key' => 'apache_error', 'label' => 'Apache — Error', 'group' => 'web', 'path' => '/var/log/apache2/error.log'],
+        ['key' => 'nginx_access', 'label' => 'Nginx — Access', 'group' => 'web', 'path' => '/var/log/nginx/access.log', 'clearable' => true],
+        ['key' => 'nginx_error', 'label' => 'Nginx — Error', 'group' => 'web', 'path' => '/var/log/nginx/error.log', 'clearable' => true],
+        ['key' => 'apache_access', 'label' => 'Apache — Access', 'group' => 'web', 'path' => '/var/log/apache2/access.log', 'clearable' => true],
+        ['key' => 'apache_error', 'label' => 'Apache — Error', 'group' => 'web', 'path' => '/var/log/apache2/error.log', 'clearable' => true],
         // Both, like the other two. OpenLiteSpeed had only an error log here,
         // so the Logs screen offered no access log on that stack at all. The
         // shipped httpd_config.conf writes `accessLog logs/access.log`, which
         // resolves against $SERVER_ROOT.
-        ['key' => 'openlitespeed_access', 'label' => 'OpenLiteSpeed — Access', 'group' => 'web', 'path' => '/usr/local/lsws/logs/access.log'],
-        ['key' => 'openlitespeed_error', 'label' => 'OpenLiteSpeed — Error', 'group' => 'web', 'path' => '/usr/local/lsws/logs/error.log'],
+        ['key' => 'openlitespeed_access', 'label' => 'OpenLiteSpeed — Access', 'group' => 'web', 'path' => '/usr/local/lsws/logs/access.log', 'clearable' => true],
+        ['key' => 'openlitespeed_error', 'label' => 'OpenLiteSpeed — Error', 'group' => 'web', 'path' => '/usr/local/lsws/logs/error.log', 'clearable' => true],
         // Database (installed engine)
-        ['key' => 'mysql_error', 'label' => 'MySQL — Error', 'group' => 'database', 'path' => '/var/log/mysql/error.log'],
-        ['key' => 'mysql_slow', 'label' => 'MySQL — Slow Query', 'group' => 'database', 'path' => '/var/log/mysql/mariadb-slow.log'],
-        ['key' => 'mongodb', 'label' => 'MongoDB', 'group' => 'database', 'path' => '/var/log/mongodb/mongod.log'],
+        ['key' => 'mysql_error', 'label' => 'MySQL — Error', 'group' => 'database', 'path' => '/var/log/mysql/error.log', 'clearable' => true],
+        ['key' => 'mysql_slow', 'label' => 'MySQL — Slow Query', 'group' => 'database', 'path' => '/var/log/mysql/mariadb-slow.log', 'clearable' => true],
+        ['key' => 'mongodb', 'label' => 'MongoDB', 'group' => 'database', 'path' => '/var/log/mongodb/mongod.log', 'clearable' => true],
         // Cache
-        ['key' => 'redis', 'label' => 'Redis', 'group' => 'cache', 'path' => '/var/log/redis/redis-server.log'],
+        ['key' => 'redis', 'label' => 'Redis', 'group' => 'cache', 'path' => '/var/log/redis/redis-server.log', 'clearable' => true],
         // System
         ['key' => 'syslog', 'label' => 'System — Syslog', 'group' => 'system', 'path' => '/var/log/syslog'],
         ['key' => 'auth', 'label' => 'System — Auth', 'group' => 'system', 'path' => '/var/log/auth.log'],
@@ -1562,7 +1573,7 @@ return [
         ['key' => 'ufw', 'label' => 'Firewall — UFW', 'group' => 'security', 'path' => '/var/log/ufw.log'],
         // Also what the `recidive` jail reads to find repeat offenders.
         ['key' => 'fail2ban', 'label' => 'Fail2ban', 'group' => 'security', 'path' => '/var/log/fail2ban.log'],
-        ['key' => 'supervisor', 'label' => 'Supervisor', 'group' => 'daemon', 'path' => '/var/log/supervisor/supervisord.log'],
+        ['key' => 'supervisor', 'label' => 'Supervisor', 'group' => 'daemon', 'path' => '/var/log/supervisor/supervisord.log', 'clearable' => true],
 
         // `kind` is `file` unless it says otherwise — read natively, followed
         // by byte offset, downloadable. The two below cannot be any of that.

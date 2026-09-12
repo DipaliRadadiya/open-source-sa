@@ -1083,7 +1083,13 @@
     "linesUnit": "lines",
     "orderNewestFirst": "Newest first",
     "orderOldestFirst": "Oldest first",
-    "clear": "Clear log"
+    "clear": "Clear log",
+    "clearTitle": "Clear the {label} log?",
+    "clearBody": "Empties the file on the server. Everything recorded so far is gone and cannot be recovered — the log keeps recording from now on.",
+    "clearCancel": "Cancel",
+    "clearSubmit": "Clear log",
+    "clearDone": "{label} cleared.",
+    "clearFailed": "The log could not be cleared."
   },
   "services": {
     "title": "Services",

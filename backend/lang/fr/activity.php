@@ -154,6 +154,7 @@ return [
     'application.environment_restored' => 'A restauré un fichier d\'environnement précédent pour :name',
     'application.permissions_fixed' => 'A réinitialisé les permissions de fichiers de :name',
     'application.log_cleared' => 'A vidé le journal :log de :subject',
+    'log.cleared' => 'A vidé le journal :log',
     'application.file_edited' => 'A modifié :path sur :name',
     'application.file_uploaded' => 'A téléversé :path sur :name',
     'application.files_extracted' => 'A extrait :path dans :target sur :name',

@@ -30,6 +30,15 @@ export const logSourceSchema = z.object({
   size: z.number().nullable().optional(),
   modified: z.string().nullable().optional(),
   readable: z.boolean(),
+  // Whether the panel will empty this one. **Named here or it is lost**: Zod
+  // strips unknown keys, so leaving it out meant the Clear action appeared on
+  // the server render and then vanished the moment the source poll replaced the
+  // catalog — a button that disappears while you look at it.
+  //
+  // Defaults to false rather than true: a server too old to send the field is
+  // one whose DELETE route does not exist either, and offering the action there
+  // would fail at the click.
+  clearable: z.boolean().optional().default(false),
 });
 
 export const logSourcesResponseSchema = z.object({

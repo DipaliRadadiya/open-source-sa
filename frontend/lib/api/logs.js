@@ -28,3 +28,20 @@ export function readLog(key, { lines, grep, after, signal } = {}) {
 export function logDownloadUrl(key) {
   return `${process.env.NEXT_PUBLIC_API_URL}/api/logs/${encodeURIComponent(key)}/download`;
 }
+
+/**
+ * Empty one server log.
+ *
+ * Truncated server-side, never deleted — the writer keeps its file handle, so
+ * nginx or MySQL carries on appending to the same inode with the same owner.
+ *
+ * `logs` **manage**; a viewer gets 403. **404** for a source the registry does
+ * not mark `clearable` — auth.log, ufw.log, fail2ban.log, syslog, kern.log,
+ * mail.log, the Let's Encrypt log and the journal. Those record what happened
+ * to the machine, so the panel offers no button and the API refuses even when
+ * one is asked for directly. Read `clearable` off the source rather than
+ * guessing from its key.
+ */
+export function clearLog(key) {
+  return api.delete(`/logs/${encodeURIComponent(key)}`);
+}

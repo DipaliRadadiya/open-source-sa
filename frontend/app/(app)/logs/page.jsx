@@ -34,6 +34,8 @@ export default async function LogsPage({ searchParams }) {
   const followPreference = cookieStore.get(FOLLOW_COOKIE)?.value ?? null;
 
   if (!can(permissions, "logs", "view")) redirect("/dashboard");
+  // Emptying a log is a different trust from reading one.
+  const canManage = can(permissions, "logs", "manage");
 
   const { logs: sources, failed } = await getLogSources();
   // Default to the first source the panel can actually open, so a box where
@@ -78,6 +80,7 @@ export default async function LogsPage({ searchParams }) {
           initial={initial}
           initialLines={DEFAULT_LINES}
           followPreference={followPreference}
+          canManage={canManage}
         />
       )}
     </div>

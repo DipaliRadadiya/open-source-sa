@@ -154,6 +154,7 @@ return [
     'application.environment_restored' => ':name の以前の環境ファイルを復元しました',
     'application.permissions_fixed' => ':name のファイル権限をリセットしました',
     'application.log_cleared' => ':subject の :log ログを消去しました',
+    'log.cleared' => ':log ログを消去しました',
     'application.file_edited' => ':name の :path を編集しました',
     'application.file_uploaded' => ':name に :path をアップロードしました',
     'application.files_extracted' => ':name の :target に :path を展開しました',
