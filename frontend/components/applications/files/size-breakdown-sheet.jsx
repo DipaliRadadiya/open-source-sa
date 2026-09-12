@@ -106,12 +106,14 @@ export function SizeBreakdownSheet({ breakdown }) {
 
         {unavailable || empty ? null : (
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4">
-            {/* One bar, full width, no axes. It answers "roughly what shape is
-                this" in 40px; the legend under it answers "how big exactly",
-                which is the question that decides what to delete. */}
+            {/* The donut answers "roughly what shape is this"; the table under
+                it answers "how big exactly", which is the question that decides
+                what to delete. It is not a fallback for the chart — they answer
+                different questions. The sheet has the height for both, which
+                the 340px rail this replaced did not. */}
             <EChart
               option={option}
-              height="h-10"
+              height="h-56"
               dataTable={{
                 caption: t("title"),
                 columns: [t("columnType"), t("columnSize"), t("columnFiles")],

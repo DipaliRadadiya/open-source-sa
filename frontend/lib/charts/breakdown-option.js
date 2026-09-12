@@ -1,19 +1,20 @@
 /**
  * The storage breakdown on the file manager: which kinds of file use the space.
  *
- * **A horizontal stacked bar, not a donut.** Part-to-whole is a stacked bar, and
- * it goes horizontal when the categories are many or long-named — both are true
- * here ("Node modules", "Documents", nine or ten of them). The donut this
- * replaces was chosen for a 340px side rail, and it cost the file listing that
- * width; a single full-width bar says the same thing in 40px of height, leaving
- * the listing the whole row. A donut also spends horizontal space on a circle,
- * which is the one resource this screen is short of.
+ * **A donut, in a sheet.** It was briefly a horizontal stacked bar, on the
+ * reasoning that a circle spends horizontal space this screen was short of —
+ * which was true while the breakdown sat in a 340px rail beside the listing and
+ * competed with it for width. It does not sit there any more: the rail is gone
+ * and this opens in a sheet, where there is no width to compete for and plenty
+ * of height. The constraint that argued against the donut went away with the
+ * rail, so the donut comes back — it is the shape people expect of "what is
+ * using this space", and part-to-whole is what it is for.
  *
  * Two rules shape the rest and both come from the chart guidance rather than
  * taste.
  *
- * **Six segments, never more.** Past about six the segments stop being
- * comparable and the thing becomes decoration over a table. The panel has
+ * **Six slices, never more.** Past about six the arcs stop being comparable and
+ * the thing becomes decoration over a table. The panel has
  * exactly five categorical tokens, so the top five categories take those in
  * fixed order and everything else folds into one "Other". A generated sixth hue
  * would be indistinguishable from an existing one under colour-blindness and
@@ -38,7 +39,7 @@ export const OTHER_TOKEN = "muted-foreground";
 export const MAX_SLICES = SERIES_TOKENS.length + 1;
 
 /**
- * Fold a full category list down to what one bar can honestly show.
+ * Fold a full category list down to what a donut can honestly show.
  *
  * Returns the tail separately as well as folded, so the legend can still list
  * every category — the chart summarises, the legend does not.
@@ -72,27 +73,14 @@ export function foldCategories(categories) {
  *
  * `tokens` is what useChartTokens resolved — colours already converted to sRGB,
  * because ECharts' own parser cannot read the `oklch()` the cascade returns.
- *
- * One stacked bar on one category band. The axes are switched off entirely: a
- * value axis under a part-to-whole bar invites reading absolute bytes off a
- * pixel position, which is what the legend's formatted sizes are for, and the
- * band has no second entry for a category axis to name.
  */
 export function breakdownOption({ slices, tokens = {}, label }) {
   const muted = tokens[OTHER_TOKEN] ?? "#888";
-  const surface = tokens.card ?? "#fff";
-  const total = slices.reduce((sum, slice) => sum + (slice.bytes ?? 0), 0);
 
   return {
     // The generated description for assistive tech; EChart's own sr-only table
     // carries the numbers.
     aria: { enabled: true },
-    // The bar is the whole chart, so it gets the whole box. No axis labels and
-    // no legend inside the canvas — the legend is real DOM beside it, where its
-    // values can be selected, translated and read by a screen reader.
-    grid: { top: 0, right: 0, bottom: 0, left: 0, containLabel: false },
-    xAxis: { type: "value", show: false, max: total || 1 },
-    yAxis: { type: "category", show: false, data: [""] },
     tooltip: {
       trigger: "item",
       backgroundColor: tokens.popover ?? "#fff",
@@ -101,56 +89,42 @@ export function breakdownOption({ slices, tokens = {}, label }) {
       // Share only. Exact sizes are in the legend beside this, already
       // formatted by the backend — a second byte formatter in JS would drift
       // from the one that produced every other size on the screen.
-      formatter: (params) => {
-        const share = total > 0 ? Math.round((params.value / total) * 100) : 0;
-
-        return `${label(params.seriesName)} · ${share}%`;
-      },
+      formatter: (params) => `${label(params.name)} · ${params.percent}%`,
     },
-    // One series per segment rather than one series of many values: `stack`
-    // needs separate series to stack, and it is also what gives each segment
-    // its own name for the tooltip and its own colour.
-    series: slices.map((slice, index) => ({
-      name: slice.key,
-      type: "bar",
-      stack: "size",
-      barWidth: 24,
-      // No label inside the segments. An interior stacked segment has no free
-      // end to put a label outside of, and most segments here are far too
-      // narrow to hold one — the guidance is to let the legend and tooltip
-      // carry it rather than clip text inside a fill.
-      label: { show: false },
-      itemStyle: {
-        color: slice.isTail ? muted : tokens[SERIES_TOKENS[index]] ?? muted,
-        // A 2px gap in the surface colour between segments, so adjacent fills
-        // never touch and read as one shape.
-        borderColor: surface,
-        borderWidth: 2,
-        // Rounded only on the two outer ends of the whole bar, square where
-        // segments meet: a rounded interior edge would read as a gap that is
-        // not there. [topLeft, topRight, bottomRight, bottomLeft]
-        borderRadius: radiusFor(index, slices.length),
+    legend: {
+      bottom: 0,
+      icon: "circle",
+      itemWidth: 8,
+      itemHeight: 8,
+      textStyle: { color: tokens["muted-foreground"] ?? muted },
+      formatter: label,
+    },
+    series: [
+      {
+        type: "pie",
+        // A donut, not a pie: the hole stops the eye trying to compare angles
+        // at the centre, where they all converge.
+        radius: ["55%", "78%"],
+        center: ["50%", "45%"],
+        avoidLabelOverlap: true,
+        // No label on every slice — a number beside each arc is chaos and goes
+        // unread. The legend names them; the tooltip and the table carry values.
+        label: { show: false },
+        labelLine: { show: false },
+        itemStyle: {
+          // A 2px gap in the surface colour between segments, so adjacent
+          // fills never touch and read as one shape.
+          borderColor: tokens.card ?? "#fff",
+          borderWidth: 2,
+        },
+        data: slices.map((slice, index) => ({
+          name: slice.key,
+          value: slice.bytes,
+          itemStyle: {
+            color: slice.isTail ? muted : tokens[SERIES_TOKENS[index]] ?? muted,
+          },
+        })),
       },
-      emphasis: { itemStyle: { borderColor: surface, borderWidth: 2 } },
-      data: [slice.bytes],
-    })),
+    ],
   };
-}
-
-/**
- * 4px on the bar's outer ends only.
- *
- * A single segment is both ends at once, which is the common case on a folder
- * holding one kind of file — and the case a left/right-only rule gets wrong.
- */
-function radiusFor(index, count) {
-  const first = index === 0;
-  const last = index === count - 1;
-
-  return [
-    first ? 4 : 0,
-    last ? 4 : 0,
-    last ? 4 : 0,
-    first ? 4 : 0,
-  ];
 }

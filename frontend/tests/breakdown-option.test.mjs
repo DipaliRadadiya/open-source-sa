@@ -66,19 +66,16 @@ test("slices take the categorical tokens in fixed order", () => {
   );
 
   const option = breakdownOption({ slices, tokens, label: (k) => k });
-  // One series per segment: `stack` needs separate series to stack, and it is
-  // what gives each segment its own name for the tooltip.
-  const colours = option.series.map((series) => series.itemStyle.color);
+  const colours = option.series[0].data.map((d) => d.itemStyle.color);
 
   assert.deepEqual(colours.slice(0, 5), SERIES_TOKENS.map((tk) => tokens[tk]));
   // The tail wears the de-emphasis grey — it is the rest, not a sixth kind.
   assert.equal(colours.at(-1), "#999999");
 });
 
-test("no value is printed inside the segments", () => {
-  // An interior stacked segment has no free end to put a label outside of, and
-  // most segments here are far too narrow to hold one — so the legend and the
-  // tooltip carry it rather than clipping text inside a fill.
+test("no value is printed on every slice", () => {
+  // A number beside every arc is chaos and goes unread; the legend names them
+  // and the table carries the sizes.
   const option = breakdownOption({
     slices: [cat("images", 5)],
     tokens: {},
@@ -95,73 +92,28 @@ test("segments are separated by a surface-coloured gap", () => {
     label: (k) => k,
   });
 
-  for (const series of option.series) {
-    assert.equal(series.itemStyle.borderColor, "#ffffff");
-    assert.equal(series.itemStyle.borderWidth, 2);
-  }
+  assert.equal(option.series[0].itemStyle.borderColor, "#ffffff");
+  assert.equal(option.series[0].itemStyle.borderWidth, 2);
 });
 
-test("it is one horizontal stacked bar", () => {
-  // Part-to-whole is a stacked bar, and it goes horizontal for many or
-  // long-named categories — both true here. The donut this replaced was chosen
-  // for a 340px rail, and the rail is what cost the listing its width.
-  const option = breakdownOption({
-    slices: [cat("images", 5), cat("code", 3)],
-    tokens: {},
-    label: (k) => k,
-  });
-
-  assert.ok(
-    option.series.every((series) => series.type === "bar"),
-    "every segment must be a bar series",
-  );
-  assert.ok(
-    option.series.every((series) => series.stack === "size"),
-    "segments that do not share a stack draw as separate bars",
-  );
-  // Horizontal: the value runs along x and the single band sits on y.
-  assert.equal(option.xAxis.type, "value");
-  assert.equal(option.yAxis.type, "category");
-  assert.equal(option.series[0].barWidth, 24);
-});
-
-test("only the bar's outer ends are rounded", () => {
-  // A rounded interior edge reads as a gap that is not there. The single-slice
-  // case is both ends at once, which a left-or-right rule gets wrong — and it
-  // is the common case on a folder holding one kind of file.
-  const [first, middle, last] = breakdownOption({
-    slices: [cat("a", 3), cat("b", 2), cat("c", 1)],
-    tokens: {},
-    label: (k) => k,
-  }).series;
-
-  assert.deepEqual(first.itemStyle.borderRadius, [4, 0, 0, 4]);
-  assert.deepEqual(middle.itemStyle.borderRadius, [0, 0, 0, 0]);
-  assert.deepEqual(last.itemStyle.borderRadius, [0, 4, 4, 0]);
-
-  const [only] = breakdownOption({
-    slices: [cat("a", 3)],
-    tokens: {},
-    label: (k) => k,
-  }).series;
-
-  assert.deepEqual(only.itemStyle.borderRadius, [4, 4, 4, 4]);
-});
-
-test("the axes are off, so nobody reads bytes off a pixel position", () => {
-  // A value axis under a part-to-whole bar invites exactly that; the legend's
-  // formatted sizes are what answer "how big".
+test("it is a donut, not a pie", () => {
+  // The hole stops the eye comparing angles at the centre, where they all
+  // converge. It was briefly a horizontal stacked bar, which was the right
+  // shape for a 340px rail competing with the listing for width — in a sheet
+  // there is no width to compete for, and a donut is what this question looks
+  // like.
   const option = breakdownOption({
     slices: [cat("images", 5)],
     tokens: {},
     label: (k) => k,
   });
 
-  assert.equal(option.xAxis.show, false);
-  assert.equal(option.yAxis.show, false);
+  assert.equal(option.series[0].type, "pie");
+  assert.ok(Array.isArray(option.series[0].radius));
+  assert.notEqual(option.series[0].radius[0], 0);
 });
 
-test("the bar chart type is registered, or the canvas draws nothing", () => {
+test("the pie chart type is registered, or the canvas draws nothing", () => {
   // echart.jsx registers chart types by hand so the bundle stays small; a
   // series type that is not in that list renders an empty canvas silently.
   const wrapper = fs.readFileSync(
@@ -178,12 +130,13 @@ test("the bar chart type is registered, or the canvas draws nothing", () => {
     wrapper.indexOf("]);", wrapper.indexOf("echarts.use([")),
   );
 
-  assert.match(registry, /\bBarChart\b/, "BarChart must be registered with echarts.use");
-  // And the one it replaced is gone: this was the only pie on the panel, and
-  // the registry's whole point is that it lists only what is drawn.
+  assert.match(registry, /\bPieChart\b/, "PieChart must be registered with echarts.use");
+  // And nothing draws a bar: the registry's whole point is that it lists only
+  // what is drawn, so a type left behind after its chart changed shape is the
+  // bundle paying for something nobody renders.
   assert.ok(
-    !/PieChart/.test(wrapper),
-    "PieChart is no longer drawn anywhere and must not stay registered",
+    !/BarChart/.test(wrapper),
+    "no chart draws bars any more, so BarChart must not stay registered",
   );
 });
 
