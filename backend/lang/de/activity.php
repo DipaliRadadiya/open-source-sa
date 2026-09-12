@@ -153,6 +153,7 @@ return [
     'application.environment_updated' => 'Umgebung für :name aktualisiert (:keys)',
     'application.environment_restored' => 'Frühere Umgebungsdatei für :name wiederhergestellt',
     'application.permissions_fixed' => 'Dateiberechtigungen für :name zurückgesetzt',
+    'application.log_cleared' => 'Log :log für :subject geleert',
     'application.file_edited' => ':path auf :name bearbeitet',
     'application.file_uploaded' => ':path auf :name hochgeladen',
     'application.files_extracted' => ':path auf :name nach :target entpackt',

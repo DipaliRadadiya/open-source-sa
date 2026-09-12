@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -335,4 +336,90 @@ describe('how much of the log you are actually seeing', function () {
 
         expect($response->json('log.search_window_capped'))->toBeFalse();
     });
+});
+
+/*
+ * Emptying a log.
+ *
+ * Offered for a site's own logs and deliberately nowhere else: the server-wide
+ * catalogue includes auth.log, ufw.log and fail2ban.log — the record of what
+ * happened to the machine — and a one-click wipe of those is an anti-forensics
+ * button rather than a maintenance one. A site's access log is the site's own
+ * noise.
+ */
+
+it('empties a log by truncating it, never by deleting it', function () {
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->actingAs($this->admin)->deleteJson(logUrl('/access'))->assertOk();
+
+    $commands = collect($runs)->map(fn ($c) => ($c[0] ?? '') === 'sudo' ? array_slice($c, 2) : $c);
+    $truncate = $commands->first(fn ($c) => ($c[0] ?? '') === 'truncate');
+
+    // Truncate, because an unlinked open log keeps its space until the writer
+    // restarts and breaks its own handle — `rm` would free nothing and leave
+    // nginx appending to a file no screen can read. It also keeps the inode's
+    // owner, which the web server would not restore on its own.
+    expect($truncate)->not->toBeNull()
+        ->and($truncate)->toBe(['truncate', '-s', '0', '/home/logowner/logged-site/logs/access.log'])
+        ->and($commands->pluck(0)->all())->not->toContain('rm');
+});
+
+it('records who emptied which log', function () {
+    fakeLogs();
+
+    $this->actingAs($this->admin)->deleteJson(logUrl('/error'))->assertOk();
+
+    // Destroying a record without recording that it was destroyed is the worst
+    // version of this feature, and the only one a support conversation cannot
+    // recover from.
+    $entry = ActivityLog::query()->where('action', 'log_cleared')->first();
+
+    expect($entry)->not->toBeNull()
+        ->and($entry->properties['log'])->toBe('error')
+        ->and($entry->subject_id)->toBe($this->application->id);
+});
+
+it('refuses a source this application does not have', function () {
+    fakeLogs();
+
+    // Not a 500, and nothing truncated: the key is resolved through the same
+    // catalogue every read uses, which is what keeps a request from naming a
+    // path of its own.
+    $this->actingAs($this->admin)->deleteJson(logUrl('/auth'))->assertNotFound();
+    $this->actingAs($this->admin)->deleteJson(logUrl('/..%2F..%2Fetc%2Fpasswd'))->assertNotFound();
+});
+
+it('denies a viewer who may read logs but not manage them', function () {
+    fakeLogs();
+
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'app_log', view: true, manage: false);
+
+    // Reading a log and destroying it are not the same trust.
+    $this->actingAs($viewer)->deleteJson(logUrl('/access'))->assertForbidden();
+    $this->actingAs($viewer)->getJson(logUrl('/access'))->assertOk();
+});
+
+it('reports a failed truncate rather than claiming the log is empty', function () {
+    // Matched on the binary anywhere in the argv rather than at index 0:
+    // phpunit.xml sets SERVER_OPS_SUDO=false, so commands arrive here bare
+    // while production sees `sudo -n truncate …` (ServerOps::run elevates, and
+    // `truncate` is in server.privilege.binaries). A fake that required the
+    // prefix would pass for the wrong reason, and one that required its absence
+    // would stop working the day the suite ran elevated.
+    Process::fake(fn ($process) => in_array('truncate', $process->command, true)
+        ? Process::result(exitCode: 1, errorOutput: 'truncate: cannot open: Permission denied')
+        : Process::result(exitCode: 0));
+
+    $this->actingAs($this->admin)
+        ->deleteJson(logUrl('/access'))
+        ->assertStatus(500)
+        ->assertJsonStructure(['message', 'reference']);
 });

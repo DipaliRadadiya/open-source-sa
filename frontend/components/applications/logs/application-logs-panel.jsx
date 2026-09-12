@@ -5,13 +5,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Info } from "lucide-react";
-import { readApplicationLog } from "@/lib/api/application-logs";
+import {
+  clearApplicationLog,
+  readApplicationLog,
+} from "@/lib/api/application-logs";
 import { LINE_OPTIONS } from "@/lib/schemas/log";
 import { matchesSeverity } from "@/lib/logs/severity";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { LogToolbar } from "@/components/logs/log-toolbar";
 import { LogViewer } from "@/components/logs/log-viewer";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Eraser } from "lucide-react";
 import { apiMessage } from "@/lib/api/error-message";
 
 const POLL_MS = 3000;
@@ -30,6 +35,7 @@ export function ApplicationLogsPanel({
   selected,
   initial,
   initialLines,
+  canManage = false,
 }) {
   const t = useTranslations("logs");
   const tApp = useTranslations("applications.logs");
@@ -64,6 +70,8 @@ export function ApplicationLogsPanel({
   const [follow, setFollow] = useState(AUTO_FOLLOW_KEYS.has(selected));
   const [busy, setBusy] = useState(false);
   const [tailState, setTailState] = useState("idle");
+  const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const controller = useRef(null);
   const disabled =
@@ -189,6 +197,31 @@ export function ApplicationLogsPanel({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
+  /**
+   * Empty the selected log.
+   *
+   * The server truncates rather than deletes, so the source still exists and
+   * the viewer is simply emptied — no navigation, no refetch. The lines are
+   * cleared from state directly rather than re-reading: a re-read of a
+   * just-truncated busy access log can come back with the handful of requests
+   * that arrived in between, which reads as the clear having failed.
+   */
+  const clearLog = useCallback(async () => {
+    setClearing(true);
+    try {
+      await clearApplicationLog(appId, selected);
+      setLines([]);
+      setTruncated(false);
+      setSearchCapped(false);
+      setConfirmClear(false);
+      toast.success(tApp("clear.done", { label: source?.label ?? selected }));
+    } catch (error) {
+      toast.error(apiMessage(error, tApp("clear.failed")));
+    } finally {
+      setClearing(false);
+    }
+  }, [appId, selected, source, tApp]);
+
   const copy = useCallback(
     async (text, message) => {
       try {
@@ -270,6 +303,8 @@ export function ApplicationLogsPanel({
             )
           }
           showDownload={false}
+          onClear={canManage ? () => setConfirmClear(true) : null}
+          clearing={clearing}
           busy={busy}
           disabled={disabled}
           searchRef={searchRef}
@@ -316,6 +351,23 @@ export function ApplicationLogsPanel({
           onCopyLine={(text) => copy(text, t("copiedLine"))}
         />
       </section>
+
+      {/* Names the log, because "Clear log?" beside a tab strip is ambiguous
+          about which one — and this cannot be undone. `destructive` for the
+          same reason the restart dialog is: the confirm button should look
+          like what it does. */}
+      <ConfirmDialog
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        icon={Eraser}
+        tone="destructive"
+        title={tApp("clear.title", { label: source?.label ?? selected })}
+        description={tApp("clear.body")}
+        cancelLabel={tApp("clear.cancel")}
+        confirmLabel={tApp("clear.submit")}
+        pending={clearing}
+        onConfirm={clearLog}
+      />
     </Tabs>
   );
 }

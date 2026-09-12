@@ -153,6 +153,7 @@ return [
     'application.environment_updated' => 'Обновил окружение :name (:keys)',
     'application.environment_restored' => 'Восстановил предыдущий файл окружения :name',
     'application.permissions_fixed' => 'Сбросил права доступа к файлам :name',
+    'application.log_cleared' => 'Очищен лог :log для :subject',
     'application.file_edited' => 'Изменил :path на :name',
     'application.file_uploaded' => 'Загрузил :path в :name',
     'application.files_extracted' => 'Распаковал :path в :target на :name',

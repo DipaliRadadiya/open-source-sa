@@ -1082,7 +1082,8 @@
     "linesCustom": "Custom…",
     "linesUnit": "lines",
     "orderNewestFirst": "Newest first",
-    "orderOldestFirst": "Oldest first"
+    "orderOldestFirst": "Oldest first",
+    "clear": "Clear log"
   },
   "services": {
     "title": "Services",
@@ -2883,6 +2884,14 @@
       "noSources": {
         "title": "No logs for this site",
         "body": "This site has no readable log sources yet."
+      },
+      "clear": {
+        "title": "Clear the {label}?",
+        "body": "Empties the file on the server. Everything recorded so far is gone and cannot be recovered — the log keeps recording from now on.",
+        "cancel": "Cancel",
+        "submit": "Clear log",
+        "done": "{label} cleared.",
+        "failed": "The log could not be cleared."
       }
     },
     "environment": {

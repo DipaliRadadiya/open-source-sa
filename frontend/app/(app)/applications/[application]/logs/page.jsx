@@ -49,6 +49,9 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
   if (!can(appPermissions, "app_log", "view", "application")) {
     redirect(`/applications/${id}`);
   }
+
+  // Emptying a log is a different trust from reading one.
+  const canManage = can(appPermissions, "app_log", "manage", "application");
   const settled = application.status === "active";
 
   const { logs: sources, failed } = settled
@@ -93,6 +96,7 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
           selected={selected}
           initial={initial}
           initialLines={DEFAULT_LINES}
+          canManage={canManage}
         />
       )}
     </div>

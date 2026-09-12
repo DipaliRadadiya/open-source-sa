@@ -5,6 +5,7 @@ import {
   ArrowUpNarrowWide,
   RotateCw,
   Download,
+  Eraser,
   WrapText,
   Radio,
   Loader2,
@@ -64,6 +65,11 @@ export function LogToolbar({
   downloadUrl,
   // App logs have no download endpoint, so the action is hidden there.
   showDownload = true,
+  // Emptying the log. Null when the viewer has no such action or the reader
+  // lacks `manage` — hidden rather than disabled, because an always-disabled
+  // destructive control invites "why not" and the answer is "you may not".
+  onClear = null,
+  clearing = false,
   busy,
   disabled,
   searchRef,
@@ -306,6 +312,27 @@ export function LogToolbar({
               </SelectContent>
             </Select>
           )}
+
+          {/* Deliberately outside the segmented group below. Those are view
+              actions — they change what you see and nothing else. This one
+              destroys the thing being viewed, and putting it a pixel away from
+              Reload is how a misclick becomes an unrecoverable one. */}
+          {onClear ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClear}
+              disabled={disabled || clearing}
+            >
+              {clearing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Eraser className="size-4" />
+              )}
+              {t("clear")}
+            </Button>
+          ) : null}
 
           {/* One segmented group, not four floating squares: these are view
               actions on the same object, so they read as a single control. */}

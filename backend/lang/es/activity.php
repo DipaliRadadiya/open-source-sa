@@ -153,6 +153,7 @@ return [
     'application.environment_updated' => 'Actualizó el entorno de :name (:keys)',
     'application.environment_restored' => 'Restauró un archivo de entorno anterior de :name',
     'application.permissions_fixed' => 'Restableció los permisos de archivo de :name',
+    'application.log_cleared' => 'Vació el registro :log de :subject',
     'application.file_edited' => 'Editó :path en :name',
     'application.file_uploaded' => 'Subió :path a :name',
     'application.files_extracted' => 'Extrajo :path en :target de :name',

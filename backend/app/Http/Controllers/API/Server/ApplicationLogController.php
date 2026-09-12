@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Server;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\ShowApplicationLogRequest;
 use App\Models\Application;
+use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationLogManager;
 use Illuminate\Http\JsonResponse;
 
@@ -12,9 +13,10 @@ use Illuminate\Http\JsonResponse;
  * A site's own logs — access, error, and for a supervised application the
  * process output as well.
  *
- * Read-only, and the client only ever names a source by key: the path is
- * resolved server-side from the web-server driver, so no request can point
- * this at a file of its choosing.
+ * Read, plus one destructive action: emptying a log. The client only ever names
+ * a source by key — the path is resolved server-side from the web-server
+ * driver, so no request can point this at a file of its choosing, and that is
+ * what makes a `DELETE` here safe to offer at all.
  */
 class ApplicationLogController extends Controller
 {
@@ -71,6 +73,41 @@ class ApplicationLogController extends Controller
                 'kind' => $source['kind'],
                 'exists' => true,
             ], $content),
+        ]);
+    }
+
+    /**
+     * Empty one log. `app_log` **manage**.
+     *
+     * Truncated rather than deleted — see ApplicationLogManager::clear(), where
+     * the reason lives. Logged to the activity feed with the source named:
+     * destroying a record without recording that it was destroyed is the worst
+     * version of this feature, and the only one a support conversation cannot
+     * recover from.
+     */
+    public function destroy(
+        Application $application,
+        string $key,
+        ApplicationLogManager $logs,
+        ActivityLogger $activity,
+    ): JsonResponse {
+        if ($logs->find($application, $key) === null) {
+            abort(404, __('app_log.errors.unknown_source'));
+        }
+
+        $logs->clear($application, $key);
+
+        $activity->log('application.log_cleared', $application, ['log' => $key]);
+
+        // The source still exists, it is simply empty now — so the client can
+        // re-read it rather than being told the key is gone.
+        return response()->json([
+            'log' => [
+                'key' => $key,
+                'label' => __('app_log.sources.'.$key),
+                'lines' => [],
+                'truncated' => false,
+            ],
         ]);
     }
 }

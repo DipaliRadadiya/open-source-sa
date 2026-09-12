@@ -1082,7 +1082,8 @@
     "linesCustom": "Personalizado…",
     "linesUnit": "líneas",
     "orderNewestFirst": "Más recientes primero",
-    "orderOldestFirst": "Más antiguos primero"
+    "orderOldestFirst": "Más antiguos primero",
+    "clear": "Vaciar el registro"
   },
   "services": {
     "title": "Servicios",
@@ -2883,6 +2884,14 @@
       "noSources": {
         "title": "Sin registros para este sitio",
         "body": "Este sitio aún no tiene fuentes de registro legibles."
+      },
+      "clear": {
+        "title": "¿Vaciar el {label}?",
+        "body": "Vacía el archivo en el servidor. Todo lo registrado hasta ahora se pierde y no se puede recuperar; el registro sigue grabando desde ahora.",
+        "cancel": "Cancelar",
+        "submit": "Vaciar el registro",
+        "done": "{label} vaciado.",
+        "failed": "No se pudo vaciar el registro."
       }
     },
     "environment": {

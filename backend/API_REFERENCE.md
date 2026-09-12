@@ -2610,6 +2610,23 @@ There is **no cursor and no `?after=`**. This reference described cursor-based t
 
 ---
 
+### DELETE `/applications/{application}/logs/{key}`
+**Permission:** `app_log` (**manage**)
+
+Empty one of this site's logs. `manage`, not `view`: reading a log and destroying it are not the same trust, and a viewer gets **403**.
+
+**Response `200`:** `{"log": {"key": "access", "label": "Access Log", "lines": [], "truncated": false}}` — the source still exists, it is simply empty, so a client can render it rather than being told the key is gone.
+
+**Truncated, never deleted.** An open log file that is unlinked keeps its disk space until the writer restarts and breaks its own handle — `rm` would free nothing and leave nginx or the Node unit appending to a file no screen can read. `truncate -s 0` reclaims the space with the writer still attached, and keeps the inode's owner and mode, which matters because these files belong to the site's system user and the web server will not recreate them with the right ownership.
+
+**404** for a key this application does not have. The key is resolved through the same catalogue every read uses, so a request can never aim this at a path of its own choosing — which is what makes a `DELETE` safe to offer here at all.
+
+Every clear is written to the activity feed as `application.log_cleared` with the source named. Destroying a record without recording that it was destroyed is the one version of this feature a support conversation cannot recover from.
+
+**There is deliberately no equivalent for the server-wide logs** (`/logs/{key}`). That catalogue includes `auth.log`, `ufw.log` and `fail2ban.log` — the record of what happened to the machine, and the first thing an intruder would want erased. A one-click wipe of those is an anti-forensics button rather than a maintenance one. A site's own access log is the site's own noise, which is a different thing.
+
+---
+
 ## Application — Workers (Queue / Background Processes)
 
 ### GET `/applications/{application}/workers`

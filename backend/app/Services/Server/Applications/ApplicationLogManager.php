@@ -292,4 +292,47 @@ class ApplicationLogManager
     {
         return ['feature' => 'application', 'op' => $op, 'application' => $application->id];
     }
+
+    /**
+     * Empty one of this application's logs.
+     *
+     * **Truncated, never deleted, and the distinction is the whole method.** An
+     * open log file that is unlinked keeps its disk space until the writer
+     * restarts and breaks its own file handle — so `rm` would free nothing and
+     * leave nginx or the Node unit appending to a file no screen can read until
+     * the next reload. `truncate -s 0` reclaims the space with the writer still
+     * attached, and keeps the inode, its owner and its mode, which matters
+     * because these files belong to the site's system user and the web server
+     * will not recreate them with the right ownership on its own.
+     *
+     * Only this application's own logs, resolved from a key through the same
+     * catalog every read uses. The server-wide logs deliberately have no
+     * equivalent: `auth.log`, `ufw.log` and `fail2ban.log` are the record of
+     * what happened to the machine, and a one-click wipe of those is an
+     * anti-forensics button rather than a maintenance one.
+     *
+     * @throws LogOperationException
+     */
+    public function clear(Application $application, string $key): void
+    {
+        $source = $this->find($application, $key);
+
+        if ($source === null || ($source['kind'] ?? 'file') !== 'file') {
+            // The caller 404s on an unknown key; reaching here with a non-file
+            // source would mean the catalog grew a journal entry and this was
+            // not revisited. `journalctl --vacuum` is a different operation
+            // against the host's journal, not this site's log.
+            throw new LogOperationException('');
+        }
+
+        $result = $this->serverOps->run(
+            ['truncate', '-s', '0', $source['path']],
+            $this->context($application, 'app_log_clear'),
+            timeout: 30,
+        );
+
+        if ($result->failed()) {
+            throw new LogOperationException($result->reference);
+        }
+    }
 }

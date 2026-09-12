@@ -19,3 +19,13 @@ Route::get('/applications/{application}/logs', [ApplicationLogController::class,
 
 Route::get('/applications/{application}/logs/{key}', [ApplicationLogController::class, 'show'])
     ->middleware(['permission:app_log', 'throttle:120,1']);
+
+// Empty one of this site's own logs. `app_log` **manage**, not view: reading a
+// log and destroying it are not the same trust.
+//
+// There is deliberately no equivalent for the server-wide logs. Those include
+// auth.log, ufw.log and fail2ban.log — the record of what happened to the
+// machine — and a one-click wipe of them is an anti-forensics button rather
+// than a maintenance one. A site's access log is the site's own noise.
+Route::delete('/applications/{application}/logs/{key}', [ApplicationLogController::class, 'destroy'])
+    ->middleware('permission:app_log,manage');
