@@ -4528,7 +4528,8 @@ All available log sources on the server.
 {"logs": [{
   "key": "nginx_error", "label": "Nginx Error Log", "group": "web",
   "kind": "file", "size": 4096, "modified": "29-07-2026 11:00:00",
-  "readable": true, "follow": true, "downloadable": true, "clearable": true
+  "readable": true, "follow": true, "downloadable": true,
+  "clearable": true, "clear_sensitive": false
 }]}
 ```
 
@@ -4615,7 +4616,11 @@ Empty one log. `manage`, not `view`: reading a log and destroying it are not the
 
 **Response `200`:** `{"log": {"key": "nginx_error", "lines": [], "truncated": false}}` — the source still exists, it is simply empty.
 
-**Only sources whose `clearable` is `true`.** That flag is opt-in per registry row, and it is **false** for `syslog`, `auth`, `kernel`, `mail`, `ufw`, `fail2ban`, `letsencrypt` and `journal`. Those record what happened to the machine — what an investigation needs, and the first thing an intruder would erase — so the panel offers no button and the API refuses even when one is named directly. Clearable today: the nginx/Apache/OpenLiteSpeed access and error logs, MySQL error and slow-query, MongoDB, Redis, Supervisor, each PHP-FPM version, each cron job and each worker. **Read `clearable` off the source rather than inferring it from the key** — a client that guesses will offer what the server refuses.
+**Only sources whose `clearable` is `true`.** That flag is opt-in per registry row and covers every file-based source. **Read it off the source rather than inferring it from the key** — a client that guesses will offer what the server refuses.
+
+**`clear_sensitive: true`** marks `auth`, `ufw`, `fail2ban`, `syslog`, `kernel`, `mail` and `letsencrypt`. These are clearable — operator's decision — but they are how the server records what happened to *it*: sign-ins, blocked requests, bans. They are what an investigation needs and the first thing an intruder would erase, so **a client must confirm them with copy that names what is being destroyed**, not the sentence it uses for an access log. The flag is the registry's answer, not the client's: do not keep a list of these keys locally, it will drift.
+
+**`journal` is the one refusal left, and it is technical rather than policy.** It is not a file, so there is nothing to truncate; emptying it means `journalctl --vacuum`, which discards the host's entire journal rather than one source. A different operation with a different blast radius, and not this endpoint.
 
 A refused or unknown key both answer **404**, deliberately the same: from the client's side they are equally not on offer, and a 403 would advertise a capability the panel does not intend to have.
 

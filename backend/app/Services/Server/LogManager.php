@@ -14,12 +14,17 @@ use Illuminate\Support\Str;
 /**
  * Server log files: read, and — for the sources that opt in — empty.
  *
- * This was read-only, and the exception is narrow on purpose. `clearable` is
- * opt-in per source, and it is absent from auth.log, ufw.log, fail2ban.log,
- * syslog, kern.log, mail.log, the Let's Encrypt log and the journal: those are
- * the record of what happened to the machine, the files an investigation needs
- * and the first ones an intruder would erase. What a service says about its own
- * traffic is a different thing, and that is all this will empty.
+ * This was read-only. `clearable` is opt-in per source and now covers every
+ * file-based source, including the ones that record what happened to the machine
+ * — auth.log, ufw.log, fail2ban.log, syslog, kern.log, mail.log and the Let's
+ * Encrypt log. Those carry `sensitive` as well, which the screen turns into a
+ * confirmation that names what is being destroyed: they are the files an
+ * investigation needs and the first ones an intruder would erase, so the answer
+ * is informed consent rather than a silent button. Operator's decision, taken
+ * after the alternative was argued.
+ *
+ * The journal is the one thing still refused, and for a reason that is not
+ * policy: it is not a file, so there is nothing to truncate.
  *
  * The catalog is the configured source
  * registry, plus one log per PHP version the stack reports, plus one
@@ -166,12 +171,18 @@ class LogManager
             'label' => $source['label'],
             'group' => $source['group'],
             'kind' => $kind,
-            // Whether the panel will empty this one. Opt-in per source, and
-            // deliberately false for auth, ufw, fail2ban, syslog, kernel, mail,
-            // letsencrypt and the journal — those record what happened to the
-            // machine, which is the thing you need after an intrusion and the
-            // first thing an intruder would erase.
+            // Whether the panel will empty this one. Opt-in per source; false
+            // for the journal, which is not a file and so has nothing to
+            // truncate — emptying that means `journalctl --vacuum` against the
+            // host's whole journal, a different operation.
             'clearable' => ($source['clearable'] ?? false) === true && $kind !== 'journal',
+            // Clearable, but it is the record of what happened to the machine:
+            // auth.log, ufw.log, fail2ban.log, syslog, kern.log, mail.log, the
+            // Let's Encrypt log. Reported so the confirmation can name what is
+            // being destroyed rather than offering the same sentence it uses for
+            // an access log. The screen must not infer this from the key — the
+            // registry decides, and a second client would get the list wrong.
+            'clear_sensitive' => ($source['sensitive'] ?? false) === true,
             'size' => $stat['size'],
             'modified' => $stat['modified'] === null ? null : date('d-m-Y H:i:s', $stat['modified']),
             // A privileged source is read through sudo, so "can the panel

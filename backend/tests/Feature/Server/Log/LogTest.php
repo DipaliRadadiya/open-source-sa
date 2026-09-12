@@ -582,7 +582,7 @@ function clearableLogs(): void
 {
     config(['server.logs' => [
         ['key' => 'nginx_error', 'label' => 'Nginx — Error', 'group' => 'web', 'path' => test()->logDir.'/nginx-error.log', 'clearable' => true],
-        ['key' => 'auth', 'label' => 'System — Auth', 'group' => 'system', 'path' => test()->logDir.'/auth.log'],
+        ['key' => 'auth', 'label' => 'System — Auth', 'group' => 'system', 'path' => test()->logDir.'/auth.log', 'clearable' => true, 'sensitive' => true],
         ['key' => 'journal', 'label' => 'System — Journal', 'group' => 'system', 'kind' => 'journal', 'path' => '', 'clearable' => true],
     ]]);
 }
@@ -611,21 +611,50 @@ it('empties a clearable log by truncating it, never by deleting it', function ()
         ->and($commands->pluck(0)->all())->not->toContain('rm');
 });
 
-it('refuses the logs that record what happened to the machine', function () {
+it('marks the logs that record what happened to the machine', function () {
+    clearableLogs();
+    File::put($this->logDir.'/auth.log', "sshd: accepted publickey for root\n");
+    File::put($this->logDir.'/nginx-error.log', "noise\n");
+
+    $logs = collect(
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs')
+    );
+
+    // Clearable by operator decision, and flagged so the confirmation can name
+    // what is being destroyed rather than reusing the sentence for an access
+    // log. The screen must not infer this from the key — the registry decides,
+    // or a second client gets the list wrong.
+    $auth = $logs->firstWhere('key', 'auth');
+    expect($auth['clearable'])->toBeTrue()
+        ->and($auth['clear_sensitive'])->toBeTrue()
+        ->and($logs->firstWhere('key', 'nginx_error')['clear_sensitive'])->toBeFalse();
+});
+
+it('empties an audit log when asked, because the operator chose that', function () {
     clearableLogs();
     File::put($this->logDir.'/auth.log', "sshd: accepted publickey for root\n");
 
-    Process::fake(fn () => Process::result(exitCode: 0));
+    $runs = new ArrayObject;
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
 
-    // 404, the same answer as a key that does not exist: auth.log is not
-    // offered, and a 403 would advertise a capability the panel does not have.
+        return Process::result(exitCode: 0);
+    });
+
     $this->withHeader('Authorization', "Bearer {$this->token}")
         ->deleteJson('/api/logs/auth')
-        ->assertNotFound();
+        ->assertOk();
 
-    // And nothing was touched.
-    expect(File::get($this->logDir.'/auth.log'))->toContain('accepted publickey');
-    Process::assertNothingRan();
+    $commands = collect($runs)->map(fn ($c) => ($c[0] ?? '') === 'sudo' ? array_slice($c, 2) : $c);
+
+    expect($commands->first(fn ($c) => ($c[0] ?? '') === 'truncate'))
+        ->toBe(['truncate', '-s', '0', $this->logDir.'/auth.log']);
+
+    // The audit entry matters more here than anywhere: this is the one clear
+    // whose own record is the only thing left saying it happened.
+    expect(ActivityLog::query()->where('action', 'cleared')->where('type', 'log')->first()?->properties['log'])
+        ->toBe('auth');
 });
 
 it('refuses the journal, which is not a file', function () {
@@ -684,6 +713,7 @@ it('tells the screen which sources it may offer the action for', function () {
 
     expect($logs->firstWhere('key', 'nginx_error')['clearable'])->toBeTrue()
         // Not merely hidden by the client: the API says so, so a second client
-        // cannot offer what the server will refuse.
-        ->and($logs->firstWhere('key', 'auth')['clearable'])->toBeFalse();
+        // cannot offer what the server will refuse. The journal is the only
+        // refusal left, and it is technical rather than policy.
+        ->and($logs->firstWhere('key', 'journal')['clearable'] ?? false)->toBeFalse();
 });

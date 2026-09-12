@@ -1089,7 +1089,8 @@
     "clearCancel": "Cancelar",
     "clearSubmit": "Vaciar el registro",
     "clearDone": "{label} vaciado.",
-    "clearFailed": "No se pudo vaciar el registro."
+    "clearFailed": "No se pudo vaciar el registro.",
+    "clearBodyAudit": "Este registro forma parte de cómo el servidor anota lo que le ha pasado: inicios de sesión, peticiones bloqueadas, bloqueos. Vaciarlo destruye pruebas que podrías necesitar tras una intrusión y no se puede deshacer. El archivo sigue grabando desde ahora."
   },
   "services": {
     "title": "Servicios",

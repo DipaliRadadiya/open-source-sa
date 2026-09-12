@@ -39,6 +39,14 @@ export const logSourceSchema = z.object({
   // one whose DELETE route does not exist either, and offering the action there
   // would fail at the click.
   clearable: z.boolean().optional().default(false),
+  // Clearable, but it is the machine's own record — auth.log, ufw.log,
+  // fail2ban.log, syslog, kern.log, mail.log, the Let's Encrypt log. Drives a
+  // confirmation that names what is being destroyed rather than the sentence
+  // used for an access log.
+  //
+  // Read from the API, never inferred from the key: the registry decides which
+  // sources these are, and a list kept here would drift from it.
+  clear_sensitive: z.boolean().optional().default(false),
 });
 
 export const logSourcesResponseSchema = z.object({

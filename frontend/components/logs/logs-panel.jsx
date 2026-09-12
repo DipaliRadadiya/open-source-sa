@@ -437,7 +437,13 @@ export function LogsPanel({
         icon={Eraser}
         tone="destructive"
         title={t("clearTitle", { label: source?.label ?? "" })}
-        description={t("clearBody")}
+        description={
+          // Two sentences, because these are two different acts. Emptying an
+          // access log frees disk; emptying auth.log destroys the record of who
+          // signed in. The same wording for both would be the interface
+          // pretending they are equivalent.
+          source?.clear_sensitive ? t("clearBodyAudit") : t("clearBody")
+        }
         cancelLabel={t("clearCancel")}
         confirmLabel={t("clearSubmit")}
         pending={clearing}

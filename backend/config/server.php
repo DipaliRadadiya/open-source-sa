@@ -1535,11 +1535,18 @@ return [
     | LogManager::clear). It is opt-IN per row on purpose: a source added here
     | later is not clearable until somebody decides it should be.
     |
-    | Absent from syslog, auth, kernel, mail, ufw, fail2ban, letsencrypt and the
-    | journal, and that is the point of the flag. Those record what happened to
-    | the machine rather than what a service is chattering about — they are the
-    | files you need after an intrusion and the first ones an intruder would
-    | want erased, so the panel offers no button for them.
+    | `sensitive` marks the ones that record what happened to the *machine*
+    | rather than what a service is chattering about: auth.log, ufw.log,
+    | fail2ban.log, syslog, kern.log, mail.log and the Let's Encrypt log. They
+    | are clearable by operator decision, and the flag exists so the
+    | confirmation can name what is being destroyed — these are the files an
+    | investigation needs and the first ones an intruder would erase, so the
+    | answer is informed consent rather than a silent button.
+    |
+    | The journal has no `clearable` and cannot get one: it is not a file, so
+    | there is nothing to truncate. Emptying it means `journalctl --vacuum`,
+    | which discards the host's entire journal rather than one source — a
+    | different operation with a different blast radius, and not this one.
     */
     'logs' => [
         // Web server (only the installed one has files)
@@ -1560,19 +1567,19 @@ return [
         // Cache
         ['key' => 'redis', 'label' => 'Redis', 'group' => 'cache', 'path' => '/var/log/redis/redis-server.log', 'clearable' => true],
         // System
-        ['key' => 'syslog', 'label' => 'System — Syslog', 'group' => 'system', 'path' => '/var/log/syslog'],
-        ['key' => 'auth', 'label' => 'System — Auth', 'group' => 'system', 'path' => '/var/log/auth.log'],
+        ['key' => 'syslog', 'label' => 'System — Syslog', 'group' => 'system', 'path' => '/var/log/syslog', 'clearable' => true, 'sensitive' => true],
+        ['key' => 'auth', 'label' => 'System — Auth', 'group' => 'system', 'path' => '/var/log/auth.log', 'clearable' => true, 'sensitive' => true],
         // Hardware, drivers, and the OOM killer — the log that answers "the
         // site did not crash, it was killed".
-        ['key' => 'kernel', 'label' => 'System — Kernel', 'group' => 'system', 'path' => '/var/log/kern.log'],
+        ['key' => 'kernel', 'label' => 'System — Kernel', 'group' => 'system', 'path' => '/var/log/kern.log', 'clearable' => true, 'sensitive' => true],
         // Only present where an MTA is installed. The panel does not install
         // one; it reads what is already there, and the source hides itself on
         // the servers that have none.
-        ['key' => 'mail', 'label' => 'System — Mail', 'group' => 'system', 'path' => '/var/log/mail.log'],
+        ['key' => 'mail', 'label' => 'System — Mail', 'group' => 'system', 'path' => '/var/log/mail.log', 'clearable' => true, 'sensitive' => true],
         // Security / daemons
-        ['key' => 'ufw', 'label' => 'Firewall — UFW', 'group' => 'security', 'path' => '/var/log/ufw.log'],
+        ['key' => 'ufw', 'label' => 'Firewall — UFW', 'group' => 'security', 'path' => '/var/log/ufw.log', 'clearable' => true, 'sensitive' => true],
         // Also what the `recidive` jail reads to find repeat offenders.
-        ['key' => 'fail2ban', 'label' => 'Fail2ban', 'group' => 'security', 'path' => '/var/log/fail2ban.log'],
+        ['key' => 'fail2ban', 'label' => 'Fail2ban', 'group' => 'security', 'path' => '/var/log/fail2ban.log', 'clearable' => true, 'sensitive' => true],
         ['key' => 'supervisor', 'label' => 'Supervisor', 'group' => 'daemon', 'path' => '/var/log/supervisor/supervisord.log', 'clearable' => true],
 
         // `kind` is `file` unless it says otherwise — read natively, followed
@@ -1581,7 +1588,7 @@ return [
         // certbot's directory is 0700 root, so the panel account cannot even
         // stat inside it. Read through ServerOps, the same way the unattended
         // upgrades log already is.
-        ['key' => 'letsencrypt', 'label' => "Let's Encrypt", 'group' => 'security', 'kind' => 'privileged', 'path' => '/var/log/letsencrypt/letsencrypt.log'],
+        ['key' => 'letsencrypt', 'label' => "Let's Encrypt", 'group' => 'security', 'kind' => 'privileged', 'path' => '/var/log/letsencrypt/letsencrypt.log', 'clearable' => true, 'sensitive' => true],
 
         // Not a file at all — a binary store read through journalctl. `path` is
         // empty because there is nothing to open.

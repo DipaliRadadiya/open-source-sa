@@ -1089,7 +1089,8 @@
     "clearCancel": "Cancel",
     "clearSubmit": "Clear log",
     "clearDone": "{label} cleared.",
-    "clearFailed": "The log could not be cleared."
+    "clearFailed": "The log could not be cleared.",
+    "clearBodyAudit": "This log is part of how the server records what happened to it — sign-ins, blocked requests, bans. Clearing it destroys evidence you may need after a break-in, and it cannot be undone. The file keeps recording from now on."
   },
   "services": {
     "title": "Services",

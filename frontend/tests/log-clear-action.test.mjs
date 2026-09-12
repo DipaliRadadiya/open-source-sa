@@ -104,3 +104,44 @@ test("clearing a server log resets the incremental cursor", () => {
   assert.match(handler, /cursor\.current = 0/);
   assert.match(handler, /setLines\(\[\]\)/);
 });
+
+test("an audit log's confirmation says what is being destroyed", () => {
+  // Emptying an access log frees disk; emptying auth.log destroys the record of
+  // who signed in. One sentence for both would be the interface pretending they
+  // are equivalent.
+  const dialog = serverPanel.slice(serverPanel.indexOf("<ConfirmDialog"));
+
+  assert.match(
+    dialog,
+    /source\?\.clear_sensitive \? t\("clearBodyAudit"\) : t\("clearBody"\)/,
+  );
+});
+
+test("sensitivity comes from the API, not a list in the client", () => {
+  // The registry decides which sources these are. A list kept here would drift
+  // from it, and the drift would be silent in the direction that matters.
+  assert.match(
+    schema,
+    /clear_sensitive: z\.boolean\(\)\.optional\(\)\.default\(false\)/,
+  );
+  assert.ok(
+    !/"auth"|'auth'|fail2ban/.test(serverPanel),
+    "the panel must not name audit sources itself",
+  );
+});
+
+test("the audit warning names the consequence, not just the action", () => {
+  // "Are you sure?" is not a warning. The reader needs to know what is lost.
+  const en = JSON.parse(read("messages/en.json"));
+  const body = en.logs.clearBodyAudit;
+
+  assert.match(body, /cannot be undone/i);
+  assert.ok(
+    /evidence|break-in|sign-ins/i.test(body),
+    "the audit copy must say what the log is for",
+  );
+  assert.ok(
+    body.length > en.logs.clearBody.length,
+    "the audit warning must say more than the ordinary one, not less",
+  );
+});
