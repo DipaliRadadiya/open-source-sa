@@ -909,11 +909,20 @@ describe('the lsphp stack', function () {
         // --install first, and in that order: the set cannot work until the
         // group exists.
         expect($calls[0])->toBe(['update-alternatives', '--install', '/usr/bin/php', 'php', $binary, '84'])
-            ->and($calls[1])->toBe(['update-alternatives', '--set', 'php', $binary])
-            ->and($calls)->toHaveCount(2);
+            ->and($calls[1])->toBe(['update-alternatives', '--set', 'php', $binary]);
     });
 
-    it('registers no phar alternative, because lsphp ships none', function () {
+    /*
+     * Measured on a real OLS server, and the reason the first fix was not
+     * enough: the alternative was set, `/usr/bin/php -v` reported the new
+     * version, and `php -v` reported the old one.
+     *
+     * install.sh creates /usr/local/bin/php on this stack so the PHARs whose
+     * shebang is `#!/usr/bin/env php` have a php on PATH -- and /usr/local/bin
+     * precedes /usr/bin there. That symlink, not the alternative, is what `php`
+     * resolves through.
+     */
+    it('moves the symlink that actually wins on PATH', function () {
         $runs = new ArrayObject;
 
         Process::fake(function ($process) use ($runs) {
@@ -924,9 +933,51 @@ describe('the lsphp stack', function () {
 
         app(PhpRuntime::class)->setDefault('8.4');
 
-        // Registering a link to a binary that is not there would leave
-        // `phar` pointing at nothing, which is worse than leaving it alone.
-        expect(collect($runs)->flatten()->all())->not->toContain('phar');
+        expect(collect($runs))
+            ->toContain(['ln', '-sfn', $this->lsws.'/lsphp84/bin/php', '/usr/local/bin/php']);
+    });
+
+    it('registers the phar lsphp actually ships', function () {
+        $runs = new ArrayObject;
+
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = $process->command;
+
+            return Process::result(exitCode: 0);
+        });
+
+        app(PhpRuntime::class)->setDefault('8.4');
+
+        // `<tree>/bin/phar8.4` is there on every lsphp tree. An earlier version
+        // of this claimed LSPHP had no phar, copied from the v7 handler's
+        // omission rather than checked.
+        $phar = $this->lsws.'/lsphp84/bin/phar8.4';
+
+        expect(collect($runs))
+            ->toContain(['update-alternatives', '--install', '/usr/bin/phar', 'phar', $phar, '84'])
+            ->toContain(['update-alternatives', '--set', 'phar', $phar]);
+    });
+
+    it('still changes php when the derived phar path is wrong', function () {
+        // The phar filename is derived, not detected, so a tree that spells it
+        // differently must leave phar alone rather than fail the change the
+        // user asked for.
+        $runs = new ArrayObject;
+
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = $process->command;
+            $command = $process->command;
+
+            return in_array('phar', $command, true)
+                ? Process::result(exitCode: 2, errorOutput: 'update-alternatives: error: alternative path ... does not exist')
+                : Process::result(exitCode: 0);
+        });
+
+        app(PhpRuntime::class)->setDefault('8.4');
+
+        expect(collect($runs))
+            ->toContain(['update-alternatives', '--set', 'php', $this->lsws.'/lsphp84/bin/php'])
+            ->toContain(['ln', '-sfn', $this->lsws.'/lsphp84/bin/php', '/usr/local/bin/php']);
     });
 
     it('reads back the default it just set', function () {

@@ -52,6 +52,14 @@ class PanelPhpBinary
     public function __construct(
         private string $versionedPrefix = '/usr/bin/php',
         private string $fallback = self::FALLBACK,
+        /**
+         * The interpreter executing this code. Injected for the same reason the
+         * two paths above are: a rule that cannot be exercised on a developer's
+         * box is one that gets reversed by the next person who finds it
+         * puzzling, and `PHP_BINARY` is whatever happens to be running the
+         * suite.
+         */
+        private string $running = PHP_BINARY,
     ) {}
 
     public function path(): string
@@ -68,10 +76,55 @@ class PanelPhpBinary
             return $versioned;
         }
 
+        // The CLI sibling of the interpreter actually running this code.
+        //
+        // Checked before the shared symlink because the two are no longer the
+        // same thing. `/usr/local/bin/php` used to be both "the panel's own
+        // PHP" and "the php on PATH", and the moment the PHP screen's "make
+        // default" button started owning the second, the panel's self-update
+        // would have followed whatever version the user picked — up to and
+        // including one that cannot run the panel.
+        //
+        // This needs no configuration and no migration, which matters because
+        // install.sh only reaches fresh installs: the panel is being executed
+        // by a binary in the tree it belongs to, so that tree is the answer.
+        // Under LSAPI `PHP_BINARY` is `<tree>/bin/lsphp` and the sibling is
+        // `<tree>/bin/php`; under php-fpm it is `/usr/sbin/php-fpm8.4`, whose
+        // sibling does not exist — which is correct, because the versioned
+        // path above has already answered on that stack.
+        $sibling = $this->runningSibling();
+
+        if ($sibling !== null) {
+            return $sibling;
+        }
+
         if (is_executable($this->fallback)) {
             return $this->fallback;
         }
 
         return $versioned;
+    }
+
+    /**
+     * `php` next to whatever is executing this, or null.
+     *
+     * Deliberately refuses the two shared paths. Reaching either of them here
+     * would reintroduce the coupling this method exists to break: both are
+     * link targets somebody else may move, and a panel that updates itself with
+     * an interpreter a user can repoint is one setting away from not starting.
+     */
+    private function runningSibling(): ?string
+    {
+        if ($this->running === '') {
+            return null;
+        }
+
+        $candidate = dirname($this->running).'/php';
+
+        if (in_array($candidate, ['/usr/bin/php', self::FALLBACK], true)) {
+            return null;
+        }
+
+        return is_executable($candidate) ? $candidate : null;
     }
 }

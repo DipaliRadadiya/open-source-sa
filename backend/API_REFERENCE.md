@@ -4905,9 +4905,13 @@ What runs depends on the stack, because the two register alternatives differentl
 | stack | commands |
 |---|---|
 | FPM (ondrej) | `--set php`, `--set phar`, `--set phar.phar` — all three groups exist already, and moving only `php` would leave `phar` on the previous version |
-| LSPHP (OpenLiteSpeed) | `--install /usr/bin/php php <binary> <priority>` **then** `--set php` |
+| LSPHP (OpenLiteSpeed) | `--install /usr/bin/php php <binary> <priority>`, `--set php`, **`ln -sfn <binary> /usr/local/bin/php`**, then the same install/set pair for `phar` |
 
-The `--install` is not optional on LSPHP. LiteSpeed's packages install an interpreter and never call `update-alternatives`, so on a box without ondrej PHP there is no `php` link group and `--set` alone fails with `update-alternatives: error: no alternatives for php`. The priority is the compact version (`84` for 8.4) so a later PHP outranks an earlier one if the link is ever put back into automatic mode; `--set` selects manual mode, which is what asking for a specific version means. There is no lsphp `phar` binary to register.
+The `--install` is not optional on LSPHP. LiteSpeed's packages install an interpreter and never call `update-alternatives`, so on a box without ondrej PHP there is no `php` link group and `--set` alone fails with `update-alternatives: error: no alternatives for php`. The priority is the compact version (`84` for 8.4) so a later PHP outranks an earlier one if the link is ever put back into automatic mode; `--set` selects manual mode, which is what asking for a specific version means.
+
+**Nor is the symlink optional, and it is the part that decides the answer.** Measured on a real OpenLiteSpeed server: with only the alternative set, `/usr/bin/php -v` reported the new version and `php -v` reported the old one. `install.sh` creates `/usr/local/bin/php` on this stack so the PHARs whose shebang is `#!/usr/bin/env php` have a `php` on PATH, and `/usr/local/bin` precedes `/usr/bin` there — so that symlink is what `php` resolves through. The group is kept correct for anything that reads it; the symlink is what makes the screen true.
+
+Because the CLI default now owns that symlink, **the panel no longer resolves its own interpreter through it**: `PanelPhpBinary` prefers the CLI sibling of the binary currently executing the panel (`<tree>/bin/php` next to LSAPI's `<tree>/bin/lsphp`). Otherwise changing the CLI default would change the PHP the panel updates itself with. Panel-driven WordPress work was already immune — wp-cli is invoked with an explicit interpreter rather than through its shebang.
 
 The `phar` groups are **best-effort**: a box that has the interpreter without those links still gets its PHP default changed, and the miss is recorded in the server-ops log rather than failing the request.
 

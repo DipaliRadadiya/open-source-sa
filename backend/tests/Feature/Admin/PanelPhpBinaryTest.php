@@ -102,3 +102,73 @@ it('names the real LSPHP symlink as its fallback', function () {
     // saw injected temp paths would not notice it being changed.
     expect(PanelPhpBinary::FALLBACK)->toBe('/usr/local/bin/php');
 });
+
+/*
+ * The PHP screen's "make default" button now owns /usr/local/bin/php on the
+ * LSPHP stack, because that symlink — not the alternatives group — is what
+ * `php` resolves through on an OLS box. Measured on a real one.
+ *
+ * Which makes the order below load-bearing in a new way: if the panel still
+ * resolved its own interpreter through that symlink, changing the CLI default
+ * would change the PHP the panel updates itself with, up to and including a
+ * version that cannot run it.
+ */
+
+it('prefers the interpreter it is running under over the shared symlink', function () {
+    // Both exist, as they do on an OLS box after a default change. The tree the
+    // panel is executing from is the answer; the shared symlink is now a user
+    // setting.
+    $tree = $this->dir.'/lsphp84/bin';
+    File::makeDirectory($tree, 0755, true);
+    File::put($tree.'/lsphp', "#!/bin/sh\n");
+    File::put($tree.'/php', "#!/bin/sh\n");
+    chmod($tree.'/php', 0755);
+
+    $fallback = ($this->makeExecutable)('shared-php');
+
+    config(['panel_update.php_binary' => '', 'panel_update.php_version' => '8.4']);
+
+    $resolver = new PanelPhpBinary(
+        $this->dir.'/does-not-exist-php',
+        $fallback,
+        // What PHP_BINARY is under LSAPI.
+        $tree.'/lsphp',
+    );
+
+    expect($resolver->path())->toBe($tree.'/php')
+        ->and($resolver->path())->not->toBe($fallback);
+});
+
+it('refuses the two shared paths as a sibling, whatever is running', function () {
+    // Reaching either here would reintroduce exactly the coupling this breaks:
+    // both are links somebody else may move. `/usr/bin/php` is the alternatives
+    // group the button sets; `/usr/local/bin/php` is the PATH winner it moves.
+    $fallback = ($this->makeExecutable)('fallback-php');
+
+    config(['panel_update.php_binary' => '', 'panel_update.php_version' => '8.4']);
+
+    foreach (['/usr/bin/php-fpm8.4', '/usr/local/bin/php-something'] as $running) {
+        $resolver = new PanelPhpBinary($this->dir.'/does-not-exist-php', $fallback, $running);
+
+        // dirname() of those is /usr/bin and /usr/local/bin, so the candidate
+        // would be exactly the path that must not be used.
+        expect($resolver->path())->toBe($fallback);
+    }
+});
+
+it('still prefers the versioned path over the running interpreter', function () {
+    // nginx and Apache must resolve exactly as they did before any of this:
+    // there, /usr/bin/php8.4 is the panel's own and is checked first.
+    $versioned = ($this->makeExecutable)('php8.4');
+
+    $tree = $this->dir.'/tree';
+    File::makeDirectory($tree, 0755, true);
+    File::put($tree.'/php', "#!/bin/sh\n");
+    chmod($tree.'/php', 0755);
+
+    config(['panel_update.php_binary' => '', 'panel_update.php_version' => '8.4']);
+
+    $resolver = new PanelPhpBinary($this->dir.'/php', ($this->makeExecutable)('shared'), $tree.'/php');
+
+    expect($resolver->path())->toBe($versioned);
+});

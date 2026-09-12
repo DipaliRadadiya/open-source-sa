@@ -207,23 +207,52 @@ class LsphpPhpStack implements PhpStack
      * `--set` puts it in manual mode, which is what being asked for a specific
      * version means.
      *
-     * No `phar`: there is no lsphp phar binary at a path the panel could
-     * register, and inventing one would register a link to nothing.
+     * **And `/usr/local/bin/php`, which is what actually decides the answer.**
+     * Registering the alternative alone was measured on a real OLS server and
+     * changed nothing a user could see: `/usr/bin/php -v` reported the new
+     * version while `php -v` reported the old one, because `install.sh` creates
+     * `/usr/local/bin/php` on this stack for the PHARs whose
+     * `#!/usr/bin/env php` shebang needs *a* `php` on PATH — and
+     * `/usr/local/bin` precedes `/usr/bin` there. So the group is kept correct
+     * for anything reading it, and the symlink is moved because that is the
+     * file `php` resolves through. The panel's own interpreter no longer
+     * depends on it — see PanelPhpBinary::runningSibling().
+     *
+     * `phar` is registered too. LSPHP does ship one — `<tree>/bin/phar8.4` —
+     * and an earlier version of this said it did not, which was copied from the
+     * v7 handler's omission rather than checked against a tree. Non-fatal
+     * because the filename is derived rather than detected, so a layout that
+     * spells it differently leaves `phar` alone instead of failing the change.
      *
      * @return array<int, array{command: array<int, string>, fatal: bool}>
      */
     public function defaultCommands(string $version): array
     {
         $binary = $this->binaryPath($version);
+        $priority = $this->compact($version);
+        $phar = dirname($binary).'/phar'.$version;
 
         return [
             [
-                'command' => ['update-alternatives', '--install', '/usr/bin/php', 'php', $binary, $this->compact($version)],
+                'command' => ['update-alternatives', '--install', '/usr/bin/php', 'php', $binary, $priority],
                 'fatal' => true,
             ],
             [
                 'command' => ['update-alternatives', '--set', 'php', $binary],
                 'fatal' => true,
+            ],
+            // The one that makes `php -v` agree with the screen.
+            [
+                'command' => ['ln', '-sfn', $binary, '/usr/local/bin/php'],
+                'fatal' => true,
+            ],
+            [
+                'command' => ['update-alternatives', '--install', '/usr/bin/phar', 'phar', $phar, $priority],
+                'fatal' => false,
+            ],
+            [
+                'command' => ['update-alternatives', '--set', 'phar', $phar],
+                'fatal' => false,
             ],
         ];
     }
