@@ -69,6 +69,14 @@ class PhpRuntime implements Runtime
 
     /**
      * What bare `php` resolves to, according to update-alternatives.
+     *
+     * The path is matched against the stack's own `binaryPath()` per installed
+     * version rather than having a version read out of it by pattern. The
+     * pattern here was `\S*php(\d+\.\d+)` — true of `/usr/bin/php8.4` and false
+     * of every LSPHP path, because LiteSpeed names its tree `lsphp85` with no
+     * dot and ends the path in a bare `php`. So an OLS box reported "no
+     * default" whatever was actually selected, and only the stack knows what
+     * its own paths look like.
      */
     public function default(): ?string
     {
@@ -77,10 +85,23 @@ class PhpRuntime implements Runtime
             ['feature' => 'runtime', 'op' => 'php_default'],
         )->output();
 
-        // Value: /usr/bin/php8.4
-        return preg_match('/^Value:\s*\S*php(\d+\.\d+)\s*$/m', $output, $matches) === 1
-            ? $matches[1]
-            : null;
+        if (preg_match('/^Value:\s*(\S+)\s*$/m', $output, $matches) !== 1) {
+            return null;
+        }
+
+        $value = $matches[1];
+
+        foreach ($this->versions->versions() as $version) {
+            if ($this->binaryPath($version) === $value) {
+                return $version;
+            }
+        }
+
+        // A selected path the panel does not recognise — a hand-built symlink,
+        // or a version removed while it was still the default. Null says "this
+        // is not one of the versions listed above", which is the truth; naming
+        // one of them anyway would mark the wrong row as default.
+        return null;
     }
 
     /**
@@ -284,10 +305,31 @@ class PhpRuntime implements Runtime
      */
     public function setDefault(string $version): void
     {
-        $this->must($this->serverOps->run(
-            ['update-alternatives', '--set', 'php', $this->binaryPath($version)],
-            ['feature' => 'runtime', 'op' => 'php_default_set', 'version' => $version],
-        ));
+        foreach ($this->stack->defaultCommands($version) as $step) {
+            $result = $this->serverOps->run(
+                $step['command'],
+                ['feature' => 'runtime', 'op' => 'php_default_set', 'version' => $version],
+            );
+
+            if ($step['fatal']) {
+                $this->must($result);
+
+                continue;
+            }
+
+            // A secondary group the stack would like to move but can live
+            // without. Recorded rather than raised: the interpreter did change,
+            // and reporting that as a failure would tell the user the opposite
+            // of what happened.
+            if ($result->failed()) {
+                Log::warning('A secondary PHP alternative could not be moved.', [
+                    'feature' => 'runtime',
+                    'op' => 'php_default_set',
+                    'version' => $version,
+                    'reference' => $result->reference,
+                ]);
+            }
+        }
     }
 
     /**

@@ -114,6 +114,30 @@ interface PhpStack
     public function configTestCommand(string $version): array;
 
     /**
+     * What to run so that bare `php` resolves to this version.
+     *
+     * A list rather than one command, because the two stacks need different
+     * numbers of them and for different reasons.
+     *
+     * **FPM:** ondrej's `php8.x-cli` package already registered the `php`,
+     * `phar` and `phar.phar` alternative groups, so each is a plain `--set` —
+     * and `phar` has to move too, or `phar` keeps running under the version
+     * that was default before.
+     *
+     * **LSPHP:** LiteSpeed's packages never call `update-alternatives` at all,
+     * so on a box with no ondrej PHP there is no `php` group to set and
+     * `--set` fails with "no alternatives for php". The group has to be created
+     * first. There is no lsphp `phar` to register alongside it.
+     *
+     * `fatal` separates "the thing the user asked for" from the rest: failing
+     * the whole operation because a secondary group is absent would report a
+     * change that did happen as a change that did not.
+     *
+     * @return array<int, array{command: array<int, string>, fatal: bool}>
+     */
+    public function defaultCommands(string $version): array;
+
+    /**
      * The package-name prefix for a version: `php8.4-` | `lsphp84-`. Callers
      * that build patterns rather than a single package name need this on its
      * own — apt-cache searches and purge globs are prefix-shaped.

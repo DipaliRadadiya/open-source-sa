@@ -191,6 +191,43 @@ class LsphpPhpStack implements PhpStack
      * assuming otherwise produces a "package not found" that looks like a
      * broken repository.
      */
+    /**
+     * Register the group, then select it.
+     *
+     * `--set` alone is what the panel did, and on a box with no ondrej PHP it
+     * exits 2 with `update-alternatives: error: no alternatives for php`:
+     * LiteSpeed's packages install an interpreter and never call
+     * update-alternatives, so the `php` link group does not exist to be set.
+     * `--install` creates it. On a box that also has ondrej PHP the group is
+     * already there and this adds lsphp to it as another choice, which is
+     * exactly what it should do.
+     *
+     * The priority is the compact version — 85 for 8.5 — so a later PHP
+     * outranks an earlier one if the link is ever returned to automatic mode.
+     * `--set` puts it in manual mode, which is what being asked for a specific
+     * version means.
+     *
+     * No `phar`: there is no lsphp phar binary at a path the panel could
+     * register, and inventing one would register a link to nothing.
+     *
+     * @return array<int, array{command: array<int, string>, fatal: bool}>
+     */
+    public function defaultCommands(string $version): array
+    {
+        $binary = $this->binaryPath($version);
+
+        return [
+            [
+                'command' => ['update-alternatives', '--install', '/usr/bin/php', 'php', $binary, $this->compact($version)],
+                'fatal' => true,
+            ],
+            [
+                'command' => ['update-alternatives', '--set', 'php', $binary],
+                'fatal' => true,
+            ],
+        ];
+    }
+
     public function packagePrefix(string $version): string
     {
         return 'lsphp'.$this->compact($version).'-';

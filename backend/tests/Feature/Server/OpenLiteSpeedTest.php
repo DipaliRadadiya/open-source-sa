@@ -14,6 +14,7 @@ use App\Services\Server\Php\PhpExtensionManager;
 use App\Services\Server\Php\PhpOverview;
 use App\Services\Server\Php\PhpStackManager;
 use App\Services\Server\Php\Stacks\LsphpPhpStack;
+use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\WebServers\OlsDriver;
 use App\Services\Server\WebServers\OlsSharedConfig;
 use App\Services\Server\WebServers\WebServerManager;
@@ -876,6 +877,83 @@ describe('the lsphp stack', function () {
 
         expect(app(LsphpPhpStack::class)->versions())->toBe(['8.4', '8.3'])
             ->and(app(LsphpPhpStack::class)->installed('8.4'))->toBeTrue();
+    });
+
+    /*
+     * Reported from a real server: "when I change the default PHP I get an
+     * error on the OLS stack."
+     *
+     *   sudo -n update-alternatives --set php /usr/local/lsws/lsphp85/bin/php
+     *   update-alternatives: error: no alternatives for php
+     *
+     * `--set` selects a choice inside an existing link group. ondrej's
+     * php8.x-cli registers that group; LiteSpeed's packages install an
+     * interpreter and never call update-alternatives at all. So on a box with
+     * no ondrej PHP there was nothing to set, and the panel had no way to
+     * change the CLI default on its own stack.
+     */
+    it('creates the alternatives group before selecting it', function () {
+        $runs = new ArrayObject;
+
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = $process->command;
+
+            return Process::result(exitCode: 0);
+        });
+
+        app(PhpRuntime::class)->setDefault('8.4');
+
+        $calls = collect($runs)->filter(fn ($c) => ($c[0] ?? '') === 'update-alternatives')->values();
+        $binary = $this->lsws.'/lsphp84/bin/php';
+
+        // --install first, and in that order: the set cannot work until the
+        // group exists.
+        expect($calls[0])->toBe(['update-alternatives', '--install', '/usr/bin/php', 'php', $binary, '84'])
+            ->and($calls[1])->toBe(['update-alternatives', '--set', 'php', $binary])
+            ->and($calls)->toHaveCount(2);
+    });
+
+    it('registers no phar alternative, because lsphp ships none', function () {
+        $runs = new ArrayObject;
+
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = $process->command;
+
+            return Process::result(exitCode: 0);
+        });
+
+        app(PhpRuntime::class)->setDefault('8.4');
+
+        // Registering a link to a binary that is not there would leave
+        // `phar` pointing at nothing, which is worse than leaving it alone.
+        expect(collect($runs)->flatten()->all())->not->toContain('phar');
+    });
+
+    it('reads back the default it just set', function () {
+        // The second half of the same bug. The version used to be pattern-matched
+        // out of the path with `php(\d+\.\d+)`, which is true of
+        // /usr/bin/php8.4 and false of every lsphp path — LiteSpeed names the
+        // tree `lsphp84` with no dot and ends the path in a bare `php`. So even
+        // once --set worked, an OLS box would report "no default" for ever and
+        // no row would be marked.
+        $binary = $this->lsws.'/lsphp84/bin/php';
+
+        Process::fake(fn ($process) => ($process->command[0] ?? '') === 'update-alternatives'
+            ? Process::result(output: "Name: php\nLink: /usr/bin/php\nValue: {$binary}\n")
+            : Process::result(exitCode: 0));
+
+        expect(app(PhpRuntime::class)->default())->toBe('8.4');
+    });
+
+    it('claims no default when the selected binary is not a version it knows', function () {
+        // A hand-made symlink, or a version removed while it was still
+        // selected. Naming one of the listed versions anyway would mark the
+        // wrong row as default.
+        Process::fake(fn ($process) => ($process->command[0] ?? '') === 'update-alternatives'
+            ? Process::result(output: "Value: /opt/somebody/elses/php\n")
+            : Process::result(exitCode: 0));
+
+        expect(app(PhpRuntime::class)->default())->toBeNull();
     });
 
     it('does not report a version whose directory has no interpreter in it', function () {

@@ -189,6 +189,30 @@ class FpmPhpStack implements PhpStack
         return [(string) config('server.php_fpm_binary', '/usr/sbin/php-fpm').$version, '-t'];
     }
 
+    /**
+     * Three groups, not one.
+     *
+     * `php8.x-cli` registers `php`, `phar` and `phar.phar`, and moving only the
+     * first leaves `phar` executing under whichever version was default before
+     * — so `php -v` and `phar -v` disagree, which is the kind of thing found
+     * weeks later by a build script.
+     *
+     * The two `phar` groups are not fatal. They exist on every ondrej install,
+     * but a box assembled some other way may have the interpreter without
+     * them, and refusing to change the PHP default over a missing `phar` link
+     * would be refusing the thing that does work.
+     *
+     * @return array<int, array{command: array<int, string>, fatal: bool}>
+     */
+    public function defaultCommands(string $version): array
+    {
+        return [
+            ['command' => ['update-alternatives', '--set', 'php', $this->binaryPath($version)], 'fatal' => true],
+            ['command' => ['update-alternatives', '--set', 'phar', '/usr/bin/phar'.$version], 'fatal' => false],
+            ['command' => ['update-alternatives', '--set', 'phar.phar', '/usr/bin/phar.phar'.$version], 'fatal' => false],
+        ];
+    }
+
     public function packagePrefix(string $version): string
     {
         return "php{$version}-";

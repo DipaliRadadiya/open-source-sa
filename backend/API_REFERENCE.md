@@ -4898,6 +4898,21 @@ Omit `password` to leave it unchanged. `{"remove_password": true}` clears it.
 
 **Response `200`:** `{"php": {"default": "8.3", …}}`
 
+Only the **CLI** default moves. Sites keep whatever version their pool or handler runs — this must never migrate a running site.
+
+What runs depends on the stack, because the two register alternatives differently:
+
+| stack | commands |
+|---|---|
+| FPM (ondrej) | `--set php`, `--set phar`, `--set phar.phar` — all three groups exist already, and moving only `php` would leave `phar` on the previous version |
+| LSPHP (OpenLiteSpeed) | `--install /usr/bin/php php <binary> <priority>` **then** `--set php` |
+
+The `--install` is not optional on LSPHP. LiteSpeed's packages install an interpreter and never call `update-alternatives`, so on a box without ondrej PHP there is no `php` link group and `--set` alone fails with `update-alternatives: error: no alternatives for php`. The priority is the compact version (`84` for 8.4) so a later PHP outranks an earlier one if the link is ever put back into automatic mode; `--set` selects manual mode, which is what asking for a specific version means. There is no lsphp `phar` binary to register.
+
+The `phar` groups are **best-effort**: a box that has the interpreter without those links still gets its PHP default changed, and the miss is recorded in the server-ops log rather than failing the request.
+
+`php.default` is resolved by comparing the selected path against each installed version's own binary path, not by reading a version out of the path — `/usr/local/lsws/lsphp84/bin/php` contains no `8.4`. It is `null` when the selected binary is not one of the versions listed in `php.versions` (a hand-made symlink, or a version removed while still selected) — that is "not one of these", not "none".
+
 ---
 
 ### POST `/php/versions`

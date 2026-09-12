@@ -354,6 +354,48 @@ it('changes the default through update-alternatives', function () {
         ->toContain(['update-alternatives', '--set', 'php', '/usr/bin/php8.3']);
 });
 
+it('moves phar with php, so the two cannot disagree', function () {
+    // `php8.x-cli` registers three groups and the panel moved one of them, so
+    // `php -v` and `phar -v` could report different versions — the kind of
+    // thing a build script finds weeks later.
+    $runs = fakePhp(default: '8.4');
+
+    phpCall('PUT', '/api/php/default', ['default' => '8.3'])->assertOk();
+
+    expect(collect($runs)->pluck('command'))
+        ->toContain(['update-alternatives', '--set', 'phar', '/usr/bin/phar8.3'])
+        ->toContain(['update-alternatives', '--set', 'phar.phar', '/usr/bin/phar.phar8.3']);
+});
+
+it('still changes the default when the box has no phar alternative', function () {
+    // A box assembled some other way can have the interpreter without the phar
+    // links. Refusing the whole change over that would report a change that
+    // did happen as one that did not.
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+        $command = $process->command;
+
+        if (($command[0] ?? '') === 'update-alternatives' && in_array('--query', $command, true)) {
+            return Process::result(output: "Name: php\nValue: /usr/bin/php8.4\n");
+        }
+
+        // Only the phar groups are missing.
+        if (($command[0] ?? '') === 'update-alternatives' && in_array('--set', $command, true)) {
+            return str_contains($command[2] ?? '', 'phar')
+                ? Process::result(exitCode: 2, errorOutput: 'update-alternatives: error: no alternatives for phar')
+                : Process::result(exitCode: 0);
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    app(PhpRuntime::class)->setDefault('8.3');
+
+    expect(collect($runs))->toContain(['update-alternatives', '--set', 'php', '/usr/bin/php8.3']);
+});
+
 it('refuses a default that is not installed', function () {
     fakePhp();
 
