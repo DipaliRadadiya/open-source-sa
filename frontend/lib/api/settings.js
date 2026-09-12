@@ -29,6 +29,32 @@ export function updateUpdateSettings(payload) {
 }
 
 /**
+ * Install the waiting security updates now, rather than at apt's next timer.
+ *
+ * Runs unattended-upgrades' own binary, so it applies exactly the policy the
+ * PUT above configures — and it works with that automation switched off,
+ * because the enable flags gate the timer and not the binary.
+ *
+ * **202**, never a finished answer: the upgrade takes minutes and can restart
+ * services the panel itself runs under. Poll `getSecurityUpdateRun` for the
+ * outcome. **409** means one is already running and carries that run in
+ * `security_update`; **422** means the package is not installed.
+ */
+export function runSecurityUpdates() {
+  return api.post("/settings/updates/run");
+}
+
+/**
+ * The current or last run. `security_update` is null when none has ever run.
+ *
+ * Readable with `setting` view, but `output` comes back null without `manage` —
+ * apt's output can carry conffile diffs, debconf answers and mirror URLs.
+ */
+export function getSecurityUpdateRun() {
+  return api.get("/settings/updates/run");
+}
+
+/**
  * A recurring restart. Disabling removes the cron file outright, so only
  * `enabled: false` needs sending in that case — the rest would describe a
  * schedule that no longer exists.

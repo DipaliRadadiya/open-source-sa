@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {
+  securityUpdateRunResponseSchema,
   settingsResponseSchema,
   settingsSchema,
 } from "../lib/schemas/settings.js";
@@ -187,4 +188,71 @@ test("a log nobody could read is not the same as a box that never ran one", () =
     older.data.settings.updates.unattended_last_log_truncated,
     false,
   );
+});
+
+/*
+ * The run has to survive the parse too.
+ *
+ * Same trap as above, and it would be worse here: a stripped `security_update`
+ * means the button starts an upgrade the page can never show, so it would look
+ * like nothing happened while apt held the box's lock for ten minutes.
+ */
+test("a security update run arrives intact on the settings payload", () => {
+  const parsed = settingsResponseSchema.safeParse({
+    settings: {
+      updates: {
+        security_updates_enabled: true,
+        auto_reboot: false,
+        reboot_time: "02:00",
+        security_update: {
+          id: 7,
+          status: "running",
+          output: "Packages that will be upgraded: curl",
+        },
+      },
+    },
+  });
+
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.data.settings.updates.security_update.id, 7);
+  assert.equal(parsed.data.settings.updates.security_update.status, "running");
+});
+
+test("a finished run keeps the facts the card reports", () => {
+  const parsed = securityUpdateRunResponseSchema.safeParse({
+    security_update: {
+      id: 8,
+      status: "succeeded",
+      reason: null,
+      packages_upgraded: 3,
+      reboot_required_after: true,
+      output: "All upgrades installed",
+      finished_at_human: "2 minutes ago",
+    },
+  });
+
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.data.security_update.packages_upgraded, 3);
+  assert.equal(parsed.data.security_update.reboot_required_after, true);
+});
+
+test("no run at all is a legitimate answer, not a parse failure", () => {
+  // A box where nobody has ever pressed the button — every fresh install.
+  const parsed = securityUpdateRunResponseSchema.safeParse({
+    security_update: null,
+  });
+
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.data.security_update, null);
+});
+
+test("a run whose output was withheld still parses", () => {
+  // `output` is null for a viewer without `setting,manage`. Rejecting that
+  // would make the whole card fail to render for a read-only role.
+  const parsed = securityUpdateRunResponseSchema.safeParse({
+    security_update: { id: 9, status: "running", output: null },
+  });
+
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.data.security_update.output, null);
 });

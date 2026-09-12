@@ -1,18 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import {
+  DisabledReasonProvider,
+  ReasonTooltip,
+} from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 import {
   CalendarClock,
   ChevronDown,
   CircleAlert,
   CircleCheck,
+  Download,
   Loader2,
   Lock,
   Power,
@@ -20,6 +24,7 @@ import {
   ShieldCheck,
   SquareTerminal,
   TriangleAlert,
+  WifiOff,
 } from "lucide-react";
 import {
   updatesFormSchema,
@@ -32,6 +37,8 @@ import {
   updateRebootSchedule,
   rebootServer,
   cancelReboot,
+  runSecurityUpdates,
+  getSecurityUpdateRun,
 } from "@/lib/api/settings";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -255,6 +262,205 @@ function UpdateStatus({ updates }) {
   );
 }
 
+/**
+ * Install the waiting security updates now, and watch it happen.
+ *
+ * The card could only ever describe a schedule. A server with a published
+ * kernel fix waited for apt's timer, and the only way to patch before then was
+ * SSH — which whoever is reading a settings page usually does not have.
+ *
+ * The button runs unattended-upgrades' own binary, so it installs exactly what
+ * the toggle above it already allows. It therefore works with the automation
+ * switched off, which makes "I patch manually, when I choose" a supported
+ * posture rather than a gap.
+ */
+function RunSecurityUpdates({ run, canManage }) {
+  const t = useTranslations("settings.maintenance");
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [starting, setStarting] = useState(false);
+  // Seeded from the server render so a reload mid-upgrade still shows it.
+  const [current, setCurrent] = useState(run ?? null);
+  const [synced, setSynced] = useState(run ?? null);
+  // The upgrade can restart php-fpm and the frontend, so a failed poll is
+  // ordinary progress here, not an error. Said out loud after the second one
+  // rather than the first, which is usually just a reload.
+  const [reconnecting, setReconnecting] = useState(false);
+
+  // Adjusted during render rather than in an effect. `router.refresh()` brings
+  // a newer server-rendered run down as a prop, and mirroring that with an
+  // effect means a render with stale state in it every time — as well as the
+  // cascading-render lint this used to trip.
+  if (run !== synced) {
+    setSynced(run);
+    setCurrent(run ?? null);
+  }
+
+  // Derived, not stored. Two sources of truth for "is it running" is how a
+  // spinner gets left behind after a run has settled.
+  const running = current?.status === "running";
+
+  useEffect(() => {
+    if (!running) return undefined;
+
+    let cancelled = false;
+    let misses = 0;
+
+    const interval = window.setInterval(async () => {
+      try {
+        const { data } = await getSecurityUpdateRun();
+        if (cancelled) return;
+
+        misses = 0;
+        setReconnecting(false);
+
+        const next = data?.security_update ?? null;
+        setCurrent(next);
+
+        if (next && next.status !== "running") {
+          // The page is server-rendered: the counts, the last-run line and the
+          // reboot-required banner are all stale the moment this finishes, and
+          // a sibling card would otherwise keep showing page-load state.
+          router.refresh();
+        }
+      } catch {
+        if (cancelled) return;
+        misses += 1;
+        if (misses > 1) setReconnecting(true);
+      }
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [running, router]);
+
+  async function start() {
+    setStarting(true);
+    try {
+      const { data } = await runSecurityUpdates();
+      setCurrent(data?.security_update ?? null);
+      setConfirming(false);
+      toast.success(t("updates.runStarted"));
+    } catch (error) {
+      // 409 carries the run that is already going, which is the answer rather
+      // than a failure — adopt it instead of reporting an error over the top of
+      // a working upgrade.
+      const existing = error?.response?.data?.security_update;
+      if (existing) {
+        setCurrent(existing);
+        setConfirming(false);
+      }
+      toast.error(apiMessage(error, t("updates.runFailed")));
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  const reason = !canManage
+    ? null
+    : running
+      ? t("updates.runInProgress")
+      : null;
+
+  return (
+    <div className="mt-3.5 space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <ReasonTooltip reason={reason}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!canManage || running || starting}
+            onClick={() => setConfirming(true)}
+          >
+            {running || starting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            {running ? t("updates.running") : t("updates.runNow")}
+          </Button>
+        </ReasonTooltip>
+
+        {running && reconnecting ? (
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            <WifiOff className="size-3.5 shrink-0" />
+            {t("updates.runReconnecting")}
+          </span>
+        ) : null}
+
+        {/* The outcome of the last panel-initiated run, which is a different
+            fact from the last automatic one reported above. */}
+        {current && !running ? (
+          <span className="text-xs text-muted-foreground">
+            {current.status === "succeeded"
+              ? current.packages_upgraded
+                ? t("updates.runInstalled", {
+                    count: current.packages_upgraded,
+                    when: current.finished_at_human ?? "",
+                  })
+                : t("updates.runNothing")
+              : t("updates.runFailedAt", {
+                  when: current.finished_at_human ?? "",
+                })}
+          </span>
+        ) : null}
+      </div>
+
+      {/* A restart the upgrade asked for. Never performed here: rebooting is
+          its own confirmed action, and doing it as a side effect of "install
+          updates" would take the box down without being asked. */}
+      {current?.reboot_required_after && !running ? (
+        <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+          <RotateCcw className="mt-0.5 size-4 shrink-0 text-warning" />
+          {t("updates.runRebootRequired")}
+        </p>
+      ) : null}
+
+      {current?.status === "failed" ? (
+        <p className="text-sm text-destructive">
+          {t(`updates.runReasons.${current.reason ?? "unknown"}`)}
+        </p>
+      ) : null}
+
+      {/* apt's own narration, while it happens and after it stops. Open while
+          running — a progress bar cannot be drawn honestly here, because apt
+          does not say how much is left, and watching the real output is more
+          informative than a bar that lies. */}
+      {current?.output ? (
+        <Collapsible defaultOpen={running} className="group/run">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="-ml-2 h-8 gap-2 px-2">
+              <SquareTerminal className="size-4" />
+              {t("updates.runOutput")}
+              <ChevronDown className="size-4 transition-transform group-data-[state=open]/run:rotate-180" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <pre className="max-h-80 overflow-auto rounded-md border bg-zinc-950 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-zinc-100">
+              {current.output}
+            </pre>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
+
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        icon={Download}
+        title={t("updates.runConfirmTitle")}
+        description={t("updates.runConfirmBody")}
+        cancelLabel={t("updates.runConfirmCancel")}
+        confirmLabel={t("updates.runConfirmSubmit")}
+        pending={starting}
+        onConfirm={start}
+      />
+    </div>
+  );
+}
+
 function UpdatesSection({ updates, canManage }) {
   const t = useTranslations("settings.maintenance");
   const tv = useTranslations("settings.validation");
@@ -311,6 +517,11 @@ function UpdatesSection({ updates, canManage }) {
               until now nothing on the page reported the result — you could not
               tell a patched server from one 43 updates behind. */}
           <UpdateStatus updates={updates} />
+
+          <RunSecurityUpdates
+            run={updates?.security_update ?? null}
+            canManage={canManage}
+          />
 
           <FormField
             control={form.control}

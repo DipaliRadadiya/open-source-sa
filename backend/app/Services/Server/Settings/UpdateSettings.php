@@ -54,6 +54,7 @@ class UpdateSettings implements SettingGroup
     public function __construct(
         private ManagedFile $files,
         private ServerOps $serverOps,
+        private SecurityUpdateTracker $runs,
     ) {}
 
     public function key(): string
@@ -85,6 +86,11 @@ class UpdateSettings implements SettingGroup
             ...$this->pending(),
             ...$this->lastRefresh(),
             ...$this->lastUnattendedRun(),
+            // The panel's own run, carried on the first paint rather than
+            // fetched separately. A page that rendered without it would show no
+            // run in progress for as long as the first poll takes, and the most
+            // likely moment to open this page is just after pressing the button.
+            'security_update' => $this->runs->latest()?->toProgress($this->mayReadLog()),
         ];
     }
 

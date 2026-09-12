@@ -108,6 +108,12 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         'api/applications/{application}/deployments/{deployment}',
         'api/server/sync/{run}',
         'api/admin/panel-update/{panelUpdate}',
+        // A security update waits out the dpkg lock for up to ten minutes
+        // before it installs anything, so this is watched for longer than any
+        // other progress feed on the panel. Sharing the interactive budget
+        // would end the longest runs in a 429 — which reads as the upgrade
+        // having failed, on the one screen where that is most alarming.
+        'api/settings/updates/run',
 
         // The rest of the same class, found by auditing for "what does a
         // screen watch?" rather than by waiting for the next 429 report.

@@ -4720,6 +4720,35 @@ Both logs, because they answer different halves of the question: unattended-upgr
 
 **`unattended_log_readable`** is a separate answer from every field above being `null`. `false` means the panel could not open the log at all — a missing `adm` group membership, a sudoers grant that never synced — which is a broken panel, not a server that has simply never run an upgrade. The two were indistinguishable and both rendered as silence.
 
+**`security_update`** is the panel's own most recent run, or `null` if the button has never been pressed. Same shape as `POST /settings/updates/run` returns; carried here so the page renders a run in progress on its first paint instead of waiting for the first poll. `output` follows `setting,manage`.
+
+---
+
+### POST `/settings/updates/run`
+**Permission:** `setting` (manage)
+
+Install the security updates that are waiting, now, instead of at apt's next timer.
+
+Runs **`unattended-upgrade -v`** — unattended-upgrades' own binary, not `apt-get upgrade`. It applies exactly the `Allowed-Origins` policy that `PUT /settings/updates` writes, so the button means "run the automation now" rather than "upgrade everything". It also **works with the automation disabled**: the enable flags gate apt's *timer*, not the binary, so manual-only patching is a supported posture.
+
+**Response `202`:** `{"security_update": {"id": 4, "status": "running", "reason": null, "reference": null, "exit_code": null, "packages_upgraded": null, "reboot_required_after": null, "output": null, "started_at": "12-09-2026 09:20:11", "started_at_human": "1 second ago", "finished_at": null, "finished_at_human": null}}`
+
+Never a finished answer — the upgrade takes minutes and can restart php-fpm, the frontend and the queue worker. The row is written **before** the job is dispatched, so there is no window where the run exists and nothing can see it.
+
+- **`409`** — one is already running. The body carries that run in `security_update`, so a client can adopt it rather than reporting an error over the top of a working upgrade. Not `422`: nothing about the request is wrong, and apt's box-wide lock means a second run could only wait behind the first and then repeat it.
+- **`422`** — `unattended-upgrades` is not installed. Checked before queueing, so this is not a job that fails a minute later for a reason nothing on screen could explain.
+
+The panel **never reboots here**, even when the upgrade demands one. `reboot_required_after` records that the box now wants one; restarting is its own confirmed action (`POST /settings/reboot`).
+
+### GET `/settings/updates/run`
+**Permission:** `setting` (view) · `throttle:progress`, outside the ordinary API limiter
+
+`{"security_update": {…}|null}` — the current or last run. Polled while one is in flight; expect connection failures mid-run and treat them as progress, because the upgrade can restart the services answering the request.
+
+`output` is `null` without `setting,manage`. Watching is not changing, but apt's output can carry conffile diffs, debconf answers and mirror URLs, so it follows the heavier permission — the same split the failed-automatic-run excerpt uses.
+
+`reason` on a failed run is a code the client words: `locked`, `stale_lock`, `denied`, `timeout`, `dpkg`, `fetch`, `disk_full`, `dependencies`, `worker`, `unknown`. **`worker` is the one that is not a failure of the upgrade**: the process running it disappeared — most likely restarted by the upgrade itself — so apt may well have finished the work. A run is also moved out of `running` by age for that reason, because when the worker dies nothing else is left to report.
+
 ---
 
 ### PUT `/settings/general`

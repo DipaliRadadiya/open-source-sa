@@ -12,15 +12,19 @@ use App\Http\Requests\Server\Setting\RedisSettingsRequest;
 use App\Http\Requests\Server\Setting\SecuritySettingsRequest;
 use App\Http\Requests\Server\Setting\SwapSettingsRequest;
 use App\Http\Requests\Server\Setting\UpdateSettingsRequest;
+use App\Jobs\InstallSecurityUpdates;
 use App\Services\ActivityLogger;
 use App\Services\Server\ServerOps;
 use App\Services\Server\Settings\RebootScheduleSettings;
 use App\Services\Server\Settings\RedisSettings;
+use App\Services\Server\Settings\SecurityUpdateRunner;
+use App\Services\Server\Settings\SecurityUpdateTracker;
 use App\Services\Server\Settings\SettingChangeLog;
 use App\Services\Server\Settings\SettingsManager;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class SettingController extends Controller
 {
@@ -131,6 +135,64 @@ class SettingController extends Controller
         ]);
 
         return response()->json(['reboot_schedule' => $values]);
+    }
+
+    /**
+     * Install the waiting security updates now. `202 Accepted`.
+     *
+     * The row is written **before** the job is dispatched, deliberately — the
+     * same order `InstallTracker` uses. Started inside the job instead, there is
+     * a window between the 202 and the worker picking it up where the run exists
+     * and nothing can see it, which is the exact blindness the table removes.
+     */
+    public function runSecurityUpdates(
+        SecurityUpdateRunner $updates,
+        SecurityUpdateTracker $runs,
+        ActivityLogger $log,
+    ): JsonResponse {
+        // Asked before queueing: a job that fails a minute later because the
+        // package is absent gives an operator a red card and no way to connect
+        // it to a missing package.
+        if (! $updates->available()) {
+            return response()->json(['message' => __('errors/setting.security_updates_unavailable')], 422);
+        }
+
+        $run = $runs->start(Auth::id());
+
+        // Null means one is already open. 409 rather than 422: nothing about the
+        // request is wrong, it is the server's state that refuses it — and apt's
+        // lock means a second run could only wait and then repeat the first.
+        if ($run === null) {
+            return response()->json([
+                'message' => __('errors/setting.security_updates_in_progress'),
+                'security_update' => $runs->inFlight()?->toProgress(withOutput: true),
+            ], 409);
+        }
+
+        InstallSecurityUpdates::dispatch($run->getKey(), Auth::id());
+
+        $log->log('setting.security_updates_started', null, []);
+
+        return response()->json(['security_update' => $run->toProgress(withOutput: true)], 202);
+    }
+
+    /**
+     * How the current or last security update is going.
+     *
+     * Readable with `setting` view, because watching is not changing — but the
+     * captured output follows `manage`, as the failed-automatic-run excerpt in
+     * the same card does. apt's output can carry conffile diffs, debconf answers
+     * and mirror URLs.
+     */
+    public function securityUpdateStatus(SecurityUpdateTracker $runs): JsonResponse
+    {
+        $run = $runs->latest();
+
+        return response()->json([
+            'security_update' => $run?->toProgress(
+                withOutput: Auth::user()?->canManage('setting') ?? false,
+            ),
+        ]);
     }
 
     /**

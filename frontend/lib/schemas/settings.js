@@ -38,6 +38,36 @@ export const securitySettingsSchema = z.object({
   has_ssh_key: z.boolean().nullable().optional(),
 });
 
+/**
+ * One security update the panel was asked to install.
+ *
+ * `status` is a code and `reason` is a code — this side owns the wording, the
+ * same way it already does for `unattended_last_result` in the same card.
+ *
+ * `output` is null for a viewer without `setting,manage`, so the absence of a
+ * log here is not evidence that there was nothing to show.
+ */
+export const securityUpdateRunSchema = z.object({
+  id: z.number(),
+  // "running" | "succeeded" | "failed"
+  status: z.string(),
+  reason: z.string().nullable().optional(),
+  reference: z.string().nullable().optional(),
+  exit_code: z.number().nullable().optional(),
+  // Null means the run did not say, which is not the same as none.
+  packages_upgraded: z.number().nullable().optional(),
+  reboot_required_after: z.boolean().nullable().optional(),
+  output: z.string().nullable().optional(),
+  started_at: z.string().nullable().optional(),
+  started_at_human: z.string().nullable().optional(),
+  finished_at: z.string().nullable().optional(),
+  finished_at_human: z.string().nullable().optional(),
+});
+
+export const securityUpdateRunResponseSchema = z.object({
+  security_update: securityUpdateRunSchema.nullable(),
+});
+
 export const updateSettingsSchema = z.object({
   security_updates_enabled: z.boolean(),
   auto_reboot: z.boolean(),
@@ -72,6 +102,10 @@ export const updateSettingsSchema = z.object({
   // being null, which is what a box that has never run one looks like —
   // both used to render as silence, and only one of them is a broken panel.
   unattended_log_readable: z.boolean().optional().default(true),
+  // The panel's own run, carried on the first paint. Without it the page would
+  // show no run in progress until the first poll lands, and the likeliest
+  // moment to open this page is straight after pressing the button.
+  security_update: securityUpdateRunSchema.nullable().optional(),
 });
 
 /**

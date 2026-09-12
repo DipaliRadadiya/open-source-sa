@@ -19,6 +19,17 @@ Route::get('/settings/reboot', [SettingController::class, 'rebootStatus'])->midd
 Route::delete('/settings/reboot', [SettingController::class, 'cancelReboot'])->middleware('permission:setting,manage');
 Route::put('/settings/security', [SettingController::class, 'updateSecurity'])->middleware('permission:setting,manage');
 Route::put('/settings/updates', [SettingController::class, 'updateUpdates'])->middleware('permission:setting,manage');
+// Install the waiting security updates on demand, rather than waiting for
+// apt's timer. Runs unattended-upgrades' own binary, so it applies exactly the
+// policy the PUT above configures — and works with that automation switched
+// off, because the enable flags gate the timer and not the binary.
+Route::post('/settings/updates/run', [SettingController::class, 'runSecurityUpdates'])->middleware('permission:setting,manage');
+// Polled while one is running, so it escapes the ordinary API limiter the way
+// every other progress endpoint does. Watching is not changing: `view` is
+// enough, and the captured output is withheld from a viewer inside the payload.
+Route::get('/settings/updates/run', [SettingController::class, 'securityUpdateStatus'])
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:setting', 'throttle:progress']);
 Route::put('/settings/redis', [SettingController::class, 'updateRedis'])->middleware('permission:setting,manage');
 
 // A plain scheduled reboot — daily, weekly or monthly, whether or not an

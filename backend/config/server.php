@@ -139,6 +139,12 @@ return [
         // that is not /usr/bin, goes in `paths` below.
         'binaries' => [
             'apt-get', 'apt-cache', 'dpkg-query',
+            // The security-update button runs unattended-upgrades' own binary
+            // rather than `apt-get upgrade`, so that "install them now" applies
+            // exactly the policy the toggle beside it already configured. The
+            // binary reads that policy whether or not apt's timer is enabled,
+            // which is what makes a manual-only posture work.
+            'unattended-upgrade',
             // systemd-run puts the panel update in a transient unit of its
             // own, so restarting the panel's services partway through the
             // update does not kill the update — see PanelUpdateRunner.
@@ -1689,6 +1695,24 @@ return [
         'SERVER_UNATTENDED_DPKG_LOG',
         '/var/log/unattended-upgrades/unattended-upgrades-dpkg.log',
     ),
+
+    /*
+    | Installing the waiting security updates on demand.
+    |
+    | `unattended-upgrade` (singular) is the binary; `unattended-upgrades` is
+    | the service. Running the binary applies the same Allowed-Origins policy
+    | the drop-in configures, whether or not apt's timer is enabled.
+    |
+    | The timeout has to cover both halves of the work. ServerOps waits out the
+    | dpkg lock for up to ten minutes (40 attempts, 15s apart) before the
+    | upgrade starts at all, so 900 — the runtime-install figure — could leave a
+    | kernel and a hundred packages five minutes to install. 30 minutes is the
+    | whole budget, and the queue job's timeout matches it.
+    */
+    'security_updates' => [
+        'binary' => env('SERVER_UNATTENDED_UPGRADE_BIN', '/usr/bin/unattended-upgrade'),
+        'timeout' => (int) env('SERVER_SECURITY_UPDATE_TIMEOUT', 1800),
+    ],
 
     'redis_cli' => env('SERVER_REDIS_CLI', '/usr/bin/redis-cli'),
 

@@ -3,6 +3,8 @@
 return [
     'operation_failed' => 'The settings change failed on the server.',
     'group_unavailable' => 'That settings group is not available on this server.',
+    'security_updates_unavailable' => 'unattended-upgrades is not installed on this server, so the panel has nothing to run. Install the unattended-upgrades package, then try again.',
+    'security_updates_in_progress' => 'A security update is already running.',
     'no_ssh_key' => 'Add an SSH key before disabling password authentication, or you may lock yourself out.',
     'redis_credential_unusable' => 'The panel cannot reach Redis with the password it has stored, so it cannot change it. Redis is running but rejecting the panel\'s credential — correct REDIS_PASSWORD in the panel\'s .env to the password Redis actually requires, then try again.',
     'env_not_writable' => 'The panel cannot write its own .env file, so a new Redis password could not be recorded. Fix the file permissions first — otherwise the panel would lose access to Redis.',
