@@ -62,6 +62,16 @@ export const updateSettingsSchema = z.object({
   // "failed" alone sends the reader to SSH for the one sentence that
   // explains it, and the commonest one is a transient apt lock.
   unattended_last_error: z.string().nullable().optional(),
+  // The failed run itself, from both unattended-upgrades' log and dpkg's.
+  // One line says whether this is urgent; it cannot say why a package
+  // refused, because dpkg narrates that in a different file. Null on
+  // success, and null for a viewer without `setting,manage`.
+  unattended_last_log: z.string().nullable().optional(),
+  unattended_last_log_truncated: z.boolean().optional().default(false),
+  // Whether the log could be opened at all. Distinct from every field above
+  // being null, which is what a box that has never run one looks like —
+  // both used to render as silence, and only one of them is a broken panel.
+  unattended_log_readable: z.boolean().optional().default(true),
 });
 
 /**

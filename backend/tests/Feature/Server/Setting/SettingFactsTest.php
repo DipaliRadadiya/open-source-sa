@@ -41,6 +41,7 @@ beforeEach(function () {
         'server.apt_check' => $this->aptCheck,
         'server.apt_update_stamp' => $this->stamp,
         'server.unattended_upgrades_log' => $this->dir.'/unattended.log',
+        'server.unattended_upgrades_dpkg_log' => $this->dir.'/unattended-dpkg.log',
         'server.redis_cli' => $this->redisCli,
         'server.proc_dir' => $this->dir,
         'server.swap_file' => $this->dir.'/swapfile',
@@ -60,7 +61,9 @@ function fakeFacts(array $overrides = []): void
     $aptCheck = test()->aptCheck;
     $redis = test()->redisCli;
 
-    Process::fake(function ($process) use ($aptCheck, $redis, $overrides) {
+    $dpkgLog = (string) config('server.unattended_upgrades_dpkg_log');
+
+    Process::fake(function ($process) use ($aptCheck, $redis, $dpkgLog, $overrides) {
         $cmd = $process->command;
         $bin = $cmd[0] ?? '';
 
@@ -77,8 +80,12 @@ function fakeFacts(array $overrides = []): void
                 : Process::result(errorOutput: '43;1');
         }
 
+        // Two logs are tailed and they say different things, so the fake has to
+        // tell them apart by path rather than by binary.
         if ($bin === 'tail') {
-            return $overrides['unattended'] ?? Process::result(exitCode: 1);
+            return in_array($dpkgLog, $cmd, true)
+                ? ($overrides['unattended_dpkg'] ?? Process::result(exitCode: 1))
+                : ($overrides['unattended'] ?? Process::result(exitCode: 1));
         }
 
         if ($bin === 'timedatectl' && ($cmd[1] ?? '') === 'show') {
@@ -371,4 +378,169 @@ it('keeps a Traceback to its first line', function () {
     // the marker is what tells the reader there is more in the log.
     expect(strlen($error))->toBeLessThanOrEqual(303)
         ->and($error)->toEndWith('...');
+});
+
+/*
+ * The run, not only the line that decided it.
+ *
+ * One line answers "is this urgent" and for a lock collision that is the whole
+ * story. It does not answer "why did this package refuse" — unattended-upgrades
+ * narrates that across several lines, and dpkg narrates the part that actually
+ * matters in a different file, which the panel was not reading at all.
+ */
+
+it('includes the failed run as a log excerpt', function () {
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(output: implode("\n", [
+        '2026-07-30 06:00:01,001 INFO Starting unattended upgrades script',
+        '2026-07-30 06:00:02,002 INFO a previous run nobody is asking about',
+        '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
+        '2026-08-01 06:00:03,003 INFO Packages that will be upgraded: curl',
+        '2026-08-01 06:00:04,004 ERROR Could not fetch archives',
+    ]))]);
+
+    $log = (string) readSettings()->json('settings.updates.unattended_last_log');
+
+    expect($log)->toContain('Packages that will be upgraded: curl')
+        ->and($log)->toContain('Could not fetch archives')
+        // Scoped to the run being reported, the same way the verdict is.
+        ->and($log)->not->toContain('a previous run nobody is asking about');
+});
+
+it('reports no excerpt when the run succeeded', function () {
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(output: implode("\n", [
+        '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
+        '2026-08-01 06:00:09,123 INFO All upgrades installed',
+    ]))]);
+
+    readSettings()
+        ->assertJsonPath('settings.updates.unattended_last_log', null)
+        ->assertJsonPath('settings.updates.unattended_last_log_truncated', false);
+});
+
+it('carries the dpkg log, where the reason for a failed package actually is', function () {
+    // unattended-upgrades says a package failed; dpkg says why. Reporting only
+    // the first tells an administrator that something broke and not one word
+    // about what.
+    File::put($this->aptCheck, '');
+    fakeFacts([
+        'unattended' => Process::result(output: implode("\n", [
+            '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
+            '2026-08-01 06:00:04,004 ERROR installing the upgrades failed!',
+        ])),
+        'unattended_dpkg' => Process::result(output: implode("\n", [
+            'Log started: 2026-07-01  06:00:00',
+            'an earlier upgrade that succeeded',
+            'Log started: 2026-08-01  06:00:02',
+            'Setting up nginx (1.24.0-1ubuntu1) ...',
+            'dpkg: error processing package nginx (--configure):',
+            ' installed nginx package post-installation script subprocess returned error exit status 1',
+        ])),
+    ]);
+
+    $log = (string) readSettings()->json('settings.updates.unattended_last_log');
+
+    expect($log)->toContain('post-installation script subprocess returned error exit status 1')
+        // Named, so dpkg's ordinary "Setting up ..." chatter is not read as
+        // part of unattended-upgrades' own narration.
+        ->and($log)->toContain('unattended-dpkg.log')
+        // Its own blocks are scoped too.
+        ->and($log)->not->toContain('an earlier upgrade that succeeded');
+});
+
+it('redacts every line of the excerpt, not only the headline', function () {
+    // The reason line is redacted already. A credentialled mirror is just as
+    // likely to be quoted by the INFO line above it, and that line is now
+    // being published too.
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(output: implode("\n", [
+        '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
+        '2026-08-01 06:00:02,002 INFO Using https://deploy:s3cr3t@repo.example.com/ubuntu',
+        '2026-08-01 06:00:04,004 ERROR Could not fetch archives',
+    ]))]);
+
+    $log = (string) readSettings()->json('settings.updates.unattended_last_log');
+
+    expect($log)->not->toContain('s3cr3t')
+        ->and($log)->toContain('repo.example.com');
+});
+
+it('says the excerpt is partial when the run began before the window', function () {
+    // No start marker in the tail means this is the end of a run, not all of
+    // it. Presented as the whole story it would invite the reader to conclude
+    // the upgrade began with the error.
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(output: implode("\n", [
+        '2026-08-01 06:00:03,003 INFO Packages that will be upgraded: curl',
+        '2026-08-01 06:00:04,004 ERROR Could not fetch archives',
+    ]))]);
+
+    readSettings()
+        ->assertJsonPath('settings.updates.unattended_last_result', 'failed')
+        ->assertJsonPath('settings.updates.unattended_last_log_truncated', true);
+});
+
+it('bounds the excerpt and says so', function () {
+    File::put($this->aptCheck, '');
+    $noise = array_map(
+        fn (int $i) => '2026-08-01 06:00:02,002 INFO '.str_repeat("padding line {$i} ", 20),
+        range(1, 400),
+    );
+    fakeFacts(['unattended' => Process::result(output: implode("\n", [
+        '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
+        ...$noise,
+        '2026-08-01 06:00:04,004 ERROR Could not fetch archives',
+    ]))]);
+
+    $response = readSettings();
+    $log = (string) $response->json('settings.updates.unattended_last_log');
+
+    expect(strlen($log))->toBeLessThanOrEqual(8 * 1024)
+        // Bounded from the end, because the failure is the last thing that
+        // happened — the reason must survive the bound.
+        ->and($log)->toContain('Could not fetch archives');
+
+    $response->assertJsonPath('settings.updates.unattended_last_log_truncated', true);
+});
+
+it('distinguishes a log it could not read from a box that has never run one', function () {
+    // Both were all-nulls, and the screen said nothing in both cases. One of
+    // them is a broken panel.
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(exitCode: 1, errorOutput: 'Permission denied')]);
+
+    readSettings()
+        ->assertJsonPath('settings.updates.unattended_log_readable', false)
+        ->assertJsonPath('settings.updates.unattended_last_result', null);
+});
+
+it('calls the log readable when it simply holds no run', function () {
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(output: '')]);
+
+    readSettings()
+        ->assertJsonPath('settings.updates.unattended_log_readable', true)
+        ->assertJsonPath('settings.updates.unattended_last_result', null);
+});
+
+it('withholds the excerpt from a viewer who cannot manage settings', function () {
+    // A dpkg excerpt can carry conffile diffs, debconf answers and mirror URLs.
+    // Viewing this group needs `setting`; this follows `setting,manage`.
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(output: implode("\n", [
+        '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
+        '2026-08-01 06:00:04,004 ERROR Could not fetch archives',
+    ]))]);
+
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'setting', view: true, manage: false);
+
+    $this->withHeader('Authorization', 'Bearer '.$viewer->createToken('t')->plainTextToken)
+        ->getJson('/api/settings')
+        ->assertOk()
+        ->assertJsonPath('settings.updates.unattended_last_log', null)
+        // The one-line reason stays: it is what tells a viewer whether to
+        // escalate, and it was already bounded and redacted for that purpose.
+        ->assertJsonPath('settings.updates.unattended_last_error', 'Could not fetch archives');
 });

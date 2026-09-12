@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { settingsResponseSchema, settingsSchema } from "../lib/schemas/settings.js";
+import {
+  settingsResponseSchema,
+  settingsSchema,
+} from "../lib/schemas/settings.js";
 
 const root = path.join(import.meta.dirname, "..");
 const backend = path.join(root, "..", "backend");
@@ -35,7 +38,9 @@ function backendGroupKeys() {
     const source = fs.readFileSync(path.join(dir, file), "utf8");
 
     // `public function key(): string { return 'general'; }`
-    const match = source.match(/function key\(\)\s*:\s*string\s*\{\s*return\s*'([a-z_]+)'/);
+    const match = source.match(
+      /function key\(\)\s*:\s*string\s*\{\s*return\s*'([a-z_]+)'/,
+    );
     if (match) keys.push(match[1]);
   }
 
@@ -58,7 +63,10 @@ test("the backend groups this test can see are the ones we expect", () => {
   // pass vacuously by finding no groups at all.
   const keys = backendGroupKeys();
 
-  assert.ok(keys.length >= 6, `only found ${keys.length} backend groups — the parse is probably broken`);
+  assert.ok(
+    keys.length >= 6,
+    `only found ${keys.length} backend groups — the parse is probably broken`,
+  );
   // Two groups that have been there since the beginning; if the regex breaks,
   // these disappear and the check above starts passing vacuously.
   assert.ok(keys.includes("general"));
@@ -108,4 +116,75 @@ test("a group the schema does not name is dropped, which is the point", () => {
 
   assert.equal(parsed.success, true);
   assert.equal("invented_group" in parsed.data.settings, false);
+});
+
+/*
+ * The failure evidence has to survive the parse.
+ *
+ * This is the same trap as the dropped groups above, one level down: the
+ * backend reads two logs, bounds and redacts them, and a field absent from the
+ * schema would be deleted before the card ever sees it — a 200 response, no
+ * warning, and a failed update that still explains nothing.
+ */
+test("a failed run carries its log excerpt through the parse", () => {
+  const parsed = settingsResponseSchema.safeParse({
+    settings: {
+      updates: {
+        security_updates_enabled: true,
+        auto_reboot: false,
+        reboot_time: "02:00",
+        unattended_last_result: "failed",
+        unattended_last_error: "Could not fetch archives",
+        unattended_last_log: "ERROR Could not fetch archives",
+        unattended_last_log_truncated: true,
+        unattended_log_readable: true,
+      },
+    },
+  });
+
+  assert.equal(parsed.success, true);
+  assert.equal(
+    parsed.data.settings.updates.unattended_last_log,
+    "ERROR Could not fetch archives",
+  );
+  assert.equal(
+    parsed.data.settings.updates.unattended_last_log_truncated,
+    true,
+  );
+});
+
+test("a log nobody could read is not the same as a box that never ran one", () => {
+  // Both were all-nulls and both rendered as silence. The card now says which
+  // of the two it is, so the flag has to arrive intact — and default to the
+  // optimistic value when an older backend omits it, not to "broken".
+  const unreadable = settingsResponseSchema.safeParse({
+    settings: {
+      updates: {
+        security_updates_enabled: true,
+        auto_reboot: false,
+        reboot_time: "02:00",
+        unattended_log_readable: false,
+      },
+    },
+  });
+
+  assert.equal(unreadable.success, true);
+  assert.equal(unreadable.data.settings.updates.unattended_log_readable, false);
+
+  const older = settingsResponseSchema.safeParse({
+    settings: {
+      updates: {
+        security_updates_enabled: true,
+        auto_reboot: false,
+        reboot_time: "02:00",
+      },
+    },
+  });
+
+  assert.equal(older.success, true);
+  assert.equal(older.data.settings.updates.unattended_log_readable, true);
+  assert.equal(
+    older.data.settings.updates.unattended_last_log_truncated,
+    false,
+  );
 });

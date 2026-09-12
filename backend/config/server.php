@@ -1675,6 +1675,21 @@ return [
     */
     'unattended_upgrades_log' => env('SERVER_UNATTENDED_LOG', '/var/log/unattended-upgrades/unattended-upgrades.log'),
 
+    /*
+    | Where the *reason* actually is when a package fails to configure.
+    |
+    | The log above is unattended-upgrades' own narration, and for a failed
+    | dpkg step it says little more than `ERROR` plus a summary. dpkg's output
+    | — the maintainer script's stderr, the conffile prompt it could not
+    | answer, the dependency it could not satisfy — goes only here. Reporting a
+    | failure from the first file alone tells an administrator that something
+    | broke and not one word about what.
+    */
+    'unattended_upgrades_dpkg_log' => env(
+        'SERVER_UNATTENDED_DPKG_LOG',
+        '/var/log/unattended-upgrades/unattended-upgrades-dpkg.log',
+    ),
+
     'redis_cli' => env('SERVER_REDIS_CLI', '/usr/bin/redis-cli'),
 
     /*

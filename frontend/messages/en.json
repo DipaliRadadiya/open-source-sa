@@ -1750,7 +1750,10 @@
         "neverChecked": "Never checked",
         "neverRun": "Automatic updates are on but have never run yet.",
         "lastFailed": "The last automatic update failed.",
-        "lastRun": "Last run {when}"
+        "lastRun": "Last run {when}",
+        "viewLog": "View the update log",
+        "logTruncated": "Showing the latest output. Earlier lines were omitted.",
+        "logUnreadable": "The update log could not be read, so the last run cannot be reported."
       },
       "reboot": {
         "title": "Manual restart",

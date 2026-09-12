@@ -4662,7 +4662,7 @@ Manual + scheduled run history, paginated.
   "general": {"timezone": "UTC", "ntp": true, "clock_synchronized": true, "hostname": "srv1"},
   "swap": {"enabled": true, "path": "/swapfile", "size": 2147483648, "size_human": "2 GB", "used": 0, "used_human": "0 B", "free": 2147483648, "free_human": "2 GB"},
   "security": {"port": 22, "permit_root_login": "prohibit-password", "password_authentication": false, "has_ssh_key": true},
-  "updates": {"security_updates_enabled": true, "auto_reboot": false, "reboot_time": "06:00", "reboot_required": false, "updates_available": 3, "security_updates_available": 1, "lists_refreshed_at": "29-07-2026 04:00:00", "unattended_last_run_at": "27-07-2026 06:18:00", "unattended_last_result": "success"},
+  "updates": {"security_updates_enabled": true, "auto_reboot": false, "reboot_time": "06:00", "reboot_required": false, "updates_available": 3, "security_updates_available": 1, "lists_refreshed_at": "29-07-2026 04:00:00", "unattended_last_run_at": "27-07-2026 06:18:00", "unattended_last_result": "success", "unattended_last_error": null, "unattended_last_log": null, "unattended_last_log_truncated": false, "unattended_log_readable": true},
   "redis": {"maxmemory": "256mb", "maxmemory_policy": "allkeys-lru", "has_password": true, "password": "s3cr3t-redis", "password_out_of_sync": false, "password_manageable": true, "running": true, "memory_used": 8388608, "memory_used_human": "8 MB"}
 ```
 
@@ -4707,6 +4707,18 @@ stay queued.
 `redis` group is omitted if Redis is not installed.
 
 `null` for unavailable facts (e.g. `updates_available: null` when the check failed) — render differently from `0` (which means "nothing waiting").
+
+**Why an automatic update failed.** `unattended_last_result` is `"success"`, `"failed"` or `null` (never run). When it is `"failed"`, three fields carry the evidence:
+
+| field | meaning |
+|---|---|
+| `unattended_last_error` | the one log line that decided the verdict — de-timestamped, redacted, bounded at 300 characters. Verbatim and **untranslated**: this is the string an operator pastes into a search box, and a paraphrase is not searchable. |
+| `unattended_last_log` | the failed run itself, from **both** `unattended-upgrades.log` and `unattended-upgrades-dpkg.log`, 8 KB per file, every line redacted. `null` on success, and `null` for a caller holding `setting` view without **manage**. |
+| `unattended_last_log_truncated` | either file was cut to fit, or the run began before the 500-line tail window reached back — so what is shown is the end of a run and not all of it. |
+
+Both logs, because they answer different halves of the question: unattended-upgrades narrates what it decided to do and that something went wrong, and when the failure is a package refusing to configure, **the maintainer script's actual output is only in the dpkg log**. A report built from the first file alone says that something broke and nothing about what. The dpkg portion is preceded by a line naming its path, so its ordinary `Setting up ...` chatter is not read as part of the error.
+
+**`unattended_log_readable`** is a separate answer from every field above being `null`. `false` means the panel could not open the log at all — a missing `adm` group membership, a sudoers grant that never synced — which is a broken panel, not a server that has simply never run an upgrade. The two were indistinguishable and both rendered as silence.
 
 ---
 

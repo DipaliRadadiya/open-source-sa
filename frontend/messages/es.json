@@ -1750,7 +1750,10 @@
         "neverChecked": "Nunca comprobado",
         "neverRun": "Las actualizaciones automáticas están activas pero aún no se han ejecutado.",
         "lastFailed": "La última actualización automática falló.",
-        "lastRun": "Última ejecución {when}"
+        "lastRun": "Última ejecución {when}",
+        "viewLog": "Ver el registro de la actualización",
+        "logTruncated": "Se muestra la salida más reciente. Se omitieron las líneas anteriores.",
+        "logUnreadable": "No se pudo leer el registro de actualizaciones, así que no se puede informar de la última ejecución."
       },
       "reboot": {
         "pendingAt": "Hay un reinicio programado para {at}.",

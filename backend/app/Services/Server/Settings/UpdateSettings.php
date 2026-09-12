@@ -8,6 +8,7 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Support\CommandRedactor;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Throwable;
@@ -32,6 +33,24 @@ use Throwable;
  */
 class UpdateSettings implements SettingGroup
 {
+    /**
+     * How far back either log is read.
+     *
+     * 200 was not enough to be sure of containing a whole run: the line that
+     * lists the packages to upgrade is one line per run, but a box with a long
+     * allowed-origins list and a few hundred held packages pushes the start
+     * marker out of the window, and the slice then silently becomes the end of
+     * a run presented as all of it.
+     */
+    private const LOG_LINES = 500;
+
+    /**
+     * Byte budget per log in the excerpt, so two of them cannot make a settings
+     * response large. The same order as PanelUpdateOutput's bound, which reads
+     * the same kind of thing for the same kind of screen.
+     */
+    private const LOG_EXCERPT_BYTES = 8 * 1024;
+
     public function __construct(
         private ManagedFile $files,
         private ServerOps $serverOps,
@@ -133,7 +152,7 @@ class UpdateSettings implements SettingGroup
      * is root:adm 0750 — the panel user cannot open it directly. Bounded to a
      * tail: this is on a settings page, and the file grows without limit.
      *
-     * @return array<string, string|null>
+     * @return array<string, mixed>
      */
     private function lastUnattendedRun(): array
     {
@@ -142,17 +161,27 @@ class UpdateSettings implements SettingGroup
             'unattended_last_run_at_human' => null,
             'unattended_last_result' => null,
             'unattended_last_error' => null,
+            'unattended_last_log' => null,
+            'unattended_last_log_truncated' => false,
+            // Whether the log could be opened at all, which is a different
+            // answer from every field above being null. See below.
+            'unattended_log_readable' => true,
         ];
 
         $log = (string) config('server.unattended_upgrades_log');
 
         $result = $this->serverOps->run(
-            ['tail', '-n', '200', $log],
+            ['tail', '-n', (string) self::LOG_LINES, $log],
             ['feature' => 'setting', 'group' => 'updates', 'op' => 'unattended_log'],
         );
 
         if ($result->failed()) {
-            return $none;
+            // "Nobody could look" reported as all-nulls is indistinguishable
+            // from "nothing has ever run", and the screen said nothing in both
+            // cases. One of those is a broken panel — a missing adm group, a
+            // sudoers grant that never synced — and it must not hide behind the
+            // wording for a box that is merely new.
+            return [...$none, 'unattended_log_readable' => false];
         }
 
         $lines = preg_split('/\r?\n/', trim($result->output())) ?: [];
@@ -160,14 +189,18 @@ class UpdateSettings implements SettingGroup
         // Only the most recent run is being judged, so anything before the last
         // start marker is another run's history — an error from a fortnight ago
         // must not make today's successful run look failed.
-        $start = 0;
+        $start = null;
         foreach ($lines as $index => $line) {
             if (str_contains($line, 'Starting unattended upgrades script')) {
                 $start = $index;
             }
         }
 
-        $recent = array_slice($lines, $start);
+        // No marker in the window means the run began further back than the
+        // tail reaches, so what follows is the end of a run and not all of it.
+        // Said out loud rather than presented as the whole story.
+        $partial = $start === null;
+        $recent = array_slice($lines, $start ?? 0);
 
         $at = null;
         foreach ($recent as $line) {
@@ -206,6 +239,26 @@ class UpdateSettings implements SettingGroup
             }
         }
 
+        // The run itself, not only the line that decided it.
+        //
+        // One line answers "is this urgent", and for a lock collision that is
+        // the whole story. It does not answer "why did this package refuse",
+        // because unattended-upgrades narrates that in several lines and dpkg
+        // narrates the part that matters in a different file entirely.
+        //
+        // Only read on failure: a successful run has nothing to explain, and
+        // this is on a page that loads on every visit.
+        //
+        // And only for somebody who could act on it. Viewing this group needs
+        // `setting`; changing it needs `setting,manage`. One redacted line is a
+        // narrow disclosure, but a dpkg excerpt can carry conffile diffs,
+        // debconf answers and mirror URLs — so it follows the heavier
+        // permission, fail-closed the way PanelUpdateResource gates its own
+        // output even on a route that is already admin-only.
+        $excerpt = $failure === null || ! $this->mayReadLog()
+            ? ['content' => null, 'truncated' => false]
+            : $this->runExcerpt($recent, $partial);
+
         return [
             ...$this->timestamps('unattended_last_run_at', $ran),
             // A code, not a sentence: the frontend owns the wording, the same
@@ -216,6 +269,137 @@ class UpdateSettings implements SettingGroup
             // verbatim `detail`. A log line is what an operator searches for;
             // a paraphrase is not.
             'unattended_last_error' => $failure,
+            'unattended_last_log' => $excerpt['content'],
+            'unattended_last_log_truncated' => $excerpt['truncated'],
+            'unattended_log_readable' => true,
+        ];
+    }
+
+    /**
+     * Fail closed: no actor, no log.
+     *
+     * `read()` is also reachable from the console, where there is no user at
+     * all. A truthy default there would mean the first caller that forgets to
+     * authenticate publishes the excerpt.
+     */
+    private function mayReadLog(): bool
+    {
+        return Auth::user()?->canManage('setting') ?? false;
+    }
+
+    /**
+     * The failed run, from both logs, bounded and redacted.
+     *
+     * Two files because they answer different halves of the question.
+     * unattended-upgrades' own log says what it decided to do and that
+     * something went wrong; when the failure is a package refusing to
+     * configure, the maintainer script's output — the actual reason — is only
+     * in the dpkg log it writes alongside. A report built from the first file
+     * alone is why "it failed" has been the end of the sentence until now.
+     *
+     * Every line goes through the redactor, not just the headline: an apt error
+     * quotes the repository URL it could not reach, and a credentialled mirror
+     * puts a password in it. Bounded from the *end* of each file, because the
+     * failure is the last thing that happened.
+     *
+     * @param  array<int, string>  $recent
+     * @return array{content: string, truncated: bool}
+     */
+    private function runExcerpt(array $recent, bool $partial): array
+    {
+        $main = $this->boundedTail($recent);
+        $truncated = $partial || $main['truncated'];
+
+        $dpkg = $this->dpkgTail();
+
+        if ($dpkg === null) {
+            return ['content' => $main['content'], 'truncated' => $truncated];
+        }
+
+        return [
+            // Named rather than merely concatenated: the two files have
+            // different formats and different timestamps, and a reader who
+            // cannot tell where one ends will read dpkg's ordinary "Setting
+            // up ..." chatter as part of the error.
+            'content' => $main['content']."\n\n--- ".$this->dpkgLogPath()." ---\n".$dpkg['content'],
+            'truncated' => $truncated || $dpkg['truncated'],
+        ];
+    }
+
+    /**
+     * The dpkg log's most recent block, or null when it cannot be read.
+     *
+     * Absent is not an error worth reporting on its own: a run that failed
+     * before dpkg was reached never writes one, and the main log already
+     * carries the reason in that case.
+     *
+     * @return array{content: string, truncated: bool}|null
+     */
+    private function dpkgTail(): ?array
+    {
+        $result = $this->serverOps->run(
+            ['tail', '-n', (string) self::LOG_LINES, $this->dpkgLogPath()],
+            ['feature' => 'setting', 'group' => 'updates', 'op' => 'unattended_dpkg_log'],
+        );
+
+        if ($result->failed()) {
+            return null;
+        }
+
+        $lines = preg_split('/\r?\n/', trim($result->output())) ?: [];
+
+        if ($lines === [] || $lines === ['']) {
+            return null;
+        }
+
+        // dpkg's log is a series of `Log started:` blocks, one per invocation.
+        // Anything before the last one belongs to an earlier upgrade.
+        $start = null;
+        foreach ($lines as $index => $line) {
+            if (str_starts_with($line, 'Log started:')) {
+                $start = $index;
+            }
+        }
+
+        return $this->boundedTail(array_slice($lines, $start ?? 0));
+    }
+
+    private function dpkgLogPath(): string
+    {
+        return (string) config('server.unattended_upgrades_dpkg_log');
+    }
+
+    /**
+     * Redact every line, then keep the last whole lines that fit the budget.
+     *
+     * Whole lines: cutting mid-line leaves a fragment that reads like a
+     * complete statement, which is the one thing a diagnostic must not do.
+     *
+     * @param  array<int, string>  $lines
+     * @return array{content: string, truncated: bool}
+     */
+    private function boundedTail(array $lines): array
+    {
+        $kept = [];
+        $bytes = 0;
+        $truncated = false;
+
+        foreach (array_reverse($lines) as $line) {
+            $safe = CommandRedactor::line(rtrim($line));
+            $cost = strlen($safe) + 1;
+
+            if ($bytes + $cost > self::LOG_EXCERPT_BYTES) {
+                $truncated = true;
+                break;
+            }
+
+            $kept[] = $safe;
+            $bytes += $cost;
+        }
+
+        return [
+            'content' => implode("\n", array_reverse($kept)),
+            'truncated' => $truncated,
         ];
     }
 

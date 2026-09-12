@@ -10,6 +10,7 @@ import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils";
 import {
   CalendarClock,
+  ChevronDown,
   CircleAlert,
   CircleCheck,
   Loader2,
@@ -17,6 +18,7 @@ import {
   Power,
   RotateCcw,
   ShieldCheck,
+  SquareTerminal,
   TriangleAlert,
 } from "lucide-react";
 import {
@@ -39,6 +41,11 @@ import { useServerRestart } from "@/components/sections/server-restart-overlay";
 import { RebootCountdown } from "@/components/settings/reboot-countdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -127,18 +134,26 @@ function UpdateStatus({ updates }) {
   const total = updates?.updates_available;
   const security = updates?.security_updates_available ?? 0;
 
-  // Null means the server did not report — say nothing rather than "0 updates",
-  // which is a claim we cannot support.
-  if (total == null) return null;
-
   const failed = updates?.unattended_last_result === "failed";
+  // The panel could not open the log, which is not the same answer as the log
+  // holding no run. Both were silence before, and only one is a broken panel.
+  const unreadable = updates?.unattended_log_readable === false;
   const neverRun =
     updates?.security_updates_enabled && !updates?.unattended_last_run_at;
+
+  // Nothing true left to say. Previously this returned on a null count alone,
+  // which meant a failed run went unreported whenever the *unrelated* apt-check
+  // command also failed — the reason was hidden behind a different question.
+  if (total == null && !failed && !unreadable && !neverRun) return null;
+
   const tone = failed
     ? "border-destructive/30 bg-destructive/5 text-destructive"
-    : security > 0
-      ? "border-warning/40 bg-warning/10"
-      : "border-success/30 bg-success/5";
+    : unreadable || total == null
+      ? // Not green: green here would be a claim about a count nobody has.
+        "border-warning/40 bg-warning/10"
+      : security > 0
+        ? "border-warning/40 bg-warning/10"
+        : "border-success/30 bg-success/5";
 
   return (
     <div
@@ -149,17 +164,22 @@ function UpdateStatus({ updates }) {
     >
       {failed ? (
         <CircleAlert className="size-4 shrink-0" />
-      ) : security > 0 ? (
+      ) : unreadable || total == null || security > 0 ? (
         <TriangleAlert className="size-4 shrink-0 text-warning" />
       ) : (
         <CircleCheck className="size-4 shrink-0 text-success" />
       )}
 
-      <span className="font-medium">
-        {total > 0
-          ? t("updates.pending", { total, security })
-          : t("updates.upToDate")}
-      </span>
+      {/* Omitted entirely when the count is unknown, rather than guessed at:
+        `null` is "nobody knows" and `0` is "nothing is waiting", and the
+        sentences below carry the state in either case. */}
+      {total == null ? null : (
+        <span className="font-medium">
+          {total > 0
+            ? t("updates.pending", { total, security })
+            : t("updates.upToDate")}
+        </span>
+      )}
 
       <span className="text-xs text-muted-foreground">
         {updates?.lists_refreshed_at_human
@@ -170,6 +190,8 @@ function UpdateStatus({ updates }) {
       {/* Only worth saying when the automation claims to be doing something. */}
       {failed ? (
         <span className="text-xs">{t("updates.lastFailed")}</span>
+      ) : unreadable ? (
+        <span className="text-xs">{t("updates.logUnreadable")}</span>
       ) : neverRun ? (
         <span className="text-xs text-muted-foreground">
           {t("updates.neverRun")}
@@ -195,6 +217,39 @@ function UpdateStatus({ updates }) {
         <p className="w-full font-mono text-xs wrap-anywhere opacity-90">
           {updates.unattended_last_error}
         </p>
+      ) : null}
+
+      {/* And the run behind the line, one click away.
+       *
+       * Closed by default: the line above answers the common case — a
+       * transient apt lock — in a glance, and opening a wall of dpkg output on
+       * every page load would bury it. But "why did this package refuse" is
+       * only answerable from the log, and dpkg writes that part to a file the
+       * panel was not reading at all until now.
+       *
+       * Absent for a viewer without `setting,manage`, and absent when the
+       * excerpt could not be built — never an empty panel pretending there is
+       * something to see. */}
+      {failed && updates?.unattended_last_log ? (
+        <Collapsible className="group/log w-full">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="-ml-2 h-8 gap-2 px-2">
+              <SquareTerminal className="size-4" />
+              {t("updates.viewLog")}
+              <ChevronDown className="size-4 transition-transform group-data-[state=open]/log:rotate-180" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            {updates.unattended_last_log_truncated ? (
+              <p className="mb-1 text-xs text-muted-foreground">
+                {t("updates.logTruncated")}
+              </p>
+            ) : null}
+            <pre className="max-h-80 overflow-auto rounded-md border bg-zinc-950 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-zinc-100">
+              {updates.unattended_last_log}
+            </pre>
+          </CollapsibleContent>
+        </Collapsible>
       ) : null}
     </div>
   );
