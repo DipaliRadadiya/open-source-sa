@@ -84,36 +84,35 @@ export function MaintenanceCard({
     // disabled control, so hovering one does not contradict the banner with a
     // generic line — and names the permission to ask for.
     <DisabledReasonProvider reason={canManage ? null : tc("noPermission")}>
-    <div className="space-y-4">
-      {/* Said once above the three cards rather than repeated in each, or left
+      <div className="space-y-4">
+        {/* Said once above the three cards rather than repeated in each, or left
           as three disabled buttons with the reason hidden behind a hover. */}
-      {!canManage ? (
-        <p className="flex w-fit items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-          <Lock className="size-3.5 shrink-0" />
-          {tc("readOnly")}
-        </p>
-      ) : null}
+        {!canManage ? (
+          <p className="flex w-fit items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <Lock className="size-3.5 shrink-0" />
+            {tc("readOnly")}
+          </p>
+        ) : null}
 
-      <UpdatesSection updates={updates} canManage={canManage} />
+        <UpdatesSection updates={updates} canManage={canManage} />
 
-      <ScheduleSection
-        schedule={schedule}
-        presets={presets}
-        presetsFailed={presetsFailed}
-        canManage={canManage}
-      />
+        <ScheduleSection
+          schedule={schedule}
+          presets={presets}
+          presetsFailed={presetsFailed}
+          canManage={canManage}
+        />
 
-      <ManualSection
-        canManage={canManage}
-        rebootRequired={rebootRequired}
-        pendingReboot={pendingReboot}
-        pendingRebootFailed={pendingRebootFailed}
-      />
-    </div>
+        <ManualSection
+          canManage={canManage}
+          rebootRequired={rebootRequired}
+          pendingReboot={pendingReboot}
+          pendingRebootFailed={pendingRebootFailed}
+        />
+      </div>
     </DisabledReasonProvider>
   );
 }
-
 
 /**
  * How many updates are waiting, and whether the automation is alive.
@@ -142,7 +141,12 @@ function UpdateStatus({ updates }) {
       : "border-success/30 bg-success/5";
 
   return (
-    <div className={cn("mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3.5 py-2.5 text-sm", tone)}>
+    <div
+      className={cn(
+        "mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3.5 py-2.5 text-sm",
+        tone,
+      )}
+    >
       {failed ? (
         <CircleAlert className="size-4 shrink-0" />
       ) : security > 0 ? (
@@ -152,7 +156,9 @@ function UpdateStatus({ updates }) {
       )}
 
       <span className="font-medium">
-        {total > 0 ? t("updates.pending", { total, security }) : t("updates.upToDate")}
+        {total > 0
+          ? t("updates.pending", { total, security })
+          : t("updates.upToDate")}
       </span>
 
       <span className="text-xs text-muted-foreground">
@@ -165,11 +171,30 @@ function UpdateStatus({ updates }) {
       {failed ? (
         <span className="text-xs">{t("updates.lastFailed")}</span>
       ) : neverRun ? (
-        <span className="text-xs text-muted-foreground">{t("updates.neverRun")}</span>
+        <span className="text-xs text-muted-foreground">
+          {t("updates.neverRun")}
+        </span>
       ) : updates?.unattended_last_run_at_human ? (
         <span className="text-xs text-muted-foreground">
           {t("updates.lastRun", { when: updates.unattended_last_run_at_human })}
         </span>
+      ) : null}
+
+      {/* The reason, verbatim, on its own line.
+       *
+       * `w-full` inside the wrapping row rather than a sibling block, so it
+       * stays inside the coloured border that already says which state this
+       * is. Monospace and untranslated for the same reason `panel:doctor`
+       * renders its `detail` that way: this is the string an operator will
+       * paste into a search box, and a paraphrase is not searchable.
+       *
+       * `wrap-anywhere` because a log line has no spaces where it needs them
+       * — a long package name would otherwise push the card wider than the
+       * column and take the layout with it. */}
+      {failed && updates?.unattended_last_error ? (
+        <p className="w-full font-mono text-xs wrap-anywhere opacity-90">
+          {updates.unattended_last_error}
+        </p>
       ) : null}
     </div>
   );
@@ -550,7 +575,12 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
  * No Save: this section has nothing to persist. Its only action happens now,
  * behind a confirmation that says what goes offline.
  */
-function ManualSection({ canManage, rebootRequired, pendingReboot, pendingRebootFailed }) {
+function ManualSection({
+  canManage,
+  rebootRequired,
+  pendingReboot,
+  pendingRebootFailed,
+}) {
   const t = useTranslations("settings.maintenance");
   const router = useRouter();
   const { start } = useServerRestart();
@@ -591,7 +621,9 @@ function ManualSection({ canManage, rebootRequired, pendingReboot, pendingReboot
         // wrong means expecting a restart at the wrong hour.
         const at = data?.reboot?.at;
         toast.success(
-          at ? t("reboot.scheduledAt", { at }) : t("reboot.scheduled", { minutes }),
+          at
+            ? t("reboot.scheduledAt", { at })
+            : t("reboot.scheduled", { minutes }),
         );
         router.refresh();
       }

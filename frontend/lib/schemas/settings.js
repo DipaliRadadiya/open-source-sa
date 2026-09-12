@@ -58,6 +58,10 @@ export const updateSettingsSchema = z.object({
   unattended_last_run_at_human: z.string().nullable().optional(),
   // "success" | "failed" | null. Null means it has never run.
   unattended_last_result: z.string().nullable().optional(),
+  // The log line that decided "failed", verbatim and untranslated —
+  // "failed" alone sends the reader to SSH for the one sentence that
+  // explains it, and the commonest one is a transient apt lock.
+  unattended_last_error: z.string().nullable().optional(),
 });
 
 /**
@@ -168,14 +172,20 @@ export const settingsSchema = z.object({
 
 /** Who last touched each group, keyed by group name. */
 const lastChangedEntrySchema = z.object({
-  user: z.object({ id: z.number(), username: z.string() }).nullable().optional(),
+  user: z
+    .object({ id: z.number(), username: z.string() })
+    .nullable()
+    .optional(),
   at: z.string().nullable().optional(),
   at_human: z.string().nullable().optional(),
 });
 
 export const settingsResponseSchema = z.object({
   settings: settingsSchema,
-  last_changed: z.record(z.string(), lastChangedEntrySchema).nullable().optional(),
+  last_changed: z
+    .record(z.string(), lastChangedEntrySchema)
+    .nullable()
+    .optional(),
 });
 
 // ---------------------------------------------------------------------------

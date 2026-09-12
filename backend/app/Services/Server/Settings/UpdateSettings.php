@@ -6,8 +6,10 @@ use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
+use App\Support\CommandRedactor;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -139,6 +141,7 @@ class UpdateSettings implements SettingGroup
             'unattended_last_run_at' => null,
             'unattended_last_run_at_human' => null,
             'unattended_last_result' => null,
+            'unattended_last_error' => null,
         ];
 
         $log = (string) config('server.unattended_upgrades_log');
@@ -183,10 +186,22 @@ class UpdateSettings implements SettingGroup
             return $none;
         }
 
-        $failed = false;
+        // The line that decided it, not only the verdict.
+        //
+        // This matched on the error and then threw it away, so the screen said
+        // "The last automatic update failed" and stopped. That reads as
+        // something broken and urgent, and the commonest cause is not:
+        //
+        //   ERROR Lock could not be acquired (another package manager running?)
+        //
+        // which means apt was busy and the run will retry. Without the line
+        // there is no way to tell that from a held package or a broken
+        // post-install script, and the only route to the answer is SSH — which
+        // the person reading a settings page usually does not have.
+        $failure = null;
         foreach ($recent as $line) {
             if (preg_match('/\b(ERROR|Traceback)\b/', $line) === 1) {
-                $failed = true;
+                $failure = $this->failureDetail($line);
                 break;
             }
         }
@@ -195,8 +210,39 @@ class UpdateSettings implements SettingGroup
             ...$this->timestamps('unattended_last_run_at', $ran),
             // A code, not a sentence: the frontend owns the wording, the same
             // way it does for runtime-install reasons.
-            'unattended_last_result' => $failed ? 'failed' : 'success',
+            'unattended_last_result' => $failure === null ? 'success' : 'failed',
+            // Raw evidence beside the code, deliberately untranslated — the
+            // same split `panel:doctor` uses between a translated title and a
+            // verbatim `detail`. A log line is what an operator searches for;
+            // a paraphrase is not.
+            'unattended_last_error' => $failure,
         ];
+    }
+
+    /**
+     * One log line, trimmed of the parts that are noise on a screen.
+     *
+     * The leading timestamp goes because the run's time is already reported
+     * beside this, and the level word goes because the screen has already said
+     * it failed. What is left is the sentence unattended-upgrades wrote.
+     *
+     * Redacted through the same rules command lines are: an apt error can
+     * quote a repository URL with credentials in it, and this is read by
+     * anyone who can open the settings page.
+     *
+     * Bounded at 300 because a Traceback's first line is the useful one and
+     * the rest is a Python stack that means nothing here — the full text stays
+     * in the log the message names.
+     */
+    private function failureDetail(string $line): string
+    {
+        $text = preg_replace(
+            '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+\s*(ERROR|WARNING)?\s*/',
+            '',
+            trim($line),
+        ) ?? trim($line);
+
+        return Str::limit(CommandRedactor::line(trim($text)), 300);
     }
 
     /**

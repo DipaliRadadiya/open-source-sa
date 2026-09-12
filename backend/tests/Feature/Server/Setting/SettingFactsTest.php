@@ -299,3 +299,76 @@ it('finds the reboot schedule change under its own verb', function () {
 
     readSettings()->assertJsonPath('last_changed.reboot_schedule.user.username', $this->admin->username);
 });
+
+/*
+ * Why the automatic update failed, not only that it did.
+ *
+ * The check matched on the error line and discarded it, so the settings page
+ * said "The last automatic update failed" and stopped. The commonest cause is
+ * a transient apt lock, which needs no action at all — indistinguishable, from
+ * that screen, from a held package or a broken post-install script. The only
+ * route to the answer was SSH, which whoever is reading a settings page
+ * usually does not have.
+ */
+
+it('says why the last unattended run failed', function () {
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(output: implode("\n", [
+        '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
+        '2026-08-01 06:00:04,004 ERROR Lock could not be acquired (another package manager running?)',
+    ]))]);
+
+    readSettings()
+        ->assertJsonPath('settings.updates.unattended_last_result', 'failed')
+        // The sentence unattended-upgrades wrote, without the timestamp and
+        // level the screen has already shown.
+        ->assertJsonPath(
+            'settings.updates.unattended_last_error',
+            'Lock could not be acquired (another package manager running?)',
+        );
+});
+
+it('reports no reason when the run succeeded', function () {
+    // A stale reason beside a green state would be worse than none.
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(output: implode("\n", [
+        '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
+        '2026-08-01 06:00:09,123 INFO All upgrades installed',
+    ]))]);
+
+    readSettings()
+        ->assertJsonPath('settings.updates.unattended_last_result', 'success')
+        ->assertJsonPath('settings.updates.unattended_last_error', null);
+});
+
+it('redacts a credential an apt error quoted back', function () {
+    // An apt failure can echo the repository URL it could not reach, and this
+    // field is readable by anyone who can open the settings page.
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(output: implode("\n", [
+        '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
+        '2026-08-01 06:00:04,004 ERROR Failed to fetch https://deploy:s3cr3t@repo.example.com/ubuntu',
+    ]))]);
+
+    $error = readSettings()->json('settings.updates.unattended_last_error');
+
+    expect($error)->not->toContain('s3cr3t')
+        ->and($error)->toContain('repo.example.com');
+});
+
+it('keeps a Traceback to its first line', function () {
+    // A Python stack is not what the reader needs on a settings card, and the
+    // full text is still in the log the message names.
+    File::put($this->aptCheck, '');
+    fakeFacts(['unattended' => Process::result(output: implode("\n", [
+        '2026-08-01 06:00:01,001 INFO Starting unattended upgrades script',
+        '2026-08-01 06:00:04,004 ERROR '.str_repeat('very long detail ', 60),
+    ]))]);
+
+    $error = (string) readSettings()->json('settings.updates.unattended_last_error');
+
+    // 300 plus the ellipsis Str::limit appends — the bound is on the text, and
+    // the marker is what tells the reader there is more in the log.
+    expect(strlen($error))->toBeLessThanOrEqual(303)
+        ->and($error)->toEndWith('...');
+});
