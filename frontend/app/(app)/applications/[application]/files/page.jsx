@@ -10,7 +10,6 @@ import { getFiles } from "@/lib/applications/get-files";
 import { getTrash } from "@/lib/applications/get-trash";
 import { getBreakdown } from "@/lib/applications/get-breakdown";
 import { FilesPanel } from "@/components/applications/files/files-panel";
-import { SizeBreakdownCard } from "@/components/applications/files/size-breakdown-card";
 import { TrashPanel } from "@/components/applications/files/trash-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -131,42 +130,25 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
       ) : filesResult.failed ? (
         <LoadFailed description={t("loadFailed")} />
       ) : (
-        // Side by side rather than stacked: the breakdown is context for the
-        // listing, and underneath it was below the fold on any folder with
-        // more than a screenful of rows.
+        // No rail. The breakdown was a 340px column beside the listing, held
+        // back to 2xl because below that the listing's seven columns were
+        // narrower than their own content — and compensating with a width
+        // floor put Download and Copy behind a horizontal scroll, the two
+        // controls people reach for most.
         //
-        // Splits at 2xl, not xl. The rail costs 340px and the listing has
-        // seven columns; at xl that left them narrower than their own content,
-        // and widening the table to compensate put Download and Copy behind a
-        // horizontal scroll — the two controls people reach for most. The
-        // breakdown is the secondary thing on this screen, so it is the one
-        // that waits for a screen wide enough to hold both.
-        <div className="grid items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
-          <FilesPanel
+        // 2xl only moved that cost to the widest screens rather than removing
+        // it: a listing is what this page is for, and it was still giving up
+        // 340px of it to context. The breakdown is now a sheet off the
+        // toolbar, so the listing gets the whole row at every size.
+        <FilesPanel
             appId={id}
             initialPath={filesResult.path}
             initialFiles={filesResult.files}
             hiddenCount={filesResult.hiddenCount}
             showHidden={showHidden}
             canManage={canManage}
+            breakdown={breakdown}
           />
-          {/* Sticky only where the rail exists — below xl the card is stacked
-              under the listing, and pinning it there would park it over the
-              rows it describes.
-
-              The offset comes from `--app-chrome`, the shell's own measured
-              header height, because the banners above it are conditional: the
-              Create-application summary used a fixed `top-20` and slid under
-              the breadcrumb the moment a banner appeared. Same fallback as
-              that panel, for the render before the measurement lands.
-
-              Capped to the viewport and scrolled internally, so a card taller
-              than the screen does not pin its top and strand its own table
-              somewhere unreachable. */}
-          <aside className="2xl:sticky 2xl:top-[calc(var(--app-chrome,7rem)_+_1.5rem)] 2xl:max-h-[calc(100vh-var(--app-chrome,7rem)-3rem)] 2xl:overflow-y-auto">
-            <SizeBreakdownCard breakdown={breakdown} />
-          </aside>
-        </div>
       )}
     </div>
   );

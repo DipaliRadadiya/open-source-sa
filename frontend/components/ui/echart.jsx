@@ -6,7 +6,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import * as echarts from "echarts/core";
-import { LineChart, PieChart } from "echarts/charts";
+import { BarChart, LineChart } from "echarts/charts";
 import {
   AriaComponent,
   DataZoomComponent,
@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
  */
 echarts.use([
   LineChart,
-  PieChart,
+  BarChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,

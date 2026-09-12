@@ -3851,7 +3851,8 @@
           "logs": "Registros",
           "fonts": "Fuentes",
           "other": "Otros"
-        }
+        },
+        "trigger": "Almacenamiento"
       }
     },
     "workers": {

@@ -92,14 +92,33 @@ test("the listing never scrolls sideways to reach its own row actions", () => {
     "utf8",
   );
 
-  assert.match(
-    page,
-    /2xl:grid-cols-\[minmax\(0,1fr\)_minmax\(0,340px\)\]/,
-    "the breakdown rail must only take its 340px where there is room for it",
+  // The rail is gone entirely. It cost 340px, which is why it was held back to
+  // 2xl; holding it back only moved that cost to the widest screens instead of
+  // removing it. The breakdown is a sheet off the toolbar now, so the listing
+  // gets the whole row at every size — and nothing may put a column beside it
+  // again without deciding this afresh.
+  assert.ok(
+    !/grid-cols-\[minmax\(0,1fr\)_minmax\(0,340px\)\]/.test(page),
+    "the breakdown must not take a column beside the listing",
   );
   assert.ok(
-    !/\bxl:grid-cols-\[/.test(page),
-    "the rail must not split at xl, where the columns do not fit",
+    !/\b(?:xl|2xl):grid-cols-\[/.test(page),
+    "the listing must not share its row with a side rail at any breakpoint",
+  );
+
+  // And the breakdown is still reachable — a guard that let it be deleted
+  // would be satisfied by removing the feature.
+  const panel = fs.readFileSync(
+    path.join(root, "components/applications/files/files-panel.jsx"),
+    "utf8",
+  );
+
+  // As JSX, not as an identifier: an import left behind after the element was
+  // deleted satisfied the looser form, which a mutation run caught.
+  assert.match(
+    panel,
+    /<SizeBreakdownSheet\b/,
+    "the breakdown must still be rendered, not merely imported",
   );
 });
 

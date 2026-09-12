@@ -3851,7 +3851,8 @@
           "logs": "Logs",
           "fonts": "Fonts",
           "other": "Other"
-        }
+        },
+        "trigger": "Storage"
       }
     },
     "workers": {

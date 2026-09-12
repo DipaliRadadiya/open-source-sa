@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { FileBreadcrumb } from "@/components/applications/files/file-breadcrumb";
 import { FilesTable } from "@/components/applications/files/files-table";
+import { SizeBreakdownSheet } from "@/components/applications/files/size-breakdown-sheet";
 import { FilesCards } from "@/components/applications/files/files-cards";
 import { SiteSearchResults } from "@/components/applications/files/site-search-results";
 import { NewFolderDialog } from "@/components/applications/files/new-folder-dialog";
@@ -41,6 +42,7 @@ export function FilesPanel({
   hiddenCount = 0,
   showHidden = true,
   canManage,
+  breakdown = null,
 }) {
   const t = useTranslations("applications.files");
   const [action, setAction] = useState(null); // { type, file }
@@ -298,6 +300,11 @@ export function FilesPanel({
           <div />
         )}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Context for the listing, not an action on it — so it sits with the
+              other view controls rather than among New folder and Upload. It
+              was a 340px rail beside the table until the table needed that
+              width back. */}
+          <SizeBreakdownSheet breakdown={breakdown} />
           {/* A link, not a button: the listing is fetched on the server, so
               the choice has to be in the URL to change what comes back. It
               also makes the view shareable and survives a reload. */}
