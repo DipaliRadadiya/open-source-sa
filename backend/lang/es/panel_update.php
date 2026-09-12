@@ -8,6 +8,8 @@ return [
         'failed' => 'La actualización falló',
     ],
     'steps' => [
+        'record_firewall_defaults' => 'Registrando las reglas por defecto del firewall',
+        'refresh_npm_catalogue' => 'Actualizando el catálogo de npm',
         'preflight_git' => 'Comprobando el repositorio del panel',
         'preflight' => 'Comprobando que el servidor está listo',
         'create_release' => 'Creando la nueva versión',
@@ -33,6 +35,15 @@ return [
         'rollback' => 'Restaurando la versión anterior',
     ],
     'reasons' => [
+        'preflight' => 'El servidor no pasó las comprobaciones previas, así que no se cambió nada.',
+        'create_release' => 'No se pudo construir la nueva versión.',
+        'link_shared' => 'No se pudieron enlazar los archivos compartidos en la nueva versión.',
+        'swap' => 'El cambio a la nueva versión falló, así que la anterior sigue en servicio.',
+        'verify' => 'El panel actualizado no respondió correctamente, así que se restauró la versión anterior.',
+        'prune' => 'No se pudieron eliminar las versiones antiguas.',
+        'sync_privileges' => 'No se pudieron actualizar los privilegios del panel.',
+        'record_firewall_defaults' => 'No se pudieron registrar las reglas por defecto del firewall.',
+        'refresh_npm_catalogue' => 'No se pudo actualizar el catálogo de npm.',
         'launch' => 'No se pudo iniciar la actualización.',
         'preflight_git' => 'No se pudo leer el repositorio del panel.',
         'maintenance_on' => 'No se pudo poner el panel en modo de mantenimiento.',
@@ -52,6 +63,13 @@ return [
         'target_not_newer' => 'La versión seleccionada ya está incluida en esta compilación del panel, por lo que se rechazó la degradación.',
         'unknown' => 'La actualización falló por un motivo desconocido.',
     ],
+    /*
+     * Appended to a reason when the rollback could not undo the migration.
+     * A separate sentence rather than nine duplicated ones: any step after
+     * `migrate` can carry the `:migrated` suffix.
+     */
+    'reason_migrated' => 'Los cambios en la base de datos ya se habían aplicado y no se pueden deshacer: el código ha vuelto a la versión anterior, pero el esquema no. La copia de seguridad previa está en storage/app/panel-backups.',
+
     'errors' => [
         'in_progress' => 'Ya hay una actualización en curso.',
         'no_update' => 'El panel ya está en la versión más reciente.',

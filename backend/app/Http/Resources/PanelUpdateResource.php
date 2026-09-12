@@ -6,6 +6,7 @@ use App\Services\Panel\PanelUpdateOutput;
 use App\Services\Panel\UpdateSteps;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Lang;
 
 class PanelUpdateResource extends JsonResource
 {
@@ -25,9 +26,7 @@ class PanelUpdateResource extends JsonResource
             'status' => $this->status->value,
             'status_title' => $this->status->label(),
             'current_step' => $this->current_step,
-            'current_step_title' => $this->current_step === null
-                ? null
-                : __('panel_update.steps.'.$this->current_step),
+            'current_step_title' => $this->stepTitle($this->current_step),
             // Position in the sequence, so the UI can draw a progress bar
             // without hardcoding the step list.
             'step_number' => $this->stepNumber(),
@@ -38,9 +37,7 @@ class PanelUpdateResource extends JsonResource
             'to_commit' => $this->to_commit,
             // A classified key, never raw stderr — the detail is in the log.
             'reason' => $this->reason,
-            'reason_title' => $this->reason === null
-                ? null
-                : __('panel_update.reasons.'.$this->reason),
+            'reason_title' => $this->reasonTitle($this->reason),
             'rolled_back' => $this->rolled_back,
             'reference' => $this->reference,
             'output' => $output['content'],
@@ -62,5 +59,55 @@ class PanelUpdateResource extends JsonResource
     private function stepNumber(): ?int
     {
         return app(UpdateSteps::class)->numberOf($this->current_step);
+    }
+
+    /**
+     * A step's sentence, never its key.
+     *
+     * `__()` returns the key it was given when no line exists, so a step added
+     * to UpdateScript::STEPS without a line here rendered the literal string
+     * `panel_update.steps.swap` on the progress screen. Two steps shipped that
+     * way. The test beside this asserts the gap is closed; this makes the
+     * failure mode harmless if it ever reopens, because a progress screen
+     * showing an identifier is worse than one showing nothing.
+     */
+    private function stepTitle(?string $step): ?string
+    {
+        if ($step === null) {
+            return null;
+        }
+
+        return Lang::has('panel_update.steps.'.$step)
+            ? __('panel_update.steps.'.$step)
+            : null;
+    }
+
+    /**
+     * The failure sentence, including the part a rollback could not undo.
+     *
+     * The release flow appends `:migrated` to the failed step when the
+     * migration had already run — the code is back on the previous version and
+     * the schema is not, which is the single most important thing to say and
+     * was being said by rendering `panel_update.reasons.swap:migrated` as text.
+     * Any step after `migrate` can carry the suffix, so the clause is one
+     * sentence appended rather than nine duplicated reasons.
+     */
+    private function reasonTitle(?string $reason): ?string
+    {
+        if ($reason === null) {
+            return null;
+        }
+
+        [$code, $suffix] = array_pad(explode(':', $reason, 2), 2, null);
+
+        $key = 'panel_update.reasons.'.$code;
+        // Falls back to the generic sentence rather than the key: the reader
+        // already knows it failed, and an untranslated identifier tells them
+        // less than "for an unknown reason" does.
+        $title = Lang::has($key) ? __($key) : __('panel_update.reasons.unknown');
+
+        return $suffix === 'migrated'
+            ? $title.' '.__('panel_update.reason_migrated')
+            : $title;
     }
 }

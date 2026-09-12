@@ -15,6 +15,8 @@ return [
     ],
 
     'steps' => [
+        'record_firewall_defaults' => 'Recording the firewall defaults',
+        'refresh_npm_catalogue' => 'Refreshing the npm catalogue',
         'preflight_git' => 'Checking the panel repository',
         'preflight' => 'Checking the server is ready',
         'create_release' => 'Building the new release',
@@ -46,6 +48,15 @@ return [
      * The panel is always rolled back to the previous version first.
      */
     'reasons' => [
+        'preflight' => 'The server did not pass its pre-update checks, so nothing was changed.',
+        'create_release' => 'The new release could not be built.',
+        'link_shared' => 'The shared files could not be linked into the new release.',
+        'swap' => 'Switching to the new release failed, so the previous one is still serving.',
+        'verify' => 'The updated panel did not answer correctly, so the previous release was restored.',
+        'prune' => 'The old releases could not be removed.',
+        'sync_privileges' => 'The panel’s privileges could not be updated.',
+        'record_firewall_defaults' => 'The firewall defaults could not be recorded.',
+        'refresh_npm_catalogue' => 'The npm catalogue could not be refreshed.',
         'launch' => 'The update could not be started.',
         'preflight_git' => 'The panel repository could not be read.',
         'maintenance_on' => 'The panel could not be put into maintenance mode.',
@@ -65,6 +76,13 @@ return [
         'target_not_newer' => 'The selected release is already contained in this panel build, so the downgrade was refused.',
         'unknown' => 'The update failed for an unknown reason.',
     ],
+
+    /*
+     * Appended to a reason when the rollback could not undo the migration.
+     * A separate sentence rather than nine duplicated ones: any step after
+     * `migrate` can carry the `:migrated` suffix.
+     */
+    'reason_migrated' => 'The database changes had already been applied and cannot be undone: the code is back on the previous version but the schema is not. The backup taken beforehand is in storage/app/panel-backups.',
 
     'errors' => [
         'in_progress' => 'An update is already running.',

@@ -8,6 +8,8 @@ return [
         'failed' => '更新に失敗しました',
     ],
     'steps' => [
+        'record_firewall_defaults' => 'ファイアウォールの既定ルールを記録しています',
+        'refresh_npm_catalogue' => 'npm カタログを更新しています',
         'preflight_git' => 'パネルのリポジトリを確認しています',
         'preflight' => 'サーバーの準備を確認しています',
         'create_release' => '新しいリリースを作成しています',
@@ -33,6 +35,15 @@ return [
         'rollback' => '以前のバージョンを復元しています',
     ],
     'reasons' => [
+        'preflight' => 'サーバーが更新前のチェックに合格しなかったため、何も変更されていません。',
+        'create_release' => '新しいリリースをビルドできませんでした。',
+        'link_shared' => '共有ファイルを新しいリリースにリンクできませんでした。',
+        'swap' => '新しいリリースへの切り替えに失敗したため、以前のリリースが動作を続けています。',
+        'verify' => '更新後のパネルが正しく応答しなかったため、以前のリリースに戻しました。',
+        'prune' => '古いリリースを削除できませんでした。',
+        'sync_privileges' => 'パネルの権限を更新できませんでした。',
+        'record_firewall_defaults' => 'ファイアウォールの既定ルールを記録できませんでした。',
+        'refresh_npm_catalogue' => 'npm カタログを更新できませんでした。',
         'launch' => '更新を開始できませんでした。',
         'preflight_git' => 'パネルのリポジトリを読み取れませんでした。',
         'maintenance_on' => 'パネルをメンテナンスモードにできませんでした。',
@@ -52,6 +63,13 @@ return [
         'target_not_newer' => '選択したリリースはこのパネルビルドに既に含まれているため、ダウングレードを拒否しました。',
         'unknown' => '不明な理由で更新に失敗しました。',
     ],
+    /*
+     * Appended to a reason when the rollback could not undo the migration.
+     * A separate sentence rather than nine duplicated ones: any step after
+     * `migrate` can carry the `:migrated` suffix.
+     */
+    'reason_migrated' => 'データベースの変更はすでに適用されており、元に戻せません。コードは以前のバージョンに戻りましたが、スキーマは戻っていません。事前に取得したバックアップは storage/app/panel-backups にあります。',
+
     'errors' => [
         'in_progress' => 'すでに更新が実行中です。',
         'no_update' => 'パネルはすでに最新バージョンです。',

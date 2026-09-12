@@ -8,6 +8,8 @@ return [
         'failed' => 'Échec de la mise à jour',
     ],
     'steps' => [
+        'record_firewall_defaults' => 'Enregistrement des règles de pare-feu par défaut',
+        'refresh_npm_catalogue' => 'Actualisation du catalogue npm',
         'preflight_git' => 'Vérification du dépôt du panneau',
         'preflight' => 'Vérification que le serveur est prêt',
         'create_release' => 'Création de la nouvelle version',
@@ -33,6 +35,15 @@ return [
         'rollback' => 'Restauration de la version précédente',
     ],
     'reasons' => [
+        'preflight' => 'Le serveur n’a pas passé les vérifications préalables, rien n’a été modifié.',
+        'create_release' => 'La nouvelle version n’a pas pu être construite.',
+        'link_shared' => 'Les fichiers partagés n’ont pas pu être liés à la nouvelle version.',
+        'swap' => 'Le passage à la nouvelle version a échoué, la précédente est toujours en service.',
+        'verify' => 'Le panneau mis à jour n’a pas répondu correctement, la version précédente a donc été restaurée.',
+        'prune' => 'Les anciennes versions n’ont pas pu être supprimées.',
+        'sync_privileges' => 'Les privilèges du panneau n’ont pas pu être mis à jour.',
+        'record_firewall_defaults' => 'Les règles de pare-feu par défaut n’ont pas pu être enregistrées.',
+        'refresh_npm_catalogue' => 'Le catalogue npm n’a pas pu être actualisé.',
         'launch' => 'La mise à jour n’a pas pu être lancée.',
         'preflight_git' => 'Le dépôt du panneau n’a pas pu être lu.',
         'maintenance_on' => 'Le panneau n’a pas pu être mis en mode maintenance.',
@@ -52,6 +63,13 @@ return [
         'target_not_newer' => 'La version sélectionnée est déjà incluse dans cette build du panneau ; le retour en arrière a été refusé.',
         'unknown' => 'La mise à jour a échoué pour une raison inconnue.',
     ],
+    /*
+     * Appended to a reason when the rollback could not undo the migration.
+     * A separate sentence rather than nine duplicated ones: any step after
+     * `migrate` can carry the `:migrated` suffix.
+     */
+    'reason_migrated' => 'Les modifications de la base de données avaient déjà été appliquées et ne peuvent pas être annulées : le code est revenu à la version précédente, mais pas le schéma. La sauvegarde effectuée au préalable se trouve dans storage/app/panel-backups.',
+
     'errors' => [
         'in_progress' => 'Une mise à jour est déjà en cours.',
         'no_update' => 'Le panneau est déjà à la version la plus récente.',
