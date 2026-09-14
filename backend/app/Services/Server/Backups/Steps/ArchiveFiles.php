@@ -3,8 +3,8 @@
 namespace App\Services\Server\Backups\Steps;
 
 use App\Contracts\BackupStep;
-use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Backups\BackupContext;
+use App\Services\Server\Backups\BackupRoot;
 use App\Services\Server\ServerOps;
 use RuntimeException;
 
@@ -20,7 +20,7 @@ class ArchiveFiles implements BackupStep
 {
     public function __construct(
         private ServerOps $serverOps,
-        private ApplicationProvisioner $provisioner,
+        private BackupRoot $roots,
     ) {}
 
     public function key(): string
@@ -48,11 +48,18 @@ class ArchiveFiles implements BackupStep
         }
 
         if ($context->wantsFiles()) {
-            $siteRoot = $this->provisioner->documentRoot($context->application());
+            // The application's own directory, not the served one — see
+            // {@see BackupRoot}. The kind is recorded in the same breath,
+            // because the restore reads it back to know what this archive
+            // holds, and an archive whose manifest disagrees with its contents
+            // unpacks over the wrong directory.
+            ['path' => $siteRoot, 'kind' => $kind] = $this->roots->toArchive($context->application());
 
             if (! is_dir($siteRoot)) {
                 throw new RuntimeException("site directory {$siteRoot} does not exist");
             }
+
+            $context->manifest['root_kind'] = $kind;
 
             // -C so the archive holds relative paths. An archive of absolute
             // paths restores over the original location no matter where you

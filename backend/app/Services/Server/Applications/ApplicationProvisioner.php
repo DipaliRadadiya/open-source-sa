@@ -92,6 +92,37 @@ class ApplicationProvisioner
     }
 
     /**
+     * The directory that *is* the application: `{home}/{slug}/public_html`.
+     *
+     * The third of these three, and the difference matters exactly once — when
+     * a site is served from a subdirectory of itself. `documentRoot()` answers
+     * "what does the web server hand out", `codePath()` answers "where do this
+     * application's own commands run", and neither answers "what are this
+     * site's files", which is the question a backup asks. For a Laravel or
+     * Craft site both of the others point *inside* the application, so anything
+     * copying them copies the public folder and calls it the site.
+     *
+     * `web_root` selects what is served inside this directory; it does not move
+     * the directory, so this is unconditional. `.panel` — trash, file backups,
+     * the htpasswd file — is a sibling rather than a child, so it stays out of
+     * anything that copies this without needing an exclude somebody remembers.
+     *
+     * Same traversal guard as the two above, for the same reason: this hands a
+     * directory to a shell command.
+     */
+    public function applicationRoot(Application $application): string
+    {
+        $path = $application->publicHtmlPath();
+
+        abort_if(
+            str_contains($path, '/../') || str_ends_with($path, '/..'),
+            500,
+        );
+
+        return $path;
+    }
+
+    /**
      * Steps are recorded on the application as each one completes, not
      * collected and written at the end — the user is watching this happen, and
      * a failure halfway should leave behind how far it got.

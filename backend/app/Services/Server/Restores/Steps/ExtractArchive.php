@@ -3,7 +3,7 @@
 namespace App\Services\Server\Restores\Steps;
 
 use App\Contracts\RestoreStep;
-use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Backups\BackupRoot;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\ServerOps;
 use RuntimeException;
@@ -22,7 +22,7 @@ class ExtractArchive implements RestoreStep
 {
     public function __construct(
         private ServerOps $serverOps,
-        private ApplicationProvisioner $provisioner,
+        private BackupRoot $roots,
     ) {}
 
     public function key(): string
@@ -43,7 +43,12 @@ class ExtractArchive implements RestoreStep
             throw new RuntimeException('there is no archive to extract');
         }
 
-        $siteRoot = $this->provisioner->documentRoot($context->application);
+        // The directory *this archive* was made from, which is not always the
+        // one a backup taken today would use — see {@see BackupRoot}. It
+        // decides both the entry name expected inside the archive and where
+        // the staging directory sits, since staging is a sibling of the thing
+        // being replaced.
+        $siteRoot = $this->roots->forBackup($context->backup, $context->application);
         $staging = dirname($siteRoot).'/.restore-'.$context->restore->id;
 
         // Both through ServerOps rather than File::, which is PHP's own

@@ -3,8 +3,8 @@
 namespace App\Services\Server\Restores\Steps;
 
 use App\Contracts\RestoreStep;
-use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ProcessSupervisor;
+use App\Services\Server\Backups\BackupRoot;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\ServerOps;
 use RuntimeException;
@@ -28,7 +28,7 @@ class SwapFiles implements RestoreStep
 {
     public function __construct(
         private ServerOps $serverOps,
-        private ApplicationProvisioner $provisioner,
+        private BackupRoot $roots,
         private ProcessSupervisor $processes,
     ) {}
 
@@ -44,7 +44,10 @@ class SwapFiles implements RestoreStep
 
     public function run(RestoreContext $context): void
     {
-        $siteRoot = $this->provisioner->documentRoot($context->application);
+        // Whatever `ExtractArchive` unpacked, swapped back over the directory
+        // that archive was made from — the same question, asked the same way,
+        // so the two cannot disagree about which directory this restore is of.
+        $siteRoot = $this->roots->forBackup($context->backup, $context->application);
         $staged = $context->stagingDirectory.'/'.basename($siteRoot);
         $rollback = dirname($siteRoot).'/.rollback-'.$context->restore->id;
 
@@ -88,7 +91,7 @@ class SwapFiles implements RestoreStep
 
         // Put the site back. Only when the swap actually happened — if the
         // move out of the way is what failed, the live directory never moved.
-        $siteRoot = $this->provisioner->documentRoot($context->application);
+        $siteRoot = $this->roots->forBackup($context->backup, $context->application);
 
         if ($context->rollbackPath !== null && is_dir($context->rollbackPath) && ! is_dir($siteRoot)) {
             $this->move($context, $context->rollbackPath, $siteRoot, 'restore_rollback');
