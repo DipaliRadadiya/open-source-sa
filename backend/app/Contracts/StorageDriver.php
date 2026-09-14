@@ -85,4 +85,23 @@ interface StorageDriver
      * Return the i18n key, not the bare category.
      */
     public function classify(Throwable $e): string;
+
+    /**
+     * A precondition to check before the write/read/delete round trip, or null
+     * when the provider has none.
+     *
+     * Exists because **writability is not always a sufficient test**. A Google
+     * service account has no Drive quota of its own, so a 64-byte sentinel can
+     * succeed into a personal folder where a real archive fails with
+     * `storageQuotaExceeded` — the probe would go green and the first backup
+     * would fail at 3am. The question "is this folder in a Shared Drive" has an
+     * unambiguous answer, so it is asked directly rather than inferred from a
+     * write.
+     *
+     * Returns the i18n key of the failure, or null if the destination passes.
+     * Implementations must not throw for an ordinary failure — the prober's
+     * catch-all would classify it, losing the specific reason this exists to
+     * give.
+     */
+    public function preflight(StorageDestination $destination): ?string;
 }

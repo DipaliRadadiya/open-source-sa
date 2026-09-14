@@ -75,6 +75,23 @@ class StorageConnectionProber
         // where there should be one.
         $this->rememberHostKeyOnFirstUse($destination);
 
+        // A precondition the round trip cannot answer. Google Drive is the
+        // reason: a service account has no storage quota, so a small sentinel
+        // can be accepted into a folder that will refuse a real archive — the
+        // probe would go green and the first backup would fail at 3am. Asked
+        // before the write rather than after, so a destination that cannot
+        // work is never reported as working.
+        $precondition = $driver->preflight($destination);
+
+        if ($precondition !== null) {
+            return $this->failure(
+                destination: $destination,
+                durationMs: $this->elapsed($start),
+                i18nKey: $precondition,
+                exception: null,
+            );
+        }
+
         try {
             $disk = ($this->diskBuilder)($driver->config($destination));
 

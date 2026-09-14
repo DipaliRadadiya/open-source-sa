@@ -11,6 +11,7 @@ return [
         's3' => 'Compatible S3',
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
+        'google_drive' => 'Google Drive',
     ],
 
     'fields' => [
@@ -31,6 +32,10 @@ return [
         'private_key' => 'Clé privée',
         'passphrase' => 'Phrase secrète de la clé',
         'host_fingerprint' => 'Empreinte de la clé d’hôte',
+        'service_account_json' => 'Clé de compte de service (JSON)',
+        'folder_id' => 'ID du dossier Drive partagé',
+        'drive_name' => 'Drive partagé',
+        'client_email' => 'Adresse du compte de service',
     ],
 
     'placeholders' => [
@@ -56,6 +61,10 @@ return [
         'passphrase' => 'Uniquement si la clé privée est elle-même chiffrée.',
         'host_fingerprint' => 'Enregistrée lors de la première connexion, puis imposée. À comparer avec la clé présente sur le serveur.',
         'plain_ftp_warning' => 'TLS est désactivé. Le mot de passe et chaque sauvegarde seront envoyés en clair.',
+        'service_account_json' => 'Collez le fichier de clé JSON complet du compte de service.',
+        'folder_id' => 'La partie de l’URL du dossier après /folders/, pas le lien entier.',
+        'drive_shared_only' => 'Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide.',
+        'drive_share_with' => 'Partagez le dossier du Drive partagé avec l’adresse du compte de service avant de tester.',
     ],
 
     'status' => [
@@ -76,6 +85,13 @@ return [
         'host_key_mismatch' => 'Le serveur a présenté une clé d’hôte différente de celle enregistrée. La connexion a été interrompue.',
         'invalid_private_key' => 'La clé privée n’a pas pu être lue. Vérifiez qu’elle a été collée en entier.',
         'root_missing' => "Le dossier de destination n'existe pas sur le serveur. Créez-le ou corrigez le chemin du dossier.",
+        'drive_personal' => 'Ce dossier est sur un Drive personnel. Un compte de service n’y a aucun stockage, les sauvegardes seraient refusées — utilisez un dossier d’un Drive partagé.',
+        'drive_not_shared' => 'Le dossier existe, mais ce compte de service n’y a pas accès.',
+        'drive_folder_missing' => 'Aucun dossier trouvé avec cet identifiant.',
+        'drive_not_a_folder' => 'Cet identifiant désigne un fichier, pas un dossier.',
+        'drive_bad_key' => 'La clé du compte de service n’a pas pu être lue. Collez le fichier JSON entier.',
+        'drive_quota' => 'Google a refusé l’envoi faute de quota de stockage, ce qui est le cas sur un Drive personnel.',
+        'drive_incomplete' => 'Ajoutez la clé du compte de service et l’identifiant du dossier avant de tester.',
     ],
 
     'delete' => [

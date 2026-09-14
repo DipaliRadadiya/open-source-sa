@@ -58,6 +58,13 @@ import {
  */
 const FAILURE_KEYS = {
   invalid_credentials: "failedCredentials",
+  drive_personal: "failedDrivePersonal",
+  drive_not_shared: "failedDriveNotShared",
+  drive_folder_missing: "failedDriveFolderMissing",
+  drive_not_a_folder: "failedDriveNotAFolder",
+  drive_bad_key: "failedDriveBadKey",
+  drive_quota: "failedDriveQuota",
+  drive_incomplete: "failedDriveIncomplete",
   unreachable: "failedUnreachable",
   host_key_mismatch: "failedHostKey",
   invalid_private_key: "failedPrivateKey",

@@ -5017,7 +5017,14 @@
       "failedHostKey": "Le dernier test a échoué {when} — le serveur a présenté une clé d’hôte différente de celle enregistrée, la connexion a donc été interrompue.",
       "failedPrivateKey": "Le dernier test a échoué {when} — la clé privée n’a pas pu être lue.",
       "failedRootMissing": "Le dernier test a échoué {when} — le dossier de destination n’existe pas sur le serveur.",
-      "failedMismatch": "Le dernier test a échoué {when} — la destination a relu des octets différents de ceux écrits."
+      "failedMismatch": "Le dernier test a échoué {when} — la destination a relu des octets différents de ceux écrits.",
+      "failedDrivePersonal": "Le dernier test a échoué {when} — ce dossier est sur un Drive personnel, où un compte de service n’a aucun stockage.",
+      "failedDriveNotShared": "Le dernier test a échoué {when} — le dossier existe, mais le compte de service n’y a pas accès.",
+      "failedDriveFolderMissing": "Le dernier test a échoué {when} — aucun dossier trouvé avec cet identifiant.",
+      "failedDriveNotAFolder": "Le dernier test a échoué {when} — cet identifiant désigne un fichier, pas un dossier.",
+      "failedDriveBadKey": "Le dernier test a échoué {when} — la clé du compte de service n’a pas pu être lue.",
+      "failedDriveQuota": "Le dernier test a échoué {when} — Google a refusé l’envoi faute de quota.",
+      "failedDriveIncomplete": "Le dernier test a échoué {when} — la clé ou l’identifiant du dossier manque."
     },
     "form": {
       "provider": "Fournisseur",
@@ -5031,7 +5038,8 @@
         "minio": "MinIO ou auto-hébergé",
         "other": "Autre",
         "ftp": "FTP",
-        "sftp": "SFTP"
+        "sftp": "SFTP",
+        "google_drive": "Google Drive"
       },
       "name": "Nom",
       "namePlaceholder": "ex. Sauvegardes externes",
@@ -5057,7 +5065,9 @@
         "ssl": "Utiliser TLS (FTPS)",
         "passive": "Mode passif",
         "private_key": "Clé privée",
-        "passphrase": "Phrase secrète de la clé"
+        "passphrase": "Phrase secrète de la clé",
+        "service_account_json": "Clé de compte de service (JSON)",
+        "folder_id": "ID du dossier Drive partagé"
       },
       "help": {
         "host": "Nom d’hôte ou adresse IP du serveur qui conservera les sauvegardes.",
@@ -5066,7 +5076,10 @@
         "ssl": "Fortement recommandé. Sans cela, le mot de passe et toute la sauvegarde circulent en clair.",
         "passive": "À laisser activé sauf si le serveur exige le contraire.",
         "private_key": "Collez la clé privée entière. Utilisée à la place d’un mot de passe.",
-        "passphrase": "Uniquement si la clé privée est elle-même chiffrée."
+        "passphrase": "Uniquement si la clé privée est elle-même chiffrée.",
+        "service_account_json": "Collez le fichier de clé JSON complet du compte de service.",
+        "folder_id": "La partie de l’URL du dossier après /folders/, pas le lien entier.",
+        "drive_shared_only": "Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide. Partagez le dossier avec l’adresse du compte de service, puis collez sa clé ci-dessous."
       },
       "plainFtpWarning": "TLS est désactivé. Le mot de passe et chaque sauvegarde seront envoyés en clair.",
       "prefixHintRemote": "Dossier facultatif dans le répertoire distant, pour qu’un serveur puisse héberger plusieurs sites.",

@@ -11,6 +11,7 @@ return [
         's3' => 'Compatible con S3',
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
+        'google_drive' => 'Google Drive',
     ],
 
     'fields' => [
@@ -31,6 +32,10 @@ return [
         'private_key' => 'Clave privada',
         'passphrase' => 'Frase de la clave',
         'host_fingerprint' => 'Huella de la clave del servidor',
+        'service_account_json' => 'Clave de cuenta de servicio (JSON)',
+        'folder_id' => 'ID de carpeta de la unidad compartida',
+        'drive_name' => 'Unidad compartida',
+        'client_email' => 'Dirección de la cuenta de servicio',
     ],
 
     'placeholders' => [
@@ -56,6 +61,10 @@ return [
         'passphrase' => 'Solo si la propia clave privada está cifrada.',
         'host_fingerprint' => 'Se registra la primera vez que el panel conecta y luego se exige. Compárala con la clave del servidor para estar seguro.',
         'plain_ftp_warning' => 'TLS está desactivado. La contraseña y todas las copias se enviarán sin cifrar.',
+        'service_account_json' => 'Pega el archivo JSON completo de la cuenta de servicio.',
+        'folder_id' => 'La parte de la URL de la carpeta después de /folders/, no el enlace completo.',
+        'drive_shared_only' => 'Solo funciona una unidad compartida de Google Workspace. Una cuenta de servicio no tiene almacenamiento propio, así que las subidas a un Drive personal se rechazan aunque la cuenta esté vacía.',
+        'drive_share_with' => 'Comparte la carpeta de la unidad compartida con la dirección de la cuenta de servicio antes de probar.',
     ],
 
     'status' => [
@@ -76,6 +85,13 @@ return [
         'host_key_mismatch' => 'El servidor presentó una clave distinta de la registrada. La conexión se detuvo.',
         'invalid_private_key' => 'No se pudo leer la clave privada. Comprueba que se pegó completa.',
         'root_missing' => 'La carpeta de destino no existe en el servidor. Créala o corrige la ruta de la carpeta.',
+        'drive_personal' => 'Esa carpeta está en un Drive personal. Una cuenta de servicio no tiene almacenamiento allí, así que las copias se rechazarían: usa una carpeta de una unidad compartida.',
+        'drive_not_shared' => 'La carpeta existe, pero esta cuenta de servicio no tiene acceso a ella.',
+        'drive_folder_missing' => 'No se encontró ninguna carpeta con ese ID.',
+        'drive_not_a_folder' => 'Ese ID apunta a un archivo, no a una carpeta.',
+        'drive_bad_key' => 'No se pudo leer la clave de la cuenta de servicio. Pega el archivo JSON completo.',
+        'drive_quota' => 'Google rechazó la subida por falta de cuota de almacenamiento, que es lo que ocurre en un Drive personal.',
+        'drive_incomplete' => 'Añade la clave de la cuenta de servicio y el ID de la carpeta antes de probar.',
     ],
 
     'delete' => [

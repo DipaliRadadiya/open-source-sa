@@ -23,6 +23,16 @@ const CATEGORIES = [
   "invalid_private_key",
   "root_missing",
   "mismatch",
+  // Google Drive. `drive_personal` is the one that matters: a service account
+  // has no storage on a personal Drive, so the destination can never work —
+  // completely different advice from any other failure here.
+  "drive_personal",
+  "drive_not_shared",
+  "drive_folder_missing",
+  "drive_not_a_folder",
+  "drive_bad_key",
+  "drive_quota",
+  "drive_incomplete",
 ];
 
 const row = readFileSync("components/integrations/storage/destination-row.jsx", "utf8");
@@ -52,6 +62,13 @@ test("every failure message exists in every locale", () => {
     "failedPrivateKey",
     "failedRootMissing",
     "failedMismatch",
+    "failedDrivePersonal",
+    "failedDriveNotShared",
+    "failedDriveFolderMissing",
+    "failedDriveNotAFolder",
+    "failedDriveBadKey",
+    "failedDriveQuota",
+    "failedDriveIncomplete",
   ];
 
   const locales = readdirSync("messages").filter((f) => f.endsWith(".json"));
@@ -82,4 +99,21 @@ test("the host-key message says the connection was stopped, not that the host wa
 
   assert.match(en.storage.row.failedHostKey, /host key/i);
   assert.doesNotMatch(en.storage.row.failedHostKey, /could not be reached/i);
+});
+
+test("the Drive form states the Shared-Drive constraint before the key is pasted", () => {
+  // A service account has no quota on a personal Drive, so such a destination
+  // can never work. Finding that out after filling the form in — or worse, at
+  // the first backup — is the failure this copy exists to prevent.
+  const en = JSON.parse(readFileSync("messages/en.json", "utf8"));
+  const warning = en.storage.form.help.drive_shared_only;
+
+  assert.match(warning, /shared drive/i);
+  assert.match(warning, /no storage of its own/i);
+
+  const form = readFileSync("components/integrations/storage/destination-form-fields.jsx", "utf8");
+
+  // Rendered as prose in the form, not hidden behind a tooltip or a title
+  // attribute where it would only be found by someone already looking.
+  assert.match(form, /help\.drive_shared_only/);
 });

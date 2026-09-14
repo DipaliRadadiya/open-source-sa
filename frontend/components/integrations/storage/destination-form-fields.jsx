@@ -99,6 +99,23 @@ export function DestinationFormFields({
         )}
       />
 
+      {/*
+        * Said BEFORE the key is pasted, as prose, not as a tooltip.
+        *
+        * A Google service account has no Drive storage quota of its own, so
+        * uploads to a personal Drive are refused even when the account is
+        * empty — only a Workspace Shared Drive works. The panel refuses a
+        * personal folder at probe time too, but a form that let someone find
+        * that out only after filling it in has already wasted their time on a
+        * destination that could never have worked.
+        */}
+      {provider === "google_drive" ? (
+        <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed">
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />
+          <p>{t("help.drive_shared_only")}</p>
+        </div>
+      ) : null}
+
       {fields.map((definition) => (
         <ConfigField
           key={definition.name}

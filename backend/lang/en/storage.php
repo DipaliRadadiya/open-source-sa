@@ -14,6 +14,7 @@ return [
         's3' => 'S3-compatible',
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
+        'google_drive' => 'Google Drive',
     ],
 
     'fields' => [
@@ -34,6 +35,10 @@ return [
         'private_key' => 'Private key',
         'passphrase' => 'Key passphrase',
         'host_fingerprint' => 'Host key fingerprint',
+        'service_account_json' => 'Service account key (JSON)',
+        'folder_id' => 'Shared Drive folder ID',
+        'drive_name' => 'Shared Drive',
+        'client_email' => 'Service account address',
     ],
 
     'placeholders' => [
@@ -59,6 +64,10 @@ return [
         'passphrase' => 'Only needed if the private key itself is encrypted.',
         'host_fingerprint' => 'Recorded the first time the panel connects, then enforced. Compare it with the key on the server to be certain.',
         'plain_ftp_warning' => 'TLS is off. The password and every backup will be sent unencrypted.',
+        'service_account_json' => 'Paste the whole JSON key file for the service account.',
+        'folder_id' => 'The part of the folder URL after /folders/ — not the whole link.',
+        'drive_shared_only' => 'Only a Google Workspace Shared Drive works. A service account has no storage of its own, so uploads to a personal Drive are refused even when the account is empty.',
+        'drive_share_with' => 'Share the Shared Drive folder with the service account address before testing.',
     ],
 
     'status' => [
@@ -79,6 +88,13 @@ return [
         'host_key_mismatch' => 'The server presented a different host key than the one recorded. The connection was stopped.',
         'invalid_private_key' => 'The private key could not be read. Check that it was pasted whole.',
         'root_missing' => 'The destination folder does not exist on the server. Create it, or correct the folder path.',
+        'drive_personal' => 'That folder is on a personal Drive. A service account has no storage there, so backups would be refused — use a folder in a Shared Drive.',
+        'drive_not_shared' => 'The folder exists, but this service account has not been given access to it.',
+        'drive_folder_missing' => 'No folder with that ID was found.',
+        'drive_not_a_folder' => 'That ID points at a file, not a folder.',
+        'drive_bad_key' => 'The service account key could not be read. Paste the whole JSON file.',
+        'drive_quota' => 'Google refused the upload for lack of storage quota, which is what happens on a personal Drive.',
+        'drive_incomplete' => 'Add the service account key and the folder ID before testing.',
     ],
 
     'delete' => [

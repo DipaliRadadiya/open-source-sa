@@ -5017,7 +5017,14 @@
       "failedHostKey": "O último teste falhou {when} — o servidor apresentou uma chave de host diferente da registrada, então a conexão foi interrompida.",
       "failedPrivateKey": "O último teste falhou {when} — não foi possível ler a chave privada.",
       "failedRootMissing": "O último teste falhou {when} — a pasta de destino não existe no servidor.",
-      "failedMismatch": "O último teste falhou {when} — o destino leu de volta bytes diferentes dos gravados."
+      "failedMismatch": "O último teste falhou {when} — o destino leu de volta bytes diferentes dos gravados.",
+      "failedDrivePersonal": "O último teste falhou {when} — essa pasta está em um Drive pessoal, onde uma conta de serviço não tem armazenamento.",
+      "failedDriveNotShared": "O último teste falhou {when} — a pasta existe, mas a conta de serviço não recebeu acesso.",
+      "failedDriveFolderMissing": "O último teste falhou {when} — nenhuma pasta encontrada com esse ID.",
+      "failedDriveNotAFolder": "O último teste falhou {when} — esse ID aponta para um arquivo, não uma pasta.",
+      "failedDriveBadKey": "O último teste falhou {when} — não foi possível ler a chave da conta de serviço.",
+      "failedDriveQuota": "O último teste falhou {when} — o Google recusou o envio por falta de cota.",
+      "failedDriveIncomplete": "O último teste falhou {when} — falta a chave ou o ID da pasta."
     },
     "form": {
       "provider": "Provedor",
@@ -5031,7 +5038,8 @@
         "minio": "MinIO ou auto-hospedado",
         "other": "Outro",
         "ftp": "FTP",
-        "sftp": "SFTP"
+        "sftp": "SFTP",
+        "google_drive": "Google Drive"
       },
       "name": "Nome",
       "namePlaceholder": "ex.: Backups offsite",
@@ -5057,7 +5065,9 @@
         "ssl": "Usar TLS (FTPS)",
         "passive": "Modo passivo",
         "private_key": "Chave privada",
-        "passphrase": "Frase da chave"
+        "passphrase": "Frase da chave",
+        "service_account_json": "Chave da conta de serviço (JSON)",
+        "folder_id": "ID da pasta do Drive compartilhado"
       },
       "help": {
         "host": "Nome do host ou endereço IP do servidor que guardará os backups.",
@@ -5066,7 +5076,10 @@
         "ssl": "Fortemente recomendado. Sem ele, a senha e todo o backup trafegam em texto claro.",
         "passive": "Mantenha ligado, a menos que o servidor exija o contrário.",
         "private_key": "Cole a chave privada inteira. Usada no lugar de uma senha.",
-        "passphrase": "Só é necessária se a própria chave privada estiver criptografada."
+        "passphrase": "Só é necessária se a própria chave privada estiver criptografada.",
+        "service_account_json": "Cole o arquivo JSON completo da conta de serviço.",
+        "folder_id": "A parte da URL da pasta depois de /folders/ — não o link inteiro.",
+        "drive_shared_only": "Só funciona um Drive compartilhado do Google Workspace. Uma conta de serviço não tem armazenamento próprio, então envios para um Drive pessoal são recusados mesmo com a conta vazia. Compartilhe a pasta com o endereço da conta de serviço e cole a chave abaixo."
       },
       "plainFtpWarning": "O TLS está desligado. A senha e todos os backups serão enviados sem criptografia.",
       "prefixHintRemote": "Pasta opcional dentro do diretório remoto, para que um servidor possa guardar vários sites.",

@@ -5017,7 +5017,14 @@
       "failedHostKey": "La última prueba falló {when}: el servidor presentó una clave distinta de la registrada, así que se detuvo la conexión.",
       "failedPrivateKey": "La última prueba falló {when}: no se pudo leer la clave privada.",
       "failedRootMissing": "La última prueba falló {when}: la carpeta de destino no existe en el servidor.",
-      "failedMismatch": "La última prueba falló {when}: el destino devolvió bytes distintos de los escritos."
+      "failedMismatch": "La última prueba falló {when}: el destino devolvió bytes distintos de los escritos.",
+      "failedDrivePersonal": "La última prueba falló {when}: esa carpeta está en un Drive personal, donde una cuenta de servicio no tiene almacenamiento.",
+      "failedDriveNotShared": "La última prueba falló {when}: la carpeta existe, pero la cuenta de servicio no tiene acceso.",
+      "failedDriveFolderMissing": "La última prueba falló {when}: no se encontró ninguna carpeta con ese ID.",
+      "failedDriveNotAFolder": "La última prueba falló {when}: ese ID apunta a un archivo, no a una carpeta.",
+      "failedDriveBadKey": "La última prueba falló {when}: no se pudo leer la clave de la cuenta de servicio.",
+      "failedDriveQuota": "La última prueba falló {when}: Google rechazó la subida por falta de cuota.",
+      "failedDriveIncomplete": "La última prueba falló {when}: falta la clave o el ID de la carpeta."
     },
     "form": {
       "provider": "Proveedor",
@@ -5031,7 +5038,8 @@
         "minio": "MinIO o autoalojado",
         "other": "Otro",
         "ftp": "FTP",
-        "sftp": "SFTP"
+        "sftp": "SFTP",
+        "google_drive": "Google Drive"
       },
       "name": "Nombre",
       "namePlaceholder": "p. ej. Copias externas",
@@ -5057,7 +5065,9 @@
         "ssl": "Usar TLS (FTPS)",
         "passive": "Modo pasivo",
         "private_key": "Clave privada",
-        "passphrase": "Frase de la clave"
+        "passphrase": "Frase de la clave",
+        "service_account_json": "Clave de cuenta de servicio (JSON)",
+        "folder_id": "ID de carpeta de la unidad compartida"
       },
       "help": {
         "host": "Nombre de host o dirección IP del servidor que guardará las copias.",
@@ -5066,7 +5076,10 @@
         "ssl": "Muy recomendable. Sin él, la contraseña y toda la copia viajan sin cifrar.",
         "passive": "Déjalo activado salvo que el servidor exija lo contrario.",
         "private_key": "Pega la clave privada completa. Se usa en lugar de una contraseña.",
-        "passphrase": "Solo si la propia clave privada está cifrada."
+        "passphrase": "Solo si la propia clave privada está cifrada.",
+        "service_account_json": "Pega el archivo JSON completo de la cuenta de servicio.",
+        "folder_id": "La parte de la URL de la carpeta después de /folders/, no el enlace completo.",
+        "drive_shared_only": "Solo funciona una unidad compartida de Google Workspace. Una cuenta de servicio no tiene almacenamiento propio, así que las subidas a un Drive personal se rechazan aunque la cuenta esté vacía. Comparte la carpeta con la dirección de la cuenta de servicio y luego pega su clave abajo."
       },
       "plainFtpWarning": "TLS está desactivado. La contraseña y todas las copias se enviarán sin cifrar.",
       "prefixHintRemote": "Carpeta opcional dentro del directorio remoto, para que un servidor pueda alojar varios sitios.",

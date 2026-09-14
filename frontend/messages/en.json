@@ -5017,7 +5017,14 @@
       "failedHostKey": "The last test failed {when} — the server presented a different host key than the one recorded, so the connection was stopped.",
       "failedPrivateKey": "The last test failed {when} — the private key could not be read.",
       "failedRootMissing": "The last test failed {when} — the destination folder does not exist on the server.",
-      "failedMismatch": "The last test failed {when} — the destination read back different bytes than were written."
+      "failedMismatch": "The last test failed {when} — the destination read back different bytes than were written.",
+      "failedDrivePersonal": "The last test failed {when} — that folder is on a personal Drive, where a service account has no storage.",
+      "failedDriveNotShared": "The last test failed {when} — the folder exists, but the service account has not been given access to it.",
+      "failedDriveFolderMissing": "The last test failed {when} — no folder with that ID was found.",
+      "failedDriveNotAFolder": "The last test failed {when} — that ID points at a file, not a folder.",
+      "failedDriveBadKey": "The last test failed {when} — the service account key could not be read.",
+      "failedDriveQuota": "The last test failed {when} — Google refused the upload for lack of storage quota.",
+      "failedDriveIncomplete": "The last test failed {when} — the key or the folder ID is missing."
     },
     "form": {
       "provider": "Provider",
@@ -5031,7 +5038,8 @@
         "minio": "MinIO or self-hosted",
         "other": "Other",
         "ftp": "FTP",
-        "sftp": "SFTP"
+        "sftp": "SFTP",
+        "google_drive": "Google Drive"
       },
       "name": "Name",
       "namePlaceholder": "e.g. Offsite backups",
@@ -5057,7 +5065,9 @@
         "ssl": "Use TLS (FTPS)",
         "passive": "Passive mode",
         "private_key": "Private key",
-        "passphrase": "Key passphrase"
+        "passphrase": "Key passphrase",
+        "service_account_json": "Service account key (JSON)",
+        "folder_id": "Shared Drive folder ID"
       },
       "help": {
         "host": "Hostname or IP address of the server that will hold the backups.",
@@ -5066,7 +5076,10 @@
         "ssl": "Strongly recommended. Without it the password and the entire backup travel in the clear.",
         "passive": "Keep this on unless the server requires otherwise.",
         "private_key": "Paste the whole private key. Used instead of a password.",
-        "passphrase": "Only needed if the private key itself is encrypted."
+        "passphrase": "Only needed if the private key itself is encrypted.",
+        "service_account_json": "Paste the whole JSON key file for the service account.",
+        "folder_id": "The part of the folder URL after /folders/ — not the whole link.",
+        "drive_shared_only": "Only a Google Workspace Shared Drive works. A service account has no storage of its own, so uploads to a personal Drive are refused even when the account is empty. Share the Shared Drive folder with the service account address, then paste its key below."
       },
       "plainFtpWarning": "TLS is off. The password and every backup will be sent unencrypted.",
       "prefixHintRemote": "Optional folder inside the remote directory, so one server can hold several sites.",

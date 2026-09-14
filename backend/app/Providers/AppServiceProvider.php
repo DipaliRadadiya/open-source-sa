@@ -28,13 +28,19 @@ use App\Services\Server\Sync\Discoverers\SystemUserDiscoverer;
 use App\Services\Server\Sync\Discoverers\WorkerDiscoverer;
 use App\Services\Server\Sync\ServerSync;
 use App\Support\PasswordPolicy;
+use Google\Client as GoogleClient;
+use Google\Service\Drive as GoogleDrive;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use League\Flysystem\Filesystem as Flysystem;
+use Masbug\Flysystem\GoogleDriveAdapter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -106,6 +112,47 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('access-admin', fn (User $user): bool => $user->isAdmin());
+
+        // Laravel ships no Google Drive driver, so `Storage::build()` cannot
+        // resolve one without this. Registered here rather than inside
+        // `GoogleDriveDriver` so that class stays a description of the
+        // provider rather than a place adapters get constructed.
+        //
+        // Built per call and never registered as a named disk: a destination's
+        // service-account key must not leak into `filesystems.disks`, where
+        // any later code resolving a disk by name could reach it — the same
+        // isolation rule every other storage driver follows.
+        Storage::extend('google', function ($app, array $config): FilesystemAdapter {
+            $client = new GoogleClient;
+            $client->setAuthConfig(json_decode((string) ($config['service_account'] ?? ''), true, 512, JSON_THROW_ON_ERROR));
+            $client->setScopes([GoogleDrive::DRIVE]);
+
+            $adapter = new GoogleDriveAdapter(
+                new GoogleDrive($client),
+                (string) ($config['folder_id'] ?? ''),
+                [
+                    // Drive is not a key-value store: the same display name can
+                    // exist twice in one folder. Path translation is what makes
+                    // `backups/site/2026-09-14/x.tar.gz` mean one file rather
+                    // than a name that silently collides with an existing one.
+                    'useDisplayPaths' => true,
+                    // Ask the API to see Shared Drives. Without it every
+                    // operation is scoped to My Drive, where a service account
+                    // has no quota — which is the one place these destinations
+                    // cannot work.
+                    'parameters' => [
+                        'supportsAllDrives' => true,
+                        'includeItemsFromAllDrives' => true,
+                    ],
+                ],
+            );
+
+            return new FilesystemAdapter(
+                new Flysystem($adapter, $config),
+                $adapter,
+                $config,
+            );
+        });
 
         // One definition of what a password has to be.
         //

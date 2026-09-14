@@ -18,6 +18,7 @@ enum StorageProvider: string
     case S3 = 's3';
     case Ftp = 'ftp';
     case Sftp = 'sftp';
+    case GoogleDrive = 'google_drive';
 
     /**
      * The translated display name. Kept here rather than on the driver so a

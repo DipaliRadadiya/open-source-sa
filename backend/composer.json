@@ -14,6 +14,7 @@
         "league/flysystem-aws-s3-v3": "^3.35",
         "league/flysystem-ftp": "^3.35",
         "league/flysystem-sftp-v3": "^3.36",
+        "masbug/flysystem-google-drive-ext": "^2.5",
         "spatie/laravel-translatable": "^6.14"
     },
     "require-dev": {

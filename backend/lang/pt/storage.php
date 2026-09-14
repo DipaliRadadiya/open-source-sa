@@ -11,6 +11,7 @@ return [
         's3' => 'Compatível com S3',
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
+        'google_drive' => 'Google Drive',
     ],
 
     'fields' => [
@@ -31,6 +32,10 @@ return [
         'private_key' => 'Chave privada',
         'passphrase' => 'Frase da chave',
         'host_fingerprint' => 'Impressão digital da chave do host',
+        'service_account_json' => 'Chave da conta de serviço (JSON)',
+        'folder_id' => 'ID da pasta do Drive compartilhado',
+        'drive_name' => 'Drive compartilhado',
+        'client_email' => 'Endereço da conta de serviço',
     ],
 
     'placeholders' => [
@@ -56,6 +61,10 @@ return [
         'passphrase' => 'Só é necessária se a própria chave privada estiver criptografada.',
         'host_fingerprint' => 'Registrada na primeira conexão do painel e exigida depois. Compare com a chave no servidor para ter certeza.',
         'plain_ftp_warning' => 'O TLS está desligado. A senha e todos os backups serão enviados sem criptografia.',
+        'service_account_json' => 'Cole o arquivo JSON completo da conta de serviço.',
+        'folder_id' => 'A parte da URL da pasta depois de /folders/ — não o link inteiro.',
+        'drive_shared_only' => 'Só funciona um Drive compartilhado do Google Workspace. Uma conta de serviço não tem armazenamento próprio, então envios para um Drive pessoal são recusados mesmo com a conta vazia.',
+        'drive_share_with' => 'Compartilhe a pasta do Drive compartilhado com o endereço da conta de serviço antes de testar.',
     ],
 
     'status' => [
@@ -76,6 +85,13 @@ return [
         'host_key_mismatch' => 'O servidor apresentou uma chave de host diferente da registrada. A conexão foi interrompida.',
         'invalid_private_key' => 'Não foi possível ler a chave privada. Verifique se ela foi colada por inteiro.',
         'root_missing' => 'A pasta de destino não existe no servidor. Crie-a ou corrija o caminho da pasta.',
+        'drive_personal' => 'Essa pasta está em um Drive pessoal. Uma conta de serviço não tem armazenamento lá, então os backups seriam recusados — use uma pasta de um Drive compartilhado.',
+        'drive_not_shared' => 'A pasta existe, mas esta conta de serviço não recebeu acesso a ela.',
+        'drive_folder_missing' => 'Nenhuma pasta encontrada com esse ID.',
+        'drive_not_a_folder' => 'Esse ID aponta para um arquivo, não uma pasta.',
+        'drive_bad_key' => 'Não foi possível ler a chave da conta de serviço. Cole o arquivo JSON inteiro.',
+        'drive_quota' => 'O Google recusou o envio por falta de cota de armazenamento, que é o que acontece em um Drive pessoal.',
+        'drive_incomplete' => 'Adicione a chave da conta de serviço e o ID da pasta antes de testar.',
     ],
 
     'delete' => [

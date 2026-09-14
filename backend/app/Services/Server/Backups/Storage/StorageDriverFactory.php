@@ -6,6 +6,7 @@ use App\Contracts\StorageDriver;
 use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
 use App\Services\Server\Backups\Storage\Drivers\FtpDriver;
+use App\Services\Server\Backups\Storage\Drivers\GoogleDriveDriver;
 use App\Services\Server\Backups\Storage\Drivers\S3Driver;
 use App\Services\Server\Backups\Storage\Drivers\SftpDriver;
 
@@ -24,6 +25,7 @@ class StorageDriverFactory
         StorageProvider::S3->value => S3Driver::class,
         StorageProvider::Ftp->value => FtpDriver::class,
         StorageProvider::Sftp->value => SftpDriver::class,
+        StorageProvider::GoogleDrive->value => GoogleDriveDriver::class,
     ];
 
     public function for(StorageDestination $destination): StorageDriver

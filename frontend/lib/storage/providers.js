@@ -47,6 +47,7 @@ export const PRESETS = [
   { value: "other", provider: "s3", endpointHint: "" },
   { value: "ftp", provider: "ftp" },
   { value: "sftp", provider: "sftp" },
+  { value: "google_drive", provider: "google_drive" },
 ];
 
 /**
@@ -122,6 +123,13 @@ export const FIELDS = {
     { name: "ssl", kind: TOGGLE, default: true, warnWhenOff: "plainFtpWarning" },
     { name: "passive", kind: TOGGLE, default: true },
   ],
+  google_drive: [
+    // One paste and one id. No OAuth means no client id, no secret, no refresh
+    // token and no callback — by some distance the smallest credential set of
+    // the four providers.
+    { name: "service_account_json", kind: TEXTAREA, required: true, mono: true },
+    { name: "folder_id", kind: TEXT, required: true, mono: true },
+  ],
   sftp: [
     { name: "host", kind: TEXT, required: true, mono: true },
     { name: "port", kind: NUMBER, placeholder: "22" },
@@ -172,6 +180,16 @@ export function isRequired(field, preset) {
 export function describeDestination(destination) {
   const config = destination?.config ?? {};
   const prefix = destination?.prefix ?? "";
+
+  if (destination?.provider === "google_drive") {
+    // The Shared Drive's name if a successful probe recorded one, falling back
+    // to the folder id. An id alone tells the operator nothing about which of
+    // their drives this is.
+    return {
+      location: [config.drive_name || config.folder_id, prefix].filter(Boolean).join("/"),
+      address: config.client_email || null,
+    };
+  }
 
   if (destination?.provider === "s3") {
     return {

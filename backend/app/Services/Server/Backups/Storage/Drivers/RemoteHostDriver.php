@@ -67,6 +67,15 @@ abstract class RemoteHostDriver implements StorageDriver
     }
 
     /**
+     * Nothing to check up front: for this provider a successful write really
+     * does mean the destination works, so the round trip is the whole test.
+     */
+    public function preflight(StorageDestination $destination): ?string
+    {
+        return null;
+    }
+
+    /**
      * Validation shared by every host-addressed provider.
      *
      * `host` is required and goes through `SafeRemoteHost` — for these
