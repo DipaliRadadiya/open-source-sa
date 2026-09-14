@@ -117,7 +117,7 @@ class MoodleInstaller extends AbstractPhpInstaller
             'dataroot' => $dataDir,
         ])->render());
 
-        $php = $this->phpBinary($application);
+        $php = $this->phpCommand($application);
         $adminUser = (string) ($settings['admin_user'] ?? 'admin');
 
         // The password here is deliberately disposable — see the class note.
@@ -130,7 +130,7 @@ class MoodleInstaller extends AbstractPhpInstaller
         // The site's own pool still needs it for Moodle to run in a browser;
         // this flag does nothing for that. See the note in install().
         $this->runAsSiteUser('install_app', $application, [
-            $php, '-d', 'max_input_vars='.self::MIN_INPUT_VARS,
+            ...$php, '-d', 'max_input_vars='.self::MIN_INPUT_VARS,
             'admin/cli/install_database.php',
             '--agree-license',
             '--adminuser='.$adminUser,
@@ -144,7 +144,7 @@ class MoodleInstaller extends AbstractPhpInstaller
         // thing when given a username, which is what makes this reliable
         // where feeding install.php's fourteen prompts would not be.
         $this->runAsSiteUser('set_password', $application, [
-            $php, '-d', 'max_input_vars='.self::MIN_INPUT_VARS,
+            ...$php, '-d', 'max_input_vars='.self::MIN_INPUT_VARS,
             'admin/cli/reset_password.php', '--username='.$adminUser,
         ], ($settings['admin_password'] ?? '')."\n", $documentRoot);
     }

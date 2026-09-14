@@ -986,6 +986,31 @@ return [
     'installer_timeout' => (int) env('SERVER_INSTALLER_TIMEOUT', 300),
 
     /*
+    | `memory_limit` for the CLI step an application runs during its own
+    | installation -- Mautic's `bin/console mautic:install`, Craft's `craft
+    | install`, Nextcloud's `occ`, and the rest.
+    |
+    | Set explicitly because the ambient limit differs per web server, and on
+    | one of them it is too small to install with. Debian's CLI ini carries
+    | `memory_limit = -1`, so on nginx and Apache the interpreter is effectively
+    | unlimited; LiteSpeed's lsphp loads its *production* ini at 128M instead,
+    | and Mautic's Symfony container compile does not fit -- "Allowed memory
+    | size of 134217728 bytes exhausted", on OpenLiteSpeed only, for what is
+    | otherwise the same command. Every PHP site type runs a CLI step, so Mautic
+    | was the heaviest rather than the only one at risk.
+    |
+    | 512M is what Mautic's own documentation asks for. Deliberately not `-1`:
+    | unbounded on a 1 GB box trades a failed install for an OOM-killed server,
+    | and PHP stopping at a limit it names is the legible failure of the two.
+    |
+    | This is not the site's `memory_limit` from its PHP settings screen. That
+    | value is written into the FPM pool or the site's ini, which a CLI
+    | invocation never reads, and it describes a request-serving budget rather
+    | than a one-off container compile.
+    */
+    'installer_php_memory_limit' => env('SERVER_INSTALLER_PHP_MEMORY_LIMIT', '512M'),
+
+    /*
     | Everything a provision or deploy does *besides* the slow part: the
     | directory, ownership, the vhost write/test/reload, creating the database,
     | and starting the unit. Added to the installer (or git + build) timeout to

@@ -104,7 +104,7 @@ class CraftCmsInstaller extends AbstractPhpInstaller
         // `--password` is left out on purpose: Craft then asks, and Yii's
         // prompt reads stdin.
         $this->runAsSiteUser('install_app', $application, [
-            $this->phpBinary($application), 'craft', 'install',
+            ...$this->phpCommand($application), 'craft', 'install',
             '--username='.($settings['admin_user'] ?? 'admin'),
             '--email='.($settings['admin_email'] ?? ''),
             '--site-name='.($settings['site_name'] ?? $application->name),
@@ -147,7 +147,7 @@ class CraftCmsInstaller extends AbstractPhpInstaller
 
         if ($changed) {
             $this->runAsSiteUser('sync_url', $application, [
-                $this->phpBinary($application), 'craft', 'clear-caches/all', '--interactive=0',
+                ...$this->phpCommand($application), 'craft', 'clear-caches/all', '--interactive=0',
             ], null, $projectRoot);
         }
     }

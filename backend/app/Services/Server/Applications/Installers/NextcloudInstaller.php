@@ -100,12 +100,12 @@ class NextcloudInstaller extends AbstractPhpInstaller
         // business reading what users have uploaded.
         $this->run('configure', ['chmod', '0750', $dataDir], $application);
 
-        $php = $this->phpBinary($application);
+        $php = $this->phpCommand($application);
 
         // Both passwords are omitted so that occ prompts for them, and both
         // answers go in on stdin in the order it asks: database, then admin.
         $this->runAsSiteUser('install_app', $application, [
-            $php, 'occ', 'maintenance:install',
+            ...$php, 'occ', 'maintenance:install',
             '--database', $this->databaseDriver($context),
             '--database-host', (string) ($context['db_host'] ?? '127.0.0.1'),
             ...$this->portOption($context),
@@ -120,14 +120,14 @@ class NextcloudInstaller extends AbstractPhpInstaller
         // the hostname from, so it trusts only localhost. Without this the
         // site is reachable and refuses everyone.
         $this->runAsSiteUser('trust_domain', $application, [
-            $php, 'occ', 'config:system:set', 'trusted_domains', '1',
+            ...$php, 'occ', 'config:system:set', 'trusted_domains', '1',
             '--value='.$application->domain,
         ], null, $documentRoot);
 
         // Background jobs and generated links need to know the site's own
         // address; from the CLI there is nothing to infer it from.
         $this->runAsSiteUser('trust_domain', $application, [
-            $php, 'occ', 'config:system:set', 'overwrite.cli.url',
+            ...$php, 'occ', 'config:system:set', 'overwrite.cli.url',
             '--value='.$application->url(),
         ], null, $documentRoot);
     }
@@ -177,7 +177,7 @@ class NextcloudInstaller extends AbstractPhpInstaller
         $documentRoot = $application->documentRoot();
 
         $this->runAsSiteUser('sync_url', $application, [
-            $this->phpBinary($application), 'occ', 'config:system:set', 'overwrite.cli.url',
+            ...$this->phpCommand($application), 'occ', 'config:system:set', 'overwrite.cli.url',
             '--value='.$url,
         ], null, $documentRoot);
     }

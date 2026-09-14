@@ -57,7 +57,7 @@ class AkauntingInstaller extends AbstractPhpInstaller
         // the default rather than reading the pipe — so an omitted password is
         // an empty password, not a prompt.
         $this->runAsSiteUser('install_app', $application, [
-            $this->phpBinary($application), 'artisan', 'install',
+            ...$this->phpCommand($application), 'artisan', 'install',
             '--db-host='.($context['db_host'] ?? '127.0.0.1'),
             '--db-port='.($context['db_port'] ?? 3306),
             '--db-name='.$context['database'],
@@ -130,7 +130,7 @@ class AkauntingInstaller extends AbstractPhpInstaller
         // failing here would roll back a certificate over a cache file.
         try {
             $this->runAsSiteUser('sync_url', $application, [
-                $this->phpBinary($application), 'artisan', 'config:clear',
+                ...$this->phpCommand($application), 'artisan', 'config:clear',
             ], null, $documentRoot);
         } catch (ProvisioningFailedException $e) {
             report($e);

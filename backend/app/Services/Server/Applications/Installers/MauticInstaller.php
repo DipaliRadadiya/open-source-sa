@@ -81,13 +81,18 @@ class MauticInstaller extends AbstractPhpInstaller
         ])->render());
 
         $this->runAsSiteUser('install_app', $application, [
-            $this->phpBinary($application), 'bin/console', 'mautic:install',
+            ...$this->phpCommand($application), 'bin/console', 'mautic:install',
             $application->url(),
             // Mautic treats recommendations (including its 512M memory
             // preference) as a confirmation prompt. With nobody to answer,
             // --no-interaction declines that prompt at step zero — whose
             // negated exit code is still zero. --force means continue past
             // recommendations; hard requirements still fail normally.
+            //
+            // The 512M recommendation itself is now met rather than waved
+            // past: `phpCommand()` passes it on the interpreter, because on
+            // OpenLiteSpeed the ambient CLI limit is 128M and this command's
+            // container compile died in it.
             '--force',
             '--no-interaction',
         ], null, $documentRoot);
@@ -97,7 +102,7 @@ class MauticInstaller extends AbstractPhpInstaller
         // Ask Doctrine for a table the installer creates instead of trusting
         // that exit code. This is read-only and carries no credentials.
         $this->runAsSiteUser('verify_install', $application, [
-            $this->phpBinary($application), 'bin/console', 'doctrine:query:sql',
+            ...$this->phpCommand($application), 'bin/console', 'doctrine:query:sql',
             'SELECT COUNT(*) FROM users',
             '--no-interaction',
         ], null, $documentRoot);
@@ -133,7 +138,7 @@ class MauticInstaller extends AbstractPhpInstaller
 
         if ($changed) {
             $this->runAsSiteUser('sync_url', $application, [
-                $this->phpBinary($application), 'bin/console', 'mautic:cache:clear', '--no-interaction',
+                ...$this->phpCommand($application), 'bin/console', 'mautic:cache:clear', '--no-interaction',
             ], null, $documentRoot);
         }
     }

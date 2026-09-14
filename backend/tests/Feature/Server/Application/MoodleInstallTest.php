@@ -179,10 +179,13 @@ it('raises max_input_vars on the interpreter, which Moodle refuses to install wi
         fn ($run) => in_array('admin/cli/install_database.php', $run['command'], true),
     );
 
-    $flag = array_search('-d', $install['command'], true);
+    // The value, not the first `-d`: the interpreter also carries the
+    // installer's memory limit now, so this looks for its own pair.
+    $value = array_search('max_input_vars=5000', $install['command'], true);
+    $flag = $value === false ? false : $value - 1;
 
     expect($flag)->not->toBeFalse()
-        ->and($install['command'][$flag + 1])->toBe('max_input_vars=5000')
+        ->and($install['command'][$flag])->toBe('-d')
         // Before the script, or PHP reads it as one of the script's own
         // arguments and applies nothing.
         ->and($flag)->toBeLessThan(array_search('admin/cli/install_database.php', $install['command'], true));

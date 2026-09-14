@@ -69,7 +69,7 @@ class StatamicInstaller extends AbstractPhpInstaller
         // on the command line because Statamic offers no other way in — see
         // the class note.
         $this->runAsSiteUser('install_app', $application, array_filter([
-            $this->phpBinary($application), 'please', 'make:user',
+            ...$this->phpCommand($application), 'please', 'make:user',
             (string) ($settings['admin_email'] ?? ''),
             '--super',
             '--password='.($settings['admin_password'] ?? ''),
@@ -95,7 +95,7 @@ class StatamicInstaller extends AbstractPhpInstaller
 
         if ($changed) {
             $this->runAsSiteUser('sync_url', $application, [
-                $this->phpBinary($application), 'artisan', 'config:clear',
+                ...$this->phpCommand($application), 'artisan', 'config:clear',
             ], null, $application->codePath());
         }
     }

@@ -147,10 +147,22 @@ it('runs wp-cli under the site own php, not whatever the shebang finds', functio
     Process::assertRan(function ($p) {
         $command = $p->command;
         $wp = array_search('/usr/local/bin/wp', $command, true);
+        $php = array_search('/usr/bin/php8.4', $command, true);
+
+        // Not `$wp - 1`: the interpreter also carries the installer's memory
+        // limit now, so what sits between the two is a run of `-d` pairs.
+        $between = $php === false ? [] : array_slice($command, $php + 1, $wp - $php - 1);
+
+        $onlyIniFlags = count($between) % 2 === 0
+            && collect($between)->every(fn ($argument, $index) => $index % 2 === 0
+                ? $argument === '-d'
+                : str_contains((string) $argument, '='));
 
         return $wp !== false
             && in_array('core', $command, true)
-            && ($command[$wp - 1] ?? '') === '/usr/bin/php8.4';
+            && $php !== false
+            && $php < $wp
+            && $onlyIniFlags;
     });
 });
 

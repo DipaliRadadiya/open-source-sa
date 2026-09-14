@@ -60,7 +60,7 @@ class WordPressInstaller extends AbstractPhpInstaller
         // the user supplied a value are added as separate array items so array_filter
         // can exclude the nulls cleanly.
         $installCmd = array_filter([
-            $this->phpBinary($application),
+            ...$this->phpCommand($application),
             (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
             'core', 'install',
             '--path='.$documentRoot,
@@ -86,7 +86,7 @@ class WordPressInstaller extends AbstractPhpInstaller
         if (filled($settings['timezone'] ?? null)) {
             try {
                 $this->runAsSiteUser('set_timezone', $application, [
-                    $this->phpBinary($application),
+                    ...$this->phpCommand($application),
                     (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
                     'option', 'update', 'timezone_string',
                     $settings['timezone'],
@@ -105,7 +105,7 @@ class WordPressInstaller extends AbstractPhpInstaller
 
         foreach (['home', 'siteurl'] as $option) {
             $this->runAsSiteUser('sync_url', $application, [
-                $this->phpBinary($application),
+                ...$this->phpCommand($application),
                 (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
                 'option', 'update', $option, $url,
                 '--path='.$documentRoot,

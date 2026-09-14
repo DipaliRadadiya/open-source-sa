@@ -57,7 +57,7 @@ class PrestaShopInstaller extends AbstractPhpInstaller
         ], $application);
 
         $this->runAsSiteUser('install_app', $application, [
-            $this->phpBinary($application), 'install/index_cli.php',
+            ...$this->phpCommand($application), 'install/index_cli.php',
             '--domain='.$application->domain,
             '--base_uri=/',
             // PrestaShop's CLI has no --db_port; its own docs say to put a
@@ -231,7 +231,7 @@ class PrestaShopInstaller extends AbstractPhpInstaller
         }
 
         $this->runAsSiteUser('sync_url', $application, [
-            $this->phpBinary($application), '-r', $this->syncUrlProgram(),
+            ...$this->phpCommand($application), '-r', $this->syncUrlProgram(),
         ], json_encode([
             'parameters' => $documentRoot.'/app/config/parameters.php',
             'domain' => $host,

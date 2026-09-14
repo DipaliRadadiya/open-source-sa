@@ -82,7 +82,7 @@ class JoomlaInstaller extends AbstractPhpInstaller
         // secret in without putting it on the command line, where `ps` shows
         // it to every user on the machine.
         $this->runAsSiteUser('install_app', $application, [
-            $this->phpBinary($application), 'installation/joomla.php', 'install',
+            ...$this->phpCommand($application), 'installation/joomla.php', 'install',
             '--site-name='.($settings['site_name'] ?? $application->name),
             '--admin-user='.($settings['admin_name'] ?? 'Administrator'),
             '--admin-username='.($settings['admin_user'] ?? 'admin'),
