@@ -11,6 +11,7 @@ use App\Services\Server\Backups\BackupContext;
 use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\Steps\VerifyArtifact;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -29,6 +30,7 @@ beforeEach(function () {
     // The disk is built per-destination and never registered globally, so the
     // fake has to be injected the same way production builds the real one.
     $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+        app(StorageDriverFactory::class),
         fn (array $config) => $this->fakeDisk,
     ));
 
@@ -59,11 +61,8 @@ beforeEach(function () {
 
     $this->destination = StorageDestination::create([
         'name' => 'Backups',
-        'endpoint' => '',
-        'region' => 'us-east-1',
-        'bucket' => 'backups',
-        'access_key' => 'key',
-        'secret_key' => 'secret',
+        'provider' => 's3',
+        'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'backups', 'access_key' => 'key', 'secret_key' => 'secret'],
     ]);
 });
 

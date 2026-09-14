@@ -2,21 +2,22 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * One S3-compatible storage destination.
+ * One storage destination, of whatever provider.
  *
- * Secrets are deliberately absent — not masked, not truncated: the
- * `access_key` and `secret_key` columns are encrypted at rest (`encrypted`
- * cast on the model), and the model would *decrypt* them on access. Any
- * reference at all — even `$this->access_key` — would leak the plaintext
- * into the API response. They are write-only: rotation replaces them.
+ * Secrets are deliberately absent — not masked, not truncated. The whole
+ * `config` column is encrypted at rest (`encrypted:array` cast), and the model
+ * would *decrypt* it on access. So this resource never serialises `config`;
+ * it asks the provider's driver for the non-secret subset instead, and the
+ * driver is the only thing that knows which of its keys are credentials.
  *
- * `has_credentials` reports whether both secret columns are populated
- * without ever reading their value, so the UI can show a "credentials set"
- * badge and a rotation prompt without ever seeing the secrets themselves.
+ * `has_credentials` reports whether the provider's secrets are populated
+ * without putting their values anywhere near the response, so the UI can show
+ * a "credentials set" badge and a rotation prompt without ever seeing them.
  */
 class StorageDestinationResource extends JsonResource
 {
@@ -25,21 +26,31 @@ class StorageDestinationResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $driver = app(StorageDriverFactory::class)->for($this->resource);
+
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'driver' => 's3',
-            'endpoint' => $this->endpoint,
-            'region' => $this->region,
-            'bucket' => $this->bucket,
+
+            // The real provider, read from the column. This used to be a
+            // hardcoded `'s3'` and the frontend inferred the truth by
+            // matching the endpoint hostname — a guess that was wrong for a
+            // self-hosted MinIO and meaningless for an FTP host.
+            'provider' => $this->provider->value,
+            'provider_title' => $this->provider->title(),
+
+            // Addressing detail only: bucket and region for S3, host and port
+            // for FTP/SFTP. Never a credential — see the driver's
+            // `secretKeys()` for what is withheld.
+            'config' => $driver->publicConfig($this->resource),
+
             'prefix' => $this->prefix,
-            // True when *both* encrypted columns are populated. We read
-            // the raw DB value via getRawOriginal() so the encrypted-cast
-            // machinery never runs — looking at `$this->access_key` would
-            // *decrypt* the column and put the plaintext secret into a
-            // string the rest of the request could leak.
-            'has_credentials' => $this->hasRawValue('access_key')
-                && $this->hasRawValue('secret_key'),
+
+            // True when every secret this provider needs is populated. The
+            // config is read once, already decrypted by the cast, and only
+            // its *emptiness* is reported — no value reaches the array.
+            'has_credentials' => $this->hasCredentials($driver->secretKeys()),
+
             // The last connection probe, so "this destination works" survives
             // a page reload. `last_test_success` is null when the panel has
             // never asked — a different answer from "asked and it failed",
@@ -49,7 +60,8 @@ class StorageDestinationResource extends JsonResource
             // days ago is not a destination known to work today.
             'last_tested_at_human' => $this->last_tested_at?->diffForHumans(),
             'last_test_success' => $this->last_test_success,
-            // Stable category — 'invalid_credentials' or 'unreachable'.
+            // Stable category — `invalid_credentials`, `unreachable`,
+            // `host_key_mismatch`, `invalid_private_key`, `mismatch`.
             'last_test_error' => $this->last_test_error,
             'status' => $this->testStatus(),
             'status_title' => __('storage.status.'.$this->testStatus()),
@@ -61,14 +73,22 @@ class StorageDestinationResource extends JsonResource
     }
 
     /**
-     * Whether the underlying DB column for an *encrypted* attribute is
-     * populated, without ever triggering the model cast and decrypting
-     * the value into plaintext.
+     * Whether every secret the provider requires is present.
+     *
+     * SFTP is the reason this is "any of", not "all of": password and private
+     * key are alternatives, and a key-authenticated destination has no
+     * password without being incomplete.
+     *
+     * @param  list<string>  $keys
      */
-    private function hasRawValue(string $column): bool
+    private function hasCredentials(array $keys): bool
     {
-        $raw = $this->getRawOriginal($column);
+        foreach ($keys as $key) {
+            if (filled($this->resource->configValue($key))) {
+                return true;
+            }
+        }
 
-        return is_string($raw) && $raw !== '';
+        return false;
     }
 }

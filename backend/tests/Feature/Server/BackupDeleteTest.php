@@ -9,6 +9,7 @@ use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Storage;
 
@@ -40,11 +41,8 @@ beforeEach(function () {
 
     $this->destination = StorageDestination::create([
         'name' => 'Offsite',
-        'endpoint' => '',
-        'region' => 'us-east-1',
-        'bucket' => 'backups',
-        'access_key' => 'k',
-        'secret_key' => 's',
+        'provider' => 's3',
+        'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'backups', 'access_key' => 'k', 'secret_key' => 's'],
     ]);
 
     $this->backupTarget = BackupTarget::create([
@@ -59,6 +57,7 @@ beforeEach(function () {
     $this->disk = Storage::fake('destination');
 
     $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+        app(StorageDriverFactory::class),
         builder: fn (array $config) => $this->disk,
     ));
 });
@@ -104,6 +103,7 @@ it('keeps the record when the archive cannot be removed', function () {
     // A destination that refuses. Losing the row here would strand the object
     // permanently, so the row is the thing worth keeping.
     $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+        app(StorageDriverFactory::class),
         builder: fn (array $config) => new class
         {
             public function exists(string $key): bool

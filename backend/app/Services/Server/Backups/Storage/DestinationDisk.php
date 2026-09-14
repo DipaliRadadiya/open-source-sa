@@ -19,6 +19,10 @@ use Illuminate\Support\Facades\Storage;
  * `throw => false` that silently swallowed every failure, and a second copy of
  * that mistake in the uploader would have meant backups reporting success
  * while writing nothing.
+ *
+ * The per-provider knowledge moved out to `StorageDriver` implementations —
+ * this class is now the seam that keeps every caller from having to know which
+ * provider it got.
  */
 class DestinationDisk
 {
@@ -29,8 +33,10 @@ class DestinationDisk
      * @param  null|callable(array<string, mixed>): Filesystem  $builder
      *                                                                    Defaults to Storage::build(). Tests inject a fake.
      */
-    public function __construct(?callable $builder = null)
-    {
+    public function __construct(
+        private StorageDriverFactory $drivers,
+        ?callable $builder = null,
+    ) {
         $this->builder = $builder !== null
             ? Closure::fromCallable($builder)
             : static fn (array $config): Filesystem => Storage::build($config);
@@ -46,37 +52,6 @@ class DestinationDisk
      */
     public function config(StorageDestination $destination): array
     {
-        return [
-            'driver' => 's3',
-            'key' => $destination->access_key,
-            'secret' => $destination->secret_key,
-            'region' => $destination->region ?: 'us-east-1',
-            'bucket' => $destination->bucket,
-            'endpoint' => $destination->endpoint ?: null,
-            // Behind the prefix, so one destination shared by several
-            // applications cannot read or overwrite another's artefacts.
-            'root' => $destination->prefix ?: '',
-
-            // Path-style only for a custom endpoint. MinIO, Wasabi and B2
-            // route through the path; real AWS deprecated it and does not
-            // support it for buckets in regions launched after 2019 — and an
-            // empty endpoint *means* AWS.
-            'use_path_style_endpoint' => filled($destination->endpoint),
-
-            // MUST stay true. With `throw => false` the adapter swallows
-            // failures and returns null/false, so an upload that never
-            // happened looks identical to one that did — a backup reporting
-            // success over an empty bucket.
-            'throw' => true,
-
-            // MUST stay true. Laravel defaults this to *false* and so
-            // overrides Flysystem's own `true`, which leaves `@http.stream`
-            // unset on GetObject: Guzzle then buffers the whole object into
-            // memory and hands readStream() a stream over an already-loaded
-            // body. DownloadArtifact's stream_copy_to_stream looks streamed
-            // and isn't — a 5.8 GB archive OOMs the worker on exactly the
-            // large sites that most need restoring.
-            'stream_reads' => true,
-        ];
+        return $this->drivers->for($destination)->config($destination);
     }
 }

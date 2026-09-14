@@ -11,6 +11,7 @@ use App\Models\Restore;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\Restores\RestoreRunner;
@@ -32,6 +33,7 @@ beforeEach(function () {
     $this->fakeDisk = Storage::fake('destination');
 
     $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+        app(StorageDriverFactory::class),
         fn (array $config) => $this->fakeDisk,
     ));
 
@@ -60,8 +62,9 @@ beforeEach(function () {
     ]);
 
     $this->destination = StorageDestination::create([
-        'name' => 'Backups', 'endpoint' => '', 'region' => 'us-east-1',
-        'bucket' => 'backups', 'access_key' => 'key', 'secret_key' => 'secret',
+        'name' => 'Backups',
+        'provider' => 's3',
+        'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'backups', 'access_key' => 'key', 'secret_key' => 'secret'],
     ]);
 
     // Not `$this->target`: HigherOrderTapProxy (what `test()` returns inside a

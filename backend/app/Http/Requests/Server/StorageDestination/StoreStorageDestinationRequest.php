@@ -2,8 +2,9 @@
 
 namespace App\Http\Requests\Server\StorageDestination;
 
-use App\Rules\SafeProviderHost;
+use App\Enums\StorageProvider;
 use App\Rules\SingleLine;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,51 +16,97 @@ class StoreStorageDestinationRequest extends FormRequest
     }
 
     /**
+     * Provider-independent rules, plus whichever `config.*` rules the chosen
+     * provider's driver asks for.
+     *
+     * The driver supplies its rules rather than applying them: validation
+     * still lives here, in the FormRequest, which is the only layer that
+     * knows this is a create and therefore that credentials are required.
+     *
      * @return array<string, mixed>
      */
     public function rules(): array
     {
-        return [
+        return array_merge([
             'name' => ['required', 'string', 'max:100', Rule::unique('storage_destinations', 'name'), new SingleLine],
 
-            // Endpoint is optional: S3-compatible providers (AWS, R2, B2,
-            // Wasabi, …) carry their region inside the bucket host. When
-            // set, it must be a reachable https URL and must not point at
-            // loopback or the cloud metadata range — the same SSRF surface
-            // Self-hosted GitLab exposes, reused here.
-            'endpoint' => ['nullable', 'string', 'max:255', new SafeProviderHost(
-                'storage.test.invalid_endpoint',
-                'storage.test.forbidden_host',
-            )],
+            // Required with no default. A default provider would be a silent
+            // 's3' on a request that forgot to say — which is exactly the
+            // guessing this column was added to end.
+            'provider' => ['required', Rule::enum(StorageProvider::class)],
 
-            'region' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9-]+$/'],
-            'bucket' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9._-]+$/'],
+            // Provider-independent: every destination lands somewhere inside
+            // its own space, whether that space is an S3 key prefix or a
+            // subdirectory of an FTP account.
             'prefix' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9._/-]*$#'],
-
-            // Secrets — encrypted on write (model cast) and never echoed
-            // back through the API. Sizes are generous but capped to keep
-            // a stray paste of a megabyte log from filling the database.
-            'access_key' => ['required', 'string', 'max:255'],
-            'secret_key' => ['required', 'string', 'max:512'],
-        ];
+        ], $this->providerRules());
     }
 
     /**
-     * Pre-fill defaults so the frontend can send a slim payload.
-     *
-     * `endpoint` defaults to an empty string rather than null because the
-     * column is not nullable (an endpoint URL is part of the record), and
-     * the empty-string sentinel lets the storage driver fall back to AWS
-     * defaults while the DB still sees a non-null value.
+     * @return array<string, mixed>
+     */
+    protected function providerRules(): array
+    {
+        $provider = StorageProvider::tryFrom((string) $this->input('provider'));
+
+        // An unknown provider fails the enum rule above; returning nothing
+        // here avoids a second, more confusing error about a config key
+        // belonging to a provider that does not exist.
+        if ($provider === null) {
+            return [];
+        }
+
+        return app(StorageDriverFactory::class)->forProvider($provider)->rules(requireSecrets: true);
+    }
+
+    public function withValidator(mixed $validator): void
+    {
+        $validator->after(function ($validator): void {
+            $this->validateSftpHasOneAuthMethod($validator);
+        });
+    }
+
+    /**
+     * SFTP authenticates with a password *or* a private key, so neither can be
+     * `required` on its own — but a destination with neither cannot connect at
+     * all, and storing one means the failure arrives at the first backup
+     * instead of at the form that could have prevented it.
+     */
+    protected function validateSftpHasOneAuthMethod(mixed $validator): void
+    {
+        if (StorageProvider::tryFrom((string) $this->input('provider')) !== StorageProvider::Sftp) {
+            return;
+        }
+
+        if (filled($this->input('config.password')) || filled($this->input('config.private_key'))) {
+            return;
+        }
+
+        $validator->errors()->add('config.password', __('storage.validation.sftp_auth_required'));
+    }
+
+    /**
+     * The frontend sends a slim payload; the gaps that have a single sensible
+     * answer are filled here rather than in the driver, so validation sees the
+     * same values the database will.
      */
     protected function prepareForValidation(): void
     {
-        $region = $this->input('region');
-        $endpoint = $this->input('endpoint');
+        $config = $this->input('config');
 
-        $this->merge([
-            'region' => $region === null || $region === '' ? 'us-east-1' : $region,
-            'endpoint' => $endpoint === null ? '' : $endpoint,
-        ]);
+        if (! is_array($config)) {
+            return;
+        }
+
+        // Region is S3's only field with a universal default — an empty one
+        // means AWS's own, which is `us-east-1`. Endpoint keeps its
+        // empty-string sentinel: blank *means* AWS, and the driver reads it
+        // that way.
+        if (StorageProvider::tryFrom((string) $this->input('provider')) === StorageProvider::S3) {
+            $config['region'] = ($config['region'] ?? '') === '' ? 'us-east-1' : $config['region'];
+            $config['endpoint'] ??= '';
+        }
+
+        $this->merge(['config' => $config]);
     }
 }

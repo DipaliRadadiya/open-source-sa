@@ -5296,7 +5296,9 @@ Verify the token is still valid with the provider.
 
 ---
 
-## Integrations — Storage Destinations (S3-compatible backup storage)
+## Integrations — Storage Destinations (S3-compatible, FTP, SFTP)
+
+> ⚠️ **Breaking change.** The destination is now **polymorphic**. The read-only `driver` field (always `"s3"`) is replaced by a real **`provider`** column, and the five S3 fields that used to sit at the top level (`endpoint`, `region`, `bucket`, `access_key`, `secret_key`) have moved **inside a `config` object whose shape depends on the provider**. Any client that inferred the provider by matching the endpoint hostname should delete that inference — the API now states it.
 
 ### GET `/integrations/storage/destinations`
 **Permission:** `storage` (view)
@@ -5307,10 +5309,8 @@ Rows are ordered by `name` without case bias.
 {"storage_destinations": [{
   "id": 1,
   "name": "S3 Backup",
-  "driver": "s3",
-  "endpoint": "https://s3.eu-west-1.amazonaws.com",
-  "region": "eu-west-1",
-  "bucket": "my-backups",
+  "provider": "s3", "provider_title": "S3-compatible",
+  "config": {"endpoint": "https://s3.eu-west-1.amazonaws.com", "region": "eu-west-1", "bucket": "my-backups"},
   "prefix": "backups/",
   "has_credentials": true,
   "status": "connected", "status_title": "Connected",
@@ -5322,28 +5322,50 @@ Rows are ordered by `name` without case bias.
 }]}
 ```
 
-The field is `driver` (always `"s3"` today), not `provider`, and the path prefix is `prefix`, not `path_prefix`.
+`provider` is one of `s3` · `ftp` · `sftp`. `provider_title` is the localized label — render that, don't map the code yourself.
+
+**`config` on a *response* is addressing detail only, never credentials** — bucket/region/endpoint for S3, host/port/root for FTP and SFTP. It is not the same set of keys you send; secrets are silently absent rather than masked, because reading them would mean decrypting them into the response.
 
 **`status` distinguishes three states, and the third one matters:** `never_tested` · `connected` · `failed`. `last_test_success` is deliberately nullable — never-asked is not the same as asked-and-failed, and rendering a red cross for an untested destination would be a lie. Drive the badge off `status`, not off the boolean.
 
-**The test result is cleared whenever credentials or the address change.** A stored "connected" describes the keys that were tested, not the ones now saved; a green tick for a key rotated out ten seconds ago is the one thing this field exists to prevent.
+**The test result is cleared whenever the provider or *any* config key changes** (the one exception is `host_fingerprint`, which a successful probe records itself). A stored "connected" describes the credentials that were tested, not the ones now saved.
 
-`has_credentials` says whether an access key and secret are stored, without returning either. Keys are never in a response.
+`last_test_error` is a stable category, safe to branch on and to translate: `invalid_credentials` · `unreachable` · `host_key_mismatch` · `invalid_private_key` · `mismatch`. The raw exception is never echoed.
+
+`has_credentials` reports whether the provider's secrets are populated, without returning any of them. For SFTP it is *any of* password / private key, since those are alternatives.
 
 ---
 
 ### POST `/integrations/storage/destinations`
 **Permission:** `storage` (manage) | **Throttle:** 20/min
 
-**Request:**
-```json
-{"name": "S3 Backup", "endpoint": "https://s3.amazonaws.com",
- "bucket": "my-backups", "region": "eu-west-1", "access_key": "AKIA…", "secret_key": "…", "prefix": "backups/"}
-```
+Required for every provider: `name` (unique, single-line, max 100) and **`provider`**. Optional: `prefix` (`[A-Za-z0-9._/-]`, max 255). There is **no default provider** — a request that omits it is a `422`, not an implicit S3 destination.
 
-Required: `name` (unique, single-line), `bucket`, `access_key`, `secret_key`. Optional: `endpoint`, `region`, `prefix`.
+**S3** — `{"name": "S3 Backup", "provider": "s3", "prefix": "backups/", "config": {"endpoint": "https://s3.amazonaws.com", "region": "eu-west-1", "bucket": "my-backups", "access_key": "AKIA…", "secret_key": "…"}}`
 
-**There is no `provider` field and no local-disk driver** — S3-compatible storage is the only option today, and `driver` is a read-only output field. `endpoint` may be omitted for AWS itself and for any provider that carries its region in the bucket host (R2, B2, Wasabi); when sent it must be an `https` URL, and it is refused if it resolves to loopback or the cloud metadata range (the same SSRF rule self-hosted Git providers get). `region` defaults to `us-east-1` when omitted or empty. `bucket` is `[A-Za-z0-9._-]`, `region` is `[A-Za-z0-9-]`, `prefix` is `[A-Za-z0-9._/-]`.
+| key | required | notes |
+|---|---|---|
+| `config.bucket` | yes | `[A-Za-z0-9._-]`, single-line |
+| `config.access_key` / `config.secret_key` | yes | max 255 / 512 |
+| `config.endpoint` | no | `https` URL; omit for AWS itself and for anything carrying its region in the bucket host (R2, B2, Wasabi). Refused if it resolves to loopback or the cloud metadata range. |
+| `config.region` | no | `[A-Za-z0-9-]`, defaults to `us-east-1` |
+
+**FTP** — `{"name": "NAS", "provider": "ftp", "config": {"host": "nas.example.com", "port": 21, "username": "backup", "password": "…", "root": "/backups", "ssl": true, "passive": true}}`
+
+| key | required | notes |
+|---|---|---|
+| `config.host` | yes | hostname or IP. Refused if it resolves to loopback or `169.254.0.0/16`; a private LAN address is allowed, because a NAS on the same network is a normal destination. |
+| `config.username` / `config.password` | yes | single-line / max 512 |
+| `config.port` | no | 1–65535, defaults to 21 |
+| `config.root` | no | `[A-Za-z0-9._/-]`, and `..` segments are refused |
+| `config.ssl` | no | boolean, **defaults to `true`** (FTPS). Sending `false` means credentials *and* backup contents both cross the network in cleartext — surface that as an explicit, labelled choice rather than a bare toggle. |
+| `config.passive` | no | boolean, defaults true |
+
+**SFTP** — same host/port/username/root rules (port defaults to 22), plus `config.password`, `config.private_key` (max 16384) and `config.passphrase`, all individually optional.
+
+⚠️ **SFTP needs exactly one auth method and neither field can be `required` on its own.** A request with *neither* a password nor a private key is refused: storing it would move the failure from this form to the first backup.
+
+**Host keys are trust-on-first-use.** The first successful probe records the server's fingerprint on the destination; a later probe against a changed key fails with `host_key_mismatch` rather than connecting. Re-keying a server therefore requires clearing the stored fingerprint deliberately.
 
 **Response `201`:** `{"storage_destination": {...}}`
 
@@ -5353,7 +5375,8 @@ Required: `name` (unique, single-line), `bucket`, `access_key`, `secret_key`. Op
 **Permission:** `storage` (view)
 
 ```json
-{"storage_destination": {"id": 1, "name": "S3 Backup", "driver": "s3", "bucket": "my-backups", …}}
+{"storage_destination": {"id": 1, "name": "NAS", "provider": "ftp", "provider_title": "FTP",
+ "config": {"host": "nas.example.com", "port": 21, "root": "/backups"}, …}}
 ```
 
 ---
@@ -5361,9 +5384,13 @@ Required: `name` (unique, single-line), `bucket`, `access_key`, `secret_key`. Op
 ### PATCH `/integrations/storage/destinations/{storageDestination}`
 **Permission:** `storage` (manage) | **Throttle:** 20/min
 
-Update any field(s). Secrets omitted = unchanged.
+Update `name`, `prefix` and any `config` key. **Secrets omitted = unchanged**, so a rename must not resend them.
 
-**Request:** `{"name": "EU Backup", "bucket": "eu-backups"}`
+**`config` is merged, not replaced** — patching `config.host` alone keeps the username, password and root that were already stored.
+
+🔴 **`provider` is immutable** (`prohibited` — sending it at all is a `422`, even with the current value). The stored `config` is only meaningful in the shape its provider defines, so changing the provider would reinterpret a bucket as a hostname. Changing provider means delete and recreate.
+
+**Request:** `{"name": "EU Backup", "config": {"bucket": "eu-backups"}}`
 
 **Response `200`:** `{"storage_destination": {...}}`
 

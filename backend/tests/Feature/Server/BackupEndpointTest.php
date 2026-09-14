@@ -11,6 +11,7 @@ use App\Models\StorageDestination;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\DB;
@@ -35,11 +36,8 @@ beforeEach(function () {
 
     $this->destination = StorageDestination::create([
         'name' => 'Offsite',
-        'endpoint' => '',
-        'region' => 'us-east-1',
-        'bucket' => 'backups',
-        'access_key' => 'k',
-        'secret_key' => 's',
+        'provider' => 's3',
+        'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'backups', 'access_key' => 'k', 'secret_key' => 's'],
     ]);
 });
 
@@ -520,7 +518,7 @@ describe('downloading a backup', function () {
 
             $this->app->bind(
                 DestinationDisk::class,
-                fn () => new DestinationDisk(builder: fn (array $config) => $disk),
+                fn () => new DestinationDisk(app(StorageDriverFactory::class), builder: fn (array $config) => $disk),
             );
         };
     });
@@ -672,7 +670,7 @@ describe('deleting backups in bulk', function () {
 
             $this->app->bind(
                 DestinationDisk::class,
-                fn () => new DestinationDisk(builder: fn (array $config) => $disk),
+                fn () => new DestinationDisk(app(StorageDriverFactory::class), builder: fn (array $config) => $disk),
             );
         };
     });

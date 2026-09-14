@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Server\Backups\BackupContext;
 use App\Services\Server\Backups\Steps\PruneOldBackups;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Storage;
 
@@ -47,13 +48,15 @@ beforeEach(function () {
     ]);
 
     $this->oldDestination = StorageDestination::create([
-        'name' => 'Old Provider', 'endpoint' => '', 'region' => 'us-east-1',
-        'bucket' => 'old-bucket', 'access_key' => 'old-key', 'secret_key' => 's',
+        'name' => 'Old Provider',
+        'provider' => 's3',
+        'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'old-bucket', 'access_key' => 'old-key', 'secret_key' => 's'],
     ]);
 
     $this->newDestination = StorageDestination::create([
-        'name' => 'New Provider', 'endpoint' => '', 'region' => 'us-east-1',
-        'bucket' => 'new-bucket', 'access_key' => 'new-key', 'secret_key' => 's',
+        'name' => 'New Provider',
+        'provider' => 's3',
+        'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'new-bucket', 'access_key' => 'new-key', 'secret_key' => 's'],
     ]);
 
     $this->oldDisk = Storage::fake('old-bucket');
@@ -63,6 +66,7 @@ beforeEach(function () {
     // asking for the wrong destination gets the wrong bucket — exactly as it
     // would in production.
     $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+        app(StorageDriverFactory::class),
         builder: fn (array $config) => $config['key'] === 'old-key' ? $this->oldDisk : $this->newDisk,
     ));
 

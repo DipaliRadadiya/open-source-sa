@@ -10,6 +10,7 @@ use App\Models\SystemUser;
 use App\Services\Server\Backups\BackupRoot;
 use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\Restores\Steps\ExtractArchive;
 use App\Services\Server\Restores\Steps\SwapFiles;
@@ -32,7 +33,10 @@ use Illuminate\Support\Facades\Storage;
 beforeEach(function () {
     $this->fakeDisk = Storage::fake('destination');
 
+    // The disk is built per-destination and never registered globally, so the
+    // fake has to be injected the same way production builds the real one.
     $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+        app(StorageDriverFactory::class),
         fn (array $config) => $this->fakeDisk,
     ));
 
@@ -45,11 +49,8 @@ beforeEach(function () {
 
     $this->destination = StorageDestination::create([
         'name' => 'Backups',
-        'endpoint' => '',
-        'region' => 'us-east-1',
-        'bucket' => 'backups',
-        'access_key' => 'key',
-        'secret_key' => 'secret',
+        'provider' => 's3',
+        'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'backups', 'access_key' => 'key', 'secret_key' => 'secret'],
     ]);
 
     $this->systemUser = $systemUser;

@@ -41,8 +41,9 @@ beforeEach(function () {
     ]);
 
     $destination = StorageDestination::create([
-        'name' => 'Backups', 'endpoint' => '', 'region' => 'us-east-1',
-        'bucket' => 'backups', 'access_key' => 'key', 'secret_key' => 'secret',
+        'name' => 'Backups',
+        'provider' => 's3',
+        'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'backups', 'access_key' => 'key', 'secret_key' => 'secret'],
     ]);
 
     $this->backupTarget = BackupTarget::create([

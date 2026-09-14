@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Models\Worker;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
@@ -246,8 +247,9 @@ it('keeps going when one artefact refuses to be removed', function () {
 describe('the site\'s backups', function () {
     beforeEach(function () {
         $this->destination = StorageDestination::create([
-            'name' => 'Offsite', 'endpoint' => '', 'region' => 'us-east-1',
-            'bucket' => 'backups', 'access_key' => 'k', 'secret_key' => 's',
+            'name' => 'Offsite',
+            'provider' => 's3',
+            'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'backups', 'access_key' => 'k', 'secret_key' => 's'],
         ]);
 
         $this->target = BackupTarget::create([
@@ -259,6 +261,7 @@ describe('the site\'s backups', function () {
         $this->disk = Storage::fake('destination');
 
         $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+            app(StorageDriverFactory::class),
             builder: fn (array $config) => $this->disk,
         ));
 
@@ -347,6 +350,7 @@ describe('the site\'s backups', function () {
         $deleted = new ArrayObject;
 
         $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+            app(StorageDriverFactory::class),
             builder: fn (array $config) => failingDisk('shop/one.tar.gz', $deleted),
         ));
 
@@ -366,6 +370,7 @@ describe('the site\'s backups', function () {
         // is the last thing that will ever know these keys. Without them
         // nobody can find the objects the warning is about.
         $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+            app(StorageDriverFactory::class),
             builder: fn (array $config) => failingDisk('shop/one.tar.gz', new ArrayObject),
         ));
 
@@ -401,6 +406,7 @@ describe('the site\'s backups', function () {
         // return type rather than a destination that would not answer. The
         // assertion held either way, which is exactly why it went unnoticed.
         $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+            app(StorageDriverFactory::class),
             builder: fn (array $config) => failingDisk('shop/one.tar.gz', new ArrayObject),
         ));
 

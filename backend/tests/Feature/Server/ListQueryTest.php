@@ -481,8 +481,9 @@ describe('GET /backup-targets', function () {
         grantPermission($this->user, 'backup');
 
         $this->destination = StorageDestination::create([
-            'name' => 'Offsite', 'endpoint' => '', 'region' => 'us-east-1',
-            'bucket' => 'backups', 'access_key' => 'k', 'secret_key' => 's',
+            'name' => 'Offsite',
+            'provider' => 's3',
+            'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'backups', 'access_key' => 'k', 'secret_key' => 's'],
         ]);
     });
 

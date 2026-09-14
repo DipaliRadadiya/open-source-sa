@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Backups\Storage;
 
+use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
 use Closure;
 use Illuminate\Contracts\Filesystem\Filesystem;
@@ -11,16 +12,23 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Probes an S3-compatible storage destination by writing a random key,
- * reading it back and deleting it. The disk is built on demand and never
- * registered globally, so the runtime credentials never leak into the
- * framework's shared `filesystems.disks` map and bleed across queue
- * workers, Octane tasks, or any other code that resolves a named disk.
+ * Probes a storage destination by writing a random key, reading it back and
+ * deleting it. The disk is built on demand and never registered globally, so
+ * the runtime credentials never leak into the framework's shared
+ * `filesystems.disks` map and bleed across queue workers, Octane tasks, or any
+ * other code that resolves a named disk.
  *
- * Failure categories are translated into user-friendly messages; raw
- * exception text (which can carry S3 URLs, bucket names, partial access
- * keys) is held inside the result for the operator log only — never
- * surfaced to the response body.
+ * Failure categories are translated into user-friendly messages; raw exception
+ * text (which can carry URLs, bucket names, hostnames, partial access keys) is
+ * held inside the result for the operator log only — never surfaced to the
+ * response body.
+ *
+ * **Categorisation is the driver's job, not this class's.** It used to live
+ * here and fingerprinted AWS SDK exception names, which was correct while S3
+ * was the only provider and quietly wrong the moment another existed: an SFTP
+ * authentication failure matches none of those strings and was reported as
+ * "unreachable", sending someone to check their hostname when their password
+ * was what was wrong.
  */
 class StorageConnectionProber
 {
@@ -32,8 +40,11 @@ class StorageConnectionProber
      *                                                                        Defaults to `Storage::build($config)` so production takes
      *                                                                        the canonical ephemeral-disk path. Tests inject a fake.
      */
-    public function __construct(?callable $diskBuilder = null)
-    {
+    public function __construct(
+        private StorageDriverFactory $drivers,
+        private SftpHostKey $hostKeys,
+        ?callable $diskBuilder = null,
+    ) {
         // Wrap callable into a Closure so the typed property is satisfied
         // whether or not the caller passed one.
         $this->diskBuilder = $diskBuilder !== null
@@ -56,8 +67,16 @@ class StorageConnectionProber
         $payload = Str::random(64);
         $key = '.probe/'.Str::uuid()->toString().'.bin';
 
+        $driver = $this->drivers->for($destination);
+
+        // Learn the host key *before* connecting, not after, so the probe
+        // itself runs pinned. Capturing it afterwards would mean the probe
+        // trusted one host and the pin recorded another — two trust decisions
+        // where there should be one.
+        $this->rememberHostKeyOnFirstUse($destination);
+
         try {
-            $disk = ($this->diskBuilder)(app(DestinationDisk::class)->config($destination));
+            $disk = ($this->diskBuilder)($driver->config($destination));
 
             $disk->put($key, $payload);
             $read = $disk->get($key);
@@ -87,46 +106,55 @@ class StorageConnectionProber
             return $this->failure(
                 destination: $destination,
                 durationMs: $this->elapsed($start),
-                i18nKey: $this->classify($e),
+                i18nKey: $driver->classify($e),
                 exception: $e,
             );
         }
     }
 
     /**
-     * Categorise an exception into a translated string without leaking
-     * its raw text in the resulting `message`. The AWS SDK's exception
-     * strings are useful for fingerprinting to an attacker and rarely
-     * useful for an end user — the translated `storage.test.unreachable`
-     * is the same actionable message in every situation.
+     * Record an SFTP host's fingerprint the first time the panel meets it.
+     *
+     * Only ever *writes* — it never replaces a stored fingerprint. That is the
+     * whole security property: if this overwrote on mismatch, the pin would
+     * re-pin itself to the impostor and the check would be decorative.
      */
-    private function classify(Throwable $e): string
+    private function rememberHostKeyOnFirstUse(StorageDestination $destination): void
     {
-        $name = $e::class;
-        $message = strtolower($e->getMessage());
-
-        // The S3 SDK tags credential failures with one of these in the
-        // class name or message; we map them to a single translated key.
-        // The lowercased "invalidaccesskeyid" form covers the substring
-        // the SDK uses in both exception names and error message prefixes
-        // when only the message is available to us.
-        if (str_contains($name, 'InvalidAccessKeyId')
-            || str_contains($name, 'SignatureDoesNotMatch')
-            || str_contains($name, 'AccessDenied')
-            || str_contains($name, 'Aws\S3\Exception')
-            || str_contains($message, 'invalidaccesskeyid')
-            || str_contains($message, 'invalid access key')
-            || str_contains($message, 'signature')
-            || str_contains($message, 'access denied')
-            || str_contains($message, '403')) {
-            return 'storage.test.invalid_credentials';
+        if ($destination->provider !== StorageProvider::Sftp) {
+            return;
         }
 
-        // Network/DNS/SSL problems. Bucket-not-found (NoSuchBucket) also
-        // arrives here — categorising it would still leave the user with
-        // the actionable "could not connect" message they can act on
-        // (check bucket name / region).
-        return 'storage.test.unreachable';
+        if (filled($destination->configValue('host_fingerprint'))) {
+            return;
+        }
+
+        $host = (string) $destination->configValue('host', '');
+
+        if ($host === '') {
+            return;
+        }
+
+        $fingerprint = $this->hostKeys->fingerprint(
+            $host,
+            (int) ($destination->configValue('port') ?: 22),
+        );
+
+        if ($fingerprint === null) {
+            return;
+        }
+
+        $destination->mergeConfig(['host_fingerprint' => $fingerprint]);
+        $destination->save();
+
+        Log::info('Recorded SFTP host fingerprint on first use.', [
+            'feature' => 'storage',
+            'destination_id' => $destination->getKey(),
+            // A public host key fingerprint is public by definition — this is
+            // the one piece of connection detail that is safe to log, and
+            // having it in the log is how a later mismatch gets investigated.
+            'host_fingerprint' => $fingerprint,
+        ]);
     }
 
     /**
@@ -144,7 +172,7 @@ class StorageConnectionProber
         string $i18nKey,
         ?Throwable $exception,
     ): array {
-        // Identify the destination by id/name/bucket only. The credentials
+        // Identify the destination by id/name/provider only. The credentials
         // are the one thing that must never reach a log file, and the raw
         // SDK message can carry a partial access key — so it is logged as
         // its own field a redactor can target, not folded into the summary.
@@ -152,7 +180,7 @@ class StorageConnectionProber
             'feature' => 'storage',
             'destination_id' => $destination->getKey(),
             'destination_name' => $destination->name,
-            'bucket' => $destination->bucket,
+            'provider' => $destination->provider->value,
             'error_class' => $i18nKey,
             'latency_ms' => $durationMs,
             'detail' => $exception?->getMessage(),
@@ -162,16 +190,15 @@ class StorageConnectionProber
             'success' => false,
             'latency_ms' => $durationMs,
             'message' => __($i18nKey),
-            // Stable machine-readable category: 'invalid_credentials' or
-            // 'unreachable'. The UI branches on this without parsing the
-            // human message.
-            'error_class' => $i18nKey === 'storage.test.invalid_credentials'
-                ? 'invalid_credentials'
-                : 'unreachable',
-            // Raw SDK error string. Never echoed in the API body — the
-            // client only ever sees `error_class` and the translated
-            // `message`. It is logged (see below) so a support ticket has
-            // something concrete behind the generic user-facing wording.
+            // Stable machine-readable category. Derived from the i18n key
+            // rather than mapped by hand, so a driver adding a category
+            // cannot forget to register it here and silently report the
+            // wrong one.
+            'error_class' => Str::after($i18nKey, 'storage.test.'),
+            // Raw error string. Never echoed in the API body — the client
+            // only ever sees `error_class` and the translated `message`. It
+            // is logged so a support ticket has something concrete behind the
+            // generic user-facing wording.
             'detail' => $exception?->getMessage(),
         ];
     }
