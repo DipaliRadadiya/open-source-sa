@@ -49,7 +49,9 @@ language rather than the language of whoever caused them.
 
 ## Requirements
 
-- Ubuntu 22.04 LTS, 24.04 LTS or 26.04 LTS
+- Ubuntu 22.04 LTS, 24.04 LTS or 26.04 LTS — see
+  [Supported platforms](SUPPORTED_PLATFORMS.md) for what differs between them
+  (**MongoDB is not available on 26.04**, because MongoDB does not publish for it)
 - Root access
 - Ports 80 and 443 free
 - 1 GB RAM (the installer adds swap below 2 GB so the frontend build survives)
