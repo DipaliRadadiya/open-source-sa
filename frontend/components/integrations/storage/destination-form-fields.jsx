@@ -10,6 +10,7 @@ import {
   isRequired,
   presetFor,
   providerForPreset,
+  warningFor,
 } from "@/lib/storage/providers";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -57,6 +58,7 @@ export function DestinationFormFields({
   const t = useTranslations("storage.form");
   const provider = providerForPreset(preset);
   const endpointHint = presetFor(preset)?.endpointHint ?? "";
+  const warning = warningFor(preset);
   const fields = fieldsFor(provider).filter(
     (f) => !hideSecrets || (f.kind !== SECRET && f.kind !== TEXTAREA),
   );
@@ -100,19 +102,21 @@ export function DestinationFormFields({
       />
 
       {/*
-        * Said BEFORE the key is pasted, as prose, not as a tooltip.
+        * A constraint stated BEFORE the credentials are entered, as prose,
+        * not as a tooltip.
         *
-        * A Google service account has no Drive storage quota of its own, so
-        * uploads to a personal Drive are refused even when the account is
-        * empty — only a Workspace Shared Drive works. The panel refuses a
-        * personal folder at probe time too, but a form that let someone find
-        * that out only after filling it in has already wasted their time on a
-        * destination that could never have worked.
+        * Google Drive: a service account has no storage quota of its own, so
+        * a personal-Drive folder is refused outright. pCloud: the vendor's own
+        * documentation says its WebDAV is for small files and may be
+        * interrupted, which matters when the file is a site archive. Neither
+        * is discoverable by trying, and finding out afterwards means having
+        * filled in a form for a destination that was never going to do the
+        * job.
         */}
-      {provider === "google_drive" ? (
+      {warning ? (
         <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed">
           <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />
-          <p>{t("help.drive_shared_only")}</p>
+          <p>{t(warning)}</p>
         </div>
       ) : null}
 

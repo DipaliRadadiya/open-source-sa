@@ -15,6 +15,7 @@ return [
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
+        'webdav' => 'WebDAV',
     ],
 
     'fields' => [
@@ -39,6 +40,7 @@ return [
         'folder_id' => 'Shared Drive folder ID',
         'drive_name' => 'Shared Drive',
         'client_email' => 'Service account address',
+        'base_uri' => 'Server URL',
     ],
 
     'placeholders' => [
@@ -68,6 +70,8 @@ return [
         'folder_id' => 'The part of the folder URL after /folders/ — not the whole link.',
         'drive_shared_only' => 'Only a Google Workspace Shared Drive works. A service account has no storage of its own, so uploads to a personal Drive are refused even when the account is empty.',
         'drive_share_with' => 'Share the Shared Drive folder with the service account address before testing.',
+        'base_uri' => 'The full WebDAV URL, including any folder — for example https://cloud.example.com/remote.php/dav/files/you/',
+        'pcloud_warning' => 'pCloud states that its WebDAV is intended for small files and may be interrupted, and it stops working entirely when two-factor authentication is enabled on the account. Both matter for backups: test the destination, and keep a second one elsewhere.',
     ],
 
     'status' => [
@@ -95,6 +99,8 @@ return [
         'drive_bad_key' => 'The service account key could not be read. Paste the whole JSON file.',
         'drive_quota' => 'Google refused the upload for lack of storage quota, which is what happens on a personal Drive.',
         'drive_incomplete' => 'Add the service account key and the folder ID before testing.',
+        'dav_full' => 'The server refused the upload because it is out of space.',
+        'dav_reset' => 'The server closed the connection without answering. If this is pCloud, two-factor authentication on the account will do this.',
     ],
 
     'delete' => [

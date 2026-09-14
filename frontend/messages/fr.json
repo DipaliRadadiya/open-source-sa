@@ -5024,7 +5024,9 @@
       "failedDriveNotAFolder": "Le dernier test a échoué {when} — cet identifiant désigne un fichier, pas un dossier.",
       "failedDriveBadKey": "Le dernier test a échoué {when} — la clé du compte de service n’a pas pu être lue.",
       "failedDriveQuota": "Le dernier test a échoué {when} — Google a refusé l’envoi faute de quota.",
-      "failedDriveIncomplete": "Le dernier test a échoué {when} — la clé ou l’identifiant du dossier manque."
+      "failedDriveIncomplete": "Le dernier test a échoué {when} — la clé ou l’identifiant du dossier manque.",
+      "failedDavFull": "Le dernier test a échoué {when} — le serveur n’a plus d’espace.",
+      "failedDavReset": "Le dernier test a échoué {when} — le serveur a fermé la connexion sans répondre. Sur pCloud, l’authentification à deux facteurs produit cela."
     },
     "form": {
       "provider": "Fournisseur",
@@ -5039,7 +5041,10 @@
         "other": "Autre",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google Drive"
+        "google_drive": "Google Drive",
+        "nextcloud": "Nextcloud / ownCloud",
+        "pcloud": "pCloud",
+        "webdav": "WebDAV (autre)"
       },
       "name": "Nom",
       "namePlaceholder": "ex. Sauvegardes externes",
@@ -5067,7 +5072,8 @@
         "private_key": "Clé privée",
         "passphrase": "Phrase secrète de la clé",
         "service_account_json": "Clé de compte de service (JSON)",
-        "folder_id": "ID du dossier Drive partagé"
+        "folder_id": "ID du dossier Drive partagé",
+        "base_uri": "URL du serveur"
       },
       "help": {
         "host": "Nom d’hôte ou adresse IP du serveur qui conservera les sauvegardes.",
@@ -5079,7 +5085,9 @@
         "passphrase": "Uniquement si la clé privée est elle-même chiffrée.",
         "service_account_json": "Collez le fichier de clé JSON complet du compte de service.",
         "folder_id": "La partie de l’URL du dossier après /folders/, pas le lien entier.",
-        "drive_shared_only": "Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide. Partagez le dossier avec l’adresse du compte de service, puis collez sa clé ci-dessous."
+        "drive_shared_only": "Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide. Partagez le dossier avec l’adresse du compte de service, puis collez sa clé ci-dessous.",
+        "base_uri": "L’URL WebDAV complète, dossier compris — par exemple https://cloud.exemple.fr/remote.php/dav/files/vous/",
+        "pcloud_warning": "pCloud indique que son WebDAV est prévu pour de petits fichiers et peut être interrompu, et il cesse de fonctionner dès que l’authentification à deux facteurs est activée. Les deux comptent pour des sauvegardes : testez la destination et gardez-en une seconde ailleurs."
       },
       "plainFtpWarning": "TLS est désactivé. Le mot de passe et chaque sauvegarde seront envoyés en clair.",
       "prefixHintRemote": "Dossier facultatif dans le répertoire distant, pour qu’un serveur puisse héberger plusieurs sites.",
@@ -5087,7 +5095,8 @@
         "bucket": "my-backups",
         "region": "eu-west-1",
         "host": "backup.exemple.fr",
-        "root": "backups/"
+        "root": "backups/",
+        "base_uri": "https://cloud.exemple.fr/remote.php/dav/files/vous/"
       }
     },
     "connect": {

@@ -5024,7 +5024,9 @@
       "failedDriveNotAFolder": "La última prueba falló {when}: ese ID apunta a un archivo, no a una carpeta.",
       "failedDriveBadKey": "La última prueba falló {when}: no se pudo leer la clave de la cuenta de servicio.",
       "failedDriveQuota": "La última prueba falló {when}: Google rechazó la subida por falta de cuota.",
-      "failedDriveIncomplete": "La última prueba falló {when}: falta la clave o el ID de la carpeta."
+      "failedDriveIncomplete": "La última prueba falló {when}: falta la clave o el ID de la carpeta.",
+      "failedDavFull": "La última prueba falló {when}: el servidor no tiene espacio.",
+      "failedDavReset": "La última prueba falló {when}: el servidor cerró la conexión sin responder. En pCloud, la verificación en dos pasos provoca esto."
     },
     "form": {
       "provider": "Proveedor",
@@ -5039,7 +5041,10 @@
         "other": "Otro",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google Drive"
+        "google_drive": "Google Drive",
+        "nextcloud": "Nextcloud / ownCloud",
+        "pcloud": "pCloud",
+        "webdav": "WebDAV (otro)"
       },
       "name": "Nombre",
       "namePlaceholder": "p. ej. Copias externas",
@@ -5067,7 +5072,8 @@
         "private_key": "Clave privada",
         "passphrase": "Frase de la clave",
         "service_account_json": "Clave de cuenta de servicio (JSON)",
-        "folder_id": "ID de carpeta de la unidad compartida"
+        "folder_id": "ID de carpeta de la unidad compartida",
+        "base_uri": "URL del servidor"
       },
       "help": {
         "host": "Nombre de host o dirección IP del servidor que guardará las copias.",
@@ -5079,7 +5085,9 @@
         "passphrase": "Solo si la propia clave privada está cifrada.",
         "service_account_json": "Pega el archivo JSON completo de la cuenta de servicio.",
         "folder_id": "La parte de la URL de la carpeta después de /folders/, no el enlace completo.",
-        "drive_shared_only": "Solo funciona una unidad compartida de Google Workspace. Una cuenta de servicio no tiene almacenamiento propio, así que las subidas a un Drive personal se rechazan aunque la cuenta esté vacía. Comparte la carpeta con la dirección de la cuenta de servicio y luego pega su clave abajo."
+        "drive_shared_only": "Solo funciona una unidad compartida de Google Workspace. Una cuenta de servicio no tiene almacenamiento propio, así que las subidas a un Drive personal se rechazan aunque la cuenta esté vacía. Comparte la carpeta con la dirección de la cuenta de servicio y luego pega su clave abajo.",
+        "base_uri": "La URL completa de WebDAV incluida la carpeta — por ejemplo https://cloud.ejemplo.com/remote.php/dav/files/tu/",
+        "pcloud_warning": "pCloud indica que su WebDAV está pensado para archivos pequeños y puede interrumpirse, y deja de funcionar por completo si la cuenta tiene verificación en dos pasos. Ambas cosas importan para las copias: prueba el destino y mantén otro en otro sitio."
       },
       "plainFtpWarning": "TLS está desactivado. La contraseña y todas las copias se enviarán sin cifrar.",
       "prefixHintRemote": "Carpeta opcional dentro del directorio remoto, para que un servidor pueda alojar varios sitios.",
@@ -5087,7 +5095,8 @@
         "bucket": "mis-copias",
         "region": "eu-west-1",
         "host": "backup.ejemplo.com",
-        "root": "backups/"
+        "root": "backups/",
+        "base_uri": "https://cloud.ejemplo.com/remote.php/dav/files/tu/"
       }
     },
     "connect": {

@@ -12,6 +12,7 @@ return [
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
+        'webdav' => 'WebDAV',
     ],
 
     'fields' => [
@@ -36,6 +37,7 @@ return [
         'folder_id' => 'ID de carpeta de la unidad compartida',
         'drive_name' => 'Unidad compartida',
         'client_email' => 'Dirección de la cuenta de servicio',
+        'base_uri' => 'URL del servidor',
     ],
 
     'placeholders' => [
@@ -65,6 +67,8 @@ return [
         'folder_id' => 'La parte de la URL de la carpeta después de /folders/, no el enlace completo.',
         'drive_shared_only' => 'Solo funciona una unidad compartida de Google Workspace. Una cuenta de servicio no tiene almacenamiento propio, así que las subidas a un Drive personal se rechazan aunque la cuenta esté vacía.',
         'drive_share_with' => 'Comparte la carpeta de la unidad compartida con la dirección de la cuenta de servicio antes de probar.',
+        'base_uri' => 'La URL completa de WebDAV, incluida la carpeta — por ejemplo https://cloud.ejemplo.com/remote.php/dav/files/tu/',
+        'pcloud_warning' => 'pCloud indica que su WebDAV está pensado para archivos pequeños y puede interrumpirse, y deja de funcionar por completo si la cuenta tiene verificación en dos pasos. Ambas cosas importan para las copias: prueba el destino y mantén otro en otro sitio.',
     ],
 
     'status' => [
@@ -92,6 +96,8 @@ return [
         'drive_bad_key' => 'No se pudo leer la clave de la cuenta de servicio. Pega el archivo JSON completo.',
         'drive_quota' => 'Google rechazó la subida por falta de cuota de almacenamiento, que es lo que ocurre en un Drive personal.',
         'drive_incomplete' => 'Añade la clave de la cuenta de servicio y el ID de la carpeta antes de probar.',
+        'dav_full' => 'El servidor rechazó la subida porque no tiene espacio.',
+        'dav_reset' => 'El servidor cerró la conexión sin responder. Si es pCloud, la verificación en dos pasos provoca esto.',
     ],
 
     'delete' => [

@@ -12,6 +12,7 @@ return [
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
+        'webdav' => 'WebDAV',
     ],
 
     'fields' => [
@@ -36,6 +37,7 @@ return [
         'folder_id' => 'Ordner-ID der geteilten Ablage',
         'drive_name' => 'Geteilte Ablage',
         'client_email' => 'Adresse des Dienstkontos',
+        'base_uri' => 'Server-URL',
     ],
 
     'placeholders' => [
@@ -65,6 +67,8 @@ return [
         'folder_id' => 'Der Teil der Ordner-URL nach /folders/ — nicht der ganze Link.',
         'drive_shared_only' => 'Nur eine geteilte Ablage in Google Workspace funktioniert. Ein Dienstkonto hat keinen eigenen Speicher, daher werden Uploads in ein persönliches Drive auch bei leerem Konto abgelehnt.',
         'drive_share_with' => 'Geben Sie den Ordner der geteilten Ablage vor dem Test für die Adresse des Dienstkontos frei.',
+        'base_uri' => 'Die vollständige WebDAV-URL samt Ordner — zum Beispiel https://cloud.beispiel.de/remote.php/dav/files/du/',
+        'pcloud_warning' => 'pCloud gibt an, dass sein WebDAV für kleine Dateien gedacht ist und unterbrochen werden kann; mit aktivierter Zwei-Faktor-Authentifizierung funktioniert es gar nicht mehr. Beides ist für Sicherungen relevant: Testen Sie das Ziel und behalten Sie ein zweites anderswo.',
     ],
 
     'status' => [
@@ -92,6 +96,8 @@ return [
         'drive_bad_key' => 'Der Dienstkonto-Schlüssel konnte nicht gelesen werden. Fügen Sie die vollständige JSON-Datei ein.',
         'drive_quota' => 'Google hat den Upload mangels Speicherkontingent abgelehnt — genau das passiert bei einem persönlichen Drive.',
         'drive_incomplete' => 'Fügen Sie vor dem Test den Dienstkonto-Schlüssel und die Ordner-ID hinzu.',
+        'dav_full' => 'Der Server hat den Upload abgelehnt, weil kein Speicher mehr frei ist.',
+        'dav_reset' => 'Der Server hat die Verbindung ohne Antwort geschlossen. Bei pCloud verursacht die Zwei-Faktor-Authentifizierung genau das.',
     ],
 
     'delete' => [

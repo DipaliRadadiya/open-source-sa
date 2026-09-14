@@ -5024,7 +5024,9 @@
       "failedDriveNotAFolder": "前回のテストは{when}に失敗しました — その ID はフォルダーではなくファイルを指しています。",
       "failedDriveBadKey": "前回のテストは{when}に失敗しました — サービスアカウントキーを読み取れませんでした。",
       "failedDriveQuota": "前回のテストは{when}に失敗しました — 保存容量の不足により Google がアップロードを拒否しました。",
-      "failedDriveIncomplete": "前回のテストは{when}に失敗しました — キーまたはフォルダー ID がありません。"
+      "failedDriveIncomplete": "前回のテストは{when}に失敗しました — キーまたはフォルダー ID がありません。",
+      "failedDavFull": "前回のテストは{when}に失敗しました — サーバーの空き容量がありません。",
+      "failedDavReset": "前回のテストは{when}に失敗しました — サーバーが応答せずに接続を閉じました。pCloud では二段階認証がこれを引き起こします。"
     },
     "form": {
       "provider": "プロバイダー",
@@ -5039,7 +5041,10 @@
         "other": "その他",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google ドライブ"
+        "google_drive": "Google ドライブ",
+        "nextcloud": "Nextcloud / ownCloud",
+        "pcloud": "pCloud",
+        "webdav": "WebDAV (その他)"
       },
       "name": "名前",
       "namePlaceholder": "例: オフサイトバックアップ",
@@ -5067,7 +5072,8 @@
         "private_key": "秘密鍵",
         "passphrase": "鍵のパスフレーズ",
         "service_account_json": "サービスアカウントキー (JSON)",
-        "folder_id": "共有ドライブのフォルダー ID"
+        "folder_id": "共有ドライブのフォルダー ID",
+        "base_uri": "サーバー URL"
       },
       "help": {
         "host": "バックアップを保存するサーバーのホスト名または IP アドレス。",
@@ -5079,7 +5085,9 @@
         "passphrase": "秘密鍵自体が暗号化されている場合のみ必要です。",
         "service_account_json": "サービスアカウントの JSON キーファイル全体を貼り付けてください。",
         "folder_id": "フォルダー URL の /folders/ 以降の部分です。リンク全体ではありません。",
-        "drive_shared_only": "Google Workspace の共有ドライブのみ利用できます。サービスアカウントには自身の保存容量がないため、個人のドライブへのアップロードは空のアカウントでも拒否されます。共有ドライブのフォルダーをサービスアカウントのアドレスと共有してから、下にキーを貼り付けてください。"
+        "drive_shared_only": "Google Workspace の共有ドライブのみ利用できます。サービスアカウントには自身の保存容量がないため、個人のドライブへのアップロードは空のアカウントでも拒否されます。共有ドライブのフォルダーをサービスアカウントのアドレスと共有してから、下にキーを貼り付けてください。",
+        "base_uri": "フォルダーを含む完全な WebDAV URL。例: https://cloud.example.com/remote.php/dav/files/you/",
+        "pcloud_warning": "pCloud は自社の WebDAV について、小さなファイル向けであり中断する場合があると説明しており、アカウントで二段階認証を有効にすると完全に動作しなくなります。どちらもバックアップには重要です。保存先をテストし、別の場所にもう一つ用意してください。"
       },
       "plainFtpWarning": "TLS が無効です。パスワードとすべてのバックアップが暗号化されずに送信されます。",
       "prefixHintRemote": "リモートディレクトリ内の任意のフォルダー。1 台のサーバーで複数サイトを保存できます。",
@@ -5087,7 +5095,8 @@
         "bucket": "my-backups",
         "region": "eu-west-1",
         "host": "backup.example.com",
-        "root": "backups/"
+        "root": "backups/",
+        "base_uri": "https://cloud.example.com/remote.php/dav/files/you/"
       }
     },
     "connect": {

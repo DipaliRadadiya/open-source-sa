@@ -48,6 +48,9 @@ export const PRESETS = [
   { value: "ftp", provider: "ftp" },
   { value: "sftp", provider: "sftp" },
   { value: "google_drive", provider: "google_drive" },
+  { value: "nextcloud", provider: "webdav" },
+  { value: "pcloud", provider: "webdav" },
+  { value: "webdav", provider: "webdav" },
 ];
 
 /**
@@ -123,6 +126,11 @@ export const FIELDS = {
     { name: "ssl", kind: TOGGLE, default: true, warnWhenOff: "plainFtpWarning" },
     { name: "passive", kind: TOGGLE, default: true },
   ],
+  webdav: [
+    { name: "base_uri", kind: TEXT, required: true, mono: true },
+    { name: "username", kind: TEXT, required: true, mono: true },
+    { name: "password", kind: SECRET, required: true },
+  ],
   google_drive: [
     // One paste and one id. No OAuth means no client id, no secret, no refresh
     // token and no callback — by some distance the smallest credential set of
@@ -143,6 +151,28 @@ export const FIELDS = {
     { name: "root", kind: TEXT, mono: true },
   ],
 };
+
+/**
+ * A constraint worth stating before the form is filled in, keyed by preset
+ * first and provider second.
+ *
+ * Generalised from what began as a hardcoded Google Drive branch in the
+ * renderer. A second provider needing the same treatment is the moment a
+ * special case should become a lookup — otherwise the third one gets forgotten.
+ *
+ * Both entries exist because a destination that *cannot work* is not the same
+ * as one that will not work *well*, and neither is discoverable by trying:
+ * Drive refuses a personal folder outright, and pCloud's own documentation
+ * says its WebDAV is for small files and may be interrupted.
+ */
+const WARNINGS = {
+  presets: { pcloud: "help.pcloud_warning" },
+  providers: { google_drive: "help.drive_shared_only" },
+};
+
+export function warningFor(preset) {
+  return WARNINGS.presets[preset] ?? WARNINGS.providers[providerForPreset(preset)] ?? null;
+}
 
 export function fieldsFor(provider) {
   return FIELDS[provider] ?? [];
@@ -180,6 +210,13 @@ export function isRequired(field, preset) {
 export function describeDestination(destination) {
   const config = destination?.config ?? {};
   const prefix = destination?.prefix ?? "";
+
+  if (destination?.provider === "webdav") {
+    return {
+      location: prefix || null,
+      address: config.base_uri || null,
+    };
+  }
 
   if (destination?.provider === "google_drive") {
     // The Shared Drive's name if a successful probe recorded one, falling back

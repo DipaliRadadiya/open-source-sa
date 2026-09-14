@@ -5296,7 +5296,7 @@ Verify the token is still valid with the provider.
 
 ---
 
-## Integrations — Storage Destinations (S3-compatible, FTP, SFTP)
+## Integrations — Storage Destinations (S3-compatible, FTP, SFTP, Google Drive, WebDAV)
 
 > ⚠️ **Breaking change.** The destination is now **polymorphic**. The read-only `driver` field (always `"s3"`) is replaced by a real **`provider`** column, and the five S3 fields that used to sit at the top level (`endpoint`, `region`, `bucket`, `access_key`, `secret_key`) have moved **inside a `config` object whose shape depends on the provider**. Any client that inferred the provider by matching the endpoint hostname should delete that inference — the API now states it.
 
@@ -5322,7 +5322,7 @@ Rows are ordered by `name` without case bias.
 }]}
 ```
 
-`provider` is one of `s3` · `ftp` · `sftp`. `provider_title` is the localized label — render that, don't map the code yourself.
+`provider` is one of `s3` · `ftp` · `sftp` · `google_drive` · `webdav`. `provider_title` is the localized label — render that, don't map the code yourself.
 
 **`config` on a *response* is addressing detail only, never credentials** — bucket/region/endpoint for S3, host/port/root for FTP and SFTP. It is not the same set of keys you send; secrets are silently absent rather than masked, because reading them would mean decrypting them into the response.
 
@@ -5366,6 +5366,22 @@ Required for every provider: `name` (unique, single-line, max 100) and **`provid
 ⚠️ **SFTP needs exactly one auth method and neither field can be `required` on its own.** A request with *neither* a password nor a private key is refused: storing it would move the failure from this form to the first backup.
 
 **Host keys are trust-on-first-use.** The first successful probe records the server's fingerprint on the destination; a later probe against a changed key fails with `host_key_mismatch` rather than connecting. Re-keying a server therefore requires clearing the stored fingerprint deliberately.
+
+**Google Drive** — `{"name": "Drive", "provider": "google_drive", "config": {"service_account_json": "{…}", "folder_id": "1AbC…"}}`
+
+Authenticated by a **service account**; there is no OAuth flow, so there is no client id, refresh token or callback. `config.folder_id` is the part of the folder URL after `/folders/` — a pasted URL is a `422`, because storing one fails much later with a "file not found" that names nothing.
+
+🔴 **Only a Google Workspace *Shared Drive* works.** A service account has no Drive storage quota of its own, so a file it uploads to a personal "My Drive" folder has no quota to charge and Google refuses the write with `storageQuotaExceeded` — *even when the account is empty*. The test endpoint checks the folder's `driveId` **before** writing anything and answers `drive_personal` for a personal folder: a small probe object can be accepted where a real archive is refused, so writability is not a sufficient test. Surface this in the UI before the key is pasted.
+
+A successful test records `drive_name` (which Shared Drive it is) and `client_email` (the address the folder must be shared with) onto the destination; both come back in `config` and neither is a credential.
+
+Drive-specific `last_test_error` categories: `drive_personal` · `drive_not_shared` · `drive_folder_missing` · `drive_not_a_folder` · `drive_bad_key` · `drive_quota` · `drive_incomplete`.
+
+**WebDAV** — `{"name": "Nextcloud", "provider": "webdav", "config": {"base_uri": "https://cloud.example.com/remote.php/dav/files/me/", "username": "me", "password": "…"}}`
+
+Covers Nextcloud, ownCloud, Synology and pCloud. `config.base_uri` is a full https URL under the same SSRF guard as the S3 endpoint, and is normalised to exactly one trailing slash — without it the adapter resolves the prefix one directory too high and writes to a real but wrong location. Categories: `dav_full` (507, the server is out of space) and `dav_reset` (the connection closed with no HTTP response).
+
+⚠️ **pCloud caveat, from pCloud's own documentation:** their WebDAV is intended for *small files* and its stability "may have interruptions", and it stops working entirely when 2FA is enabled on the account — the endpoint resets the connection rather than returning a 401, so `dav_reset` is the most specific answer available. A site archive is not a small file. Offer pCloud as one WebDAV preset with that stated, not as a headline destination.
 
 **Response `201`:** `{"storage_destination": {...}}`
 

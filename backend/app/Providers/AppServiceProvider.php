@@ -40,7 +40,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use League\Flysystem\Filesystem as Flysystem;
+use League\Flysystem\WebDAV\WebDAVAdapter;
 use Masbug\Flysystem\GoogleDriveAdapter;
+use Sabre\DAV\Client as SabreClient;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -122,6 +124,20 @@ class AppServiceProvider extends ServiceProvider
         // service-account key must not leak into `filesystems.disks`, where
         // any later code resolving a disk by name could reach it — the same
         // isolation rule every other storage driver follows.
+        // Same reason as the Drive driver below: Laravel ships no WebDAV
+        // driver, and the credentials must never land in a named disk.
+        Storage::extend('webdav', function ($app, array $config): FilesystemAdapter {
+            $client = new SabreClient([
+                'baseUri' => (string) ($config['baseUri'] ?? ''),
+                'userName' => (string) ($config['userName'] ?? ''),
+                'password' => (string) ($config['password'] ?? ''),
+            ]);
+
+            $adapter = new WebDAVAdapter($client, (string) ($config['prefix'] ?? ''));
+
+            return new FilesystemAdapter(new Flysystem($adapter, $config), $adapter, $config);
+        });
+
         Storage::extend('google', function ($app, array $config): FilesystemAdapter {
             $client = new GoogleClient;
             $client->setAuthConfig(json_decode((string) ($config['service_account'] ?? ''), true, 512, JSON_THROW_ON_ERROR));

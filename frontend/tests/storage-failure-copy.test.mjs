@@ -33,6 +33,9 @@ const CATEGORIES = [
   "drive_bad_key",
   "drive_quota",
   "drive_incomplete",
+  // WebDAV.
+  "dav_full",
+  "dav_reset",
 ];
 
 const row = readFileSync("components/integrations/storage/destination-row.jsx", "utf8");
@@ -69,6 +72,8 @@ test("every failure message exists in every locale", () => {
     "failedDriveBadKey",
     "failedDriveQuota",
     "failedDriveIncomplete",
+    "failedDavFull",
+    "failedDavReset",
   ];
 
   const locales = readdirSync("messages").filter((f) => f.endsWith(".json"));
@@ -111,9 +116,41 @@ test("the Drive form states the Shared-Drive constraint before the key is pasted
   assert.match(warning, /shared drive/i);
   assert.match(warning, /no storage of its own/i);
 
+  // The warning used to be a hardcoded Drive branch in the renderer; it is a
+  // lookup now, so the assertion follows it rather than pinning the old shape.
+  const providers = readFileSync("lib/storage/providers.js", "utf8");
+  assert.match(providers, /google_drive:\s*"help\.drive_shared_only"/);
+
   const form = readFileSync("components/integrations/storage/destination-form-fields.jsx", "utf8");
 
   // Rendered as prose in the form, not hidden behind a tooltip or a title
   // attribute where it would only be found by someone already looking.
-  assert.match(form, /help\.drive_shared_only/);
+  assert.match(form, /warningFor\(preset\)/);
+  assert.match(form, /\{t\(warning\)\}/);
+});
+
+test("the pCloud preset carries the vendor's own small-files caveat", () => {
+  // pCloud's documentation says its WebDAV is for small files with stability
+  // that "may have interruptions", and it stops working entirely with 2FA on.
+  // A site archive is not a small file, so offering pCloud without saying so
+  // would have the panel implying something the vendor does not.
+  const providers = readFileSync("lib/storage/providers.js", "utf8");
+  assert.match(providers, /pcloud:\s*"help\.pcloud_warning"/);
+
+  const en = JSON.parse(readFileSync("messages/en.json", "utf8"));
+  const warning = en.storage.form.help.pcloud_warning;
+
+  assert.match(warning, /small files/i);
+  assert.match(warning, /two-factor/i);
+});
+
+test("every WebDAV preset resolves to the webdav provider", () => {
+  // pCloud is one preset among several rather than a provider of its own.
+  // Generalising is what buys Nextcloud, ownCloud and Synology, and stops one
+  // vendor's weakest surface from being the whole feature.
+  const providers = readFileSync("lib/storage/providers.js", "utf8");
+
+  for (const preset of ["nextcloud", "pcloud", "webdav"]) {
+    assert.match(providers, new RegExp(`value:\\s*"${preset}",\\s*provider:\\s*"webdav"`));
+  }
 });

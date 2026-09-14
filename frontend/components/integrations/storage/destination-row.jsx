@@ -65,6 +65,8 @@ const FAILURE_KEYS = {
   drive_bad_key: "failedDriveBadKey",
   drive_quota: "failedDriveQuota",
   drive_incomplete: "failedDriveIncomplete",
+  dav_full: "failedDavFull",
+  dav_reset: "failedDavReset",
   unreachable: "failedUnreachable",
   host_key_mismatch: "failedHostKey",
   invalid_private_key: "failedPrivateKey",

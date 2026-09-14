@@ -5024,7 +5024,9 @@
       "failedDriveNotAFolder": "Der letzte Test ist {when} fehlgeschlagen — diese ID verweist auf eine Datei, nicht auf einen Ordner.",
       "failedDriveBadKey": "Der letzte Test ist {when} fehlgeschlagen — der Dienstkonto-Schlüssel konnte nicht gelesen werden.",
       "failedDriveQuota": "Der letzte Test ist {when} fehlgeschlagen — Google lehnte den Upload mangels Speicherkontingent ab.",
-      "failedDriveIncomplete": "Der letzte Test ist {when} fehlgeschlagen — Schlüssel oder Ordner-ID fehlt."
+      "failedDriveIncomplete": "Der letzte Test ist {when} fehlgeschlagen — Schlüssel oder Ordner-ID fehlt.",
+      "failedDavFull": "Der letzte Test ist {when} fehlgeschlagen — auf dem Server ist kein Speicher mehr frei.",
+      "failedDavReset": "Der letzte Test ist {when} fehlgeschlagen — der Server hat die Verbindung ohne Antwort geschlossen. Bei pCloud verursacht die Zwei-Faktor-Authentifizierung das."
     },
     "form": {
       "provider": "Anbieter",
@@ -5039,7 +5041,10 @@
         "other": "Anderer",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google Drive"
+        "google_drive": "Google Drive",
+        "nextcloud": "Nextcloud / ownCloud",
+        "pcloud": "pCloud",
+        "webdav": "WebDAV (andere)"
       },
       "name": "Name",
       "namePlaceholder": "z. B. Externe Backups",
@@ -5067,7 +5072,8 @@
         "private_key": "Privater Schlüssel",
         "passphrase": "Schlüssel-Passphrase",
         "service_account_json": "Dienstkonto-Schlüssel (JSON)",
-        "folder_id": "Ordner-ID der geteilten Ablage"
+        "folder_id": "Ordner-ID der geteilten Ablage",
+        "base_uri": "Server-URL"
       },
       "help": {
         "host": "Hostname oder IP-Adresse des Servers, der die Sicherungen aufnimmt.",
@@ -5079,7 +5085,9 @@
         "passphrase": "Nur nötig, wenn der private Schlüssel selbst verschlüsselt ist.",
         "service_account_json": "Die vollständige JSON-Schlüsseldatei des Dienstkontos einfügen.",
         "folder_id": "Der Teil der Ordner-URL nach /folders/ — nicht der ganze Link.",
-        "drive_shared_only": "Nur eine geteilte Ablage in Google Workspace funktioniert. Ein Dienstkonto hat keinen eigenen Speicher, daher werden Uploads in ein persönliches Drive auch bei leerem Konto abgelehnt. Geben Sie den Ordner für die Adresse des Dienstkontos frei und fügen Sie dann dessen Schlüssel unten ein."
+        "drive_shared_only": "Nur eine geteilte Ablage in Google Workspace funktioniert. Ein Dienstkonto hat keinen eigenen Speicher, daher werden Uploads in ein persönliches Drive auch bei leerem Konto abgelehnt. Geben Sie den Ordner für die Adresse des Dienstkontos frei und fügen Sie dann dessen Schlüssel unten ein.",
+        "base_uri": "Die vollständige WebDAV-URL samt Ordner — zum Beispiel https://cloud.beispiel.de/remote.php/dav/files/du/",
+        "pcloud_warning": "pCloud gibt an, dass sein WebDAV für kleine Dateien gedacht ist und unterbrochen werden kann; mit aktivierter Zwei-Faktor-Authentifizierung funktioniert es gar nicht mehr. Beides ist für Sicherungen relevant: Testen Sie das Ziel und behalten Sie ein zweites anderswo."
       },
       "plainFtpWarning": "TLS ist aus. Passwort und jede Sicherung werden unverschlüsselt gesendet.",
       "prefixHintRemote": "Optionaler Ordner im entfernten Verzeichnis, damit ein Server mehrere Sites aufnehmen kann.",
@@ -5087,7 +5095,8 @@
         "bucket": "meine-backups",
         "region": "eu-west-1",
         "host": "backup.beispiel.de",
-        "root": "backups/"
+        "root": "backups/",
+        "base_uri": "https://cloud.beispiel.de/remote.php/dav/files/du/"
       }
     },
     "connect": {

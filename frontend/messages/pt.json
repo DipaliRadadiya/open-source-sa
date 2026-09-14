@@ -5024,7 +5024,9 @@
       "failedDriveNotAFolder": "O último teste falhou {when} — esse ID aponta para um arquivo, não uma pasta.",
       "failedDriveBadKey": "O último teste falhou {when} — não foi possível ler a chave da conta de serviço.",
       "failedDriveQuota": "O último teste falhou {when} — o Google recusou o envio por falta de cota.",
-      "failedDriveIncomplete": "O último teste falhou {when} — falta a chave ou o ID da pasta."
+      "failedDriveIncomplete": "O último teste falhou {when} — falta a chave ou o ID da pasta.",
+      "failedDavFull": "O último teste falhou {when} — o servidor está sem espaço.",
+      "failedDavReset": "O último teste falhou {when} — o servidor fechou a conexão sem responder. No pCloud, a verificação em duas etapas causa isso."
     },
     "form": {
       "provider": "Provedor",
@@ -5039,7 +5041,10 @@
         "other": "Outro",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google Drive"
+        "google_drive": "Google Drive",
+        "nextcloud": "Nextcloud / ownCloud",
+        "pcloud": "pCloud",
+        "webdav": "WebDAV (outro)"
       },
       "name": "Nome",
       "namePlaceholder": "ex.: Backups offsite",
@@ -5067,7 +5072,8 @@
         "private_key": "Chave privada",
         "passphrase": "Frase da chave",
         "service_account_json": "Chave da conta de serviço (JSON)",
-        "folder_id": "ID da pasta do Drive compartilhado"
+        "folder_id": "ID da pasta do Drive compartilhado",
+        "base_uri": "URL do servidor"
       },
       "help": {
         "host": "Nome do host ou endereço IP do servidor que guardará os backups.",
@@ -5079,7 +5085,9 @@
         "passphrase": "Só é necessária se a própria chave privada estiver criptografada.",
         "service_account_json": "Cole o arquivo JSON completo da conta de serviço.",
         "folder_id": "A parte da URL da pasta depois de /folders/ — não o link inteiro.",
-        "drive_shared_only": "Só funciona um Drive compartilhado do Google Workspace. Uma conta de serviço não tem armazenamento próprio, então envios para um Drive pessoal são recusados mesmo com a conta vazia. Compartilhe a pasta com o endereço da conta de serviço e cole a chave abaixo."
+        "drive_shared_only": "Só funciona um Drive compartilhado do Google Workspace. Uma conta de serviço não tem armazenamento próprio, então envios para um Drive pessoal são recusados mesmo com a conta vazia. Compartilhe a pasta com o endereço da conta de serviço e cole a chave abaixo.",
+        "base_uri": "A URL WebDAV completa incluindo a pasta — por exemplo https://cloud.exemplo.com/remote.php/dav/files/voce/",
+        "pcloud_warning": "A pCloud informa que seu WebDAV é destinado a arquivos pequenos e pode ser interrompido, e ele para de funcionar quando a verificação em duas etapas está ativa. Ambos importam para backups: teste o destino e mantenha um segundo em outro lugar."
       },
       "plainFtpWarning": "O TLS está desligado. A senha e todos os backups serão enviados sem criptografia.",
       "prefixHintRemote": "Pasta opcional dentro do diretório remoto, para que um servidor possa guardar vários sites.",
@@ -5087,7 +5095,8 @@
         "bucket": "meus-backups",
         "region": "eu-west-1",
         "host": "backup.exemplo.com",
-        "root": "backups/"
+        "root": "backups/",
+        "base_uri": "https://cloud.exemplo.com/remote.php/dav/files/voce/"
       }
     },
     "connect": {

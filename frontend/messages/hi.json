@@ -5024,7 +5024,9 @@
       "failedDriveNotAFolder": "पिछली जाँच {when} विफल रही — वह ID फ़ाइल की ओर इशारा करती है, फ़ोल्डर की नहीं।",
       "failedDriveBadKey": "पिछली जाँच {when} विफल रही — सेवा खाता कुंजी पढ़ी नहीं जा सकी।",
       "failedDriveQuota": "पिछली जाँच {when} विफल रही — कोटा न होने से Google ने अपलोड अस्वीकार किया।",
-      "failedDriveIncomplete": "पिछली जाँच {when} विफल रही — कुंजी या फ़ोल्डर ID अनुपस्थित है।"
+      "failedDriveIncomplete": "पिछली जाँच {when} विफल रही — कुंजी या फ़ोल्डर ID अनुपस्थित है।",
+      "failedDavFull": "पिछली जाँच {when} विफल रही — सर्वर पर जगह नहीं है।",
+      "failedDavReset": "पिछली जाँच {when} विफल रही — सर्वर ने बिना उत्तर दिए कनेक्शन बंद कर दिया। pCloud पर दो-चरणीय प्रमाणीकरण यही करता है।"
     },
     "form": {
       "provider": "प्रोवाइडर",
@@ -5039,7 +5041,10 @@
         "other": "अन्य",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google Drive"
+        "google_drive": "Google Drive",
+        "nextcloud": "Nextcloud / ownCloud",
+        "pcloud": "pCloud",
+        "webdav": "WebDAV (अन्य)"
       },
       "name": "नाम",
       "namePlaceholder": "जैसे बाहरी बैकअप",
@@ -5067,7 +5072,8 @@
         "private_key": "निजी कुंजी",
         "passphrase": "कुंजी पासफ़्रेज़",
         "service_account_json": "सेवा खाता कुंजी (JSON)",
-        "folder_id": "साझा ड्राइव फ़ोल्डर ID"
+        "folder_id": "साझा ड्राइव फ़ोल्डर ID",
+        "base_uri": "सर्वर URL"
       },
       "help": {
         "host": "उस सर्वर का होस्टनेम या IP पता जो बैकअप रखेगा।",
@@ -5079,7 +5085,9 @@
         "passphrase": "केवल तभी चाहिए जब निजी कुंजी स्वयं एन्क्रिप्टेड हो।",
         "service_account_json": "सेवा खाते की पूरी JSON कुंजी फ़ाइल चिपकाएँ।",
         "folder_id": "फ़ोल्डर URL का /folders/ के बाद वाला भाग — पूरा लिंक नहीं।",
-        "drive_shared_only": "केवल Google Workspace साझा ड्राइव काम करती है। सेवा खाते का अपना संग्रहण नहीं होता, इसलिए व्यक्तिगत ड्राइव पर अपलोड खाली खाते में भी अस्वीकार होते हैं। फ़ोल्डर को सेवा खाता पते के साथ साझा करें, फिर नीचे उसकी कुंजी चिपकाएँ।"
+        "drive_shared_only": "केवल Google Workspace साझा ड्राइव काम करती है। सेवा खाते का अपना संग्रहण नहीं होता, इसलिए व्यक्तिगत ड्राइव पर अपलोड खाली खाते में भी अस्वीकार होते हैं। फ़ोल्डर को सेवा खाता पते के साथ साझा करें, फिर नीचे उसकी कुंजी चिपकाएँ।",
+        "base_uri": "फ़ोल्डर सहित पूरा WebDAV URL — उदाहरण https://cloud.example.com/remote.php/dav/files/you/",
+        "pcloud_warning": "pCloud बताता है कि उसका WebDAV छोटी फ़ाइलों के लिए है और बाधित हो सकता है, और खाते पर दो-चरणीय प्रमाणीकरण चालू होने पर यह पूरी तरह काम करना बंद कर देता है। बैकअप के लिए दोनों मायने रखते हैं: गंतव्य जाँचें और दूसरा कहीं और रखें।"
       },
       "plainFtpWarning": "TLS बंद है। पासवर्ड और हर बैकअप बिना एन्क्रिप्शन के भेजा जाएगा।",
       "prefixHintRemote": "रिमोट डायरेक्टरी के अंदर वैकल्पिक फ़ोल्डर, ताकि एक सर्वर कई साइटें रख सके।",
@@ -5087,7 +5095,8 @@
         "bucket": "my-backups",
         "region": "eu-west-1",
         "host": "backup.example.com",
-        "root": "backups/"
+        "root": "backups/",
+        "base_uri": "https://cloud.example.com/remote.php/dav/files/you/"
       }
     },
     "connect": {

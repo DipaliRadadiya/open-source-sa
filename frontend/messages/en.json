@@ -5024,7 +5024,9 @@
       "failedDriveNotAFolder": "The last test failed {when} — that ID points at a file, not a folder.",
       "failedDriveBadKey": "The last test failed {when} — the service account key could not be read.",
       "failedDriveQuota": "The last test failed {when} — Google refused the upload for lack of storage quota.",
-      "failedDriveIncomplete": "The last test failed {when} — the key or the folder ID is missing."
+      "failedDriveIncomplete": "The last test failed {when} — the key or the folder ID is missing.",
+      "failedDavFull": "The last test failed {when} — the server is out of space.",
+      "failedDavReset": "The last test failed {when} — the server closed the connection without answering. On pCloud, two-factor authentication does this."
     },
     "form": {
       "provider": "Provider",
@@ -5039,7 +5041,10 @@
         "other": "Other",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google Drive"
+        "google_drive": "Google Drive",
+        "nextcloud": "Nextcloud / ownCloud",
+        "pcloud": "pCloud",
+        "webdav": "WebDAV (other)"
       },
       "name": "Name",
       "namePlaceholder": "e.g. Offsite backups",
@@ -5067,7 +5072,8 @@
         "private_key": "Private key",
         "passphrase": "Key passphrase",
         "service_account_json": "Service account key (JSON)",
-        "folder_id": "Shared Drive folder ID"
+        "folder_id": "Shared Drive folder ID",
+        "base_uri": "Server URL"
       },
       "help": {
         "host": "Hostname or IP address of the server that will hold the backups.",
@@ -5079,7 +5085,9 @@
         "passphrase": "Only needed if the private key itself is encrypted.",
         "service_account_json": "Paste the whole JSON key file for the service account.",
         "folder_id": "The part of the folder URL after /folders/ — not the whole link.",
-        "drive_shared_only": "Only a Google Workspace Shared Drive works. A service account has no storage of its own, so uploads to a personal Drive are refused even when the account is empty. Share the Shared Drive folder with the service account address, then paste its key below."
+        "drive_shared_only": "Only a Google Workspace Shared Drive works. A service account has no storage of its own, so uploads to a personal Drive are refused even when the account is empty. Share the Shared Drive folder with the service account address, then paste its key below.",
+        "base_uri": "The full WebDAV URL including any folder — for example https://cloud.example.com/remote.php/dav/files/you/",
+        "pcloud_warning": "pCloud states that its WebDAV is intended for small files and may be interrupted, and it stops working entirely when two-factor authentication is enabled on the account. Both matter for backups: test the destination, and keep a second one elsewhere."
       },
       "plainFtpWarning": "TLS is off. The password and every backup will be sent unencrypted.",
       "prefixHintRemote": "Optional folder inside the remote directory, so one server can hold several sites.",
@@ -5087,7 +5095,8 @@
         "bucket": "my-backups",
         "region": "eu-west-1",
         "host": "backup.example.com",
-        "root": "backups/"
+        "root": "backups/",
+        "base_uri": "https://cloud.example.com/remote.php/dav/files/you/"
       }
     },
     "connect": {
