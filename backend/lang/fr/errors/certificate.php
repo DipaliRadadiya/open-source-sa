@@ -12,6 +12,9 @@ return [
     // distinct fix — 'SSL failed' would leave the user guessing between
     // DNS, a firewall and their own rewrite rules.
     'precheck' => [
+        // The passing verdict. Only the dry-run report needs it: the 422
+        // that refuses an issue request never lists a name that passed.
+        'ok' => ':domain est prêt — ce serveur a correctement répondu à la requête de validation.',
         'dns_missing' => ':domain ne se résout pas. Ajoutez un enregistrement DNS A pointant vers ce serveur, puis réessayez.',
         'dns_not_pointing' => ':domain pointe vers :ip, qui n\'est pas ce serveur.',
         'dns_unverifiable' => "Ce serveur est derrière un NAT ; le panneau ne peut donc pas confirmer d'ici que :domain pointe vers lui. Si le DNS est correct, utilisez « Émettre quand même » : la requête de validation arrive de l'extérieur et aboutira.",
@@ -21,5 +24,12 @@ return [
         'challenge_redirected' => ':domain redirige la requête de validation au lieu d\'y répondre. Désactivez la redirection HTTP vers HTTPS jusqu\'à l\'émission du certificat.',
         'challenge_not_served' => ':domain a répondu, mais pas avec le fichier de validation. Le site réécrit probablement /.well-known/ — vérifiez ses règles de réécriture.',
         'precheck_failed' => 'Le fichier de validation n\'a pas pu être écrit sur ce serveur, :domain n\'a donc pas pu être vérifié.',
+    ],
+
+    // Why a dry run would not start. Not a verdict on any domain — the
+    // run never happened, and saying so plainly stops the user reading
+    // a refusal as a DNS problem.
+    'dry_run' => [
+        'issue_in_flight' => 'Un certificat est en cours d\'émission pour ce site. Attendez la fin : certbot ne traite qu\'une tâche à la fois, une simulation lancée maintenant ne signalerait que le conflit.',
     ],
 ];

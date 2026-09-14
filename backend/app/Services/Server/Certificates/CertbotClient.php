@@ -28,6 +28,79 @@ class CertbotClient
      */
     public function issue(array $domains, string $email, int $applicationId): ServerOpsResult
     {
+        return $this->serverOps->run(
+            $this->certonly($domains, $email, [
+                // Renew rather than reissue when there is still time. Reissuing
+                // spends the weekly duplicate-certificate limit for no gain — five
+                // per identical name set per week, and a user clicking a button
+                // that looks like it did nothing will click it again.
+                '--keep-until-expiring',
+            ]),
+            ['feature' => 'certificate', 'op' => 'issue', 'application' => $applicationId],
+            timeout: (int) config('server.certificates.timeout'),
+        );
+    }
+
+    /**
+     * Perform the same request against Let's Encrypt's staging server and keep
+     * nothing — certbot's own `--dry-run`.
+     *
+     * This is the part the panel's reachability check cannot do. That check
+     * proves *this server* serves the token; only ACME itself can tell you
+     * whether Let's Encrypt will accept the name — a CAA record forbidding the
+     * CA, an account problem, or a rate limit already in force all pass the
+     * local check and fail the real thing.
+     *
+     * Verified against certbot 2.9: `--dry-run` pins the staging endpoint, and
+     * every save path is short-circuited — `renew_cert` skips updating the
+     * lineage and `obtain_and_enroll_certificate` skips creating one — so an
+     * existing live certificate cannot be replaced by a test one. Deploy hooks
+     * do not run either, which is where the panel's web-server reload lives, so
+     * nothing on the running site moves.
+     *
+     * `--force-renewal` rather than `--keep-until-expiring`: with a lineage
+     * already in place and nothing due, certonly prints "Certificate not yet
+     * due for renewal; no action taken" and exits **0** without validating
+     * anything. A dry run that does not validate is worse than no dry run — it
+     * is a green tick for work that never happened. See `confirmedDryRun()`,
+     * which refuses to read that as a pass even if this flag is ever dropped.
+     *
+     * @param  array<int, string>  $domains
+     */
+    public function dryRun(array $domains, string $email, int $applicationId): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            $this->certonly($domains, $email, ['--dry-run', '--force-renewal']),
+            ['feature' => 'certificate', 'op' => 'dry_run', 'application' => $applicationId],
+            timeout: (int) config('server.certificates.timeout'),
+        );
+    }
+
+    /**
+     * Did the simulation actually simulate?
+     *
+     * Read off the output, never off the exit code. certonly exits 0 both when
+     * it completed a staging authorisation and when it decided there was
+     * nothing to do, and those two must not land the user in the same place.
+     * certbot prints this exact line, and only this line, on the path that ran.
+     */
+    public function confirmedDryRun(string $output): bool
+    {
+        return str_contains(strtolower($output), 'the dry run was successful');
+    }
+
+    /**
+     * The shared `certonly --webroot` invocation, plus whatever distinguishes
+     * the caller. Kept in one place so a dry run exercises the command that
+     * will actually be issued — a simulation that drifts from the real thing
+     * is a simulation of nothing.
+     *
+     * @param  array<int, string>  $domains
+     * @param  array<int, string>  $extra
+     * @return array<int, string>
+     */
+    private function certonly(array $domains, string $email, array $extra): array
+    {
         $command = [
             (string) config('server.certificates.certbot'),
             'certonly',
@@ -43,11 +116,7 @@ class CertbotClient
             // Adding a name to an existing certificate has to replace it, not
             // create a second one beside it.
             '--expand',
-            // Renew rather than reissue when there is still time. Reissuing
-            // spends the weekly duplicate-certificate limit for no gain — five
-            // per identical name set per week, and a user clicking a button
-            // that looks like it did nothing will click it again.
-            '--keep-until-expiring',
+            ...$extra,
         ];
 
         foreach ($domains as $domain) {
@@ -61,11 +130,7 @@ class CertbotClient
             $command[] = $email;
         }
 
-        return $this->serverOps->run(
-            $command,
-            ['feature' => 'certificate', 'op' => 'issue', 'application' => $applicationId],
-            timeout: (int) config('server.certificates.timeout'),
-        );
+        return $command;
     }
 
     /**
@@ -124,6 +189,13 @@ class CertbotClient
 
             str_contains($text, 'command not found'),
             str_contains($text, 'certbot: not found') => 'certbot_missing',
+
+            // certonly decided there was nothing to do and exited 0. Never
+            // reached from `issue()`, where `--keep-until-expiring` makes it
+            // the intended outcome; reached from `dryRun()` only if the forced
+            // renewal ever stops applying, and then it must read as "this
+            // proved nothing" rather than as a pass.
+            str_contains($text, 'not yet due for renewal') => 'dry_run_skipped',
 
             default => 'unknown',
         };

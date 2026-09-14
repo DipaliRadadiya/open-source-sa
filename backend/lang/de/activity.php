@@ -115,6 +115,8 @@ return [
     'application.domain_removed' => 'Domain :domain entfernt (:type)',
     'application.primary_domain_changed' => 'Primäre Domain von :from auf :to geändert',
     'application.certificate_requested' => 'Hat ein :type-Zertifikat für :domain angefordert',
+    'application.certificate_dry_run' => 'Hat einen Zertifikat-Testlauf für :domain gestartet',
+    'application.certificate_dry_run_finished' => 'Zertifikat-Testlauf für :domain abgeschlossen (:result)',
     'application.certificate_issued' => 'Hat ein :type-Zertifikat für :domain ausgestellt',
     'application.certificate_failed' => 'Zertifikat für :domain konnte nicht ausgestellt werden (:reason)',
     'application.certificate_uploaded' => 'Hat ein Zertifikat für :domain hochgeladen',

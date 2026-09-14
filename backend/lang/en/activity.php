@@ -121,6 +121,8 @@ return [
     'application.domain_removed' => 'Removed domain :domain (:type)',
     'application.primary_domain_changed' => 'Changed the primary domain from :from to :to',
     'application.certificate_requested' => 'Requested a :type certificate for :domain',
+    'application.certificate_dry_run' => 'Started a certificate dry run for :domain',
+    'application.certificate_dry_run_finished' => 'Certificate dry run for :domain finished (:result)',
     'application.certificate_issued' => 'Issued a :type certificate for :domain',
     'application.certificate_failed' => 'Certificate for :domain could not be issued (:reason)',
     'application.certificate_uploaded' => 'Uploaded a certificate for :domain',

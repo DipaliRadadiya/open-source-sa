@@ -12,6 +12,9 @@ return [
     // distinct fix — 'SSL failed' would leave the user guessing between
     // DNS, a firewall and their own rewrite rules.
     'precheck' => [
+        // The passing verdict. Only the dry-run report needs it: the 422
+        // that refuses an issue request never lists a name that passed.
+        'ok' => ':domain तैयार है — इस सर्वर ने सत्यापन अनुरोध का सही उत्तर दिया।',
         'dns_missing' => ':domain बिल्कुल हल नहीं होता। इस सर्वर की ओर इंगित करने वाला DNS A रिकॉर्ड जोड़ें, फिर पुनः प्रयास करें।',
         'dns_not_pointing' => ':domain :ip की ओर इंगित करता है, जो यह सर्वर नहीं है।',
         'dns_unverifiable' => "यह सर्वर NAT के पीछे है, इसलिए पैनल यहाँ से पुष्टि नहीं कर सकता कि :domain इसी की ओर इंगित करता है। यदि DNS सही है, तो 'फिर भी जारी करें' का उपयोग करें — सत्यापन अनुरोध बाहर से आता है और सफल होगा।",
@@ -21,5 +24,12 @@ return [
         'challenge_redirected' => ':domain सत्यापन अनुरोध का उत्तर देने के बजाय उसे पुनर्निर्देशित करता है। प्रमाणपत्र जारी होने तक HTTP से HTTPS पुनर्निर्देशन बंद करें।',
         'challenge_not_served' => ':domain ने उत्तर दिया, पर सत्यापन फ़ाइल के साथ नहीं। संभवतः साइट /.well-known/ को पुनः लिख रही है — उसके rewrite नियम जाँचें।',
         'precheck_failed' => 'इस सर्वर पर सत्यापन फ़ाइल नहीं लिखी जा सकी, इसलिए :domain की जाँच नहीं हो सकी।',
+    ],
+
+    // Why a dry run would not start. Not a verdict on any domain — the
+    // run never happened, and saying so plainly stops the user reading
+    // a refusal as a DNS problem.
+    'dry_run' => [
+        'issue_in_flight' => 'इस साइट के लिए अभी एक प्रमाणपत्र जारी किया जा रहा है। उसके पूरा होने की प्रतीक्षा करें — certbot एक बार में केवल एक ही काम करता है, इसलिए अभी शुरू किया गया ड्राई रन केवल टकराव की सूचना देगा।',
     ],
 ];

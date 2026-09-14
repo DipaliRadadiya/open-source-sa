@@ -134,10 +134,7 @@ class RequestCertificate
             // firewall and their own rewrite rules.
             throw ValidationException::withMessages([
                 'domain' => array_map(
-                    fn (array $result) => __('errors/certificate.precheck.'.$result['reason'], [
-                        'domain' => $result['domain'],
-                        'ip' => $result['resolved_ip'] ?? '—',
-                    ]),
+                    fn (array $result) => $this->reachability->describe($result),
                     $results,
                 ),
             ]);

@@ -100,6 +100,14 @@ Route::get('/applications/{application}/certificate', [CertificateController::cl
     ->middleware('permission:app_domain');
 Route::post('/applications/{application}/certificate', [CertificateController::class, 'store'])
     ->middleware('permission:app_domain,manage');
+// The rehearsal. `manage` on the POST rather than plain read access: it writes
+// a challenge token onto the server and makes this box talk to Let's Encrypt,
+// which is not something a read-only viewer should be able to set off. Reading
+// the verdict is a view.
+Route::post('/applications/{application}/certificate/dry-run', [CertificateController::class, 'dryRun'])
+    ->middleware('permission:app_domain,manage');
+Route::get('/applications/{application}/certificate/dry-run', [CertificateController::class, 'dryRunStatus'])
+    ->middleware('permission:app_domain');
 Route::put('/applications/{application}/certificate/force-https', [CertificateController::class, 'forceHttps'])
     ->middleware('permission:app_domain,manage');
 Route::delete('/applications/{application}/certificate', [CertificateController::class, 'destroy'])

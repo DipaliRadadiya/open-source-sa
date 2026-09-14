@@ -115,6 +115,8 @@ return [
     'application.domain_removed' => 'ドメイン :domain を削除しました (:type)',
     'application.primary_domain_changed' => 'プライマリドメインを :from から :to に変更しました',
     'application.certificate_requested' => ':domain の :type 証明書を要求しました',
+    'application.certificate_dry_run' => ':domain の証明書ドライランを開始しました',
+    'application.certificate_dry_run_finished' => ':domain の証明書ドライランが完了しました (:result)',
     'application.certificate_issued' => ':domain の :type 証明書を発行しました',
     'application.certificate_failed' => ':domain の証明書を発行できませんでした (:reason)',
     'application.certificate_uploaded' => ':domain の証明書をアップロードしました',

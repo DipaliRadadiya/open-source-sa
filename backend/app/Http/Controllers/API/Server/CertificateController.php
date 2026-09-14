@@ -5,12 +5,15 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Application\RemoveCertificate;
 use App\Actions\Server\Application\RequestCertificate;
 use App\Actions\Server\Application\SetForceHttps;
+use App\Actions\Server\Application\StartCertificateDryRun;
 use App\Actions\Server\Application\UploadCertificate;
 use App\Enums\CertificateType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\StoreCertificateRequest;
+use App\Http\Resources\CertificateDryRunResource;
 use App\Http\Resources\CertificateResource;
 use App\Models\Application;
+use App\Services\Server\Certificates\CertificateDryRunStore;
 use App\Services\Server\Certificates\CertificateOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,6 +64,36 @@ class CertificateController extends Controller
                 $issue->execute($application, $type, (bool) $request->validated('force', false))
             )->resolve(),
         ], 202);
+    }
+
+    /**
+     * Rehearse an issuance. 202 and a queued job, like `store()` and for the
+     * same reason: the second half of a dry run is a round trip to Let's
+     * Encrypt's staging server, which outlasts the request.
+     *
+     * @throws ValidationException
+     */
+    public function dryRun(Application $application, StartCertificateDryRun $action): JsonResponse
+    {
+        return response()->json([
+            'dry_run' => CertificateDryRunResource::make($action->execute($application))->resolve(),
+        ], 202);
+    }
+
+    /**
+     * Polled while the run is in flight. `null` rather than a 404 when there
+     * has never been one: "this site has not been checked" is a normal state
+     * the dialog has to render, not an error.
+     */
+    public function dryRunStatus(Application $application, CertificateDryRunStore $store): JsonResponse
+    {
+        $state = $store->get($application->id);
+
+        return response()->json([
+            'dry_run' => $state === null
+                ? null
+                : CertificateDryRunResource::make($state)->resolve(),
+        ]);
     }
 
     /**

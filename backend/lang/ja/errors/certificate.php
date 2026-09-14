@@ -12,6 +12,9 @@ return [
     // distinct fix — 'SSL failed' would leave the user guessing between
     // DNS, a firewall and their own rewrite rules.
     'precheck' => [
+        // The passing verdict. Only the dry-run report needs it: the 422
+        // that refuses an issue request never lists a name that passed.
+        'ok' => ':domain は準備できています。このサーバーが検証リクエストに正しく応答しました。',
         'dns_missing' => ':domain は名前解決できません。このサーバーを指す DNS A レコードを追加してから再試行してください。',
         'dns_not_pointing' => ':domain は :ip を指しており、このサーバーではありません。',
         'dns_unverifiable' => 'このサーバーはNATの内側にあるため、:domain がこのサーバーを指しているかをここから確認できません。DNSが正しい場合は「それでも発行」を使用してください。検証リクエストは外部から届くため成功します。',
@@ -21,5 +24,12 @@ return [
         'challenge_redirected' => ':domain は検証リクエストに応答せずリダイレクトしています。証明書が発行されるまで HTTP から HTTPS へのリダイレクトを無効にしてください。',
         'challenge_not_served' => ':domain は応答しましたが、検証ファイルではありませんでした。サイトが /.well-known/ を書き換えている可能性が高いため、リライトルールを確認してください。',
         'precheck_failed' => 'このサーバーに検証ファイルを書き込めなかったため、:domain を確認できませんでした。',
+    ],
+
+    // Why a dry run would not start. Not a verdict on any domain — the
+    // run never happened, and saying so plainly stops the user reading
+    // a refusal as a DNS problem.
+    'dry_run' => [
+        'issue_in_flight' => 'このサイトの証明書を現在発行中です。完了までお待ちください。certbot は一度に 1 つの処理しか実行できないため、今ドライランを開始しても競合が報告されるだけです。',
     ],
 ];

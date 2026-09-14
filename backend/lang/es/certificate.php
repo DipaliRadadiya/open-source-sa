@@ -22,6 +22,7 @@ return [
         'no_certifiable_domains' => 'Ningún dominio de este sitio está listo para un certificado. Verifique primero el DNS.',
         'self_sign_failed' => 'No se pudo generar el certificado autofirmado.',
         'file_missing' => 'Falta el archivo del certificado en este servidor. Vuelva a emitirlo.',
+        'dry_run_skipped' => 'certbot decidió que el certificado existente no necesitaba renovarse, así que no se validó nada. Esta ejecución no demuestra nada: es un error, no un veredicto sobre su dominio.',
         'unknown' => 'No se pudo emitir el certificado.',
     ],
 

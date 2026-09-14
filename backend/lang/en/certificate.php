@@ -22,6 +22,7 @@ return [
         'no_certifiable_domains' => 'None of this site\'s domains are ready for a certificate. Verify DNS first.',
         'self_sign_failed' => 'The self-signed certificate could not be generated.',
         'file_missing' => 'The certificate file is missing from this server. Reissue it.',
+        'dry_run_skipped' => 'certbot decided the existing certificate did not need renewing, so nothing was validated. This run proved nothing — it is a bug, not a verdict on your domain.',
         'unknown' => 'The certificate could not be issued.',
     ],
 

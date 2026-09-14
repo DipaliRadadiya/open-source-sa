@@ -115,6 +115,8 @@ return [
     'application.domain_removed' => 'Eliminó el dominio :domain (:type)',
     'application.primary_domain_changed' => 'Cambió el dominio principal de :from a :to',
     'application.certificate_requested' => 'Solicitó un certificado :type para :domain',
+    'application.certificate_dry_run' => 'Inició una simulación de certificado para :domain',
+    'application.certificate_dry_run_finished' => 'La simulación de certificado para :domain terminó (:result)',
     'application.certificate_issued' => 'Emitió un certificado :type para :domain',
     'application.certificate_failed' => 'No se pudo emitir el certificado para :domain (:reason)',
     'application.certificate_uploaded' => 'Subió un certificado para :domain',

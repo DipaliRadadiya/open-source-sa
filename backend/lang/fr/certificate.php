@@ -22,6 +22,7 @@ return [
         'no_certifiable_domains' => 'Aucun domaine de ce site n\'est prêt pour un certificat. Vérifiez d\'abord le DNS.',
         'self_sign_failed' => 'Le certificat auto-signé n\'a pas pu être généré.',
         'file_missing' => 'Le fichier du certificat est absent de ce serveur. Réémettez-le.',
+        'dry_run_skipped' => 'certbot a estimé que le certificat existant n\'avait pas besoin d\'être renouvelé : rien n\'a donc été validé. Cette exécution ne prouve rien — c\'est un bogue, pas un verdict sur votre domaine.',
         'unknown' => 'Le certificat n\'a pas pu être émis.',
     ],
 

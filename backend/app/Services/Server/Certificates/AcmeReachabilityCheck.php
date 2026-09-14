@@ -57,6 +57,24 @@ class AcmeReachabilityCheck
     }
 
     /**
+     * The sentence for one result, in the reader's locale.
+     *
+     * Here rather than at each call site because the same verdict is rendered
+     * in two places — the 422 that refuses an issue request, and the dry-run
+     * report — and a user who reads one and then the other must not be given
+     * two different explanations of the same check.
+     *
+     * @param  array{domain: string, ok: bool, reason: ?string, resolved_ip: ?string}  $result
+     */
+    public function describe(array $result): string
+    {
+        return __('errors/certificate.precheck.'.($result['ok'] ? 'ok' : $result['reason']), [
+            'domain' => $result['domain'],
+            'ip' => $result['resolved_ip'] ?? '—',
+        ]);
+    }
+
+    /**
      * @return array{domain: string, ok: bool, reason: ?string, resolved_ip: ?string}
      */
     public function check(ApplicationDomain $domain): array

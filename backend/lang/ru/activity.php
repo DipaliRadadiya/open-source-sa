@@ -115,6 +115,8 @@ return [
     'application.domain_removed' => 'Удалил домен :domain (:type)',
     'application.primary_domain_changed' => 'Изменил основной домен с :from на :to',
     'application.certificate_requested' => 'Запросил сертификат :type для :domain',
+    'application.certificate_dry_run' => 'Запустил пробный выпуск сертификата для :domain',
+    'application.certificate_dry_run_finished' => 'Пробный выпуск сертификата для :domain завершён (:result)',
     'application.certificate_issued' => 'Выпустил сертификат :type для :domain',
     'application.certificate_failed' => 'Сертификат для :domain не удалось выпустить (:reason)',
     'application.certificate_uploaded' => 'Загрузил сертификат для :domain',

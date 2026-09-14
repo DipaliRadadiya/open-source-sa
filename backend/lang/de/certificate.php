@@ -22,6 +22,7 @@ return [
         'no_certifiable_domains' => 'Keine Domain dieser Website ist bereit für ein Zertifikat. Prüfen Sie zuerst das DNS.',
         'self_sign_failed' => 'Das selbstsignierte Zertifikat konnte nicht erzeugt werden.',
         'file_missing' => 'Die Zertifikatsdatei fehlt auf diesem Server. Stellen Sie sie neu aus.',
+        'dry_run_skipped' => 'certbot hat entschieden, dass das vorhandene Zertifikat keine Erneuerung braucht, daher wurde nichts validiert. Dieser Lauf beweist nichts – das ist ein Fehler, kein Urteil über Ihre Domain.',
         'unknown' => 'Das Zertifikat konnte nicht ausgestellt werden.',
     ],
 
