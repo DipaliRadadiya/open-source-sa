@@ -4681,6 +4681,10 @@ See also `DELETE /applications/{application}/logs/{key}` for a site's own logs, 
 
 **Response `200`:** `{"schedule": {...}}`
 
+**`categories` must hold at least one entry** — an empty array is a `422`, by design. A schedule with nothing selected is a cron entry that runs on time and cleans nothing: protection on the screen, nothing on the disk. Two honest ways to say "don't do this" already exist — send `enabled: false`, or `DELETE` the schedule — so the empty list is not a third.
+
+**So keeping Save disabled while every box is unchecked is correct**, and it has been raised as a bug twice. Removing only the button's guard turns a disabled button into a failed save. Point the user at the toggle or the delete instead.
+
 ---
 
 ### DELETE `/disk-cleaner/schedule`
