@@ -291,7 +291,7 @@ export function CommandField({
                           fixed label column would push the dropdown wider than
                           the dialog holding it. */}
                       <span className="flex min-w-0 flex-col items-start gap-0.5 py-0.5">
-                        <span className="truncate">{application.name}</span>
+                        <span className="truncate" title={application.name}>{application.name}</span>
                         <span className="truncate font-mono text-xs text-muted-foreground">
                           {application.path}
                         </span>

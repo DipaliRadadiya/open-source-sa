@@ -45,7 +45,10 @@ export function UsedByCard({
           <p className="text-sm font-medium">{t("title")}</p>
 
           {application ? (
-            <p className="text-sm text-muted-foreground">
+            // The name sits mid-sentence, so it wraps rather than truncates —
+            // but a site name is one unbroken token with no space to wrap at,
+            // so without break-words a long one overflows the card instead.
+            <p className="text-sm break-words text-muted-foreground">
               <Link
                 href={`/applications/${application.id}`}
                 prefetch={false}

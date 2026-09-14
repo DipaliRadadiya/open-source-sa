@@ -92,7 +92,7 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
                   <div className="flex min-w-0 items-start gap-2.5">
                     <Globe className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{app.name}</p>
+                      <p className="truncate text-sm font-medium" title={app.name}>{app.name}</p>
                       {app.domain ? (
                         <p className="truncate text-xs text-muted-foreground">
                           {app.domain}

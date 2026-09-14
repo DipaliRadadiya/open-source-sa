@@ -81,11 +81,17 @@ function ApplicationCell({ database, applications, onAttach }) {
   const application = applicationById(applications, database.application_id);
 
   if (application) {
+    // `block truncate` and not a bare inline link: an inline element never
+    // shows the ellipsis, and without a bound the column simply grew to the
+    // longest site name and took the rest of the table with it — the same
+    // fault the applications table carries a comment about. `title` keeps the
+    // full name reachable once it is cut.
     return (
       <Link
         href={`/applications/${application.id}`}
         prefetch={false}
-        className="underline-offset-4 hover:underline"
+        title={application.name}
+        className="block truncate underline-offset-4 hover:underline"
       >
         {application.name}
       </Link>
@@ -251,6 +257,14 @@ function DatabasesList({
       accessorFn: (row) =>
         applicationById(applications, row.application_id)?.name ?? "",
       header: t("columns.application"),
+      // This table is auto-layout, so `truncate` alone has nothing to bind
+      // against — the column grew to the longest site name and pushed the rest
+      // of the table out. `max-w-0` lets the cell stop claiming max-content so
+      // the link can ellipsise, but on its own it collapses the column to ~70px
+      // and shows one character. The width pairs with it: the percentage is
+      // what the column actually gets, max-w-0 is what stops content overriding
+      // it. Measured at 1440/1600/1920 with a 61-character name.
+      meta: { className: "w-[22%] max-w-0" },
       cell: ({ row }) => (
         <ApplicationCell
           database={row.original}

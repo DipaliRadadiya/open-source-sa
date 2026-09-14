@@ -40,7 +40,7 @@ export function ApplicationsCards({ applications = [], canManage = false }) {
                   prefetch={false}
                   className="inline-flex min-w-0 items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  <span className="truncate">{application.name}</span>
+                  <span className="truncate" title={application.name}>{application.name}</span>
                   <ChevronRight className="size-3.5 shrink-0" />
                 </Link>
                 {/* A copy and the site it copies sit next to each other under

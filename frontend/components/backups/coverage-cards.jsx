@@ -49,6 +49,7 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
                 <Link
                   prefetch={false}
                   href={`/applications/${application.id}/backups`}
+                  title={application.name}
                   className="block truncate font-medium underline-offset-4 hover:underline"
                 >
                   {application.name}

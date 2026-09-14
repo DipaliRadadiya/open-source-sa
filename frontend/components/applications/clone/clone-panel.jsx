@@ -315,7 +315,7 @@ export function CloneApplicationPanel({
                 <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                   {canManage ? (
                     <p className="flex min-w-0 items-center gap-2 text-sm">
-                      <span className="truncate font-medium">{application.name}</span>
+                      <span className="truncate font-medium" title={application.name}>{application.name}</span>
                       <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                       {target ? (
                         <span className="truncate font-mono font-medium">{target}</span>
@@ -366,7 +366,7 @@ export function CloneApplicationPanel({
           <dl className="space-y-2 rounded-lg border bg-muted/40 p-3 text-sm">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-muted-foreground">{t("confirm.source")}</dt>
-              <dd className="min-w-0 truncate font-medium">{application.name}</dd>
+              <dd className="min-w-0 truncate font-medium" title={application.name}>{application.name}</dd>
             </div>
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-muted-foreground">{t("confirm.domain")}</dt>

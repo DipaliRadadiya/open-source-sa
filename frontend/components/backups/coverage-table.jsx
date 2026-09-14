@@ -52,6 +52,7 @@ function SiteCell({ row }) {
         <Link
           prefetch={false}
           href={`/applications/${application.id}/backups`}
+          title={application.name}
           className="truncate font-medium underline-offset-4 hover:underline"
         >
           {application.name}

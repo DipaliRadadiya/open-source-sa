@@ -166,7 +166,7 @@ export function AppSidebar({ items }) {
                 >
                   <Globe2 className="mt-0.5" />
                   <span className="min-w-0 leading-tight">
-                    <span className="block truncate font-semibold">{application.name}</span>
+                    <span className="block truncate font-semibold" title={application.name}>{application.name}</span>
                     <span className="mt-1 block truncate text-xs text-muted-foreground">
                       {application.domain}
                     </span>
