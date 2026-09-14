@@ -151,7 +151,7 @@ describe('live progress', function () {
 
         expect($app->status->value)->toBe('failed');
         expect($app->failed_step)->toBe('placeholder');
-        expect($app->steps)->toBe(['check_account', 'create_directory']);
+        expect($app->steps)->toBe(['ensure_account', 'create_directory']);
     });
 
     it('starts a retry from an empty list rather than the previous attempt', function () {
@@ -177,7 +177,7 @@ describe('live progress', function () {
 
         // Only what this attempt got through — the account check — and not the
         // steps the first attempt managed before it failed.
-        expect($app->refresh()->steps)->toBe(['check_account']);
+        expect($app->refresh()->steps)->toBe(['ensure_account']);
     });
 });
 

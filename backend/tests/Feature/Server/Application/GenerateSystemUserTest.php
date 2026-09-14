@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Server\SystemUser\CreateSystemUser;
 use App\Models\Application;
 use App\Models\Permission;
 use App\Models\Role;
@@ -40,7 +41,7 @@ function createPayload(array $overrides = []): array
     ], $overrides);
 }
 
-it('creates the account and owns the application with it', function () {
+it('records the owner with the application, and writes nothing to the server', function () {
     $response = $this->actingAs($this->admin)
         ->postJson('/api/applications', createPayload())
         ->assertCreated();
@@ -53,10 +54,75 @@ it('creates the account and owns the application with it', function () {
     // or `ls -l` while working out which site an account belongs to.
     expect($user->username)->toBe('company-blog');
 
-    Process::assertRan(fn ($process) => str_contains(
-        is_array($process->command) ? implode(' ', $process->command) : (string) $process->command,
-        'useradd'
-    ));
+    // The account is NOT created here. This action records what the user asked
+    // for; every server write belongs to provisioning, and the first version of
+    // this feature put a useradd in the one place the class promises there is
+    // none.
+    Process::assertNotRan(fn ($process) => str_contains(commandOf($process), 'useradd'));
+});
+
+it('creates the account during provisioning, beside the directory that needs it', function () {
+    $response = $this->actingAs($this->admin)
+        ->postJson('/api/applications', createPayload())
+        ->assertCreated();
+
+    $application = Application::find($response->json('application.id'));
+
+    // `getent` says absent, so the step creates it rather than failing — which
+    // is also the repair for an adopted box or a rebuilt server.
+    app(CreateSystemUser::class)
+        ->ensureOnServer($application->systemUser);
+
+    Process::assertRan(fn ($process) => str_contains(commandOf($process), 'useradd')
+        && str_contains(commandOf($process), 'company-blog'));
+});
+
+it('leaves an account that already exists alone', function () {
+    $existing = SystemUser::create([
+        'username' => 'picked', 'home_path' => '/home/picked', 'shell' => '/bin/bash', 'sudo' => false,
+    ]);
+
+    // Every site whose user the operator chose takes this path.
+    Process::fake(fn ($process) => str_contains(commandOf($process), 'getent passwd')
+        ? Process::result(output: 'picked:x:1001:1001::/home/picked:/bin/bash')
+        : Process::result(exitCode: 0));
+
+    app(CreateSystemUser::class)->ensureOnServer($existing);
+
+    Process::assertNotRan(fn ($process) => str_contains(commandOf($process), 'useradd'));
+});
+
+it('does not useradd blindly when the server cannot be asked', function () {
+    $user = SystemUser::create([
+        'username' => 'probe-me', 'home_path' => '/home/probe-me', 'shell' => '/bin/bash', 'sudo' => false,
+    ]);
+
+    // sudo refusing, or getent missing: stderr is non-empty, so ServerOps does
+    // not count it as an answer. Creating the account on that basis would be a
+    // write against a server we cannot see — the step should fail with its own
+    // reference instead.
+    Process::fake(fn () => Process::result(errorOutput: 'sudo: a password is required', exitCode: 1));
+
+    app(CreateSystemUser::class)->ensureOnServer($user);
+
+    Process::assertNotRan(fn ($process) => str_contains(commandOf($process), 'useradd'));
+});
+
+it('rolls the account row back when the application cannot be created', function () {
+    // A name collision committed between validation and insert. The row and the
+    // application are one transaction, so there is no orphan to tidy up — which
+    // is the cleanup code this replaced.
+    Application::factory()->create(['name' => 'Taken Name', 'domain' => 'taken.example.com']);
+
+    $before = SystemUser::count();
+
+    $this->actingAs($this->admin)
+        ->postJson('/api/applications', createPayload([
+            'name' => 'Taken Name',
+        ]))
+        ->assertStatus(422);
+
+    expect(SystemUser::count())->toBe($before);
 });
 
 it('still accepts an existing system user', function () {
@@ -73,8 +139,9 @@ it('still accepts an existing system user', function () {
 
     expect(Application::find($response->json('application.id'))->system_user_id)->toBe($existing->id);
 
-    // Nothing was created: an id the caller chose is not an invitation to make
-    // another account.
+    // Nothing is created here for either path now — but especially not for
+    // this one: an id the caller chose is not an invitation to make another
+    // account, at create time or at provision time.
     Process::assertNotRan(fn ($process) => str_contains(
         is_array($process->command) ? implode(' ', $process->command) : (string) $process->command,
         'useradd'

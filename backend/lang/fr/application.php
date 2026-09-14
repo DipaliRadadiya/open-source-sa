@@ -153,7 +153,7 @@ return [
         'seed_env' => 'Préparation du fichier d’environnement',
         'build' => 'Exécution de la commande de build',
         'write_credential' => 'Préparation de l\'accès git',
-        'check_account' => 'Vérification du compte système',
+        'ensure_account' => 'Création du compte système',
         'create_directory' => 'Création du répertoire',
         'set_ownership' => 'Attribution des droits',
         'placeholder' => 'Ajout d\'une page provisoire',

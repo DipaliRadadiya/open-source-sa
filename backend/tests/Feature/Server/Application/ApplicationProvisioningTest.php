@@ -75,7 +75,7 @@ it('creates the directory, writes a tested config and reloads', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     expect($app->steps)->toBe([
-        'check_account', 'create_directory', 'placeholder', 'set_ownership', 'harden_php', 'create_php_pool', 'write_config', 'test_config', 'reload',
+        'ensure_account', 'create_directory', 'placeholder', 'set_ownership', 'harden_php', 'create_php_pool', 'write_config', 'test_config', 'reload',
     ]);
 
     // `{home}/{slug}/public_html` — the document root, not the site directory:
@@ -177,7 +177,7 @@ it('is idempotent when the job runs twice', function () {
     // thing this test exists to catch, when in fact a step was added. Naming
     // them means the next addition fails with a diff that says which.
     expect($app->steps)->toBe([
-        'check_account',
+        'ensure_account',
         'create_directory',
         'placeholder',
         'set_ownership',

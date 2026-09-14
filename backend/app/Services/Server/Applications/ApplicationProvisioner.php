@@ -3,6 +3,7 @@
 namespace App\Services\Server\Applications;
 
 use App\Actions\Server\Application\AutoIssueCertificate;
+use App\Actions\Server\SystemUser\CreateSystemUser;
 use App\Exceptions\Server\Application\ApplicationAvailabilityException;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Jobs\MeasureApplicationSize;
@@ -29,6 +30,7 @@ use Illuminate\Support\Facades\View;
 class ApplicationProvisioner
 {
     public function __construct(
+        private CreateSystemUser $createSystemUser,
         private ServerOps $serverOps,
         private WebServerManager $webServers,
         private InstallerManager $installers,
@@ -109,11 +111,27 @@ class ApplicationProvisioner
         // only. On OpenLiteSpeed the pool step never runs, so nothing asked,
         // and `chown` exited 1 several steps later with a reference number in
         // place of "that account does not exist on this server".
-        $this->step('check_account', fn (): ServerOpsResult => $this->serverOps->run(
-            ['getent', 'passwd', (string) $user?->username],
-            ['feature' => 'application', 'op' => 'account_check', 'application' => $application->id],
-            timeout: 15,
-        ));
+        // Creates it when it is not there, rather than only reporting that it
+        // is not. The three states the paragraph above describes — an adopted
+        // box, a server rebuilt under a surviving database, a `useradd` that
+        // failed somewhere the row outlived — all end with a row naming an
+        // account that does not exist, and all three are repaired by making it.
+        //
+        // It is also where an account the panel generated for this site comes
+        // into being at all: `CreateApplication` records the owner in the same
+        // transaction as the application and writes nothing to the server, so
+        // the site and its user are one fact and the account is created here,
+        // beside the directory and the vhost that need it.
+        //
+        // Idempotent: an account that already exists — which is every site
+        // whose user the operator picked — is left exactly as it is.
+        $this->step('ensure_account', fn (): ServerOpsResult => $user === null
+            ? $this->serverOps->run(
+                ['getent', 'passwd', ''],
+                ['feature' => 'application', 'op' => 'account_check', 'application' => $application->id],
+                timeout: 15,
+            )
+            : $this->createSystemUser->ensureOnServer($user));
 
         // One directory, for every site type there is. `documentRoot()` resolves
         // to the same flat `{root}/public_html/{web_root}` shape for all of

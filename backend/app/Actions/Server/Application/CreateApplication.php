@@ -2,14 +2,13 @@
 
 namespace App\Actions\Server\Application;
 
-use App\Actions\Server\SystemUser\CreateSystemUser;
-use App\Actions\Server\SystemUser\DeleteSystemUser;
 use App\Enums\ApplicationStatus;
 use App\Enums\DomainOrigin;
 use App\Enums\DomainType;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
+use App\Models\SystemUser;
 use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
@@ -20,7 +19,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Throwable;
 
 /**
  * Record an application the user asked for.
@@ -36,7 +34,6 @@ class CreateApplication
         private ActivityLogger $activityLogger,
         private PortAllocator $ports,
         private SystemUsernameGenerator $usernames,
-        private CreateSystemUser $createSystemUser,
     ) {}
 
     /**
@@ -48,26 +45,38 @@ class CreateApplication
         $servingProfile = ServingProfile::resolve($type, $data);
         $origin = DomainOrigin::tryFrom((string) ($data['domain_type'] ?? '')) ?? DomainOrigin::Custom;
 
-        // Outside the transaction, and it has to be: `useradd` writes to
-        // /etc/passwd, which no database rollback can undo. So the account is
-        // made first, its id is used like any other, and if the rest fails it
-        // is removed again by hand below.
-        $generatedUser = ($data['generate_system_user'] ?? false)
-            ? $this->createSystemUser->execute([
-                'username' => $this->usernames->forApplication((string) $data['name']),
-            ])
+        // Only the *name* is settled here, and only because choosing it reads
+        // the server (`getent`) — which must not happen inside a transaction.
+        // Nothing is written to /etc/passwd: this action records what the user
+        // asked for, and every server write belongs to provisioning. Creating
+        // the account here is what the first version of this feature did, and
+        // it put a useradd in the one place the class docblock promises there
+        // is none.
+        $generatedUsername = ($data['generate_system_user'] ?? false)
+            ? $this->usernames->forApplication((string) $data['name'])
             : null;
-
-        if ($generatedUser !== null) {
-            $data['system_user_id'] = $generatedUser->id;
-        }
 
         try {
             // The application and its primary hostname are one record from the
             // caller's point of view. If the hostname loses a uniqueness race,
             // rolling both back avoids an invisible half-created application
             // that then blocks the same name on retry.
-            $application = DB::transaction(function () use ($data, $type, $servingProfile, $origin): Application {
+            $application = DB::transaction(function () use ($data, $type, $servingProfile, $origin, $generatedUsername): Application {
+                // In the transaction with the application, so a site and its
+                // owner are one fact rather than two. If anything below fails,
+                // the rollback takes the account row with it and there is no
+                // orphan to tidy up — which is exactly the cleanup code this
+                // replaces.
+                if ($generatedUsername !== null) {
+                    $data['system_user_id'] = SystemUser::create([
+                        'username' => $generatedUsername,
+                        'home_path' => rtrim((string) config('server.home_base'), '/').'/'.$generatedUsername,
+                        'shell' => '/bin/bash',
+                        'sudo' => false,
+                        'ssh_access' => false,
+                    ])->id;
+                }
+
                 $application = Application::forceCreate([
                     // Derived here, not accepted from the client: it names the
                     // web-server config file, and a caller choosing that is a caller
@@ -134,28 +143,7 @@ class CreateApplication
 
                 return $application;
             });
-        } catch (Throwable $exception) {
-            // The account was made moments ago, by this request, for an
-            // application that now does not exist. Left behind it is an orphan
-            // in /etc/passwd with a home directory and a name nobody can
-            // explain — and it silently blocks the same site name on retry.
-            //
-            // Only ever the account *this* call created: an id the caller
-            // chose is not ours to delete.
-            if ($generatedUser !== null) {
-                try {
-                    app(DeleteSystemUser::class)->execute($generatedUser);
-                } catch (Throwable) {
-                    // Report the original failure, not the cleanup's. A user
-                    // whose application failed does not need to hear that
-                    // tidying up afterwards also failed.
-                }
-            }
-
-            if (! $exception instanceof UniqueConstraintViolationException) {
-                throw $exception;
-            }
-
+        } catch (UniqueConstraintViolationException $exception) {
             // Validation runs before this transaction, but another request can
             // claim the same name or domain between that check and the insert.
             // Re-run the two user-owned unique rules after rollback so Laravel

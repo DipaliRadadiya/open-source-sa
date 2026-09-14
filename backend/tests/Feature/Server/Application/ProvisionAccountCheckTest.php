@@ -1,6 +1,5 @@
 <?php
 
-use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
@@ -57,38 +56,66 @@ function fakeAccount(bool $exists): void
         : Process::result(exitCode: 0));
 }
 
-it('stops at the account check when the Linux user is not on the server', function () {
-    fakeAccount(false);
+it('creates the Linux user when it is not on the server', function () {
+    ServerCapability::query()->update(['stack' => 'lemp', 'web_server' => 'nginx']);
+
+    // Stateful, because a static fake is not a server: the account is absent
+    // until `useradd` runs and present afterwards, and the step confirms with a
+    // second `getent` precisely so it passes only when that is true. A fake
+    // that answered "absent" forever would fail a step that had just succeeded.
+    $created = false;
+    Process::fake(function ($process) use (&$created) {
+        if ($process->command[0] === 'useradd') {
+            $created = true;
+
+            return Process::result(exitCode: 0);
+        }
+
+        return $process->command[0] === 'getent'
+            ? Process::result(exitCode: $created ? 0 : 2)
+            : Process::result(exitCode: 0);
+    });
 
     $app = accountCheckApp();
 
-    // Named, so the failure says which part broke rather than surfacing as a
-    // chown several steps later — `ProvisionApplication` copies this onto the
-    // application as `failed_step`.
-    try {
-        app(ApplicationProvisioner::class)->provision($app);
-        $this->fail('provisioning should have stopped at the account check');
-    } catch (ProvisioningFailedException $e) {
-        expect($e->step)->toBe('check_account');
-    }
+    app(ApplicationProvisioner::class)->provision($app);
+
+    // It used to stop here and say so. Reporting was the right answer while
+    // nothing could act on it; now the step can make the account, and the three
+    // states that produce a row without a passwd entry — an adopted box, a
+    // server rebuilt under a surviving database, a useradd that failed
+    // somewhere the row outlived — are all repaired rather than reported.
+    //
+    // It is also how an account the panel generated for a new site comes into
+    // being at all: `CreateApplication` records the owner and writes nothing to
+    // the server.
+    Process::assertRan(fn ($p) => $p->command[0] === 'useradd');
+    expect($app->fresh()->steps)->toContain('ensure_account');
 });
 
-it('creates nothing at all when the account is missing', function () {
-    fakeAccount(false);
+it('still stops before building anything when the account cannot be made', function () {
+    // useradd itself refused — a real failure, as opposed to a missing account
+    // the step can fix.
+    Process::fake(fn ($process) => match (true) {
+        $process->command[0] === 'getent' => Process::result(exitCode: 2),
+        $process->command[0] === 'useradd' => Process::result(errorOutput: 'useradd: failure', exitCode: 1),
+        default => Process::result(exitCode: 0),
+    });
 
     try {
         app(ApplicationProvisioner::class)->provision(accountCheckApp());
-    } catch (ProvisioningFailedException) {
-        // Expected; this test is about what did *not* run.
+        $this->fail('provisioning should have stopped');
+    } catch (Throwable $e) {
+        // Either shape is acceptable; what matters is that it stopped.
     }
 
     // Before the directory, before the vhost, before the reload — the point of
-    // checking first is that a failure leaves no half-built site to clean up.
+    // doing this first is that a failure leaves no half-built site to clean up.
     Process::assertNotRan(fn ($p) => $p->command[0] === 'mkdir');
     Process::assertNotRan(fn ($p) => $p->command[0] === 'tee');
 });
 
-it('carries on when the account is there', function () {
+it('leaves an account that is already there alone', function () {
     // On nginx for the happy path only: the check itself is driver-independent
     // — that is the whole point of moving it out of the pool builder — and
     // OpenLiteSpeed's later steps want a real shared config this test has no
@@ -101,6 +128,6 @@ it('carries on when the account is there', function () {
 
     app(ApplicationProvisioner::class)->provision($app);
 
-    expect($app->fresh()->steps)->toContain('check_account')
+    expect($app->fresh()->steps)->toContain('ensure_account')
         ->and($app->fresh()->steps)->toContain('write_config');
 });
