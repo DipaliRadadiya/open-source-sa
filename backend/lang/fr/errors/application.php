@@ -47,6 +47,10 @@ return [
     'unsafe_path' => 'Ce chemin n\'est pas autorisé.',
     'file_too_large' => 'Ce fichier est trop volumineux pour l\'éditeur. Téléchargez-le : les téléchargements n\'ont aucune limite de taille.',
     'file_not_text' => 'Ce fichier ne semble pas être du texte et ne peut pas être ouvert ici.',
+    'file_not_previewable' => 'Ce fichier n\'est pas une image, il n\'y a donc rien à afficher. Téléchargez-le pour l\'ouvrir sur votre machine.',
+    'file_svg_not_previewable' => 'Les fichiers SVG ne sont pas affichés ici, car un SVG peut contenir du code. Téléchargez-le pour le consulter.',
+    'file_too_large_to_preview' => 'Cette image est trop volumineuse pour être affichée ici. Téléchargez-la : les téléchargements n\'ont aucune limite de taille.',
+
     'file_operation_failed' => 'L\'opération sur le fichier a échoué sur le serveur.',
 
     'file_not_archive' => 'Seules les archives .zip et .tar.gz peuvent être extraites ici.',
@@ -73,4 +77,10 @@ return [
     'supervisor_missing' => 'Les workers nécessitent supervisord, qui n\'est pas installé sur ce serveur. Installez-le avec `apt-get install supervisor`, puis recréez le worker.',
     'supervisor_already_installed' => 'Supervisor est déjà installé sur ce serveur.',
     'worker_control_failed' => 'Le worker n’a pas pu être piloté sur le serveur.',
+
+    // Which system account a new site runs as. Generating one creates a
+    // real Linux account, which is why it needs its own permission.
+    'generate_system_user_forbidden' => 'Vous n\'avez pas l\'autorisation de créer des utilisateurs système, un nouveau ne peut donc pas être généré pour ce site. Choisissez plutôt un utilisateur système existant.',
+    'system_user_conflict' => 'Choisissez soit un nouvel utilisateur système, soit un utilisateur existant, pas les deux.',
+    'system_user_name_unavailable' => 'Impossible de réserver un nom d\'utilisateur système pour ce site : le serveur n\'a pas pu indiquer quels noms sont déjà utilisés. Réessayez ou choisissez un utilisateur système existant.',
 ];

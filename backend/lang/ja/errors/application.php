@@ -47,6 +47,10 @@ return [
     'unsafe_path' => 'そのパスは許可されていません。',
     'file_too_large' => 'このファイルはエディターで開くには大きすぎます。代わりにダウンロードしてください（ダウンロードにサイズ制限はありません）。',
     'file_not_text' => 'このファイルはテキストではないようで、ここでは開けません。',
+    'file_not_previewable' => 'このファイルは画像ではないため、表示できるものがありません。ダウンロードしてお使いの端末で開いてください。',
+    'file_svg_not_previewable' => 'SVG ファイルはコードを含むことがあるため、ここでは表示しません。ダウンロードしてご覧ください。',
+    'file_too_large_to_preview' => 'この画像はここに表示するには大きすぎます。代わりにダウンロードしてください（ダウンロードにサイズ制限はありません）。',
+
     'file_operation_failed' => 'サーバー上でのファイル操作に失敗しました。',
 
     'file_not_archive' => 'ここでは .zip と .tar.gz アーカイブのみ展開できます。',
@@ -73,4 +77,10 @@ return [
     'supervisor_missing' => 'ワーカーには supervisord が必要ですが、このサーバーにはインストールされていません。`apt-get install supervisor` でインストールしてから、ワーカーを作成し直してください。',
     'supervisor_already_installed' => 'この サーバーには supervisor が既にインストールされています。',
     'worker_control_failed' => 'サーバー上でワーカーを制御できませんでした。',
+
+    // Which system account a new site runs as. Generating one creates a
+    // real Linux account, which is why it needs its own permission.
+    'generate_system_user_forbidden' => 'システムユーザーを作成する権限がないため、このサイト用に新しいユーザーを生成できません。既存のシステムユーザーを選択してください。',
+    'system_user_conflict' => '新しいシステムユーザーか既存のシステムユーザーのどちらかを選択してください。両方は指定できません。',
+    'system_user_name_unavailable' => 'このサイト用のシステムユーザー名を確保できませんでした。どの名前が使用中かをサーバーに問い合わせられませんでした。もう一度お試しになるか、既存のシステムユーザーを選択してください。',
 ];

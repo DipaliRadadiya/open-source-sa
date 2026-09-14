@@ -701,6 +701,11 @@ export function CreateApplicationForm({
       site_type: initialType,
       name: initialName,
       domain: "",
+      // On by default, because a dedicated account per site is the right
+      // answer often enough to be where the form starts. Off for anyone who
+      // cannot create system users: the API refuses to generate for them, and
+      // a form that defaults to a refusal is a form that is wrong on open.
+      generate_system_user: canCreateSystemUser,
       system_user_id: "",
       git_account_id: "",
       repository: "",
@@ -757,6 +762,10 @@ export function CreateApplicationForm({
       form.setValue("domain", next, { shouldValidate: Boolean(next) });
     }
   }, [temporary, generated, form]);
+  const generateSystemUser = useWatch({
+    control: form.control,
+    name: "generate_system_user",
+  });
   const systemUserId = useWatch({
     control: form.control,
     name: "system_user_id",
@@ -892,11 +901,14 @@ export function CreateApplicationForm({
       key: "user",
       target: "system_user_id",
       label: t("systemUser"),
-      value:
-        availableSystemUsers.find(
-          (user) => String(user.id) === String(systemUserId),
-        )?.username ?? "—",
-      ready: Boolean(systemUserId),
+      // Generating is a complete answer, so the row reads as ready rather than
+      // as a blank waiting to be filled — the name itself does not exist yet.
+      value: generateSystemUser
+        ? t("form.systemUserWillBeCreated")
+        : (availableSystemUsers.find(
+            (user) => String(user.id) === String(systemUserId),
+          )?.username ?? "—"),
+      ready: generateSystemUser || Boolean(systemUserId),
     },
     ...(isGit
       ? [
@@ -1238,7 +1250,13 @@ export function CreateApplicationForm({
       site_type: values.site_type,
       name: values.name.trim(),
       domain: values.domain.trim(),
-      system_user_id: Number(values.system_user_id),
+      // One or the other, never both: the API refuses a payload carrying a
+      // generate flag *and* an id, because a client that sends both has not
+      // decided and picking for it is how a site ends up owned by an account
+      // nobody chose.
+      ...(values.generate_system_user
+        ? { generate_system_user: true }
+        : { system_user_id: Number(values.system_user_id) }),
     };
     // Every field the chosen type declares is validated at the TOP LEVEL on
     // create — the backend generates the rules from that same schema, so a
@@ -1504,8 +1522,11 @@ export function CreateApplicationForm({
                         </FormLabel>
                         {/* Shows whether or not users already exist: wanting a
                             dedicated user for a new site is the normal case,
-                            not a recovery from an empty list. */}
-                        {canCreateSystemUser ? (
+                            not a recovery from an empty list. Hidden while the
+                            panel is generating one — there is nothing to pick
+                            between, so the link would open a dialog whose
+                            result the form would ignore. */}
+                        {canCreateSystemUser && !generateSystemUser ? (
                           <button
                             type="button"
                             onClick={() => setSystemUserDialogOpen(true)}
@@ -1516,6 +1537,54 @@ export function CreateApplicationForm({
                           </button>
                         ) : null}
                       </div>
+
+                      {/* Only offered to someone who may actually create an
+                          account. Without the permission there is one way to
+                          answer this question, and a disabled radio pair would
+                          be two controls saying so. */}
+                      {canCreateSystemUser ? (
+                        <div className="grid gap-2 @md:grid-cols-2">
+                          {[
+                            { generate: true, label: t("form.generateSystemUser"), hint: t("form.generateSystemUserHint") },
+                            { generate: false, label: t("form.pickSystemUser"), hint: t("form.pickSystemUserHint") },
+                          ].map((choice) => {
+                            const active = generateSystemUser === choice.generate;
+                            return (
+                              <button
+                                key={String(choice.generate)}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => {
+                                  form.setValue("generate_system_user", choice.generate, {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                  });
+                                  // Clearing on the way *into* generate mode,
+                                  // so a stale id cannot be submitted beside
+                                  // the flag — the API refuses that payload.
+                                  if (choice.generate) {
+                                    form.setValue("system_user_id", "", { shouldValidate: true });
+                                  }
+                                }}
+                                className={cn(
+                                  "rounded-lg border p-3 text-left transition-colors",
+                                  active
+                                    ? "border-primary bg-primary/5"
+                                    : "hover:border-muted-foreground/40",
+                                )}
+                              >
+                                <span className="block text-sm font-medium">{choice.label}</span>
+                                <span className="mt-0.5 block text-xs text-muted-foreground">
+                                  {choice.hint}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+
+                      {generateSystemUser ? null : (
+                      <>
                       <FormControl>
                         <Combobox
                           options={availableSystemUsers.map((user) => ({
@@ -1547,6 +1616,8 @@ export function CreateApplicationForm({
                               : t("form.noSystemUserCreatePermission")}
                         </FormDescription>
                       ) : null}
+                      </>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

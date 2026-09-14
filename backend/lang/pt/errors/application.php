@@ -47,6 +47,10 @@ return [
     'unsafe_path' => 'Esse caminho não é permitido.',
     'file_too_large' => 'Esse ficheiro é demasiado grande para abrir no editor. Transfira-o — as transferências não têm limite de tamanho.',
     'file_not_text' => 'Esse ficheiro não parece ser texto e não pode ser aberto aqui.',
+    'file_not_previewable' => 'Esse ficheiro não é uma imagem, por isso não há nada para mostrar. Transfira-o para o abrir no seu computador.',
+    'file_svg_not_previewable' => 'Os ficheiros SVG não são mostrados aqui, porque um SVG pode conter código. Transfira-o para o ver.',
+    'file_too_large_to_preview' => 'Essa imagem é demasiado grande para ser mostrada aqui. Transfira-a — as transferências não têm limite de tamanho.',
+
     'file_operation_failed' => 'A operação de ficheiro falhou no servidor.',
 
     'file_not_archive' => 'Apenas arquivos .zip e .tar.gz podem ser extraídos aqui.',
@@ -73,4 +77,10 @@ return [
     'supervisor_missing' => 'Os workers precisam do supervisord, que não está instalado neste servidor. Instale-o com `apt-get install supervisor` e crie o worker novamente.',
     'supervisor_already_installed' => 'O supervisor já está instalado neste servidor.',
     'worker_control_failed' => 'Não foi possível controlar o worker no servidor.',
+
+    // Which system account a new site runs as. Generating one creates a
+    // real Linux account, which is why it needs its own permission.
+    'generate_system_user_forbidden' => 'Não tem permissão para criar utilizadores do sistema, por isso não é possível gerar um novo para este site. Escolha antes um utilizador do sistema existente.',
+    'system_user_conflict' => 'Escolha um utilizador do sistema novo ou um existente, não ambos.',
+    'system_user_name_unavailable' => 'Não foi possível reservar um nome de utilizador do sistema para este site — não foi possível perguntar ao servidor que nomes já estão em uso. Tente novamente ou escolha um utilizador do sistema existente.',
 ];

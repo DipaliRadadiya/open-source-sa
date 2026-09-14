@@ -69,7 +69,35 @@ class StoreApplicationRequest extends FormRequest
             // working; an unlabelled name is treated as the user's own, and a
             // wildcard-DNS suffix is caught regardless of the label.
             'domain_type' => ['sometimes', new Enum(DomainOrigin::class)],
-            'system_user_id' => ['required', 'integer', 'exists:system_users,id'],
+            // Let the panel create a dedicated Linux account for this site.
+            //
+            // Gated on `system_user` manage, not on `application` manage: this
+            // creates a real account on the box, and the "Create system user"
+            // link in this same form is already hidden without that permission.
+            // Allowing it here would mean anyone who can add a site can add
+            // Linux users, which is a wider grant than the one they were given.
+            'generate_system_user' => [
+                'sometimes', 'boolean',
+                function (string $attribute, mixed $value, Closure $fail) {
+                    if ($value && ! ($this->user()?->canManage('system_user') ?? false)) {
+                        $fail(__('errors/application.generate_system_user_forbidden'));
+                    }
+                },
+            ],
+
+            // Required only when the caller is choosing one. `exclude_if` would
+            // be wrong: a client that sends both a generate flag and an id is
+            // confused about its own intent, and silently honouring one of them
+            // is how a site ends up owned by an account nobody picked.
+            'system_user_id' => [
+                Rule::requiredIf(fn () => ! $this->boolean('generate_system_user')),
+                'nullable', 'integer', 'exists:system_users,id',
+                function (string $attribute, mixed $value, Closure $fail) {
+                    if ($value !== null && $this->boolean('generate_system_user')) {
+                        $fail(__('errors/application.system_user_conflict'));
+                    }
+                },
+            ],
             // Both versions become path segments and, for PHP, part of an
             // executed binary path. `max:10` alone let a newline through.
             //

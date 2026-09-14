@@ -47,6 +47,10 @@ return [
     'unsafe_path' => 'That path is not allowed.',
     'file_too_large' => 'That file is too large to open in the editor. Download it instead — downloads have no size limit.',
     'file_not_text' => 'That file does not look like text and cannot be opened here.',
+    'file_not_previewable' => 'That file is not an image, so there is nothing to show. Download it to open it on your own machine.',
+    'file_svg_not_previewable' => 'SVG files are not shown here, because an SVG can carry code. Download it to view it.',
+    'file_too_large_to_preview' => 'That image is too large to display here. Download it instead — downloads have no size limit.',
+
     'file_operation_failed' => 'The file operation failed on the server.',
 
     'file_not_archive' => 'Only .zip and .tar.gz archives can be extracted here.',
@@ -73,4 +77,10 @@ return [
     'supervisor_missing' => 'Workers need supervisord, which is not installed on this server. Install it with `apt-get install supervisor`, then create the worker again.',
     'supervisor_already_installed' => 'Supervisor is already installed on this server.',
     'worker_control_failed' => 'Could not control the worker on the server.',
+
+    // Which system account a new site runs as. Generating one creates a
+    // real Linux account, which is why it needs its own permission.
+    'generate_system_user_forbidden' => 'You do not have permission to create system users, so a new one cannot be generated for this site. Choose an existing system user instead.',
+    'system_user_conflict' => 'Choose either a new system user or an existing one, not both.',
+    'system_user_name_unavailable' => 'A system username could not be reserved for this site — the server could not be asked which names are already in use. Try again, or choose an existing system user.',
 ];

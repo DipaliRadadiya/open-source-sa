@@ -47,6 +47,10 @@ return [
     'unsafe_path' => 'Dieser Pfad ist nicht zulässig.',
     'file_too_large' => 'Diese Datei ist zu groß für den Editor. Laden Sie sie stattdessen herunter — Downloads haben keine Größenbeschränkung.',
     'file_not_text' => 'Diese Datei scheint kein Text zu sein und kann hier nicht geöffnet werden.',
+    'file_not_previewable' => 'Diese Datei ist kein Bild, es gibt also nichts anzuzeigen. Laden Sie sie herunter, um sie auf Ihrem Rechner zu öffnen.',
+    'file_svg_not_previewable' => 'SVG-Dateien werden hier nicht angezeigt, da ein SVG Code enthalten kann. Laden Sie die Datei herunter, um sie anzusehen.',
+    'file_too_large_to_preview' => 'Dieses Bild ist zu groß für die Anzeige. Laden Sie es stattdessen herunter — Downloads haben keine Größenbeschränkung.',
+
     'file_operation_failed' => 'Der Dateivorgang ist auf dem Server fehlgeschlagen.',
 
     'file_not_archive' => 'Hier können nur .zip- und .tar.gz-Archive entpackt werden.',
@@ -73,4 +77,10 @@ return [
     'supervisor_missing' => 'Worker benötigen supervisord, das auf diesem Server nicht installiert ist. Installieren Sie es mit `apt-get install supervisor` und legen Sie den Worker erneut an.',
     'supervisor_already_installed' => 'Supervisor ist auf diesem Server bereits installiert.',
     'worker_control_failed' => 'Der Worker konnte auf dem Server nicht gesteuert werden.',
+
+    // Which system account a new site runs as. Generating one creates a
+    // real Linux account, which is why it needs its own permission.
+    'generate_system_user_forbidden' => 'Sie dürfen keine Systembenutzer anlegen, daher kann für diese Website kein neuer erzeugt werden. Wählen Sie stattdessen einen vorhandenen Systembenutzer.',
+    'system_user_conflict' => 'Wählen Sie entweder einen neuen oder einen vorhandenen Systembenutzer, nicht beides.',
+    'system_user_name_unavailable' => 'Für diese Website konnte kein Systembenutzername reserviert werden – der Server konnte nicht gefragt werden, welche Namen bereits vergeben sind. Versuchen Sie es erneut oder wählen Sie einen vorhandenen Systembenutzer.',
 ];

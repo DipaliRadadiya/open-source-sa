@@ -431,5 +431,20 @@ export const createApplicationSchema = z.object({
     .min(1, "applicationDomainRequired")
     .max(255, "tooLong")
     .refine(isValidApplicationDomain, "hostnameInvalid"),
-  system_user_id: z.coerce.number().int().positive("applicationSystemUserRequired"),
-}).passthrough();
+  // Default true: a dedicated account per site is the right answer often
+  // enough to be the one the form starts on. Turned off for anyone who cannot
+  // create system users — see the form, which cannot offer what the API refuses.
+  generate_system_user: z.boolean().default(true),
+  // Required only when the caller is picking one. `superRefine` rather than a
+  // conditional field, because the message has to land on `system_user_id` —
+  // that is where the control is and where the form scrolls to.
+  system_user_id: z.union([z.coerce.number().int().positive(), z.literal("")]).optional(),
+}).passthrough().superRefine((values, ctx) => {
+  if (!values.generate_system_user && !values.system_user_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["system_user_id"],
+      message: "applicationSystemUserRequired",
+    });
+  }
+});
