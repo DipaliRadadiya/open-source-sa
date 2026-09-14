@@ -33,9 +33,30 @@ class CloneManager
      *
      * @var array<int, string>
      */
+    /**
+     * Never worth copying, for any site type: caches that rebuild themselves,
+     * logs that belong to the site they were written on, and the panel's own
+     * state directory.
+     */
     private const FILE_EXCLUDES = [
-        'wp-content/cache/', '.git/', 'node_modules/', '*.log', 'wp-content/upgrade/', '.panel/',
+        'wp-content/cache/', '*.log', 'wp-content/upgrade/', '.panel/',
     ];
+
+    /**
+     * Dropped from the exclude list for a git application, because a clone of
+     * one has to be a *working copy*.
+     *
+     * `.git/` was excluded, so the copy was not a checkout: no remote, no
+     * branch, no HEAD. Nothing could be deployed from it and `git status` in it
+     * was an error. `node_modules/` was excluded, so a Node site could not
+     * start until something rebuilt it — and nothing does, because a clone does
+     * not run a deploy.
+     *
+     * They are still excluded everywhere else. A WordPress install has no
+     * checkout to preserve, and its `node_modules` (a theme build directory)
+     * is genuinely disposable.
+     */
+    private const GIT_WORKING_COPY = ['.git/', 'node_modules/'];
 
     public function __construct(
         private ApplicationProvisioner $provisioner,
@@ -88,9 +109,30 @@ class CloneManager
             'build_command' => $source->build_command,
             'deploy_script' => $source->deploy_script,
             'start_command' => $source->start_command,
+            // The account the source deploys with, and the commit it is
+            // actually on.
+            //
+            // `git_account_id` was the one git column left behind, so the clone
+            // came up with a repository, a branch and no way to reach either:
+            // `git_account_missing` true, the Deployment screen asking to
+            // relink, and the user re-picking credentials the panel already
+            // holds. Copying a foreign key to the same stored credential grants
+            // nothing new — the clone runs on the same box, as the same system
+            // user, against the same repository.
+            'git_account_id' => $source->git_account_id,
             'repository' => $source->repository,
             'repository_url' => $source->repository_url,
             'branch' => $source->branch,
+            // What is on disk after the copy, which is the source's commit. A
+            // clone reporting "never deployed" while serving deployed code is
+            // the Deployment screen lying about the site in front of you.
+            'last_commit' => $source->last_commit,
+            'last_deployed_at' => $source->last_deployed_at,
+            // Deliberately NOT copied: `webhook_*`. `webhook_identifier` is
+            // UNIQUE, so it cannot be, and duplicating the secret would make one
+            // `git push` deploy the original and the clone together — which is
+            // the opposite of what a copy is for. Deploy-on-push stays off until
+            // it is switched on deliberately.
             'status' => 'pending',
         ]);
 
@@ -159,10 +201,31 @@ class CloneManager
             $this->provisioner->provision($target, skipInstaller: true);
 
             $cloneRecord->update(['current_step' => 'copying_files']);
+
+            // `codePath()`, not `documentRoot()`.
+            //
+            // They are the same directory for most site types, and for those
+            // this changes nothing. They are NOT the same for the two shapes
+            // that build a project around the served directory:
+            //
+            //  - a git checkout always lands at `public_html`, whatever
+            //    `web_root` says — so a repository whose front controller is in
+            //    `public/` had only `public/` copied. Not the application
+            //    source, not composer.json, and not the `.env`, which
+            //    `ApplicationEnvironment` writes at `codePath()/.env` — one
+            //    level above what was being copied.
+            //  - Craft and Statamic put `craft`/`please` and the whole project
+            //    one level above `web/`, and were cloned just as partially.
+            //
+            // The old behaviour produced a clone of the served assets and
+            // called it a copy of the site.
             $this->rsync(
-                $this->provisioner->documentRoot($source),
-                $this->provisioner->documentRoot($target),
+                $this->provisioner->codePath($source),
+                $this->provisioner->codePath($target),
                 $target,
+                $this->siteTypes->find($source->site_type)?->method() === 'git'
+                    ? []
+                    : self::GIT_WORKING_COPY,
             );
 
             if ($needsDatabase) {
@@ -172,7 +235,10 @@ class CloneManager
 
             if ($this->supervisor->runs($target)) {
                 $cloneRecord->update(['current_step' => 'starting_process']);
-                $this->supervisor->apply($target, $this->provisioner->documentRoot($target), start: true);
+                // Same path as the copy: a Node process whose working
+                // directory is `public/` cannot find the server it is meant to
+                // start.
+                $this->supervisor->apply($target, $this->provisioner->codePath($target), start: true);
             }
         } catch (Throwable $e) {
             $this->discard($target);
@@ -234,7 +300,10 @@ class CloneManager
         $result = $this->serverOps->run(
             array_merge(['rsync', '-a'], $args, [rtrim($source, '/').'/', rtrim($destination, '/').'/']),
             ['feature' => 'application', 'op' => 'clone_rsync', 'application' => $owner->id],
-            timeout: 300,
+            // Raised with the payload. A served directory was the old scope; a
+            // working copy carries `.git` and `node_modules` too, which on a
+            // real project is usually the bulk of it.
+            timeout: (int) config('server.clone.rsync_timeout', 900),
         );
 
         if ($result->failed()) {

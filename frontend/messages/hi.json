@@ -4242,7 +4242,7 @@
           "phpVersion": "रनटाइम संस्करण",
           "webRoot": "वेब रूट",
           "buildCommand": "बिल्ड और डिप्लॉय",
-          "repository": "रिपॉज़िटरी संदर्भ"
+          "repository": "रिपॉज़िटरी, ब्रांच और Git खाता"
         },
         "dropsItems": {
           "ssl": "SSL प्रमाणपत्र",

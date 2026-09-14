@@ -4242,7 +4242,7 @@
           "phpVersion": "ランタイムバージョン",
           "webRoot": "Web ルート",
           "buildCommand": "ビルド & デプロイ",
-          "repository": "リポジトリ参照"
+          "repository": "リポジトリ・ブランチ・Git アカウント"
         },
         "dropsItems": {
           "ssl": "SSL 証明書",

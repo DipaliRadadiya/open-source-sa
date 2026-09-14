@@ -4242,7 +4242,7 @@
           "phpVersion": "Laufzeitversionen",
           "webRoot": "Web-Root",
           "buildCommand": "Build & Deployment",
-          "repository": "Repository-Verweis"
+          "repository": "Repository, Branch & Git-Konto"
         },
         "dropsItems": {
           "ssl": "SSL-Zertifikat",

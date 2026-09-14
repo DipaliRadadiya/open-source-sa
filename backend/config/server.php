@@ -1005,6 +1005,21 @@ return [
     'installer_timeout' => (int) env('SERVER_INSTALLER_TIMEOUT', 300),
 
     /*
+    |--------------------------------------------------------------------------
+    | Site clone
+    |--------------------------------------------------------------------------
+    |
+    | How long the file copy may take. A clone used to carry a served directory;
+    | it now carries the whole working copy — for a git application that means
+    | the checkout, its `.git` history and its `node_modules`, which on a real
+    | project is usually most of the bytes on disk.
+    |
+    */
+    'clone' => [
+        'rsync_timeout' => (int) env('SERVER_CLONE_RSYNC_TIMEOUT', 900),
+    ],
+
+    /*
     | `memory_limit` for the CLI step an application runs during its own
     | installation -- Mautic's `bin/console mautic:install`, Craft's `craft
     | install`, Nextcloud's `occ`, and the rest.

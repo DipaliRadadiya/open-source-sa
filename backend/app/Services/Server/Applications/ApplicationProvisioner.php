@@ -70,6 +70,28 @@ class ApplicationProvisioner
     }
 
     /**
+     * The application's own root — where its code lives, which is not always
+     * where it is served from.
+     *
+     * Here, beside `documentRoot()`, for exactly the reason that one is: the
+     * arithmetic belongs on the model, and the traversal guard belongs on the
+     * path that is about to be handed to a shell command. Site Clone rsyncs
+     * this directory, so it needs the same guard the served path has always
+     * had.
+     */
+    public function codePath(Application $application): string
+    {
+        $path = $application->codePath();
+
+        abort_if(
+            str_contains($path, '/../') || str_ends_with($path, '/..'),
+            500,
+        );
+
+        return $path;
+    }
+
+    /**
      * Steps are recorded on the application as each one completes, not
      * collected and written at the end — the user is watching this happen, and
      * a failure halfway should leave behind how far it got.

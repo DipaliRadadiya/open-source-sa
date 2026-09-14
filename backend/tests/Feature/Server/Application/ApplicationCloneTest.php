@@ -1,12 +1,14 @@
 <?php
 
 use App\Enums\DomainType;
+use App\Http\Resources\ApplicationResource;
 use App\Jobs\RunClone;
 use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Models\Database;
 use App\Models\DatabaseUser;
+use App\Models\GitAccount;
 use App\Models\ServerCapability;
 use App\Models\SiteClone;
 use App\Models\SystemUser;
@@ -525,4 +527,150 @@ it('still hardens a clone whose source had no settings at all', function () {
     expect($clone->phpSettings)->not->toBeNull()
         ->and($clone->phpSettings->disable_functions)
         ->toBe(ApplicationPhpSettings::STRICT_DISABLED_FUNCTIONS);
+});
+
+describe('cloning a git application', function () {
+    function gitSource(array $overrides = []): Application
+    {
+        $account = GitAccount::create([
+            'provider' => 'github',
+            'label' => 'Deploy key',
+            'identifier' => 'octocat',
+            'token' => 'ghp_secret',
+        ]);
+
+        return Application::forceCreate(array_merge([
+            'system_user_id' => test()->systemUser->id,
+            'name' => 'Shop API',
+            'slug' => 'shop-api',
+            'domain' => 'api.test',
+            'site_type' => 'git',
+            'serving_profile' => 'php',
+            'php_version' => '8.4',
+            'status' => 'active',
+            // The shape that broke: the front controller is in public/, so the
+            // served directory is one level below the checkout.
+            'web_root' => '/public',
+            'git_account_id' => $account->id,
+            'repository' => 'octocat/shop-api',
+            'branch' => 'main',
+            'last_commit' => 'abc1234',
+            'last_deployed_at' => now()->subHour(),
+            'deploy_script' => 'composer install',
+        ], $overrides));
+    }
+
+    it('copies the checkout, not just the served directory', function () {
+        fakeCloneServer();
+
+        $source = gitSource();
+        $record = runClone($source, 'api-clone.test');
+
+        expect($record->status->value)->toBe('completed');
+
+        $clone = Application::find($record->target_application_id);
+
+        // `public_html`, not `public_html/public`. The old behaviour copied the
+        // served subdirectory and left the application source, composer.json
+        // and the `.env` — which lives at codePath()/.env — behind.
+        Process::assertRan(function ($p) use ($source, $clone) {
+            if (($p->command[0] ?? '') !== 'rsync') {
+                return false;
+            }
+
+            $command = implode(' ', $p->command);
+
+            return str_contains($command, rtrim($source->codePath(), '/').'/')
+                && str_contains($command, rtrim($clone->codePath(), '/').'/')
+                && ! str_contains($command, '/public/ ');
+        });
+    });
+
+    it('keeps the checkout and its dependencies', function () {
+        fakeCloneServer();
+
+        $record = runClone(gitSource(), 'api-clone.test');
+        expect($record->status->value)->toBe('completed');
+
+        // Excluding these made the copy not a working copy: no remote, no
+        // branch, no HEAD, and a Node site that cannot start until something
+        // rebuilds it — which a clone never does.
+        Process::assertRan(function ($p) {
+            if (($p->command[0] ?? '') !== 'rsync') {
+                return false;
+            }
+
+            $command = implode(' ', $p->command);
+
+            return ! str_contains($command, '--exclude .git/')
+                && ! str_contains($command, '--exclude node_modules/');
+        });
+    });
+
+    it('carries the git account, so nothing has to be relinked', function () {
+        fakeCloneServer();
+
+        $source = gitSource();
+        $clone = Application::find(runClone($source, 'api-clone.test')->target_application_id);
+
+        expect($clone->git_account_id)->toBe($source->git_account_id);
+        // The flag the Deployment screen reads to decide whether to demand a
+        // relink. It was true on every git clone.
+        expect($clone->git_account_missing ?? null)->toBeNull();
+
+        $payload = ApplicationResource::make($clone->fresh())->resolve();
+        expect($payload['git_account_missing'])->toBeFalse();
+    });
+
+    it('reports the commit it is actually running', function () {
+        fakeCloneServer();
+
+        $source = gitSource();
+        $clone = Application::find(runClone($source, 'api-clone.test')->target_application_id);
+
+        // The files on disk are the source's. A clone saying "never deployed"
+        // while serving deployed code is the Deployment screen lying about the
+        // site in front of you.
+        expect($clone->last_commit)->toBe($source->last_commit);
+        expect($clone->last_deployed_at)->not->toBeNull();
+    });
+
+    it('does not inherit deploy-on-push', function () {
+        fakeCloneServer();
+
+        $source = gitSource(['webhook_enabled' => true, 'webhook_identifier' => 'src-hook', 'webhook_provider' => 'github']);
+        $clone = Application::find(runClone($source, 'api-clone.test')->target_application_id);
+
+        // `webhook_identifier` is UNIQUE so it cannot be copied — and copying
+        // the secret would make one `git push` deploy the original and the
+        // clone together, which is the opposite of what a copy is for.
+        expect($clone->webhook_enabled)->toBeFalse();
+        expect($clone->webhook_identifier)->toBeNull();
+    });
+
+    it('still excludes the checkout for a site type that has none', function () {
+        fakeCloneServer();
+
+        $source = Application::forceCreate([
+            'system_user_id' => test()->systemUser->id,
+            'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.test',
+            'site_type' => 'wordpress', 'serving_profile' => 'php', 'php_version' => '8.4',
+            'status' => 'active', 'web_root' => '/',
+        ]);
+
+        runClone($source, 'blog-clone.test');
+
+        // A WordPress install has no checkout to preserve, and its
+        // node_modules is a disposable theme build directory.
+        Process::assertRan(function ($p) {
+            if (($p->command[0] ?? '') !== 'rsync') {
+                return false;
+            }
+
+            $command = implode(' ', $p->command);
+
+            return str_contains($command, '--exclude .git/')
+                && str_contains($command, '--exclude node_modules/');
+        });
+    });
 });
