@@ -4751,11 +4751,13 @@ Manual + scheduled run history, paginated.
 ```json
 {"settings": {
   "general": {"timezone": "UTC", "ntp": true, "clock_synchronized": true, "hostname": "srv1"},
-  "swap": {"enabled": true, "path": "/swapfile", "size": 2147483648, "size_human": "2 GB", "used": 0, "used_human": "0 B", "free": 2147483648, "free_human": "2 GB"},
+  "swap": {"enabled": true, "path": "/swapfile-panel", "size": 2147483648, "size_human": "2 GB", "used": 0, "used_human": "0 B", "free": 2147483648, "free_human": "2 GB"},
   "security": {"port": 22, "permit_root_login": "prohibit-password", "password_authentication": false, "has_ssh_key": true},
   "updates": {"security_updates_enabled": true, "auto_reboot": false, "reboot_time": "06:00", "reboot_required": false, "updates_available": 3, "security_updates_available": 1, "lists_refreshed_at": "29-07-2026 04:00:00", "unattended_last_run_at": "27-07-2026 06:18:00", "unattended_last_result": "success", "unattended_last_error": null, "unattended_last_log": null, "unattended_last_log_truncated": false, "unattended_log_readable": true},
   "redis": {"maxmemory": "256mb", "maxmemory_policy": "allkeys-lru", "has_password": true, "password": "s3cr3t-redis", "password_out_of_sync": false, "password_manageable": true, "running": true, "memory_used": 8388608, "memory_used_human": "8 MB"}
 ```
+
+**`swap.path` is `/swapfile-panel`, not `/swapfile`** (changed 2026-09-14). It is the file `install.sh` creates, and the panel manages exactly that one — `swap.enabled` is answered by looking for this path in the kernel's swap list. The two names used to disagree, so on a fresh install the installer's swap was live and this block read `enabled: false, size: 0`. A server whose swap was created through this screen before the change has it at `/swapfile`; that file is now reported under `unmanaged` / `system_total` and is no longer resizable from the screen. Don't hardcode the path — render `swap.path`.
 
 **`redis.password` is the real value**, sent so the panel can show and copy it (operator decision, 2026-08-31). It comes from the panel's own configuration — the value `install.sh` generated, wrote to `redis.conf` and recorded in `.env` — not from `CONFIG GET requirepass`. Reading it back from Redis required authenticating with that same value first, so a successful answer only echoed it, a failed one left the field blank on the very screen someone opens to investigate, and `CONFIG GET` can be renamed or disabled on a hardened Redis.
 

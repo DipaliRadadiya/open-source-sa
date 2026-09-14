@@ -498,6 +498,12 @@ configure_swap() {
     # A second file rather than resizing the first: /swapfile may not be ours,
     # and swapoff-ing a file the box is actively paging into is a far worse
     # failure than using a little more disk.
+    #
+    # ⚠️ This name is also the panel's `server.swap_file`, and the two must
+    # stay equal: the Memory screen answers "is swap on?" by looking for that
+    # exact path in the kernel's swap list. While they disagreed, this
+    # gigabyte was live and the screen said off. A test asserts the two match,
+    # so changing it here alone fails the suite rather than the server.
     local swapfile=/swapfile-panel
 
     # How much of that total is the file we manage. Read from /proc/swaps

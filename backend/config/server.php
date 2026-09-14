@@ -1930,7 +1930,29 @@ return [
 
     // Swap: a single managed swap file. Only this file + its fstab line are
     // ever touched (non-destructive → a migrated server keeps existing swap).
-    'swap_file' => env('SERVER_SWAP_FILE', '/swapfile'),
+    //
+    // `/swapfile-panel`, and it has to be: install.sh creates a file by that
+    // name and this is the path the panel calls "ours". While the two names
+    // disagreed, the installer's gigabyte was live and the Memory screen read
+    // `enabled: false, size: 0` — because `enabled` is answered by looking for
+    // *this* path in the kernel's swap list, and it was never there. Reported
+    // as "1 GB of swap during installation, off afterwards", which is exactly
+    // what it was.
+    //
+    // Not the other way round — the installer's comment says why, and it
+    // governs: a plain `/swapfile` may already be someone else's, and
+    // `createOrResize()` runs `rm -f` over this path. Pointing that at a name
+    // the panel does not own is how a VPS image's swap gets deleted.
+    //
+    // ⚠️ A panel that created swap through the Settings screen before this
+    // change has it at `/swapfile`, and that file is now unmanaged — reported
+    // honestly under `unmanaged` / `system_total`, but no longer resizable or
+    // removable from the screen. `SERVER_SWAP_FILE=/swapfile` restores the old
+    // behaviour for such a server. Deliberately no auto-adoption of a bare
+    // `/swapfile`: its fstab line carries no mark of who wrote it, and
+    // claiming one on sight is the mistake `SwapSettings::isActive()` exists
+    // to avoid.
+    'swap_file' => env('SERVER_SWAP_FILE', '/swapfile-panel'),
 
     'swap_max_mb' => (int) env('SERVER_SWAP_MAX_MB', 65536), // 64 GB ceiling
 
