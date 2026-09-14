@@ -3,6 +3,7 @@
 use App\Models\ActivityLog;
 use App\Models\Permission;
 use App\Models\User;
+use App\Services\PermissionCatalog;
 use Database\Seeders\PermissionSeeder;
 
 beforeEach(function () {
@@ -37,14 +38,21 @@ it('re-syncs the permission catalog for an admin', function () {
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->postJson('/api/admin/permissions/sync');
 
+    // Counted from the catalog rather than written here as a number. The
+    // assertion is "sync restores every permission the code defines", and a
+    // literal made that a lie the moment somebody added one: this test went
+    // red on a commit that correctly added a permission and updated the other
+    // permission test, because the count lived in two places.
+    $defined = count(app(PermissionCatalog::class)->items());
+
     $response->assertOk()
-        ->assertJsonPath('synced', 33)
-        ->assertJsonCount(33, 'permissions');
-    expect(Permission::count())->toBe(33);
+        ->assertJsonPath('synced', $defined)
+        ->assertJsonCount($defined, 'permissions');
+    expect(Permission::count())->toBe($defined);
 
     // audit entry recorded
     $log = ActivityLog::where('type', 'permission')->where('action', 'synced')->latest('id')->first();
-    expect($log->properties['count'])->toBe(33);
+    expect($log->properties['count'])->toBe($defined);
 });
 
 it('denies a non-admin from syncing permissions', function () {
