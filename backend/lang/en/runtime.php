@@ -11,6 +11,10 @@ return [
     'install_failed' => [
         'package_not_found' => 'No package for :version is available from this server\'s package sources.',
         'apt_lock' => 'Another package operation is already running. Try again in a moment.',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'This server\'s sudo grant is older than the panel running on it, so the install was refused before it started. Nothing was changed and trying again will not help. Run `sudo php artisan panel:sudoers` on the server to rewrite the grant from the panel\'s own list, then retry.',
         'network' => 'The package repository could not be reached. Check the server has network access.',
         'no_space' => 'The server has run out of disk space.',
         'worker' => 'The install stopped unexpectedly. It may have timed out — try again.',
@@ -37,6 +41,10 @@ return [
     'extension_install_failed' => [
         'package_not_found' => 'No package for :extension on PHP :version. It may not exist for this version.',
         'apt_lock' => 'Another package operation is already running. Try again in a moment.',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'This server\'s sudo grant is older than the panel running on it, so the install was refused before it started. Nothing was changed and trying again will not help. Run `sudo php artisan panel:sudoers` on the server to rewrite the grant from the panel\'s own list, then retry.',
         'network' => 'The package repository could not be reached. Check the server has network access.',
         'no_space' => 'The server has run out of disk space.',
         'worker' => 'Installing :extension stopped unexpectedly. It may have timed out — try again.',

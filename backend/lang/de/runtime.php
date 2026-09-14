@@ -11,6 +11,10 @@ return [
     'install_failed' => [
         'package_not_found' => 'In den Paketquellen dieses Servers gibt es kein Paket für :version.',
         'apt_lock' => 'Es läuft bereits ein anderer Paketvorgang. Versuche es gleich noch einmal.',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'Die sudo-Berechtigung dieses Servers ist älter als das darauf laufende Panel, deshalb wurde die Installation abgelehnt, bevor sie begann. Es wurde nichts geändert, und ein erneuter Versuch hilft nicht. Führe auf dem Server `sudo php artisan panel:sudoers` aus, um die Berechtigung aus der Liste des Panels neu zu schreiben, und versuche es dann erneut.',
         'network' => 'Das Paket-Repository war nicht erreichbar. Prüfe die Netzwerkverbindung des Servers.',
         'no_space' => 'Auf dem Server ist kein Speicherplatz mehr frei.',
         'worker' => 'Die Installation wurde unerwartet beendet. Möglicherweise ein Timeout — versuche es erneut.',
@@ -37,6 +41,10 @@ return [
     'extension_install_failed' => [
         'package_not_found' => 'Kein Paket für :extension unter PHP :version. Für diese Version existiert es möglicherweise nicht.',
         'apt_lock' => 'Es läuft bereits ein anderer Paketvorgang. Versuche es gleich noch einmal.',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'Die sudo-Berechtigung dieses Servers ist älter als das darauf laufende Panel, deshalb wurde die Installation abgelehnt, bevor sie begann. Es wurde nichts geändert, und ein erneuter Versuch hilft nicht. Führe auf dem Server `sudo php artisan panel:sudoers` aus, um die Berechtigung aus der Liste des Panels neu zu schreiben, und versuche es dann erneut.',
         'network' => 'Das Paket-Repository war nicht erreichbar. Prüfe die Netzwerkverbindung des Servers.',
         'no_space' => 'Auf dem Server ist kein Speicherplatz mehr frei.',
         'worker' => 'Die Installation von :extension wurde unerwartet beendet. Möglicherweise ein Timeout — versuche es erneut.',

@@ -11,6 +11,10 @@ return [
     'install_failed' => [
         'package_not_found' => 'このサーバーのパッケージソースに :version のパッケージがありません。',
         'apt_lock' => '別のパッケージ操作が実行中です。しばらくしてからもう一度お試しください。',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'このサーバーの sudo 権限は動作中のパネルより古いため、インストールは開始前に拒否されました。変更は行われておらず、再試行しても解決しません。サーバーで `sudo php artisan panel:sudoers` を実行して権限をパネル自身の一覧から書き直してから、再度お試しください。',
         'network' => 'パッケージリポジトリに接続できませんでした。サーバーのネットワーク接続を確認してください。',
         'no_space' => 'サーバーのディスク容量が不足しています。',
         'worker' => 'インストールが予期せず停止しました。タイムアウトの可能性があります — もう一度お試しください。',
@@ -37,6 +41,10 @@ return [
     'extension_install_failed' => [
         'package_not_found' => 'PHP :version 用の :extension パッケージがありません。このバージョンには存在しない可能性があります。',
         'apt_lock' => '別のパッケージ操作が実行中です。しばらくしてからもう一度お試しください。',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'このサーバーの sudo 権限は動作中のパネルより古いため、インストールは開始前に拒否されました。変更は行われておらず、再試行しても解決しません。サーバーで `sudo php artisan panel:sudoers` を実行して権限をパネル自身の一覧から書き直してから、再度お試しください。',
         'network' => 'パッケージリポジトリに接続できませんでした。サーバーのネットワーク接続を確認してください。',
         'no_space' => 'サーバーのディスク容量が不足しています。',
         'worker' => ':extension のインストールが予期せず停止しました。タイムアウトの可能性があります — もう一度お試しください。',

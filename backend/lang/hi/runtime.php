@@ -11,6 +11,10 @@ return [
     'install_failed' => [
         'package_not_found' => 'इस सर्वर के पैकेज स्रोतों में :version के लिए कोई पैकेज नहीं है।',
         'apt_lock' => 'एक अन्य पैकेज कार्य पहले से चल रहा है। थोड़ी देर बाद फिर कोशिश करें।',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'इस सर्वर की sudo अनुमति उस पर चल रहे पैनल से पुरानी है, इसलिए इंस्टॉल शुरू होने से पहले ही अस्वीकार कर दिया गया। कुछ नहीं बदला और दोबारा कोशिश करने से मदद नहीं मिलेगी। सर्वर पर `sudo php artisan panel:sudoers` चलाकर अनुमति को पैनल की अपनी सूची से दोबारा लिखें, फिर पुनः प्रयास करें।',
         'network' => 'पैकेज रिपॉज़िटरी तक नहीं पहुँचा जा सका। सर्वर की नेटवर्क पहुँच जाँचें।',
         'no_space' => 'सर्वर पर डिस्क स्थान समाप्त हो गया है।',
         'worker' => 'इंस्टॉल अप्रत्याशित रूप से रुक गया। समय समाप्त हो सकता है — फिर कोशिश करें।',
@@ -37,6 +41,10 @@ return [
     'extension_install_failed' => [
         'package_not_found' => 'PHP :version पर :extension के लिए कोई पैकेज नहीं है। इस संस्करण के लिए यह उपलब्ध नहीं हो सकता।',
         'apt_lock' => 'एक अन्य पैकेज कार्य पहले से चल रहा है। थोड़ी देर बाद फिर कोशिश करें।',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'इस सर्वर की sudo अनुमति उस पर चल रहे पैनल से पुरानी है, इसलिए इंस्टॉल शुरू होने से पहले ही अस्वीकार कर दिया गया। कुछ नहीं बदला और दोबारा कोशिश करने से मदद नहीं मिलेगी। सर्वर पर `sudo php artisan panel:sudoers` चलाकर अनुमति को पैनल की अपनी सूची से दोबारा लिखें, फिर पुनः प्रयास करें।',
         'network' => 'पैकेज रिपॉज़िटरी तक नहीं पहुँचा जा सका। सर्वर की नेटवर्क पहुँच जाँचें।',
         'no_space' => 'सर्वर पर डिस्क स्थान समाप्त हो गया है।',
         'worker' => ':extension का इंस्टॉल अप्रत्याशित रूप से रुक गया। समय समाप्त हो सकता है — फिर कोशिश करें।',

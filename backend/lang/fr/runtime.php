@@ -11,6 +11,10 @@ return [
     'install_failed' => [
         'package_not_found' => 'Aucun paquet pour :version n\'est disponible dans les sources de paquets de ce serveur.',
         'apt_lock' => 'Une autre opération de paquets est déjà en cours. Réessayez dans un instant.',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'L\'autorisation sudo de ce serveur est plus ancienne que le panneau qui y tourne : l\'installation a été refusée avant de commencer. Rien n\'a été modifié et réessayer n\'y changera rien. Exécutez `sudo php artisan panel:sudoers` sur le serveur pour réécrire l\'autorisation à partir de la liste du panneau, puis réessayez.',
         'network' => 'Le dépôt de paquets est injoignable. Vérifiez que le serveur a un accès réseau.',
         'no_space' => 'Le serveur n\'a plus d\'espace disque.',
         'worker' => 'L\'installation s\'est arrêtée de façon inattendue. Elle a peut-être expiré — réessayez.',
@@ -37,6 +41,10 @@ return [
     'extension_install_failed' => [
         'package_not_found' => 'Aucun paquet pour :extension sur PHP :version. Il n\'existe peut-être pas pour cette version.',
         'apt_lock' => 'Une autre opération de paquets est déjà en cours. Réessayez dans un instant.',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'L\'autorisation sudo de ce serveur est plus ancienne que le panneau qui y tourne : l\'installation a été refusée avant de commencer. Rien n\'a été modifié et réessayer n\'y changera rien. Exécutez `sudo php artisan panel:sudoers` sur le serveur pour réécrire l\'autorisation à partir de la liste du panneau, puis réessayez.',
         'network' => 'Le dépôt de paquets est injoignable. Vérifiez que le serveur a un accès réseau.',
         'no_space' => 'Le serveur n\'a plus d\'espace disque.',
         'worker' => 'L\'installation de :extension s\'est arrêtée de façon inattendue. Elle a peut-être expiré — réessayez.',

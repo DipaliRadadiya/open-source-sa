@@ -11,6 +11,10 @@ return [
     'install_failed' => [
         'package_not_found' => 'Não há pacote para :version nas fontes de pacotes deste servidor.',
         'apt_lock' => 'Outra operação de pacotes já está em execução. Tente novamente em instantes.',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'A permissão sudo deste servidor é mais antiga que o painel em execução nele, então a instalação foi recusada antes de começar. Nada foi alterado e tentar de novo não vai ajudar. Execute `sudo php artisan panel:sudoers` no servidor para reescrever a permissão a partir da lista do próprio painel e tente novamente.',
         'network' => 'Não foi possível alcançar o repositório de pacotes. Verifique o acesso à rede do servidor.',
         'no_space' => 'O servidor ficou sem espaço em disco.',
         'worker' => 'A instalação parou inesperadamente. Pode ter excedido o tempo — tente novamente.',
@@ -37,6 +41,10 @@ return [
     'extension_install_failed' => [
         'package_not_found' => 'Nenhum pacote para :extension no PHP :version. Pode não existir para esta versão.',
         'apt_lock' => 'Outra operação de pacotes já está em execução. Tente novamente em instantes.',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'A permissão sudo deste servidor é mais antiga que o painel em execução nele, então a instalação foi recusada antes de começar. Nada foi alterado e tentar de novo não vai ajudar. Execute `sudo php artisan panel:sudoers` no servidor para reescrever a permissão a partir da lista do próprio painel e tente novamente.',
         'network' => 'Não foi possível alcançar o repositório de pacotes. Verifique o acesso à rede do servidor.',
         'no_space' => 'O servidor ficou sem espaço em disco.',
         'worker' => 'A instalação de :extension parou inesperadamente. Pode ter excedido o tempo — tente novamente.',

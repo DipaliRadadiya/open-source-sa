@@ -190,7 +190,7 @@ class NodeRuntime implements Runtime
         if ($result->failed()) {
             throw new RuntimeInstallException(
                 $result->reference,
-                $this->classifier->classify('node', $result->output()),
+                $this->classifier->classify('node', $result),
             );
         }
     }

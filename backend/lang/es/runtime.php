@@ -11,6 +11,10 @@ return [
     'install_failed' => [
         'package_not_found' => 'No hay ningún paquete para :version en las fuentes de paquetes de este servidor.',
         'apt_lock' => 'Ya se está ejecutando otra operación de paquetes. Inténtalo de nuevo en un momento.',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'El permiso sudo de este servidor es más antiguo que el panel que se ejecuta en él, así que la instalación se rechazó antes de empezar. No se cambió nada y volver a intentarlo no servirá. Ejecuta `sudo php artisan panel:sudoers` en el servidor para reescribir el permiso a partir de la propia lista del panel y vuelve a intentarlo.',
         'network' => 'No se pudo acceder al repositorio de paquetes. Comprueba que el servidor tenga acceso a la red.',
         'no_space' => 'El servidor se ha quedado sin espacio en disco.',
         'worker' => 'La instalación se detuvo inesperadamente. Puede haber excedido el tiempo — inténtalo de nuevo.',
@@ -37,6 +41,10 @@ return [
     'extension_install_failed' => [
         'package_not_found' => 'No hay paquete para :extension en PHP :version. Puede que no exista para esta versión.',
         'apt_lock' => 'Ya se está ejecutando otra operación de paquetes. Inténtalo de nuevo en un momento.',
+        // ServerOps already knew: the grant is older than the panel.
+        // Naming the repair beats "contact support" for a failure with
+        // a one-command fix.
+        'sudo_denied' => 'El permiso sudo de este servidor es más antiguo que el panel que se ejecuta en él, así que la instalación se rechazó antes de empezar. No se cambió nada y volver a intentarlo no servirá. Ejecuta `sudo php artisan panel:sudoers` en el servidor para reescribir el permiso a partir de la propia lista del panel y vuelve a intentarlo.',
         'network' => 'No se pudo acceder al repositorio de paquetes. Comprueba que el servidor tenga acceso a la red.',
         'no_space' => 'El servidor se ha quedado sin espacio en disco.',
         'worker' => 'La instalación de :extension se detuvo inesperadamente. Puede haber excedido el tiempo — inténtalo de nuevo.',

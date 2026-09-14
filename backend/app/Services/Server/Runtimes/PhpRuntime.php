@@ -290,7 +290,7 @@ class PhpRuntime implements Runtime
         if ($result->failed()) {
             throw new RuntimeInstallException(
                 $result->reference,
-                $this->classifier->classify('php', $result->output()),
+                $this->classifier->classify('php', $result),
             );
         }
     }

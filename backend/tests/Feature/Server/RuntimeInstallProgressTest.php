@@ -14,7 +14,9 @@ use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Php\PhpExtensionManager;
 use App\Services\Server\Runtimes\PhpRuntime;
+use App\Services\Server\ServerOpsResult;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Process\FakeProcessResult;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -323,9 +325,27 @@ describe('extensions', function () {
     });
 });
 
+/** A failed result carrying `$stderr`, which is where installers report failure. */
+function classifiable(string $stderr, bool $denied = false): ServerOpsResult
+{
+    return new ServerOpsResult(
+        ok: false,
+        reference: 'ref',
+        result: new FakeProcessResult(exitCode: 1, output: '', errorOutput: $stderr),
+        denied: $denied,
+    );
+}
+
 describe('failure classification', function () {
+    /*
+     * These pass the whole result rather than a string because the classifier
+     * now takes one — deliberately. It used to be handed `$result->output()`,
+     * which is stdout, while installers report failure on stderr; taking the
+     * result makes reading only one stream unexpressible. The cases below feed
+     * stderr for that reason.
+     */
     it('reads a reason out of apt output', function (string $output, string $expected) {
-        expect(app(InstallFailureClassifier::class)->classify('php', $output))->toBe($expected);
+        expect(app(InstallFailureClassifier::class)->classify('php', classifiable($output)))->toBe($expected);
     })->with([
         ['E: Unable to locate package php8.3-fpm', 'package_not_found'],
         ['E: Could not get lock /var/lib/dpkg/lock-frontend', 'apt_lock'],
@@ -335,14 +355,14 @@ describe('failure classification', function () {
     ]);
 
     it('reads a reason out of fnm output', function () {
-        expect(app(InstallFailureClassifier::class)->classify('node', "Can't find version '99'"))
+        expect(app(InstallFailureClassifier::class)->classify('node', classifiable("Can't find version '99'")))
             ->toBe('package_not_found');
     });
 
     it('never guesses when it does not recognise the output', function () {
         // Guessing a cause would be worse than admitting we do not know: the
         // reference still points at the real stderr.
-        expect(app(InstallFailureClassifier::class)->classify('php', 'weird apt explosion'))
+        expect(app(InstallFailureClassifier::class)->classify('php', classifiable('weird apt explosion')))
             ->toBe('unknown');
     });
 });
