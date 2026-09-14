@@ -145,7 +145,7 @@
     "name": "Nombre",
     "username": "Usuario",
     "accountType": "Tipo de cuenta",
-    "admin": "Administrador",
+    "admin": "Admin",
     "user": "Usuario"
   },
   "validation": {
@@ -238,7 +238,7 @@
   "admin": {
     "switchToAdmin": "Panel de administración",
     "exitToPanel": "Salir al panel del servidor",
-    "breadcrumbRoot": "Administración",
+    "breadcrumbRoot": "Admin",
     "nav": {
       "dashboard": "Panel",
       "users": "Usuarios",
@@ -280,7 +280,7 @@
       "versionUpToDate": "Al día"
     },
     "attention": {
-      "title": "Necesita atención",
+      "title": "Requiere atención",
       "count": "{count, plural, one {# problema} other {# problemas}}",
       "openHealth": "Abrir estado del sistema",
       "openErrors": "Ver registro de errores",
@@ -402,7 +402,7 @@
       "nonAdmins": "No administradores"
     },
     "roleBadge": {
-      "admin": "Administrador",
+      "admin": "Admin",
       "user": "Usuario"
     },
     "columns": {
@@ -664,7 +664,7 @@
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
       "submit": "Crear usuario",
       "more": "Más opciones",
-      "shell": "Shell de acceso",
+      "shell": "Shell de inicio de sesión",
       "shellHint": "Déjalo en bash salvo que esta cuenta no deba poder iniciar sesión.",
       "sudo": "Permitir sudo",
       "sudoHint": "Permite a esta cuenta ejecutar comandos como root. Puedes cambiarlo después.",
@@ -720,15 +720,15 @@
       "remove": "Eliminar clave",
       "removeTitle": "¿Eliminar clave SSH?",
       "removeDescription": "Esto elimina “{name}” de las claves autorizadas del usuario.",
-      "removeConfirm": "Eliminar"
+      "removeConfirm": "Quitar"
     },
     "detail": {
       "back": "Usuarios del sistema",
       "overview": "Resumen",
       "shell": "Shell de inicio de sesión",
       "created": "Creado",
-      "enabled": "Habilitado",
-      "disabled": "Deshabilitado",
+      "enabled": "Activado",
+      "disabled": "Desactivado",
       "password": "Contraseña del SO",
       "passwordHint": "Se usa para iniciar sesión en el servidor como este usuario.",
       "passwordNotSet": "Sin establecer",
@@ -747,7 +747,7 @@
     "sshNeedsLoginShell": "El shell es «{shell}», que rechaza el inicio de sesión. Elige antes un shell que lo permita.",
     "sshKeys": {
       "loadFailed": "No se pudieron cargar las claves de esta cuenta. Eso no es lo mismo que no tener ninguna.",
-      "retryLoad": "Intentar de nuevo"
+      "retryLoad": "Reintentar"
     },
     "loadFailed": "No se pudieron cargar tus usuarios del sistema. No se han modificado ni eliminado."
   },
@@ -827,7 +827,7 @@
     "recovered": "Métricas en vivo restablecidas",
     "updated": "Actualizado {time}",
     "of": "de",
-    "swapOff": "No configurado",
+    "swapOff": "Sin configurar",
     "ofCores": "de {count} núcleos",
     "breakdown": "{used} usados · {free} libres · {total} en total",
     "loadFailed": "No se pudieron cargar estos datos. Prueba a recargar la página.",
@@ -966,7 +966,7 @@
       "title": "Página no encontrada",
       "description": "Puede que el enlace esté roto o que la página se haya movido. Nada en tu servidor ha cambiado.",
       "dashboard": "Volver al panel",
-      "back": "Atrás",
+      "back": "Volver",
       "linksLabel": "Páginas frecuentes"
     },
     "reason": {
@@ -1107,7 +1107,7 @@
     "status": {
       "active": "En ejecución",
       "inactive": "Detenido",
-      "failed": "Con errores"
+      "failed": "Fallido"
     },
     "actions": {
       "start": "Iniciar",
@@ -1163,7 +1163,7 @@
     "copiedReference": "Copiado",
     "memoryShort": "Memoria",
     "cpuShort": "CPU",
-    "viewLogs": "Ver los registros",
+    "viewLogs": "Ver registros",
     "configTest": {
       "action": "Probar la configuración",
       "okTitle": "La configuración de {name} es válida",
@@ -1209,7 +1209,7 @@
     },
     "sections": {
       "attention": {
-        "title": "Necesita atención",
+        "title": "Requiere atención",
         "hint": "Estos no están funcionando. Cada uno indica por qué y qué hacer."
       },
       "running": {
@@ -1247,7 +1247,7 @@
       "started": "Instalando — tarda un minuto.",
       "installing": "Esta página se actualiza sola cuando termine.",
       "failed": "No se pudo instalar fail2ban.",
-      "stalled": "Está tardando más de lo normal. Puede que siga trabajando.",
+      "stalled": "Está tardando más de lo habitual. Puede que siga funcionando.",
       "retry": "Intentar instalar otra vez",
       "installingTitle": "Instalando Fail2ban…",
       "failedTitle": "No se pudo instalar Fail2ban",
@@ -1283,7 +1283,7 @@
       "title": "Direcciones bloqueadas",
       "description": "Quién está bloqueado ahora y cuánto le queda.",
       "ip": "Dirección",
-      "jail": "Jaula",
+      "jail": "Jail",
       "since": "Bloqueada",
       "timeLeft": "Tiempo restante",
       "actions": "Acciones",
@@ -1322,7 +1322,7 @@
       "description": "La dirección se bloquea con la jaula que elijas, durante el tiempo de bloqueo actual.",
       "ipLabel": "Dirección",
       "ipHint": "Una sola dirección, no un rango.",
-      "jailLabel": "Jaula",
+      "jailLabel": "Jail",
       "submit": "Bloquear",
       "cancel": "Cancelar",
       "banned": "{ip} bloqueada",
@@ -1348,7 +1348,7 @@
       "addIp": "Añadir",
       "you": "tú",
       "removeIp": "Quitar {ip}",
-      "save": "Guardar los cambios",
+      "save": "Guardar cambios",
       "savingNote": "Esto puede tardar unos segundos: se está recargando Fail2ban.",
       "saved": "Reglas guardadas.",
       "failed": "No hemos podido guardarlo.",
@@ -1370,7 +1370,7 @@
     },
     "tabs": {
       "live": "Protección",
-      "settings": "Reglas",
+      "settings": "Reglas de bloqueo",
       "needsAttention": "Necesita tu atención"
     },
     "disabled": {
@@ -1807,7 +1807,7 @@
         "when": "Inicio",
         "now": "Ahora mismo",
         "inMinutes": "Dentro de {minutes} minutos",
-        "action": "Reiniciar el servidor",
+        "action": "Reiniciar servidor",
         "confirmTitle": "¿Reiniciar este servidor?",
         "confirmNow": "Todos los sitios, bases de datos y servicios de esta máquina se detienen ahora y vuelven cuando haya arrancado. El panel no estará accesible mientras tanto.",
         "confirmDelayed": "El servidor se reiniciará dentro de {minutes} minutos. Todos los sitios, bases de datos y servicios se detendrán hasta que vuelva.",
@@ -1843,8 +1843,8 @@
     },
     "unsavedTitle": "¿Salir sin guardar?",
     "unsavedDescription": "Los cambios de esta página no se han guardado. Se perderán.",
-    "unsavedStay": "Quedarme aquí",
-    "unsavedLeave": "Salir y descartar"
+    "unsavedStay": "Quedarme en esta página",
+    "unsavedLeave": "Salir y perder los cambios"
   },
   "php": {
     "title": "PHP",
@@ -1868,7 +1868,7 @@
       "remove": "Quitar",
       "defaultHint": "Tus sitios conservan su propia versión: esto solo cambia el comando php.",
       "defaultSet": "PHP {version} ya es la predeterminada.",
-      "defaultFailed": "No se pudo hacer predeterminada esa versión.",
+      "defaultFailed": "No se pudo establecer esa versión como predeterminada.",
       "removed": "PHP {version} eliminada.",
       "removing": "Eliminando PHP {version}: esto tarda unos minutos.",
       "removeFailed": "No se pudo eliminar esa versión.",
@@ -2031,7 +2031,7 @@
       "usedByCount": "{count, plural, one {La usa # aplicación} other {La usan # aplicaciones}}.",
       "usedByNone": "Todavía ninguna aplicación usa esta versión.",
       "makeDefault": "Hacer predeterminada",
-      "remove": "Eliminar",
+      "remove": "Quitar",
       "defaultHint": "Tus aplicaciones conservan su propia versión: esto solo cambia el comando node.",
       "defaultSet": "Node.js {version} ya es la predeterminada.",
       "defaultFailed": "No se pudo establecer esa versión como predeterminada.",
@@ -2041,7 +2041,7 @@
       "confirmRemoveBody": "Todo lo instalado para esta versión se elimina con ella. Puedes instalarla de nuevo más tarde.",
       "confirmCancel": "Cancelar",
       "moreCount": "+{count} más",
-      "statusFailed": "Falló la instalación",
+      "statusFailed": "Instalación fallida",
       "statusInstalling": "Instalando",
       "statusRemoving": "Eliminando",
       "steps": {
@@ -2186,7 +2186,7 @@
         "scheduled": "Automática",
         "schedule": "Automática"
       },
-      "failed": "Falló"
+      "failed": "Fallida"
     }
   },
   "rebootBanner": {
@@ -2320,7 +2320,7 @@
       "description": "Una base de datos es donde tu aplicación guarda sus datos. Crea una para empezar.",
       "filteredTitle": "Sin resultados",
       "filteredDesc": "Ninguna base de datos coincide con esa búsqueda.",
-      "clearSearch": "Limpiar búsqueda"
+      "clearSearch": "Borrar búsqueda"
     },
     "create": {
       "action": "Crear base de datos",
@@ -2335,7 +2335,7 @@
       "engine": "Motor",
       "withUser": "Crear también un usuario",
       "withUserHint": "Una base de datos necesita un usuario antes de que algo pueda conectarse. Puedes añadir más después.",
-      "username": "Nombre de usuario",
+      "username": "Usuario",
       "access": "Desde dónde puede conectarse",
       "host": "Dirección IP",
       "hostHint": "Una dirección o un rango; por ejemplo 203.0.113.10 o 203.0.113.0/24.",
@@ -2353,7 +2353,7 @@
       "applicationEngine": "Este sitio funciona con {engines}.",
       "sqlWords": {
         "charset": "Juego de caracteres",
-        "collation": "Colación",
+        "collation": "Cotejamiento",
         "needsCharset": "Elige primero un juego de caracteres: sus colaciones se cargan con él.",
         "chooseFirst": "Elige primero un juego de caracteres"
       },
@@ -2384,10 +2384,10 @@
       "subtitleNoUser": "La base de datos se creó.",
       "done": "Listo",
       "open": "Abrir base de datos",
-      "host": "Servidor",
+      "host": "Host",
       "port": "Puerto",
       "database": "Base de datos",
-      "username": "Nombre de usuario",
+      "username": "Usuario",
       "password": "Contraseña",
       "connectionString": "Cadena de conexión",
       "copyString": "Copiar",
@@ -2455,7 +2455,7 @@
       "socketPath": "Ruta del socket",
       "host": "Host",
       "port": "Puerto",
-      "username": "Nombre de usuario",
+      "username": "Usuario",
       "password": "Contraseña",
       "passwordSet": "Contraseña guardada",
       "passwordNone": "Sin contraseña",
@@ -2474,7 +2474,7 @@
     "credentials": {
       "title": "Datos de conexión",
       "description": "Conecta tu aplicación a esta base de datos.",
-      "host": "Servidor",
+      "host": "Host",
       "port": "Puerto",
       "database": "Base de datos",
       "username": "Usuario",
@@ -2494,7 +2494,7 @@
       "added": "{username} añadido.",
       "passwordGenerated": "Se genera una contraseña segura y se muestra una vez creado el usuario.",
       "empty": {
-        "title": "Todavía no hay usuarios",
+        "title": "Aún no hay usuarios",
         "description": "Nada puede conectarse a esta base de datos hasta que tenga un usuario."
       },
       "panelAccount": "Cuenta del panel",
@@ -2564,7 +2564,7 @@
         "queued": "En espera",
         "running": "Exportando",
         "completed": "Lista",
-        "failed": "Falló"
+        "failed": "Fallida"
       },
       "sameDiskWarning": "Estos archivos se guardan en este servidor, junto a la propia base de datos. Descarga una copia en otro sitio: un archivo en el mismo disco no sobrevivirá a un fallo del disco.",
       "starting": "Iniciando…",
@@ -2619,7 +2619,7 @@
       "runningCount": "{count, plural, =0 {nada en ejecución} one {# en ejecución} other {# en ejecución}}",
       "ofMaxShort": "de {max}",
       "sinceRestart": "desde el último reinicio",
-      "durationSeconds": "{seconds}s",
+      "durationSeconds": "{seconds} s",
       "durationMinutes": "{minutes}m {seconds}s",
       "durationHours": "{hours}h {minutes}m",
       "showAll": "{count, plural, one {Mostrar # consulta más} other {Mostrar # consultas más}}",
@@ -2628,7 +2628,7 @@
       "searchQueries": "Buscar consultas, base de datos, usuario…",
       "slowOnly": "Solo las largas",
       "noMatches": "Ninguna consulta coincide con tu búsqueda.",
-      "clearFilters": "Quitar filtros",
+      "clearFilters": "Borrar filtros",
       "perHour": "{rate}/hora",
       "verdict": {
         "normal": "Normal",
@@ -2753,7 +2753,7 @@
       "description": "Conecta GitHub, GitLab o Bitbucket para que las aplicaciones puedan desplegar desde tus repositorios.",
       "providers": "GitHub, GitLab o Bitbucket",
       "howItWorks": "Cómo funciona",
-      "stepsTitle": "Sigue estos tres pasos para empezar:",
+      "stepsTitle": "Para empezar, sigue estos tres pasos:",
       "step1": "Crea un token en {provider} con acceso de lectura a tus repositorios.",
       "step2": "Pega el token en el formulario anterior.",
       "step3": "Elige esta cuenta al crear una aplicación."
@@ -2960,7 +2960,7 @@
         "colKey": "Variable",
         "colBefore": "Antes",
         "colAfter": "Después",
-        "absent": "Sin definir",
+        "absent": "Sin establecer",
         "emptyValue": "vacío"
       }
     },
@@ -3000,7 +3000,7 @@
       "never": "Aún no desplegada",
       "deploy": "Desplegar ahora",
       "deploying": "Desplegando…",
-      "started": "El despliegue ha comenzado.",
+      "started": "Despliegue iniciado.",
       "failed": "No pudimos iniciar el despliegue.",
       "pushToDeploy": "Despliega al hacer push",
       "failedAt": "El último despliegue falló en {step}. La versión anterior sigue sirviéndose.",
@@ -3038,7 +3038,7 @@
       "description": "Crea un sitio o servicio en un flujo guiado. {brand} lo aprovisionará y luego mostrará aquí su estado en directo.",
       "filteredTitle": "No hay aplicaciones coincidentes",
       "filteredDescription": "Ninguna aplicación coincide con tu búsqueda.",
-      "clearSearch": "Limpiar búsqueda",
+      "clearSearch": "Borrar búsqueda",
       "guideTitle": "De la idea a una aplicación en marcha",
       "steps": {
         "choose": {
@@ -3125,7 +3125,7 @@
       "change": "Cambiar"
     },
     "readiness": {
-      "needsAttention": "Necesita atención",
+      "needsAttention": "Requiere atención",
       "ready": "Listo",
       "incompleteHint": "Completa estos elementos para continuar.",
       "readyHint": "Revisa esta configuración y crea la aplicación.",
@@ -3279,7 +3279,7 @@
       "testDomain": "Dominio de prueba",
       "rowActions": "Acciones",
       "makePrimary": "Hacer principal",
-      "remove": "Eliminar",
+      "remove": "Quitar",
       "cancel": "Cancelar",
       "add": {
         "action": "Añadir dominio",
@@ -3691,8 +3691,8 @@
         "preset644": "Solo lectura — la opción habitual para archivos",
         "preset755": "Estándar — la opción habitual para carpetas y scripts",
         "preset600": "Privado — solo el propietario puede leer o escribir",
-        "read": "Leer",
-        "write": "Escribir",
+        "read": "Lectura",
+        "write": "Escritura",
         "execute": "Ejecutar",
         "noAccess": "sin acceso",
         "describeSimple": "Propietario: {owner}. Todos los demás: {rest}.",
@@ -3741,7 +3741,7 @@
       },
       "bulk": {
         "selected": "{count, plural, one {# seleccionado} other {# seleccionados}}",
-        "clear": "Quitar",
+        "clear": "Borrar",
         "selectAll": "Seleccionar todo en esta carpeta",
         "selectOne": "Seleccionar {name}",
         "move": "Mover",
@@ -3776,7 +3776,7 @@
         "partlyDone": "{done} de {total} hechos. El resto no se pudo:",
         "noneDone": "Ninguno de los {total} se pudo hacer:",
         "dismiss": "Descartar",
-        "failed": "No se pudo hacer.",
+        "failed": "No se pudo completar.",
         "reason": {
           "not_found": "Ya no está",
           "exists": "Ya hay algo en el destino",
@@ -4023,7 +4023,7 @@
       "loadFailed": "No se pudo cargar esto.",
       "provisioning": "Este sitio todavía se está configurando. La protección con contraseña estará disponible cuando esté en funcionamiento.",
       "statusProtected": "Protegido",
-      "statusNotProtected": "No protegido",
+      "statusNotProtected": "Sin protección",
       "enable": "Exigir una contraseña",
       "enableHint": "Los visitantes deberán iniciar sesión con las credenciales de abajo antes de poder ver el sitio.",
       "whenToUseTitle": "Cuándo usar esto",
@@ -4143,7 +4143,7 @@
       "offHint": "No se revisa ninguna solicitud.",
       "watchingHint": "Las solicitudes sospechosas se registran, pero se dejan pasar.",
       "blockingHint": "Las solicitudes sospechosas se rechazan.",
-      "whenToUseTitle": "Cuándo usarlo",
+      "whenToUseTitle": "Cuándo usar esto",
       "whenToUseBody": "Conviene activarlo en cualquier sitio público. Empieza observando unos días: así verás si habría bloqueado algo legítimo antes de que empiece a bloquear.",
       "modeLabel": "¿Qué hacer con una solicitud sospechosa?",
       "modeDetectHint": "No se bloquea nada. Las coincidencias se escriben en un registro para que primero revises si hay errores.",
@@ -4214,9 +4214,9 @@
           "ssl": "Certificado SSL",
           "backups": "Copias de seguridad",
           "cronJobs": "Tareas cron",
-          "workers": "Workers de colas",
+          "workers": "Workers de cola",
           "passwordProtection": "Protección con contraseña",
-          "deploys": "Despliegue al hacer push"
+          "deploys": "Desplegar al hacer push"
         }
       },
       "form": {
@@ -4282,7 +4282,7 @@
         "running": "Creando la copia",
         "queued": "Esperando para empezar…",
         "resuming": "Comprobando una copia que ya se estaba creando…",
-        "started": "Empezó {when}",
+        "started": "Iniciada {when}",
         "step": "Paso {step} de {total}",
         "canLeave": "Puedes salir de esta página: la copia continúa sin ella.",
         "stalled": "Esta clonación lleva un rato sin avanzar",
@@ -4304,7 +4304,7 @@
         "failedUnknown": "No se registró el motivo.",
         "failedSafe": "El original no ha cambiado: solo se lee de él.",
         "reference": "Referencia: {reference}",
-        "tryAgain": "Intentar de nuevo",
+        "tryAgain": "Reintentar",
         "target": "Copiando a {domain}",
         "steps": {
           "provisioning": "Creando el sitio",
@@ -4620,7 +4620,7 @@
       "pending": "Pendiente",
       "provisioning": "Aprovisionando",
       "active": "En ejecución",
-      "failed": "Con error"
+      "failed": "Fallida"
     },
     "protection": {
       "title": "Seguridad",
@@ -4650,7 +4650,7 @@
       "started": "La copia de seguridad ha comenzado.",
       "startFailed": "No se pudo iniciar la copia de seguridad.",
       "manage": "Gestionar copias",
-      "setUp": "Configurar copias",
+      "setUp": "Configurar copias de seguridad",
       "loadFailed": "No se pudo cargar la configuración de copias.",
       "unprotectedRisk": "No se está haciendo ninguna copia de seguridad. Si pierdes este sitio, no habrá nada que restaurar.",
       "pausedRisk": "Las copias están configuradas pero no se ejecutan, así que la copia más reciente envejece.",
@@ -4664,7 +4664,7 @@
       "title": "Requiere atención",
       "allClear": "No hay nada que requiera atención en este sitio.",
       "noBackups": "Copias de seguridad sin configurar",
-      "setUpBackups": "Configurar copias",
+      "setUpBackups": "Configurar copias de seguridad",
       "noCertificate": "SSL no instalado",
       "issueCertificate": "Emitir SSL",
       "reviewSecurity": "Revisar seguridad",
@@ -4797,7 +4797,7 @@
     "dryRunDoneBody": "No se cambió nada. La ejecución muestra exactamente lo que haría una actualización real.",
     "reload": "Recargar panel",
     "reloadCountdown": "Recargar panel ({seconds} s)",
-    "dismiss": "Hecho",
+    "dismiss": "Listo",
     "failed": "La actualización no se completó",
     "rolledBack": "Se restauró la versión anterior, por lo que el panel sigue funcionando.",
     "notChanged": "No se cambió nada; este panel ya contiene esa versión.",
@@ -4815,7 +4815,7 @@
     "loadFailed": "No pudimos ejecutar las comprobaciones. Inténtalo de nuevo en un momento.",
     "statusPass": "Correcto",
     "statusWarn": "Advertencia",
-    "statusFail": "Fallo",
+    "statusFail": "Fallida",
     "healthy": "Todo se ve saludable",
     "healthyWithWarnings": "{count, plural, one {Saludable — # advertencia opcional} other {Saludable — # advertencias opcionales}}",
     "blockingNote": "Las comprobaciones fallidas impiden que el panel funcione bien y hay que solucionarlas. Las advertencias son opcionales: suelen ser una función que quizá no necesites.",
@@ -4901,7 +4901,7 @@
     "noVersions": "Este servidor no ha informado de ninguna versión instalable. Puedes añadirlo más tarde desde la página de Node.js.",
     "pillInstalled": "Instalado",
     "pillInstalling": "Instalando…",
-    "pillFailed": "Falló",
+    "pillFailed": "Fallido",
     "allSetTitle": "¡Todo listo! 🎉",
     "allSetBody": "Todo lo recomendado está instalado. Puedes añadir los opcionales ahora o más adelante.",
     "componentFailed": "La instalación no se completó. Puedes volver a intentarlo.",
@@ -5061,14 +5061,14 @@
       "restores": "Restauraciones"
     },
     "coverage": {
-      "setUp": "Configurar copias",
+      "setUp": "Configurar copias de seguridad",
       "setUpShort": "Configurar",
       "noApplications": "Todavía no hay aplicaciones en este servidor.",
       "lastRun": "Última ejecución {when}",
       "neverRun": "Todavía no se ha ejecutado",
       "actions": "Acciones de copia",
       "manage": "Ajustes de copia",
-      "backUpNow": "Copiar ahora",
+      "backUpNow": "Hacer copia ahora",
       "started": "Copiando {name} ahora.",
       "startFailed": "No se pudo iniciar esa copia.",
       "staging": "Pruebas",
@@ -5078,7 +5078,7 @@
       "exposedHint": "Si se pierde este servidor, esos sitios no se pueden recuperar. Configurar uno lleva un minuto.",
       "columns": {
         "site": "Sitio",
-        "status": "Copias",
+        "status": "Copias de seguridad",
         "schedule": "Programación",
         "lastRun": "Última copia",
         "actions": "Acciones",
@@ -5104,7 +5104,7 @@
       "filters": {
         "all": "Todos",
         "protected": "Protegidos",
-        "unprotected": "Sin proteger",
+        "unprotected": "Sin protección",
         "anyType": "Cualquier tipo"
       },
       "types": {
@@ -5115,8 +5115,8 @@
       "moreActions": "Acciones",
       "placeholders": {
         "type": "Sin configurar",
-        "schedule": "Sin programación",
-        "storage": "Sin almacenamiento",
+        "schedule": "Sin programar",
+        "storage": "Sin almacenamiento seleccionado",
         "lastRun": "Nunca"
       },
       "runsShortly": "Se ejecuta en breve",
@@ -5134,7 +5134,7 @@
       "savedScheduled": "La programación está guardada y se ejecutará sola a partir de ahora.",
       "savedManual": "Guardado. Las copias solo se harán cuando pulses Copiar ahora.",
       "done": "Listo",
-      "backUpNow": "Copiar ahora",
+      "backUpNow": "Hacer copia ahora",
       "verifyHint": "Ejecuta una ahora para comprobar que las claves de almacenamiento funcionan. Esperar a la copia de esta noche significa enterarte mañana.",
       "started": "La primera copia ha comenzado.",
       "startFailed": "No se pudo iniciar esa copia.",
@@ -5229,7 +5229,7 @@
       "statuses": {
         "verified": "Completada",
         "verifying": "Verificando",
-        "running": "En curso",
+        "running": "En ejecución",
         "pending": "En cola",
         "failed": "Fallida"
       },
@@ -5252,7 +5252,7 @@
         "total": "Copias totales",
         "complete": "Completas",
         "failed": "Fallidas",
-        "running": "En curso"
+        "running": "En ejecución"
       },
       "columns": {
         "site": "Sitio",
@@ -5292,7 +5292,7 @@
       "delete": {
         "action": "Eliminar",
         "selectedCount": "{count} seleccionados",
-        "clearSelection": "Limpiar",
+        "clearSelection": "Borrar",
         "selectAll": "Seleccionar todas las copias",
         "selectRow": "Seleccionar copia",
         "title": "¿Eliminar {count, plural, one {esta copia} other {# copias}}?",
@@ -5369,12 +5369,12 @@
       "undo": "Deshacer esta restauración",
       "undoHint": "Restaura la copia de seguridad tomada justo antes: el sitio tal y como estaba antes de restaurar.",
       "undoFailed": "No se pudo cargar la copia de seguridad previa.",
-      "dismiss": "Cerrar",
+      "dismiss": "Descartar",
       "failed": "La restauración no terminó",
       "failedSafe": "Se tomó una copia de seguridad previa, así que el sitio se puede dejar como estaba.",
       "failedNoSafety": "La restauración se detuvo antes de cambiar nada.",
       "reference": "Referencia: {reference}",
-      "unknownReason": "El motivo no se registró.",
+      "unknownReason": "No se registró el motivo.",
       "stalled": "Esta restauración lleva un rato sin avanzar",
       "stalledBody": "No ha informado de ningún progreso durante 20 minutos. Puede que siga ejecutándose en el servidor o que el trabajo se haya detenido. Vuelve a comprobarlo o pide a quien gestione este servidor que lo revise.",
       "checkAgain": "Comprobar de nuevo",
@@ -5408,7 +5408,7 @@
       },
       "lastRun": "Última ejecución {when}",
       "neverRun": "Todavía no se ha hecho ninguna copia",
-      "backUpNow": "Copiar ahora",
+      "backUpNow": "Hacer copia ahora",
       "saved": "Ajustes de copia guardados.",
       "saveFailed": "No se pudieron guardar esos ajustes.",
       "readOnly": "No tienes permiso para cambiar esto.",
@@ -5435,10 +5435,10 @@
         "keepsEverything": "Se conservan todas",
         "keepsNotApplicable": "No aplicable"
       },
-      "unknownReason": "El motivo no se registró.",
+      "unknownReason": "No se registró el motivo.",
       "restore": "Restaurar",
       "editSettings": "Editar ajustes",
-      "setUp": "Configurar copias",
+      "setUp": "Configurar copias de seguridad",
       "sizePending": "Aún no",
       "sizeNone": "Sin archivo",
       "sizeUnknown": "Desconocido",
@@ -5475,7 +5475,7 @@
       "step1": "Conecta un destino de almacenamiento: el bucket donde se escriben las copias.",
       "step2": "Elige un sitio, qué copiar y con qué frecuencia.",
       "step3": "Restaura desde cualquier copia verificada, en la pestaña Historial.",
-      "action": "Configurar copias",
+      "action": "Configurar copias de seguridad",
       "addStorage": "Configurar almacenamiento primero"
     },
     "download": {
@@ -5508,7 +5508,7 @@
         "pending": "En espera",
         "running": "Restaurando",
         "succeeded": "Restaurado",
-        "failed": "Falló"
+        "failed": "Fallida"
       },
       "unknownApplication": "Sitio eliminado",
       "unknownReason": "No se registró el motivo.",

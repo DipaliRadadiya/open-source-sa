@@ -17,6 +17,16 @@
  *      be dead on arrival and every other check still passes: the key set is
  *      identical, it resolves, the build is green. `validation.max500` sat
  *      duplicated in all three locales until a round-trip happened to show it.
+ *   4. Every locale's string has the same ICU shape as English — the same
+ *      arguments, of the same type, and the same rich-text tags. Key parity
+ *      stops at the key; a translation that drops `{count}` renders a sentence
+ *      with a hole in it, and one that renames it throws at render. Three
+ *      locales could be read by eye. Eight cannot, and this file exists to be
+ *      the check that does not depend on anyone remembering.
+ *   5. An English string used at more than one key is translated one way. A
+ *      locale built in parallel batches comes back saying "Saving…" two
+ *      different ways and calling RAM by the same word as disk, and 1–4 all
+ *      pass it. See scripts/one-voice.mjs.
  *
  * Dynamic keys (`t(\`add.errors.${x}\`)`) are skipped: they can't be resolved
  * statically, so they stay a human responsibility.
@@ -25,6 +35,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { duplicateKeys } from "./duplicate-keys.mjs";
+import { shapeProblems } from "./icu-shape.mjs";
+import { oneVoiceProblems } from "./one-voice.mjs";
 
 const MESSAGES = "messages";
 const SOURCE_DIRS = ["app", "components", "lib"];
@@ -87,6 +99,37 @@ for (const file of fs.readdirSync(MESSAGES).filter((f) => f.endsWith(".json"))) 
       `${locale}: "${name}" is defined twice in the same object ` +
         `(lines ${first} and ${line}) — line ${first} is silently discarded`,
     );
+  }
+}
+
+// 4 — the shape inside each string, not just the key that holds it
+const value = (obj, key) =>
+  key.split(".").reduce((o, part) => (o && typeof o === "object" ? o[part] : undefined), obj);
+
+const englishStrings = {};
+for (const key of base) {
+  const source = value(en, key);
+  if (typeof source === "string") englishStrings[key] = source;
+}
+
+for (const file of fs.readdirSync(MESSAGES).filter((f) => f.endsWith(".json") && f !== "en.json")) {
+  const locale = path.basename(file, ".json");
+  const messages = JSON.parse(fs.readFileSync(path.join(MESSAGES, file), "utf8"));
+  const localeStrings = {};
+
+  for (const key of base) {
+    const source = value(en, key);
+    const translated = value(messages, key);
+    if (typeof source !== "string" || typeof translated !== "string") continue;
+    localeStrings[key] = translated;
+    for (const problem of shapeProblems(source, translated)) {
+      problems.push(`${locale}: ${key} — ${problem}`);
+    }
+  }
+
+  // 5 — one English string, one translation
+  for (const problem of oneVoiceProblems(englishStrings, localeStrings, locale)) {
+    problems.push(`${locale}: ${problem}`);
   }
 }
 
