@@ -115,6 +115,18 @@ Route::delete('/applications/{application}/files/uploads/{uploadId}', [Applicati
 Route::get('/applications/{application}/files/download', [ApplicationFileController::class, 'download'])
     ->middleware(['permission:app_file', 'throttle:20,1']);
 
+/*
+| The one read here that returns a renderable response: an image, with its
+| real content type, so the file manager can show a picture instead of
+| offering to save it.
+|
+| Read-only and `permission:app_file` like `content` and `download`, and
+| throttled like `content` rather than like `download` — a folder of
+| thumbnails is many small reads, not a few large transfers.
+*/
+Route::get('/applications/{application}/files/preview', [ApplicationFileController::class, 'preview'])
+    ->middleware(['permission:app_file', 'throttle:60,1']);
+
 Route::post('/applications/{application}/files/extract', [ApplicationFileController::class, 'extract'])
     ->middleware(['permission:app_file,manage', 'throttle:5,1']);
 

@@ -153,7 +153,11 @@ return [
             'chpasswd', 'gpasswd', 'getent', 'id',
             'tee', 'touch', 'mkdir', 'chown', 'chmod', 'rm',
             'cp', 'mv', 'ln', 'install', 'truncate',
-            'find', 'tail', 'cat', 'test', 'which', 'stat',
+            // `head` sits beside `tail` and `cat` for the same reason they are
+            // here: the file manager reads a site's files, which belong to the
+            // site's own user. It reads the first bytes of a file to decide
+            // what a preview may claim it is.
+            'find', 'tail', 'head', 'cat', 'test', 'which', 'stat',
             // `openssl req` writes the key and certificate into /etc/ssl, and
             // `openssl x509 -enddate` reads out of /etc/letsencrypt/live —
             // both root-only. Without this, self-signed certificates cannot be
@@ -832,6 +836,21 @@ return [
         | mistake and short enough that nobody is storing a backup in it.
         */
         'trash_retention_days' => (int) env('SERVER_TRASH_RETENTION_DAYS', 7),
+
+        /*
+        | The largest image the file manager will render.
+        |
+        | Bounded because this is the one file response a browser is asked to
+        | interpret, and because nothing is gained past it: a photograph that
+        | does not fit in ten megabytes still does not fit on a screen. The
+        | check runs against the stat, before a byte is read, so an oversized
+        | file costs a refusal rather than a transfer.
+        |
+        | Download is deliberately *not* capped (see `FileBrowser::download()`)
+        | — the panel must always hand back a file it accepted. This limit is
+        | about rendering, not about access.
+        */
+        'preview_max_bytes' => (int) env('SERVER_PREVIEW_MAX_BYTES', 10 * 1024 * 1024),
 
         /*
         | Where supervisor keeps its program blocks.

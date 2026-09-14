@@ -86,6 +86,18 @@ class FileBrowser
 
     private const BINARY_SNIFF_BYTES = 8192;
 
+    /** The default for `server.applications.preview_max_bytes` — see there. */
+    public const PREVIEW_MAX_BYTES = 10 * 1024 * 1024;
+
+    /**
+     * How much of a file is read to decide what it is.
+     *
+     * Every image signature lives in the first dozen bytes; the window is this
+     * wide for SVG, whose root element can sit behind an XML declaration, a
+     * doctype and a licence comment.
+     */
+    private const PREVIEW_SNIFF_BYTES = 512;
+
     public function __construct(
         private ServerOps $serverOps,
         private PanelDirectory $panelDirectory,
@@ -538,6 +550,112 @@ class FileBrowser
                 ['feature' => 'application', 'op' => 'file_download', 'application' => $application->id],
             ),
         ];
+    }
+
+    /**
+     * An image's own bytes, for rendering in the browser.
+     *
+     * `read()` refuses this file (it is binary) and `download()` deliberately
+     * serves every file as `application/octet-stream` so that nothing the
+     * panel hands back can be interpreted by the browser. Both are right for
+     * what they do, and between them there was no way to show a picture — the
+     * file manager could list a JPEG and never display it.
+     *
+     * So this is the one endpoint that returns a real content type, and
+     * everything about it is built around keeping that narrow:
+     *
+     *  - **The type comes from the file's first bytes, never its name.** A
+     *    file called `logo.png` holding HTML would otherwise be served as an
+     *    image, and a browser that sniffs past our content type would run it
+     *    on the API's own origin. The extension is not consulted at all.
+     *  - **SVG is refused**, with its own reason so the UI can say why. It is
+     *    the one image format that is a script container, and this response is
+     *    inline and same-origin. Download still returns it, as octet-stream,
+     *    which is where an untrusted SVG belongs.
+     *  - **Size is capped.** A browser gains nothing from a 4 GB "image", and
+     *    the cap is checked from the stat before a byte is read. `download()`
+     *    stays uncapped for the reason its own docblock gives.
+     *
+     * Two commands, both cheap: the sniff reads a few hundred bytes, then the
+     * file streams like a download does. Nothing is buffered whole.
+     *
+     * @return array{size: int, mime: string, chunks: \Generator<int, string>}
+     */
+    public function preview(Application $application, string $path): array
+    {
+        $this->assertRootExists($application);
+        $target = $this->resolve($application, $path);
+        $size = $this->assertType($application, $target, 'f');
+
+        $max = (int) config('server.applications.preview_max_bytes', self::PREVIEW_MAX_BYTES);
+
+        abort_if($size > $max, 422, __('errors/application.file_too_large_to_preview'));
+
+        $head = $this->run($application, ['head', '-c', (string) self::PREVIEW_SNIFF_BYTES, $target], 'preview_sniff')->output();
+
+        $mime = $this->imageType($head);
+
+        if ($mime === null) {
+            // Asked in this order, not the other one: a real PNG whose pixels
+            // happen to spell `<svg` is still a PNG. The SVG question is only
+            // ever a way to explain a file that is *not* one of the formats
+            // above, never a way to reject one that is.
+            abort_if($this->looksLikeSvg($head), 422, __('errors/application.file_svg_not_previewable'));
+
+            abort(422, __('errors/application.file_not_previewable'));
+        }
+
+        return [
+            'size' => $size,
+            'mime' => $mime,
+            'chunks' => $this->serverOps->stream(
+                $this->asUser($application, ['cat', $target]),
+                ['feature' => 'application', 'op' => 'file_preview', 'application' => $application->id],
+            ),
+        ];
+    }
+
+    /**
+     * The image format these bytes actually are, or null for anything else.
+     *
+     * Signatures rather than a `file` call: this runs on every thumbnail, the
+     * answer has to be one the panel can defend, and the whole list is seven
+     * formats. `finfo` is not an option — the panel's own process cannot read
+     * a site's files; everything here goes through the site's user.
+     */
+    private function imageType(string $head): ?string
+    {
+        return match (true) {
+            str_starts_with($head, "\x89PNG\r\n\x1a\n") => 'image/png',
+            str_starts_with($head, "\xFF\xD8\xFF") => 'image/jpeg',
+            str_starts_with($head, 'GIF87a'), str_starts_with($head, 'GIF89a') => 'image/gif',
+            // RIFF is also WAV and AVI, so the WEBP tag at byte 8 is the half
+            // that identifies the format.
+            str_starts_with($head, 'RIFF') && substr($head, 8, 4) === 'WEBP' => 'image/webp',
+            str_starts_with($head, 'BM') => 'image/bmp',
+            str_starts_with($head, "\x00\x00\x01\x00") => 'image/x-icon',
+            // ISO-BMFF: a box length, then `ftyp`, then the brand. AVIF and
+            // HEIC share the container and differ only in that brand.
+            substr($head, 4, 4) === 'ftyp' && in_array(substr($head, 8, 4), ['avif', 'avis'], true) => 'image/avif',
+            default => null,
+        };
+    }
+
+    /**
+     * Whether these bytes are an SVG.
+     *
+     * Told apart from "not an image at all" on purpose: an SVG is a file the
+     * user would reasonably expect to see, so it earns a message saying why it
+     * is not shown rather than the generic one.
+     *
+     * Looks for the root element rather than for `<?xml`, which any XML file
+     * starts with — a `.xml` sitemap is not an SVG and must not be told it is.
+     * That element can sit behind an XML declaration, a doctype and a comment,
+     * which is what the sniff window is sized for.
+     */
+    private function looksLikeSvg(string $head): bool
+    {
+        return str_contains(strtolower($head), '<svg');
     }
 
     /**

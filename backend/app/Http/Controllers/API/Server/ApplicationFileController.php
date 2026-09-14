@@ -418,6 +418,48 @@ class ApplicationFileController extends Controller
     }
 
     /**
+     * An image, as an image — the one response here a browser may render.
+     *
+     * Everything that makes that safe is either in `FileBrowser::preview()`
+     * (the type comes from the file's bytes, SVG is refused, the size is
+     * capped) or in these headers:
+     *
+     *  - `nosniff` so a browser cannot decide this is something other than
+     *    the type we determined,
+     *  - a CSP of `default-src 'none'` plus `sandbox`, so that if a file ever
+     *    does reach this response with content we misidentified, opening its
+     *    URL directly executes nothing and loads nothing,
+     *  - `inline`, which is the entire difference from `download()` and the
+     *    reason the rest of this list exists,
+     *  - `no-store`, because this is a customer's file behind a permission
+     *    check and shared caches have no business keeping it.
+     */
+    public function preview(BrowseFilesRequest $request, Application $application, FileBrowser $files): StreamedResponse
+    {
+        $file = $files->preview($application, $request->targetPath());
+
+        return response()->stream(function () use ($file): void {
+            foreach ($file['chunks'] as $chunk) {
+                echo $chunk;
+
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+
+                flush();
+            }
+        }, 200, [
+            'Content-Type' => $file['mime'],
+            'Content-Disposition' => $this->disposition('inline', basename($request->targetPath())),
+            'Content-Length' => (string) $file['size'],
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; sandbox",
+            'Cache-Control' => 'private, no-store',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
+    /**
      * A Content-Disposition value that survives the filename.
      *
      * `addslashes()` was not enough: it leaves UTF-8 alone (so a non-ASCII
@@ -428,11 +470,22 @@ class ApplicationFileController extends Controller
      */
     private function attachment(string $filename): string
     {
+        return $this->disposition('attachment', $filename);
+    }
+
+    /**
+     * The same header, built the same way, for a response meant to be shown
+     * rather than saved. Shared so the escaping above cannot be reimplemented
+     * — a newline in a filename ends the header either way.
+     */
+    private function disposition(string $type, string $filename): string
+    {
         $ascii = preg_replace('/[^\x20-\x7E]/', '_', $filename) ?? 'download';
         $ascii = str_replace(['\\', '"'], ['\\\\', '\\"'], $ascii);
 
         return sprintf(
-            'attachment; filename="%s"; filename*=UTF-8\'\'%s',
+            '%s; filename="%s"; filename*=UTF-8\'\'%s',
+            $type,
             $ascii,
             rawurlencode($filename),
         );

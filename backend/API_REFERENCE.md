@@ -1830,6 +1830,32 @@ The response is a stream, not a buffered body: read it as a blob, not as text.
 
 ---
 
+### GET `/applications/{application}/files/preview`
+**Permission:** `app_file` (view) | **Throttle:** 60/min
+
+Stream an **image** with its real content type, so it can be rendered rather
+than saved. The only response in this API a browser is meant to interpret;
+`download` above deliberately labels everything `application/octet-stream`.
+
+The type is determined from the file's **own bytes**, never its extension, and
+only these are served: PNG, JPEG, GIF, WebP, BMP, ICO, AVIF. Headers carry
+`Content-Disposition: inline`, `X-Content-Type-Options: nosniff`,
+`Content-Security-Policy: default-src 'none'; sandbox` and
+`Cache-Control: private, no-store`.
+
+**Query:** `?path=wp-content/uploads/2026/logo.png`
+
+**Refusals (all `422`):**
+- not an image — `errors/application.file_not_previewable`
+- an SVG — `errors/application.file_svg_not_previewable`. Refused on purpose:
+  an SVG can carry script and this response is inline and same-origin. Use
+  `download` for it.
+- larger than `SERVER_PREVIEW_MAX_BYTES` (default 10 MB) —
+  `errors/application.file_too_large_to_preview`. Checked against the stat, so
+  an oversized file is never read.
+
+---
+
 ### POST `/applications/{application}/files/extract`
 **Permission:** `app_file` (manage) | **Throttle:** 5/min
 
