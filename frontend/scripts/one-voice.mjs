@@ -113,7 +113,7 @@ export const MANY_MEANINGS = {
   },
   Installed: {
     reason: "A participle agreeing with a PHP version (feminine) or a setup component (masculine).",
-    locales: ["es", "fr"],
+    locales: ["es", "fr", "pt"],
   },
   Ready: {
     reason: "An adjective agreeing with a database export (feminine) or an application (masculine).",
@@ -122,7 +122,7 @@ export const MANY_MEANINGS = {
   '"{name}" created.': {
     reason:
       "The name is a file or a folder, and the participle agrees with whichever the caller made.",
-    locales: ["es", "hi"],
+    locales: ["es", "hi", "pt"],
   },
   Protected: {
     reason: "An adjective describing one site or a filter over several, so it agrees in number.",
@@ -157,11 +157,11 @@ export const MANY_MEANINGS = {
   Enabled: {
     reason:
       "One participle agreeing with its subject: a worker or a toggle is Activado, a firewall rule Activa.",
-    locales: ["es"],
+    locales: ["es", "pt"],
   },
   Disabled: {
     reason: "The other half of the pair above, agreeing for the same reason.",
-    locales: ["es"],
+    locales: ["es", "pt"],
   },
   Failed: {
     reason:
@@ -170,7 +170,7 @@ export const MANY_MEANINGS = {
   },
   Complete: {
     reason: "A badge on one backup and a count of several, so it agrees in number.",
-    locales: ["es"],
+    locales: ["es", "pt"],
   },
 };
 
