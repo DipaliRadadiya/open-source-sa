@@ -3416,6 +3416,20 @@
       },
       "openNamed": "{domain} in neuem Tab öffnen"
     },
+    "magicLogin": {
+      "action": "Direktanmeldung",
+      "title": "Bei WordPress anmelden",
+      "subtitle": "Wählen Sie, als welcher Administrator Sie sich anmelden möchten. Kein Passwort nötig.",
+      "signIn": "Anmelden",
+      "cancel": "Abbrechen",
+      "loading": "Administratoren dieser Website werden gelesen…",
+      "none": "Diese Website hat keine Administratorkonten.",
+      "listFailed": "Die Administratoren dieser Website konnten nicht gelesen werden.",
+      "failed": "Der Anmeldelink konnte nicht erstellt werden.",
+      "popupBlocked": "Ihr Browser hat den neuen Tab blockiert. Erlauben Sie Pop-ups für dieses Panel und versuchen Sie es erneut.",
+      "redirecting": "Sie werden angemeldet…",
+      "auditNote": "Der Link funktioniert einmal und läuft nach einer Minute ab. Als wen Sie sich anmelden, wird im Aktivitätsprotokoll festgehalten."
+    },
     "markers": {
       "processFailed": "Prozess fehlgeschlagen",
       "processStopped": "Prozess gestoppt",

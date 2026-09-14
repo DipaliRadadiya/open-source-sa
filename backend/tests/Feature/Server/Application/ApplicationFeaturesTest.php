@@ -135,9 +135,14 @@ it('still returns every application permission for the role form', function () {
             ->json('permissions')
     )->pluck('name');
 
-    expect($all)->toHaveCount(15)
+    expect($all)->toHaveCount(16)
         ->and($all)->toContain('app_deployment')
-        ->and($all)->toContain('app_staging');
+        ->and($all)->toContain('app_staging')
+        // Including the one that is not a screen. `app_magic_login` has a null
+        // url so the sidebar skips it, but an admin assigning a role must still
+        // be able to grant it — that separation is the whole reason the url is
+        // null rather than the permission being folded into another.
+        ->and($all)->toContain('app_magic_login');
 });
 
 it('leaves the server sidebar untouched when an application is named', function () {

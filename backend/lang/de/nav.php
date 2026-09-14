@@ -38,4 +38,5 @@ return [
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'Staging-Bereich',
     'app_clone' => 'Website klonen',
+    'app_magic_login' => 'Direktanmeldung',
 ];

@@ -3416,6 +3416,20 @@
       },
       "openNamed": "Open {domain} in a new tab"
     },
+    "magicLogin": {
+      "action": "Magic Login",
+      "title": "Log in to WordPress",
+      "subtitle": "Choose an administrator to sign in as. No password needed.",
+      "signIn": "Log in",
+      "cancel": "Cancel",
+      "loading": "Reading this site's administrators…",
+      "none": "This site has no administrator accounts.",
+      "listFailed": "Couldn't read this site's administrators.",
+      "failed": "Couldn't create the login link.",
+      "popupBlocked": "Your browser blocked the new tab. Allow pop-ups for this panel and try again.",
+      "redirecting": "Signing you in…",
+      "auditNote": "The link works once and expires in a minute. Whoever you sign in as is recorded in the activity log."
+    },
     "markers": {
       "processFailed": "Process failed",
       "processStopped": "Process stopped",

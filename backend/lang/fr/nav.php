@@ -38,4 +38,5 @@ return [
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'Zone de préproduction',
     'app_clone' => 'Cloner le site',
+    'app_magic_login' => 'Connexion directe',
 ];

@@ -38,4 +38,5 @@ return [
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'ステージング',
     'app_clone' => 'サイト複製',
+    'app_magic_login' => 'ワンクリックログイン',
 ];

@@ -105,7 +105,13 @@ class WordPressSiteType extends AbstractSiteType
         // leaves a site pointing at the original's database. WordPress is the
         // one type with a `cloneStrategy()`, so it is the one type that gets
         // the screen back.
-        return [...parent::features(), 'app_clone', 'app_staging'];
+        // `app_magic_login` is WordPress's alone, and deliberately not on the
+        // base list. Signing in without a password needs somewhere to put the
+        // loader and a notion of "administrator" to sign in as; nothing else
+        // here has both. Being the only holder is also what makes the routes
+        // 404 everywhere else without a single site-type check in the
+        // controller.
+        return [...parent::features(), 'app_clone', 'app_staging', 'app_magic_login'];
     }
 
     public function stagingStrategy(): ?StagingStrategy

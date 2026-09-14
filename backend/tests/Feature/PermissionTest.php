@@ -13,7 +13,7 @@ it('creates the Administrator system role with every permission, idempotently', 
     expect($admin)->toHaveCount(1);
     expect($admin->first()->is_system)->toBeTrue();
     // holds every permission at both levels, view+manage
-    expect($admin->first()->permissions()->count())->toBe(33);
+    expect($admin->first()->permissions()->count())->toBe(34);
     foreach ($admin->first()->permissions as $permission) {
         expect((bool) $permission->pivot->view)->toBeTrue();
         expect((bool) $permission->pivot->manage)->toBeTrue();
@@ -23,9 +23,9 @@ it('creates the Administrator system role with every permission, idempotently', 
 it('seeds the server and application permission items in order', function () {
     $this->seed(PermissionSeeder::class);
 
-    expect(Permission::count())->toBe(33);
+    expect(Permission::count())->toBe(34);
     expect(Permission::where('level', 'server')->count())->toBe(18);
-    expect(Permission::where('level', 'application')->count())->toBe(15);
+    expect(Permission::where('level', 'application')->count())->toBe(16);
 
     $server = Permission::where('level', 'server')->orderBy('order');
     expect($server->pluck('name')->first())->toBe('dashboard');
@@ -33,7 +33,11 @@ it('seeds the server and application permission items in order', function () {
 
     $app = Permission::where('level', 'application')->orderBy('order');
     expect($app->pluck('name')->first())->toBe('app_dashboard');
-    expect($app->pluck('name')->last())->toBe('app_clone');
+    // Last because it is not a screen: `app_magic_login` has a null url and is
+    // filtered out of the sidebar, so its order only decides where it sits in
+    // the role editor's list. Appended rather than slotted in beside the other
+    // application features, so adding it moved nothing that was already there.
+    expect($app->pluck('name')->last())->toBe('app_magic_login');
 
     // Every application permission carries the `app_` prefix. hasAbility()
     // resolves by name and ignores level, so a collision with a server-level
@@ -93,7 +97,7 @@ it('shows an admin every permission with full view+manage access', function () {
     $response = $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions');
 
-    $response->assertOk()->assertJsonCount(33, 'permissions');
+    $response->assertOk()->assertJsonCount(34, 'permissions');
     foreach ($response->json('permissions') as $permission) {
         expect($permission['permissions']['view'])->toBeTrue();
         expect($permission['permissions']['manage'])->toBeTrue();
@@ -157,7 +161,7 @@ it('filters the check endpoint by level', function () {
     $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions/check?level=application')
         ->assertOk()
-        ->assertJsonCount(15, 'permissions')
+        ->assertJsonCount(16, 'permissions')
         ->assertJsonPath('permissions.0.name', 'app_dashboard');
 });
 

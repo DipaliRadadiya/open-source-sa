@@ -133,6 +133,18 @@ class PermissionCatalog
             ['name' => 'app_fail2ban', 'title' => 'Fail2ban', 'icon' => 'ban', 'url' => '/fail2ban'],
             ['name' => 'app_staging', 'title' => 'Staging Area', 'icon' => 'flask-conical', 'url' => '/staging'],
             ['name' => 'app_clone', 'title' => 'Site Clone', 'icon' => 'copy', 'url' => '/clone'],
+            // The first permission that is NOT a nav entry: `url` is null
+            // because Magic Login is a button on the Dashboard, not a screen.
+            // The sidebar skips null-url rows; the role editor still lists it,
+            // which is the whole point of separating the two.
+            //
+            // It gets its own permission rather than riding on an existing one
+            // because of what it grants: a full WordPress administrator session
+            // on the customer's site. Folding that into `app_dashboard` would
+            // silently upgrade every role that can currently only *look* at an
+            // application. Held by WordPressSiteType alone, so every other site
+            // type 404s the routes without naming them.
+            ['name' => 'app_magic_login', 'title' => 'Magic Login', 'icon' => 'log-in', 'url' => null],
         ];
 
         return array_map(

@@ -38,4 +38,5 @@ return [
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'Staging Area',
     'app_clone' => 'Site Clone',
+    'app_magic_login' => 'Magic Login',
 ];

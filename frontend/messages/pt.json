@@ -3416,6 +3416,20 @@
       },
       "openNamed": "Abrir {domain} em uma nova aba"
     },
+    "magicLogin": {
+      "action": "Início de sessão direto",
+      "title": "Entrar no WordPress",
+      "subtitle": "Escolha com que administrador quer entrar. Não é preciso palavra-passe.",
+      "signIn": "Entrar",
+      "cancel": "Cancelar",
+      "loading": "A ler os administradores deste site…",
+      "none": "Este site não tem contas de administrador.",
+      "listFailed": "Não foi possível ler os administradores deste site.",
+      "failed": "Não foi possível criar a ligação de acesso.",
+      "popupBlocked": "O seu navegador bloqueou o novo separador. Permita janelas pop-up para este painel e tente novamente.",
+      "redirecting": "A iniciar a sua sessão…",
+      "auditNote": "A ligação funciona uma vez e expira dentro de um minuto. A conta com que entrar fica registada no histórico de atividade."
+    },
     "markers": {
       "processFailed": "Processo falhou",
       "processStopped": "Processo parado",

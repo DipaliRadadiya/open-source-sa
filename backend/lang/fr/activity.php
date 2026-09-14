@@ -115,6 +115,7 @@ return [
     'application.domain_removed' => 'A supprimé le domaine :domain (:type)',
     'application.primary_domain_changed' => 'A changé le domaine principal de :from vers :to',
     'application.certificate_requested' => 'A demandé un certificat :type pour :domain',
+    'application.magic_login' => 'S\'est connecté à :domain en tant qu\'utilisateur WordPress :wp_user',
     'application.certificate_dry_run' => 'A lancé une simulation de certificat pour :domain',
     'application.certificate_dry_run_finished' => 'Simulation de certificat pour :domain terminée (:result)',
     'application.certificate_issued' => 'A émis un certificat :type pour :domain',

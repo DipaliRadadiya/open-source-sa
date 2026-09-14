@@ -38,4 +38,5 @@ return [
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'Тестовая площадка',
     'app_clone' => 'Клон сайта',
+    'app_magic_login' => 'Быстрый вход',
 ];

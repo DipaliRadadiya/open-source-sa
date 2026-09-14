@@ -38,4 +38,5 @@ return [
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'स्टेजिंग एरिया',
     'app_clone' => 'साइट क्लोन',
+    'app_magic_login' => 'त्वरित लॉगिन',
 ];

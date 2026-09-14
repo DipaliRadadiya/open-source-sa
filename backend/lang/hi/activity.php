@@ -115,6 +115,7 @@ return [
     'application.domain_removed' => 'डोमेन :domain हटाया (:type)',
     'application.primary_domain_changed' => 'प्राथमिक डोमेन :from से :to में बदला',
     'application.certificate_requested' => ':domain के लिए :type प्रमाणपत्र का अनुरोध किया',
+    'application.magic_login' => ':domain में WordPress उपयोगकर्ता :wp_user के रूप में लॉगिन किया',
     'application.certificate_dry_run' => ':domain के लिए प्रमाणपत्र ड्राई रन शुरू किया',
     'application.certificate_dry_run_finished' => ':domain के लिए प्रमाणपत्र ड्राई रन पूरा हुआ (:result)',
     'application.certificate_issued' => ':domain के लिए :type प्रमाणपत्र जारी किया',

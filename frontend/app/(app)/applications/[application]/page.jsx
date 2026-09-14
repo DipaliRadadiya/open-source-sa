@@ -27,6 +27,7 @@ import { DatabaseCard } from "@/components/applications/database-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MagicLoginLauncher } from "@/components/applications/magic-login-launcher";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 
@@ -59,6 +60,12 @@ export default async function ApplicationDetailPage({ params }) {
   const canManage = can(permissions, "application", "manage");
   const canDeploy = can(appPermissions, "app_deployment", "manage", "application");
   const canSeeDomains = can(appPermissions, "app_domain", "view", "application");
+  // Already site-type gated by the API: `app_magic_login` exists only in
+  // WordPressSiteType::features(), and VisiblePermissions filters the
+  // catalog by the site's features. A `site_type === "wordpress"` check
+  // here as well would put the decision in the one place the backend says
+  // not to — "so a new site type costs one class and no frontend change".
+  const canMagicLogin = can(appPermissions, "app_magic_login", "manage", "application");
   // The screens people come back to; the sidebar carries the rest. Filtered
   // here rather than in the menu so permission checks stay on the server.
   const headerShortcuts = [
@@ -321,6 +328,13 @@ export default async function ApplicationDetailPage({ params }) {
                   {t("actions.visit")}
                 </a>
               </Button>
+            ) : null}
+            {/* Beside Visit site because they are the same act with
+                different credentials: one opens the site as a visitor, the
+                other as its administrator. Outline for the same reason Visit
+                is — filled is reserved for what a card is asking you to do. */}
+            {canMagicLogin && application.status === "active" ? (
+              <MagicLoginLauncher appId={id} />
             ) : null}
             <ApplicationRowActions
               application={application}

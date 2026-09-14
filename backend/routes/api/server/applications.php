@@ -6,6 +6,7 @@ use App\Http\Controllers\API\Server\ApplicationWebhookController;
 use App\Http\Controllers\API\Server\ApplicationWebRootController;
 use App\Http\Controllers\API\Server\CertificateController;
 use App\Http\Controllers\API\Server\DeploymentController;
+use App\Http\Controllers\API\Server\MagicLoginController;
 use App\Http\Controllers\API\Server\ServerCapabilityController;
 use App\Http\Controllers\API\Server\SiteTypeController;
 use Illuminate\Support\Facades\Route;
@@ -112,6 +113,18 @@ Route::put('/applications/{application}/certificate/force-https', [CertificateCo
     ->middleware('permission:app_domain,manage');
 Route::delete('/applications/{application}/certificate', [CertificateController::class, 'destroy'])
     ->middleware('permission:app_domain,manage');
+
+// Magic Login — WordPress only, and the middleware enforces that rather than
+// the controller: `app_magic_login` is in WordPressSiteType::features() and no
+// other type's, so every other site 404s here without a line of its own.
+//
+// `manage` on both, including the list. Reading which accounts are
+// administrators of a customer's site is not a view-level fact, and the list
+// exists for no purpose other than to then assume one of them.
+Route::get('/applications/{application}/magic-login', [MagicLoginController::class, 'index'])
+    ->middleware('permission:app_magic_login,manage');
+Route::post('/applications/{application}/magic-login', [MagicLoginController::class, 'store'])
+    ->middleware('permission:app_magic_login,manage');
 
 // The Deployment screen. Gated by `app_deployment`, which also brings these
 // under the site-type check — a WordPress install has no repository, so every

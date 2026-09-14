@@ -38,4 +38,5 @@ return [
     'app_fail2ban' => 'Fail2ban',
     'app_staging' => 'Área de testes',
     'app_clone' => 'Clonar site',
+    'app_magic_login' => 'Início de sessão direto',
 ];

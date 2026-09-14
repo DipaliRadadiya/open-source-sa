@@ -3416,6 +3416,20 @@
       },
       "openNamed": "Abrir {domain} en una pestaña nueva"
     },
+    "magicLogin": {
+      "action": "Inicio de sesión directo",
+      "title": "Entrar en WordPress",
+      "subtitle": "Elija con qué administrador desea entrar. No hace falta contraseña.",
+      "signIn": "Entrar",
+      "cancel": "Cancelar",
+      "loading": "Leyendo los administradores de este sitio…",
+      "none": "Este sitio no tiene cuentas de administrador.",
+      "listFailed": "No se pudieron leer los administradores de este sitio.",
+      "failed": "No se pudo crear el enlace de acceso.",
+      "popupBlocked": "Su navegador bloqueó la pestaña nueva. Permita las ventanas emergentes de este panel e inténtelo de nuevo.",
+      "redirecting": "Iniciando su sesión…",
+      "auditNote": "El enlace funciona una sola vez y caduca en un minuto. La cuenta con la que entre queda registrada en el historial de actividad."
+    },
     "markers": {
       "processFailed": "Proceso con error",
       "processStopped": "Proceso detenido",
