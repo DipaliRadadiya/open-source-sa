@@ -24,7 +24,7 @@ import { DomainText } from "@/components/ui/domain-text";
  * The globe icon is dropped here for the same reason — it is identical on every
  * row, so it spends 44px saying nothing.
  */
-export function ApplicationsCards({ applications = [], canManage = false }) {
+export function ApplicationsCards({ applications = [], canManage = false, canMagicLogin = false }) {
   const t = useTranslations("applications");
   const format = useFormatter();
 
@@ -59,7 +59,7 @@ export function ApplicationsCards({ applications = [], canManage = false }) {
             {/* shrink-0 so the menu keeps its place however long the name is —
                 it is the reason this card exists. */}
             <div className="-me-2 -mt-1 shrink-0">
-              <ApplicationRowActions application={application} canManage={canManage} />
+              <ApplicationRowActions application={application} canManage={canManage} canMagicLogin={canMagicLogin} />
             </div>
           </div>
 

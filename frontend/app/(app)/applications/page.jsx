@@ -25,8 +25,13 @@ export default async function ApplicationsPage({ searchParams }) {
     Object.entries(sp ?? {}).filter(([, v]) => typeof v === "string"),
   ).toString();
 
-  const [permissions, t, result] = await Promise.all([
+  const [permissions, appPermissions, t, result] = await Promise.all([
     getPermissions(),
+    // The application-level catalog, unfiltered: role grants are global,
+    // and `application_id` only narrows the list by that one site's
+    // features. So one call answers "does this user hold Magic Login" for
+    // every row, instead of one request per application.
+    getPermissions("application").catch(() => []),
     getTranslations("applications"),
     getApplications(query),
   ]);
@@ -69,6 +74,14 @@ export default async function ApplicationsPage({ searchParams }) {
         meta={result.meta}
         siteTypes={siteTypes}
         canManage={can(permissions, "application", "manage")}
+        // Gated on the Magic Login permission, not on `application`
+        // manage. The API enforces `app_magic_login`, so showing it to
+        // an application manager who lacks that grant would render a
+        // button whose only outcome is a 403.
+        //
+        // The catalog here is unfiltered by site type, so unlike the
+        // Dashboard the row has to check `site_type` itself.
+        canMagicLogin={can(appPermissions, "app_magic_login", "manage", "application")}
         missingDatabase={sitesMissingDatabase(
           result.applications,
           siteTypes,

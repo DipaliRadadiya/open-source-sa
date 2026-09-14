@@ -137,6 +137,7 @@ function ActionsCell({ row, table }) {
     <ApplicationRowActions
       application={row.original}
       canManage={table.options.meta?.canManage ?? false}
+      canMagicLogin={table.options.meta?.canMagicLogin ?? false}
     />
   );
 }
@@ -223,6 +224,7 @@ function ApplicationsList({
   meta,
   siteTypes = [],
   canManage = false,
+  canMagicLogin = false,
   // Ids of sites whose type needs a database and that have none. Empty when
   // the reader cannot see databases, or when the count could not be read.
   missingDatabase = new Set(),
@@ -342,11 +344,11 @@ function ApplicationsList({
       {/* Cards below lg, the table from lg up — same rule as services and
           workers. Six columns cannot fit a phone, and the table quietly hid
           five of them. */}
-      <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} /></div>
+      <div className="lg:hidden"><ApplicationsCards applications={applications} canManage={canManage} canMagicLogin={canMagicLogin} /></div>
       {/* fixedLayout, so the percentages above are obeyed instead of treated as
           hints the browser is free to ignore — the same fix services-table
           needed, for the same reason. */}
-      <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage }} fixedLayout /></div>
+      <div className="hidden lg:block"><DataTable columns={columns} data={applications} meta={{ canManage, canMagicLogin }} fixedLayout /></div>
       <DataTablePagination meta={meta} />
     </div>
   );

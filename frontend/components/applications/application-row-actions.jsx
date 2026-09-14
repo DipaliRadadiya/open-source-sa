@@ -13,6 +13,7 @@ import {
   Globe2,
   LayoutDashboard,
   Loader2,
+  KeyRound,
   MoreHorizontal,
   PauseCircle,
   Pencil,
@@ -35,6 +36,7 @@ import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
 import { PauseApplicationDialog } from "@/components/applications/pause-application-dialog";
 import { WebRootDialog } from "@/components/applications/web-root-dialog";
+import { MagicLoginDialog } from "@/components/applications/magic-login-dialog";
 
 /**
  * The screens worth reaching from the header menu, in the order a site is
@@ -58,6 +60,10 @@ const SHORTCUT_ICONS = {
 export function ApplicationRowActions({
   application,
   canManage = false,
+  // Only the list passes this. The application's own dashboard already carries
+  // a full Magic Login button in its header, so defaulting to false is what
+  // keeps the same action from appearing twice on that page.
+  canMagicLogin = false,
   // On the application's own dashboard page, "Open dashboard" points at the
   // current page and "Visit" duplicates the header button — hide both there.
   showNavigation = true,
@@ -77,6 +83,10 @@ export function ApplicationRowActions({
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [magicLoginOpen, setMagicLoginOpen] = useState(false);
+  // Bumped per open so the dialog remounts and re-reads the administrator
+  // list; an account that was an administrator last time may not be one now.
+  const [magicLoginRun, setMagicLoginRun] = useState(0);
   /*
    * Close when the row changes underneath an open menu.
    *
@@ -93,6 +103,15 @@ export function ApplicationRowActions({
    * Render-phase sync, the same shape `workers-panel` uses: an effect would
    * paint the stale menu once before closing it.
    */
+  // WordPress only, and only while the site is actually being served. The
+  // catalog the list reads is not filtered by site type — unlike the
+  // Dashboard's, which is fetched for one application — so the row has to ask
+  // the question itself.
+  const showMagicLogin =
+    canMagicLogin &&
+    application.site_type === "wordpress" &&
+    application.status === "active";
+
   const [seenStatus, setSeenStatus] = useState(application.status);
   if (seenStatus !== application.status) {
     setSeenStatus(application.status);
@@ -184,6 +203,25 @@ export function ApplicationRowActions({
                   )}
                 </DropdownMenuItem>
               </MenuItemHint>
+            </>
+          ) : null}
+
+          {/* Beside Visit, because they are the same act with different
+              credentials: one opens the site as a visitor, the other as its
+              administrator. Its own separator when there is no navigation
+              above it — on the list this is often the first item. */}
+          {showMagicLogin ? (
+            <>
+              <DropdownMenuItem
+                onSelect={() => {
+                  setMagicLoginRun((n) => n + 1);
+                  setMagicLoginOpen(true);
+                }}
+              >
+                <KeyRound className="size-4" />
+                {t("magicLogin.action")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
             </>
           ) : null}
 
@@ -281,6 +319,16 @@ export function ApplicationRowActions({
         open={webRootOpen}
         onOpenChange={setWebRootOpen}
       />
+      {/* Mounted only once it has been asked for. Every row of this list would
+          otherwise carry a dialog nobody opened — and the list renders ten. */}
+      {showMagicLogin ? (
+        <MagicLoginDialog
+          key={magicLoginRun}
+          appId={application.id}
+          open={magicLoginOpen}
+          onOpenChange={setMagicLoginOpen}
+        />
+      ) : null}
 
       <PauseApplicationDialog
         application={application}
