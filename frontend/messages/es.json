@@ -2232,6 +2232,7 @@
   "databaseInstallProgress": {
     "queued": "En cola para instalarse",
     "working": "Instalando el motor de base de datos",
+    "titleWithEngine": "{name} · {step}",
     "failed": "No se pudo instalar el motor de base de datos",
     "started": "Iniciada {when}",
     "progressLabel": "Progreso de instalación de {name}",
@@ -2277,8 +2278,8 @@
       "subtitle": "El servidor lo instala en segundo plano; suele tardar unos minutos.",
       "submit": "Instalar",
       "installing": "Iniciando…",
-      "queued": "Instalando. Esto tarda unos minutos.",
-      "already": "Ese motor ya está instalado.",
+      "queued": "Instalando {name}. Esto tarda unos minutos.",
+      "already": "{name} ya está instalado.",
       "failed": "No se pudo iniciar la instalación.",
       "alreadyInstalled": "Ya está instalado en este servidor.",
       "notInstallable": "Hay que instalarlo manualmente: no está en la lista de paquetes del servidor.",

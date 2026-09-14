@@ -31,8 +31,15 @@ export function InstallConfirm({ engine, open, onOpenChange, onSuccess }) {
     setPending(true);
     try {
       const { data } = await installEngine(engine.engine);
+      // Named, for the same reason the dialog above it names the engine: this
+      // toast is the only thing on screen for the second or two before the
+      // progress card appears, and "Installing." is not an answer to "which?"
+      const name = t(`engines.${engine.engine}`);
+
       toast.success(
-        data?.queued === false ? t("install.already") : t("install.queued"),
+        data?.queued === false
+          ? t("install.already", { name })
+          : t("install.queued", { name }),
       );
       onSuccess?.({ engine: engine.engine, queued: data?.queued !== false });
     } catch (error) {

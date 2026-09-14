@@ -2232,6 +2232,7 @@
   "databaseInstallProgress": {
     "queued": "Für die Installation eingeplant",
     "working": "Datenbank-Engine wird installiert",
+    "titleWithEngine": "{name} · {step}",
     "failed": "Installation der Datenbank-Engine fehlgeschlagen",
     "started": "Gestartet {when}",
     "progressLabel": "Installationsfortschritt von {name}",
@@ -2277,8 +2278,8 @@
       "subtitle": "Der Server installiert sie im Hintergrund — das dauert meist einige Minuten.",
       "submit": "Installieren",
       "installing": "Wird gestartet…",
-      "queued": "Wird installiert. Das dauert einige Minuten.",
-      "already": "Diese Engine ist bereits installiert.",
+      "queued": "{name} wird installiert. Das dauert einige Minuten.",
+      "already": "{name} ist bereits installiert.",
       "failed": "Die Installation konnte nicht gestartet werden.",
       "alreadyInstalled": "Auf diesem Server bereits installiert.",
       "notInstallable": "Muss manuell installiert werden — sie ist nicht in der Paketliste des Servers.",

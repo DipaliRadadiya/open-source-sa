@@ -2232,6 +2232,7 @@
   "databaseInstallProgress": {
     "queued": "Queued for installation",
     "working": "Installing database engine",
+    "titleWithEngine": "{name} · {step}",
     "failed": "Database engine installation failed",
     "started": "Started {when}",
     "progressLabel": "{name} installation progress",
@@ -2277,8 +2278,8 @@
       "subtitle": "The server installs it in the background — this usually takes a few minutes.",
       "submit": "Install",
       "installing": "Starting…",
-      "queued": "Installing. This takes a few minutes.",
-      "already": "That engine is already installed.",
+      "queued": "Installing {name}. This takes a few minutes.",
+      "already": "{name} is already installed.",
       "failed": "The install couldn't be started.",
       "alreadyInstalled": "Already installed on this server.",
       "notInstallable": "Has to be installed manually — it isn't in the server's package list.",

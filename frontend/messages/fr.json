@@ -2232,6 +2232,7 @@
   "databaseInstallProgress": {
     "queued": "En file d'attente pour installation",
     "working": "Installation du moteur de base de données",
+    "titleWithEngine": "{name} · {step}",
     "failed": "Échec de l'installation du moteur de base de données",
     "started": "Démarré {when}",
     "progressLabel": "Progression de l'installation de {name}",
@@ -2277,8 +2278,8 @@
       "subtitle": "Le serveur l'installe en arrière-plan — cela prend généralement quelques minutes.",
       "submit": "Installer",
       "installing": "Démarrage…",
-      "queued": "Installation en cours. Cela prend quelques minutes.",
-      "already": "Ce moteur est déjà installé.",
+      "queued": "Installation de {name}. Cela prend quelques minutes.",
+      "already": "{name} est déjà installé.",
       "failed": "L'installation n'a pas pu démarrer.",
       "alreadyInstalled": "Déjà installé sur ce serveur.",
       "notInstallable": "Doit être installé manuellement — il n'est pas dans la liste des paquets du serveur.",

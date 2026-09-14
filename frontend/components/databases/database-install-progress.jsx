@@ -45,13 +45,30 @@ export function DatabaseInstallProgress({
   if (!progress) return null;
 
   const failed = progress.status === "failed";
-  const title =
+  const step =
     progress.current_step_title ??
     (failed
       ? t("failed")
       : progress.current_step === "queued"
         ? t("queued")
         : t("working"));
+
+  /*
+   * The engine's name, said out loud.
+   *
+   * `label` was passed by all three callers and spent only on the progress
+   * bar's aria-label, so the visible line read "Downloading packages" — true of
+   * MySQL, MariaDB, PostgreSQL, MongoDB and Redis alike. Installing a *second*
+   * engine is the case that breaks: the server owns the step wording and none
+   * of it names an engine, so the card said nothing about which one you were
+   * waiting for.
+   *
+   * In the title rather than beside it, because this <p> is the aria-live
+   * region: a screen reader announcing "Configuring packages" every few seconds
+   * with no subject has the same problem, and fixing the visible text without
+   * fixing that would be fixing half of it.
+   */
+  const title = label ? t("titleWithEngine", { name: label, step }) : step;
 
   return (
     <div

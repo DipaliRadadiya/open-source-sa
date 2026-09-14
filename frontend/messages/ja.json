@@ -2232,6 +2232,7 @@
   "databaseInstallProgress": {
     "queued": "インストール待ち",
     "working": "データベースエンジンをインストール中",
+    "titleWithEngine": "{name}・{step}",
     "failed": "データベースエンジンのインストールに失敗しました",
     "started": "開始: {when}",
     "progressLabel": "{name} のインストール进度",
@@ -2277,8 +2278,8 @@
       "subtitle": "サーバーがバックグラウンドでインストールします。通常は数分で完了します。",
       "submit": "インストール",
       "installing": "起動中…",
-      "queued": "インストール中です。数分かかります。",
-      "already": "そのエンジンはすでにインストールされています。",
+      "queued": "{name} をインストールしています。数分かかります。",
+      "already": "{name} はすでにインストールされています。",
       "failed": "インストールを開始できませんでした。",
       "alreadyInstalled": "このサーバーにはすでにインストールされています。",
       "notInstallable": "手動でインストールする必要があります。サーバーのパッケージ一覧には含まれていません。",
