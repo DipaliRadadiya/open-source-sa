@@ -3627,7 +3627,8 @@
       },
       "imagePreview": {
         "subtitle": "Nur Vorschau — laden Sie die Datei herunter, um sie zu bearbeiten oder zu nutzen.",
-        "loadFailed": "Dieses Bild konnte nicht geladen werden."
+        "loadFailed": "Dieses Bild konnte nicht geladen werden.",
+        "loading": "Bild wird geladen…"
       },
       "newFolder": {
         "action": "Neuer Ordner",
@@ -5527,7 +5528,8 @@
       "failed": "Dieses Archiv konnte nicht heruntergeladen werden.",
       "blocked": {
         "noPermission": "Ihre Rolle enthält nicht „Backups“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
-        "inFlight": "Dieses Backup wird noch geschrieben."
+        "inFlight": "Dieses Backup wird noch geschrieben.",
+        "noArtifact": "Dieses Backup ist fehlgeschlagen, es gibt also kein Archiv zum Herunterladen."
       }
     },
     "destinationHealth": {

@@ -3627,7 +3627,8 @@
       },
       "imagePreview": {
         "subtitle": "Preview only — download to edit or use this file.",
-        "loadFailed": "This image could not be loaded."
+        "loadFailed": "This image could not be loaded.",
+        "loading": "Loading the image…"
       },
       "newFolder": {
         "action": "New folder",
@@ -5527,7 +5528,8 @@
       "failed": "That archive could not be downloaded.",
       "blocked": {
         "noPermission": "Your role does not include Backups with Manage access. Ask an administrator to grant it.",
-        "inFlight": "This backup is still being written."
+        "inFlight": "This backup is still being written.",
+        "noArtifact": "This backup failed, so there is no archive to download."
       }
     },
     "destinationHealth": {

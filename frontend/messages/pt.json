@@ -3627,7 +3627,8 @@
       },
       "imagePreview": {
         "subtitle": "Apenas pré-visualização — baixe para editar ou usar este arquivo.",
-        "loadFailed": "Esta imagem não pôde ser carregada."
+        "loadFailed": "Esta imagem não pôde ser carregada.",
+        "loading": "Carregando a imagem…"
       },
       "newFolder": {
         "action": "Nova pasta",
@@ -5527,7 +5528,8 @@
       "failed": "Não foi possível baixar esse arquivo.",
       "blocked": {
         "noPermission": "Seu papel não inclui Backups com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
-        "inFlight": "Este backup ainda está sendo gravado."
+        "inFlight": "Este backup ainda está sendo gravado.",
+        "noArtifact": "Esta cópia falhou, então não há nenhum arquivo para baixar."
       }
     },
     "destinationHealth": {

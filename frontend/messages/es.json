@@ -3627,7 +3627,8 @@
       },
       "imagePreview": {
         "subtitle": "Solo vista previa — descarga para editar o usar este archivo.",
-        "loadFailed": "No se pudo cargar esta imagen."
+        "loadFailed": "No se pudo cargar esta imagen.",
+        "loading": "Cargando la imagen…"
       },
       "newFolder": {
         "action": "Nueva carpeta",
@@ -5527,7 +5528,8 @@
       "failed": "No se pudo descargar ese archivo.",
       "blocked": {
         "noPermission": "Tu rol no incluye Copias de seguridad con acceso de gestión. Pide a un administrador que te lo conceda.",
-        "inFlight": "Esta copia aún se está escribiendo."
+        "inFlight": "Esta copia aún se está escribiendo.",
+        "noArtifact": "Esta copia falló, así que no hay ningún archivo que descargar."
       }
     },
     "destinationHealth": {

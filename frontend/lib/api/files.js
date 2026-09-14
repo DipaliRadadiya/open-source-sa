@@ -43,6 +43,51 @@ export function fileDownloadUrl(appId, path) {
   return `${base}/api/applications/${appId}/files/download?path=${encodeURIComponent(path)}`;
 }
 
+/**
+ * Fetch an image for display, as a blob URL.
+ *
+ * `download` above is deliberately unrenderable — `application/octet-stream`
+ * plus `Content-Disposition: attachment` and `nosniff`, which is right for
+ * handing a file over and useless for showing one. `preview` is the only
+ * response in the API a browser is meant to interpret.
+ *
+ * Fetched rather than pointed at with `<img src>`, even though the cookie
+ * would ride along today: a refusal is a 422 with a written reason, and an
+ * `<img>` onError handler cannot see a status code, let alone a body. The
+ * reader would get "could not be loaded" for three different problems, two of
+ * which they can act on. This also survives the panel being deployed on a
+ * domain unrelated to the API, where the `<img>` approach silently stops
+ * sending the session.
+ *
+ * Returns `{ url }` on success — the CALLER OWNS IT and must
+ * `URL.revokeObjectURL` it, or the image stays in memory for the life of the
+ * document. Returns `{ error }` carrying the API's own sentence otherwise.
+ */
+export async function fetchFilePreview(appId, path, { signal } = {}) {
+  const base = process.env.NEXT_PUBLIC_API_URL;
+  const url = `${base}/api/applications/${appId}/files/preview?path=${encodeURIComponent(path)}`;
+
+  const response = await fetch(url, {
+    credentials: "include",
+    headers: { Accept: "image/*, application/json" },
+    signal,
+  });
+
+  if (response.ok) return { url: URL.createObjectURL(await response.blob()) };
+
+  // Every refusal is a 422 with a translated `message`. Anything else (403,
+  // 404, a gateway error) has no body worth reading, so the caller's own copy
+  // is better than whatever HTML a proxy returned.
+  let message = null;
+  try {
+    const body = await response.json();
+    if (typeof body?.message === "string" && body.message.trim()) message = body.message.trim();
+  } catch {
+    // not JSON — leave it null
+  }
+  return { error: { status: response.status, message } };
+}
+
 // `onProgress(fraction)` — undefined is fine, axios just skips the callback.
 export function uploadFile(appId, path, file, { onProgress, signal } = {}) {
   const form = new FormData();

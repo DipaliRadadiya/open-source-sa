@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
 import { ActionIcon } from "@/components/ui/action-icon";
+import { DomainText } from "@/components/ui/domain-text";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
 import {
   DropdownMenu,
@@ -63,7 +64,7 @@ function SiteCell({ row }) {
           </Badge>
         ) : null}
       </div>
-      <p className="truncate text-xs text-muted-foreground">{application.domain}</p>
+      <DomainText domain={application.domain} className="text-xs text-muted-foreground" />
     </div>
   );
 }

@@ -26,14 +26,23 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
   const format = useFormatter();
   const [pending, setPending] = useState(false);
 
-  // A run still in flight has not written an archive yet — the API answers 422
-  // for exactly this, and meeting that after a click is worse than a button
-  // that says why up front.
+  // Only a completed run has an archive. A run still in flight has not written
+  // one yet, and a failed run never will — the API answers 422
+  // download_no_artifact for both, and meeting that after a click is worse
+  // than a button that says why up front.
+  //
+  // This used to be offered on failed runs, on the theory that a partial
+  // archive might explain the failure. The backend confirmed there is no
+  // partial archive to hand back, so the button could only ever have produced
+  // a 422. `reason_title` is the run's own explanation of why it failed, which
+  // is a better thing to read here than anything this file could word.
   const blocker = !canDownload
     ? t("blocked.noPermission")
     : BACKUP_IN_FLIGHT.includes(backup.status)
       ? t("blocked.inFlight")
-      : null;
+      : backup.status !== "completed"
+        ? (backup.reason_title ?? t("blocked.noArtifact"))
+        : null;
 
   async function download() {
     setPending(true);

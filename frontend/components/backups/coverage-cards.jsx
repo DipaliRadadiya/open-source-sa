@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { ActionIcon } from "@/components/ui/action-icon";
+import { DomainText } from "@/components/ui/domain-text";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
 import { COVERAGE_STATE } from "@/components/backups/status-meta";
 
@@ -54,7 +55,7 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
                 >
                   {application.name}
                 </Link>
-                <p className="truncate text-xs text-muted-foreground">{application.domain}</p>
+                <DomainText domain={application.domain} className="text-xs text-muted-foreground" />
               </div>
               <Badge variant={meta.variant} className="shrink-0 gap-1.5 font-normal">
                 <Icon className="size-3" />

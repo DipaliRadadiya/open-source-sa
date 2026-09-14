@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
+import { DomainText } from "@/components/ui/domain-text";
 import {
   Form,
   FormControl,
@@ -558,7 +559,7 @@ function ExistingCopies({ copies }) {
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{copy.name}</p>
-                  <p className="truncate font-mono text-xs text-muted-foreground">{copy.domain}</p>
+                  <DomainText domain={copy.domain} className="font-mono text-xs text-muted-foreground" />
                 </div>
                 {copy.created_at_human ? (
                   <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:inline">

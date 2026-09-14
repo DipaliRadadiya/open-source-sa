@@ -3627,7 +3627,8 @@
       },
       "imagePreview": {
         "subtitle": "Aperçu uniquement — téléchargez pour modifier ou utiliser ce fichier.",
-        "loadFailed": "Cette image n'a pas pu être chargée."
+        "loadFailed": "Cette image n'a pas pu être chargée.",
+        "loading": "Chargement de l'image…"
       },
       "newFolder": {
         "action": "Nouveau dossier",
@@ -5527,7 +5528,8 @@
       "failed": "Cette archive n'a pas pu être téléchargée.",
       "blocked": {
         "noPermission": "Votre rôle n'inclut pas Sauvegardes avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
-        "inFlight": "Cette sauvegarde est encore en cours d'écriture."
+        "inFlight": "Cette sauvegarde est encore en cours d'écriture.",
+        "noArtifact": "Cette sauvegarde a échoué, il n'y a donc aucune archive à télécharger."
       }
     },
     "destinationHealth": {
