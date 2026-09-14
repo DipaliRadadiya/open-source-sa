@@ -1227,7 +1227,8 @@
       "openDatabases": "डेटाबेस खोलें",
       "openPhp": "PHP खोलें",
       "openFail2ban": "Fail2ban खोलें"
-    }
+    },
+    "moreActions": "{name} के लिए और कार्रवाइयाँ"
   },
   "fail2ban": {
     "title": "Fail2ban",

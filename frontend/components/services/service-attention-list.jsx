@@ -90,8 +90,7 @@ export function ServiceAttentionList({ services, phpVersions = [], canManage, bu
                     canManage={canManage}
                     phpVersion={phpVersions.find((v) => v.service === service.key)?.version}
                     onBusyChange={(action) => setRowBusy(service.key, action)}
-                    reserveSlots={false}
-                  />
+                      />
                 </>
               )}
             </div>

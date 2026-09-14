@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ShieldCheck, Loader2, CircleCheck, CircleX } from "lucide-react";
+import { CircleCheck, CircleX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { testServiceConfig } from "@/lib/api/services";
 import { LEVEL_CLASS, lineLevel } from "@/lib/logs/severity";
 import { configTestResponseSchema } from "@/lib/schemas/service";
-import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import {
   Dialog,
@@ -14,11 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 
 /**
@@ -28,8 +22,13 @@ import { apiMessage } from "@/lib/api/error-message";
  *
  * Only rendered where the API says `testable`; a service with no real test is
  * not given an invented one.
+ *
+ * **Split into a hook and a dialog**, because the trigger now lives in the
+ * row's actions menu. A `<Dialog>` rendered inside `DropdownMenuContent`
+ * unmounts the instant the menu closes, so the result would flash and vanish:
+ * the menu owns the item, and the dialog is rendered as the menu's sibling.
  */
-export function ConfigTestButton({ service, canManage }) {
+export function useConfigTest(service) {
   const t = useTranslations("services");
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState(null);
@@ -51,38 +50,18 @@ export function ConfigTestButton({ service, canManage }) {
     }
   }
 
-  const disabled = !canManage || pending;
+  return { run, pending, result, dismiss: () => setResult(null) };
+}
+
+/**
+ * The result of a config test. Rendered by the row, outside its menu.
+ */
+export function ConfigTestDialog({ service, result, onDismiss }) {
+  const t = useTranslations("services");
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span tabIndex={disabled ? 0 : -1} className="inline-flex">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              disabled={disabled}
-              onClick={run}
-              aria-label={t("configTest.action")}
-            >
-              {/* A shield, not another document: next to the log icon a
-                  clipboard read as the same rectangle, and the row is scanned
-                  by silhouette before anything else. */}
-              {pending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <ShieldCheck className="size-4" />
-              )}
-            </Button>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          {canManage ? t("configTest.action") : t("noPermission")}
-        </TooltipContent>
-      </Tooltip>
-
-      <Dialog open={result !== null} onOpenChange={(open) => !open && setResult(null)}>
+      <Dialog open={result !== null} onOpenChange={(open) => !open && onDismiss()}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             {/* Icon beside the title, not above it — same markup as

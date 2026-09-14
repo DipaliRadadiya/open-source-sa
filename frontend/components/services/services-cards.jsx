@@ -125,7 +125,6 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
                 service={service}
                 canManage={canManage}
                 phpVersion={php?.version}
-                reserveSlots={false}
                 onBusyChange={(action) => setRowBusy(service.key, action)}
               />
             </div>

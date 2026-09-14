@@ -1227,7 +1227,8 @@
       "openDatabases": "Ouvrir les bases de données",
       "openPhp": "Ouvrir PHP",
       "openFail2ban": "Ouvrir Fail2ban"
-    }
+    },
+    "moreActions": "Plus d’actions pour {name}"
   },
   "fail2ban": {
     "title": "Fail2ban",

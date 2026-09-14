@@ -8,6 +8,9 @@ import {
   RefreshCcw,
   Loader2,
   TriangleAlert,
+  MoreHorizontal,
+  ShieldCheck,
+  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { runServiceAction } from "@/lib/api/services";
@@ -18,9 +21,16 @@ import {
 import { DISRUPTIVE_ACTIONS } from "@/lib/schemas/service";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ConfigTestButton } from "@/components/services/config-test-button";
-import { ServiceLogsLink } from "@/components/services/service-logs-link";
-import { PhpSettingsLink } from "@/components/services/php-settings-link";
+import { ConfigTestDialog, useConfigTest } from "@/components/services/config-test";
+import { ServiceLogItems } from "@/components/services/service-log-items";
+import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -30,8 +40,10 @@ import { apiMessage } from "@/lib/api/error-message";
 
 // Ordered by how much they disturb the service: reload re-reads config without
 // dropping a connection, restart drops everything for a moment, stop ends it.
-// Colour follows that escalation — and it has to, because reload and restart
-// are mirrored circular arrows that are indistinguishable in grey at 16px.
+// Colour follows that escalation. It used to be load-bearing, because reload
+// and restart were mirrored circular arrows sitting side by side and colour was
+// the only thing telling them apart. Both carry their own word now, so the
+// colour is reinforcement rather than the whole signal.
 const ACTION_META = {
   start: { icon: Play, tone: "text-success hover:bg-success/10 hover:text-success" },
   reload: { icon: RefreshCcw, tone: "text-primary hover:bg-primary/10 hover:text-primary" },
@@ -51,36 +63,40 @@ const BY_STATUS = {
   failed: ["start", "restart"],
 };
 
-// Fixed slots, so the same action sits at the same x on every row and the
-// column has a straight edge. Rows differ in which actions apply, and simply
-// right-aligning them left the icons staggered down the table.
-// `start` and `reload` share a slot because they never co-occur: start only
-// appears when the service is down, reload only when it's up.
-const SLOTS = [["start", "reload"], ["restart"], ["stop"]];
+// The one action the row leads with, by state. Everything else is in the menu.
+//
+// `failed` leads with start rather than restart: recovery from failed is
+// "bring it up", and restart is a click away for the case where it is not.
+const PRIMARY = { active: "restart", inactive: "start", failed: "start" };
 
 /**
- * Per-row controls: every applicable action visible as its own icon button, in
- * a fixed order so the same action sits in the same place down the column.
+ * Per-row controls: one labelled button for the action you actually want, and a
+ * menu for the rest.
  *
- * No overflow menu — with at most three actions a menu hides half of them
- * behind a click and makes the rows unscannable. Labels live in tooltips and
- * `aria-label`, so the meaning is one hover (or one screen reader) away.
+ * **This was six icon-only buttons per row** — logs, config test, PHP settings,
+ * then start/reload, restart, stop — and it defended itself with "no overflow
+ * menu, with at most three actions a menu hides half of them". That counted the
+ * three state verbs and ignored the three links beside them. Six grey glyphs of
+ * the same size, no text, and reload and restart adjacent as near-identical
+ * circular arrows: a row you had to hover through to read, and on a touch
+ * screen could not read at all.
+ *
+ * So: the verb that matches the state gets a word and sits on the row, and
+ * everything else is a named item behind `…` — the same shape FileRowActions
+ * uses, which is the panel's own convention for this.
+ *
+ * **Stop is in the menu.** It already asked for confirmation, so it was never
+ * one click; what it gains is not being one pixel from Restart.
  *
  * Stop asks first: it takes something offline now, and undo can't give back the
  * seconds it was down. The rest just run.
  */
-export function ServiceActions({
-  service,
-  canManage,
-  phpVersion,
-  onBusyChange,
-  // Table: keep a column straight. Cards: hug the right edge.
-  reserveSlots = true,
-}) {
+export function ServiceActions({ service, canManage, phpVersion, onBusyChange }) {
   const t = useTranslations("services");
   const router = useRouter();
   const [pending, setPending] = useState(null);
   const [confirming, setConfirming] = useState(null);
+  const configTest = useConfigTest(service);
 
   // Reported upward so the status cell can say "Restarting…" too. A spinner on
   // one icon while the badge still reads "Running" leaves the row ambiguous
@@ -97,6 +113,18 @@ export function ServiceActions({
     allowed.includes(a),
   );
   const busy = pending !== null;
+
+  // The row's one button, and everything else. A state whose primary is not
+  // permitted for this unit — a protected service that may only be reloaded —
+  // falls back to whatever it does allow rather than showing nothing.
+  const primary = actions.includes(PRIMARY[service.status])
+    ? PRIMARY[service.status]
+    : (actions[0] ?? null);
+  const secondary = actions.filter((a) => a !== primary);
+
+  const hasLogs = (service.log_keys ?? []).length > 0;
+  const hasMenu =
+    secondary.length > 0 || hasLogs || service.testable || Boolean(phpVersion);
 
   async function run(action) {
     setBusyAction(action);
@@ -136,68 +164,125 @@ export function ServiceActions({
   }
 
   return (
-    <div className="flex items-center justify-end gap-0.5">
-      {/* Read-only first, then the writes, with a rule between them. Looking at
-          the log and checking the config are what you do BEFORE touching a
-          running service — and they carry no colour, because on this row colour
-          means "this changes the service". The divider is what stops the two
-          groups reading as one undifferentiated strip of icons. */}
-      {/* These collapse rather than hold reserved slots. Reserving space for
-          all three left a service with none showing a large empty gap, and
-          their exact x doesn't matter: they're a group that ends at the
-          divider, not a column you read down. The ACTION buttons below are the
-          ones that need fixed positions. */}
-      {(service.log_keys ?? []).length > 0 ? <ServiceLogsLink service={service} /> : null}
-      {service.testable ? <ConfigTestButton service={service} canManage={canManage} /> : null}
-      {/* Settings for a PHP version live on the PHP page now — one place for
-          the version, its extensions and its ini. Starting and stopping the FPM
-          unit stays here, because that is the same job as for nginx. */}
-      {phpVersion ? <PhpSettingsLink version={phpVersion} /> : null}
-      {/* Only drawn when something sits to its left — a floating line with
-          nothing before it reads as a rendering fault. */}
-      {(service.log_keys ?? []).length > 0 || service.testable || phpVersion ? (
-        <span aria-hidden="true" className="mx-1 h-5 w-px bg-border" />
+    <div className="flex items-center justify-end gap-1.5">
+      {/* One button, with the verb on it. Which verb depends on the state, so
+          the thing you came to do is the thing under the cursor: Restart a
+          running unit, Start a stopped or failed one. */}
+      {primary ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {/* Wrapped: a disabled button swallows pointer events, and the
+                no-permission case is exactly when the tooltip matters. */}
+            <span tabIndex={!canManage || busy ? 0 : -1} className="inline-flex">
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(ACTION_META[primary].tone)}
+                disabled={!canManage || busy}
+                onClick={() => trigger(primary)}
+              >
+                {pending === primary ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  (() => {
+                    const Icon = ACTION_META[primary].icon;
+
+                    return <Icon className="size-4" />;
+                  })()
+                )}
+                {t(`actions.${primary}`)}
+              </Button>
+            </span>
+          </TooltipTrigger>
+          {canManage ? null : <TooltipContent>{t("noPermission")}</TooltipContent>}
+        </Tooltip>
       ) : null}
 
-      {SLOTS.map((slot) => {
-        const action = slot.find((a) => actions.includes(a));
-        // A missing action holds its place only where the icons form a column
-        // to read down — the table. In the cards the right edge is the
-        // alignment guide, so an invisible trailing slot just insets the row by
-        // 32px and reads as a mistake.
-        if (!action) return reserveSlots ? <Slot key={slot[0]} /> : null;
-
-        const meta = ACTION_META[action];
-        const Icon = meta.icon;
-        const label = t(`actions.${action}`);
-        const disabled = !canManage || busy;
-
-        return (
-          <Tooltip key={slot[0]}>
+      {hasMenu ? (
+        <DropdownMenu>
+          <Tooltip>
             <TooltipTrigger asChild>
-              {/* Wrapped: a disabled button swallows pointer events, and the
-                  no-permission case is exactly when the tooltip matters. */}
-              <span tabIndex={disabled ? 0 : -1} className="inline-flex">
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={cn("size-8", meta.tone)}
-                  disabled={disabled}
-                  onClick={() => trigger(action)}
-                  aria-label={label}
+                  className="size-8"
+                  aria-label={t("moreActions", { name: service.label })}
+                  disabled={busy}
                 >
-                  {pending === action ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Icon className="size-4" />
-                  )}
+                  <MoreHorizontal className="size-4" />
                 </Button>
-              </span>
+              </DropdownMenuTrigger>
             </TooltipTrigger>
-            <TooltipContent>{canManage ? label : t("noPermission")}</TooltipContent>
+            <TooltipContent>{t("moreActions", { name: service.label })}</TooltipContent>
           </Tooltip>
-        );
-      })}
+
+          <DropdownMenuContent align="end" className="w-52">
+            {/* The remaining state verbs, each with its word. Reload and
+                restart can finally sit near each other: one says "Reload", the
+                other says "Restart". */}
+            {secondary.map((action) => {
+              const Icon = ACTION_META[action].icon;
+
+              return (
+                <DropdownMenuItem
+                  key={action}
+                  disabled={!canManage}
+                  onSelect={() => trigger(action)}
+                  variant={action === "stop" ? "destructive" : undefined}
+                >
+                  <Icon className="size-4" />
+                  {t(`actions.${action}`)}
+                </DropdownMenuItem>
+              );
+            })}
+
+            {/* Reading before writing: the log and the config check are what
+                you do BEFORE touching a running service, so they sit below the
+                verbs with a rule between. */}
+            {secondary.length > 0 && (hasLogs || service.testable || phpVersion) ? (
+              <DropdownMenuSeparator />
+            ) : null}
+
+            <ServiceLogItems service={service} />
+
+            {service.testable ? (
+              <DropdownMenuItem
+                disabled={!canManage || configTest.pending}
+                // Closing the menu is what we want — the dialog is rendered
+                // below, outside it, so it survives.
+                onSelect={() => configTest.run()}
+              >
+                {configTest.pending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ShieldCheck className="size-4" />
+                )}
+                {t("configTest.action")}
+              </DropdownMenuItem>
+            ) : null}
+
+            {/* Settings for a PHP version live on the PHP page now — one place
+                for the version, its extensions and its ini. Starting and
+                stopping the FPM unit stays here, because that is the same job
+                as for nginx. */}
+            {phpVersion ? (
+              <DropdownMenuItem asChild>
+                <Link href={`/php?version=${encodeURIComponent(phpVersion)}`}>
+                  <SlidersHorizontal className="size-4" />
+                  {t("phpSettings")}
+                </Link>
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+
+      <ConfigTestDialog
+        service={service}
+        result={configTest.result}
+        onDismiss={configTest.dismiss}
+      />
 
       <ConfirmDialog
         open={confirming !== null}
@@ -214,10 +299,4 @@ export function ServiceActions({
       />
     </div>
   );
-}
-
-
-/** A fixed 32px cell, so an absent action still holds its column. */
-function Slot({ children }) {
-  return <span className="inline-flex size-8 items-center justify-center">{children}</span>;
 }
