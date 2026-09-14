@@ -7,6 +7,7 @@ use App\Enums\BackupType;
 use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTrigger;
 use App\Enums\DomainType;
+use App\Enums\StorageProvider;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
 use App\Models\ApplicationPhpSettings;
@@ -173,12 +174,17 @@ class DemoDataSeeder extends Seeder
         $destination = StorageDestination::firstOrCreate(
             ['name' => 'Demo S3 Bucket'],
             [
-                'endpoint' => 'https://s3.us-east-1.amazonaws.com',
-                'region' => 'us-east-1',
-                'bucket' => 'demo-panel-backups',
+                'provider' => StorageProvider::S3,
                 'prefix' => 'demo',
-                'access_key' => 'DEMOACCESSKEYNOTREAL',
-                'secret_key' => 'demo-secret-key-not-real',
+                // The five S3 fields live inside `config` now, whose shape is
+                // decided by `provider`. They are not top-level columns.
+                'config' => [
+                    'endpoint' => 'https://s3.us-east-1.amazonaws.com',
+                    'region' => 'us-east-1',
+                    'bucket' => 'demo-panel-backups',
+                    'access_key' => 'DEMOACCESSKEYNOTREAL',
+                    'secret_key' => 'demo-secret-key-not-real',
+                ],
             ],
         );
 
