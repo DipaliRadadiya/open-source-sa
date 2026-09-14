@@ -4,7 +4,7 @@
 // Locale is resolved from the `NEXT_LOCALE` cookie server-side (i18n/request.js)
 // — no URL prefix, no middleware. English is the source; partial locales fall
 // back to English per-key.
-export const locales = ["en", "es", "hi"];
+export const locales = ["en", "es", "de", "fr", "hi"];
 export const defaultLocale = "en";
 
 // Human-readable names for the switcher. Extra entries (for not-yet-active

@@ -113,7 +113,7 @@ export const MANY_MEANINGS = {
   },
   Installed: {
     reason: "A participle agreeing with a PHP version (feminine) or a setup component (masculine).",
-    locales: ["es"],
+    locales: ["es", "fr"],
   },
   Ready: {
     reason: "An adjective agreeing with a database export (feminine) or an application (masculine).",
