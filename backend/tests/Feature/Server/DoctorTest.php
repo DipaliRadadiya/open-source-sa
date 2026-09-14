@@ -282,6 +282,27 @@ describe('the checks added for "routes error after setup"', function () {
             ->and($report['healthy'])->toBeTrue();
     });
 
+    it('warns about a missing psql, naming PostgreSQL', function () {
+        // Absent from the optional list until 2026-09-14, which left the one
+        // check whose job is catching an absent-or-ungranted binary blind to
+        // the engine with an installer, a driver and a remote-access feature.
+        // The 2026-09-07 sudoers gap in miniature: allowlisted in config, and
+        // nothing verifying the grant reached the server.
+        Process::fake(function ($process) {
+            return str_contains(implode(' ', $process->command), 'psql')
+                ? Process::result(exitCode: 1)
+                : Process::result(output: '/usr/bin/thing', exitCode: 0);
+        });
+
+        config()->set('server.doctor.checks', [BinariesCheck::class]);
+        $report = app(Doctor::class)->run();
+
+        expect($report['checks'][0]['status'])->toBe('warn')
+            ->and($report['checks'][0]['detail'])->toContain('PostgreSQL')
+            // A panel without psql still runs every other feature.
+            ->and($report['healthy'])->toBeTrue();
+    });
+
     it('fails when a required tool is missing', function () {
         Process::fake(function ($process) {
             return str_contains(implode(' ', $process->command), 'systemctl')

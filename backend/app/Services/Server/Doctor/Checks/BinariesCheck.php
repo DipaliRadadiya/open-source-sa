@@ -34,6 +34,13 @@ class BinariesCheck implements DoctorCheck
         'fail2ban-client' => 'fail2ban',
         'mysql' => 'MySQL/MariaDB databases',
         'mongosh' => 'MongoDB databases',
+        // Missing from this list until 2026-09-14, which made the one check
+        // whose job is catching an absent-or-ungranted binary blind to the
+        // engine that has an installer, a driver and a whole remote-access
+        // feature. Exactly the shape of the 2026-09-07 sudoers gap: a binary
+        // the panel calls, allowlisted in config, and nothing verifying the
+        // grant reached /etc/sudoers.d on a server installed before it.
+        'psql' => 'PostgreSQL databases',
         'redis-cli' => 'Redis',
         'fnm' => 'Node version management',
         'wp' => 'WordPress sites',
