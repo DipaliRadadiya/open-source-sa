@@ -1,21 +1,22 @@
-import { useForm, useWatch } from "react-hook-form";
+import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ExternalLink, HardDrive, Loader2 } from "lucide-react";
 import { createStorageDestinationSchema } from "@/lib/schemas/storage";
-import { createRequirements } from "@/lib/storage/requirements";
+import { defaultConfig, keyDocsUrl, providerForPreset } from "@/lib/storage/providers";
 import { createDestination } from "@/lib/api/storage";
 import { probeDestination } from "@/lib/storage/probe";
-import { keyDocsUrl } from "@/lib/storage/provider-from-endpoint";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
-import { PasswordInput } from "@/components/ui/password-input";
 import { FormModal } from "@/components/ui/form-modal";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
 import { DestinationFormFields } from "@/components/integrations/storage/destination-form-fields";
+
+const DEFAULT_PRESET = "aws";
 
 /**
  * Adding a destination.
@@ -30,19 +31,22 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
   const t = useTranslations("storage.connect");
   const router = useRouter();
 
+  // The preset lives in component state rather than the form, because it
+  // selects the *schema* — a resolver cannot be rebuilt from a value it is
+  // itself validating.
+  const [preset, setPreset] = useState(DEFAULT_PRESET);
+  const provider = providerForPreset(preset);
+
+  const resolver = useMemo(() => zodResolver(createStorageDestinationSchema(preset)), [preset]);
+
   const form = useForm({
-    resolver: zodResolver(createStorageDestinationSchema),
+    resolver,
     mode: "onSubmit",
     reValidateMode: "onChange",
     defaultValues: {
-      provider: "aws",
       name: "",
-      endpoint: "",
-      region: "",
-      bucket: "",
       prefix: "",
-      access_key: "",
-      secret_key: "",
+      config: defaultConfig(providerForPreset(DEFAULT_PRESET)),
     },
   });
 
@@ -50,18 +54,15 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
     try {
       const { data } = await createDestination({
         name: values.name.trim(),
-        bucket: values.bucket.trim(),
-        endpoint: values.endpoint?.trim() || undefined,
-        region: values.region?.trim() || undefined,
+        provider,
         prefix: values.prefix?.trim() || undefined,
-        access_key: values.access_key.trim(),
-        secret_key: values.secret_key.trim(),
+        config: cleanConfig(values.config),
       });
 
       const created = data?.storage_destination;
       toast.success(t("added"));
       onOpenChange?.(false);
-      form.reset();
+      reset(DEFAULT_PRESET);
       router.refresh();
 
       // Saved is not the same as working. The check runs after the dialog
@@ -78,23 +79,42 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
   }
 
   const submitting = form.formState.isSubmitting;
-  // The provider is a form field rather than local state so the schema can see
-  // it: which of endpoint and region is required depends on it.
-  const provider = useWatch({ control: form.control, name: "provider" });
-  const keyDocs = keyDocsUrl(provider);
+  const keyDocs = keyDocsUrl(preset);
 
-  function handleProviderChange(next) {
-    form.setValue("provider", next);
-    // Requiredness moves with the provider, so an error raised under the old
-    // one has to be re-judged — otherwise "Endpoint is required" stays on
-    // screen after switching to AWS, where it is not.
-    if (form.formState.isSubmitted) form.trigger(["endpoint", "region"]);
+  function reset(nextPreset) {
+    setPreset(nextPreset);
+    form.reset({
+      name: "",
+      prefix: "",
+      config: defaultConfig(providerForPreset(nextPreset)),
+    });
+  }
+
+  function handlePresetChange(next) {
+    const nextProvider = providerForPreset(next);
+    setPreset(next);
+
+    // Switching between providers swaps the whole field set, so values typed
+    // under the old one are not merely irrelevant — they would be submitted.
+    // Within the S3 family the fields are the same, so what was typed is kept
+    // and only the requiredness moves.
+    if (nextProvider !== provider) {
+      form.reset({
+        name: form.getValues("name"),
+        prefix: form.getValues("prefix"),
+        config: defaultConfig(nextProvider),
+      });
+      return;
+    }
+
+    // Requiredness moves with the preset, so an error raised under the old one
+    // has to be re-judged — otherwise "Endpoint is required" stays on screen
+    // after switching to AWS, where it is not.
+    if (form.formState.isSubmitted) form.trigger(["config.endpoint", "config.region"]);
   }
 
   function handleOpenChange(next) {
-    if (!next) {
-      form.reset();
-    }
+    if (!next) reset(DEFAULT_PRESET);
     onOpenChange?.(next);
   }
 
@@ -127,23 +147,22 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
       >
         <DestinationFormFields
           form={form}
-          provider={provider}
-          onProviderChange={handleProviderChange}
+          preset={preset}
+          onPresetChange={handlePresetChange}
           disabled={submitting}
-          required={createRequirements(provider)}
         />
 
-        {/* Said BEFORE the key is created, not after the test fails. The probe
-            writes an object, reads it back and deletes it, and backups prune
-            old archives when they pass the retention limit — so a read-only
-            key cannot work, and that is the single most common reason one of
-            these never starts working. */}
+        {/* Said BEFORE the credentials are created, not after the test fails.
+            The probe writes an object, reads it back and deletes it, and
+            backups prune old archives when they pass the retention limit — so
+            a read-only credential cannot work, and that is the single most
+            common reason one of these never starts working. */}
         <div className="rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
-          {t("permissionsNote")}
+          {provider === "s3" ? t("permissionsNote") : t("permissionsNoteRemote")}
         </div>
 
-        {/* Where these come from, for the provider actually chosen. Every
-            service calls them something else — an API token at Cloudflare, an
+        {/* Where these come from, for the service actually chosen. Every one
+            calls them something else — an API token at Cloudflare, an
             Application Key at Backblaze — so "paste your access key" sends a
             first-time user hunting a console for a phrase that is not there. */}
         {keyDocs ? (
@@ -158,50 +177,28 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
           </a>
         ) : null}
 
-        <div className="space-y-4">
-          <FormField
-            control={form.control}
-            name="access_key"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel required>{t("accessKey")}</FormLabel>
-                <FormControl>
-                  <PasswordInput
-                    autoComplete="off"
-                    placeholder={t("accessKeyPlaceholder")}
-                    disabled={submitting}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage field={t("accessKey")} />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="secret_key"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel required>{t("secretKey")}</FormLabel>
-                <FormControl>
-                  <PasswordInput
-                    autoComplete="new-password"
-                    placeholder={t("secretKeyPlaceholder")}
-                    disabled={submitting}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage field={t("secretKey")} />
-              </FormItem>
-            )}
-          />
-        </div>
-
         {/* Said before they are typed: these are stored encrypted and the API
             never sends them back, so the panel genuinely cannot show them
             again — replacing is the only way to change them later. */}
         <p className="text-xs text-muted-foreground">{t("credentialsNote")}</p>
       </FormModal>
     </Form>
+  );
+}
+
+/**
+ * Drop the keys the user left empty.
+ *
+ * An empty string is not the same as "not set": sending `password: ""` for an
+ * SFTP destination authenticating by key would store an empty password and
+ * phpseclib would try to authenticate with it. Booleans are kept as they are —
+ * `false` is a deliberate answer, and stripping it would silently re-enable
+ * TLS on a destination whose owner turned it off.
+ */
+function cleanConfig(config = {}) {
+  return Object.fromEntries(
+    Object.entries(config).filter(([, value]) =>
+      typeof value === "boolean" ? true : String(value ?? "").trim() !== "",
+    ),
   );
 }

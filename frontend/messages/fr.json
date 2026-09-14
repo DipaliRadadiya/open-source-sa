@@ -5012,7 +5012,12 @@
       "neverTested": "Jamais testé — personne n'a vérifié que ces identifiants fonctionnent.",
       "lastTestedOk": "Testé {when}",
       "failedCredentials": "Le dernier test a échoué {when} — les identifiants ont été refusés.",
-      "failedUnreachable": "Le dernier test a échoué {when} — le bucket est injoignable."
+      "failedUnreachable": "Le dernier test a échoué {when} — le bucket est injoignable.",
+      "failed": "Le dernier test a échoué {when}.",
+      "failedHostKey": "Le dernier test a échoué {when} — le serveur a présenté une clé d’hôte différente de celle enregistrée, la connexion a donc été interrompue.",
+      "failedPrivateKey": "Le dernier test a échoué {when} — la clé privée n’a pas pu être lue.",
+      "failedRootMissing": "Le dernier test a échoué {when} — le dossier de destination n’existe pas sur le serveur.",
+      "failedMismatch": "Le dernier test a échoué {when} — la destination a relu des octets différents de ceux écrits."
     },
     "form": {
       "provider": "Fournisseur",
@@ -5024,29 +5029,57 @@
         "wasabi": "Wasabi",
         "spaces": "DigitalOcean Spaces",
         "minio": "MinIO ou auto-hébergé",
-        "other": "Autre"
+        "other": "Autre",
+        "ftp": "FTP",
+        "sftp": "SFTP"
       },
       "name": "Nom",
       "namePlaceholder": "ex. Sauvegardes externes",
       "nameHint": "Comment ceci s'affiche quand vous le choisissez pour une application.",
-      "bucket": "Bucket",
-      "bucketPlaceholder": "my-backups",
-      "region": "Région",
-      "regionPlaceholder": "eu-west-1",
-      "endpoint": "Point de terminaison",
       "endpointPlaceholder": "https://…",
       "endpointExample": "Pour ce fournisseur, cela ressemble à {example}",
       "endpointAws": "Laissez vide pour Amazon S3 — la région détermine le point de terminaison.",
       "prefix": "Dossier",
       "prefixPlaceholder": "backups/",
       "prefixHint": "Optionnel. Conserve les sauvegardes dans leur propre dossier à l'intérieur du bucket.",
-      "prefixChangeWarning": "Modifier ceci ne déplace rien. Les sauvegardes déjà stockées dans l'ancien dossier ne seront plus trouvées."
+      "prefixChangeWarning": "Modifier ceci ne déplace rien. Les sauvegardes déjà stockées dans l'ancien dossier ne seront plus trouvées.",
+      "fields": {
+        "bucket": "Bucket",
+        "region": "Région",
+        "endpoint": "Point de terminaison",
+        "access_key": "Clé d’accès",
+        "secret_key": "Clé secrète",
+        "host": "Host",
+        "port": "Port",
+        "username": "Nom d'utilisateur",
+        "password": "Mot de passe",
+        "root": "Répertoire distant",
+        "ssl": "Utiliser TLS (FTPS)",
+        "passive": "Mode passif",
+        "private_key": "Clé privée",
+        "passphrase": "Phrase secrète de la clé"
+      },
+      "help": {
+        "host": "Nom d’hôte ou adresse IP du serveur qui conservera les sauvegardes.",
+        "port": "Laisser vide pour utiliser la valeur par défaut.",
+        "root": "Répertoire du serveur où écrire. Laisser vide pour rester là où la connexion aboutit.",
+        "ssl": "Fortement recommandé. Sans cela, le mot de passe et toute la sauvegarde circulent en clair.",
+        "passive": "À laisser activé sauf si le serveur exige le contraire.",
+        "private_key": "Collez la clé privée entière. Utilisée à la place d’un mot de passe.",
+        "passphrase": "Uniquement si la clé privée est elle-même chiffrée."
+      },
+      "plainFtpWarning": "TLS est désactivé. Le mot de passe et chaque sauvegarde seront envoyés en clair.",
+      "prefixHintRemote": "Dossier facultatif dans le répertoire distant, pour qu’un serveur puisse héberger plusieurs sites.",
+      "placeholders": {
+        "bucket": "my-backups",
+        "region": "eu-west-1",
+        "host": "backup.exemple.fr",
+        "root": "backups/"
+      }
     },
     "connect": {
       "title": "Ajouter une destination de stockage",
       "subtitle": "Un bucket compatible S3 pour envoyer les sauvegardes.",
-      "accessKey": "Clé d'accès",
-      "secretKey": "Clé secrète",
       "credentialsNote": "Les clés sont stockées chiffrées et ne sont plus jamais affichées — pour les modifier plus tard, il faut les remplacer.",
       "cancel": "Annuler",
       "submit": "Ajouter une destination",
@@ -5054,10 +5087,9 @@
       "added": "Destination ajoutée.",
       "testPassed": "Connexion testée — elle fonctionne.",
       "testFailed": "Enregistré, mais le test de connexion a échoué. Vérifiez les clés et le bucket.",
-      "accessKeyPlaceholder": "Depuis la page des clés API de votre fournisseur",
-      "secretKeyPlaceholder": "Affiché uniquement lors de la création de la clé",
       "permissionsNote": "La clé doit avoir les permissions pour téléverser, télécharger et supprimer des objets dans ce bucket. La suppression est importante — les sauvegardes effacent les anciennes archives une fois la limite de rétention dépassée.",
-      "keyDocs": "Où trouver ces clés ?"
+      "keyDocs": "Où trouver ces clés ?",
+      "permissionsNoteRemote": "Le compte doit pouvoir créer, lire et supprimer des fichiers dans ce répertoire — les sauvegardes suppriment les anciennes archives au-delà de la limite de rétention, un accès en lecture seule ne peut donc pas fonctionner."
     },
     "edit": {
       "title": "Modifier la destination",
@@ -5066,21 +5098,19 @@
       "submit": "Enregistrer les modifications",
       "saving": "Enregistrement…",
       "saved": "Destination mise à jour.",
-      "credentialsUntouched": "Les clés stockées ne sont pas modifiées — utilisez Remplacer les identifiants pour les changer."
+      "credentialsUntouched": "Les clés stockées ne sont pas modifiées — utilisez Remplacer les identifiants pour les changer.",
+      "providerLocked": "Le fournisseur est fixé à {provider}. Pour en utiliser un autre, supprimez cette destination et ajoutez-en une nouvelle."
     },
     "replace": {
       "title": "Remplacer les identifiants",
       "subtitle": "Nouvelles clés pour {name}.",
       "warning": "Les clés stockées sont remplacées immédiatement. Elles ne sont pas vérifiées au préalable ; une clé incorrecte bloque les sauvegardes jusqu'à correction.",
-      "accessKey": "Nouvelle clé d'accès",
-      "secretKey": "Nouvelle clé secrète",
       "cancel": "Annuler",
       "submit": "Remplacer les clés",
       "saving": "Remplacement…",
       "replacedAndTested": "Clés remplacées — la connexion fonctionne.",
       "replacedButFailed": "Clés remplacées, mais le test de connexion a échoué.",
-      "accessKeyPlaceholder": "Depuis la page des clés API de votre fournisseur",
-      "secretKeyPlaceholder": "Affiché uniquement lors de la création de la clé"
+      "onlyWhatYouChange": "Ne remplissez que ce que vous changez. Les champs laissés vides conservent leur valeur actuelle."
     },
     "delete": {
       "title": "Supprimer cette destination ?",

@@ -1,7 +1,20 @@
 import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
-import { STORAGE_PROVIDERS } from "@/lib/schemas/storage";
+import {
+  NUMBER,
+  PRESETS,
+  SECRET,
+  TEXTAREA,
+  TOGGLE,
+  fieldsFor,
+  isRequired,
+  presetFor,
+  providerForPreset,
+} from "@/lib/storage/providers";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -13,46 +26,54 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/comp
 
 /**
  * The fields that describe *where* the data goes — shared by create and edit,
- * because they are the same question in both and had no business being typed
- * out twice.
+ * because they are the same question in both.
  *
- * The provider select is a hint mechanism, not a stored value: the backend has
- * no provider concept, it takes any S3-compatible endpoint. Choosing one only
- * changes the example shown under the endpoint field, because every real
- * endpoint contains something only the account owner knows (an account id, a
- * region) — pre-filling a template would just hand back a value that fails
- * validation.
+ * Every provider's inputs come from one declaration (`lib/storage/providers`)
+ * and are rendered by one loop. The alternative — a form per provider, or one
+ * union form with everything nullable — produces a screen that asks for a
+ * bucket and a hostname at the same time and leaves the user to work out which
+ * half applies to them.
  *
- * `required` says which of endpoint and region this particular destination
- * needs; it comes from lib/storage/requirements and differs between create and
- * edit, so the asterisk is a claim about this form rather than decoration.
+ * The provider picker is now a REAL field: it is submitted, the backend stores
+ * it, and it decides what the rest of this form asks for. It used to be a
+ * client-only hint that changed an example line, because the API had no
+ * provider concept and inferred one from the endpoint hostname.
  */
 export function DestinationFormFields({
   // True on a destination that already exists, where changing the folder has
   // consequences for archives already in it.
   existing = false,
   form,
-  provider,
-  onProviderChange,
+  preset,
+  onPresetChange,
   disabled,
-  required = {},
+  // Editing never touches credentials: the API reads the *presence* of one as
+  // "rotate this", so a form that rendered them would post whatever was in its
+  // state and overwrite the stored secret. Rotation is its own dialog, and
+  // this is enforced by not drawing the inputs rather than by remembering not
+  // to submit them.
+  hideSecrets = false,
 }) {
   const t = useTranslations("storage.form");
-  const hint = STORAGE_PROVIDERS.find((p) => p.value === provider)?.endpointHint ?? "";
+  const provider = providerForPreset(preset);
+  const endpointHint = presetFor(preset)?.endpointHint ?? "";
+  const fields = fieldsFor(provider).filter(
+    (f) => !hideSecrets || (f.kind !== SECRET && f.kind !== TEXTAREA),
+  );
 
   return (
     <>
-      {onProviderChange ? (
+      {onPresetChange ? (
         <FormItem>
-          <FormLabel>{t("provider")}</FormLabel>
-          <Select value={provider} onValueChange={onProviderChange} disabled={disabled}>
+          <FormLabel required>{t("provider")}</FormLabel>
+          <Select value={preset} onValueChange={onPresetChange} disabled={disabled}>
             <FormControl>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
             </FormControl>
             <SelectContent>
-              {STORAGE_PROVIDERS.map((p) => (
+              {PRESETS.map((p) => (
                 <SelectItem key={p.value} value={p.value}>
                   {t(`providers.${p.value}`)}
                 </SelectItem>
@@ -78,72 +99,17 @@ export function DestinationFormFields({
         )}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <FormField
-          control={form.control}
-          name="bucket"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel required>{t("bucket")}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={t("bucketPlaceholder")}
-                  className="font-mono"
-                  autoComplete="off"
-                  spellCheck={false}
-                  disabled={disabled}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      {fields.map((definition) => (
+        <ConfigField
+          key={definition.name}
+          definition={definition}
+          form={form}
+          preset={preset}
+          disabled={disabled}
+          endpointHint={endpointHint}
+          t={t}
         />
-        <FormField
-          control={form.control}
-          name="region"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel required={Boolean(required.region)}>{t("region")}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={t("regionPlaceholder")}
-                  className="font-mono"
-                  autoComplete="off"
-                  spellCheck={false}
-                  disabled={disabled}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      <FormField
-        control={form.control}
-        name="endpoint"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel required={Boolean(required.endpoint)}>{t("endpoint")}</FormLabel>
-            <FormControl>
-              <Input
-                placeholder={hint || t("endpointPlaceholder")}
-                className="font-mono"
-                autoComplete="off"
-                spellCheck={false}
-                disabled={disabled}
-                {...field}
-              />
-            </FormControl>
-            <p className="text-xs text-muted-foreground">
-              {hint ? t("endpointExample", { example: hint }) : t("endpointAws")}
-            </p>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      ))}
 
       <FormField
         control={form.control}
@@ -161,17 +127,20 @@ export function DestinationFormFields({
                 {...field}
               />
             </FormControl>
-            <p className="text-xs text-muted-foreground">{t("prefixHint")}</p>
+            <p className="text-xs text-muted-foreground">
+              {provider === "s3" ? t("prefixHint") : t("prefixHintRemote")}
+            </p>
             {/*
-              * The folder is the disk's ROOT, and a backup's stored key is
-              * relative to it (`DestinationDisk`: 'root' => $destination->prefix).
-              * So changing it does not move anything — it repoints the panel at
-              * a different place, and every archive already written stops being
-              * found. Said where the change is made, because afterwards the only
-              * symptom is a download that reports the file missing.
+              * On S3 the folder is the disk's ROOT and a backup's stored key is
+              * relative to it, so changing it does not move anything — it
+              * repoints the panel at a different place and every archive
+              * already written stops being found. On FTP/SFTP it is appended
+              * to the connection root, with the same consequence. Said where
+              * the change is made, because afterwards the only symptom is a
+              * download that reports the file missing.
               *
-              * Only when editing: on a destination that does not exist yet there
-              * is nothing to strand, and a warning there is just noise.
+              * Only when editing: on a destination that does not exist yet
+              * there is nothing to strand, and a warning there is just noise.
               */}
             {existing ? (
               <p className="flex items-start gap-1.5 text-xs text-warning">
@@ -184,5 +153,108 @@ export function DestinationFormFields({
         )}
       />
     </>
+  );
+}
+
+/**
+ * One config input, drawn according to its declared kind.
+ *
+ * Help text and labels are looked up by field name, so adding a provider field
+ * means adding a dictionary key — there is no per-provider branch here to
+ * forget to update.
+ */
+function ConfigField({ definition, form, preset, disabled, endpointHint, t }) {
+  const { name, kind, mono, placeholder, warnWhenOff, hintsEndpoint } = definition;
+  const required = isRequired(definition, preset);
+  const help = t.has(`help.${name}`) ? t(`help.${name}`) : null;
+  // A translated placeholder when the field has one, falling back to the
+  // literal on the definition (the port defaults, which are numbers and the
+  // same in every language).
+  const hint = t.has(`placeholders.${name}`) ? t(`placeholders.${name}`) : placeholder;
+
+  return (
+    <FormField
+      control={form.control}
+      name={`config.${name}`}
+      render={({ field }) => {
+        if (kind === TOGGLE) {
+          // `field.value` can be undefined on first paint; the declaration's
+          // default is applied when the form is reset, so coercing here only
+          // guards the gap rather than deciding policy.
+          const on = field.value !== false;
+
+          return (
+            <FormItem className="flex flex-row items-start justify-between gap-4 rounded-lg border p-3">
+              <div className="space-y-1">
+                <FormLabel>{t(`fields.${name}`)}</FormLabel>
+                {help ? <p className="text-xs text-muted-foreground">{help}</p> : null}
+                {/*
+                  * Shown only when the toggle is off, and worded as a
+                  * consequence rather than a setting: "TLS is off" tells
+                  * somebody nothing they did not just do, while naming what
+                  * travels unencrypted is the reason to reconsider.
+                  */}
+                {warnWhenOff && !on ? (
+                  <p className="flex items-start gap-1.5 text-xs text-warning">
+                    <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                    {t(warnWhenOff)}
+                  </p>
+                ) : null}
+              </div>
+              <FormControl>
+                <Switch checked={on} onCheckedChange={field.onChange} disabled={disabled} />
+              </FormControl>
+            </FormItem>
+          );
+        }
+
+        return (
+          <FormItem>
+            <FormLabel required={required}>{t(`fields.${name}`)}</FormLabel>
+            <FormControl>
+              {kind === TEXTAREA ? (
+                <Textarea
+                  rows={4}
+                  placeholder={hint}
+                  className="font-mono text-xs"
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={disabled}
+                  {...field}
+                />
+              ) : kind === SECRET ? (
+                <PasswordInput
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={disabled}
+                  className={mono ? "font-mono" : undefined}
+                  {...field}
+                />
+              ) : (
+                <Input
+                  type={kind === NUMBER ? "number" : "text"}
+                  placeholder={
+                    hintsEndpoint ? endpointHint || t("endpointPlaceholder") : hint
+                  }
+                  className={mono ? "font-mono" : undefined}
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={disabled}
+                  {...field}
+                />
+              )}
+            </FormControl>
+            {hintsEndpoint ? (
+              <p className="text-xs text-muted-foreground">
+                {endpointHint ? t("endpointExample", { example: endpointHint }) : t("endpointAws")}
+              </p>
+            ) : help ? (
+              <p className="text-xs text-muted-foreground">{help}</p>
+            ) : null}
+            <FormMessage />
+          </FormItem>
+        );
+      }}
+    />
   );
 }

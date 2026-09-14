@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -6,17 +6,24 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { KeyRound, Loader2, TriangleAlert } from "lucide-react";
 import { replaceCredentialsSchema } from "@/lib/schemas/storage";
+import { TEXTAREA, secretFieldsFor } from "@/lib/storage/providers";
 import { updateDestination } from "@/lib/api/storage";
 import { probeDestination } from "@/lib/storage/probe";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
+import { Textarea } from "@/components/ui/textarea";
 import { FormModal } from "@/components/ui/form-modal";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 /**
- * Rotating the keys.
+ * Rotating the credentials.
+ *
+ * Which credentials those are depends on the provider — rotating an SFTP
+ * private key is not rotating an access key and secret key pair — so the
+ * fields come from the same declaration the create form uses rather than being
+ * the hardcoded S3 pair this dialog used to assume.
  *
  * Unlike the git equivalent, the API does NOT verify these before storing
  * them — it has no way to, since the check is a separate endpoint. So the old
@@ -27,25 +34,39 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
  */
 export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
   const t = useTranslations("storage.replace");
+  const tf = useTranslations("storage.form");
   const router = useRouter();
-  const [failure, setFailure] = useState(null);
+
+  const provider = destination?.provider ?? "s3";
+  const fields = useMemo(() => secretFieldsFor(provider), [provider]);
+  const schema = useMemo(() => replaceCredentialsSchema(destination), [destination]);
+
+  const defaults = useMemo(
+    () => Object.fromEntries(fields.map((f) => [f.name, ""])),
+    [fields],
+  );
 
   const form = useForm({
-    resolver: zodResolver(replaceCredentialsSchema),
+    resolver: zodResolver(schema),
     mode: "onSubmit",
     reValidateMode: "onChange",
-    defaultValues: { access_key: "", secret_key: "" },
+    defaultValues: defaults,
   });
 
   async function onSubmit(values) {
-    setFailure(null);
     try {
-      await updateDestination(destination.id, {
-        access_key: values.access_key.trim(),
-        secret_key: values.secret_key.trim(),
-      });
+      // Only what was actually typed. An empty string here is not "clear it" —
+      // it is "I did not rotate this one", which matters for SFTP where the
+      // user rotates either the password or the key, never both.
+      const config = Object.fromEntries(
+        Object.entries(values)
+          .map(([key, value]) => [key, String(value ?? "").trim()])
+          .filter(([, value]) => value !== ""),
+      );
+
+      await updateDestination(destination.id, { config });
       onOpenChange?.(false);
-      form.reset();
+      form.reset(defaults);
       router.refresh();
 
       const verdict = await probeDestination(destination.id, t("replacedButFailed"));
@@ -59,10 +80,7 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
   const submitting = form.formState.isSubmitting;
 
   function handleOpenChange(next) {
-    if (!next) {
-      form.reset();
-      setFailure(null);
-    }
+    if (!next) form.reset(defaults);
     onOpenChange?.(next);
   }
 
@@ -100,43 +118,43 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
           <p>{t("warning")}</p>
         </div>
 
-        <FormField
-          control={form.control}
-          name="access_key"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel required>{t("accessKey")}</FormLabel>
-              <FormControl>
-                <PasswordInput
-                    autoComplete="off"
-                    placeholder={t("accessKeyPlaceholder")}
-                    disabled={submitting}
-                    {...field}
-                  />
-              </FormControl>
-              <FormMessage field={t("accessKey")} />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="secret_key"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel required>{t("secretKey")}</FormLabel>
-              <FormControl>
-                <PasswordInput
-                    autoComplete="new-password"
-                    placeholder={t("secretKeyPlaceholder")}
-                    disabled={submitting}
-                    {...field}
-                  />
-              </FormControl>
-              <FormMessage field={t("secretKey")} />
-            </FormItem>
-          )}
-        />
-        {failure ? <p className="text-xs text-destructive">{failure}</p> : null}
+        {fields.map((definition) => (
+          <FormField
+            key={definition.name}
+            control={form.control}
+            name={definition.name}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{tf(`fields.${definition.name}`)}</FormLabel>
+                <FormControl>
+                  {definition.kind === TEXTAREA ? (
+                    <Textarea
+                      rows={4}
+                      className="font-mono text-xs"
+                      autoComplete="off"
+                      spellCheck={false}
+                      disabled={submitting}
+                      {...field}
+                    />
+                  ) : (
+                    <PasswordInput
+                      autoComplete="new-password"
+                      spellCheck={false}
+                      disabled={submitting}
+                      className={definition.mono ? "font-mono" : undefined}
+                      {...field}
+                    />
+                  )}
+                </FormControl>
+                <FormMessage field={tf(`fields.${definition.name}`)} />
+              </FormItem>
+            )}
+          />
+        ))}
+
+        {/* SFTP takes a password OR a key, so "fill in the one you are
+            changing" is the actual instruction — not "fill in everything". */}
+        <p className="text-xs text-muted-foreground">{t("onlyWhatYouChange")}</p>
       </FormModal>
     </Form>
   );

@@ -5012,7 +5012,12 @@
       "neverTested": "Nunca probado: nadie ha comprobado que estas credenciales funcionen.",
       "lastTestedOk": "Probado {when}",
       "failedCredentials": "La última prueba falló {when}: se rechazaron las credenciales.",
-      "failedUnreachable": "La última prueba falló {when}: no se pudo acceder al bucket."
+      "failedUnreachable": "La última prueba falló {when}: no se pudo acceder al bucket.",
+      "failed": "La última prueba falló {when}.",
+      "failedHostKey": "La última prueba falló {when}: el servidor presentó una clave distinta de la registrada, así que se detuvo la conexión.",
+      "failedPrivateKey": "La última prueba falló {when}: no se pudo leer la clave privada.",
+      "failedRootMissing": "La última prueba falló {when}: la carpeta de destino no existe en el servidor.",
+      "failedMismatch": "La última prueba falló {when}: el destino devolvió bytes distintos de los escritos."
     },
     "form": {
       "provider": "Proveedor",
@@ -5024,29 +5029,57 @@
         "wasabi": "Wasabi",
         "spaces": "DigitalOcean Spaces",
         "minio": "MinIO o autoalojado",
-        "other": "Otro"
+        "other": "Otro",
+        "ftp": "FTP",
+        "sftp": "SFTP"
       },
       "name": "Nombre",
       "namePlaceholder": "p. ej. Copias externas",
       "nameHint": "Así aparecerá cuando lo elijas en una aplicación.",
-      "bucket": "Bucket",
-      "bucketPlaceholder": "mis-copias",
-      "region": "Región",
-      "regionPlaceholder": "eu-west-1",
-      "endpoint": "Endpoint",
       "endpointPlaceholder": "https://…",
       "endpointExample": "Para este proveedor se parece a {example}",
       "endpointAws": "Déjalo vacío para Amazon S3: la región determina el endpoint.",
       "prefix": "Carpeta",
       "prefixPlaceholder": "backups/",
       "prefixHint": "Opcional. Mantiene las copias en su propia carpeta dentro del bucket.",
-      "prefixChangeWarning": "Cambiarlo no mueve nada. Las copias ya guardadas en la carpeta anterior dejan de encontrarse."
+      "prefixChangeWarning": "Cambiarlo no mueve nada. Las copias ya guardadas en la carpeta anterior dejan de encontrarse.",
+      "fields": {
+        "bucket": "Bucket",
+        "region": "Región",
+        "endpoint": "Endpoint",
+        "access_key": "Clave de acceso",
+        "secret_key": "Clave secreta",
+        "host": "Host",
+        "port": "Puerto",
+        "username": "Usuario",
+        "password": "Contraseña",
+        "root": "Directorio remoto",
+        "ssl": "Usar TLS (FTPS)",
+        "passive": "Modo pasivo",
+        "private_key": "Clave privada",
+        "passphrase": "Frase de la clave"
+      },
+      "help": {
+        "host": "Nombre de host o dirección IP del servidor que guardará las copias.",
+        "port": "Déjalo vacío para usar el valor predeterminado.",
+        "root": "Directorio del servidor donde escribir. Déjalo vacío para usar donde aterrice el inicio de sesión.",
+        "ssl": "Muy recomendable. Sin él, la contraseña y toda la copia viajan sin cifrar.",
+        "passive": "Déjalo activado salvo que el servidor exija lo contrario.",
+        "private_key": "Pega la clave privada completa. Se usa en lugar de una contraseña.",
+        "passphrase": "Solo si la propia clave privada está cifrada."
+      },
+      "plainFtpWarning": "TLS está desactivado. La contraseña y todas las copias se enviarán sin cifrar.",
+      "prefixHintRemote": "Carpeta opcional dentro del directorio remoto, para que un servidor pueda alojar varios sitios.",
+      "placeholders": {
+        "bucket": "mis-copias",
+        "region": "eu-west-1",
+        "host": "backup.ejemplo.com",
+        "root": "backups/"
+      }
     },
     "connect": {
       "title": "Añadir un destino de almacenamiento",
       "subtitle": "Un bucket compatible con S3 al que enviar las copias.",
-      "accessKey": "Clave de acceso",
-      "secretKey": "Clave secreta",
       "credentialsNote": "Las claves se guardan cifradas y no se vuelven a mostrar: para cambiarlas más adelante hay que reemplazarlas.",
       "cancel": "Cancelar",
       "submit": "Añadir destino",
@@ -5054,10 +5087,9 @@
       "added": "Destino añadido.",
       "testPassed": "Conexión probada: funciona.",
       "testFailed": "Guardado, pero la prueba de conexión falló. Revisa las claves y el bucket.",
-      "accessKeyPlaceholder": "Desde la página de claves API de tu proveedor",
-      "secretKeyPlaceholder": "Solo se muestra al crear la clave",
       "permissionsNote": "La clave necesita permiso para subir, descargar y eliminar objetos en este bucket. Eliminar también importa: las copias antiguas se borran cuando superan el límite de retención que definas.",
-      "keyDocs": "¿Dónde encuentro estas claves?"
+      "keyDocs": "¿Dónde encuentro estas claves?",
+      "permissionsNoteRemote": "La cuenta necesita crear, leer y eliminar archivos en ese directorio: las copias eliminan archivos antiguos al superar el límite de retención, así que el acceso de solo lectura no funciona."
     },
     "edit": {
       "title": "Editar destino",
@@ -5066,21 +5098,19 @@
       "submit": "Guardar cambios",
       "saving": "Guardando…",
       "saved": "Destino actualizado.",
-      "credentialsUntouched": "Las claves guardadas no se tocan: usa Reemplazar credenciales para cambiarlas."
+      "credentialsUntouched": "Las claves guardadas no se tocan: usa Reemplazar credenciales para cambiarlas.",
+      "providerLocked": "El proveedor está fijado en {provider}. Para usar otro, elimina este destino y añade uno nuevo."
     },
     "replace": {
       "title": "Reemplazar credenciales",
       "subtitle": "Nuevas claves para {name}.",
       "warning": "Las claves guardadas se reemplazan de inmediato. No se comprueban antes, así que una clave incorrecta detiene las copias hasta que se corrija.",
-      "accessKey": "Nueva clave de acceso",
-      "secretKey": "Nueva clave secreta",
       "cancel": "Cancelar",
       "submit": "Reemplazar claves",
       "saving": "Reemplazando…",
       "replacedAndTested": "Claves reemplazadas: la conexión funciona.",
       "replacedButFailed": "Claves reemplazadas, pero la prueba de conexión falló.",
-      "accessKeyPlaceholder": "Desde la página de claves API de tu proveedor",
-      "secretKeyPlaceholder": "Solo se muestra al crear la clave"
+      "onlyWhatYouChange": "Rellena solo lo que vayas a cambiar. Lo que dejes vacío conserva su valor actual."
     },
     "delete": {
       "title": "¿Eliminar este destino?",

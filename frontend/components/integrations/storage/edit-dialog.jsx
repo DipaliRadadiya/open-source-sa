@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Pencil } from "lucide-react";
 import { editStorageDestinationSchema } from "@/lib/schemas/storage";
-import { editRequirements } from "@/lib/storage/requirements";
+import { fieldsFor, presetForProvider } from "@/lib/storage/providers";
 import { updateDestination } from "@/lib/api/storage";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -16,48 +16,62 @@ import { Form } from "@/components/ui/form";
 import { DestinationFormFields } from "@/components/integrations/storage/destination-form-fields";
 
 /**
- * Editing where a destination points — deliberately without the credentials.
+ * Editing where a destination points — deliberately without the credentials,
+ * and deliberately without the provider.
  *
- * The API reads the *presence* of `access_key`/`secret_key` as "rotate these",
- * so a form that posted everything it knew about would overwrite the stored
- * secrets with whatever happened to be in its state. Rotation is its own
- * dialog; this one cannot touch them by construction.
+ * The API reads the *presence* of a credential as "rotate this", so a form
+ * that posted everything it knew about would overwrite the stored secrets with
+ * whatever happened to be in its state. Rotation is its own dialog; this one
+ * cannot touch them by construction.
+ *
+ * The provider is immutable server-side — the config blob's shape is defined
+ * by it, so changing it would reinterpret a bucket and a secret key as a
+ * hostname and a password. There is no picker here because a control whose
+ * only possible outcome is a 422 is not a control; the copy says to delete and
+ * recreate instead.
  */
 export function EditDestinationDialog({ destination, open, onOpenChange }) {
   const t = useTranslations("storage.edit");
   const router = useRouter();
-  // There is no provider field here, so requiredness is read off the stored
-  // destination: keep what it already relies on, demand nothing new.
-  const required = editRequirements(destination);
-  const schema = useMemo(
-    () => editStorageDestinationSchema(destination),
-    [destination],
-  );
+
+  const provider = destination?.provider ?? "s3";
+  const preset = presetForProvider(provider);
+
+  const schema = useMemo(() => editStorageDestinationSchema(destination), [destination]);
+
+  // The non-secret config as the API reports it. Secrets are absent from the
+  // response entirely, so there is nothing to accidentally round-trip.
+  const values = useMemo(() => {
+    const config = {};
+
+    for (const field of fieldsFor(provider)) {
+      const current = destination?.config?.[field.name];
+      config[field.name] = current ?? (field.default !== undefined ? field.default : "");
+    }
+
+    return {
+      name: destination?.name ?? "",
+      prefix: destination?.prefix ?? "",
+      config,
+    };
+  }, [destination, provider]);
 
   const form = useForm({
     resolver: zodResolver(schema),
     mode: "onSubmit",
     reValidateMode: "onChange",
-    values: {
-      name: destination?.name ?? "",
-      endpoint: destination?.endpoint ?? "",
-      region: destination?.region ?? "",
-      bucket: destination?.bucket ?? "",
-      prefix: destination?.prefix ?? "",
-    },
+    values,
   });
 
-  async function onSubmit(values) {
+  async function onSubmit(formValues) {
     try {
       await updateDestination(destination.id, {
-        name: values.name.trim(),
-        bucket: values.bucket.trim(),
-        // Sent as an empty string rather than omitted: the backend treats ""
-        // as "clear this and use the provider default", and omitting would
-        // instead keep the old value — so clearing a field has to be explicit.
-        endpoint: values.endpoint?.trim() ?? "",
-        region: values.region?.trim() ?? "",
-        prefix: values.prefix?.trim() ?? "",
+        name: formValues.name.trim(),
+        // Sent as an empty string rather than omitted: the backend treats an
+        // absent key as "keep what is stored", so clearing a field has to be
+        // explicit or it silently does nothing.
+        prefix: formValues.prefix?.trim() ?? "",
+        config: submittableConfig(provider, formValues.config),
       });
       toast.success(t("saved"));
       onOpenChange?.(false);
@@ -96,9 +110,37 @@ export function EditDestinationDialog({ destination, open, onOpenChange }) {
           </>
         }
       >
-        <DestinationFormFields form={form} disabled={submitting} required={required} existing />
+        <DestinationFormFields
+          form={form}
+          preset={preset}
+          disabled={submitting}
+          hideSecrets
+          existing
+        />
         <p className="text-xs text-muted-foreground">{t("credentialsUntouched")}</p>
+        {/* Why there is no provider control, rather than leaving its absence
+            to be discovered. */}
+        <p className="text-xs text-muted-foreground">
+          {t("providerLocked", { provider: destination?.provider_title ?? provider })}
+        </p>
       </FormModal>
     </Form>
   );
+}
+
+/**
+ * Only the non-secret fields, always sent — including the empty ones.
+ *
+ * A credential key must never appear here: its presence is what the API reads
+ * as "rotate", so including an empty `password` would clear a working one.
+ */
+function submittableConfig(provider, config = {}) {
+  const entries = fieldsFor(provider)
+    .filter((f) => f.kind !== "secret" && f.kind !== "textarea")
+    .map((f) => {
+      const value = config[f.name];
+      return [f.name, typeof value === "boolean" ? value : (value ?? "")];
+    });
+
+  return Object.fromEntries(entries);
 }

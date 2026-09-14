@@ -5012,7 +5012,12 @@
       "neverTested": "未テスト — この認証情報が動作するかは確認されていません。",
       "lastTestedOk": "{when} にテスト済み",
       "failedCredentials": "{when} のテストは失敗しました — 認証情報が拒否されました。",
-      "failedUnreachable": "{when} のテストは失敗しました — バケットに接続できませんでした。"
+      "failedUnreachable": "{when} のテストは失敗しました — バケットに接続できませんでした。",
+      "failed": "前回のテストは{when}に失敗しました。",
+      "failedHostKey": "前回のテストは{when}に失敗しました — サーバーが記録済みとは異なるホスト鍵を提示したため、接続を中止しました。",
+      "failedPrivateKey": "前回のテストは{when}に失敗しました — 秘密鍵を読み取れませんでした。",
+      "failedRootMissing": "前回のテストは{when}に失敗しました — 保存先のフォルダーがサーバー上に存在しません。",
+      "failedMismatch": "前回のテストは{when}に失敗しました — 書き込んだ内容と読み戻した内容が一致しませんでした。"
     },
     "form": {
       "provider": "プロバイダー",
@@ -5024,29 +5029,57 @@
         "wasabi": "Wasabi",
         "spaces": "DigitalOcean Spaces",
         "minio": "MinIO またはセルフホスト",
-        "other": "その他"
+        "other": "その他",
+        "ftp": "FTP",
+        "sftp": "SFTP"
       },
       "name": "名前",
       "namePlaceholder": "例: オフサイトバックアップ",
       "nameHint": "アプリケーションで選択する際に表示される名前です。",
-      "bucket": "バケット",
-      "bucketPlaceholder": "my-backups",
-      "region": "リージョン",
-      "regionPlaceholder": "eu-west-1",
-      "endpoint": "エンドポイント",
       "endpointPlaceholder": "https://…",
       "endpointExample": "このプロバイダーでは次のような形式です: {example}",
       "endpointAws": "Amazon S3 の場合は空欄のままにしてください — リージョンからエンドポイントが決定されます。",
       "prefix": "フォルダー",
       "prefixPlaceholder": "backups/",
       "prefixHint": "任意。バケット内の専用フォルダーにバックアップをまとめます。",
-      "prefixChangeWarning": "変更しても既存のバックアップは移動されません。古いフォルダーに保存されているバックアップは検出されなくなります。"
+      "prefixChangeWarning": "変更しても既存のバックアップは移動されません。古いフォルダーに保存されているバックアップは検出されなくなります。",
+      "fields": {
+        "bucket": "バケット",
+        "region": "リージョン",
+        "endpoint": "エンドポイント",
+        "access_key": "アクセスキー",
+        "secret_key": "シークレットキー",
+        "host": "Host",
+        "port": "ポート",
+        "username": "ユーザー名",
+        "password": "パスワード",
+        "root": "リモートディレクトリ",
+        "ssl": "TLS を使用 (FTPS)",
+        "passive": "パッシブモード",
+        "private_key": "秘密鍵",
+        "passphrase": "鍵のパスフレーズ"
+      },
+      "help": {
+        "host": "バックアップを保存するサーバーのホスト名または IP アドレス。",
+        "port": "空欄の場合は既定値を使用します。",
+        "root": "書き込み先のサーバー上のディレクトリ。空欄の場合はログイン先をそのまま使用します。",
+        "ssl": "強く推奨します。無効にすると、パスワードとバックアップ全体が平文で送信されます。",
+        "passive": "サーバーが別途要求しない限り、有効のままにしてください。",
+        "private_key": "秘密鍵全体を貼り付けてください。パスワードの代わりに使用します。",
+        "passphrase": "秘密鍵自体が暗号化されている場合のみ必要です。"
+      },
+      "plainFtpWarning": "TLS が無効です。パスワードとすべてのバックアップが暗号化されずに送信されます。",
+      "prefixHintRemote": "リモートディレクトリ内の任意のフォルダー。1 台のサーバーで複数サイトを保存できます。",
+      "placeholders": {
+        "bucket": "my-backups",
+        "region": "eu-west-1",
+        "host": "backup.example.com",
+        "root": "backups/"
+      }
     },
     "connect": {
       "title": "ストレージ送信先を追加",
       "subtitle": "バックアップ送信先の S3 互換バケット。",
-      "accessKey": "アクセスキー",
-      "secretKey": "シークレットキー",
       "credentialsNote": "キーは暗号化して保存され、再表示はできません。後から変更するには差し替えてください。",
       "cancel": "キャンセル",
       "submit": "保存先を追加",
@@ -5054,10 +5087,9 @@
       "added": "送信先を追加しました。",
       "testPassed": "接続をテストしました — 正常です。",
       "testFailed": "保存は完了しましたが、接続テストは失敗しました。キーとバケットを確認してください。",
-      "accessKeyPlaceholder": "プロバイダーの API キーのページから",
-      "secretKeyPlaceholder": "キーの作成時にのみ表示されます",
       "permissionsNote": "このバケットでオブジェクトのアップロード、ダウンロード、削除の権限が必要です。削除権限も重要で、設定された保持期間を超えた古いバックアップは削除されます。",
-      "keyDocs": "これらのキーはどこで確認できますか?"
+      "keyDocs": "これらのキーはどこで確認できますか?",
+      "permissionsNoteRemote": "そのディレクトリでファイルを作成・読み取り・削除できる権限が必要です。バックアップは保持数を超えた古いアーカイブを削除するため、読み取り専用では機能しません。"
     },
     "edit": {
       "title": "送信先を編集",
@@ -5066,21 +5098,19 @@
       "submit": "変更を保存",
       "saving": "保存中…",
       "saved": "送信先を更新しました。",
-      "credentialsUntouched": "保存済みのキーはそのまま残ります — 変更するには「認証情報を差し替え」を使用してください。"
+      "credentialsUntouched": "保存済みのキーはそのまま残ります — 変更するには「認証情報を差し替え」を使用してください。",
+      "providerLocked": "プロバイダーは {provider} で固定されています。別のものを使うには、この保存先を削除して新規に追加してください。"
     },
     "replace": {
       "title": "認証情報を置き換え",
       "subtitle": "{name} の新しいキー。",
       "warning": "保存済みのキーはすぐに差し替えられます。事前に確認は行われないため、ここを誤るとバックアップが停止します。修正するまで動きません。",
-      "accessKey": "新しいアクセスキー",
-      "secretKey": "新しいシークレットキー",
       "cancel": "キャンセル",
       "submit": "キーを差し替え",
       "saving": "差し替え中…",
       "replacedAndTested": "キーを差し替えました — 接続は正常です。",
       "replacedButFailed": "キーは差し替えましたが、接続テストは失敗しました。",
-      "accessKeyPlaceholder": "プロバイダーの API キーのページから",
-      "secretKeyPlaceholder": "キーの作成時にのみ表示されます"
+      "onlyWhatYouChange": "変更する項目だけを入力してください。空欄のままにした項目は現在の値を保持します。"
     },
     "delete": {
       "title": "この送信先を削除しますか?",

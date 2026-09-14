@@ -13,7 +13,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { providerFromEndpoint } from "@/lib/storage/provider-from-endpoint";
+import { describeDestination } from "@/lib/storage/providers";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ActionIcon } from "@/components/ui/action-icon";
@@ -48,6 +48,23 @@ import {
  * The age is shown with it on purpose: "tested 40 days ago" is not "works
  * tonight", and a tick with no date invites exactly that reading.
  */
+/**
+ * One sentence per failure category the API can report.
+ *
+ * Deliberately exhaustive rather than a two-way branch, and deliberately
+ * fallback-to-generic rather than fallback-to-unreachable: a category added by
+ * a later driver is one this build knows nothing about, and guessing it is a
+ * network fault is how a host-key mismatch got shown as a firewall problem.
+ */
+const FAILURE_KEYS = {
+  invalid_credentials: "failedCredentials",
+  unreachable: "failedUnreachable",
+  host_key_mismatch: "failedHostKey",
+  invalid_private_key: "failedPrivateKey",
+  root_missing: "failedRootMissing",
+  mismatch: "failedMismatch",
+};
+
 export function DestinationRow({
   destination,
   canManage,
@@ -59,20 +76,23 @@ export function DestinationRow({
   onDelete,
 }) {
   const t = useTranslations("storage");
-  const location = [destination.bucket, destination.prefix].filter(Boolean).join("/");
+  // Per-provider: "bucket/prefix" is meaningless for an FTP host, and an
+  // empty bucket column beside a hostname is worse than no column at all.
+  const { location, address } = describeDestination(destination);
+  const isS3 = destination.provider === "s3";
 
   // Written once, placed twice — inside the content column on a phone, in its
   // own column on a wide screen. Two copies of this markup is how they drift.
   const facts = (
     <>
-      <p className="text-foreground">{destination.region || t("row.regionDefault")}</p>
+      <p className="text-foreground">
+        {isS3 ? destination.config?.region || t("row.regionDefault") : destination.provider_title}
+      </p>
       {destination.created_at_human ? (
         <p>{t("row.added", { when: destination.created_at_human })}</p>
       ) : null}
     </>
   );
-
-  const provider = providerFromEndpoint(destination.endpoint);
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
@@ -84,14 +104,13 @@ export function DestinationRow({
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="min-w-0 font-medium break-all">{destination.name}</span>
-              {/* Which service this actually is, read from the endpoint. The
-                  API only stores `driver: s3` and the name someone typed, so a
-                  Backblaze bucket could sit here labelled nothing but
-                  "S3-compatible". An endpoint we do not recognise says nothing
-                  rather than guessing. */}
-              {provider ? (
+              {/* Read from the API, not inferred. This used to match the
+                  endpoint hostname against a list because the API stored
+                  `driver: s3` for everything; `provider` is a real column now,
+                  so the row states a fact instead of a guess. */}
+              {destination.provider_title ? (
                 <Badge variant="outline" className="font-normal">
-                  {t(`providers.${provider}`)}
+                  {destination.provider_title}
                 </Badge>
               ) : null}
               {/* Not "verified" — only that both secret columns are populated.
@@ -119,14 +138,14 @@ export function DestinationRow({
               )}
             </div>
   
-            <p className="truncate font-mono text-xs text-muted-foreground">{location}</p>
-            {destination.endpoint ? (
-              <p className="truncate font-mono text-xs text-muted-foreground">
-                {destination.endpoint}
-              </p>
-            ) : (
+            {location ? (
+              <p className="truncate font-mono text-xs text-muted-foreground">{location}</p>
+            ) : null}
+            {address ? (
+              <p className="truncate font-mono text-xs text-muted-foreground">{address}</p>
+            ) : isS3 ? (
               <p className="text-xs text-muted-foreground">{t("row.awsDefault")}</p>
-            )}
+            ) : null}
   
             {/* Phone: region and age join the same indent as everything else
                 rather than starting a new left edge at the card border. */}
@@ -278,12 +297,17 @@ function StoredVerdict({ destination, canManage, onReplace }) {
       <p className="flex items-start gap-1.5 text-xs text-destructive">
         <TriangleAlert className="mt-0.5 size-3 shrink-0" />
         {/* Branching on the stable category, never on a message: the raw
-            provider text is not sent, and would not be translatable if it were. */}
-        <span>
-          {destination.last_test_error === "invalid_credentials"
-            ? t("row.failedCredentials", { when: when ?? "" })
-            : t("row.failedUnreachable", { when: when ?? "" })}
-        </span>
+            provider text is not sent, and would not be translatable if it were.
+
+            Every category the API can return gets its own sentence. This used
+            to be a two-way branch that rendered everything except
+            `invalid_credentials` as "could not be reached" — so a CHANGED HOST
+            KEY, the one failure that can mean someone else is answering,
+            displayed as a network problem. An unknown category falls back to
+            the generic failure rather than to "unreachable", because a build
+            that has not heard of a category does not know it is a network
+            one. */}
+        <span>{t(`row.${FAILURE_KEYS[destination.last_test_error] ?? "failed"}`, { when: when ?? "" })}</span>
       </p>
       {destination.last_test_error === "invalid_credentials" && canManage ? (
         <Button type="button" variant="outline" size="sm" className="h-7" onClick={onReplace}>

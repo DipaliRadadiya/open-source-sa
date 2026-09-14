@@ -5012,7 +5012,12 @@
       "neverTested": "Nie getestet — niemand hat geprüft, ob diese Zugangsdaten funktionieren.",
       "lastTestedOk": "Getestet {when}",
       "failedCredentials": "Der letzte Test ist {when} fehlgeschlagen — die Zugangsdaten wurden abgelehnt.",
-      "failedUnreachable": "Der letzte Test ist {when} fehlgeschlagen — der Bucket war nicht erreichbar."
+      "failedUnreachable": "Der letzte Test ist {when} fehlgeschlagen — der Bucket war nicht erreichbar.",
+      "failed": "Der letzte Test ist {when} fehlgeschlagen.",
+      "failedHostKey": "Der letzte Test ist {when} fehlgeschlagen — der Server legte einen anderen Hostschlüssel vor als den aufgezeichneten, daher wurde die Verbindung abgebrochen.",
+      "failedPrivateKey": "Der letzte Test ist {when} fehlgeschlagen — der private Schlüssel konnte nicht gelesen werden.",
+      "failedRootMissing": "Der letzte Test ist {when} fehlgeschlagen — der Zielordner existiert auf dem Server nicht.",
+      "failedMismatch": "Der letzte Test ist {when} fehlgeschlagen — das Ziel las andere Bytes zurück als geschrieben wurden."
     },
     "form": {
       "provider": "Anbieter",
@@ -5024,29 +5029,57 @@
         "wasabi": "Wasabi",
         "spaces": "DigitalOcean Spaces",
         "minio": "MinIO oder selbst gehostet",
-        "other": "Anderer"
+        "other": "Anderer",
+        "ftp": "FTP",
+        "sftp": "SFTP"
       },
       "name": "Name",
       "namePlaceholder": "z. B. Externe Backups",
       "nameHint": "So erscheint das, wenn Sie es bei einer Anwendung auswählen.",
-      "bucket": "Bucket",
-      "bucketPlaceholder": "meine-backups",
-      "region": "Region",
-      "regionPlaceholder": "eu-west-1",
-      "endpoint": "Endpunkt",
       "endpointPlaceholder": "https://…",
       "endpointExample": "Bei diesem Anbieter sieht er so aus: {example}",
       "endpointAws": "Für Amazon S3 leer lassen — die Region bestimmt den Endpunkt.",
       "prefix": "Ordner",
       "prefixPlaceholder": "backups/",
       "prefixHint": "Optional. Hält Backups in einem eigenen Ordner im Bucket.",
-      "prefixChangeWarning": "Das zu ändern verschiebt nichts. Backups, die bereits im alten Ordner liegen, werden nicht mehr gefunden."
+      "prefixChangeWarning": "Das zu ändern verschiebt nichts. Backups, die bereits im alten Ordner liegen, werden nicht mehr gefunden.",
+      "fields": {
+        "bucket": "Bucket",
+        "region": "Region",
+        "endpoint": "Endpunkt",
+        "access_key": "Zugriffsschlüssel",
+        "secret_key": "Geheimer Schlüssel",
+        "host": "Host",
+        "port": "Port",
+        "username": "Benutzername",
+        "password": "Passwort",
+        "root": "Entferntes Verzeichnis",
+        "ssl": "TLS verwenden (FTPS)",
+        "passive": "Passiver Modus",
+        "private_key": "Privater Schlüssel",
+        "passphrase": "Schlüssel-Passphrase"
+      },
+      "help": {
+        "host": "Hostname oder IP-Adresse des Servers, der die Sicherungen aufnimmt.",
+        "port": "Leer lassen für den Standardwert.",
+        "root": "Verzeichnis auf dem Server, in das geschrieben wird. Leer lassen, um dort zu bleiben, wo die Anmeldung landet.",
+        "ssl": "Dringend empfohlen. Ohne TLS werden Passwort und gesamte Sicherung unverschlüsselt übertragen.",
+        "passive": "Aktiviert lassen, sofern der Server nichts anderes verlangt.",
+        "private_key": "Den vollständigen privaten Schlüssel einfügen. Wird anstelle eines Passworts verwendet.",
+        "passphrase": "Nur nötig, wenn der private Schlüssel selbst verschlüsselt ist."
+      },
+      "plainFtpWarning": "TLS ist aus. Passwort und jede Sicherung werden unverschlüsselt gesendet.",
+      "prefixHintRemote": "Optionaler Ordner im entfernten Verzeichnis, damit ein Server mehrere Sites aufnehmen kann.",
+      "placeholders": {
+        "bucket": "meine-backups",
+        "region": "eu-west-1",
+        "host": "backup.beispiel.de",
+        "root": "backups/"
+      }
     },
     "connect": {
       "title": "Speicherziel hinzufügen",
       "subtitle": "Ein S3-kompatibler Bucket, an den Backups gesendet werden.",
-      "accessKey": "Zugriffsschlüssel",
-      "secretKey": "Geheimer Schlüssel",
       "credentialsNote": "Schlüssel werden verschlüsselt gespeichert und nie wieder angezeigt — um sie später zu ändern, ersetzen Sie sie.",
       "cancel": "Abbrechen",
       "submit": "Ziel hinzufügen",
@@ -5054,10 +5087,9 @@
       "added": "Ziel hinzugefügt.",
       "testPassed": "Verbindung getestet — sie funktioniert.",
       "testFailed": "Gespeichert, aber der Verbindungstest ist fehlgeschlagen. Prüfen Sie Schlüssel und Bucket.",
-      "accessKeyPlaceholder": "Von der API-Schlüssel-Seite Ihres Anbieters",
-      "secretKeyPlaceholder": "Wird nur beim Erstellen des Schlüssels angezeigt",
       "permissionsNote": "Der Schlüssel braucht die Berechtigung, in diesem Bucket Objekte hochzuladen, herunterzuladen und zu löschen. Löschen zählt auch — Backups entfernen alte Archive, sobald sie die Aufbewahrungsgrenze überschreiten, die Sie gesetzt haben.",
-      "keyDocs": "Wo finde ich diese Schlüssel?"
+      "keyDocs": "Wo finde ich diese Schlüssel?",
+      "permissionsNoteRemote": "Das Konto muss in diesem Verzeichnis Dateien anlegen, lesen und löschen können — Sicherungen entfernen alte Archive beim Überschreiten des Aufbewahrungslimits, reiner Lesezugriff funktioniert also nicht."
     },
     "edit": {
       "title": "Ziel bearbeiten",
@@ -5066,21 +5098,19 @@
       "submit": "Änderungen speichern",
       "saving": "Wird gespeichert…",
       "saved": "Ziel aktualisiert.",
-      "credentialsUntouched": "Die gespeicherten Schlüssel bleiben unberührt — nutzen Sie „Zugangsdaten ersetzen“, um sie zu ändern."
+      "credentialsUntouched": "Die gespeicherten Schlüssel bleiben unberührt — nutzen Sie „Zugangsdaten ersetzen“, um sie zu ändern.",
+      "providerLocked": "Der Anbieter ist auf {provider} festgelegt. Für einen anderen löschen Sie dieses Ziel und legen ein neues an."
     },
     "replace": {
       "title": "Zugangsdaten ersetzen",
       "subtitle": "Neue Schlüssel für {name}.",
       "warning": "Die gespeicherten Schlüssel werden sofort ersetzt. Sie werden vorher nicht geprüft, ein falscher Schlüssel stoppt hier also die Backups, bis er korrigiert wird.",
-      "accessKey": "Neuer Zugriffsschlüssel",
-      "secretKey": "Neuer geheimer Schlüssel",
       "cancel": "Abbrechen",
       "submit": "Schlüssel ersetzen",
       "saving": "Wird ersetzt…",
       "replacedAndTested": "Schlüssel ersetzt — die Verbindung funktioniert.",
       "replacedButFailed": "Schlüssel ersetzt, aber der Verbindungstest ist fehlgeschlagen.",
-      "accessKeyPlaceholder": "Von der API-Schlüssel-Seite Ihres Anbieters",
-      "secretKeyPlaceholder": "Wird nur beim Erstellen des Schlüssels angezeigt"
+      "onlyWhatYouChange": "Nur ausfüllen, was Sie ändern. Leer gelassene Felder behalten ihren aktuellen Wert."
     },
     "delete": {
       "title": "Dieses Ziel löschen?",

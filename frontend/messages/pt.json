@@ -5012,7 +5012,12 @@
       "neverTested": "Nunca testado — ninguém verificou se essas credenciais funcionam.",
       "lastTestedOk": "Testado em {when}",
       "failedCredentials": "O último teste falhou em {when} — as credenciais foram rejeitadas.",
-      "failedUnreachable": "O último teste falhou em {when} — não foi possível acessar o bucket."
+      "failedUnreachable": "O último teste falhou em {when} — não foi possível acessar o bucket.",
+      "failed": "O último teste falhou {when}.",
+      "failedHostKey": "O último teste falhou {when} — o servidor apresentou uma chave de host diferente da registrada, então a conexão foi interrompida.",
+      "failedPrivateKey": "O último teste falhou {when} — não foi possível ler a chave privada.",
+      "failedRootMissing": "O último teste falhou {when} — a pasta de destino não existe no servidor.",
+      "failedMismatch": "O último teste falhou {when} — o destino leu de volta bytes diferentes dos gravados."
     },
     "form": {
       "provider": "Provedor",
@@ -5024,29 +5029,57 @@
         "wasabi": "Wasabi",
         "spaces": "DigitalOcean Spaces",
         "minio": "MinIO ou auto-hospedado",
-        "other": "Outro"
+        "other": "Outro",
+        "ftp": "FTP",
+        "sftp": "SFTP"
       },
       "name": "Nome",
       "namePlaceholder": "ex.: Backups offsite",
       "nameHint": "Como isto aparece ao selecioná-lo em uma aplicação.",
-      "bucket": "Bucket",
-      "bucketPlaceholder": "meus-backups",
-      "region": "Região",
-      "regionPlaceholder": "eu-west-1",
-      "endpoint": "Endpoint",
       "endpointPlaceholder": "https://…",
       "endpointExample": "Para este provedor fica assim {example}",
       "endpointAws": "Deixe vazio para o Amazon S3 — a região define o endpoint.",
       "prefix": "Pasta",
       "prefixPlaceholder": "backups/",
       "prefixHint": "Opcional. Mantém os backups em sua própria pasta dentro do bucket.",
-      "prefixChangeWarning": "Alterar isto não move nada. Backups já armazenados na pasta antiga deixam de ser localizados."
+      "prefixChangeWarning": "Alterar isto não move nada. Backups já armazenados na pasta antiga deixam de ser localizados.",
+      "fields": {
+        "bucket": "Bucket",
+        "region": "Região",
+        "endpoint": "Endpoint",
+        "access_key": "Chave de acesso",
+        "secret_key": "Chave secreta",
+        "host": "Host",
+        "port": "Porta",
+        "username": "Nome de usuário",
+        "password": "Senha",
+        "root": "Diretório remoto",
+        "ssl": "Usar TLS (FTPS)",
+        "passive": "Modo passivo",
+        "private_key": "Chave privada",
+        "passphrase": "Frase da chave"
+      },
+      "help": {
+        "host": "Nome do host ou endereço IP do servidor que guardará os backups.",
+        "port": "Deixe vazio para usar o padrão.",
+        "root": "Diretório no servidor onde gravar. Deixe vazio para usar onde o login chegar.",
+        "ssl": "Fortemente recomendado. Sem ele, a senha e todo o backup trafegam em texto claro.",
+        "passive": "Mantenha ligado, a menos que o servidor exija o contrário.",
+        "private_key": "Cole a chave privada inteira. Usada no lugar de uma senha.",
+        "passphrase": "Só é necessária se a própria chave privada estiver criptografada."
+      },
+      "plainFtpWarning": "O TLS está desligado. A senha e todos os backups serão enviados sem criptografia.",
+      "prefixHintRemote": "Pasta opcional dentro do diretório remoto, para que um servidor possa guardar vários sites.",
+      "placeholders": {
+        "bucket": "meus-backups",
+        "region": "eu-west-1",
+        "host": "backup.exemplo.com",
+        "root": "backups/"
+      }
     },
     "connect": {
       "title": "Adicionar um destino de armazenamento",
       "subtitle": "Um bucket compatível com S3 para enviar backups.",
-      "accessKey": "Access key",
-      "secretKey": "Secret key",
       "credentialsNote": "As chaves são armazenadas criptografadas e nunca mais serão exibidas — para alterá-las depois, você as substitui.",
       "cancel": "Cancelar",
       "submit": "Adicionar destino",
@@ -5054,10 +5087,9 @@
       "added": "Destino adicionado.",
       "testPassed": "Conexão testada — funciona.",
       "testFailed": "Salvo, mas o teste de conexão falhou. Verifique as chaves e o bucket.",
-      "accessKeyPlaceholder": "Na página de chaves de API do seu provedor",
-      "secretKeyPlaceholder": "Exibido apenas quando a chave foi criada",
       "permissionsNote": "A chave precisa de permissão para enviar, baixar e excluir objetos neste bucket. Excluir também é importante — os backups removem arquivos antigos ao ultrapassarem o limite de retenção que você definir.",
-      "keyDocs": "Onde encontro essas chaves?"
+      "keyDocs": "Onde encontro essas chaves?",
+      "permissionsNoteRemote": "A conta precisa criar, ler e excluir arquivos nesse diretório — os backups removem arquivos antigos ao passar do limite de retenção, então acesso somente leitura não funciona."
     },
     "edit": {
       "title": "Editar destino",
@@ -5066,21 +5098,19 @@
       "submit": "Salvar alterações",
       "saving": "Salvando…",
       "saved": "Destino atualizado.",
-      "credentialsUntouched": "As chaves armazenadas não são tocadas — use Substituir credenciais para alterá-las."
+      "credentialsUntouched": "As chaves armazenadas não são tocadas — use Substituir credenciais para alterá-las.",
+      "providerLocked": "O provedor está fixado em {provider}. Para usar outro, exclua este destino e adicione um novo."
     },
     "replace": {
       "title": "Substituir credenciais",
       "subtitle": "Novas chaves para {name}.",
       "warning": "As chaves armazenadas são substituídas imediatamente. Elas não são verificadas antes, então uma chave errada aqui interrompe os backups até ser corrigida.",
-      "accessKey": "Nova access key",
-      "secretKey": "Nova secret key",
       "cancel": "Cancelar",
       "submit": "Substituir chaves",
       "saving": "Substituindo…",
       "replacedAndTested": "Chaves substituídas — a conexão funciona.",
       "replacedButFailed": "Chaves substituídas, mas o teste de conexão falhou.",
-      "accessKeyPlaceholder": "Na página de chaves de API do seu provedor",
-      "secretKeyPlaceholder": "Exibido apenas quando a chave foi criada"
+      "onlyWhatYouChange": "Preencha apenas o que estiver mudando. O que for deixado vazio mantém o valor atual."
     },
     "delete": {
       "title": "Excluir este destino?",

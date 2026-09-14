@@ -1,46 +1,38 @@
 import { z } from "zod";
-import { createRequirements, editRequirements } from "@/lib/storage/requirements";
-
-// Endpoint shapes for the S3-compatible providers people actually use. These
-// are HINTS, not auto-filled values: every one of them contains a part only
-// the account owner knows (an account id, a region), so filling the field with
-// a template would just hand the user a value that fails validation. The
-// backend has no concept of a provider — it takes any S3-compatible endpoint —
-// so this list exists purely to answer "what does mine look like?".
-export const STORAGE_PROVIDERS = [
-  { value: "aws", endpointHint: "" },
-  { value: "r2", endpointHint: "https://<account-id>.r2.cloudflarestorage.com" },
-  { value: "b2", endpointHint: "https://s3.<region>.backblazeb2.com" },
-  { value: "wasabi", endpointHint: "https://s3.<region>.wasabisys.com" },
-  { value: "spaces", endpointHint: "https://<region>.digitaloceanspaces.com" },
-  { value: "minio", endpointHint: "https://storage.example.com" },
-  { value: "other", endpointHint: "" },
-];
+import { fieldsFor, isRequired, providerForPreset } from "@/lib/storage/providers";
 
 export const storageDestinationSchema = z
   .object({
     id: z.number(),
     name: z.string(),
-    driver: z.string().default("s3"),
-    endpoint: z.string().nullish(),
-    region: z.string().nullish(),
-    bucket: z.string(),
+    // The real provider, read from the API. This used to be a `driver` that
+    // was always the string "s3", and the panel inferred the truth by matching
+    // the endpoint hostname — a guess that was wrong for a self-hosted MinIO
+    // and meaningless for an FTP host.
+    provider: z.string().default("s3"),
+    provider_title: z.string().nullish(),
+    // Addressing detail only — bucket and region for S3, host and port for
+    // FTP/SFTP. Credentials are never sent, so the shape varies by provider
+    // and nothing here may assume a bucket exists.
+    config: z.record(z.string(), z.any()).default({}),
     prefix: z.string().nullish(),
-    // Computed from the raw encrypted columns — the secrets themselves are
-    // never sent, so this is the only thing the UI can know about them.
+    // Computed from the encrypted config — the secrets themselves are never
+    // sent, so this is the only thing the UI can know about them.
     has_credentials: z.boolean().default(false),
-    // The last connection probe, as the backend now REMEMBERS it. This used to
-    // be ephemeral and the UI was built on that assumption; it is persisted,
-    // and cleared automatically when a key, endpoint, region or bucket changes,
-    // so it never claims a rotated-out credential still works.
+    // The last connection probe, as the backend REMEMBERS it. Cleared
+    // automatically when anything about the connection changes, so it never
+    // claims a rotated-out credential still works.
     status: z.string().nullish(),
     status_title: z.string().nullish(),
     last_tested_at: z.string().nullish(),
     last_tested_at_human: z.string().nullish(),
     // `null` is "never tested", which is a different state from `false`.
     last_test_success: z.boolean().nullish(),
-    // A stable category — `invalid_credentials` | `unreachable`. Branch on it;
-    // the raw SDK message is never sent (it can carry a partial access key).
+    // A stable category — `invalid_credentials` | `unreachable` |
+    // `host_key_mismatch` | `invalid_private_key` | `mismatch`. Branch on it,
+    // but always with a fallback: a driver added later can return a category
+    // this build has never heard of, and an unknown one must degrade to the
+    // generic failure message rather than render blank.
     last_test_error: z.string().nullish(),
     created_at: z.string().nullish(),
     created_at_human: z.string().nullish(),
@@ -59,8 +51,8 @@ export const storageDestinationsResponseSchema = z.object({
  * This endpoint answers **200 even when the probe fails** — deliberately: the
  * request succeeded, the panel went and looked, and this is what it found. The
  * verdict lives in `test.success`, so a caller that only checks for a thrown
- * error will report a dead bucket as working. (It did. That is why this schema
- * exists.)
+ * error will report a dead destination as working. (It did. That is why this
+ * schema exists.)
  */
 export const storageTestResponseSchema = z.object({
   test: z.object({
@@ -78,100 +70,184 @@ export const storageDestinationResponseSchema = z.object({
 
 // Mirrors the backend rules so the common mistakes are caught before a round
 // trip: a bucket with a slash in it, a region with an underscore, an endpoint
-// that isn't https.
+// that isn't https, a host that is really a pasted URL.
 const nameField = z.string().trim().min(1, "required_name").max(100, "max100");
-const bucketField = z
-  .string()
-  .trim()
-  .min(1, "required_bucket")
-  .max(255, "max255")
-  .regex(/^[A-Za-z0-9._-]+$/, "bucketFormat");
-const regionField = z
-  .union([z.literal(""), z.string().trim().max(64, "max64").regex(/^[A-Za-z0-9-]+$/, "regionFormat")])
-  .optional();
 const prefixField = z
   .union([z.literal(""), z.string().trim().max(255, "max255").regex(/^[A-Za-z0-9._/-]*$/, "prefixFormat")])
   .optional();
-// Optional, but when given it has to be an https URL — the backend refuses
-// loopback and the cloud metadata range, and a plain http endpoint would send
-// the credentials in clear.
+
+const bucketField = z.string().trim().max(255, "max255").regex(/^[A-Za-z0-9._-]+$/, "bucketFormat");
+const regionField = z.string().trim().max(64, "max64").regex(/^[A-Za-z0-9-]+$/, "regionFormat");
+
+// Optional at the field level, but when given it has to be an https URL — the
+// backend refuses loopback and the cloud metadata range, and a plain http
+// endpoint would send the credentials in clear.
 const endpointField = z
+  .string()
+  .trim()
+  .max(255, "max255")
+  /*
+   * `http://` gets its own message. The generic one — "must be a full https://
+   * address" — is true and unhelpful when someone HAS typed a full address and
+   * the only thing wrong is a missing "s": they read it, look at their
+   * perfectly complete URL, and try again. Naming the scheme and why it
+   * matters is the difference between one attempt and three.
+   */
+  .refine((value) => !/^http:\/\//i.test(value.trim()), "endpointInsecure")
+  .regex(/^https:\/\/[^\s/$.?#].[^\s]*$/i, "endpointFormat")
+  // An endpoint still containing <…> is the example copied verbatim with the
+  // account id or region never filled in. It passes every other check — no
+  // spaces, valid https — and saves happily, then fails at the first backup.
+  // Someone did exactly this on the live panel while this feature was being
+  // built, which is how the guard got written.
+  .refine((value) => !/[<>]/.test(value), "endpointPlaceholder");
+
+// A bare hostname or IP, never a URL. Mirrors `SafeRemoteHost`: the backend
+// refuses a pasted URL outright rather than silently keeping the part before
+// the slash, because the value meant and the value stored would differ and the
+// difference surfaces as a failed backup much later.
+const hostField = z
+  .string()
+  .trim()
+  .max(255, "max255")
+  .refine((v) => !/:\/\//.test(v), "hostIsUrl")
+  .refine((v) => !/[/@\s]/.test(v), "hostIsUrl")
+  .refine(
+    (v) => !["localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254"].includes(v.toLowerCase()),
+    "hostForbidden",
+  );
+
+const portField = z.union([z.literal(""), z.coerce.number().int().min(1, "portRange").max(65535, "portRange")]).optional();
+
+// A remote path. Traversal is refused: `..` in a destination root is either a
+// mistake or an attempt to climb out of the backup directory.
+const rootField = z
   .union([
     z.literal(""),
     z
       .string()
       .trim()
       .max(255, "max255")
-      /*
-       * `http://` gets its own message. The generic one — "must be a full
-       * https:// address" — is true and unhelpful when someone HAS typed a
-       * full address and the only thing wrong is a missing "s": they read it,
-       * look at their perfectly complete URL, and try again. Naming the scheme
-       * and why it matters is the difference between one attempt and three.
-       */
-      .refine((value) => !/^http:\/\//i.test(value.trim()), "endpointInsecure")
-      .regex(/^https:\/\/[^\s/$.?#].[^\s]*$/i, "endpointFormat")
-      // An endpoint still containing <…> is the example copied verbatim with
-      // the account id or region never filled in. It passes every other check
-      // — no spaces, valid https — and saves happily, then fails at the first
-      // backup. Someone did exactly this on the live panel while this feature
-      // was being built, which is how the guard got written.
-      .refine((value) => !/[<>]/.test(value), "endpointPlaceholder"),
+      .regex(/^[A-Za-z0-9._/-]*$/, "rootFormat")
+      .refine((v) => !/(^|\/)\.\.(\/|$)/.test(v), "rootTraversal"),
   ])
   .optional();
 
-export const createStorageDestinationSchema = z
-  .object({
-    provider: z.string().default("other"),
-    name: nameField,
-    endpoint: endpointField,
-    region: regionField,
-    bucket: bucketField,
-    prefix: prefixField,
-    access_key: z.string().trim().min(1, "required_accessKey").max(255, "max255"),
-    secret_key: z.string().trim().min(1, "required_secretKey").max(512, "max512"),
-  })
-  // Checked here rather than on the field, because whether these are required
-  // depends on the provider chosen in the same form. See createRequirements —
-  // the API cannot enforce this, it has no idea which provider you picked.
-  .superRefine((values, ctx) => {
-    const need = createRequirements(values.provider);
-    if (need.endpoint && !values.endpoint?.trim()) {
-      ctx.addIssue({ code: "custom", path: ["endpoint"], message: "required_endpoint" });
-    }
-    if (need.region && !values.region?.trim()) {
-      ctx.addIssue({ code: "custom", path: ["region"], message: "required_region" });
-    }
-  });
+/** Per-field validators, keyed by the config key they validate. */
+const CONFIG_FIELDS = {
+  bucket: bucketField,
+  region: regionField,
+  endpoint: endpointField,
+  access_key: z.string().trim().max(255, "max255"),
+  secret_key: z.string().trim().max(512, "max512"),
+  host: hostField,
+  port: portField,
+  username: z.string().trim().max(255, "max255"),
+  password: z.string().trim().max(512, "max512"),
+  private_key: z.string().trim().max(16384, "max16384"),
+  passphrase: z.string().trim().max(512, "max512"),
+  root: rootField,
+  ssl: z.boolean(),
+  passive: z.boolean(),
+};
 
-// No credentials here at all. PATCH treats a present key as "rotate", so the
-// only safe way to rename a destination is to never send them — rotation is
-// its own dialog.
-export function editStorageDestinationSchema(destination) {
-  const need = editRequirements(destination);
+/**
+ * Whatever the chosen preset needs, and nothing it doesn't.
+ *
+ * Built from the same declaration the form renders from, so a field cannot be
+ * shown without being validated or validated without being shown — the two
+ * drifting apart is how a form starts rejecting a value it never asked for.
+ */
+function configSchemaFor(preset, { requireSecrets = true } = {}) {
+  const provider = providerForPreset(preset);
+  const shape = {};
+
+  for (const field of fieldsFor(provider)) {
+    let schema = CONFIG_FIELDS[field.name] ?? z.any();
+    const required = isRequired(field, preset) && (requireSecrets || field.kind !== "secret");
+
+    if (required) {
+      // `.min(1)` on the base string type, expressed as a refinement so it
+      // applies uniformly to the union-typed fields too.
+      schema = schema.refine(
+        (v) => v !== undefined && v !== null && String(v).trim() !== "",
+        `required_${field.name}`,
+      );
+    } else {
+      schema = schema.optional().or(z.literal(""));
+    }
+
+    shape[field.name] = schema;
+  }
+
+  return z.object(shape).passthrough();
+}
+
+export function createStorageDestinationSchema(preset) {
+  const provider = providerForPreset(preset);
 
   return z
     .object({
+      preset: z.string(),
       name: nameField,
-      endpoint: endpointField,
-      region: regionField,
-      bucket: bucketField,
       prefix: prefixField,
+      config: configSchemaFor(preset),
     })
-    // Only what this destination already relies on. Clearing the endpoint of a
-    // Wasabi bucket points it at AWS and every backup fails, so the edit form
-    // refuses to empty a field that was set — it does not invent new ones.
     .superRefine((values, ctx) => {
-      if (need.endpoint && !values.endpoint?.trim()) {
-        ctx.addIssue({ code: "custom", path: ["endpoint"], message: "required_endpoint" });
-      }
-      if (need.region && !values.region?.trim()) {
-        ctx.addIssue({ code: "custom", path: ["region"], message: "required_region" });
+      // SFTP authenticates with a password OR a private key. Neither can be
+      // required on its own, but a destination with neither cannot connect at
+      // all — and storing one means the failure arrives at the first backup
+      // rather than at the form that could have prevented it.
+      if (provider !== "sftp") return;
+
+      const hasPassword = Boolean(values.config?.password?.trim?.());
+      const hasKey = Boolean(values.config?.private_key?.trim?.());
+
+      if (!hasPassword && !hasKey) {
+        ctx.addIssue({ code: "custom", path: ["config", "password"], message: "sftpAuthRequired" });
       }
     });
 }
 
-export const replaceCredentialsSchema = z.object({
-  access_key: z.string().trim().min(1, "required_accessKey").max(255, "max255"),
-  secret_key: z.string().trim().min(1, "required_secretKey").max(512, "max512"),
-});
+/**
+ * Editing sends no credentials at all.
+ *
+ * PATCH treats a present credential as "rotate", so the only safe way to
+ * rename a destination is never to send them — rotation is its own dialog.
+ * The provider is absent too: it is immutable on the API, and offering a
+ * control whose only outcome is a 422 is not a control.
+ */
+export function editStorageDestinationSchema(destination) {
+  const preset = destination?.provider === "s3" ? "other" : destination?.provider;
+
+  return z.object({
+    name: nameField,
+    prefix: prefixField,
+    config: configSchemaFor(preset, { requireSecrets: false }),
+  });
+}
+
+/** Rotation: only the credential fields, all of them required. */
+export function replaceCredentialsSchema(destination) {
+  const provider = destination?.provider ?? "s3";
+  const shape = {};
+
+  for (const field of fieldsFor(provider)) {
+    if (field.kind !== "secret" && field.kind !== "textarea") continue;
+    shape[field.name] = (CONFIG_FIELDS[field.name] ?? z.string()).optional().or(z.literal(""));
+  }
+
+  return z
+    .object(shape)
+    .superRefine((values, ctx) => {
+      // At least one credential must actually be typed, or "replace
+      // credentials" silently replaces them with nothing and the destination
+      // keeps working until the next backup runs.
+      const supplied = Object.entries(values).filter(([, v]) => String(v ?? "").trim() !== "");
+
+      if (supplied.length === 0) {
+        const first = Object.keys(shape)[0];
+        ctx.addIssue({ code: "custom", path: [first], message: `required_${first}` });
+      }
+    });
+}

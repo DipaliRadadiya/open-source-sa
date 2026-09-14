@@ -5012,7 +5012,12 @@
       "neverTested": "Never tested — nobody has checked these credentials work.",
       "lastTestedOk": "Tested {when}",
       "failedCredentials": "The last test failed {when} — the credentials were rejected.",
-      "failedUnreachable": "The last test failed {when} — the bucket could not be reached."
+      "failedUnreachable": "The last test failed {when} — the bucket could not be reached.",
+      "failed": "The last test failed {when}.",
+      "failedHostKey": "The last test failed {when} — the server presented a different host key than the one recorded, so the connection was stopped.",
+      "failedPrivateKey": "The last test failed {when} — the private key could not be read.",
+      "failedRootMissing": "The last test failed {when} — the destination folder does not exist on the server.",
+      "failedMismatch": "The last test failed {when} — the destination read back different bytes than were written."
     },
     "form": {
       "provider": "Provider",
@@ -5024,29 +5029,57 @@
         "wasabi": "Wasabi",
         "spaces": "DigitalOcean Spaces",
         "minio": "MinIO or self-hosted",
-        "other": "Other"
+        "other": "Other",
+        "ftp": "FTP",
+        "sftp": "SFTP"
       },
       "name": "Name",
       "namePlaceholder": "e.g. Offsite backups",
       "nameHint": "How this appears when you pick it on an application.",
-      "bucket": "Bucket",
-      "bucketPlaceholder": "my-backups",
-      "region": "Region",
-      "regionPlaceholder": "eu-west-1",
-      "endpoint": "Endpoint",
       "endpointPlaceholder": "https://…",
       "endpointExample": "For this provider it looks like {example}",
       "endpointAws": "Leave empty for Amazon S3 — the region decides the endpoint.",
       "prefix": "Folder",
       "prefixPlaceholder": "backups/",
       "prefixHint": "Optional. Keeps backups in their own folder inside the bucket.",
-      "prefixChangeWarning": "Changing this does not move anything. Backups already stored under the old folder stop being found."
+      "prefixChangeWarning": "Changing this does not move anything. Backups already stored under the old folder stop being found.",
+      "fields": {
+        "bucket": "Bucket",
+        "region": "Region",
+        "endpoint": "Endpoint",
+        "access_key": "Access key",
+        "secret_key": "Secret key",
+        "host": "Host",
+        "port": "Port",
+        "username": "Username",
+        "password": "Password",
+        "root": "Remote directory",
+        "ssl": "Use TLS (FTPS)",
+        "passive": "Passive mode",
+        "private_key": "Private key",
+        "passphrase": "Key passphrase"
+      },
+      "help": {
+        "host": "Hostname or IP address of the server that will hold the backups.",
+        "port": "Leave empty to use the default.",
+        "root": "Directory on the server to write into. Leave empty to use wherever the login lands.",
+        "ssl": "Strongly recommended. Without it the password and the entire backup travel in the clear.",
+        "passive": "Keep this on unless the server requires otherwise.",
+        "private_key": "Paste the whole private key. Used instead of a password.",
+        "passphrase": "Only needed if the private key itself is encrypted."
+      },
+      "plainFtpWarning": "TLS is off. The password and every backup will be sent unencrypted.",
+      "prefixHintRemote": "Optional folder inside the remote directory, so one server can hold several sites.",
+      "placeholders": {
+        "bucket": "my-backups",
+        "region": "eu-west-1",
+        "host": "backup.example.com",
+        "root": "backups/"
+      }
     },
     "connect": {
       "title": "Add a storage destination",
       "subtitle": "An S3-compatible bucket to send backups to.",
-      "accessKey": "Access key",
-      "secretKey": "Secret key",
       "credentialsNote": "Keys are stored encrypted and never shown again — to change them later you replace them.",
       "cancel": "Cancel",
       "submit": "Add destination",
@@ -5054,10 +5087,9 @@
       "added": "Destination added.",
       "testPassed": "Connection tested — it works.",
       "testFailed": "Saved, but the connection test failed. Check the keys and bucket.",
-      "accessKeyPlaceholder": "From your provider's API keys page",
-      "secretKeyPlaceholder": "Shown only when the key was created",
       "permissionsNote": "The key needs permission to upload, download and delete objects in this bucket. Delete matters too — backups remove old archives once they pass the retention limit you set.",
-      "keyDocs": "Where do I find these keys?"
+      "keyDocs": "Where do I find these keys?",
+      "permissionsNoteRemote": "The account needs to create, read and delete files in that directory — backups remove old archives when they pass the retention limit, so read-only access cannot work."
     },
     "edit": {
       "title": "Edit destination",
@@ -5066,21 +5098,19 @@
       "submit": "Save changes",
       "saving": "Saving…",
       "saved": "Destination updated.",
-      "credentialsUntouched": "The stored keys are left alone — use Replace credentials to change them."
+      "credentialsUntouched": "The stored keys are left alone — use Replace credentials to change them.",
+      "providerLocked": "The provider is fixed at {provider}. To use a different one, delete this destination and add a new one."
     },
     "replace": {
       "title": "Replace credentials",
       "subtitle": "New keys for {name}.",
       "warning": "The stored keys are replaced immediately. They are not checked first, so a wrong key here stops backups until it is corrected.",
-      "accessKey": "New access key",
-      "secretKey": "New secret key",
       "cancel": "Cancel",
       "submit": "Replace keys",
       "saving": "Replacing…",
       "replacedAndTested": "Keys replaced — the connection works.",
       "replacedButFailed": "Keys replaced, but the connection test failed.",
-      "accessKeyPlaceholder": "From your provider's API keys page",
-      "secretKeyPlaceholder": "Shown only when the key was created"
+      "onlyWhatYouChange": "Fill in only what you are changing. Anything left empty keeps its current value."
     },
     "delete": {
       "title": "Delete this destination?",
