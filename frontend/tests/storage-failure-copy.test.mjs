@@ -144,13 +144,17 @@ test("the pCloud preset carries the vendor's own small-files caveat", () => {
   assert.match(warning, /two-factor/i);
 });
 
-test("every WebDAV preset resolves to the webdav provider", () => {
-  // pCloud is one preset among several rather than a provider of its own.
-  // Generalising is what buys Nextcloud, ownCloud and Synology, and stops one
-  // vendor's weakest surface from being the whole feature.
+test("pCloud is the only WebDAV preset offered", () => {
+  // Nextcloud/ownCloud and a generic WebDAV option were removed from the
+  // picker (operator, 2026-09-14). The webdav PROVIDER stays — it is what
+  // pCloud runs on — but the panel offers exactly one way to reach it.
+  //
+  // Being the only one also makes `presetForProvider("webdav")` unambiguous,
+  // so editing a pCloud destination shows the pCloud form and its caveat
+  // instead of whichever preset happened to come first.
   const providers = readFileSync("lib/storage/providers.js", "utf8");
 
-  for (const preset of ["nextcloud", "pcloud", "webdav"]) {
-    assert.match(providers, new RegExp(`value:\\s*"${preset}",\\s*provider:\\s*"webdav"`));
-  }
+  assert.match(providers, /value:\s*"pcloud",\s*provider:\s*"webdav"/);
+  assert.doesNotMatch(providers, /value:\s*"nextcloud"/);
+  assert.doesNotMatch(providers, /value:\s*"webdav",\s*provider:\s*"webdav"/);
 });

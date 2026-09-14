@@ -5042,9 +5042,7 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive",
-        "nextcloud": "Nextcloud / ownCloud",
-        "pcloud": "pCloud",
-        "webdav": "WebDAV (autre)"
+        "pcloud": "pCloud"
       },
       "name": "Nom",
       "namePlaceholder": "ex. Sauvegardes externes",
@@ -5086,7 +5084,7 @@
         "service_account_json": "Collez le fichier de clé JSON complet du compte de service.",
         "folder_id": "La partie de l’URL du dossier après /folders/, pas le lien entier.",
         "drive_shared_only": "Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide. Partagez le dossier avec l’adresse du compte de service, puis collez sa clé ci-dessous.",
-        "base_uri": "L’URL WebDAV complète, dossier compris — par exemple https://cloud.exemple.fr/remote.php/dav/files/vous/",
+        "base_uri": "Utilisez https://webdav.pcloud.com/ pour un compte US ou https://ewebdav.pcloud.com/ pour un compte UE. Ajoutez un dossier à la fin pour regrouper les sauvegardes.",
         "pcloud_warning": "pCloud indique que son WebDAV est prévu pour de petits fichiers et peut être interrompu, et il cesse de fonctionner dès que l’authentification à deux facteurs est activée. Les deux comptent pour des sauvegardes : testez la destination et gardez-en une seconde ailleurs."
       },
       "plainFtpWarning": "TLS est désactivé. Le mot de passe et chaque sauvegarde seront envoyés en clair.",
@@ -5096,7 +5094,7 @@
         "region": "eu-west-1",
         "host": "backup.exemple.fr",
         "root": "backups/",
-        "base_uri": "https://cloud.exemple.fr/remote.php/dav/files/vous/"
+        "base_uri": "https://webdav.pcloud.com/backups/"
       }
     },
     "connect": {

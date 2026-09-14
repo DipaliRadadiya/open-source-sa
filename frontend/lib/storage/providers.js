@@ -48,9 +48,7 @@ export const PRESETS = [
   { value: "ftp", provider: "ftp" },
   { value: "sftp", provider: "sftp" },
   { value: "google_drive", provider: "google_drive" },
-  { value: "nextcloud", provider: "webdav" },
   { value: "pcloud", provider: "webdav" },
-  { value: "webdav", provider: "webdav" },
 ];
 
 /**
@@ -86,7 +84,10 @@ export function providerForPreset(value) {
  * The first preset that maps to a given backend provider.
  *
  * Used when editing: the destination knows it is `ftp`, and the form needs a
- * preset to render from. For `s3` this deliberately resolves to the generic
+ * preset to render from. Unambiguous for every provider that has exactly one
+ * preset — which `webdav` now does, so editing a pCloud destination shows the
+ * pCloud form and its caveat rather than whichever preset happened to be first
+ * in the list. For `s3` this deliberately resolves to the generic
  * option rather than trying to work out *which* S3 service it is — that
  * inference is what this refactor deleted, and a rename should not start
  * claiming a destination is Backblaze because its endpoint looks like it.

@@ -5042,9 +5042,7 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Диск",
-        "nextcloud": "Nextcloud / ownCloud",
-        "pcloud": "pCloud",
-        "webdav": "WebDAV (другое)"
+        "pcloud": "pCloud"
       },
       "name": "Название",
       "namePlaceholder": "напр. «Резервные копии offsite»",
@@ -5086,7 +5084,7 @@
         "service_account_json": "Вставьте целиком файл ключа JSON сервисного аккаунта.",
         "folder_id": "Часть URL папки после /folders/ — не вся ссылка.",
         "drive_shared_only": "Работает только общий диск Google Workspace. У сервисного аккаунта нет собственного хранилища, поэтому загрузки на личный Диск отклоняются даже при пустом аккаунте. Предоставьте доступ к папке адресу сервисного аккаунта, затем вставьте его ключ ниже.",
-        "base_uri": "Полный URL WebDAV вместе с папкой — например https://cloud.example.com/remote.php/dav/files/you/",
+        "base_uri": "Используйте https://webdav.pcloud.com/ для аккаунта в США или https://ewebdav.pcloud.com/ для ЕС. Добавьте папку в конце, чтобы копии лежали вместе.",
         "pcloud_warning": "pCloud указывает, что его WebDAV предназначен для небольших файлов и может прерываться, а при включённой двухфакторной аутентификации перестаёт работать совсем. И то и другое важно для резервных копий: проверьте назначение и держите второе в другом месте."
       },
       "plainFtpWarning": "TLS отключён. Пароль и каждая резервная копия будут отправлены без шифрования.",
@@ -5096,7 +5094,7 @@
         "region": "eu-west-1",
         "host": "backup.example.com",
         "root": "backups/",
-        "base_uri": "https://cloud.example.com/remote.php/dav/files/you/"
+        "base_uri": "https://webdav.pcloud.com/backups/"
       }
     },
     "connect": {

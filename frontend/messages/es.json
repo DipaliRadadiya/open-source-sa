@@ -5042,9 +5042,7 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive",
-        "nextcloud": "Nextcloud / ownCloud",
-        "pcloud": "pCloud",
-        "webdav": "WebDAV (otro)"
+        "pcloud": "pCloud"
       },
       "name": "Nombre",
       "namePlaceholder": "p. ej. Copias externas",
@@ -5086,7 +5084,7 @@
         "service_account_json": "Pega el archivo JSON completo de la cuenta de servicio.",
         "folder_id": "La parte de la URL de la carpeta después de /folders/, no el enlace completo.",
         "drive_shared_only": "Solo funciona una unidad compartida de Google Workspace. Una cuenta de servicio no tiene almacenamiento propio, así que las subidas a un Drive personal se rechazan aunque la cuenta esté vacía. Comparte la carpeta con la dirección de la cuenta de servicio y luego pega su clave abajo.",
-        "base_uri": "La URL completa de WebDAV incluida la carpeta — por ejemplo https://cloud.ejemplo.com/remote.php/dav/files/tu/",
+        "base_uri": "Usa https://webdav.pcloud.com/ para una cuenta de EE. UU. o https://ewebdav.pcloud.com/ para una de la UE. Añade una carpeta al final para agrupar las copias.",
         "pcloud_warning": "pCloud indica que su WebDAV está pensado para archivos pequeños y puede interrumpirse, y deja de funcionar por completo si la cuenta tiene verificación en dos pasos. Ambas cosas importan para las copias: prueba el destino y mantén otro en otro sitio."
       },
       "plainFtpWarning": "TLS está desactivado. La contraseña y todas las copias se enviarán sin cifrar.",
@@ -5096,7 +5094,7 @@
         "region": "eu-west-1",
         "host": "backup.ejemplo.com",
         "root": "backups/",
-        "base_uri": "https://cloud.ejemplo.com/remote.php/dav/files/tu/"
+        "base_uri": "https://webdav.pcloud.com/backups/"
       }
     },
     "connect": {
