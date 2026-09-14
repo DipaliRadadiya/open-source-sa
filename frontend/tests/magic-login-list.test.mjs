@@ -59,6 +59,29 @@ test("each row's dialog is mounted only once opened", () => {
   assert.match(actions, /setMagicLoginRun\(\(n\) => n \+ 1\)/);
 });
 
+test("Magic Login does not draw its own separator", () => {
+  // It did, and the `canManage` group below draws one whenever anything sits
+  // above it — so the list showed two rules between Magic Login and Pause
+  // site. A group that ends with a separator and a group that begins with one
+  // cannot both be right.
+  const block = actions.slice(
+    actions.indexOf("{showMagicLogin ? ("),
+    actions.indexOf("{shortcuts.length > 0 ? ("),
+  );
+
+  assert.ok(block.length > 0, "the Magic Login block must be findable");
+  assert.doesNotMatch(block, /DropdownMenuSeparator/);
+});
+
+test("the group below counts Magic Login as something above it", () => {
+  // Otherwise hiding the navigation block would leave Magic Login welded to
+  // Pause and Delete with no rule between them.
+  assert.match(
+    actions,
+    /\{showNavigation \|\| showRetry \|\| showMagicLogin \? <DropdownMenuSeparator \/> : null\}/,
+  );
+});
+
 test("the menu item reuses the existing string", () => {
   // Same action, same words as the Dashboard button — a second key would let
   // the two drift apart.

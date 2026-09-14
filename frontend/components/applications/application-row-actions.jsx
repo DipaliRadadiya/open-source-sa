@@ -208,21 +208,24 @@ export function ApplicationRowActions({
 
           {/* Beside Visit, because they are the same act with different
               credentials: one opens the site as a visitor, the other as its
-              administrator. Its own separator when there is no navigation
-              above it — on the list this is often the first item. */}
+              administrator — so it belongs in the navigation group rather than
+              in a band of its own.
+
+              No separator here. The `canManage` group below draws one whenever
+              anything sits above it, and this block adding a second produced
+              two rules between Magic Login and Pause site. A group that ends
+              with a separator AND a group that begins with one cannot both be
+              right; the one that knows what follows it wins. */}
           {showMagicLogin ? (
-            <>
-              <DropdownMenuItem
-                onSelect={() => {
-                  setMagicLoginRun((n) => n + 1);
-                  setMagicLoginOpen(true);
-                }}
-              >
-                <KeyRound className="size-4" />
-                {t("magicLogin.action")}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
+            <DropdownMenuItem
+              onSelect={() => {
+                setMagicLoginRun((n) => n + 1);
+                setMagicLoginOpen(true);
+              }}
+            >
+              <KeyRound className="size-4" />
+              {t("magicLogin.action")}
+            </DropdownMenuItem>
           ) : null}
 
           {shortcuts.length > 0 ? (
@@ -275,7 +278,7 @@ export function ApplicationRowActions({
 
           {canManage ? (
             <>
-              {showNavigation || showRetry ? <DropdownMenuSeparator /> : null}
+              {showNavigation || showRetry || showMagicLogin ? <DropdownMenuSeparator /> : null}
               {/* Above Delete and outside the destructive group: pausing is
                   reversible in one click and must not read like the row that
                   ends the site. Which control appears is decided in
