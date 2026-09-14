@@ -951,3 +951,60 @@ describe('the log source on the Logs screen', function () {
             ->toBe('privileged');
     });
 });
+
+describe('a create that fails on the server', function () {
+    /*
+     * 🔴 A worker the panel lists and supervisord has never heard of.
+     *
+     * `store()` wrote the row and then applied it. When applying threw — a
+     * unit it could not write, a program that would not start — the row stayed
+     * behind, and the request that made it returned an error, so nobody had
+     * any reason to go looking for it. The panel then showed a worker that
+     * could not be started, stopped or restarted, because there was nothing on
+     * the server to control.
+     *
+     * The method already refused to create a row when supervisord was missing,
+     * for exactly this reason. It just did not cover the apply itself failing.
+     */
+
+    beforeEach(function () {
+        config()->set('server.privilege.sudo', true);
+    });
+
+    it('leaves no worker behind when supervisorctl is refused', function () {
+        WorkerFake::$denied = ['supervisorctl'];
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload())
+            ->assertStatus(500);
+
+        expect(Worker::query()->count())->toBe(0);
+    });
+
+    it('leaves no worker behind when the unit cannot be written', function () {
+        // The other half of `apply()`, and a different failure: the config
+        // file never reaches the disk, so there is not even a program for
+        // supervisord to refuse to start.
+        WorkerFake::$denied = ['tee'];
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload())
+            ->assertStatus(500);
+
+        expect(Worker::query()->count())->toBe(0);
+    });
+
+    it('still keeps the worker when the create succeeds', function () {
+        // Without this the fix could be "delete the row every time" and every
+        // assertion above would still pass.
+        fakeWorkerSupervisor();
+
+        $this->actingAs($this->admin)
+            ->postJson(workerUrl(), workerPayload())
+            ->assertCreated();
+
+        expect(Worker::query()->count())->toBe(1);
+    });
+});

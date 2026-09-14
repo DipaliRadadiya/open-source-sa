@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Enums\InstallStatus;
+use App\Exceptions\Server\ServerOperationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\SaveWorkerRequest;
 use App\Http\Resources\WorkerResource;
@@ -18,6 +19,8 @@ use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * An application's background workers — queue workers, Horizon, or any command
@@ -131,7 +134,51 @@ class WorkerController extends Controller
         // Written and started before the row is worth anything: a worker the
         // panel lists but never started is the kind of thing discovered when
         // the queue is already hours behind.
-        $supervisor->apply($worker->load('application.systemUser'));
+        //
+        // And when that fails, the row goes with it. `apply()` throws on a
+        // unit it could not write and on a program that would not start, and
+        // until now the worker stayed behind either way — so a request that
+        // returned an error still left the panel listing a worker supervisord
+        // has never heard of, which nobody goes looking for because the call
+        // that made it failed. Same reasoning as the installed() check above,
+        // which exists for exactly this and only covers the one case.
+        //
+        // Not a swallow: the exception is rethrown untouched, so the user gets
+        // the same step and reference they would have. The catch is here to
+        // undo, not to hide.
+        try {
+            $supervisor->apply($worker->load('application.systemUser'));
+        } catch (Throwable $e) {
+            // Best effort, and deliberately not allowed to mask the real
+            // failure. `apply()` already calls remove() on the start-failure
+            // path; a second removal is harmless (stop ignores its exit code,
+            // the delete is an `rm -f`) and the write-failure path has left a
+            // config file behind that nothing else will clear.
+            //
+            // Except when the grant itself was refused. Nothing ran, so there
+            // is nothing on the server to undo, and issuing more commands that
+            // will be refused too is the behaviour `supervisorctl()` throws
+            // early to prevent — "a refused grant is not a state to carry on
+            // from". The row is still removed; only the server-side cleanup is
+            // skipped.
+            try {
+                if (! ($e instanceof ServerOperationException && $e->denied)) {
+                    $supervisor->remove($worker);
+                }
+            } catch (Throwable $cleanupException) {
+                Log::warning('supervisor cleanup after a failed worker create also failed', [
+                    'feature' => 'application',
+                    'op' => 'worker_create_cleanup',
+                    'worker' => $worker->id,
+                    'application' => $application->id,
+                    'exception' => $cleanupException::class,
+                ]);
+            }
+
+            $worker->delete();
+
+            throw $e;
+        }
 
         $activity->log('application.worker_created', $application, [
             'name' => $application->name,
