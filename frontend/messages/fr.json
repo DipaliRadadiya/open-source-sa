@@ -3296,6 +3296,10 @@
         "submitting": "Ajout…",
         "dnsNoteIp": "Après l'ajout, pointez un enregistrement A pour ce nom vers votre serveur :",
         "dnsNote": "Après l'ajout, pointez un enregistrement A pour ce nom vers votre serveur afin que le HTTPS puisse être émis.",
+        "dnsNoteSecured": "Après l'ajout, faites pointer un enregistrement A de ce nom vers votre serveur.",
+        "certNotice": "Le certificat {current} de ce site ne couvrira pas le nouveau nom tant que vous ne l'aurez pas réémis. D'ici là, les visiteurs de ce nom obtiennent un avertissement de certificat au lieu de votre site.",
+        "certUploadedNotice": "Ce site utilise un certificat importé, que ce panneau ne peut pas réémettre. Tant que vous n'en importez pas un couvrant le nouveau nom — ou ne passez pas à Let's Encrypt — ses visiteurs obtiennent un avertissement de certificat au lieu de votre site.",
+        "certNoticeForceHttps": "Forcer HTTPS est activé : les visiteurs sont envoyés directement vers cet avertissement, sans moyen de le contourner.",
         "redirectStatusOption": {
           "301": "301 — Permanent",
           "302": "302 — Temporaire",
@@ -3335,6 +3339,8 @@
       },
       "toast": {
         "added": "Domaine ajouté.",
+        "addedNeedsReissue": "{domain} n'est pas encore sur le certificat SSL — réémettez-le depuis l'onglet SSL pour couvrir le nouveau nom.",
+        "addedNeedsUpload": "{domain} n'est pas encore sur le certificat SSL — importez-en un qui le couvre depuis l'onglet SSL.",
         "verified": "{domain} est vérifié.",
         "notPointing": "{domain} ne pointe pas encore ici — la propagation des changements DNS peut prendre du temps.",
         "verifyFailed": "Impossible de revérifier le DNS.",

@@ -64,6 +64,11 @@ export function DomainsSection({
   serverIp = null,
   secured = false,
   siteType = null,
+  // What is securing this site right now, or null. Passed through to the Add
+  // dialog rather than reduced to a boolean here: the advice for an uploaded
+  // certificate is the opposite of the advice for a Let's Encrypt one, and
+  // `secured` cannot tell them apart.
+  certificate = null,
 }) {
   const t = useTranslations("applications.domains");
   const router = useRouter();
@@ -365,6 +370,7 @@ export function DomainsSection({
           open={addOpen}
           onOpenChange={setAddOpen}
           serverIp={serverIp}
+          certificate={certificate}
         />
       ) : null}
 

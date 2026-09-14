@@ -3296,6 +3296,10 @@
         "submitting": "Añadiendo…",
         "dnsNoteIp": "Después de añadirlo, apunta un registro A de este nombre a tu servidor:",
         "dnsNote": "Después de añadirlo, apunta un registro A de este nombre a tu servidor para poder emitir HTTPS.",
+        "dnsNoteSecured": "Después de añadirlo, apunte un registro A de este nombre a su servidor.",
+        "certNotice": "El certificado {current} de este sitio no cubrirá el nuevo nombre hasta que lo reemita. Hasta entonces, quien visite ese nombre verá un aviso de certificado en lugar de su sitio.",
+        "certUploadedNotice": "Este sitio usa un certificado subido, que este panel no puede reemitir. Hasta que suba uno que cubra el nuevo nombre —o cambie a Let's Encrypt— quien lo visite verá un aviso de certificado en lugar de su sitio.",
+        "certNoticeForceHttps": "Forzar HTTPS está activado, así que se envía a los visitantes directamente a ese aviso, sin forma de continuar.",
         "redirectStatusOption": {
           "301": "301 — Permanente",
           "302": "302 — Temporal",
@@ -3335,6 +3339,8 @@
       },
       "toast": {
         "added": "Dominio añadido.",
+        "addedNeedsReissue": "{domain} aún no está en el certificado SSL: reemítalo desde la pestaña SSL para cubrir el nuevo nombre.",
+        "addedNeedsUpload": "{domain} aún no está en el certificado SSL: suba uno que lo cubra desde la pestaña SSL.",
         "verified": "{domain} está verificado.",
         "notPointing": "{domain} aún no apunta aquí — los cambios de DNS pueden tardar en propagarse.",
         "verifyFailed": "No se pudo volver a comprobar el DNS.",

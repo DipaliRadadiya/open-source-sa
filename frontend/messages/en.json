@@ -3296,6 +3296,10 @@
         "submitting": "Adding…",
         "dnsNoteIp": "After adding, point an A record for this name to your server:",
         "dnsNote": "After adding, point an A record for this name to your server so HTTPS can be issued.",
+        "dnsNoteSecured": "After adding, point an A record for this name to your server.",
+        "certNotice": "This site's {current} certificate won't cover the new name until you reissue it. Until then, visitors to that name get a certificate warning instead of your site.",
+        "certUploadedNotice": "This site uses an uploaded certificate, which this panel can't reissue. Until you upload one that covers the new name — or switch to Let's Encrypt — visitors to it get a certificate warning instead of your site.",
+        "certNoticeForceHttps": "Force HTTPS is on, so visitors are sent straight to that warning with no way past it.",
         "redirectStatusOption": {
           "301": "301 — Permanent",
           "302": "302 — Temporary",
@@ -3335,6 +3339,8 @@
       },
       "toast": {
         "added": "Domain added.",
+        "addedNeedsReissue": "{domain} isn't on the SSL certificate yet — reissue it from the SSL tab to cover the new name.",
+        "addedNeedsUpload": "{domain} isn't on the SSL certificate yet — upload one that covers it from the SSL tab.",
         "verified": "{domain} is verified.",
         "notPointing": "{domain} isn't pointing here yet — DNS changes can take a while to propagate.",
         "verifyFailed": "Couldn't re-check DNS.",

@@ -97,6 +97,12 @@ export default async function ApplicationDomainsPage({ params }) {
               serverIp={serverIp}
               secured={sslStatus === "active"}
               siteType={application.site_type}
+              // Adding a name to a site that already has HTTPS has a
+              // consequence the Add form is the last place to mention it: the
+              // new name is served on 443 by the existing certificate, which
+              // does not cover it. The dialog needs the certificate's type to
+              // give the right advice, not just whether one exists.
+              certificate={cert}
             />
           }
           ssl={
