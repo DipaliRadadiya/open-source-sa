@@ -2,6 +2,7 @@
 
 namespace App\Rules;
 
+use App\Support\RemoteHost;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
@@ -51,20 +52,22 @@ class SafeProviderHost implements ValidationRule
             return;
         }
 
-        $host = strtolower(trim($parts['host'], '[]'));
+        $host = RemoteHost::canonical($parts['host']);
 
-        $isIpv4 = filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
+        // A host that cannot be interpreted the same way the HTTP client will
+        // is one no decision can be made about, so it is refused as malformed
+        // rather than range-checked. This used to range-check *only* hosts
+        // that `filter_var` accepted as a dotted quad, which let every other
+        // spelling of an address through untouched — `https://0177.0.0.1` and
+        // `https://0251.0376.0251.0376` (octal for the cloud metadata
+        // address) among them. See `RemoteHost`.
+        if (RemoteHost::isUninterpretable($host)) {
+            $fail($this->invalidKey)->translate();
 
-        $blocked = $host === 'localhost'
-            || str_ends_with($host, '.localhost')
-            || $host === '::1'
-            || ($isIpv4 && (
-                str_starts_with($host, '127.')
-                || str_starts_with($host, '169.254.') // cloud metadata
-                || str_starts_with($host, '0.')
-            ));
+            return;
+        }
 
-        if ($blocked) {
+        if (RemoteHost::isBlocked($host)) {
             $fail($this->blockedKey)->translate();
         }
     }
