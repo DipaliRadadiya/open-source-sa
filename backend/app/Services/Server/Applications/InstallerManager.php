@@ -3,10 +3,12 @@
 namespace App\Services\Server\Applications;
 
 use App\Actions\Server\Database\CreateDatabase;
+use App\Actions\Server\Database\CreateDatabaseUser;
 use App\Contracts\SiteInstaller;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Exceptions\Server\ServerOperationException;
 use App\Models\Application;
+use App\Models\Database;
 use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
@@ -26,6 +28,7 @@ class InstallerManager
 {
     public function __construct(
         private CreateDatabase $createDatabase,
+        private CreateDatabaseUser $createUser,
         private DatabaseManager $databases,
         private DatabaseIdentifier $databaseIdentifiers,
         private ProvisionProgress $progress,
@@ -126,6 +129,19 @@ class InstallerManager
      */
     private function provisionDatabase(Application $application, array $accepted, array $minimums = []): array
     {
+        // Retry Setup must not mint a second database.
+        //
+        // This method used to go straight to generating a name, so every retry
+        // after a failure past this point left another `shop_xqolim` beside the
+        // last one — schemas and accounts the user never asked for, on a server
+        // where nothing but the panel knows which one the site actually uses.
+        // An application has at most one database by design (see
+        // UpdateDatabaseApplicationRequest), so "it already has one" is a
+        // complete answer rather than a heuristic.
+        if (($attached = $application->databases()->with('users')->first()) !== null) {
+            return $this->reuseDatabase($application, $attached, $accepted);
+        }
+
         // An engine the user chose was already held to the minimum by
         // StoreApplicationRequest, so this honours a validated choice rather
         // than re-deciding it. Only the fallback — where the panel is the one
@@ -173,48 +189,131 @@ class InstallerManager
                 ],
             ]);
         } catch (Throwable $e) {
-            // Keep the reference the failure already logged under. Minting a
-            // fresh uuid here handed the user an id that appears in no log,
-            // while the one the server-ops entry was written with was thrown
-            // away — the reference is only useful if it points at something.
-            if ($e instanceof ServerOperationException) {
-                throw new ProvisioningFailedException('create_database', $e->reference);
-            }
-
-            // Anything else — a bug rather than a server refusal — has written
-            // nothing, so write the entry before handing out the id for it.
-            // Otherwise the fallback keeps the same defect the branch above
-            // was fixing, only for the failures that are hardest to diagnose.
-            $reference = (string) Str::uuid();
-
-            Log::channel('server-ops')->error('database provisioning failed', [
-                'feature' => 'database',
-                'op' => 'provision_database',
-                'application' => $application->id,
-                'engine' => $engine,
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
-                'reference' => $reference,
-            ]);
-
-            throw new ProvisioningFailedException('create_database', $reference);
+            throw $this->databaseFailure($application, $engine, $e);
         }
-
-        // Read the host and port off the engine's own connection record
-        // rather than assuming 127.0.0.1:3306. A server whose MySQL listens
-        // on a non-default port would otherwise have every installer write a
-        // config pointing at a port nothing is on — and the failure surfaces
-        // as the application's own "cannot connect to database", not as ours.
-        $connection = $this->databases->connection($engine);
 
         // `create_database` was in the documented step list and was never
         // actually emitted — the only step the frontend was told to expect that
         // could not appear.
         $this->progress->record('create_database');
 
+        return $this->connectionContext($engine, $database->name, $name, $password);
+    }
+
+    /**
+     * Hand the installer the database this application already has.
+     *
+     * Reachable in two ways: a retry after provisioning failed somewhere past
+     * the database step, and an application that had one attached to it
+     * deliberately. Both want the same thing — install against what is there.
+     *
+     * @param  array<int, string>  $accepted
+     * @return array<string, mixed>
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function reuseDatabase(Application $application, Database $database, array $accepted): array
+    {
+        // An engine this site type cannot speak is not something to work
+        // around. Creating a second database beside it is the bug being fixed
+        // here, and installing against an engine the application has no driver
+        // for fails later, further away, in the application's own words.
+        if (! in_array($database->engine, $accepted, true)) {
+            throw new ProvisioningFailedException(
+                'create_database',
+                // A sentinel rather than a uuid, as `no-database-engine` above:
+                // nothing shelled out, so there is no server-ops entry for a
+                // reference to point at. The reason code carries the meaning.
+                'attached-database-engine-mismatch',
+                'attached_database_engine_mismatch',
+            );
+        }
+
+        try {
+            // A database attached through `PUT /databases/{database}/application`
+            // may have no user the panel knows the password of — that endpoint
+            // links an existing database, it does not create credentials. The
+            // installer needs some, so make them rather than refuse.
+            //
+            // `generateAvailable` for the name: it checks the engine's own
+            // accounts as well as the panel's rows, so this cannot collide with
+            // a user the adopted database already had.
+            $user = $database->users->first() ?? $this->createUser->execute($database, [
+                'username' => $this->databaseIdentifiers->generateAvailable(
+                    $application->slug ?: $application->domain,
+                    $database->engine,
+                ),
+                'password' => DatabasePassword::generate(),
+                'connection_preference' => 'localhost',
+            ]);
+        } catch (Throwable $e) {
+            throw $this->databaseFailure($application, $database->engine, $e);
+        }
+
+        $this->progress->record('create_database');
+
+        return $this->connectionContext(
+            $database->engine,
+            $database->name,
+            (string) $user->username,
+            (string) $user->password,
+        );
+    }
+
+    /**
+     * Turn whatever went wrong into the failure the user is shown.
+     *
+     * Shared by both paths — creating a database and reusing one — so a
+     * failure in either is reported the same way rather than one of them
+     * growing its own handling later.
+     */
+    private function databaseFailure(Application $application, string $engine, Throwable $e): ProvisioningFailedException
+    {
+        // Keep the reference the failure already logged under. Minting a
+        // fresh uuid here handed the user an id that appears in no log,
+        // while the one the server-ops entry was written with was thrown
+        // away — the reference is only useful if it points at something.
+        if ($e instanceof ServerOperationException) {
+            return new ProvisioningFailedException('create_database', $e->reference);
+        }
+
+        // Anything else — a bug rather than a server refusal — has written
+        // nothing, so write the entry before handing out the id for it.
+        // Otherwise the fallback keeps the same defect the branch above
+        // was fixing, only for the failures that are hardest to diagnose.
+        $reference = (string) Str::uuid();
+
+        Log::channel('server-ops')->error('database provisioning failed', [
+            'feature' => 'database',
+            'op' => 'provision_database',
+            'application' => $application->id,
+            'engine' => $engine,
+            'exception' => $e::class,
+            'message' => $e->getMessage(),
+            'reference' => $reference,
+        ]);
+
+        return new ProvisioningFailedException('create_database', $reference);
+    }
+
+    /**
+     * What an installer needs to write its own config file.
+     *
+     * Read the host and port off the engine's own connection record rather
+     * than assuming 127.0.0.1:3306. A server whose MySQL listens on a
+     * non-default port would otherwise have every installer write a config
+     * pointing at a port nothing is on — and the failure surfaces as the
+     * application's own "cannot connect to database", not as ours.
+     *
+     * @return array<string, mixed>
+     */
+    private function connectionContext(string $engine, string $database, string $username, string $password): array
+    {
+        $connection = $this->databases->connection($engine);
+
         return [
-            'database' => $database->name,
-            'db_user' => $name,
+            'database' => $database,
+            'db_user' => $username,
             'db_password' => $password,
             'db_host' => $connection->host ?: '127.0.0.1',
             'db_port' => (int) ($connection->port ?: config("server.databases.engines.{$engine}.default_port")),

@@ -180,6 +180,7 @@ return [
     | the cause; most failures carry the step and reference instead.
     */
     'failure_reason' => [
+        'attached_database_engine_mismatch' => 'This application already has a database attached, but it runs on an engine this application cannot use. Detach it, or attach one on a supported engine, and try again.',
         'serving_error' => 'The application started but answers every request with an error. Its assets were most likely not built completely — check the application log for details.',
         'not_answering' => 'The application started but never answered a request. Check the application log for why it is not listening.',
         'out_of_memory' => 'The server ran out of memory during this step and it was stopped by the system. Free some memory, or add swap, and try again.',

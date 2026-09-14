@@ -175,6 +175,7 @@ return [
     | the cause; most failures carry the step and reference instead.
     */
     'failure_reason' => [
+        'attached_database_engine_mismatch' => 'Esta aplicación ya tiene una base de datos asociada, pero funciona con un motor que esta aplicación no puede usar. Desvincúlela, o asocie una en un motor compatible, e inténtelo de nuevo.',
         'serving_error' => 'La aplicación se inició pero responde a cada solicitud con un error. Lo más probable es que sus recursos no se compilaran por completo; consulte el registro de la aplicación.',
         'not_answering' => 'La aplicación se inició pero nunca respondió a una solicitud. Consulte el registro de la aplicación para ver por qué no está escuchando.',
         'out_of_memory' => 'El servidor se quedó sin memoria durante este paso y el sistema lo detuvo. Libere memoria, o añada swap, e inténtelo de nuevo.',
