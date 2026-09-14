@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Actions\Server\Application\ConfigureApplicationWebhook;
 use App\Enums\DomainType;
 use App\Exceptions\Server\Application\CloneOperationException;
 use App\Models\Application;
@@ -64,6 +65,7 @@ class CloneManager
         private ProcessSupervisor $supervisor,
         private PortAllocator $ports,
         private ServerOps $serverOps,
+        private ConfigureApplicationWebhook $webhooks,
     ) {}
 
     /**
@@ -186,6 +188,38 @@ class CloneManager
             $settings->save();
 
             $target->unsetRelation('phpSettings');
+        }
+
+        // Deploy-on-push, re-armed with credentials of the clone's own.
+        //
+        // The source's identifier cannot be reused — it is UNIQUE — and its
+        // secret must not be, because one `git push` would then deploy both
+        // sites. So the clone gets a fresh pair, and the result screen shows
+        // the new URL with the one instruction that cannot be automated:
+        // add it to the repository. Nothing on this box can register a webhook
+        // on somebody's GitHub.
+        //
+        // Only when the source actually used it. Minting credentials for a
+        // webhook nobody asked for would leave a live endpoint with no traffic
+        // and no reason to exist.
+        if ($source->webhook_enabled && $source->site_type === 'git') {
+            try {
+                $this->webhooks->execute($target, [
+                    'enabled' => true,
+                    'provider' => $source->webhook_provider ?: $source->gitAccount?->provider,
+                ]);
+
+                $target->refresh();
+            } catch (Throwable $exception) {
+                // An unsupported or missing provider. The copy is otherwise
+                // fine, so it is not worth failing the clone over — it comes up
+                // with deploy-on-push off, exactly as it did before, and the
+                // next-steps card says to reconnect it.
+                Log::warning('clone could not arm deploy-on-push', [
+                    'application' => $target->id,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
         }
 
         $target->load('systemUser');

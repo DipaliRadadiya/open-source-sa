@@ -635,17 +635,74 @@ describe('cloning a git application', function () {
         expect($clone->last_deployed_at)->not->toBeNull();
     });
 
-    it('does not inherit deploy-on-push', function () {
+    it('arms deploy-on-push with credentials of its own', function () {
         fakeCloneServer();
 
-        $source = gitSource(['webhook_enabled' => true, 'webhook_identifier' => 'src-hook', 'webhook_provider' => 'github']);
+        $source = gitSource([
+            'webhook_enabled' => true,
+            'webhook_identifier' => 'src-hook',
+            'webhook_secret' => 'src-secret',
+            'webhook_provider' => 'github',
+        ]);
+
         $clone = Application::find(runClone($source, 'api-clone.test')->target_application_id);
 
-        // `webhook_identifier` is UNIQUE so it cannot be copied — and copying
-        // the secret would make one `git push` deploy the original and the
-        // clone together, which is the opposite of what a copy is for.
+        expect($clone->webhook_enabled)->toBeTrue();
+
+        // Never the source's. The identifier is UNIQUE so it could not be
+        // copied anyway, and sharing the secret would make one `git push`
+        // deploy the original and the clone together.
+        expect($clone->webhook_identifier)->not->toBeNull()
+            ->and($clone->webhook_identifier)->not->toBe($source->webhook_identifier);
+        expect($clone->webhook_secret)->not->toBe($source->webhook_secret);
+        expect($clone->webhook_provider)->toBe('github');
+    });
+
+    it('shows the copy its new webhook url, because only the user can register it', function () {
+        fakeCloneServer();
+
+        $source = gitSource([
+            'webhook_enabled' => true,
+            'webhook_identifier' => 'src-hook',
+            'webhook_secret' => 'src-secret',
+            'webhook_provider' => 'github',
+        ]);
+
+        $record = runClone($source, 'api-clone.test');
+
+        // A webhook lives in the repository's settings, and one repository
+        // webhook posts to one URL. Nothing on this box can add the copy's URL
+        // to somebody's GitHub — so the screen has to hand it over at the
+        // moment the clone finishes.
+        $payload = test()->withHeaders(cloneHeaders())
+            ->getJson("/api/clones/{$record->id}")
+            ->assertOk()
+            ->json('clone.target_webhook');
+
+        $clone = Application::find($record->target_application_id);
+
+        expect($payload)->not->toBeNull();
+        expect($payload['url'])->toContain($clone->webhook_identifier);
+        expect($payload['secret'])->toBe($clone->webhook_secret);
+        expect($payload['provider'])->toBe('github');
+    });
+
+    it('says nothing about a webhook the source never used', function () {
+        fakeCloneServer();
+
+        $record = runClone(gitSource(), 'api-clone.test');
+        $clone = Application::find($record->target_application_id);
+
+        // Minting credentials nobody asked for leaves a live endpoint with no
+        // traffic and no reason to exist.
         expect($clone->webhook_enabled)->toBeFalse();
-        expect($clone->webhook_identifier)->toBeNull();
+
+        $payload = test()->withHeaders(cloneHeaders())
+            ->getJson("/api/clones/{$record->id}")
+            ->assertOk()
+            ->json('clone.target_webhook');
+
+        expect($payload)->toBeNull();
     });
 
     it('still excludes the checkout for a site type that has none', function () {

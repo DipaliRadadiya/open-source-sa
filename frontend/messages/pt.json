@@ -4305,6 +4305,13 @@
               "title": "Reativar proteção por senha",
               "body": "O original está protegido; a cópia está pública."
             }
+          },
+          "webhook": {
+            "title": "Adicione este webhook ao seu repositório",
+            "body": "A cópia tem o seu próprio URL de implementação automática. Os pushes só chegarão depois de adicionar este webhook a par do original.",
+            "secret": "Segredo",
+            "copyUrl": "Copiar URL do webhook",
+            "copySecret": "Copiar segredo do webhook"
           }
         }
       },

@@ -4305,6 +4305,13 @@
               "title": "Réactiver la protection par mot de passe",
               "body": "L'original est protégé ; la copie est publique."
             }
+          },
+          "webhook": {
+            "title": "Ajoutez ce webhook à votre dépôt",
+            "body": "La copie possède sa propre URL de déploiement automatique. Les push ne l'atteindront pas tant que vous n'aurez pas ajouté ce webhook à côté de celui de l'original.",
+            "secret": "Secret",
+            "copyUrl": "Copier l'URL du webhook",
+            "copySecret": "Copier le secret du webhook"
           }
         }
       },

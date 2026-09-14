@@ -4305,6 +4305,13 @@
               "title": "Turn password protection back on",
               "body": "The original is protected; the copy is public."
             }
+          },
+          "webhook": {
+            "title": "Add this webhook to your repository",
+            "body": "The copy has its own deploy-on-push URL. Pushes will not reach it until you add this webhook alongside the original's.",
+            "secret": "Secret",
+            "copyUrl": "Copy webhook URL",
+            "copySecret": "Copy webhook secret"
           }
         }
       },

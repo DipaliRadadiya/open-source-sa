@@ -4305,6 +4305,13 @@
               "title": "Passwortschutz wieder einschalten",
               "body": "Das Original ist geschützt, die Kopie ist öffentlich."
             }
+          },
+          "webhook": {
+            "title": "Fügen Sie diesen Webhook Ihrem Repository hinzu",
+            "body": "Die Kopie hat eine eigene Deploy-on-Push-URL. Pushes erreichen sie erst, wenn Sie diesen Webhook zusätzlich zum ursprünglichen eintragen.",
+            "secret": "Secret",
+            "copyUrl": "Webhook-URL kopieren",
+            "copySecret": "Webhook-Geheimnis kopieren"
           }
         }
       },

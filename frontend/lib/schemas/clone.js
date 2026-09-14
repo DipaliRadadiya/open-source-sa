@@ -34,6 +34,16 @@ export const cloneSchema = z
     source_application_name: z.string().nullish(),
     // Null until the job finishes — this is what the copy's own page hangs off.
     target_application_id: z.number().nullish(),
+    // The copy's own deploy-on-push endpoint, when the source had one. Zod
+    // strips unknown keys, so a field the API sends and the schema omits is a
+    // field the screen can never show.
+    target_webhook: z
+      .object({
+        url: z.string(),
+        secret: z.string().nullish(),
+        provider: z.string().nullish(),
+      })
+      .nullish(),
     name: z.string().nullish(),
     domain: z.string(),
     status: z.string(),

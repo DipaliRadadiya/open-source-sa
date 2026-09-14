@@ -209,6 +209,7 @@ export function CloneApplicationPanel({
             <CloneNextSteps
               applicationId={completedClone.target_application_id}
               sourceProtected={application.basic_auth_enabled}
+              webhook={completedClone.target_webhook}
             />
           </div>
         ) : null}

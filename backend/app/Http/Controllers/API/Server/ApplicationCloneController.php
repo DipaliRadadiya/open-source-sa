@@ -65,8 +65,12 @@ class ApplicationCloneController extends Controller
     /** Poll a clone while it runs. */
     public function show(SiteClone $clone): JsonResponse
     {
+        // Loaded so the resource can report the copy's own deploy-on-push URL
+        // once there is a copy. This is the endpoint the result screen polls,
+        // and `whenLoaded` emits nothing without it — the field would be
+        // permanently absent rather than occasionally null.
         return response()->json([
-            'clone' => CloneResource::make($clone)->resolve(),
+            'clone' => CloneResource::make($clone->load('targetApplication'))->resolve(),
         ]);
     }
 }

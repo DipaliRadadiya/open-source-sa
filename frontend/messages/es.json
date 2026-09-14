@@ -4305,6 +4305,13 @@
               "title": "Volver a activar la protección con contraseña",
               "body": "El original está protegido; la copia es pública."
             }
+          },
+          "webhook": {
+            "title": "Añada este webhook a su repositorio",
+            "body": "La copia tiene su propia URL de despliegue automático. Los envíos no llegarán hasta que añada este webhook junto al del original.",
+            "secret": "Secreto",
+            "copyUrl": "Copiar URL del webhook",
+            "copySecret": "Copiar secreto del webhook"
           }
         }
       },

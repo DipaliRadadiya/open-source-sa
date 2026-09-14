@@ -337,8 +337,8 @@ function Failed({ clone, onAgain }) {
   );
 }
 
-/** The four things a fresh copy does not inherit, each linked to its screen. */
-export function CloneNextSteps({ applicationId, sourceProtected }) {
+/** The things a fresh copy does not inherit, each linked to its screen. */
+export function CloneNextSteps({ applicationId, sourceProtected, webhook = null }) {
   const t = useTranslations("applications.clone.result.next");
 
   const steps = [
@@ -355,7 +355,30 @@ export function CloneNextSteps({ applicationId, sourceProtected }) {
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
       <CardContent className="min-h-0 flex-1 p-0">
-        <ul className="grid h-full auto-rows-fr divide-y">
+        {/* The one step nothing here can do for you.
+            A webhook lives in the repository's settings, and one repository
+            webhook posts to one URL — so the copy's URL has to be added by
+            hand. The panel has already generated it; this is the moment the
+            user learns it exists, rather than whenever they next happen to
+            open the Deployment screen. */}
+        {webhook?.url ? (
+          <div className="space-y-2 border-b bg-warning/5 px-5 py-4">
+            <p className="text-sm font-medium text-warning">{t("webhook.title")}</p>
+            <p className="text-xs text-muted-foreground">{t("webhook.body")}</p>
+            <div className="flex items-center gap-2 rounded-md border bg-background px-2 py-1.5">
+              <code className="min-w-0 flex-1 truncate font-mono text-xs">{webhook.url}</code>
+              <CopyButton value={webhook.url} label={t("webhook.copyUrl")} />
+            </div>
+            {webhook.secret ? (
+              <div className="flex items-center gap-2 rounded-md border bg-background px-2 py-1.5">
+                <span className="shrink-0 text-xs text-muted-foreground">{t("webhook.secret")}</span>
+                <code className="min-w-0 flex-1 truncate font-mono text-xs">{webhook.secret}</code>
+                <CopyButton value={webhook.secret} label={t("webhook.copySecret")} />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        <ul className="grid auto-rows-fr divide-y">
           {steps.map((step) => (
             <li key={step.key}>
               <Link
