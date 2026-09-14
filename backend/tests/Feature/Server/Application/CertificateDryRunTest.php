@@ -225,6 +225,11 @@ it('never reaches certbot when no domain serves the token', function () {
     expect($response->json('dry_run.status'))->toBe('failed');
     expect($response->json('dry_run.stage'))->toBe('reachability');
     expect($response->json('dry_run.domains.0.message'))->toContain('/.well-known/');
+
+    // No summary over the top of the per-domain list. Each name carries its
+    // own fix; "none of your domains are ready" adds no instruction and buries
+    // the ones that do.
+    expect($response->json('dry_run.message'))->toBeNull();
 });
 
 it('reports the CA\'s refusal with the reason, not a bare failure', function () {

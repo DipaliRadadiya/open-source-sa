@@ -35,6 +35,22 @@ export async function issueCertificate(appId, body) {
   return res.data?.certificate;
 }
 
+// Rehearse the issuance: the panel's reachability check, then a real
+// `certbot --dry-run` against Let's Encrypt's staging server. Queued and 202
+// for the same reason issuing is — the second half is a round trip to the CA.
+// Nothing is stored and no certificate is created either way.
+export async function startCertificateDryRun(appId) {
+  const res = await api.post(`/applications/${appId}/certificate/dry-run`);
+  return res.data?.dry_run ?? null;
+}
+
+// Poll target while a dry run is running. `null` when this site has never had
+// one — not an error, just a question nobody has asked yet.
+export async function fetchCertificateDryRun(appId) {
+  const res = await api.get(`/applications/${appId}/certificate/dry-run`);
+  return res.data?.dry_run ?? null;
+}
+
 // Poll target while a certificate is pending/issuing.
 export async function fetchCertificate(appId) {
   const res = await api.get(`/applications/${appId}/certificate`);

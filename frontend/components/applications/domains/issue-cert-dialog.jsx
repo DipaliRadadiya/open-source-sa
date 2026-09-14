@@ -1,8 +1,12 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
-import { issueCertificate } from "@/lib/api/domains";
+import { Check, FlaskConical, Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
+import {
+  issueCertificate,
+  startCertificateDryRun,
+  fetchCertificateDryRun,
+} from "@/lib/api/domains";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,6 +24,11 @@ import {
 // Only used when the server sends no catalog at all — an older backend. The
 // server decides what a site can have; this is the last-resort shape, not a
 // preference.
+// Same cadence as the SSL card polls an issuance. The first stage answers in
+// seconds; the certbot stage is a round trip to the CA and takes a good deal
+// longer, which is why the stage is named while it runs.
+const DRY_RUN_POLL_MS = 3000;
+
 const FALLBACK_TYPES = [
   { type: "letsencrypt", available: true, recommended: true },
   { type: "self_signed", available: true },
@@ -67,19 +76,65 @@ export function IssueCertDialog({
   // Per-domain reachability refusals (422 errors.domain). Their presence is what
   // unlocks the "issue anyway" (force) path — never offered up front.
   const [refusals, setRefusals] = useState([]);
+  // The rehearsal: reachability, then certbot against Let's Encrypt staging.
+  // Null until asked for — a site that has never been checked is a normal
+  // state, not a pending one.
+  const [dryRun, setDryRun] = useState(null);
+  const [starting, setStarting] = useState(false);
 
   const selected = types.find((entry) => entry.type === type);
+  const dryRunning = starting || dryRun?.status === "running";
 
   function reset() {
     setType(defaultType);
     setPem({ certificate: "", private_key: "", chain: "" });
     setRefusals([]);
+    setDryRun(null);
+    setStarting(false);
     setSubmitting(false);
   }
 
   function handleOpenChange(next) {
     if (!next) reset();
     onOpenChange?.(next);
+  }
+
+  // Poll only while something is actually running. The dry run's own state is
+  // the stop condition, so a job that dies still ends the spinner — the
+  // backend writes a verdict from the job's `failed()` hook precisely so this
+  // loop can never spin forever. Closing the dialog tears the effect down,
+  // `open` being a dependency, and the `live` flag drops a reply that lands
+  // after that.
+  useEffect(() => {
+    if (!open || dryRun?.status !== "running") return undefined;
+    let live = true;
+    const timer = setInterval(async () => {
+      try {
+        const next = await fetchCertificateDryRun(appId);
+        if (live) setDryRun(next);
+      } catch {
+        // transient — keep polling
+      }
+    }, DRY_RUN_POLL_MS);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [open, dryRun?.status, appId]);
+
+  async function runDryRun() {
+    setStarting(true);
+    // Last run's verdict is cleared first. Leaving it on screen beside a fresh
+    // spinner shows a stale answer next to the question that supersedes it.
+    setDryRun(null);
+    setRefusals([]);
+    try {
+      setDryRun(await startCertificateDryRun(appId));
+    } catch (error) {
+      toast.error(apiMessage(error, t("ssl.dryRunStartFailed")));
+    } finally {
+      setStarting(false);
+    }
   }
 
   async function submit(force = false) {
@@ -107,7 +162,14 @@ export function IssueCertDialog({
     }
   }
 
-  const canForce = type === "letsencrypt" && refusals.length > 0;
+  // Force skips the reachability check, so it is offered exactly when that
+  // check is what said no — whether the user found out by trying to issue or
+  // by rehearsing first. A dry run that got as far as the CA is not a
+  // reachability problem, and forcing past it would fix nothing.
+  const dryRunBlockedOnReach =
+    dryRun?.status === "failed" && dryRun?.stage === "reachability";
+  const canForce =
+    type === "letsencrypt" && (refusals.length > 0 || dryRunBlockedOnReach);
 
   // Reached from "Reissue" on a site that is already served over HTTPS. The
   // dialog said "Issue a certificate — secure this site over HTTPS" either way,
@@ -153,7 +215,7 @@ export function IssueCertDialog({
           modals in the same flow were spacing their labels 6px and 8px apart. */}
       <div className="grid gap-2">
         <Label htmlFor={`${fieldId}-method`}>{t("ssl.method")}</Label>
-        <Select value={type} onValueChange={(v) => { setType(v); setRefusals([]); }}>
+        <Select value={type} onValueChange={(v) => { setType(v); setRefusals([]); setDryRun(null); }}>
           {/* shadcn's SelectTrigger is `w-fit` by default, so a form field
               without this shrinks to its current option — and the control
               visibly changes width when the selection does. Every other form
@@ -208,6 +270,104 @@ export function IssueCertDialog({
       ) : (
         <p className="text-xs text-muted-foreground">{t(`ssl.methodHint_${type}`)}</p>
       )}
+
+      {/* The rehearsal. Sits under the method hint rather than in the footer:
+          it belongs to Let's Encrypt specifically, it is not an alternative to
+          Issue, and a fourth button beside Cancel / Issue anyway / Issue would
+          have made the primary action one of four equals. */}
+      {type === "letsencrypt" ? (
+        <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="min-w-40 flex-1 text-xs text-muted-foreground">
+              {t("ssl.dryRunHint")}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              disabled={dryRunning || submitting}
+              onClick={runDryRun}
+            >
+              {dryRunning ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <FlaskConical className="size-4" />
+              )}
+              {t("ssl.dryRun")}
+            </Button>
+          </div>
+
+          {/* Named while it runs, because the two stages cost very different
+              amounts of time and a user watching a spinner for forty seconds
+              deserves to know it is waiting on the CA rather than stuck. */}
+          {dryRunning ? (
+            <p className="text-sm text-muted-foreground">
+              {t(`ssl.dryRunStage_${dryRun?.stage ?? "reachability"}`)}
+            </p>
+          ) : null}
+
+          {dryRun && dryRun.status !== "running" ? (
+            <div className="space-y-2">
+              <p
+                className={
+                  dryRun.status === "passed"
+                    ? "flex items-center gap-2 text-sm font-medium text-success"
+                    : "flex items-center gap-2 text-sm font-medium text-destructive"
+                }
+              >
+                {dryRun.status === "passed" ? (
+                  <Check className="size-4" />
+                ) : (
+                  <TriangleAlert className="size-4" />
+                )}
+                {t(dryRun.status === "passed" ? "ssl.dryRunPassed" : "ssl.dryRunFailed")}
+              </p>
+
+              {/* Every name, passing ones included. "Two of your three domains
+                  are ready" is the useful sentence, and a list of only the
+                  failures cannot say it. */}
+              {dryRun.domains?.length ? (
+                <ul className="space-y-1.5">
+                  {dryRun.domains.map((entry) => (
+                    <li key={entry.domain} className="flex items-start gap-2 text-sm">
+                      {entry.ok ? (
+                        <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                      ) : (
+                        <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+                      )}
+                      <span className={entry.ok ? "text-muted-foreground" : "text-destructive"}>
+                        {entry.message}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {/* Only ever set when the CA stage is what failed. The list above
+                  already explains a reachability failure, and repeating a
+                  summary over it would say "something is wrong" twice. */}
+              {dryRun.message ? (
+                <p className="text-sm text-destructive">{dryRun.message}</p>
+              ) : null}
+              {dryRun.reference ? (
+                <p className="font-mono text-xs text-muted-foreground">
+                  {t("ssl.reference", { reference: dryRun.reference })}
+                </p>
+              ) : null}
+
+              {/* The one case where a failed check is not the last word: a
+                  NAT'd box cannot reach its own public address, so the token
+                  fetch fails while the real challenge, arriving from outside,
+                  would succeed. "Issue anyway" appears in the footer, so it is
+                  explained here. */}
+              {dryRunBlockedOnReach ? (
+                <p className="text-xs text-muted-foreground">{t("ssl.forceHint")}</p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {type === "custom" ? (
         <div className="space-y-3">

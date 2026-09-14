@@ -83,7 +83,11 @@ class DryRunCertificate implements ShouldQueue
                 'status' => 'failed',
                 'stage' => 'reachability',
                 'domains' => $results,
-                'reason' => 'no_certifiable_domains',
+                // No summary reason. Every name above already carries the
+                // sentence for its own failure, and each is a different fix;
+                // a "none of your domains are ready" line over the top of that
+                // adds no instruction and buries the ones that do.
+                'reason' => null,
             ]);
 
             return;
