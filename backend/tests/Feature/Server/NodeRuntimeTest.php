@@ -6,10 +6,12 @@ use App\Models\NpmRelease;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Runtime\NpmCatalog;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Node\NodeOverview;
 use App\Services\Server\Runtimes\NodeRuntime;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
@@ -292,14 +294,18 @@ it('removes a version nothing depends on', function () {
 });
 
 it('updates npm with that version\'s own npm', function () {
+    // A release this Node version can actually run: 20.11.0 does not satisfy
+    // npm 11's `^20.17.0 || >=22.9.0`, which is the whole point of pinning.
+    NpmRelease::query()->create(['major' => '10', 'version' => '10.9.9', 'node_range' => '^18.17.0 || >=20.5.0']);
     $runs = fakeNode(installed: ['20.11.0']);
 
     nodeCall('POST', '/api/node/versions/20.11.0/npm')->assertOk();
 
     // A global npm belongs to whichever version is default, and would update
-    // the wrong one.
+    // the wrong one. The spec is pinned rather than `@latest` for the reason
+    // NodeRuntime::updateNpm() gives.
     expect(collect($runs)->pluck('command'))
-        ->toContain(['/opt/fnm/node-versions/v20.11.0/installation/bin/npm', 'install', '-g', 'npm@latest']);
+        ->toContain(['/opt/fnm/node-versions/v20.11.0/installation/bin/npm', 'install', '-g', 'npm@10.9.9']);
 });
 
 it('denies every mutation to a view-only user', function () {
@@ -374,9 +380,9 @@ it('gives npm a PATH with node on it when updating it', function () {
     // this reason; the update path was written without it.
     $runs = fakeNode(installed: ['v24.19.0'], default: 'v24.19.0');
 
-    app(NodeRuntime::class)->updateNpm('24.19.0');
+    app(NodeRuntime::class)->updateNpm('24.19.0', '12.0.2');
 
-    $update = collect($runs)->first(fn ($run) => in_array('npm@latest', $run['command'], true));
+    $update = collect($runs)->first(fn ($run) => in_array('npm@12.0.2', $run['command'], true));
 
     expect($update)->not->toBeNull();
 
@@ -398,7 +404,7 @@ it('installs the newest npm this node version can run, not npm@latest', function
 
     $runs = fakeNode(installed: ['v20.19.0'], default: 'v20.19.0');
 
-    app(NodeRuntime::class)->updateNpm('20.19.0');
+    app(NodeRuntime::class)->updateNpm('20.19.0', app(NpmCatalog::class)->resolveTarget('20.19.0'));
 
     $specs = collect($runs)
         ->map(fn ($run) => collect($run['command'])->first(fn ($arg) => str_starts_with((string) $arg, 'npm@')))
@@ -408,15 +414,40 @@ it('installs the newest npm this node version can run, not npm@latest', function
         ->and($specs->all())->not->toContain('npm@latest');
 });
 
-it('falls back to npm@latest when it has no catalog to consult', function () {
-    // A box with no egress has never refreshed the catalog. Refusing to
-    // update would be a new failure on a machine that worked before; this is
-    // exactly the behaviour that shipped before the catalog existed.
-    $runs = fakeNode(installed: ['v24.19.0'], default: 'v24.19.0');
+it('refuses to update npm when it cannot tell which npm to install', function () {
+    // This used to fall back to `npm@latest`, on the grounds that a box with
+    // no egress was then no worse off than before the catalog existed. But an
+    // empty catalog is not a rare offline box -- it is every server whose
+    // catalog has never been filled -- and on a Node 20 box `@latest` installs
+    // an npm that cannot start. Not knowing what to install is now a refusal.
+    Http::fake(['registry.npmjs.org/*' => Http::response(status: 503)]);
 
-    app(NodeRuntime::class)->updateNpm('24.19.0');
+    $runs = fakeNode(installed: ['20.19.0'], default: '20.19.0');
 
-    expect(collect($runs)->contains(fn ($run) => in_array('npm@latest', $run['command'], true)))->toBeTrue();
+    nodeCall('POST', '/api/node/versions/20.19.0/npm')
+        ->assertUnprocessable()
+        ->assertJsonPath('message', __('errors/node.npm_target_unknown'));
+
+    // The guard that matters: nothing was installed. A refusal that still ran
+    // the install would be the old behaviour with a worse status code.
+    expect(collect($runs)->contains(fn ($run) => in_array('install', $run['command'], true)))->toBeFalse();
+});
+
+it('refreshes the catalog before giving up on it', function () {
+    // The catalog is empty here and the registry is reachable, which is the
+    // ordinary state of a server that has never run the scheduled refresh.
+    // Fetching once beats refusing: the answer is one request away.
+    Http::fake(['registry.npmjs.org/*' => Http::response([
+        'versions' => [
+            '11.19.1' => ['version' => '11.19.1', 'engines' => ['node' => '^20.17.0 || >=22.9.0']],
+        ],
+    ])]);
+
+    $runs = fakeNode(installed: ['20.19.0'], default: '20.19.0');
+
+    nodeCall('POST', '/api/node/versions/20.19.0/npm')->assertOk();
+
+    expect(collect($runs)->pluck('command')->flatten())->toContain('npm@11.19.1');
 });
 
 it('sends the newest npm each version can run beside the one it has', function () {

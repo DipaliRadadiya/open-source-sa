@@ -290,20 +290,27 @@ class NodeRuntime implements Runtime
      * global one, which would belong to whichever version happens to be
      * default and update the wrong thing.
      *
-     * Installs the newest npm *this* Node version can run, not `npm@latest`.
-     * npm declares `engines.node` and its newest release routinely excludes
-     * Node lines the panel still installs — npm 12 needs `^22.22.2 ||
-     * ^24.15.0 || >=26.0.0`, so `@latest` on a Node 20 box replaces a working
-     * npm with one that cannot start. With no catalog on record it falls back
-     * to `@latest`, which is exactly the behaviour that shipped before: a box
-     * with no egress is no worse off than it was.
+     * Installs the newest npm *this* Node version can run, which the caller
+     * resolves and passes in. npm declares `engines.node` and its newest
+     * release routinely excludes Node lines the panel still installs — npm 12
+     * needs `^22.22.2 || ^24.15.0 || >=26.0.0`, so `@latest` on a Node 20 box
+     * replaces a working npm with one that cannot start.
+     *
+     * The version is a **required argument, and `npm@latest` is gone**. This
+     * used to fall back to it whenever the catalog could not answer, on the
+     * grounds that a box with no egress was then no worse off than before the
+     * catalog existed — but an empty catalog is not a rare offline box, it is
+     * the ordinary state of every server whose catalog has never been filled,
+     * and on those the fallback is the whole bug: the button that exists to
+     * keep npm current was the one breaking it. Resolving the target is now
+     * {@see NpmCatalog::resolveTarget()}'s job, and not knowing is that
+     * caller's cue to refuse rather than this one's cue to guess.
      *
      * @throws SettingOperationException
      */
-    public function updateNpm(string $version): void
+    public function updateNpm(string $version, string $target): void
     {
-        $target = $this->npm->latestFor($version);
-        $spec = $target !== null ? "npm@{$target}" : 'npm@latest';
+        $spec = "npm@{$target}";
 
         // PATH pinned for the same reason {@see npmVersion()} pins it, and it
         // was missing here: npm is a Node script (`#!/usr/bin/env node`), so it

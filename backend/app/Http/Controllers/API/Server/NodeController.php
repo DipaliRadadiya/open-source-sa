@@ -117,7 +117,17 @@ class NodeController extends Controller
     {
         abort_unless($node->installed($version), 404);
 
-        $node->updateNpm($version);
+        // Refuse rather than install a guess. The catalog is what knows which
+        // npm this Node version can actually run; when it cannot say — no
+        // egress, never refreshed — installing `npm@latest` anyway is how a
+        // Node 20 box ends up with an npm that will not start.
+        $target = $npm->resolveTarget($version);
+
+        if ($target === null) {
+            return response()->json(['message' => __('errors/node.npm_target_unknown')], 422);
+        }
+
+        $node->updateNpm($version, $target);
         $log->log('node.npm_updated', null, ['version' => $version]);
 
         $installed = $node->npmVersion($version);

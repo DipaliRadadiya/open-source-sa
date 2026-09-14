@@ -5138,6 +5138,8 @@ The catalog is refreshed daily by `runtimes:refresh-npm`; the API never calls th
 
 Update npm inside a specific Node version. Installs the newest npm *that* version can run — never `npm@latest`, which on an older Node replaces a working npm with one that cannot start.
 
+When the npm release catalogue cannot answer (it has never been refreshed and the registry is unreachable), the request is **refused with `422` and `errors/node.npm_target_unknown`** rather than installing a guess. The catalogue is refreshed on demand first, so a server with internet access resolves this by itself.
+
 **Response `200`:** `{"message": "npm updated to 11.19.1.", "npm_version": "11.19.1", "npm_latest": "11.19.1", "npm_update_available": false}`
 
 The last two are the same fields the list sends, so the row can be updated from this response instead of refetching.

@@ -80,6 +80,35 @@ class NpmCatalog
     }
 
     /**
+     * The npm to install on this Node version, refreshing the catalog first if
+     * it cannot answer from what is stored.
+     *
+     * Reads elsewhere never touch the network, deliberately — a page must not
+     * hang on a registry it cannot reach. This is the one caller that does,
+     * because it is about to *install something*: an empty catalog is the
+     * normal state of a server whose catalog has never been filled, and the
+     * alternative to fetching is guessing.
+     *
+     * Null is a real answer — "we do not know what to install" — and its
+     * caller is expected to refuse rather than to pick something. That is the
+     * whole point: `npm install -g npm@latest` on a Node 20 box installs an
+     * npm that cannot start, which turns the button meant to keep npm current
+     * into the one that breaks it.
+     */
+    public function resolveTarget(string $nodeVersion): ?string
+    {
+        $target = $this->latestFor($nodeVersion);
+
+        if ($target !== null) {
+            return $target;
+        }
+
+        $this->refresh();
+
+        return $this->latestFor($nodeVersion);
+    }
+
+    /**
      * Fetch the registry and replace what is stored. Called by a scheduled
      * command, never by a request.
      *
