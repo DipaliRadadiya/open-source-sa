@@ -29,7 +29,7 @@ export function EngineLogo({ engine, className, size = "h-5 w-auto max-w-20" }) 
         src={logo.light}
         alt=""
         aria-hidden
-        className={cn("shrink-0 object-contain dark:hidden", size, className)}
+        className={cn("shrink-0 object-contain dark:hidden", logo.size ?? size, className)}
       />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

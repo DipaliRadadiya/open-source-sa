@@ -30,20 +30,38 @@ test("every engine has BOTH variants, never just one", () => {
 
 test("an engine we have no artwork for resolves to null, not a guessed path", () => {
   /*
-   * PostgreSQL is the live case: the panel can run it and no logo was
-   * supplied. Null is what gets it the generic database glyph instead of a
-   * broken image.
+   * `pgsql` is PostgreSQL's DRIVER, not its engine name — the engine is
+   * `postgresql` (config/server.php). Mapping the driver too would look
+   * harmless and quietly hide the day the API starts sending something this
+   * file has never heard of, which is exactly when the generic glyph is the
+   * right answer.
    */
-  assert.equal(engineLogo("postgresql"), null);
   assert.equal(engineLogo("pgsql"), null);
+  assert.equal(engineLogo("cockroachdb"), null);
   assert.equal(engineLogo(""), null);
   assert.equal(engineLogo(null), null);
   assert.equal(engineLogo(undefined), null);
 });
 
+test("PostgreSQL uses one file for both themes, on purpose", () => {
+  /*
+   * The other three are wordmarks set in near-black and need a white twin.
+   * PostgreSQL's official mark is the elephant alone, mid-blue, which reads on
+   * a white card and a dark one alike — 86% of its ink measured lighter than
+   * the dark surface. Identical paths here is the decision, not a copy-paste
+   * slip, and the both-variants test below would otherwise look like it had
+   * been satisfied by accident.
+   */
+  const pg = engineLogo("postgresql");
+  assert.equal(pg.light, "/db-engines/postgresql.svg");
+  assert.equal(pg.dark, pg.light);
+  assert.ok(pg.size, "the elephant is square and needs its own height");
+});
+
 test("the engine name is matched however the API cases it", () => {
   assert.equal(engineLogo("MySQL").light, "/db-engines/mysql.svg");
   assert.equal(engineLogo("MariaDB").dark, "/db-engines/mariadb-white.png");
+  assert.equal(engineLogo("PostgreSQL").light, "/db-engines/postgresql.svg");
 });
 
 test("no engine logo file is left unused", () => {

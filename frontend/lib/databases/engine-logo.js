@@ -11,9 +11,9 @@
  * and never noticed the navy word. Looking at it on the dark card is what
  * showed the problem.
  *
- * Keyed on the engine identifier the API sends (`mysql`, `mariadb`,
- * `mongodb`). PostgreSQL is deliberately absent: no artwork was supplied for
- * it, and `null` gets the generic database glyph rather than a wrong logo.
+ * Keyed on the engine identifier the API sends. An engine with no entry
+ * resolves to null and gets the generic database glyph, rather than a guessed
+ * path that renders as a broken image.
  */
 /*
  * `darkSize` exists because the supplied dark variants are not always the same
@@ -26,6 +26,21 @@ const ENGINE_LOGOS = {
   mysql: { light: "mysql.svg", dark: "mysql-white.svg", darkSize: "h-8 w-auto max-w-12" },
   mariadb: { light: "mariadb.svg", dark: "mariadb-white.png" },
   mongodb: { light: "mongodb.png", dark: "mongodb-white.png" },
+  /*
+   * The same file on both themes, and that is not an oversight. The other
+   * three are wordmarks whose lettering is near-black; PostgreSQL's official
+   * mark is the elephant alone, in a mid-blue that reads on white and on the
+   * dark card alike — measured at 86% of its ink lighter than the dark
+   * surface. A white variant would be a redraw nobody published.
+   *
+   * `size` rather than `darkSize`: it is square where the others are wide, so
+   * at the height that suits a wordmark it would be a 20px thumbnail.
+   */
+  postgresql: {
+    light: "postgresql.svg",
+    dark: "postgresql.svg",
+    size: "h-8 w-auto max-w-12",
+  },
 };
 
 /** `{ light, dark }` public paths for an engine, or null when it has none. */
@@ -35,7 +50,8 @@ export function engineLogo(engine) {
   return {
     light: `/db-engines/${pair.light}`,
     dark: `/db-engines/${pair.dark}`,
-    darkSize: pair.darkSize ?? null,
+    size: pair.size ?? null,
+    darkSize: pair.darkSize ?? pair.size ?? null,
   };
 }
 
