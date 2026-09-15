@@ -30,11 +30,19 @@ test("a type we have no logo for falls back rather than guessing a path", () => 
   assert.equal(siteTypeLogo(undefined), null);
 });
 
-test("the two names that differ from their file are mapped, not transformed", () => {
+test("the names that differ from their file are mapped, not transformed", () => {
   assert.equal(siteTypeLogo("craftcms"), "/site-types/craft.svg");
-  assert.equal(siteTypeLogo("static"), "/site-types/selfhosted.png");
   assert.equal(siteTypeLogo("uptimekuma"), "/site-types/uptime-kuma.svg");
   assert.equal(siteTypeLogo("nodered"), "/site-types/node-red.svg");
+});
+
+test("a static site gets HTML5, not a product logo", () => {
+  /*
+   * It was pointed at the supplied set's "Reseller Panel" artwork — a
+   * different product entirely, sitting on the row for plain HTML. A static
+   * site has no brand, so it shows the thing it is made of.
+   */
+  assert.equal(siteTypeLogo("static"), "/site-types/html5.svg");
 });
 
 test("no logo file is left unused", () => {

@@ -29,7 +29,11 @@ const LOGOS = {
   nodebb: "nodebb.svg",
   git: "git.svg",
   php: "php.svg",
-  static: "selfhosted.png",
+  // Not a brand — a static site is plain HTML, CSS and JavaScript, so it gets
+  // the thing it IS rather than a logo. The file that was here first came from
+  // the supplied set's "Reseller Panel" entry, which is a different product
+  // and meant nothing on this row.
+  static: "html5.svg",
 };
 
 /** The public path for a type's logo, or null when it has none. */
