@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { PieChart } from "lucide-react";
