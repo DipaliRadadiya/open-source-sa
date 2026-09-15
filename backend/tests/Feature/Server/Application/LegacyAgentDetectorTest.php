@@ -17,21 +17,25 @@ function agentFake(array $options = []): void
     $listening = $options['listening'] ?? false;
     $unit = $options['unit'] ?? null;
     $binary = $options['binary'] ?? null;
+    $pid = 11684;
 
-    Process::fake(function ($p) use ($listening, $unit, $binary) {
+    Process::fake(function ($p) use ($listening, $unit, $binary, $pid) {
         $args = ($p->command[0] ?? '') === 'sudo' ? array_slice((array) $p->command, 2) : (array) $p->command;
         $line = implode(' ', $args);
 
+        // Real `ss -ltnpH` output shape, copied from a live v7 box.
         if (($args[0] ?? '') === 'ss') {
             return Process::result(output: $listening
-                ? "LISTEN 0 4096 *:43210 *:*\nLISTEN 0 511 0.0.0.0:80 0.0.0.0:*\n"
+                ? "LISTEN 0 4096 *:43210 *:* users:((\"sureshcloud-age\",pid={$pid},fd=5))\n"
+                    ."LISTEN 0 511 0.0.0.0:80 0.0.0.0:*\n"
                 : "LISTEN 0 511 0.0.0.0:80 0.0.0.0:*\n");
         }
 
-        if (str_contains($line, 'list-units')) {
-            return Process::result(output: $unit === null
-                ? "nginx.service loaded active running A high performance web server\n"
-                : "nginx.service loaded active running A high performance web server\n{$unit} loaded active running Legacy agent\n");
+        // systemd's own answer to "which unit owns this PID".
+        if (($args[0] ?? '') === 'cat' && str_contains($line, '/proc/')) {
+            return $unit === null
+                ? Process::result(exitCode: 1, output: '')
+                : Process::result(output: "0::/system.slice/{$unit}\n");
         }
 
         if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-f') {
@@ -42,23 +46,29 @@ function agentFake(array $options = []): void
     });
 }
 
-it('finds the agent by its port, which every build shares', function () {
-    // The unit name comes from a build-time `-X main.ServiceName=…`, so it
-    // differs on white-labelled builds. The listener is hardcoded to 43210 in
-    // the agent's own main.go and is the same everywhere.
-    agentFake(['listening' => true]);
-
-    expect(app(LegacyAgentDetector::class)->running())->toBeTrue();
-});
-
-it('finds it by unit when the name matches, port or not', function () {
-    agentFake(['unit' => 'serveravatar.service']);
+it('finds a white-labelled agent no name list would have caught', function () {
+    // A real v7 box runs its agent as `sureshcloud.service`. The unit name is
+    // a build-time `-X main.ServiceName=…`, so matching names cannot work; the
+    // port is hardcoded in the agent's own source and the PID names its unit.
+    agentFake(['listening' => true, 'unit' => 'sureshcloud.service']);
 
     $detected = app(LegacyAgentDetector::class)->describe();
 
     expect($detected['running'])->toBeTrue()
-        ->and($detected['unit'])->toBe('serveravatar.service')
-        ->and($detected['port'])->toBeFalse();
+        ->and($detected['port'])->toBeTrue()
+        ->and($detected['unit'])->toBe('sureshcloud.service');
+});
+
+it('still reports running when the unit cannot be resolved', function () {
+    // Something holds the port but /proc says nothing useful — a container, a
+    // stray binary. Running is still the honest answer; there is just no unit
+    // to stop.
+    agentFake(['listening' => true, 'unit' => null]);
+
+    $detected = app(LegacyAgentDetector::class)->describe();
+
+    expect($detected['running'])->toBeTrue()
+        ->and($detected['unit'])->toBeNull();
 });
 
 it('says nothing is running on a server the old panel never touched', function () {
@@ -95,17 +105,12 @@ it('does not mistake another service on another port for the agent', function ()
 });
 
 it('never identifies PM2\'s own boot unit as the agent', function () {
-    // `pm2 startup` creates `pm2-<user>.service`, which runs `pm2 resurrect`
-    // and is the only thing bringing adopted applications back at boot. It is
-    // not part of the old agent and must survive its removal. A caller that
-    // stops whatever this reports would otherwise take out boot persistence
-    // for every adopted application on the server.
-    agentFake(['unit' => 'pm2-appuser.service']);
+    // Should be impossible now that the unit is derived from whatever holds
+    // 43210 — but the guard stays, because a caller stops what this reports and
+    // `pm2-<user>.service` is the boot hook every adopted application needs.
+    agentFake(['listening' => true, 'unit' => 'pm2-appuser.service']);
 
-    $detected = app(LegacyAgentDetector::class)->describe();
-
-    expect($detected['running'])->toBeFalse()
-        ->and($detected['unit'])->toBeNull();
+    expect(app(LegacyAgentDetector::class)->describe()['unit'])->toBeNull();
 });
 
 it('treats an unreadable server as not-detected rather than crashing', function () {

@@ -21,13 +21,16 @@ use App\Services\Server\ServerOps;
  * boot persistence for every adopted application that user owns — discovered at
  * the next reboot, when the sites do not come back.
  *
- * Detected by port before anything else. The agent's HTTPS listener is
- * hardcoded to 43210 in its `main.go`, while its systemd unit name is a
- * build-time variable (`-X main.ServiceName=…`) that differs between builds and
- * white-label deployments — so the port is the one signal that is the same on
- * every server. The other two are corroboration, and are worth reporting
- * because "installed but stopped" and "not installed" call for different
- * advice.
+ * Found by port, and only by port. The agent's HTTPS listener is hardcoded to
+ * 43210 in its `main.go`; its unit name is a build-time variable
+ * (`-X main.ServiceName=…`). An early version matched unit names against a
+ * pattern and a real white-labelled server disproved it immediately — there the
+ * agent is `sureshcloud.service` running `/sureshcloud/sureshcloud-agent`, which
+ * no list of names would have caught.
+ *
+ * So the port finds the process, and the process names its own unit via
+ * `/proc/<pid>/cgroup`. The binary path is still reported, because "installed
+ * but stopped" and "never installed" call for different advice.
  */
 class LegacyAgentDetector
 {
@@ -92,48 +95,77 @@ class LegacyAgentDetector
     }
 
     /**
-     * The name of the agent's unit, if one is active.
+     * The unit that owns the process holding the agent's port.
      *
-     * Matched by pattern rather than an exact name: the unit is named after a
-     * build-time `ServiceName`, so it is `serveravatar` on the vendor's own
-     * builds and something else on a white-labelled one.
+     * Derived, not guessed. The first version matched unit names against a
+     * pattern, and a real white-labelled v7 server proved that wrong within a
+     * minute: its agent runs as `sureshcloud.service`, from
+     * `/sureshcloud/sureshcloud-agent`. The name comes from a build-time
+     * `-X main.ServiceName=…` and can be anything a reseller chose, so no list
+     * of names can be complete — but the listener is hardcoded to 43210 in the
+     * agent's own source, and systemd will say which unit a PID belongs to.
      *
-     * The pattern must never match `pm2-<user>.service`. That unit is PM2's
-     * own, created by `pm2 startup`, and it is the only thing bringing adopted
-     * applications back at boot — it has to survive the old agent's removal. A
-     * caller stopping whatever this reports would otherwise remove boot
-     * persistence for every adopted application on the server. Covered by a
-     * test, because the failure would be invisible until a reboot.
+     * `/proc/<pid>/cgroup` rather than `systemctl status <pid>`: one file read
+     * with a stable format (`0::/system.slice/<unit>`) instead of parsing a
+     * human-facing status page. Verified against both the agent and an
+     * unrelated unit on a live box.
      */
     private function activeUnit(): ?string
     {
+        $pid = $this->listeningPid();
+
+        if ($pid === null) {
+            return null;
+        }
+
         $result = $this->serverOps->run(
-            ['systemctl', 'list-units', '--type=service', '--state=running', '--no-legend', '--plain', '--no-pager'],
-            ['feature' => 'application', 'op' => 'legacy_agent_unit'],
+            ['cat', '/proc/'.$pid.'/cgroup'],
+            ['feature' => 'application', 'op' => 'legacy_agent_unit', 'pid' => $pid],
         );
 
         if ($result->failed()) {
             return null;
         }
 
-        foreach (preg_split('/\R/', $result->output()) ?: [] as $line) {
-            $name = strtok(trim($line), " \t");
+        if (preg_match('#/([^/\s]+\.service)\s*$#m', $result->output(), $matches) !== 1) {
+            return null;
+        }
 
-            if (is_string($name) && $name !== '' && preg_match($this->unitPattern(), $name) === 1) {
-                return $name;
+        $unit = $matches[1];
+
+        // A last guard rather than a way of finding it: whatever owns that
+        // port, it must never be PM2's own boot unit. Stopping `pm2-<user>`
+        // would take out the boot hook every adopted application depends on.
+        return str_starts_with($unit, 'pm2-') ? null : $unit;
+    }
+
+    /** The PID listening on the agent's port, if anything is. */
+    private function listeningPid(): ?int
+    {
+        $result = $this->serverOps->run(
+            ['ss', '-ltnpH'],
+            ['feature' => 'application', 'op' => 'legacy_agent_pid'],
+        );
+
+        if ($result->failed()) {
+            return null;
+        }
+
+        $port = (int) config('server.applications.legacy_agent_port', 43210);
+
+        foreach (preg_split('/\R/', $result->output()) ?: [] as $line) {
+            if (preg_match('/\s\S*:'.$port.'\s/', $line) !== 1) {
+                continue;
+            }
+
+            if (preg_match('/pid=(\d+)/', $line, $matches) === 1) {
+                return (int) $matches[1];
             }
         }
 
         return null;
     }
 
-    /**
-     * The agent binary on disk, whether or not anything is running it.
-     *
-     * "Installed but stopped" is the state adoption wants: it means someone has
-     * already taken the old panel out of the picture, and it is worth saying so
-     * rather than reporting nothing found.
-     */
     private function binary(): ?string
     {
         foreach ((array) config('server.applications.legacy_agent_paths', []) as $path) {
@@ -146,10 +178,5 @@ class LegacyAgentDetector
         }
 
         return null;
-    }
-
-    private function unitPattern(): string
-    {
-        return (string) config('server.applications.legacy_agent_unit_pattern', '/(serveravatar|sa-agent)/i');
     }
 }

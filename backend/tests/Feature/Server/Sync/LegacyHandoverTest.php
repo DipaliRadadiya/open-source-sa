@@ -73,14 +73,19 @@ function handoverFake(array $options = []): array
             return Process::result(output: '');
         }
 
-        if (str_contains($line, 'list-units')) {
+        // The agent is found by whatever holds port 43210, then that PID names
+        // its own unit. Shapes copied from a live v7 box, where the agent runs
+        // as `sureshcloud.service` — a name no pattern would have matched.
+        if (($args[0] ?? '') === 'ss') {
             return Process::result(output: $agentRunning
-                ? "nginx.service loaded active running Web\nserveravatar.service loaded active running Agent\n"
-                : "nginx.service loaded active running Web\n");
+                ? "LISTEN 0 4096 *:43210 *:* users:((\"sureshcloud-age\",pid=11684,fd=5))\n"
+                : "LISTEN 0 511 0.0.0.0:80 0.0.0.0:*\n");
         }
 
-        if (($args[0] ?? '') === 'ss') {
-            return Process::result(output: "LISTEN 0 511 0.0.0.0:80 0.0.0.0:*\n");
+        if (($args[0] ?? '') === 'cat' && str_contains($line, '/proc/')) {
+            return $agentRunning
+                ? Process::result(output: "0::/system.slice/sureshcloud.service\n")
+                : Process::result(exitCode: 1, output: '');
         }
 
         if (str_contains($line, 'is-enabled')) {
@@ -104,9 +109,9 @@ it('stops the old agent without going through the old agent', function () {
 
     $result = app(LegacyHandover::class)->complete();
 
-    expect($result['agent'])->toBe('serveravatar.service')
-        ->and(collect($f['ran'])->contains(fn (string $c) => $c === 'systemctl stop serveravatar.service'))->toBeTrue()
-        ->and(collect($f['ran'])->contains(fn (string $c) => $c === 'systemctl disable serveravatar.service'))->toBeTrue();
+    expect($result['agent'])->toBe('sureshcloud.service')
+        ->and(collect($f['ran'])->contains(fn (string $c) => $c === 'systemctl stop sureshcloud.service'))->toBeTrue()
+        ->and(collect($f['ran'])->contains(fn (string $c) => $c === 'systemctl disable sureshcloud.service'))->toBeTrue();
 
     // Never its own teardown: `pm2 unstartup` and `pm2 kill` would stop every
     // application the user owns. The applications are children of the PM2
@@ -236,7 +241,7 @@ it('is reachable by someone who can manage sync', function () {
     $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->postJson('/api/server/sync/handover')
         ->assertOk()
-        ->assertJsonPath('agent', 'serveravatar.service')
+        ->assertJsonPath('agent', 'sureshcloud.service')
         ->assertJsonPath('users', ['appuser']);
 });
 
