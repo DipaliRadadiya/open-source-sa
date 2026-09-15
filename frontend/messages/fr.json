@@ -5124,7 +5124,6 @@
         "b2": "Backblaze B2",
         "wasabi": "Wasabi",
         "spaces": "DigitalOcean Spaces",
-        "minio": "MinIO ou auto-hébergé",
         "other": "Autre",
         "ftp": "FTP",
         "sftp": "SFTP",

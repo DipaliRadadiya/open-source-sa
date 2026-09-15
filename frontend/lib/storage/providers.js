@@ -43,7 +43,6 @@ export const PRESETS = [
   { value: "b2", provider: "s3", endpointHint: "https://s3.<region>.backblazeb2.com" },
   { value: "wasabi", provider: "s3", endpointHint: "https://s3.<region>.wasabisys.com" },
   { value: "spaces", provider: "s3", endpointHint: "https://<region>.digitaloceanspaces.com" },
-  { value: "minio", provider: "s3", endpointHint: "https://storage.example.com" },
   { value: "other", provider: "s3", endpointHint: "" },
   { value: "ftp", provider: "ftp" },
   { value: "sftp", provider: "sftp" },
@@ -57,8 +56,8 @@ export const PRESETS = [
  * Every provider calls them something different — "API token" at Cloudflare,
  * "Application Key" at Backblaze — so "paste your access key" sends a
  * first-time user hunting for a phrase that is not on the page. Null for the
- * ones with nowhere to send anybody: a self-hosted MinIO has no common
- * console, and an FTP server's password came from whoever set it up.
+ * ones with nowhere to send anybody: "Other" is whatever the reader is
+ * running, and an FTP server's password came from whoever set it up.
  */
 const KEY_DOCS = {
   aws: "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html",

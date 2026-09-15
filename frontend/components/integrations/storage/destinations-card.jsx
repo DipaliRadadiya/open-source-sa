@@ -20,7 +20,7 @@ import { ReplaceCredentialsDialog } from "@/components/integrations/storage/repl
 
 // Named in the empty state so "S3-compatible" stops being jargon. Same keys as
 // the form's provider hints, minus "other" — which tells a newcomer nothing.
-const EMPTY_STATE_PROVIDERS = ["aws", "r2", "b2", "wasabi", "spaces", "minio"];
+const EMPTY_STATE_PROVIDERS = ["aws", "r2", "b2", "wasabi", "spaces"];
 
 /**
  * Where backups are sent.

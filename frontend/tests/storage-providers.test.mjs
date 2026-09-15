@@ -34,7 +34,7 @@ test("the S3 services are presets of one provider, not providers of their own", 
   // The backend has three providers; the picker has nine entries. Collapsing
   // the S3 services into a single "S3-compatible" option would throw away the
   // endpoint examples and key-docs links that make the form fillable.
-  for (const value of ["aws", "r2", "b2", "wasabi", "spaces", "minio", "other"]) {
+  for (const value of ["aws", "r2", "b2", "wasabi", "spaces", "other"]) {
     assert.equal(providerForPreset(value), "s3");
   }
 
@@ -66,7 +66,7 @@ test("AWS needs a region and no endpoint; everything else is the other way round
   assert.equal(isRequired(region, "aws"), true);
   assert.equal(isRequired(endpoint, "aws"), false);
 
-  for (const preset of ["r2", "b2", "wasabi", "spaces", "minio", "other"]) {
+  for (const preset of ["r2", "b2", "wasabi", "spaces", "other"]) {
     assert.equal(isRequired(region, preset), false, `region should be optional for ${preset}`);
     assert.equal(isRequired(endpoint, preset), true, `endpoint should be required for ${preset}`);
   }
@@ -160,9 +160,10 @@ test("key docs exist for the services that have a console, and not for the ones 
     assert.match(keyDocsUrl(preset), /^https:\/\//);
   }
 
-  // A self-hosted MinIO has no common console, and an FTP server's password
-  // came from whoever set it up — a link here would go nowhere useful.
-  for (const preset of ["minio", "other", "ftp", "sftp"]) {
+  // "Other" is whatever the reader happens to be running, and an FTP
+  // server's password came from whoever set it up — a link here would go
+  // nowhere useful.
+  for (const preset of ["other", "ftp", "sftp"]) {
     assert.equal(keyDocsUrl(preset), null);
   }
 });
