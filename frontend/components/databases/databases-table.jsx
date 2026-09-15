@@ -12,6 +12,7 @@ import { useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
 import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
+import { EngineLogo } from "@/components/databases/engine-logo";
 import { FilterX } from "lucide-react";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
@@ -47,9 +48,14 @@ function NameCell({ row }) {
 }
 
 function EngineCell({ row, table }) {
+  const name = table.options.meta.engineName(row.original.engine);
   return (
-    <span className="text-muted-foreground">
-      {table.options.meta.engineName(row.original.engine)}
+    <span className="flex items-center gap-2 text-muted-foreground">
+      {/* The logo carries the brand; the name stays because the column is
+          sortable and searchable on it, and because an engine we have no
+          artwork for — PostgreSQL — would otherwise be a bare glyph. */}
+      <EngineLogo engine={row.original.engine} />
+      <span className="sr-only">{name}</span>
     </span>
   );
 }
