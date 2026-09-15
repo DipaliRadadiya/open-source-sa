@@ -52,6 +52,7 @@ import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { cn } from "@/lib/utils";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { initialDomainMode, ipToLabel, temporaryDomain } from "@/lib/applications/temporary-domain";
+import { siteTitleFrom } from "@/lib/applications/site-title";
 import {
   Collapsible,
   CollapsibleContent,
@@ -1107,6 +1108,47 @@ export function CreateApplicationForm({
     typeNodeVersions,
     typePhpVersions,
   ]);
+
+  /*
+   * Site title, tracking the name until the user has an opinion about it.
+   *
+   * It cannot ride the defaults loop above: that one fills from `field.default`
+   * and `site_title` declares none, because the value is not a constant — it is
+   * derived from another answer on this same form. So it is required, empty,
+   * and asks for something already typed two fields higher up.
+   *
+   * Ownership is tracked here rather than read off `isDirty`, which does not
+   * survive contact with a field that has no declared default. Writing the
+   * first value moves it from `undefined` to a string, and RHF calls a field
+   * that differs from its default dirty whatever `shouldDirty` said — so the
+   * effect marked the field as user-edited on its own opening write and never
+   * ran again. Comparing against the last value WE wrote asks the question we
+   * actually mean: is what is in the box still ours?
+   *
+   * Empty counts as ours. That is what lets the suggestion come back after the
+   * field is unregistered and re-registered by a type switch, and it costs
+   * nothing: `site_title` is `required`, so a deliberately emptied title is a
+   * state the form will not submit anyway.
+   */
+  const suggestedTitle = useRef("");
+  useEffect(() => {
+    // Keyed on the field, not the site type: Mautic declares `site_title` too.
+    const declared = selected?.fields?.some((field) => field.name === "site_title");
+    if (!declared) return;
+
+    const current = form.getValues("site_title") ?? "";
+    if (current && current !== suggestedTitle.current) return;
+
+    const next = siteTitleFrom(name);
+    if (current === next) return;
+    suggestedTitle.current = next;
+    form.setValue("site_title", next, {
+      shouldDirty: false,
+      // Only ever when there is something to validate, so an empty Name cannot
+      // raise "Site title is required" against a box nobody has touched.
+      shouldValidate: Boolean(next),
+    });
+  }, [form, name, selected]);
 
   // A starting point, not a policy: switching package manager fills in the
   // matching install+build commands, but only while build_command is still
