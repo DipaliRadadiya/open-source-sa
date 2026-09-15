@@ -42,6 +42,26 @@ function PopoverAnchor({
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
 }
 
+/**
+ * The little pointer back to the trigger.
+ *
+ * Unstyled on purpose — a menu-shaped popover wants no arrow at all, and the
+ * one place that does want one (the "?" field hint, which has to match the
+ * tooltip it sits beside) needs to colour it to match its own background.
+ * Same rotated-square trick the tooltip uses, so the two cannot drift apart.
+ */
+function PopoverArrow({
+  className,
+  ...props
+}) {
+  return (
+    <PopoverPrimitive.Arrow
+      data-slot="popover-arrow"
+      className={cn("z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]", className)}
+      {...props} />
+  );
+}
+
 function PopoverHeader({
   className,
   ...props
@@ -81,6 +101,7 @@ function PopoverDescription({
 export {
   Popover,
   PopoverAnchor,
+  PopoverArrow,
   PopoverContent,
   PopoverDescription,
   PopoverHeader,

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 /**
  * An explanation that opens on hover with a mouse and on tap with a finger.
@@ -12,7 +12,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
  * added back here, gated on the device actually having a hover-capable pointer,
  * so a tap on a phone still opens it and a stray touch on a hybrid device does
  * not open it twice.
+ *
+ * It is dressed as a tooltip because that is what it is. The mechanism had to
+ * change for touch; the appearance did not, and letting it keep the popover's
+ * white card put two different-looking panels on one screen doing the same job
+ * — a disabled button explaining itself in dark, a field explaining itself in
+ * white. The panel has ~120 tooltips and four of these, so this is the one
+ * that moves.
  */
+const TOOLTIP_SKIN =
+  "w-auto max-w-xs gap-0 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-none ring-0";
 export function InfoHint({ label, children, className }) {
   const [open, setOpen] = useState(false);
   // Cancelled when the pointer lands on the panel, so crossing the gap between
@@ -58,7 +67,7 @@ export function InfoHint({ label, children, className }) {
         <Info className="size-3.5" />
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto max-w-xs p-3 text-xs"
+        className={TOOLTIP_SKIN}
         // Without this the panel is unreadable with a mouse: it would close the
         // moment the pointer left the icon to reach it.
         onMouseEnter={openOnHover}
@@ -72,6 +81,9 @@ export function InfoHint({ label, children, className }) {
         onCloseAutoFocus={(event) => event.preventDefault()}
       >
         {children}
+        {/* Coloured to the panel, not to a token of its own — `bg-popover`
+            here would leave a white pip on a dark panel. */}
+        <PopoverArrow className="bg-foreground fill-foreground" />
       </PopoverContent>
     </Popover>
   );
