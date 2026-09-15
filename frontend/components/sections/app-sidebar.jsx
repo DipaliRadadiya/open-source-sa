@@ -166,7 +166,7 @@ export function AppSidebar({ items }) {
                   prefetch={false}
                   className="min-w-0"
                 >
-                  <SiteTypeLogo name={application.site_type} size="size-6" className="mt-0.5" />
+                  <SiteTypeLogo name={application.site_type} size="h-5 w-auto max-w-9" className="mt-0.5" />
                   <span className="min-w-0 leading-tight">
                     <span className="block truncate font-semibold" title={application.name}>{application.name}</span>
                     <span className="mt-1 block truncate text-xs text-muted-foreground">

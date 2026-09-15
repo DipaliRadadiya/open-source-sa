@@ -21,12 +21,19 @@ import { siteTypeLogo } from "@/lib/applications/site-type-logo";
  * grey glyph floating in a row has nothing to hold it.
  */
 /*
- * size-10 by default, matching the create picker. At size-8 a wide mark —
- * Moodle's wordmark is 80×21, Nextcloud's 256×128 — contained down to about
- * ten pixels tall and read as a smudge. The list rows are 65px, so the larger
- * box costs no height.
+ * Constrained by HEIGHT, not by a square box.
+ *
+ * A square box makes the two shapes disagree: Akaunting and Craft are square,
+ * so they fill all of it and set the row's floor, while Moodle's 80×21
+ * wordmark uses a quarter of the same box and reads as a smudge. One is too
+ * big and the other too small at the identical setting.
+ *
+ * Fixing the height and letting the width follow gives every logo the same
+ * optical weight — the wide ones get wider rather than shorter — and the tile
+ * can no longer be what makes a row tall, because 28px is under the two lines
+ * of text beside it.
  */
-export function SiteTypeLogo({ name, className, size = "size-10" }) {
+export function SiteTypeLogo({ name, className, size = "h-7 w-auto max-w-12" }) {
   const logo = siteTypeLogo(name);
 
   if (logo) {
@@ -47,8 +54,7 @@ export function SiteTypeLogo({ name, className, size = "size-10" }) {
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary",
-        size,
+        "flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary",
         className,
       )}
     >
