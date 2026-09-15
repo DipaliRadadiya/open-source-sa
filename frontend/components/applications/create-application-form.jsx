@@ -53,6 +53,7 @@ import { cn } from "@/lib/utils";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { initialDomainMode, ipToLabel, temporaryDomain } from "@/lib/applications/temporary-domain";
 import { TITLE_FIELDS, siteTitleFrom } from "@/lib/applications/site-title";
+import { declaredDefault, toggleValue } from "@/lib/applications/field-default";
 import {
   Collapsible,
   CollapsibleContent,
@@ -113,20 +114,6 @@ function fieldLabel(config) {
   const words = source.replace(/[._]+/g, " ").trim();
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : label;
 }
-
-/**
- * A toggle's value as a real boolean.
- *
- * The backend declares defaults as JSON, so a toggle can arrive as `false`, as
- * the string `"false"`, or as `0`. Plain `Boolean()` is wrong for two of those —
- * `Boolean("false")` is `true`, which drew the switch ON while the field still
- * held a string the API rejects with "must be true or false".
- */
-function toggleValue(value) {
-  if (typeof value === "string") return !["", "0", "false"].includes(value.trim().toLowerCase());
-  return Boolean(value);
-}
-
 
 function SectionHeading({ number, title, description, headingId }) {
   return (
@@ -381,7 +368,7 @@ function ConfigField({
       return true;
     });
   }, [config.options, runtimeVersions]);
-  const runtimeDefault = isRuntime ? preselectOption(options) : undefined;
+  const runtimeDefault = isRuntime ? preselectOption(options) : declaredDefault(config);
   // Timezones: flatten the grouped API response into a flat option list.
   const timezoneChoices = useMemo(
     () => (isTimezone ? timezoneOptions(timezones) : []),
@@ -1097,14 +1084,10 @@ export function CreateApplicationForm({
       // Fill when empty; re-default when the type changed and this value came
       // from the old type rather than from the person filling the form.
       if (filled && !(typeChanged && !edited)) continue;
-      // Keep the declared type. Stringifying a toggle's default turned `false`
-      // into `"false"` — a value the switch reads as ON and the API rejects.
-      const value =
-        field.type === "toggle"
-          ? toggleValue(field.default)
-          : field.type === "number"
-            ? Number(field.default)
-            : String(field.default);
+      // Same helper the field's Controller uses for its first render — two
+      // copies of this coercion is how they start disagreeing about whether a
+      // default is `8` or `"8"`.
+      const value = declaredDefault(field);
       form.setValue(field.name, value, {
         shouldDirty: false,
         shouldValidate: true,
