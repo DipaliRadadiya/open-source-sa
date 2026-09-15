@@ -2009,6 +2009,25 @@
       "yaml": "Чтение и запись файлов YAML",
       "zip": "Создание и распаковка архивов .zip",
       "zstd": "Быстрое сжатие для кэширования и резервного копирования"
+    },
+    "ioncube": {
+      "title": "ionCube Loader",
+      "subtitle": "Запускает коммерческое ПО на PHP с зашифрованным исходным кодом — WHMCS и большинство лицензионных скриптов.",
+      "installed": "Установлено",
+      "notInstalled": "Не установлено",
+      "loaderVersion": "Loader {version}",
+      "install": "Установить",
+      "remove": "Убрать",
+      "installing": "Установка — это займёт несколько минут. Страница обновится автоматически.",
+      "installStarted": "Установка ionCube Loader для PHP {version}.",
+      "removed": "ionCube Loader удалён из PHP {version}.",
+      "installFailed": "Не удалось установить ionCube Loader.",
+      "removeFailed": "Не удалось удалить ionCube Loader.",
+      "unsupported": "ionCube не выпускает loader для PHP {version}. Используйте другую версию для ПО, которому он требуется.",
+      "loadFailed": "Не удалось получить статус ionCube Loader.",
+      "removeConfirmTitle": "Удалить ionCube Loader?",
+      "removeConfirmBody": "Любой сайт на PHP {version}, использующий зашифрованное ПО, перестанет работать до повторной установки.",
+      "hint": "Закрытый файл от ionCube, а не пакет apt — поэтому он находится здесь, а не в списке расширений выше."
     }
   },
   "node": {

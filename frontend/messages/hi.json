@@ -2009,6 +2009,25 @@
       "yaml": "YAML फ़ाइलें पढ़ता और लिखता है",
       "zip": ".zip संग्रह बनाता और खोलता है",
       "zstd": "तेज़ कंप्रेशन, कैश और बैकअप में काम आता है"
+    },
+    "ioncube": {
+      "title": "ionCube Loader",
+      "subtitle": "कमर्शियल PHP सॉफ़्टवेयर चलाता है जिसका सोर्स एन्क्रिप्ट किया हुआ होता है — WHMCS और ज़्यादातर लाइसेंस वाले स्क्रिप्ट्स के लिए इसकी ज़रूरत होती है।",
+      "installed": "इंस्टॉल है",
+      "notInstalled": "इंस्टॉल नहीं है",
+      "loaderVersion": "Loader {version}",
+      "install": "इंस्टॉल करें",
+      "remove": "निकालें",
+      "installing": "इंस्टॉल हो रहा है — इसमें कुछ मिनट लगते हैं। पेज अपने आप अपडेट हो जाता है।",
+      "installStarted": "PHP {version} के लिए ionCube Loader इंस्टॉल हो रहा है।",
+      "removed": "PHP {version} से ionCube Loader हटा दिया गया है।",
+      "installFailed": "ionCube Loader इंस्टॉल नहीं किया जा सका।",
+      "removeFailed": "ionCube Loader हटाया не जा सका।",
+      "unsupported": "ionCube ने PHP {version} के लिए कोई loader जारी नहीं किया है। जिस सॉफ़्टवेयर को इसकी ज़रूरत है उसके लिए कोई दूसरा वर्शन इस्तेमाल करें।",
+      "loadFailed": "ionCube Loader की स्थिति पढ़ी नहीं जा सकी।",
+      "removeConfirmTitle": "ionCube Loader हटाएँ?",
+      "removeConfirmBody": "PHP {version} पर एन्क्रिप्ट किया हुआ सॉफ़्टवेयर चलाने वाली कोई भी साइट तब तक काम करना बंद कर देगी जब तक कि यह दोबारा इंस्टॉल नहीं हो जाता।",
+      "hint": "ionCube की ओर से आने वाली बंद-सोर्स फ़ाइल, apt पैकेज नहीं — इसीलिए यह ऊपर extensions की सूची में नहीं है।"
     }
   },
   "node": {

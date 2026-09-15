@@ -101,6 +101,28 @@ export const phpExtensionSchema = z.object({
     .transform((value) => (Array.isArray(value) ? {} : value)),
 });
 
+/**
+ * The ionCube Loader's state for one PHP version.
+ *
+ * `supported: false` is a normal answer, not a failure: ionCube publishes no
+ * loader for PHP 8.0 and the panel still offers 8.0. `status` reuses the
+ * install tracker's vocabulary (`installing | ready | failed`) plus `idle`
+ * when nothing has ever been run, so `isInFlight` works on it unchanged.
+ */
+export const ionCubeSchema = z.object({
+  supported: z.boolean().default(false),
+  installed: z.boolean().default(false),
+  php_version: z.string().nullish(),
+  loader_version: z.string().nullish(),
+  sha256: z.string().nullish(),
+  path: z.string().nullish(),
+  status: z.string().nullish(),
+  reason: z.string().nullish(),
+  reference: z.string().nullish(),
+});
+
+export const ionCubeResponseSchema = z.object({ ioncube: ionCubeSchema });
+
 export const phpExtensionsResponseSchema = z.object({
   extensions: z.array(phpExtensionSchema).default([]),
   // Only non-empty for the version the panel runs on.

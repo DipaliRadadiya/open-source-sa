@@ -4,10 +4,12 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getPhp } from "@/lib/php/get-php";
 import { getPhpExtensions } from "@/lib/php/get-php-extensions";
+import { getIonCube } from "@/lib/php/get-ioncube";
 import { VersionBar } from "@/components/runtime/version-bar";
 import { VersionSummary } from "@/components/php/version-summary";
 import { InstallVersionButton } from "@/components/runtime/install-version-button";
 import { ExtensionsCard } from "@/components/php/extensions-card";
+import { IonCubeCard } from "@/components/php/ioncube-card";
 import { IniEditor } from "@/components/php/ini-editor";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -55,15 +57,26 @@ export default async function PhpPage({ searchParams }) {
   // extensions endpoint 404s. Asking anyway spends a request to learn what the
   // version list already said.
   const installState = current?.status && current.status !== "ready" ? current.status : null;
-  const { data: extensions } = installState
-    ? { data: null }
-    : await getPhpExtensions(selected);
+  // Both endpoints 404 on a version that is still installing or failed, so
+  // neither is asked for then — the same reason the extensions call is
+  // skipped. Fetched together: they are independent and waiting for one to
+  // start the other adds a round trip to every load of this page.
+  const [{ data: extensions }, { data: ioncube, failed: ionCubeFailed }] = installState
+    ? [{ data: null }, { data: null, failed: false }]
+    : await Promise.all([getPhpExtensions(selected), getIonCube(selected)]);
 
   // An install or a purge takes minutes and finishes without telling anyone, so
   // a page rendered once sits on "Installing" until you navigate away and back.
   // That is what made a finished install look stuck. Polling only while
   // something is actually running: a settled server asks for nothing.
-  const inFlight = anyInFlight(versions) || anyInFlight(extensions?.extensions ?? []);
+  // ionCube joins the same poll rather than running a timer of its own: its
+  // install is queued behind a ~29 MB download and reports through the same
+  // `installing | ready | failed` tracker the versions use, so a page rendered
+  // once would otherwise sit on "Installing" until you navigated away.
+  const inFlight =
+    anyInFlight(versions) ||
+    anyInFlight(extensions?.extensions ?? []) ||
+    anyInFlight([ioncube]);
 
   return (
     <div className="space-y-6">
@@ -173,14 +186,32 @@ export default async function PhpPage({ searchParams }) {
             // to be `installing ? … : failed`, so a version being REMOVED
             // announced "Install failed" — a failure that had not happened.
             <RuntimeStatusNotice version={current} versionLabel={selected} namespace="php" />
-          ) : extensions ? (
-            <ExtensionsCard
-              version={selected}
-              extensions={extensions.extensions}
-              panelRequired={extensions.panel_required}
-              canManage={canManage}
-            />
-          ) : null}
+          ) : (
+            <>
+              {/* Still conditional: a failed extensions fetch rendered nothing
+                  before and should keep doing so, rather than an empty list
+                  claiming this PHP has no extensions. */}
+              {extensions ? (
+                <ExtensionsCard
+                  version={selected}
+                  extensions={extensions.extensions}
+                  panelRequired={extensions.panel_required}
+                  canManage={canManage}
+                />
+              ) : null}
+              {/* Under the extensions list, because it reads as the exception
+                  to it: everything above is an apt package, this one is not.
+                  Rendered even when its own fetch failed — the card says so,
+                  where returning nothing would read as a feature that is not
+                  there. */}
+              <IonCubeCard
+                version={selected}
+                ioncube={ioncube}
+                failed={ionCubeFailed}
+                canManage={canManage}
+              />
+            </>
+          )}
         </div>
       )}
     </div>

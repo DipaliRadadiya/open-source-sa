@@ -2009,6 +2009,25 @@
       "yaml": "YAMLファイルの読み書き",
       "zip": ".zip アーカイブの作成と展開",
       "zstd": "キャッシュやバックアップに使われる高速な圧縮"
+    },
+    "ioncube": {
+      "title": "ionCube Loader",
+      "subtitle": "ソースが暗号化されている商用PHPソフトウェアを実行します。WHMCSやほとんどのライセンス付きスクリプトはこれが必要です。",
+      "installed": "インストール済み",
+      "notInstalled": "未インストール",
+      "loaderVersion": "Loader {version}",
+      "install": "インストール",
+      "remove": "解除",
+      "installing": "インストール中です。数分かかります。ページは自動的に更新されます。",
+      "installStarted": "PHP {version} 用 ionCube Loader をインストールしています。",
+      "removed": "PHP {version} から ionCube Loader を削除しました。",
+      "installFailed": "ionCube Loader をインストールできませんでした。",
+      "removeFailed": "ionCube Loader を削除できませんでした。",
+      "unsupported": "ionCube は PHP {version} 用のローダーを公開していません。それを必要とするソフトウェアには別のバージョンをご使用ください。",
+      "loadFailed": "ionCube Loader の状態を読み取れませんでした。",
+      "removeConfirmTitle": "ionCube Loader を削除しますか?",
+      "removeConfirmBody": "PHP {version} で動作している暗号化ソフトウェアをご利用のサイトは、再インストールするまで動作しなくなります。",
+      "hint": "ionCube のクローズドソースのファイルであり、apt パッケージではないため、上記の拡張機能一覧ではなくこちらに表示されています。"
     }
   },
   "node": {

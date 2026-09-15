@@ -2009,6 +2009,25 @@
       "yaml": "Lee y escribe archivos YAML",
       "zip": "Crea y abre archivos .zip",
       "zstd": "Compresión rápida, usada en caché y copias de seguridad"
+    },
+    "ioncube": {
+      "title": "ionCube Loader",
+      "subtitle": "Ejecuta software PHP comercial cuyo código fuente está cifrado — WHMCS y la mayoría de los scripts con licencia lo necesitan.",
+      "installed": "Instalado",
+      "notInstalled": "No instalado",
+      "loaderVersion": "Loader {version}",
+      "install": "Instalar",
+      "remove": "Quitar",
+      "installing": "Instalando — esto tardará unos minutos. La página se actualiza sola.",
+      "installStarted": "Instalando ionCube Loader para PHP {version}.",
+      "removed": "ionCube Loader eliminado de PHP {version}.",
+      "installFailed": "No se pudo instalar ionCube Loader.",
+      "removeFailed": "No se pudo eliminar ionCube Loader.",
+      "unsupported": "ionCube no publica ningún loader para PHP {version}. Utilice otra versión para el software que lo necesite.",
+      "loadFailed": "No se pudo leer el estado de ionCube Loader.",
+      "removeConfirmTitle": "¿Eliminar ionCube Loader?",
+      "removeConfirmBody": "Cualquier sitio en PHP {version} que ejecute software cifrado dejará de funcionar hasta que se vuelva a instalar.",
+      "hint": "Un archivo de código cerrado de ionCube, no un paquete apt — por eso aparece aquí y no en la lista de extensiones de arriba."
     }
   },
   "node": {

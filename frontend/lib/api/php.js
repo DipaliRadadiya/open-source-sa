@@ -21,6 +21,34 @@ export function removePhpVersion(version) {
   return api.delete(`/php/versions/${encodeURIComponent(version)}`);
 }
 
+/**
+ * The ionCube Loader for one PHP version.
+ *
+ * Its own endpoints rather than a row in the extensions catalog: every
+ * extension there is an apt package enabled with phpenmod, and this is a
+ * closed-source `.so` fetched from the vendor and declared as a
+ * `zend_extension` pointing at an absolute path.
+ */
+export function getIonCube(version, { signal } = {}) {
+  return api.get(`/php/versions/${encodeURIComponent(version)}/ioncube`, { signal });
+}
+
+/**
+ * Queued — the archive is ~29 MB, so this returns 202 and the caller polls.
+ *
+ * `422` when ionCube publishes no loader for this PHP version. The UI knows
+ * that from `supported` before offering the button, so a 422 here means the
+ * catalogue changed under us rather than that the user did something wrong.
+ */
+export function installIonCube(version) {
+  return api.post(`/php/versions/${encodeURIComponent(version)}/ioncube`);
+}
+
+/** Immediate, unlike the install: it deletes one ini file and reloads. */
+export function removeIonCube(version) {
+  return api.delete(`/php/versions/${encodeURIComponent(version)}/ioncube`);
+}
+
 export function getPhpExtensions(version, { signal } = {}) {
   return api.get(`/php/versions/${encodeURIComponent(version)}/extensions`, { signal });
 }
