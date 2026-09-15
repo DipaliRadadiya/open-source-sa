@@ -35,7 +35,7 @@ class StorageDestinationResource extends JsonResource
             // The real provider, read from the column. This used to be a
             // hardcoded `'s3'` and the frontend inferred the truth by
             // matching the endpoint hostname — a guess that was wrong for a
-            // self-hosted MinIO and meaningless for an FTP host.
+            // self-hosted S3 service and meaningless for an FTP host.
             'provider' => $this->provider->value,
             'provider_title' => $this->provider->title(),
 

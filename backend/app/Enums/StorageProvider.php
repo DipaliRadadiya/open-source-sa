@@ -7,8 +7,8 @@ namespace App\Enums;
  *
  * This is the fact the table did not record. Until it did, the driver was
  * always S3 and the panel *inferred* the provider by matching the endpoint
- * hostname — a guess that is wrong for a self-hosted MinIO and meaningless for
- * an FTP host. The column replaces the guess.
+ * hostname — a guess that is wrong for any self-hosted S3 service and
+ * meaningless for an FTP host. The column replaces the guess.
  *
  * Phase 1 ships `s3`, `ftp` and `sftp`. Google Drive and WebDAV/pCloud land on
  * the same seam later; see `storage-providers-design.md`.

@@ -10,8 +10,16 @@ use App\Rules\SingleLine;
 use Throwable;
 
 /**
- * Any S3-compatible service: AWS, MinIO, Cloudflare R2, Backblaze B2, Wasabi,
- * DigitalOcean Spaces.
+ * Any S3-compatible service: AWS, Cloudflare R2, Backblaze B2, Wasabi,
+ * DigitalOcean Spaces, or a self-hosted one.
+ *
+ * MinIO was the self-hosted example everywhere in this feature until
+ * 2026-09-15 and is deliberately no longer named: its repository has been
+ * archived ("THIS REPOSITORY IS NO LONGER MAINTAINED"), the community edition
+ * has been source-only with no prebuilt binaries or images since October 2025,
+ * and a panel should not point people at software they cannot install or
+ * patch. Nothing about the driver changed — a self-hosted S3 endpoint is still
+ * exactly as supported as it was, and existing destinations are untouched.
  *
  * This is the original — and until now the only — destination driver. Its
  * config is carried over unchanged from `DestinationDisk`, including the two
@@ -46,10 +54,10 @@ class S3Driver implements StorageDriver
             // applications cannot read or overwrite another's artefacts.
             'root' => $destination->prefix ?: '',
 
-            // Path-style only for a custom endpoint. MinIO, Wasabi and B2
-            // route through the path; real AWS deprecated it and does not
-            // support it for buckets in regions launched after 2019 — and an
-            // empty endpoint *means* AWS.
+            // Path-style only for a custom endpoint. Wasabi, B2 and the
+            // self-hosted services route through the path; real AWS deprecated
+            // it and does not support it for buckets in regions launched after
+            // 2019 — and an empty endpoint *means* AWS.
             'use_path_style_endpoint' => $endpoint !== '',
 
             // MUST stay true. With `throw => false` the adapter swallows

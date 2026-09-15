@@ -50,7 +50,7 @@ return [
 
     'help' => [
         'name' => '連携一覧で保存先を見分けるための短いラベルです。',
-        'endpoint' => 'AWS の場合は既定のままにします。MinIO、R2、Backblaze B2、Wasabi などの場合は設定してください。',
+        'endpoint' => 'AWS の場合は既定のままにします。Cloudflare R2、Backblaze B2、Wasabi、DigitalOcean Spaces など S3 互換のサービスの場合は設定してください。',
         'region' => 'バケットが存在するリージョン (AWS の場合のみ必要)。',
         'prefix' => 'バケット内の任意のパスプレフィックス (先頭のスラッシュなし)。',
         'access_key' => '書き込み専用 — API が返すことはありません。',

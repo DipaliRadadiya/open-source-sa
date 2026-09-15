@@ -50,7 +50,7 @@ return [
 
     'help' => [
         'name' => 'Eine kurze Bezeichnung, um Ziele in der Integrationsliste zu unterscheiden.',
-        'endpoint' => 'Für AWS auf dem Standardwert lassen. Für MinIO, R2, Backblaze B2, Wasabi usw. setzen.',
+        'endpoint' => 'Für AWS auf dem Standardwert lassen. Für Cloudflare R2, Backblaze B2, Wasabi, DigitalOcean Spaces oder jeden S3-kompatiblen Dienst setzen.',
         'region' => 'Region, in der der Bucket liegt (nur für AWS erforderlich).',
         'prefix' => 'Optionales Pfadpräfix innerhalb des Buckets (ohne führenden Schrägstrich).',
         'access_key' => 'Nur schreibend — wird von der API nie zurückgegeben.',

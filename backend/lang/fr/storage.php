@@ -50,7 +50,7 @@ return [
 
     'help' => [
         'name' => 'Un libellé court pour distinguer les destinations dans la liste des intégrations.',
-        'endpoint' => 'Laissez la valeur par défaut pour AWS. Renseignez-la pour MinIO, R2, Backblaze B2, Wasabi, etc.',
+        'endpoint' => 'Laissez la valeur par défaut pour AWS. Renseignez-la pour Cloudflare R2, Backblaze B2, Wasabi, DigitalOcean Spaces ou tout service compatible S3.',
         'region' => 'Région où se trouve le bucket (requise uniquement pour AWS).',
         'prefix' => 'Préfixe de chemin facultatif dans le bucket (sans barre oblique initiale).',
         'access_key' => 'En écriture seule — jamais renvoyée par l’API.',

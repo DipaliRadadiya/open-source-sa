@@ -8,9 +8,10 @@
 
 return [
     'drivers' => [
-        // One driver for now: any S3-compatible endpoint (AWS, MinIO,
-        // Cloudflare R2, Backblaze B2, Wasabi, …). The endpoint URL alone
-        // routes around AWS — everything else is bog-standard S3.
+        // One driver for the whole family: any S3-compatible endpoint (AWS,
+        // Cloudflare R2, Backblaze B2, Wasabi, DigitalOcean Spaces, or a
+        // self-hosted service). The endpoint URL alone routes around AWS —
+        // everything else is bog-standard S3.
         's3' => 'S3-compatible',
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
@@ -53,7 +54,7 @@ return [
 
     'help' => [
         'name' => 'A short label so you can tell destinations apart in the integration list.',
-        'endpoint' => 'Leave default for AWS. Set for MinIO, R2, Backblaze B2, Wasabi, etc.',
+        'endpoint' => 'Leave default for AWS. Set for Cloudflare R2, Backblaze B2, Wasabi, DigitalOcean Spaces, or any S3-compatible service.',
         'region' => 'Region the bucket lives in (only required for AWS).',
         'prefix' => 'Optional path prefix inside the bucket (no leading slash).',
         'access_key' => 'Write-only — never returned by the API.',
