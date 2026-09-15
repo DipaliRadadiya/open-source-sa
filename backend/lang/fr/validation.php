@@ -173,6 +173,7 @@ return [
     ],
 
     'start_command_shell' => 'La commande de démarrage ne peut pas contenir « :token » : elle est exécutée directement, pas via un shell.',
+    'process_instances_entrypoint' => 'Pour exécuter plusieurs processus, la commande de démarrage doit nommer un script — par exemple « node server.js ». PM2 crée le cluster en forkant ce fichier ; avec autre chose, il exécute silencieusement un seul processus.',
     'start_command_wrapper' => 'Démarrez l\'app avec son fichier d\'entrée, par exemple « node server.js », pas avec :binary. Un gestionnaire de paquets fork le vrai processus, donc les signaux ne l\'atteignent jamais.',
 
     'port_in_use_by_app' => 'Le port :port est déjà utilisé par une autre application sur ce serveur.',

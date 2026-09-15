@@ -19,6 +19,9 @@ return [
     'not_a_git_application' => 'Cette application n\'est pas un déploiement git : il n\'y a rien à récupérer.',
     'no_database_engine' => 'Aucun moteur de base de données disponible. Installez et configurez MySQL ou MariaDB avant de créer cette application.',
     'no_process' => '« :name » n\'exécute pas de processus propre.',
+    'not_adopted' => '« :name » tourne déjà sous une unité systemd.',
+    'convert_no_entrypoint' => 'Définissez une commande de démarrage qui nomme un script — par exemple « node server.js » — avant de basculer « :name » vers une unité systemd. L\'ancien panneau n\'en a pas enregistré une qui puisse être exécutée directement.',
+    'convert_failed' => 'Impossible de basculer « :name » vers une unité systemd. L\'application a été remise sous PM2 et fonctionne. Communiquez la référence au support.',
     'process_failed' => 'Impossible de :action l\'application. Communiquez la référence au support.',
     'no_port_available' => 'Aucun port libre entre :from et :to. Libérez-en un ou élargissez la plage.',
 

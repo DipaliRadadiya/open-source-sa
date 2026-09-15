@@ -154,6 +154,13 @@ class ApplicationResource extends JsonResource
             // which have nothing to run — render no controls for those rather
             // than controls that would do nothing.
             'has_process' => app(ProcessSupervisor::class)->runs($this->resource),
+
+            // What is keeping the process alive, and how many of it there are.
+            // `pm2` means adopted from the old panel and still run by its
+            // daemon — the screen offers a switch to a unit rather than the
+            // controls a unit would have.
+            'supervisor_mode' => $this->supervisor_mode?->value,
+            'process_instances' => $this->process_instances,
             'process' => $this->when(
                 app(ProcessSupervisor::class)->runs($this->resource),
                 fn () => app(ProcessSupervisor::class)->status($this->resource),

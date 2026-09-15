@@ -215,6 +215,11 @@ return [
         'foot' => 'Placeholder page created by the control panel.',
     ],
 
+    'supervisor_mode' => [
+        'systemd' => 'systemd unit',
+        'pm2' => 'PM2 (adopted)',
+    ],
+
     'disabled_page' => [
         'title' => 'Site unavailable',
         'heading' => 'This site is temporarily unavailable',

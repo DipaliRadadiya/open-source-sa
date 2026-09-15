@@ -210,6 +210,11 @@ return [
         'foot' => 'コントロールパネルが作成したプレースホルダーページです。',
     ],
 
+    'supervisor_mode' => [
+        'systemd' => 'systemd ユニット',
+        'pm2' => 'PM2（引き継ぎ）',
+    ],
+
     'disabled_page' => [
         'title' => 'サイトを利用できません',
         'heading' => 'このサイトは一時的に利用できません',

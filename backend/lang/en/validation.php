@@ -205,6 +205,7 @@ return [
     ],
 
     'start_command_shell' => 'The start command cannot contain \":token\" — it is run directly, not through a shell.',
+    'process_instances_entrypoint' => 'To run more than one process, the start command must name a script — for example \"node server.js\". PM2 clusters by forking that file, and given anything else it silently runs a single process.',
     'start_command_wrapper' => 'Start the app with its entry file, for example \"node server.js\", not with :binary. A package manager forks the real process, so signals never reach it.',
 
     'port_in_use_by_app' => 'Port :port is already used by another application on this server.',

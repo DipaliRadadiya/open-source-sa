@@ -173,6 +173,7 @@ return [
     ],
 
     'start_command_shell' => 'Der Startbefehl darf „:token“ nicht enthalten – er wird direkt ausgeführt, nicht über eine Shell.',
+    'process_instances_entrypoint' => 'Um mehr als einen Prozess auszuführen, muss der Startbefehl ein Skript benennen – zum Beispiel „node server.js“. PM2 clustert, indem es diese Datei forkt; mit etwas anderem läuft stillschweigend nur ein einzelner Prozess.',
     'start_command_wrapper' => 'Starte die App mit ihrer Einstiegsdatei, z. B. „node server.js“, nicht mit :binary. Ein Paketmanager forkt den eigentlichen Prozess, sodass Signale ihn nie erreichen.',
 
     'port_in_use_by_app' => 'Port :port wird bereits von einer anderen Anwendung auf diesem Server verwendet.',

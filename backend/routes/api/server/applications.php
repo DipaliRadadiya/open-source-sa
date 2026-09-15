@@ -48,6 +48,14 @@ Route::post('/applications/{application}/deploy', [ApplicationController::class,
 Route::post('/applications/{application}/process/{action}', [ApplicationController::class, 'process'])
     ->middleware('permission:application,manage');
 
+// Switching an adopted application onto a systemd unit of ours. Its own
+// endpoint rather than a field on update, because it **restarts the
+// application** — one supervisor has to release the port before the other can
+// bind it — and that is not something an ordinary save should do as a side
+// effect. Throttled like the other actions that touch a running process.
+Route::post('/applications/{application}/supervisor/convert', [ApplicationController::class, 'convertSupervisor'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+
 // Enable/disable: a Dashboard action, not a separate screen, so it stays on
 // the same `application` permission as the rest of this resource rather than
 // a new one.

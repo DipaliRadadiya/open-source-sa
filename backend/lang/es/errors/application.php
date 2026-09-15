@@ -19,6 +19,9 @@ return [
     'not_a_git_application' => 'La aplicación no es un despliegue de git, así que no hay nada que descargar.',
     'no_database_engine' => 'No hay ningún motor de base de datos disponible. Instala y configura MySQL o MariaDB antes de crear esta aplicación.',
     'no_process' => '\":name\" no ejecuta un proceso propio.',
+    'not_adopted' => '«:name» ya se ejecuta bajo una unidad systemd.',
+    'convert_no_entrypoint' => 'Defina un comando de inicio que nombre un script, por ejemplo «node server.js», antes de cambiar «:name» a una unidad systemd. El panel anterior no registró ninguno que pueda ejecutarse directamente.',
+    'convert_failed' => 'No se pudo cambiar «:name» a una unidad systemd. La aplicación se ha devuelto a PM2 y está en marcha. Indique la referencia al soporte.',
     'process_failed' => 'No se pudo :action la aplicación. Indica la referencia al soporte.',
     'no_port_available' => 'No hay puertos libres entre :from y :to. Libera uno o amplía el rango.',
 

@@ -19,6 +19,9 @@ return [
     'not_a_git_application' => 'Diese Anwendung ist kein Git-Deployment — es gibt nichts abzurufen.',
     'no_database_engine' => 'Keine Datenbank-Engine verfügbar. Installiere und konfiguriere MySQL oder MariaDB, bevor du diese Anwendung anlegst.',
     'no_process' => '„:name“ führt keinen eigenen Prozess aus.',
+    'not_adopted' => '„:name“ läuft bereits unter einer systemd-Unit.',
+    'convert_no_entrypoint' => 'Legen Sie einen Startbefehl fest, der ein Skript benennt – zum Beispiel „node server.js“ –, bevor Sie „:name“ auf eine systemd-Unit umstellen. Das alte Panel hat keinen aufgezeichnet, der sich direkt ausführen lässt.',
+    'convert_failed' => '„:name“ konnte nicht auf eine systemd-Unit umgestellt werden. Die Anwendung läuft wieder unter PM2. Geben Sie dem Support die Referenz an.',
     'process_failed' => 'Die Anwendung konnte nicht :action werden. Nenne dem Support die Referenz.',
     'no_port_available' => 'Kein freier Port zwischen :from und :to. Gib einen frei oder erweitere den Bereich.',
 

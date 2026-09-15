@@ -210,6 +210,11 @@ return [
         'foot' => 'Página provisória criada pelo painel de controlo.',
     ],
 
+    'supervisor_mode' => [
+        'systemd' => 'Unidade systemd',
+        'pm2' => 'PM2 (adotado)',
+    ],
+
     'disabled_page' => [
         'title' => 'Site indisponível',
         'heading' => 'Este site está temporariamente indisponível',

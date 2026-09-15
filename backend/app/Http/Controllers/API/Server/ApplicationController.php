@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Actions\Server\Application\ConvertSupervisor;
 use App\Actions\Server\Application\CreateApplication;
 use App\Actions\Server\Application\DeleteApplication;
 use App\Actions\Server\Application\DeleteApplicationDatabases;
@@ -12,6 +13,7 @@ use App\Actions\Server\Application\RunApplicationProcess;
 use App\Actions\Server\Application\UpdateApplication;
 use App\Enums\ApplicationStatus;
 use App\Enums\DeploymentTrigger;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\DestroyApplicationRequest;
 use App\Http\Requests\Server\Application\IndexApplicationsRequest;
@@ -24,6 +26,7 @@ use App\Jobs\MeasureApplicationSize;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\Permission;
+use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PortAllocator;
@@ -238,6 +241,52 @@ class ApplicationController extends Controller
             return response()->json([
                 'message' => __('errors/application.process_failed', ['action' => $action]),
                 'reference' => $result->reference,
+            ], 500);
+        }
+
+        return response()->json([
+            'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),
+        ]);
+    }
+
+    /**
+     * Move an adopted application onto a systemd unit of ours.
+     *
+     * Only offered for one that is still under the old panel's PM2 daemon.
+     * **This restarts the application** — there is no zero-downtime path, since
+     * one supervisor has to release the port before the other can bind it — so
+     * it is a deliberate action behind its own endpoint rather than something
+     * an ordinary update does as a side effect.
+     *
+     * A failure has already put the application back under PM2 and started it;
+     * the 500 reports that rather than leaving the caller to guess.
+     */
+    public function convertSupervisor(
+        Application $application,
+        ProcessSupervisor $supervisor,
+        ConvertSupervisor $convert,
+        ApplicationProvisioner $provisioner,
+    ): JsonResponse {
+        abort_unless(
+            $supervisor->legacy($application),
+            422,
+            __('errors/application.not_adopted', ['name' => $application->name]),
+        );
+
+        $application->load('systemUser');
+
+        abort_unless(
+            $convert->convertible($application),
+            422,
+            __('errors/application.convert_no_entrypoint', ['name' => $application->name]),
+        );
+
+        try {
+            $convert->toSystemd($application, $provisioner->documentRoot($application));
+        } catch (ProvisioningFailedException $e) {
+            return response()->json([
+                'message' => __('errors/application.convert_failed', ['name' => $application->name]),
+                'reference' => $e->reference,
             ], 500);
         }
 

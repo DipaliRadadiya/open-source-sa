@@ -19,6 +19,9 @@ return [
     'not_a_git_application' => 'このアプリケーションはgitデプロイではないため、取得するものがありません。',
     'no_database_engine' => '利用可能なデータベースエンジンがありません。このアプリケーションを作成する前に MySQL または MariaDB を設定してください。',
     'no_process' => '「:name」は独自のプロセスを実行していません。',
+    'not_adopted' => '「:name」はすでに systemd ユニットで実行されています。',
+    'convert_no_entrypoint' => '「:name」を systemd ユニットに切り替える前に、スクリプトを指定する起動コマンド（例:「node server.js」）を設定してください。旧パネルは直接実行できる形では記録していません。',
+    'convert_failed' => '「:name」を systemd ユニットに切り替えられませんでした。アプリケーションは PM2 に戻され、稼働しています。参照番号をサポートにお伝えください。',
     'process_failed' => 'アプリケーションを:actionできませんでした。参照番号をサポートにお伝えください。',
     'no_port_available' => ':from から :to の間に空きポートがありません。解放するか範囲を広げてください。',
 

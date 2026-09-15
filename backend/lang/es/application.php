@@ -210,6 +210,11 @@ return [
         'foot' => 'Página de marcador creada por el panel de control.',
     ],
 
+    'supervisor_mode' => [
+        'systemd' => 'Unidad systemd',
+        'pm2' => 'PM2 (adoptado)',
+    ],
+
     'disabled_page' => [
         'title' => 'Sitio no disponible',
         'heading' => 'Este sitio no está disponible temporalmente',

@@ -173,6 +173,7 @@ return [
     ],
 
     'start_command_shell' => '起動コマンドに「:token」は使えません。シェルを介さず直接実行されます。',
+    'process_instances_entrypoint' => '複数のプロセスを実行するには、起動コマンドでスクリプトを指定してください（例: 「node server.js」）。PM2 はそのファイルを fork してクラスタ化するため、それ以外を指定すると警告なくプロセスが 1 つだけ実行されます。',
     'start_command_wrapper' => 'アプリはエントリファイル（例:「node server.js」）で起動してください。:binary では実際のプロセスがフォークされ、シグナルが届きません。',
 
     'port_in_use_by_app' => 'ポート :port はこのサーバーの別のアプリケーションが使用中です。',

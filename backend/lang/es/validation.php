@@ -196,6 +196,7 @@ return [
     ],
 
     'start_command_shell' => 'El comando de inicio no puede contener \":token\": se ejecuta directamente, no a través de un shell.',
+    'process_instances_entrypoint' => 'Para ejecutar más de un proceso, el comando de inicio debe nombrar un script, por ejemplo «node server.js». PM2 agrupa haciendo fork de ese archivo; con cualquier otra cosa ejecuta en silencio un solo proceso.',
     'start_command_wrapper' => 'Inicia la app con su archivo de entrada, por ejemplo \"node server.js\", no con :binary. Un gestor de paquetes bifurca el proceso real, así que las señales nunca le llegan.',
 
     'port_in_use_by_app' => 'El puerto :port ya lo usa otra aplicación en este servidor.',
