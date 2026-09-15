@@ -206,6 +206,23 @@
   * {
     @apply border-border outline-ring/50;
     }
+  /* An element only carries tabindex="-1" to be focusable by SCRIPT — that is
+     what the attribute means, and it is unreachable by Tab by definition. So a
+     focus ring on one is never telling a keyboard user where they are; it is
+     drawn because something called .focus() on it.
+
+     PanelFocus does exactly that to the page h1 on every route change, so a
+     screen reader announces the new page. Chrome and Firefox suppress the ring
+     for programmatic focus through :focus-visible heuristics; WebKit paints
+     it, so Safari showed a blue box around the heading of every page after the
+     first navigation — full width, and reading as a text input. The rule above
+     is what made it brand blue.
+
+     Removing the outline here costs no keyboard affordance and leaves the
+     announcement intact. Anything genuinely tabbable keeps its own ring. */
+  [tabindex="-1"]:focus {
+    outline: none;
+    }
   body {
     @apply bg-background text-foreground;
     }
