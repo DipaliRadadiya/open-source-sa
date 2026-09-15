@@ -23,6 +23,7 @@ use App\Services\Server\Sync\Discoverers\CronjobDiscoverer;
 use App\Services\Server\Sync\Discoverers\DatabaseUserDiscoverer;
 use App\Services\Server\Sync\Discoverers\FirewallRuleDiscoverer;
 use App\Services\Server\Sync\Discoverers\PhpSettingsDiscoverer;
+use App\Services\Server\Sync\Discoverers\Pm2Discoverer;
 use App\Services\Server\Sync\Discoverers\SshKeyDiscoverer;
 use App\Services\Server\Sync\Discoverers\SystemUserDiscoverer;
 use App\Services\Server\Sync\Discoverers\WorkerDiscoverer;
@@ -62,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
             $app->make(SshKeyDiscoverer::class),
             $app->make(ApplicationDiscoverer::class),
             $app->make(PhpSettingsDiscoverer::class),
+            $app->make(Pm2Discoverer::class),
             $app->make(WorkerDiscoverer::class),
             $app->make(DatabaseUserDiscoverer::class),
             $app->make(CertificateDiscoverer::class),

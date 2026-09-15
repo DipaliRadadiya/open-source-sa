@@ -70,6 +70,38 @@ class LegacyPm2Driver
         return rtrim((string) $application->systemUser->home_path, '/').'/.pm2';
     }
 
+    /**
+     * Every process in one OS user's daemon — read-only, for discovery.
+     *
+     * Takes a username and home rather than an `Application`, because the whole
+     * point of asking is that the panel does not yet know which applications
+     * these belong to. Null when the daemon cannot be read at all, which is a
+     * different answer from "this user runs nothing": on a server the old panel
+     * never touched there is simply no daemon, and that is not a failure.
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    public function processesFor(string $username, string $homePath): ?array
+    {
+        $result = $this->serverOps->run(
+            [
+                'runuser', '-u', $username, '--',
+                'env', 'PM2_HOME='.rtrim($homePath, '/').'/.pm2',
+                (string) config('server.applications.pm2_binary', 'pm2'), 'jlist',
+            ],
+            ['feature' => 'application', 'op' => 'pm2_jlist_user', 'user' => $username],
+            timeout: (int) config('server.applications.pm2_timeout', 120),
+        );
+
+        if ($result->failed()) {
+            return null;
+        }
+
+        $processes = json_decode($result->output(), true);
+
+        return is_array($processes) ? $processes : null;
+    }
+
     public function start(Application $application): ServerOpsResult
     {
         return $this->changeState('start', $application);
