@@ -117,6 +117,7 @@ WEB_SERVER=""      # derived from STACK
 # builds this exists to avoid. Set by derive_php_runtime() once the stack is
 # known.
 PANEL_PHP_BIN=""   # CLI: artisan, composer, queue worker, cron
+COMPOSER_BIN=""    # resolved in install_packages; may predate us
 PANEL_PHP_SAPI=""  # what the web server talks to: "fpm" or "lsapi"
 
 # ─── Output ──────────────────────────────────────────────────────────────────
@@ -987,16 +988,25 @@ install_packages() {
     run_progress "Installing ${WEB_SERVER}, Redis, SQLite, supervisor, and PHP ${PHP_VERSION}" apt-get install -y "${web_pkgs[@]}" redis-server sqlite3 supervisor "${php_pkgs[@]}"
     ok "${WEB_SERVER}, redis, sqlite, PHP ${PHP_VERSION}"
 
-    if ! command -v composer >/dev/null 2>&1; then
+    # Whatever composer we end up using, remember *where* it is. The check
+    # below asks "is composer installed anywhere", and the install step later
+    # used to invoke a hardcoded /usr/local/bin/composer — so on a server that
+    # already had one somewhere else the install skipped the download and then
+    # died on a path it had never created. Found on a migrated box carrying
+    # Ubuntu's /usr/bin/composer.
+    COMPOSER_BIN=$(command -v composer 2>/dev/null || true)
+
+    if [[ -z "$COMPOSER_BIN" ]]; then
         run curl -fsSL -o /tmp/composer-setup.php https://getcomposer.org/installer
         # PANEL_PHP_BIN, not a bare `php`: on OpenLiteSpeed there is no
         # /usr/bin/php at all, and a bare invocation would either fail or --
         # worse -- find some other PHP and install composer against it.
         run "$PANEL_PHP_BIN" /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
         rm -f /tmp/composer-setup.php
+        COMPOSER_BIN=/usr/local/bin/composer
         ok "composer"
     else
-        skip "composer"
+        skip "composer (${COMPOSER_BIN})"
     fi
 }
 
@@ -1224,7 +1234,7 @@ setup_backend() {
     # Through the interpreter rather than relying on composer's own shebang.
     # The `php` symlink above makes the shebang work too, but naming the binary
     # here means this step does not depend on PATH at all.
-    run sudo -u "$APP_USER" -H "$PANEL_PHP_BIN" /usr/local/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d "$dir"
+    run sudo -u "$APP_USER" -H "$PANEL_PHP_BIN" "${COMPOSER_BIN:-/usr/local/bin/composer}" install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d "$dir"
     ok "dependencies installed"
 
     [[ -f "${dir}/.env" ]] || cp "${dir}/.env.example" "${dir}/.env"
