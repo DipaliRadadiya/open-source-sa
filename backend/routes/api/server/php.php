@@ -33,3 +33,9 @@ Route::put('/php/versions/{version}/ini', [PhpController::class, 'updateIni'])->
 
 Route::get('/php/versions/{version}/extensions', [PhpController::class, 'extensions'])->middleware('permission:php');
 Route::put('/php/versions/{version}/extensions/{extension}', [PhpController::class, 'updateExtension'])->middleware('permission:php,manage');
+
+// ionCube: its own card, not a row in the extensions list. There is no apt
+// package for it — see IonCubeLoader for why it cannot share that machinery.
+Route::get('/php/versions/{version}/ioncube', [PhpController::class, 'ionCube'])->middleware('permission:php');
+Route::post('/php/versions/{version}/ioncube', [PhpController::class, 'installIonCube'])->middleware('permission:php,manage');
+Route::delete('/php/versions/{version}/ioncube', [PhpController::class, 'removeIonCube'])->middleware('permission:php,manage');

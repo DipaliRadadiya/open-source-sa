@@ -18,4 +18,10 @@ return [
     // reports success and changes nothing.
     'unsupported_on_stack' => 'This is not supported on the :stack PHP stack.',
 
+    'ioncube_unsupported_version' => 'ionCube does not publish a Loader for PHP :version.',
+    'ioncube_unsupported_architecture' => 'ionCube does not publish a Loader for this server\'s architecture (:architecture).',
+    'ioncube_download_failed' => 'The ionCube Loader could not be downloaded. Check the server\'s internet access and try again.',
+    'ioncube_invalid_loader' => 'The downloaded file is not a valid ionCube Loader for this server. Nothing was installed.',
+    'ioncube_install_failed' => 'The ionCube Loader could not be installed.',
+    'ioncube_config_test_failed' => 'PHP refused to start with the ionCube Loader in place, so it was removed again. Your sites were not affected.',
 ];

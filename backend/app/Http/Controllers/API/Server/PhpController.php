@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Enums\InstallStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Php\PhpDefaultRequest;
 use App\Http\Requests\Server\Php\PhpExtensionRequest;
 use App\Http\Requests\Server\Php\PhpVersionRequest;
 use App\Http\Requests\Server\Php\UpdatePhpIniRequest;
+use App\Jobs\InstallIonCubeLoader;
 use App\Jobs\InstallPhpExtension;
 use App\Jobs\InstallPhpVersion;
 use App\Jobs\RemovePhpVersion;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Php\IonCubeLoader;
 use App\Services\Server\Php\PhpExtensionManager;
 use App\Services\Server\Php\PhpOverview;
 use App\Services\Server\Php\PhpVersionManager;
@@ -233,6 +236,77 @@ class PhpController extends Controller
         $log->log('php.extension_enabled', null, $properties);
 
         return response()->json(['extension' => $extensions->find($version, $extension)]);
+    }
+
+    /**
+     * The ionCube Loader card for one PHP version.
+     *
+     * State is read from the server, never stored — the loader is a file on
+     * disk, and a stored flag would go on claiming it was there after the PHP
+     * version itself had been removed. The in-flight and last-failed run come
+     * from the same tracker the extension rows use.
+     */
+    public function ionCube(string $version, IonCubeLoader $loader, PhpRuntime $php, InstallTracker $installs): JsonResponse
+    {
+        abort_unless($php->installed($version), 404);
+
+        $run = $installs->current(InstallIonCubeLoader::RUNTIME, $version);
+
+        return response()->json([
+            'ioncube' => [
+                ...$loader->status($version),
+                'status' => $run?->status->value ?? 'idle',
+                'reason' => $run?->reason,
+                'reference' => $run?->reference,
+            ],
+        ]);
+    }
+
+    /**
+     * Install it. 202 and a queued job: the archive is ~29 MB and a request
+     * held open that long dies at the web server with the work half done.
+     */
+    public function installIonCube(string $version, IonCubeLoader $loader, PhpRuntime $php, ActivityLogger $log, InstallTracker $installs): JsonResponse
+    {
+        abort_unless($php->installed($version), 404);
+
+        // Refused before the row exists, so a version ionCube does not publish
+        // a loader for cannot leave a tracker row that never completes. PHP
+        // 8.0 is the live case.
+        if (! $loader->supports($version)) {
+            return response()->json([
+                'message' => __('errors/php.ioncube_unsupported_version', ['version' => $version]),
+            ], 422);
+        }
+
+        // A second click while this is running must not queue a second
+        // download over the top of the first.
+        if ($installs->current(InstallIonCubeLoader::RUNTIME, $version)?->status === InstallStatus::Installing) {
+            return response()->json(['ioncube' => $loader->status($version)], 202);
+        }
+
+        $installs->start(InstallIonCubeLoader::RUNTIME, $version);
+
+        InstallIonCubeLoader::dispatch($version, Auth::id());
+
+        $log->log('php.ioncube_install_started', null, ['version' => $version]);
+
+        return response()->json(['ioncube' => $loader->status($version)], 202);
+    }
+
+    /**
+     * Remove it. Synchronous, unlike the install: this deletes two files and
+     * reloads, with nothing to download.
+     */
+    public function removeIonCube(string $version, IonCubeLoader $loader, PhpRuntime $php, ActivityLogger $log): JsonResponse
+    {
+        abort_unless($php->installed($version), 404);
+
+        $loader->remove($version);
+
+        $log->log('php.ioncube_removed', null, ['version' => $version]);
+
+        return response()->json(['ioncube' => $loader->status($version)]);
     }
 
     /**

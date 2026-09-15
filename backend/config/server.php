@@ -1937,6 +1937,54 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | ionCube Loader
+    |--------------------------------------------------------------------------
+    |
+    | Commercial PHP applications (WHMCS and most licensed scripts) ship their
+    | source encrypted and cannot run without this loader. There is no apt
+    | package: it is a closed-source `.so` published by ionCube, one per PHP
+    | version, and it is installed as a `zend_extension`.
+    |
+    | ⚠️ The vendor publishes no checksum file — `.sha256` and `SHA256SUMS` are
+    | both absent — so the download is verified by TLS, a size cap and an ELF
+    | header check, and the installed file's SHA-256 is reported so an operator
+    | can compare it across servers. That is a sanity check, not a supply-chain
+    | guarantee. Nothing installs it unless somebody presses the button.
+    |
+    */
+    'ioncube' => [
+        // Architecture decides the archive. Both are published; the ELF check
+        // at install refuses a file whose machine type disagrees with the URL
+        // it came from.
+        'urls' => [
+            'x86_64' => env('SERVER_IONCUBE_URL_X86_64', 'https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz'),
+            'aarch64' => env('SERVER_IONCUBE_URL_AARCH64', 'https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_aarch64.tar.gz'),
+        ],
+
+        // Which PHP versions ionCube publishes a loader for, so the screen can
+        // say "not supported" without downloading 29 MB to find out. A hint,
+        // not the authority: the install refuses on the archive itself if the
+        // file turns out to be absent. Measured from the 2026-03-18 archive,
+        // which carries 4.2 through 8.5 — note 8.0 is NOT in it, and the panel
+        // still offers 8.0.
+        'versions' => array_values(array_filter(explode(',', (string) env(
+            'SERVER_IONCUBE_VERSIONS',
+            '8.1,8.2,8.3,8.4,8.5'
+        )))),
+
+        // Loaded before OPcache's `10-`, and that ordering is load-bearing:
+        // ionCube has to be in place before OPcache starts caching compiled
+        // code. Get it wrong and the site works until the cache warms up.
+        'ini_name' => env('SERVER_IONCUBE_INI_NAME', '01-ioncube.ini'),
+
+        // The archive was 29 MB in March 2026. The cap is for a response that
+        // is not the archive at all, not for a slightly larger release.
+        'max_bytes' => (int) env('SERVER_IONCUBE_MAX_BYTES', 104857600),
+        'timeout' => (int) env('SERVER_IONCUBE_TIMEOUT', 300),
+    ],
+
     'redis_maxmemory_policies' => [
         'noeviction', 'allkeys-lru', 'allkeys-lfu', 'allkeys-random',
         'volatile-lru', 'volatile-lfu', 'volatile-random', 'volatile-ttl',

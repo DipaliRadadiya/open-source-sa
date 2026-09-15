@@ -52,6 +52,56 @@ class PhpConfigException extends Exception
         return new self('errors/php.unsupported_on_stack', 422, replace: ['stack' => $stack]);
     }
 
+    /**
+     * ionCube publishes no loader for this PHP version.
+     *
+     * 422 and no reference: nothing failed on the server, the combination
+     * simply does not exist. PHP 8.0 is the live case — the panel still
+     * offers it and the current archive starts at 8.1.
+     */
+    public static function ionCubeUnsupportedVersion(string $version): self
+    {
+        return new self('errors/php.ioncube_unsupported_version', 422, replace: ['version' => $version]);
+    }
+
+    public static function ionCubeUnsupportedArchitecture(string $architecture): self
+    {
+        return new self('errors/php.ioncube_unsupported_architecture', 422, replace: ['architecture' => $architecture]);
+    }
+
+    public static function ionCubeDownloadFailed(string $reference): self
+    {
+        return new self('errors/php.ioncube_download_failed', 500, $reference);
+    }
+
+    /**
+     * What arrived is not an ionCube loader for this machine.
+     *
+     * Its own message rather than a generic install failure, because the
+     * distinction matters to whoever reads it: the download succeeded and the
+     * contents were wrong, which is the one case a checksum would have caught
+     * if the vendor published one.
+     */
+    public static function ionCubeInvalidLoader(string $reference): self
+    {
+        return new self('errors/php.ioncube_invalid_loader', 500, $reference);
+    }
+
+    public static function ionCubeInstallFailed(string $reference): self
+    {
+        return new self('errors/php.ioncube_install_failed', 500, $reference);
+    }
+
+    /**
+     * PHP refused to start with the loader in place, so it was taken back out
+     * and nothing was reloaded. Separate from a plain install failure because
+     * the user needs to know the server is still serving.
+     */
+    public static function ionCubeConfigTestFailed(string $reference): self
+    {
+        return new self('errors/php.ioncube_config_test_failed', 500, $reference);
+    }
+
     public function render(Request $request): JsonResponse
     {
         $payload = ['message' => __($this->messageKey, $this->replace)];

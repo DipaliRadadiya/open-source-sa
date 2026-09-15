@@ -5076,6 +5076,38 @@ Sequence: back up → write → `php-fpm -t` → reload. On validation failure, 
 
 ---
 
+### GET `/php/versions/{version}/ioncube`
+**Permission:** `php` (view)
+
+```json
+{"ioncube": {
+  "supported": true, "installed": true, "php_version": "8.4",
+  "loader_version": "15.5.0",
+  "sha256": "e2193a63a87e2388a71854b0114de4fc71e2e40bcf0794faf74bb562691e5b62",
+  "path": "/usr/lib/php/20240924/ioncube_loader_lin_8.4.so",
+  "status": "idle", "reason": null, "reference": null
+}}
+```
+
+The ionCube Loader, which commercial PHP applications (WHMCS and most licensed scripts) need in order to run encrypted code. **Its own card, not a row in the extensions list** — there is no apt package for it, so nothing about the extensions endpoint applies.
+
+**`supported: false` is a real state, not an error.** ionCube publishes no loader for **PHP 8.0**, and the panel still offers 8.0. Render an explanation, not an Install button. A PHP version that is not installed at all is a `404` — there is no card for a PHP that is not there.
+
+`loader_version` is read out of PHP itself, so it is the version actually loaded rather than the one that was requested; `null` while `installed` is `true` means the ini is in place and the loader did not load. `status` / `reason` / `reference` follow the same pattern as PHP extension installs.
+
+### POST `/php/versions/{version}/ioncube`
+**Permission:** `php` (manage)
+
+`202` — the archive is ~29 MB, so the install is queued. Poll `GET` until `status` leaves `installing`. A second call while one is running is a no-op `202`, not a second download. A version ionCube does not publish for is refused `422` before anything is queued.
+
+### DELETE `/php/versions/{version}/ioncube`
+**Permission:** `php` (manage)
+
+`200`, synchronous — two files removed and a reload, nothing to download.
+
+**Applies to every site on that PHP version.** There is no per-application toggle, and the loader does not carry over between versions: installing it on 8.4 does nothing for 8.3. Each version has its own card and its own binary.
+
+
 ## Node.js
 
 ### GET `/node`
