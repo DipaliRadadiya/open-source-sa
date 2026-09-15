@@ -125,7 +125,21 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
             name={definition.name}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{tf(`fields.${definition.name}`)}</FormLabel>
+                {/* The same `help.<field>` text the add/edit form prints under
+                    each input. This dialog has no such line — it is a short,
+                    tense screen about replacing a live credential — so it goes
+                    behind a "?" instead of being absent, which is what it was.
+                    Not every field has one; `t.has` is what keeps the icon off
+                    the ones that explain themselves. */}
+                <FormLabel
+                  hint={
+                    tf.has(`help.${definition.name}`)
+                      ? tf(`help.${definition.name}`)
+                      : undefined
+                  }
+                >
+                  {tf(`fields.${definition.name}`)}
+                </FormLabel>
                 <FormControl>
                   {definition.kind === TEXTAREA ? (
                     <Textarea
