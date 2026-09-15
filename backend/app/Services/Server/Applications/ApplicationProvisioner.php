@@ -481,6 +481,11 @@ class ApplicationProvisioner
         // them.
         $this->artifacts->remove($application, $removeFiles);
 
+        // Every unit that lived in the application's slice is gone by now —
+        // its own above, its workers with the artifacts — so the slice itself
+        // can go. systemd will not reclaim it on its own.
+        $this->supervisor->releaseSlice($application);
+
         $driver = $this->webServers->driver();
 
         $driver->remove($application);

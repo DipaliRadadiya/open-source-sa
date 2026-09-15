@@ -43,7 +43,7 @@ StartLimitIntervalSec=60
 
 {{-- One slice per application: per-app CPU and memory accounting comes free,
      and one runaway site cannot starve the others. --}}
-Slice=sv-app-{{ $application->id }}.slice
+Slice={{ $slice }}
 MemoryMax={{ $memoryMax }}
 
 {{-- The application is third-party code running with a shell user's rights.

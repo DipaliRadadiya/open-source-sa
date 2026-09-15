@@ -159,6 +159,33 @@ it('removes the worker units the cascade would otherwise orphan', function () {
         && in_array('daemon-reload', $c, true)))->toBeTrue();
 });
 
+it('releases the slice only once every unit in it is gone', function () {
+    Worker::create([
+        'application_id' => $this->application->id,
+        'name' => 'queue',
+        'command' => 'php artisan queue:work',
+        'processes' => 1,
+        'auto_restart' => true,
+    ]);
+
+    $ran = teardownCommands();
+
+    app(ApplicationProvisioner::class)->deprovision($this->application->fresh(['systemUser', 'certificate']));
+
+    $order = collect($ran)->map(fn (array $c) => implode(' ', $c))->values();
+
+    $slice = $order->search(fn (string $c) => str_contains($c, '.slice'));
+    $workers = $order->search(fn (string $c) => str_contains($c, 'sv-worker'));
+
+    // The slice has to outlast the units inside it. Stopping it first kills
+    // the worker processes out from under the code that is about to disable
+    // and delete their units properly, which would leave enabled units for
+    // processes that no longer exist.
+    expect($slice)->not->toBeFalse()
+        ->and($workers)->not->toBeFalse()
+        ->and($slice)->toBeGreaterThan($workers);
+});
+
 it('removes the fail2ban jail, which points at a log that is going away', function () {
     $ran = teardownCommands();
 

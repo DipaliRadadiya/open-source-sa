@@ -43,6 +43,18 @@ class ProcessSupervisor
         return 'sv-app-'.$application->id.'.service';
     }
 
+    /**
+     * The cgroup slice the unit runs in.
+     *
+     * Named here rather than in the template for the same reason the env file
+     * path is: when the unit and the code that cleans it up each built the name
+     * themselves, they would be free to stop agreeing.
+     */
+    public function slice(Application $application): string
+    {
+        return 'sv-app-'.$application->id.'.slice';
+    }
+
     public function unitPath(Application $application): string
     {
         $dir = rtrim((string) config('server.applications.systemd_dir', '/etc/systemd/system'), '/');
@@ -132,6 +144,28 @@ class ProcessSupervisor
             'feature' => 'application', 'op' => 'unit_remove', 'application' => $application->id,
         ]);
         $this->daemonReload();
+    }
+
+    /**
+     * Release the application's cgroup slice.
+     *
+     * The slice outlives its units: systemd creates `sv-app-<id>.slice` on
+     * their behalf but does not garbage-collect it, so removing the unit
+     * leaves the slice loaded and active and a long-lived box accumulates one
+     * per application ever deleted.
+     *
+     * Deliberately not part of `remove()`. The application's own unit and all
+     * of its worker units share this slice, and stopping a slice kills
+     * everything still inside it — called from `remove()` it would pull the
+     * workers out from under the code that is about to remove them properly.
+     * This runs once, after every unit in the slice is gone.
+     */
+    public function releaseSlice(Application $application): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['systemctl', 'stop', $this->slice($application)],
+            ['feature' => 'application', 'op' => 'slice_release', 'application' => $application->id],
+        );
     }
 
     public function start(Application $application): ServerOpsResult
@@ -311,6 +345,7 @@ class ProcessSupervisor
             'exec' => $this->execStart($application),
             'path' => $this->path($application),
             'memoryMax' => $this->memoryMax($application),
+            'slice' => $this->slice($application),
         ])->render();
     }
 

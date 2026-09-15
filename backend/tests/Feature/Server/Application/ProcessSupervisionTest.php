@@ -164,6 +164,57 @@ describe('the unit', function () {
 
         expect(app(ProcessSupervisor::class)->runs(nodeApp(['start_command' => null])))->toBeFalse();
     });
+
+    it('leaves the slice alone, because the workers are still in it', function () {
+        Process::fake();
+
+        app(ProcessSupervisor::class)->remove(nodeApp());
+
+        // The application's unit and every one of its worker units share
+        // `sv-app-<id>.slice`. Stopping a slice kills what is still inside it,
+        // and the workers are removed after this — by the code that knows how
+        // to disable them first.
+        Process::assertNotRan(fn ($p) => in_array('stop', (array) $p->command, true)
+            && str_contains(implode(' ', (array) $p->command), '.slice'));
+    });
+
+    it('releases the slice, which systemd does not reclaim on its own', function () {
+        Process::fake();
+
+        $application = nodeApp();
+
+        app(ProcessSupervisor::class)->releaseSlice($application);
+
+        // Removing the unit leaves the slice loaded and active. Unreleased, a
+        // long-lived box accumulates one per application ever deleted.
+        Process::assertRan(fn ($p) => implode(' ', (array) $p->command)
+            === 'systemctl stop sv-app-'.$application->id.'.slice');
+    });
+
+    it('names the slice once, so the unit and the cleanup cannot disagree', function () {
+        $written = new ArrayObject;
+        Process::fake(function ($p) use ($written) {
+            if (($p->command[0] ?? '') === 'tee') {
+                $written[] = (string) $p->input;
+            }
+
+            return Process::result(output: '');
+        });
+
+        $application = nodeApp();
+        $supervisor = app(ProcessSupervisor::class);
+
+        $supervisor->apply($application, '/home/appuser/api.test');
+
+        // The template renders whatever `slice()` returns. When each built the
+        // name itself they were free to stop agreeing, and the cleanup would
+        // then stop a slice nothing was ever in.
+        // Not the first write — the logrotate policy is written before the
+        // unit, because systemd creates the log files but not their directory.
+        $unit = collect($written)->first(fn (string $c) => str_contains($c, '[Unit]'));
+
+        expect($unit)->toContain('Slice='.$supervisor->slice($application));
+    });
 });
 
 it('logs a missing unit as an expected probe, not an error', function () {
