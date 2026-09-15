@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { SITE_TYPE_LOGOS, siteTypeLogo } from "../lib/applications/site-type-logo.js";
 
+const COMPONENT = fs.readFileSync("components/applications/site-type-logo.jsx", "utf8");
+
 test("every mapped logo file is actually on disk", () => {
   /*
    * The failure this exists for is silent: a missing file renders as a broken
@@ -43,6 +45,33 @@ test("a static site gets HTML5, not a product logo", () => {
    * site has no brand, so it shows the thing it is made of.
    */
   assert.equal(siteTypeLogo("static"), "/site-types/html5.svg");
+});
+
+test("the logo sits in a fixed-width slot, so the names beside it line up", () => {
+  /*
+   * At `w-auto` each logo is as wide as its own aspect ratio makes it — Craft's
+   * square is 28px, Moodle's wordmark 48 — so the name in the next column
+   * started up to 20px further right on one row than the next. Measured at 1440
+   * across twelve types: twelve different starts before, one after.
+   *
+   * The slot is what fixes it, so the image must never carry a width of its
+   * own again: `max-w-full` inside a sized `span`, not `w-auto max-w-12` on the
+   * `<img>`.
+   */
+  assert.match(COMPONENT, /size = "h-7 w-12"/, "the default slot has a fixed width");
+  assert.match(COMPONENT, /className="max-h-full max-w-full object-contain"/);
+  assert.doesNotMatch(COMPONENT, /<img[^>]*w-auto/s, "a width on the image defeats the slot");
+  assert.match(COMPONENT, /items-center justify-center/, "the logo is centred in the slot");
+});
+
+test("the fallback tile occupies the same column as a logo", () => {
+  /*
+   * A type with no artwork is rare but not impossible — anything added
+   * upstream before we ship its file. If its tile sat outside the slot, that
+   * one row's name would be the only one out of line, which reads as a bug in
+   * the row rather than as a missing logo.
+   */
+  assert.match(COMPONENT, /aspect-square h-full/);
 });
 
 test("no logo file is left unused", () => {

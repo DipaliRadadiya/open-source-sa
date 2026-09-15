@@ -28,27 +28,14 @@ import { siteTypeLogo } from "@/lib/applications/site-type-logo";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 
 /**
- * The application's own logo, falling back to a category glyph.
+ * The category glyph for a type with no logo of its own.
  *
- * The fallback is what the whole list used to be: one of three Lucide icons
- * chosen from `method`, so seventeen different applications were drawn as
- * three shapes and the icon column told you nothing you could not read in the
- * name beside it.
- *
- * A plain `<img>`, not `next/image`: these are local files a few KB each, most
- * of them SVG — which next/image will not optimise without
- * `dangerouslyAllowSVG`, a flag that exists because inline SVG can carry
- * script. Nothing here is remote or resizable, so the optimiser has no work to
- * do and the flag would be paying a real risk for nothing.
- *
- * `object-contain` because the logos are not all square: Moodle ships a
- * wordmark at 80×21 and node-red a 2164×2500 portrait. Contain fits each
- * inside the same box without distorting any of them.
+ * It is what the whole list used to be: one of three Lucide icons chosen from
+ * `method`, so seventeen different applications were drawn as three shapes and
+ * the icon column told you nothing you could not read in the name beside it.
+ * A type that has artwork goes through SiteTypeLogo instead — see TypeTile.
  */
 function TypeIcon({ type, className }) {
-  if (siteTypeLogo(type.name)) {
-    return <SiteTypeLogo name={type.name} size={className} />;
-  }
   const Icon =
     type.method === "git"
       ? Code2
@@ -69,14 +56,12 @@ function TypeIcon({ type, className }) {
  */
 function TypeTile({ type, selected, dimmed }) {
   // A logo needs no tile: it brings its own colour and shape, and a box around
-  // each one turns a list of logos into a list of boxes. It is sized by height
-  // so the square marks and the wordmarks carry the same weight — see
-  // SiteTypeLogo.
+  // each one turns a list of logos into a list of boxes. The fixed-width slot
+  // and the height sizing both live in SiteTypeLogo now, so this row's names
+  // start at the same x as the list's do.
   if (siteTypeLogo(type.name)) {
     return (
-      <span className={cn("flex w-10 shrink-0 justify-center", dimmed && "opacity-50")}>
-        <TypeIcon type={type} className="h-8 w-auto max-w-10" />
-      </span>
+      <SiteTypeLogo name={type.name} size="h-8 w-10" className={cn(dimmed && "opacity-50")} />
     );
   }
   return (

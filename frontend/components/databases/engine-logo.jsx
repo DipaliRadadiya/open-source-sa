@@ -14,6 +14,10 @@ import { engineLogo } from "@/lib/databases/engine-logo";
  * Sized by height for the reason the application logos are: these are wide
  * lockups — MongoDB's is 1102×278 — and a square box would shrink them to a
  * smear while a square mark filled it.
+ *
+ * No fixed-width slot, unlike SiteTypeLogo: nothing is laid out beside these —
+ * the engine name in the cell is `sr-only` — so a varying width moves no text,
+ * and left-flush edges read better than centring in a column of logos alone.
  */
 export function EngineLogo({ engine, className, size = "h-5 w-auto max-w-20" }) {
   const logo = engineLogo(engine);

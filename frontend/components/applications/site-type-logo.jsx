@@ -21,44 +21,45 @@ import { siteTypeLogo } from "@/lib/applications/site-type-logo";
  * grey glyph floating in a row has nothing to hold it.
  */
 /*
- * Constrained by HEIGHT, not by a square box.
+ * A FIXED-WIDTH SLOT, with the logo fitted inside it.
  *
- * A square box makes the two shapes disagree: Akaunting and Craft are square,
- * so they fill all of it and set the row's floor, while Moodle's 80×21
- * wordmark uses a quarter of the same box and reads as a smudge. One is too
- * big and the other too small at the identical setting.
+ * Constrained by height alone — `h-7 w-auto` — every logo takes the width its
+ * own aspect ratio asks for: Craft's square is 28px wide, Moodle's 80×21
+ * wordmark is 48. In a list that is a ragged text column, because the name
+ * beside each logo starts wherever that logo happened to end. Twenty pixels of
+ * disagreement row to row is small enough to look like a rendering fault and
+ * large enough to see.
  *
- * Fixing the height and letting the width follow gives every logo the same
- * optical weight — the wide ones get wider rather than shorter — and the tile
- * can no longer be what makes a row tall, because 28px is under the two lines
- * of text beside it.
+ * So the slot is a constant `h-7 w-12` and the image is fitted into it with
+ * `max-h-full max-w-full object-contain`: the tall-and-square and the
+ * wide-and-short both keep their proportions, neither is cropped, and the text
+ * column starts at the same x on every row. Centred rather than flush left,
+ * because a 28px mark pushed against the left edge of a 48px slot puts its
+ * whitespace all on one side and reads as misaligned in the other direction.
+ *
+ * Sizing by height inside the slot stays right for the original reason: a
+ * square box would make Akaunting and Craft fill it and set the row's floor
+ * while Moodle used a quarter of it and read as a smudge.
  */
-export function SiteTypeLogo({ name, className, size = "h-7 w-auto max-w-12" }) {
+export function SiteTypeLogo({ name, className, size = "h-7 w-12" }) {
   const logo = siteTypeLogo(name);
 
-  if (logo) {
-    return (
-      // A local file a few KB in size, usually SVG — next/image cannot
-      // optimise those without `dangerouslyAllowSVG`, and there is nothing
-      // here for it to optimise.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={logo}
-        alt=""
-        aria-hidden
-        className={cn("shrink-0 object-contain", size, className)}
-      />
-    );
-  }
-
   return (
-    <span
-      className={cn(
-        "flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary",
-        className,
+    <span className={cn("flex shrink-0 items-center justify-center", size, className)}>
+      {logo ? (
+        // A local file a few KB in size, usually SVG — next/image cannot
+        // optimise those without `dangerouslyAllowSVG`, and there is nothing
+        // here for it to optimise.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logo} alt="" aria-hidden className="max-h-full max-w-full object-contain" />
+      ) : (
+        // The fallback keeps its tile — a lone grey glyph floating in a row has
+        // nothing to hold it — and takes the slot's height as a square, so it
+        // occupies the same column as a logo instead of its own.
+        <span className="flex aspect-square h-full items-center justify-center rounded-md bg-primary/10 text-primary">
+          <Globe2 className="size-4" />
+        </span>
       )}
-    >
-      <Globe2 className="size-4" />
     </span>
   );
 }
