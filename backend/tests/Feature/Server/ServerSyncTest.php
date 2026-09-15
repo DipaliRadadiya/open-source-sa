@@ -1803,3 +1803,114 @@ describe('discovering sites on OpenLiteSpeed', function () {
             ->and($found[0]['key'])->toBe('blog.example.com');
     });
 });
+
+/**
+ * A Node site's port lives in its vhost and nowhere else.
+ *
+ * Adopting the site without it leaves `app_port` null, the allocator hands out
+ * a fresh port on the first deploy, and nginx goes on proxying to the old
+ * number — so a site that was working answers 502 the first time the panel
+ * touches it. Found on a real v7 server, where n8n is proxied to 50241.
+ */
+describe('a proxied node site', function () {
+    // Copied from a live v7 box (`n8napp.conf`), trimmed to the parts that
+    // matter. The `include` lines and the websocket headers are kept because
+    // they are what a real one looks like.
+    $v7NodeVhost = <<<'NGINX'
+    server {
+        listen 80;
+        listen [::]:80;
+        server_name n8napp.salite.top;
+    root /home/siteowner/n8napp/public_html;
+    access_log /home/siteowner/n8napp/logs/access.log;
+    include snippets/lets-encrypt-alias.conf;
+        index index.html;
+    location / {
+        proxy_pass http://127.0.0.1:50241;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Host $host;
+    }
+        }
+    NGINX;
+
+    it('records the port nginx is already proxying to', function () use ($v7NodeVhost) {
+        fakeVhosts(['n8napp' => $v7NodeVhost]);
+
+        // The discoverer skips a site whose owner it does not track, so the
+        // system user has to exist before the application can be seen.
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $run = SyncRun::create(['status' => 'running', 'started_at' => now()]);
+        $items = app(ApplicationDiscoverer::class)->discover($run);
+
+        expect($items)->toHaveCount(1)
+            ->and($items[0]['attributes']['app_port'])->toBe(50241);
+    });
+
+    it('carries the port onto the adopted application', function () use ($v7NodeVhost) {
+        fakeVhosts(['n8napp' => $v7NodeVhost]);
+
+        // The discoverer skips a site whose owner it does not track, so the
+        // system user has to exist before the application can be seen.
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $run = SyncRun::create(['status' => 'running', 'started_at' => now()]);
+        $discoverer = app(ApplicationDiscoverer::class);
+        $application = $discoverer->adopt($discoverer->discover($run)[0]);
+
+        expect($application->app_port)->toBe(50241)
+            // Kept in the adoption record too, so the number is still
+            // explicable after someone changes the port by hand.
+            ->and($application->settings['adoption']['proxied_port'] ?? null)->toBe(50241);
+    });
+
+    it('ignores a proxy_pass that points at another host', function () {
+        // A reverse proxy to something this server does not run. Claiming its
+        // port would be claiming a port we do not own.
+        fakeVhosts(['upstream' => "server {\n server_name up.test;\n root /home/siteowner/upstream/public_html;\n location / { proxy_pass http://10.0.0.7:8080; }\n}"]);
+
+        // The discoverer skips a site whose owner it does not track, so the
+        // system user has to exist before the application can be seen.
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $run = SyncRun::create(['status' => 'running', 'started_at' => now()]);
+        $items = app(ApplicationDiscoverer::class)->discover($run);
+
+        expect($items[0]['attributes']['app_port'])->toBeNull();
+    });
+
+    it('leaves a plain site portless rather than inventing one', function () {
+        fakeVhosts(['plain' => "server {\n server_name plain.test;\n root /home/siteowner/plain/public_html;\n index index.php;\n}"]);
+
+        // The discoverer skips a site whose owner it does not track, so the
+        // system user has to exist before the application can be seen.
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $run = SyncRun::create(['status' => 'running', 'started_at' => now()]);
+        $items = app(ApplicationDiscoverer::class)->discover($run);
+
+        expect($items[0]['attributes']['app_port'])->toBeNull();
+    });
+
+    it('drops the port rather than colliding with a site already adopted', function () use ($v7NodeVhost) {
+        // `applications.app_port` is uniquely indexed. A second site somehow
+        // proxied to the same port must not fail the whole adoption run.
+        fakeVhosts(['n8napp' => $v7NodeVhost]);
+
+        // The discoverer skips a site whose owner it does not track, so the
+        // system user has to exist before the application can be seen.
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+
+        $run = SyncRun::create(['status' => 'running', 'started_at' => now()]);
+        $discoverer = app(ApplicationDiscoverer::class);
+        $item = $discoverer->discover($run)[0];
+
+        $first = $discoverer->adopt($item);
+        $item['attributes']['domains'] = ['second.salite.top'];
+        $second = $discoverer->adopt($item);
+
+        expect($first->app_port)->toBe(50241)
+            ->and($second->app_port)->toBeNull();
+    });
+});

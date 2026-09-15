@@ -186,11 +186,13 @@ class ApplicationDiscoverer implements Discoverable
                     'domains' => $parsed['domains'],
                     'site_type' => $type['site_type'],
                     'matched' => $type['matched'],
+                    'proxied_port' => $parsed['port'],
                 ],
                 'attributes' => [
                     'system_user_id' => $owners->get($owner),
                     'domains' => $parsed['domains'],
                     'document_root' => $parsed['root'],
+                    'app_port' => $parsed['port'],
                     'site_type' => $type['site_type'],
                     'serving_profile' => $type['serving_profile'],
                     'confidence' => $type['confidence'],
@@ -208,6 +210,17 @@ class ApplicationDiscoverer implements Discoverable
         $domains = $attributes['domains'];
         $primary = $domains[0];
 
+        // `applications.app_port` is uniquely indexed, so a port already
+        // claimed by a site adopted earlier in this same run cannot be taken
+        // again. Dropped to null rather than allowed to throw: losing the port
+        // costs one site a manual correction, and a constraint violation here
+        // would fail the whole adoption.
+        $port = $attributes['app_port'] ?? null;
+
+        if ($port !== null && Application::query()->where('app_port', $port)->exists()) {
+            $port = null;
+        }
+
         $application = Application::forceCreate([
             'system_user_id' => $attributes['system_user_id'],
             'name' => Application::uniqueName($primary),
@@ -220,6 +233,11 @@ class ApplicationDiscoverer implements Discoverable
             'serving_profile' => $attributes['serving_profile'],
             'status' => 'active',
             'web_root' => '/',
+            // Read off `proxy_pass`. The vhost is the only record of which
+            // port a migrated Node application answers on, and adopting the
+            // site without it means the next deploy moves the process while
+            // nginx keeps pointing at the old number.
+            'app_port' => $port,
             // Deliberately null: the panel has not written a pool for this
             // site, and claiming otherwise would make `php:isolate-all` skip
             // the one site that most needs it.
@@ -233,6 +251,7 @@ class ApplicationDiscoverer implements Discoverable
                     'confidence' => $attributes['confidence'],
                     'matched' => $attributes['matched'],
                     'document_root' => $attributes['document_root'],
+                    'proxied_port' => $attributes['app_port'] ?? null,
                 ],
             ],
         ]);
@@ -354,7 +373,27 @@ class ApplicationDiscoverer implements Discoverable
             $root = trim($m[1]);
         }
 
-        return ['domains' => $domains, 'root' => $root];
+        // The port a Node application is proxied to. Nothing else in this
+        // discoverer needs one — a PHP or static site is served from its root
+        // — but a Node site's port is the only thing tying the vhost to the
+        // process, and it lives nowhere else the panel can read.
+        //
+        // Without it an adopted Node application arrives with a null
+        // `app_port`, the allocator hands out a fresh one on the first deploy,
+        // and nginx goes on proxying to the old number: a site that was
+        // working answers 502 the first time the panel touches it. Seen on a
+        // real v7 box, where n8n is proxied to 50241.
+        //
+        // Loopback only. A `proxy_pass` to another host is a reverse proxy to
+        // something this server does not run, and claiming its port would be
+        // wrong.
+        $port = null;
+
+        if (preg_match('#^\s*proxy_pass\s+https?://(?:127\.0\.0\.1|localhost|\[::1\]):(\d+)#mi', $contents, $m)) {
+            $port = (int) $m[1];
+        }
+
+        return ['domains' => $domains, 'root' => $root, 'port' => $port];
     }
 
     /**
