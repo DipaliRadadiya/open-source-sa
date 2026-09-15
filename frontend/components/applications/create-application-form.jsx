@@ -52,7 +52,7 @@ import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { cn } from "@/lib/utils";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { initialDomainMode, ipToLabel, temporaryDomain } from "@/lib/applications/temporary-domain";
-import { siteTitleFrom } from "@/lib/applications/site-title";
+import { TITLE_FIELDS, siteTitleFrom } from "@/lib/applications/site-title";
 import {
   Collapsible,
   CollapsibleContent,
@@ -1142,17 +1142,26 @@ export function CreateApplicationForm({
    */
   const suggestedTitle = useRef("");
   useEffect(() => {
-    // Keyed on the field, not the site type: Mautic declares `site_title` too.
-    const declared = selected?.fields?.some((field) => field.name === "site_title");
-    if (!declared) return;
+    // Keyed on the field, not the site type — seven types ask "what is this
+    // site called" and no two of them agree on what to call the field. Keying
+    // on `wordpress` would have left the other six with an empty required box
+    // asking for something already typed two fields higher up.
+    //
+    // Two name-ish fields are deliberately NOT here. Joomla's `admin_name` is
+    // a PERSON, and already defaults to "Administrator"; Moodle's `short_name`
+    // is a separate abbreviation, and filling it with the same words as the
+    // title is a guess dressed up as a convenience.
+    const field = selected?.fields?.find((f) => TITLE_FIELDS.has(f.name));
+    if (!field) return;
+    const key = field.name;
 
-    const current = form.getValues("site_title") ?? "";
+    const current = form.getValues(key) ?? "";
     if (current && current !== suggestedTitle.current) return;
 
     const next = siteTitleFrom(name);
     if (current === next) return;
     suggestedTitle.current = next;
-    form.setValue("site_title", next, {
+    form.setValue(key, next, {
       shouldDirty: false,
       // Only ever when there is something to validate, so an empty Name cannot
       // raise "Site title is required" against a box nobody has touched.

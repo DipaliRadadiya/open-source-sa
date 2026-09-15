@@ -1,6 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { siteTitleFrom } from "../lib/applications/site-title.js";
+import { TITLE_FIELDS, siteTitleFrom } from "../lib/applications/site-title.js";
+
+test("every site type that asks for a site name is covered", () => {
+  /*
+   * The field name differs per installer, so keying on one of them silently
+   * left five site types with an empty required box. Listed explicitly rather
+   * than pattern-matched on "name": that pattern is exactly what would sweep
+   * in the two fields below.
+   */
+  for (const field of ["site_title", "site_name", "shop_name", "company_name"]) {
+    assert.equal(TITLE_FIELDS.has(field), true, `${field} should be covered`);
+  }
+});
+
+test("a person's name and an abbreviation are not site titles", () => {
+  /*
+   * Joomla's `admin_name` is the administrator, and already defaults to
+   * "Administrator" — writing "My Shop" there puts a site name where a human
+   * goes. Moodle's `short_name` sits beside the site name on the same form;
+   * filling both with the same words is noise the user has to undo.
+   */
+  assert.equal(TITLE_FIELDS.has("admin_name"), false);
+  assert.equal(TITLE_FIELDS.has("short_name"), false);
+});
 
 test("separators become spaces and each word is capitalised", () => {
   assert.equal(siteTitleFrom("my-shop"), "My Shop");

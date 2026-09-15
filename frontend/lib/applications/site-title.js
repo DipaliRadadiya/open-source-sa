@@ -20,6 +20,33 @@
  * "ACME" are what the user typed, and they are the cases a case-fold would
  * damage.
  */
+/**
+ * The field each site type uses for "what is this site called".
+ *
+ * Seven types ask the question and no two of them agree on the name, because
+ * each mirrors whatever its own installer calls it — WordPress and Mautic a
+ * site title, Craft/Joomla/Moodle a site name, PrestaShop a shop, Akaunting a
+ * company. They are one question wearing five labels, so they get one answer.
+ *
+ * Two near-misses are excluded on purpose, and the exclusion is the point:
+ *
+ *   `admin_name`  (Joomla) — a PERSON, not the site. It already defaults to
+ *                 "Administrator", and writing the site's name into it would
+ *                 put "My Shop" where a human's name goes.
+ *   `short_name`  (Moodle) — a separate abbreviation that sits BESIDE the site
+ *                 name on the same form. Filling both boxes with the same
+ *                 words is not a suggestion, it is noise the user has to undo.
+ *
+ * Adding a type here is safe only after reading what its installer does with
+ * the value. A field is not a title because its name contains "name".
+ */
+export const TITLE_FIELDS = new Set([
+  "site_title", // WordPress, Mautic
+  "site_name", // Craft CMS, Joomla, Moodle
+  "shop_name", // PrestaShop
+  "company_name", // Akaunting
+]);
+
 export function siteTitleFrom(name) {
   const value = String(name ?? "").trim();
   if (!value) return "";
