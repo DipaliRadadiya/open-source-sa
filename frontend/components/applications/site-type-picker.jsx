@@ -24,8 +24,32 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useChromeOffset } from "@/hooks/use-chrome-offset";
+import { siteTypeLogo } from "@/lib/applications/site-type-logo";
 
+/**
+ * The application's own logo, falling back to a category glyph.
+ *
+ * The fallback is what the whole list used to be: one of three Lucide icons
+ * chosen from `method`, so seventeen different applications were drawn as
+ * three shapes and the icon column told you nothing you could not read in the
+ * name beside it.
+ *
+ * A plain `<img>`, not `next/image`: these are local files a few KB each, most
+ * of them SVG — which next/image will not optimise without
+ * `dangerouslyAllowSVG`, a flag that exists because inline SVG can carry
+ * script. Nothing here is remote or resizable, so the optimiser has no work to
+ * do and the flag would be paying a real risk for nothing.
+ *
+ * `object-contain` because the logos are not all square: Moodle ships a
+ * wordmark at 80×21 and node-red a 2164×2500 portrait. Contain fits each
+ * inside the same box without distorting any of them.
+ */
 function TypeIcon({ type, className }) {
+  const logo = siteTypeLogo(type.name);
+  if (logo) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={logo} alt="" aria-hidden className={cn("object-contain", className)} />;
+  }
   const Icon =
     type.method === "git"
       ? Code2
@@ -33,6 +57,40 @@ function TypeIcon({ type, className }) {
         ? PackageOpen
         : LayoutTemplate;
   return <Icon className={className} aria-hidden />;
+}
+
+/**
+ * The tile the icon sits in.
+ *
+ * A brand tint is right behind a monochrome glyph and wrong behind a logo:
+ * `bg-primary` on the selected row is a solid blue square, and Joomla's four
+ * colours or Moodle's orange sitting on it read as a mistake rather than a
+ * selection. A logo brings its own colour, so it gets a neutral surface and
+ * the selection is shown by the row, which is where selection already lives.
+ */
+function TypeTile({ type, selected, dimmed }) {
+  const hasLogo = Boolean(siteTypeLogo(type.name));
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-md",
+        // Bigger for a logo, and no tile behind it. At size-7 with padding a
+        // wide mark — n8n, Nextcloud, Moodle's wordmark — contained down to a
+        // few pixels of coloured smear, which is worse than the glyph it
+        // replaced. The grey square went with it: these already carry their
+        // own colour and shape, and a box around each one turned a list of
+        // logos into a list of boxes.
+        hasLogo
+          ? "size-10"
+          : selected
+            ? "size-7 bg-primary text-primary-foreground"
+            : "size-7 bg-primary/10 text-primary",
+        dimmed && "opacity-50",
+      )}
+    >
+      <TypeIcon type={type} className={hasLogo ? "size-9" : "size-4"} />
+    </span>
+  );
 }
 
 /**
@@ -127,9 +185,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
         >
           {selectedType ? (
             <span className="flex min-w-0 items-center gap-2.5">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <TypeIcon type={selectedType} className="size-4" />
-              </span>
+              <TypeTile type={selectedType} />
               <span className="min-w-0 text-left">
                 <span className="block truncate font-medium text-foreground">
                   {selectedType.title}
@@ -224,17 +280,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                     disabled && "hover:bg-transparent hover:text-inherit",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "flex size-7 shrink-0 items-center justify-center rounded-md",
-                      isSelected
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-primary/10 text-primary",
-                      disabled && "opacity-50",
-                    )}
-                  >
-                    <TypeIcon type={type} className="size-4" />
-                  </span>
+                  <TypeTile type={type} selected={isSelected} dimmed={disabled} />
                   <span className="min-w-0 flex-1">
                     <span className={cn("flex items-center gap-2", disabled && "opacity-60")}>
                       <span className="truncate text-sm font-medium">
