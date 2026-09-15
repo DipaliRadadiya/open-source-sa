@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Globe2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { cn } from "@/lib/utils";
 import {
   groupBySubLevel,
@@ -165,7 +166,7 @@ export function AppSidebar({ items }) {
                   prefetch={false}
                   className="min-w-0"
                 >
-                  <Globe2 className="mt-0.5" />
+                  <SiteTypeLogo name={application.site_type} size="size-6" className="mt-0.5" />
                   <span className="min-w-0 leading-tight">
                     <span className="block truncate font-semibold" title={application.name}>{application.name}</span>
                     <span className="mt-1 block truncate text-xs text-muted-foreground">

@@ -7,6 +7,7 @@ import { CardList, CardListItem } from "@/components/data-table/card-list";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { ApplicationStatusBadge, ApplicationStatusNotes } from "@/components/applications/application-status-badge";
 import { DomainText } from "@/components/ui/domain-text";
+import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 
 /**
  * The sites list on a narrow screen.
@@ -33,7 +34,10 @@ export function ApplicationsCards({ applications = [], canManage = false, canMag
       {applications.map((application) => (
         <CardListItem key={application.id}>
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
+            {/* The logo the table now shows, so the narrow layout identifies a
+                site the same way the wide one does rather than by name alone. */}
+            <SiteTypeLogo name={application.site_type} className="mt-0.5" />
+            <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                 <Link
                   href={`/applications/${application.id}`}

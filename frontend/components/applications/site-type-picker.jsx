@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/popover";
 import { useChromeOffset } from "@/hooks/use-chrome-offset";
 import { siteTypeLogo } from "@/lib/applications/site-type-logo";
+import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 
 /**
  * The application's own logo, falling back to a category glyph.
@@ -45,10 +46,8 @@ import { siteTypeLogo } from "@/lib/applications/site-type-logo";
  * inside the same box without distorting any of them.
  */
 function TypeIcon({ type, className }) {
-  const logo = siteTypeLogo(type.name);
-  if (logo) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={logo} alt="" aria-hidden className={cn("object-contain", className)} />;
+  if (siteTypeLogo(type.name)) {
+    return <SiteTypeLogo name={type.name} size={className} />;
   }
   const Icon =
     type.method === "git"
