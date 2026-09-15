@@ -148,7 +148,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
             className="mt-0.5"
           />
           <div className="space-y-1">
-            <Label htmlFor="delete-app-files" className="text-sm font-medium">
+            <Label htmlFor="delete-app-files" className="text-sm font-medium" hint={t("removeFilesHint")}>
               {t("removeFiles")}
             </Label>
             <p className="text-xs leading-5 text-muted-foreground">

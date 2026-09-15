@@ -277,7 +277,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
               person at the keyboard who knows what they are connecting from —
               the panel only ever sees its own server. */}
           <div className="space-y-2 py-2">
-            <Label htmlFor="lockout-ip">{t("lockout.ipLabel")}</Label>
+            <Label htmlFor="lockout-ip" hint={t("lockout.ipLabelHint")}>{t("lockout.ipLabel")}</Label>
             <Input
               id="lockout-ip"
               value={ignoreIp}

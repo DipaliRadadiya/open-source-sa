@@ -115,7 +115,7 @@ export function RestoreBackupDialog({
           <Label
             htmlFor="restore-restart"
             className="text-sm font-normal leading-relaxed"
-          >
+           hint={t("restore.restartHint")}>
             {t("restore.restart")}
           </Label>
         </div>

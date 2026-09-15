@@ -241,7 +241,7 @@ export function BackupSettingsFields({
           render={({ field }) => (
             <FormItem className="flex items-start justify-between gap-4 rounded-lg border p-3">
               <div className="space-y-1">
-                <FormLabel>{t("automatic")}</FormLabel>
+                <FormLabel hint={t("automaticHint")}>{t("automatic")}</FormLabel>
                 <FormDescription>
                   {automatic ? t("automaticOn") : t("automaticOff")}
                 </FormDescription>
@@ -494,7 +494,7 @@ export function BackupSettingsFields({
               name="file_excludes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("fileExcludes")}</FormLabel>
+                  <FormLabel hint={t("fileExcludesHint")}>{t("fileExcludes")}</FormLabel>
                   <FormControl>
                     <Textarea
                       // `field-sizing-fixed` matters: the base Textarea sets

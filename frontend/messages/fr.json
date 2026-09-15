@@ -56,7 +56,8 @@
     "autoRefresh": {
       "stopped": "Le panneau a arrêté de vérifier les mises à jour sur cette page.",
       "checkAgain": "Vérifier à nouveau"
-    }
+    },
+    "whatIsThis": "Qu’est-ce que c’est ?"
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -177,7 +178,8 @@
       "remove": "Retirer la clé",
       "removeTitle": "Retirer la clé SSH ?",
       "removeDescription": "Ceci retire « {name} » des clés autorisées de l'utilisateur.",
-      "removeConfirm": "Retirer"
+      "removeConfirm": "Retirer",
+      "publicKeyHint": "La moitié .pub d’une paire de clés SSH. Elle peut être partagée sans risque : c’est grâce à elle que le serveur vous reconnaît. Ne collez jamais la clé privée ici."
     },
     "detail": {
       "back": "Utilisateurs système",
@@ -1278,7 +1280,8 @@
       "ipLabel": "Adresse à ne jamais bannir",
       "ipPlaceholder": "203.0.113.10",
       "ipHint": "L'adresse depuis laquelle VOUS vous connectez, qui n'est pas forcément celle affichée. Vérifiez ce que votre connexion indique en cas de doute.",
-      "addIp": "Ajouter cette adresse et activer"
+      "addIp": "Ajouter cette adresse et activer",
+      "ipLabelHint": "Une adresse qui ne doit jamais être bloquée — votre connexion au bureau ou à la maison. Ajoutez-la avant de durcir les règles, pour ne pas vous enfermer dehors."
     },
     "banned": {
       "title": "Adresses bannies",
@@ -1836,7 +1839,9 @@
         "serverTime": "heure du serveur",
         "next": "Prochain redémarrage : {when}",
         "notScheduled": "Non planifié",
-        "nextLabel": "Prochain redémarrage"
+        "nextLabel": "Prochain redémarrage",
+        "dayOfWeekHint": "Le jour où la tâche hebdomadaire s’exécute.",
+        "dayOfMonthHint": "La date à laquelle la tâche mensuelle s’exécute. Choisissez 28 ou moins pour qu’elle tombe chaque mois."
       },
       "summary": {
         "pendingYes": "Redémarrage nécessaire"
@@ -2176,7 +2181,9 @@
       "cleansNothing": "Rien sélectionné",
       "overThreshold": "au-delà de {percent}%",
       "everyTime": "à chaque exécution",
-      "turnOnFirst": "Activez la planification pour choisir quand elle s'exécute."
+      "turnOnFirst": "Activez la planification pour choisir quand elle s'exécute.",
+      "enableHint": "Lance le nettoyage selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
+      "onlyWhenHint": "Ne nettoie que lorsque le disque est au moins rempli à ce niveau, pour qu’un nettoyage de routine ne se déclenche pas sur un disque presque vide."
     },
     "runs": {
       "title": "Nettoyages récents",
@@ -2357,14 +2364,19 @@
         "charset": "Jeu de caractères",
         "collation": "Collation",
         "needsCharset": "Choisissez d'abord un jeu de caractères — ses collations se chargent avec.",
-        "chooseFirst": "Choisissez d'abord un jeu de caractères"
+        "chooseFirst": "Choisissez d'abord un jeu de caractères",
+        "charsetHint": "Les caractères que la base de données peut stocker. utf8mb4 prend en charge toutes les langues et les emoji — choisissez-le, sauf si quelque chose exige autre chose.",
+        "collationHint": "Comment le texte est trié et comparé, et notamment si les majuscules et les minuscules sont considérées comme identiques. Cela découle du jeu de caractères."
       },
       "pgsqlWords": {
         "charset": "Encodage",
         "collation": "Locale",
         "needsCharset": "Choisissez d'abord un encodage — ses locales se chargent avec.",
-        "chooseFirst": "Choisissez d'abord un encodage"
-      }
+        "chooseFirst": "Choisissez d'abord un encodage",
+        "charsetHint": "Les caractères que la base de données peut stocker. UTF8 prend en charge toutes les langues et les emoji — choisissez-le, sauf si quelque chose exige autre chose.",
+        "collationHint": "Les règles linguistiques utilisées pour trier et comparer le texte. Cela découle de l'encodage."
+      },
+      "accessHint": "Les machines depuis lesquelles cet utilisateur peut se connecter. Seul ce serveur est la réponse la plus sûre, et la bonne pour un site hébergé ici. Évitez « n’importe où » sauf si vous avez vraiment besoin d’un accès distant."
     },
     "access": {
       "localhost": {
@@ -2471,7 +2483,9 @@
       "savedConnected": "Enregistré et connecté.",
       "savedNotConnected": "Enregistré, mais le panneau ne peut toujours pas se connecter.",
       "testFailed": "Le test n'a pas pu être exécuté.",
-      "action": "Connexion"
+      "action": "Connexion",
+      "howHint": "Comment un programme atteint cette base de données. Un socket est plus rapide mais ne fonctionne que depuis ce serveur. TCP/IP fonctionne depuis n’importe quelle machine autorisée pour cet utilisateur.",
+      "socketPathHint": "Le fichier par lequel un programme sur ce serveur se connecte, à la place d’un port réseau. Gardez la valeur par défaut sauf si la base a été installée ailleurs."
     },
     "credentials": {
       "title": "Détails de connexion",
@@ -2533,7 +2547,8 @@
       "generate": "Générer",
       "copyUsername": "Copier le nom d'utilisateur",
       "newPasswordRequired": "Nouveau mot de passe (requis pour renommer sur MongoDB)",
-      "nameIsFixed": "Le nom d'un utilisateur de base de données ne peut pas être modifié après sa création. Créez un autre utilisateur."
+      "nameIsFixed": "Le nom d'un utilisateur de base de données ne peut pas être modifié après sa création. Créez un autre utilisateur.",
+      "newPasswordRequiredHint": "MongoDB ne peut pas renommer un utilisateur, donc le compte est recréé de zéro. C’est pourquoi il faut définir un mot de passe."
     },
     "detail": {
       "size": "Taille",
@@ -2852,7 +2867,9 @@
       "submit": "Enregistrer",
       "saved": "Compte mis à jour.",
       "namePlaceholder": "ex. GitHub de l'entreprise",
-      "workspacePlaceholder": "your-workspace-id"
+      "workspacePlaceholder": "your-workspace-id",
+      "hostLabelHint": "L’adresse de votre GitLab ou Gitea auto-hébergé. Laissez tel quel pour github.com.",
+      "workspaceLabelHint": "Le workspace Bitbucket dont vous voulez utiliser les dépôts."
     },
     "replace": {
       "title": "Remplacer le token de {label}",
@@ -2865,7 +2882,8 @@
       "verifying": "Vérification auprès de {provider}…",
       "replaced": "Token remplacé.",
       "rejected": "{provider} a refusé ce token. Votre token actuel est toujours en place.",
-      "tokenPlaceholder": "Collez le nouveau token"
+      "tokenPlaceholder": "Collez le nouveau token",
+      "tokenLabelHint": "Un nouveau jeton d’accès qui remplace l’actuel. L’ancien jeton cesse de fonctionner dès que vous enregistrez."
     },
     "disconnect": {
       "title": "Déconnecter {label} ?",
@@ -2934,7 +2952,8 @@
         "subtitle": "Choisissez une copie enregistrée. Le fichier actuel est d'abord sauvegardé, l'opération est donc réversible.",
         "restart": "Redémarrer l'application après la restauration",
         "done": "Environnement restauré.",
-        "failed": "Impossible de restaurer la sauvegarde."
+        "failed": "Impossible de restaurer la sauvegarde.",
+        "restartHint": "Redémarre le site pour que les paramètres restaurés s’appliquent tout de suite. Sans cela, ils s’appliqueront au prochain redémarrage."
       },
       "history": {
         "title": "Historique des modifications",
@@ -3238,7 +3257,8 @@
       "removeDatabasesOn": "{count, plural, one {{databases} sera supprimée du serveur, ainsi que les utilisateurs qui s'y connectent.} other {{databases} seront supprimées du serveur, ainsi que les utilisateurs qui s'y connectent.}}",
       "removeDatabasesOff": "{count, plural, one {{databases} reste sur le serveur, sans lien avec aucun site. Supprimez-la depuis Bases de données si vous n'en avez plus besoin.} other {{databases} restent sur le serveur, sans lien avec aucun site. Supprimez-les depuis Bases de données si vous n'en avez plus besoin.}}",
       "databasesFailed": "Le site a été supprimé, mais {databases} n'ont pas pu être retirées.",
-      "goToDatabases": "Ouvrir Bases de données"
+      "goToDatabases": "Ouvrir Bases de données",
+      "removeFilesHint": "Désactivé, le site est retiré du panneau mais ses fichiers restent sur le serveur. Activé, les fichiers et ses sauvegardes sont supprimés et ne peuvent pas être récupérés."
     },
     "facts": {
       "title": "Application",
@@ -3311,7 +3331,8 @@
           "302": "302 — Temporaire",
           "307": "307 — Temporaire, conserve la méthode",
           "308": "308 — Permanent, conserve la méthode"
-        }
+        },
+        "redirectToHint": "L’adresse vers laquelle les visiteurs sont redirigés à la place. Utilisez ceci quand un domaine doit pointer vers un autre au lieu de servir son propre site."
       },
       "type": {
         "alias": "Alias (même site, second nom)",
@@ -3410,7 +3431,10 @@
         "issueFailed": "Impossible d'émettre le certificat.",
         "reissueTitle": "Réémettre le certificat",
         "reissueSubtitle": "Remplacer le certificat actuel — généralement pour couvrir un nom manquant.",
-        "replacesCurrent": "Ceci remplace le certificat {current} actuel. Un certificat téléversé ne peut pas être réémis depuis ici."
+        "replacesCurrent": "Ceci remplace le certificat {current} actuel. Un certificat téléversé ne peut pas être réémis depuis ici.",
+        "certificateHint": "Le certificat émis par votre fournisseur pour ce domaine. Collez le bloc entier, y compris les lignes BEGIN et END.",
+        "privateKeyHint": "La clé secrète qui va avec le certificat. Elle a été créée quand vous l’avez demandé — ne la partagez jamais avec personne.",
+        "chainHint": "Les certificats supplémentaires qui rattachent le vôtre à une autorité de confiance. Sans eux, certains navigateurs et téléphones affichent un avertissement. Votre fournisseur les fournit."
       },
       "issueCertificate": "Émettre un certificat SSL",
       "description": "Noms qui atteignent ce site, et son certificat.",
@@ -3507,7 +3531,9 @@
         "gitlabTokenHint": "GitLab n'affiche le jeton de signature qu'une seule fois à l'ajout du webhook. Laissez vide pour utiliser à la place un secret généré par le panneau.",
         "pickProviderHint": "Choisissez un fournisseur ci-dessus pour voir ses étapes de configuration.",
         "off": "Désactivé",
-        "offBody": "Le déploiement automatique est désactivé. Activez-le pour déployer à chaque push sur {branch} — votre URL et votre secret de webhook sont conservés."
+        "offBody": "Le déploiement automatique est désactivé. Activez-le pour déployer à chaque push sur {branch} — votre URL et votre secret de webhook sont conservés.",
+        "providerHint": "Le service sur lequel se trouve le dépôt. C’est lui qui détermine comment nous vérifions qu’une requête entrante vient vraiment de lui.",
+        "urlHint": "Collez ceci dans les paramètres webhook de votre dépôt. C’est l’adresse que votre service Git appelle lorsqu’il y a du nouveau code."
       },
       "cancel": "Annuler",
       "runtime": {
@@ -4417,7 +4443,13 @@
         "directives": "Une par ligne, comme un fichier php.ini. Tout ce qui est ici l'emporte sur les champs ci-dessus.",
         "openBasedir": "Empêche PHP de lire ou écrire des fichiers hors du dossier de ce site.",
         "allowUrlFopen": "Permet à PHP de récupérer des URL distantes. Le désactiver bloque un moyen courant pour les malwares de communiquer.",
-        "upload": "Augmente aussi la limite du serveur web lui-même, qui refuse les gros envois avant que PHP ne les voie. Un site configuré plus tôt le prend en compte la première fois que vous enregistrez."
+        "upload": "Augmente aussi la limite du serveur web lui-même, qui refuse les gros envois avant que PHP ne les voie. Un site configuré plus tôt le prend en compte la première fois que vous enregistrez.",
+        "version": "La version de PHP sur laquelle ce site tourne. Plus récent est plus rapide et mieux supporté, mais un site très ancien peut ne pas fonctionner. Changez-la, puis vérifiez que le site se charge toujours.",
+        "memory": "La quantité de mémoire qu’un chargement de page peut utiliser avant que PHP n’abandonne. Augmentez-la si vous voyez « allowed memory size exhausted ».",
+        "executionTime": "Le nombre de secondes pendant lesquelles PHP laisse une page s’exécuter avant de l’arrêter. Augmentez-le pour les imports et sauvegardes ; laissez-le bas pour les pages ordinaires.",
+        "inputVars": "Combien de champs distincts un formulaire peut soumettre. Les grandes pages de réglages et les page builders peuvent dépasser la valeur par défaut.",
+        "disableFunctions": "Les commandes PHP que ce site n’a pas le droit d’exécuter. Les valeurs par défaut bloquent celles le plus souvent utilisées dans les attaques — n’en retirez une que si le site en a vraiment besoin.",
+        "children": "Combien de requêtes ce site peut traiter en même temps. Trop peu et les visiteurs font la queue ; trop et le serveur manque de mémoire."
       },
       "pmTypes": {
         "ondemand": "À la demande",
@@ -4520,7 +4552,8 @@
       "sessionGcMaxlifetimePlaceholder": "1440",
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
-      "versionUnsupported": "{type} prend en charge PHP {range}. Faire passer ce site à une autre version risque de le casser."
+      "versionUnsupported": "{type} prend en charge PHP {range}. Faire passer ce site à une autre version risque de le casser.",
+      "presetsLabelHint": "Réglages prêts à l’emploi dimensionnés pour des sites petits, moyens ou grands. Un point de départ — vous pouvez encore modifier n’importe quelle valeur ensuite."
     },
     "fail2ban": {
       "pageTitle": "Protection anti-attaques",
@@ -4595,7 +4628,8 @@
         "submit": "Créer un site de préproduction",
         "creating": "Création…",
         "done": "Site de préproduction créé sur {domain}.",
-        "failed": "Le site de préproduction n'a pas pu être créé."
+        "failed": "Le site de préproduction n'a pas pu être créé.",
+        "domainLabelHint": "L’adresse pour la copie de préproduction. Utilisez quelque chose qui ne ressemble clairement pas à votre site en production."
       },
       "pushDialog": {
         "title": "Pousser la préproduction vers {domain} ?",
@@ -4626,7 +4660,8 @@
         "done": "Préproduction envoyée vers {domain}.",
         "failed": "L'envoi ne s'est pas terminé.",
         "copyAge": "Copie effectuée {age}",
-        "copyDomain": "Copier le domaine"
+        "copyDomain": "Copier le domaine",
+        "whatToPushHint": "Fichiers copie le code et les téléversements. Base de données copie le contenu. Les deux copient tout."
       },
       "isCopy": {
         "title": "Ce site est une copie de préproduction",
@@ -4785,6 +4820,25 @@
     "unavailableRuntime": {
       "php": "Ce site a besoin de PHP {range}, et ce serveur dispose de {installed}.",
       "node": "Ce site a besoin de Node {range}, et ce serveur dispose de {installed}."
+    },
+    "gitAccountHint": "Un compte Git connecté, utilisé pour lire vos dépôts privés. Ajoutez-en un dans Intégrations si cette liste est vide.",
+    "systemUserHint": "Le compte Linux qui possède les fichiers de ce site. Donner à chaque site son propre compte empêche un site de lire les données d’un autre.",
+    "fieldHints": {
+      "web_root": "Le dossier de votre site que les visiteurs voient réellement. Laissez-le tel quel sauf si votre framework sert le contenu depuis un sous-dossier tel que /public.",
+      "table_prefix": "Se place devant chaque nom de table de la base de données, afin que deux sites puissent partager une même base sans conflit. La valeur par défaut convient.",
+      "package_manager": "L'outil utilisé pour installer les dépendances de ce projet. Choisissez celui qui correspond au fichier de verrouillage de votre dépôt.",
+      "rendering_type": "La manière dont les pages sont produites. Server-side rend chaque requête sur le serveur ; static construit les pages une fois ; client-side envoie un paquet que le navigateur affiche.",
+      "build_command": "Exécuté une fois après la récupération du code, pour compiler le site. Laissez vide si le projet ne nécessite aucune étape de compilation.",
+      "start_command": "La commande qui maintient l'application en fonctionnement. Elle doit rester au premier plan — une commande qui se termine immédiatement ressemble à un plantage.",
+      "deploy_script": "Les commandes exécutées à chaque déploiement, dans l'ordre. C'est ici que vous récupérez le code, installez les dépendances et redémarrez l'application.",
+      "app_port": "Le port sur lequel l'application écoute à l'intérieur du serveur. Les visiteurs ne le voient jamais — le serveur web transmet les requêtes vers celui-ci.",
+      "php_version": "La version de PHP sur laquelle ce site s'exécute. Une version plus récente est plus rapide et mieux prise en charge, mais un site très ancien peut ne pas fonctionner avec.",
+      "node_version": "La version de Node.js sur laquelle ce site s'exécute. Utilisez celle correspondant à la version avec laquelle le projet a été développé.",
+      "timezone": "Le fuseau horaire utilisé par cette application lorsqu'elle affiche ou enregistre une date. Il ne modifie pas l'horloge du serveur lui-même.",
+      "site_language": "La langue dans laquelle le site installé est configuré. Cela ne modifie pas la langue de ce panneau.",
+      "locale": "La langue dans laquelle le site installé est configuré. Cela ne modifie pas la langue de ce panneau.",
+      "language": "La langue dans laquelle le site installé est configuré. Cela ne modifie pas la langue de ce panneau.",
+      "short_name": "Un identifiant court utilisé à l'intérieur de l'application. Lettres et chiffres uniquement, sans espaces."
     }
   },
   "panelUpdate": {
@@ -5085,7 +5139,11 @@
         "folder_id": "La partie de l’URL du dossier après /folders/, pas le lien entier.",
         "drive_shared_only": "Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide. Partagez le dossier avec l’adresse du compte de service, puis collez sa clé ci-dessous.",
         "base_uri": "Utilisez https://webdav.pcloud.com/ pour un compte US ou https://ewebdav.pcloud.com/ pour un compte UE. Ajoutez un dossier à la fin pour regrouper les sauvegardes.",
-        "pcloud_warning": "pCloud indique que son WebDAV est prévu pour de petits fichiers et peut être interrompu, et il cesse de fonctionner dès que l’authentification à deux facteurs est activée. Les deux comptent pour des sauvegardes : testez la destination et gardez-en une seconde ailleurs."
+        "pcloud_warning": "pCloud indique que son WebDAV est prévu pour de petits fichiers et peut être interrompu, et il cesse de fonctionner dès que l’authentification à deux facteurs est activée. Les deux comptent pour des sauvegardes : testez la destination et gardez-en une seconde ailleurs.",
+        "bucket": "Le nom du bucket dans lequel stocker les sauvegardes. Il doit déjà exister — nous ne le créerons pas pour vous.",
+        "region": "La région dans laquelle se trouve le bucket. Elle doit correspondre, sinon la connexion sera refusée.",
+        "access_key": "La partie publique des identifiants pour ce compte de stockage.",
+        "secret_key": "La partie secrète des identifiants. Traitez-la comme un mot de passe — toute personne qui la détient peut lire vos sauvegardes."
       },
       "plainFtpWarning": "TLS est désactivé. Le mot de passe et chaque sauvegarde seront envoyés en clair.",
       "prefixHintRemote": "Dossier facultatif dans le répertoire distant, pour qu’un serveur puisse héberger plusieurs sites.",
@@ -5313,7 +5371,9 @@
       "noDatabase": {
         "blocked": "Ce site n'a pas de base de données",
         "filesOnly": "Ce site n'a pas de base de données, donc seuls ses fichiers seront sauvegardés."
-      }
+      },
+      "automaticHint": "Lance la sauvegarde selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
+      "fileExcludesHint": "Chemins à exclure de la sauvegarde, un par ligne. Les caches et les logs méritent de l’être ; les téléversements, non."
     },
     "history": {
       "allApplications": "Tous les sites",
@@ -5448,7 +5508,8 @@
         "sizeUnknown": "Inconnu"
       },
       "confirmLabelPlain": "Tapez ceci pour confirmer",
-      "copyDomain": "Copier le domaine"
+      "copyDomain": "Copier le domaine",
+      "whatToRestoreHint": "Restaurez les fichiers, la base de données, ou les deux. Restaurer la base de données remplace tout le contenu actuel du site."
     },
     "progress": {
       "running": "Restauration du site",
@@ -5721,7 +5782,8 @@
       "summary": "{count, plural, =0 {Rien ne sera ajouté} one {# élément sera ajouté} other {# éléments seront ajoutés}} sur {types, plural, one {# type} other {# types}}.",
       "summaryIgnored": "{count, plural, one {# élément ignoré sera laissé tel quel} other {# éléments ignorés seront laissés tels quels}}.",
       "summaryIrreversible": "Action irréversible — les éléments ajoutés doivent être retirés un par un.",
-      "confirm": "{count, plural, =0 {Ajouter au panneau} one {Ajouter # élément} other {Ajouter # éléments}}"
+      "confirm": "{count, plural, =0 {Ajouter au panneau} one {Ajouter # élément} other {Ajouter # éléments}}",
+      "includeFirewallHint": "Ouvrez aussi les ports dont ce site a besoin, pour qu’il soit joignable immédiatement."
     },
     "errors": {
       "startFailed": "Impossible de démarrer l'analyse.",

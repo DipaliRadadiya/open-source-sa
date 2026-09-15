@@ -101,7 +101,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
           ) : null}
 
           <div className="space-y-1.5">
-            <Label>{t("whatToPush")}</Label>
+            <Label hint={t("whatToPushHint")}>{t("whatToPush")}</Label>
             <ChoiceField
               value={mode}
               onChange={setMode}

@@ -111,7 +111,7 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
           name="token"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>{t("tokenLabel")}</FormLabel>
+              <FormLabel required hint={t("tokenLabelHint")}>{t("tokenLabel")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   autoComplete="off"

@@ -209,7 +209,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
       >
         <div className="space-y-5">
           <div className="flex items-center justify-between gap-4">
-            <Label htmlFor="cleaner-enabled" className="font-normal">
+            <Label htmlFor="cleaner-enabled" className="font-normal" hint={t("schedule.enableHint")}>
               {t("schedule.enable")}
             </Label>
             <Switch id="cleaner-enabled" checked={enabled} onCheckedChange={setEnabled} />
@@ -250,7 +250,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cleaner-threshold">{t("schedule.onlyWhen")}</Label>
+              <Label htmlFor="cleaner-threshold" hint={t("schedule.onlyWhenHint")}>{t("schedule.onlyWhen")}</Label>
               <div className="relative">
                 <Input
                   id="cleaner-threshold"

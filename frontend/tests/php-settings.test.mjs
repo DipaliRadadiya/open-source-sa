@@ -86,7 +86,11 @@ test("disable_functions takes function names and nothing else", () => {
 });
 
 test("PHP directive names stay inline with their labels", () => {
-  assert.match(PHP_PANEL_SOURCE, /function Label\(\{ label, name, directive \}\)/);
+  // Matched loosely on purpose. What this protects is that the directive is
+  // rendered as part of the label and not lifted into its own component —
+  // freezing the exact parameter list made it fail the first time a prop was
+  // added for an unrelated reason, which is a test failing about itself.
+  assert.match(PHP_PANEL_SOURCE, /function Label\(\{[^}]*\bdirective\b[^}]*\}\)/);
   assert.match(PHP_PANEL_SOURCE, /\(\{directive\}\)/);
   assert.doesNotMatch(PHP_PANEL_SOURCE, /function Directive\(/);
   assert.doesNotMatch(PHP_PANEL_SOURCE, /<Directive\b/);

@@ -56,7 +56,8 @@
     "autoRefresh": {
       "stopped": "The panel has stopped checking for updates on this page.",
       "checkAgain": "Check again"
-    }
+    },
+    "whatIsThis": "What is this?"
   },
   "systemUsers": {
     "title": "System Users",
@@ -177,7 +178,8 @@
       "remove": "Remove key",
       "removeTitle": "Remove SSH key?",
       "removeDescription": "This removes “{name}” from the user's authorized keys.",
-      "removeConfirm": "Remove"
+      "removeConfirm": "Remove",
+      "publicKeyHint": "The .pub half of an SSH key pair. It is safe to share — it is how the server recognises you. Never paste the private key here."
     },
     "detail": {
       "back": "System Users",
@@ -1278,7 +1280,8 @@
       "ipLabel": "Address to keep unbanned",
       "ipPlaceholder": "203.0.113.10",
       "ipHint": "The address YOU connect from, which is not necessarily the one shown. Check what your connection reports if you are unsure.",
-      "addIp": "Add this address and turn it on"
+      "addIp": "Add this address and turn it on",
+      "ipLabelHint": "An address that must never be locked out — your own office or home connection. Add it before tightening the rules, so you cannot lock yourself out."
     },
     "banned": {
       "title": "Banned addresses",
@@ -1836,7 +1839,9 @@
         "serverTime": "server time",
         "next": "Next restart: {when}",
         "notScheduled": "Not scheduled",
-        "nextLabel": "Next restart"
+        "nextLabel": "Next restart",
+        "dayOfWeekHint": "Which day the weekly job runs.",
+        "dayOfMonthHint": "Which date the monthly job runs. Pick 28 or lower so it runs in every month."
       },
       "summary": {
         "pendingYes": "Restart needed"
@@ -2176,7 +2181,9 @@
       "cleansNothing": "Nothing selected",
       "overThreshold": "when over {percent}%",
       "everyTime": "every time",
-      "turnOnFirst": "Turn the schedule on to choose when it runs."
+      "turnOnFirst": "Turn the schedule on to choose when it runs.",
+      "enableHint": "Runs the cleanup on a schedule instead of only when you press the button.",
+      "onlyWhenHint": "Only clean up once the disk is at least this full, so a routine cleanup does not run on a mostly empty disk."
     },
     "runs": {
       "title": "Recent cleanups",
@@ -2357,14 +2364,19 @@
         "charset": "Character set",
         "collation": "Collation",
         "needsCharset": "Choose a character set first — its collations load with it.",
-        "chooseFirst": "Choose a character set first"
+        "chooseFirst": "Choose a character set first",
+        "charsetHint": "Which characters the database can store. utf8mb4 handles every language and emoji — pick it unless something needs otherwise.",
+        "collationHint": "How text is sorted and compared, including whether upper and lower case count as the same. It follows from the character set."
       },
       "pgsqlWords": {
         "charset": "Encoding",
         "collation": "Locale",
         "needsCharset": "Choose an encoding first — its locales load with it.",
-        "chooseFirst": "Choose an encoding first"
-      }
+        "chooseFirst": "Choose an encoding first",
+        "charsetHint": "Which characters the database can store. UTF8 handles every language and emoji — pick it unless something needs otherwise.",
+        "collationHint": "The language rules used to sort and compare text. It follows from the encoding."
+      },
+      "accessHint": "Which machines this user may connect from. Only this server is the safest answer, and the right one for a site hosted here. Avoid anywhere unless you genuinely need remote access."
     },
     "access": {
       "localhost": {
@@ -2471,7 +2483,9 @@
       "savedConnected": "Saved and connected.",
       "savedNotConnected": "Saved, but the panel still cannot connect.",
       "testFailed": "The test could not be run.",
-      "action": "Connection"
+      "action": "Connection",
+      "howHint": "How a program reaches this database. A socket is faster but only works from this server. TCP/IP works from anywhere this user is allowed to connect from.",
+      "socketPathHint": "The file a program on this server connects through instead of a network port. Leave the default unless the database was installed somewhere unusual."
     },
     "credentials": {
       "title": "Connection details",
@@ -2533,7 +2547,8 @@
       "generate": "Generate",
       "copyUsername": "Copy username",
       "newPasswordRequired": "New password (required to rename on MongoDB)",
-      "nameIsFixed": "A database user's name cannot be changed after it is created. Create another user instead."
+      "nameIsFixed": "A database user's name cannot be changed after it is created. Create another user instead.",
+      "newPasswordRequiredHint": "MongoDB cannot rename a user, so the account is created again from scratch. That is why it needs a password set."
     },
     "detail": {
       "size": "Size",
@@ -2852,7 +2867,9 @@
       "submit": "Save",
       "saved": "Account updated.",
       "namePlaceholder": "e.g. Company GitHub",
-      "workspacePlaceholder": "your-workspace-id"
+      "workspacePlaceholder": "your-workspace-id",
+      "hostLabelHint": "The address of your self-hosted GitLab or Gitea. Leave it as it is for github.com.",
+      "workspaceLabelHint": "The Bitbucket workspace whose repositories you want to use."
     },
     "replace": {
       "title": "Replace the token for {label}",
@@ -2865,7 +2882,8 @@
       "verifying": "Checking with {provider}…",
       "replaced": "Token replaced.",
       "rejected": "{provider} rejected this token. Your current token is still in place.",
-      "tokenPlaceholder": "Paste the new token"
+      "tokenPlaceholder": "Paste the new token",
+      "tokenLabelHint": "A new access token to replace the current one. The old token stops working as soon as you save."
     },
     "disconnect": {
       "title": "Disconnect {label}?",
@@ -2934,7 +2952,8 @@
         "subtitle": "Pick a saved copy. The current file is backed up first, so this is reversible.",
         "restart": "Restart the app after restoring",
         "done": "Environment restored.",
-        "failed": "We couldn't restore the backup."
+        "failed": "We couldn't restore the backup.",
+        "restartHint": "Restart the site so the restored settings take effect now. Without this they apply at the next restart."
       },
       "history": {
         "title": "Change history",
@@ -3238,7 +3257,8 @@
       "removeDatabasesOn": "{count, plural, one {{databases} will be dropped from the server, with the users that connect to it.} other {{databases} will be dropped from the server, with the users that connect to them.}}",
       "removeDatabasesOff": "{count, plural, one {{databases} stays on the server, no longer linked to any site. Remove it from Databases if you no longer need it.} other {{databases} stay on the server, no longer linked to any site. Remove them from Databases if you no longer need them.}}",
       "databasesFailed": "The site was deleted, but {databases} could not be removed.",
-      "goToDatabases": "Open Databases"
+      "goToDatabases": "Open Databases",
+      "removeFilesHint": "Off, the site is removed from the panel but its files stay on the server. On, the files and its backups are deleted and cannot be recovered."
     },
     "facts": {
       "title": "Application",
@@ -3311,7 +3331,8 @@
           "302": "302 — Temporary",
           "307": "307 — Temporary, keeps the method",
           "308": "308 — Permanent, keeps the method"
-        }
+        },
+        "redirectToHint": "The address visitors are sent to instead. Use this when a domain should point at another one rather than serve its own site."
       },
       "type": {
         "alias": "Alias (same site, second name)",
@@ -3410,7 +3431,10 @@
         "issueFailed": "Couldn't issue the certificate.",
         "reissueTitle": "Reissue the certificate",
         "reissueSubtitle": "Replace the current certificate — usually to cover a name it is missing.",
-        "replacesCurrent": "This replaces the current {current} certificate. An uploaded certificate cannot be re-issued from here."
+        "replacesCurrent": "This replaces the current {current} certificate. An uploaded certificate cannot be re-issued from here.",
+        "certificateHint": "The certificate your provider issued for this domain. Paste the whole block, including the BEGIN and END lines.",
+        "privateKeyHint": "The secret key that goes with the certificate. It was created when you requested it — never share it with anyone.",
+        "chainHint": "The extra certificates linking yours back to a trusted authority. Without them some browsers and phones show a warning. Your provider supplies these."
       },
       "issueCertificate": "Issue SSL certificate",
       "description": "Names that reach this site, and its certificate.",
@@ -3507,7 +3531,9 @@
         "gitlabTokenHint": "GitLab shows the signing token once when you add the webhook. Leave empty to use a panel-generated secret instead.",
         "pickProviderHint": "Choose a provider above to see its setup steps.",
         "off": "Off",
-        "offBody": "Auto-deploy is off. Turn it on to deploy on every push to {branch} — your webhook URL and secret are kept."
+        "offBody": "Auto-deploy is off. Turn it on to deploy on every push to {branch} — your webhook URL and secret are kept.",
+        "providerHint": "Which service the repository is on. It decides how we check that an incoming request really came from them.",
+        "urlHint": "Paste this into your repository's webhook settings. It is the address your Git service calls when there is new code."
       },
       "cancel": "Cancel",
       "runtime": {
@@ -4417,7 +4443,13 @@
         "directives": "One per line, like a php.ini file. Anything here wins over the fields above.",
         "openBasedir": "Stops PHP reading or writing files outside this site's folder.",
         "allowUrlFopen": "Lets PHP fetch remote URLs. Turning it off blocks a common way malware phones home.",
-        "upload": "Also raises the web server's own limit, which refuses large uploads before PHP sees them. A site set up earlier picks this up the first time you save."
+        "upload": "Also raises the web server's own limit, which refuses large uploads before PHP sees them. A site set up earlier picks this up the first time you save.",
+        "version": "The version of PHP this site runs on. Newer is faster and better supported, but a very old site may not work on it. Change it, then check the site still loads.",
+        "memory": "How much memory one page load may use before PHP gives up. Raise it if you see “allowed memory size exhausted”.",
+        "executionTime": "How many seconds PHP will let a page run before stopping it. Raise it for imports and backups; leave it low for ordinary pages.",
+        "inputVars": "How many separate boxes one form may submit. Large settings pages and page builders can go past the default.",
+        "disableFunctions": "PHP commands this site is not allowed to run. The defaults block the ones most often used in attacks — remove one only if the site genuinely needs it.",
+        "children": "How many requests this site can answer at the same time. Too few and visitors wait in a queue; too many and the server runs out of memory."
       },
       "pmTypes": {
         "ondemand": "On demand",
@@ -4520,7 +4552,8 @@
       "sessionGcMaxlifetimePlaceholder": "1440",
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
-      "versionUnsupported": "{type} supports PHP {range}. Moving this site to another version is likely to break it."
+      "versionUnsupported": "{type} supports PHP {range}. Moving this site to another version is likely to break it.",
+      "presetsLabelHint": "Ready-made settings sized for small, medium and large sites. A starting point — you can still change any value afterwards."
     },
     "fail2ban": {
       "pageTitle": "Attack protection",
@@ -4595,7 +4628,8 @@
         "submit": "Create staging site",
         "creating": "Creating…",
         "done": "Staging site created at {domain}.",
-        "failed": "The staging site could not be created."
+        "failed": "The staging site could not be created.",
+        "domainLabelHint": "The address for the staging copy. Use something obviously not your live site."
       },
       "pushDialog": {
         "title": "Push staging over {domain}?",
@@ -4626,7 +4660,8 @@
         "done": "Staging pushed to {domain}.",
         "failed": "The push did not finish.",
         "copyAge": "Copy made {age}",
-        "copyDomain": "Copy domain"
+        "copyDomain": "Copy domain",
+        "whatToPushHint": "Files copies code and uploads. Database copies content. Both copies everything."
       },
       "isCopy": {
         "title": "This site is a staging copy",
@@ -4785,6 +4820,25 @@
     "unavailableRuntime": {
       "php": "This site needs PHP {range}, and this server has {installed}.",
       "node": "This site needs Node {range}, and this server has {installed}."
+    },
+    "gitAccountHint": "A connected Git account, used to read your private repositories. Add one under Integrations if this list is empty.",
+    "systemUserHint": "The Linux account that owns this site's files. Giving each site its own account stops one site from reading another's data.",
+    "fieldHints": {
+      "web_root": "The folder inside your site that visitors actually see. Leave it as it is unless your framework serves from a sub-folder such as /public.",
+      "table_prefix": "Goes in front of every database table name, so two sites can share one database without clashing. The default is fine.",
+      "package_manager": "The tool used to install this project’s dependencies. Pick the one matching the lock file in your repository.",
+      "rendering_type": "How pages are produced. Server-side renders each request on the server; static builds the pages once; client-side sends a bundle the browser renders.",
+      "build_command": "Run once after the code is fetched, to compile the site. Leave empty if the project needs no build step.",
+      "start_command": "The command that keeps the app running. It must stay in the foreground — a command that exits immediately looks like a crash.",
+      "deploy_script": "The commands run on every deploy, in order. This is where you pull code, install dependencies and restart the app.",
+      "app_port": "The port the app listens on inside the server. Visitors never see it — the web server forwards to it.",
+      "php_version": "The version of PHP this site runs on. Newer is faster and better supported, but a very old site may not work on it.",
+      "node_version": "The version of Node.js this site runs on. Match whatever the project was built against.",
+      "timezone": "The time zone this application uses when it shows or stores a date. It does not change the server’s own clock.",
+      "site_language": "The language the installed site is set up in. It does not change this panel’s language.",
+      "locale": "The language the installed site is set up in. It does not change this panel’s language.",
+      "language": "The language the installed site is set up in. It does not change this panel’s language.",
+      "short_name": "A short identifier used inside the application. Letters and numbers only, no spaces."
     }
   },
   "panelUpdate": {
@@ -5085,7 +5139,11 @@
         "folder_id": "The part of the folder URL after /folders/ — not the whole link.",
         "drive_shared_only": "Only a Google Workspace Shared Drive works. A service account has no storage of its own, so uploads to a personal Drive are refused even when the account is empty. Share the Shared Drive folder with the service account address, then paste its key below.",
         "base_uri": "Use https://webdav.pcloud.com/ for a US account or https://ewebdav.pcloud.com/ for an EU one. Add a folder on the end to keep backups together.",
-        "pcloud_warning": "pCloud states that its WebDAV is intended for small files and may be interrupted, and it stops working entirely when two-factor authentication is enabled on the account. Both matter for backups: test the destination, and keep a second one elsewhere."
+        "pcloud_warning": "pCloud states that its WebDAV is intended for small files and may be interrupted, and it stops working entirely when two-factor authentication is enabled on the account. Both matter for backups: test the destination, and keep a second one elsewhere.",
+        "bucket": "The name of the bucket to store backups in. It must already exist — we do not create it for you.",
+        "region": "The region the bucket lives in. It has to match, or the connection is refused.",
+        "access_key": "The public half of the credentials for this storage account.",
+        "secret_key": "The secret half of the credentials. Treat it like a password — anyone holding it can read your backups."
       },
       "plainFtpWarning": "TLS is off. The password and every backup will be sent unencrypted.",
       "prefixHintRemote": "Optional folder inside the remote directory, so one server can hold several sites.",
@@ -5313,7 +5371,9 @@
       "noDatabase": {
         "blocked": "This site has no database",
         "filesOnly": "This site has no database, so only its files will be backed up."
-      }
+      },
+      "automaticHint": "Runs the backup on a schedule instead of only when you press the button.",
+      "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not."
     },
     "history": {
       "allApplications": "All sites",
@@ -5448,7 +5508,8 @@
         "sizeUnknown": "Unknown"
       },
       "confirmLabelPlain": "Type this to confirm",
-      "copyDomain": "Copy domain"
+      "copyDomain": "Copy domain",
+      "whatToRestoreHint": "Put back the files, the database, or both. Restoring the database replaces all of the site's current content."
     },
     "progress": {
       "running": "Restoring the site",
@@ -5721,7 +5782,8 @@
       "summary": "{count, plural, =0 {Nothing will be added} one {# thing will be added} other {# things will be added}} across {types, plural, one {# type} other {# types}}.",
       "summaryIgnored": "{count, plural, one {# dismissed item will be left alone} other {# dismissed items will be left alone}}.",
       "summaryIrreversible": "There's no undo for this — added items must be removed one by one.",
-      "confirm": "{count, plural, =0 {Add to the panel} one {Add # thing} other {Add # things}}"
+      "confirm": "{count, plural, =0 {Add to the panel} one {Add # thing} other {Add # things}}",
+      "includeFirewallHint": "Also open the ports this site needs, so it is reachable straight away."
     },
     "errors": {
       "startFailed": "Couldn't start the scan.",

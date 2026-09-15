@@ -412,7 +412,17 @@ function ConfigField({
               and the action never shrinks, so the row cannot overflow even if
               the column is narrower than the container query expected. */}
           <div className="flex min-h-7 items-center justify-between gap-2">
-            <FormLabel className="min-w-0" required={config.required}>
+            {/* These fields are declared by the BACKEND, so there is no i18n
+                key per field to hang an explanation on — the label itself
+                arrives already translated. The explanation is therefore looked
+                up by field NAME, and only when we have written one: most of
+                these (admin_email, company_name, shop_name) explain themselves
+                and a "?" on them would be noise. */}
+            <FormLabel
+              className="min-w-0"
+              required={config.required}
+              hint={t.has(`fieldHints.${config.name}`) ? t(`fieldHints.${config.name}`) : undefined}
+            >
               {label}
             </FormLabel>
             {isPassword && (config.generate || field.value) ? (
@@ -1559,7 +1569,7 @@ export function CreateApplicationForm({
                       className="min-w-0 @2xl:col-span-2"
                     >
                       <div className="flex min-h-7 items-center justify-between gap-2">
-                        <FormLabel className="min-w-0" required>
+                        <FormLabel className="min-w-0" required hint={t("systemUserHint")}>
                           {t("systemUser")}
                         </FormLabel>
                         {/* Shows whether or not users already exist: wanting a
@@ -1709,7 +1719,7 @@ export function CreateApplicationForm({
                                 {/* Same min-h-7 label row as Repository beside
                                     it, so both comboboxes share one baseline. */}
                                 <div className="flex min-h-7 items-center justify-between gap-2">
-                                  <FormLabel className="min-w-0">
+                                  <FormLabel className="min-w-0" hint={t("gitAccountHint")}>
                                     {t("gitAccount")}
                                   </FormLabel>
                                   {/* "Connect Git" below opens another tab; this

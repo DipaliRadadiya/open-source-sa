@@ -573,6 +573,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <Stack
+                  explain={t("hints.version")}
                   label={t("fields.version")}
                   name="php_version"
                   directive="php_version"
@@ -597,7 +598,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   />
                 </Stack>
 
-                <Stack label={t("fields.memory")} name="memory_limit" directive="memory_limit">
+                <Stack label={t("fields.memory")} explain={t("hints.memory")} name="memory_limit" directive="memory_limit">
                   <ValueSelect
                     form={form}
                     name="memory_limit"
@@ -608,7 +609,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   />
                 </Stack>
 
-                <Stack label={t("fields.children")} name="pm_max_children" directive="pm.max_children">
+                <Stack label={t("fields.children")} explain={t("hints.children")} name="pm_max_children" directive="pm.max_children">
                   <ValueSelect
                     form={form}
                     name="pm_max_children"
@@ -622,7 +623,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
 
                 {php.presets.length > 0 ? (
                   <div className="self-start">
-                    <Label label={t("presetsLabel")} />
+                    <Label label={t("presetsLabel")} explain={t("presetsLabelHint")} />
                     <div className="mt-1.5 flex flex-wrap gap-2">
                       {php.presets.map((preset) => (
                         <Button
@@ -685,7 +686,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   />
                 </Stack>
 
-                <Stack label={t("fields.executionTime")} name="max_execution_time" directive="max_execution_time">
+                <Stack label={t("fields.executionTime")} explain={t("hints.executionTime")} name="max_execution_time" directive="max_execution_time">
                   <ValueSelect
                     form={form}
                     name="max_execution_time"
@@ -698,7 +699,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   />
                 </Stack>
 
-                <Stack label={t("fields.inputVars")} name="max_input_vars" directive="max_input_vars">
+                <Stack label={t("fields.inputVars")} explain={t("hints.inputVars")} name="max_input_vars" directive="max_input_vars">
                   <ValueSelect
                     form={form}
                     name="max_input_vars"
@@ -1182,10 +1183,10 @@ function formatBytes(bytes) {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 }
 
-function Stack({ label, name, directive, error, hint, warning, children }) {
+function Stack({ label, name, directive, error, hint, warning, explain, children }) {
   return (
     <FormItem>
-      <Label label={label} name={name} directive={directive} />
+      <Label label={label} name={name} directive={directive} explain={explain} />
       {children}
       {/* The error replaces the hint rather than stacking under it: two lines
           of small grey-and-red text below one control is where people stop
@@ -1210,10 +1211,20 @@ function Stack({ label, name, directive, error, hint, warning, children }) {
  */
 const OverrideContext = createContext(null);
 
-function Label({ label, name, directive }) {
+/*
+ * `explain`, not `hint` — every other component in this file already has a
+ * `hint` prop and it means the grey line UNDER the control. This one is the
+ * "?" beside the label. Same word for both would be a trap for whoever edits
+ * this next, and the two are not interchangeable: the grey line is a note
+ * about the value, this is a definition of the setting.
+ *
+ * The directive is already printed beside the label, so the text behind the
+ * "?" says what the setting does and never restates its name.
+ */
+function Label({ label, name, directive, explain }) {
   return (
     <div className="flex min-h-5 items-center justify-between gap-2">
-      <FormLabel className="min-w-0 flex-wrap gap-1">
+      <FormLabel className="min-w-0 flex-wrap gap-1" hint={explain}>
         <span>{label}</span>
         {directive ? (
           <span className="font-mono text-xs font-normal text-muted-foreground">
@@ -1670,6 +1681,7 @@ function BlockedFunctions({ form, php, disabled }) {
         <FormItem>
           <Label
             label={t("fields.disableFunctions")}
+            explain={t("hints.disableFunctions")}
             name="disable_functions"
             directive="disable_functions"
           />

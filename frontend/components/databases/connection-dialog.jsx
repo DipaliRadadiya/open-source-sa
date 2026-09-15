@@ -184,7 +184,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
           name="connection_type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("how")}</FormLabel>
+              <FormLabel hint={t("howHint")}>{t("how")}</FormLabel>
               <FormControl>
                 <ChoiceField
                   value={field.value}
@@ -214,7 +214,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
             name="socket"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>{t("socketPath")}</FormLabel>
+                <FormLabel required hint={t("socketPathHint")}>{t("socketPath")}</FormLabel>
                 <FormControl>
                   <Input
                     className="font-mono"

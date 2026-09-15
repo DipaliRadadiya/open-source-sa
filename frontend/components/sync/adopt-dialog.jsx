@@ -136,7 +136,7 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
               onCheckedChange={(checked) => setIncludeFirewall(checked === true)}
             />
             <div className="space-y-1">
-              <Label htmlFor="adopt-firewall" className="font-normal">
+              <Label htmlFor="adopt-firewall" className="font-normal" hint={t("adopt.includeFirewallHint")}>
                 {t("adopt.includeFirewall")}
               </Label>
               <p className="flex items-start gap-1.5 text-xs text-warning">

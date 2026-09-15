@@ -117,7 +117,7 @@ export function EditDialog({ account, open, onOpenChange }) {
             name="workspace"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("workspaceLabel")}</FormLabel>
+                <FormLabel hint={t("workspaceLabelHint")}>{t("workspaceLabel")}</FormLabel>
                 <FormControl>
                   <Input
                     placeholder={t("workspacePlaceholder")}
@@ -138,7 +138,7 @@ export function EditDialog({ account, open, onOpenChange }) {
             name="host"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("hostLabel")}</FormLabel>
+                <FormLabel hint={t("hostLabelHint")}>{t("hostLabel")}</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="https://gitlab.example.com"

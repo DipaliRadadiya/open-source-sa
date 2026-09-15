@@ -152,7 +152,7 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>{t("newPasswordRequired")}</FormLabel>
+                  <FormLabel required hint={t("newPasswordRequiredHint")}>{t("newPasswordRequired")}</FormLabel>
                   <div className="flex items-start gap-2">
                     <FormControl>
                       <PasswordInput

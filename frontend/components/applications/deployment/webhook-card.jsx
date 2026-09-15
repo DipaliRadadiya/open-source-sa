@@ -39,12 +39,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-function ReadOnlyField({ label, value, secret = false }) {
+function ReadOnlyField({ label, value, hint, secret = false }) {
   const tc = useTranslations("common");
   const [reveal, setReveal] = useState(false);
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Label className="text-xs text-muted-foreground" hint={hint}>
+        {label}
+      </Label>
       <div className="flex items-center gap-1.5">
         {/* Reveal toggle sits inside the field, matching PasswordInput. */}
         <div className="relative flex-1">
@@ -308,7 +310,11 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
 
             <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
               <div className="space-y-4">
-                <ReadOnlyField label={t("webhook.url")} value={webhook.url} />
+                <ReadOnlyField
+                  label={t("webhook.url")}
+                  hint={t("webhook.urlHint")}
+                  value={webhook.url}
+                />
                 {webhook.secret ? (
                   <ReadOnlyField
                     label={t("webhook.secret")}
@@ -362,7 +368,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                 {t("webhook.disabledBody")}
               </p>
               <div className="space-y-1.5">
-                <Label className="text-sm">{t("webhook.provider")}</Label>
+                <Label className="text-sm" hint={t("webhook.providerHint")}>{t("webhook.provider")}</Label>
                 <Select value={providerName} onValueChange={setProviderName}>
                   <SelectTrigger className="w-full">
                     <SelectValue

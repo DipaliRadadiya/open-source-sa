@@ -372,7 +372,7 @@ export function IssueCertDialog({
       {type === "custom" ? (
         <div className="space-y-3">
           <div className="grid gap-2">
-            <Label htmlFor={`${fieldId}-certificate`}>{t("ssl.certificate")}</Label>
+            <Label htmlFor={`${fieldId}-certificate`} hint={t("ssl.certificateHint")}>{t("ssl.certificate")}</Label>
             <Textarea
               id={`${fieldId}-certificate`}
               rows={4}
@@ -383,7 +383,7 @@ export function IssueCertDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor={`${fieldId}-private_key`}>{t("ssl.privateKey")}</Label>
+            <Label htmlFor={`${fieldId}-private_key`} hint={t("ssl.privateKeyHint")}>{t("ssl.privateKey")}</Label>
             <Textarea
               id={`${fieldId}-private_key`}
               rows={4}
@@ -394,7 +394,7 @@ export function IssueCertDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor={`${fieldId}-chain`}>
+            <Label htmlFor={`${fieldId}-chain`} hint={t("ssl.chainHint")}>
               {t("ssl.chain")} <span className="text-muted-foreground">({t("ssl.optional")})</span>
             </Label>
             <Textarea

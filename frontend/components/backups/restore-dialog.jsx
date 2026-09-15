@@ -117,7 +117,7 @@ export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
               radio option is a decision with no alternative. */}
           {allowed.length > 1 ? (
             <div className="space-y-1.5">
-              <Label>{t("whatToRestore")}</Label>
+              <Label hint={t("whatToRestoreHint")}>{t("whatToRestore")}</Label>
               <ChoiceField
                 value={type}
                 onChange={setType}

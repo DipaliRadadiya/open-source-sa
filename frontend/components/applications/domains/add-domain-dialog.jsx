@@ -161,7 +161,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
               name="redirect_to"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>{t("add.redirectTo")}</FormLabel>
+                  <FormLabel required hint={t("add.redirectToHint")}>{t("add.redirectTo")}</FormLabel>
                   <FormControl>
                     <Input placeholder="https://example.com" autoComplete="off" spellCheck={false} {...field} />
                   </FormControl>

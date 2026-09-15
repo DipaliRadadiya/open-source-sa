@@ -729,7 +729,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
                   control={form.control}
                   name="day_of_week"
                   render={({ field }) => (
-                    <Row label={t("schedule.dayOfWeek")}>
+                    <Row label={t("schedule.dayOfWeek")} hint={t("schedule.dayOfWeekHint")}>
                       <Select
                         value={String(field.value)}
                         onValueChange={(value) => field.onChange(Number(value))}
@@ -761,7 +761,7 @@ function ScheduleSection({ schedule, presets, presetsFailed, canManage }) {
                   control={form.control}
                   name="day_of_month"
                   render={({ field }) => (
-                    <Row label={t("schedule.dayOfMonth")}>
+                    <Row label={t("schedule.dayOfMonth")} hint={t("schedule.dayOfMonthHint")}>
                       <Select
                         value={String(field.value)}
                         onValueChange={(value) => field.onChange(Number(value))}

@@ -102,7 +102,7 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
           name="domain"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("domainLabel")}</FormLabel>
+              <FormLabel hint={t("domainLabelHint")}>{t("domainLabel")}</FormLabel>
               <FormControl>
                 <Input
                   {...field}

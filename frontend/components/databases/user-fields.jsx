@@ -48,7 +48,7 @@ export function UserFields({ form, access, lockUsername = false, remoteUsers = t
         name="connection_preference"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("create.access")}</FormLabel>
+            <FormLabel hint={t("create.accessHint")}>{t("create.access")}</FormLabel>
             <FormControl>
               <ChoiceField
                 value={field.value}

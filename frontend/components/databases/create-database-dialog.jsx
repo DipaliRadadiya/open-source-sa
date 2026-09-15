@@ -397,7 +397,7 @@ export function CreateDatabaseDialog({
               name="connection_preference"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("create.access")}</FormLabel>
+                  <FormLabel hint={t("create.accessHint")}>{t("create.access")}</FormLabel>
                   <FormControl>
                     <ChoiceField
                       value={field.value}
@@ -494,7 +494,9 @@ export function CreateDatabaseDialog({
                 name="charset"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t(`create.${charsetWording}.charset`)}</FormLabel>
+                    <FormLabel hint={t(`create.${charsetWording}.charsetHint`)}>
+                      {t(`create.${charsetWording}.charset`)}
+                    </FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={(next) => {
@@ -527,7 +529,9 @@ export function CreateDatabaseDialog({
                 name="collation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t(`create.${charsetWording}.collation`)}</FormLabel>
+                    <FormLabel hint={t(`create.${charsetWording}.collationHint`)}>
+                      {t(`create.${charsetWording}.collation`)}
+                    </FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={field.onChange}

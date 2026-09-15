@@ -260,7 +260,7 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
                   name="public_key"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel required>{t("sshForm.publicKey")}</FormLabel>
+                      <FormLabel required hint={t("sshForm.publicKeyHint")}>{t("sshForm.publicKey")}</FormLabel>
                       <FormControl>
                         <Textarea
                           rows={2}

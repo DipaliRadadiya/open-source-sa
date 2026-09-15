@@ -112,7 +112,20 @@ function RequiredMark() {
 
 // `required` marks a mandatory field with the same asterisk-tooltip
 // everywhere, instead of every form re-implementing (or forgetting) it.
-function FormLabel({ className, required, children, ...props }) {
+/**
+ * `hint` is the explanation of a technical field, shown behind a "?".
+ *
+ * Forwarded to Label, which owns the "?" for the whole panel — half the
+ * dialogs label their controls with a plain Label and never touch
+ * react-hook-form, and two implementations would drift.
+ *
+ * The "?" renders after the required asterisk, so the order reading out is
+ * "Web root, required, What is this?".
+ *
+ * Not every field wants one. A "?" beside Password is noise, and noise is what
+ * stops people reading the ones that matter.
+ */
+function FormLabel({ className, required, hint, children, ...props }) {
   const { error, formItemId } = useFormField()
 
   return (
@@ -121,6 +134,7 @@ function FormLabel({ className, required, children, ...props }) {
       data-error={!!error}
       className={cn("data-[error=true]:text-destructive", className)}
       htmlFor={formItemId}
+      hint={hint}
       {...props}
     >
       {children}
