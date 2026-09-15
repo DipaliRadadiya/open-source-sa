@@ -1,5 +1,6 @@
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -17,7 +18,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  */
 export function CreateReadinessPanel({ items = [], onSelectItem }) {
   const t = useTranslations("applications");
-  const complete = items.every((item) => item.ready);
+  const done = items.filter((item) => item.ready).length;
+  const complete = items.length > 0 && done === items.length;
 
   return (
     <Card className="@container border-primary/20 bg-primary/[0.02]">
@@ -31,6 +33,26 @@ export function CreateReadinessPanel({ items = [], onSelectItem }) {
         <CardDescription>
           {complete ? t("readiness.readyHint") : t("readiness.incompleteHint")}
         </CardDescription>
+        {/* A bar, because "Complete these items to continue" says there is
+            work left and nothing about how much. Three of nine and eight of
+            nine are the same sentence and very different feelings, and this
+            list is the only place the form counts itself. */}
+        {items.length ? (
+          <div className="space-y-1.5 pt-1">
+            <div className="h-1.5 overflow-hidden rounded-full bg-primary/10">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-[width] duration-300",
+                  complete ? "bg-success" : "bg-primary",
+                )}
+                style={{ width: `${Math.round((done / items.length) * 100)}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {t("readiness.progress", { done, total: items.length })}
+            </p>
+          </div>
+        ) : null}
       </CardHeader>
       <CardContent className="grid gap-x-6 gap-y-2 @md:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-4">
         {items.map((item) => (

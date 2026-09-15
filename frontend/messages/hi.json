@@ -3178,7 +3178,8 @@
       "incompleteHint": "आगे बढ़ने के लिए इन आइटम को पूरा करें।",
       "readyHint": "इस कॉन्फ़िगरेशन की समीक्षा करें, फिर ऐप्लिकेशन बनाएँ।",
       "complete": "{field} जोड़ें",
-      "configured": "कॉन्फ़िगर किया गया"
+      "configured": "कॉन्फ़िगर किया गया",
+      "progress": "{total} में से {done} तैयार"
     },
     "form": {
       "detailsTitle": "ऐप्लिकेशन विवरण",
@@ -3256,16 +3257,19 @@
       "blockedDatabase": "डेटाबेस चाहिए",
       "blockedNode": "Node चाहिए",
       "blockedPhp": "PHP चाहिए",
-      "blockedPhpVersion": "PHP {range} चाहिए",
-      "blockedNodeVersion": "Node {range} चाहिए",
-      "blockedDatabaseEngines": "{engines} चाहिए",
       "categoryAll": "सभी",
-      "categoryPopular": "लोकप्रिय",
       "categoryCms": "CMS",
       "categoryDevelopment": "डेवलपमेंट",
       "categoryTools": "टूल्स",
       "categoryProductivity": "प्रोडक्टिविटी",
-      "categoryOthers": "अन्य"
+      "categoryOthers": "अन्य",
+      "categoryPopular": "लोकप्रिय",
+      "blockedPhpVersion": "PHP {range} चाहिए",
+      "blockedNodeVersion": "Node {range} चाहिए",
+      "blockedDatabaseEngines": "{engines} चाहिए",
+      "useAccountHint": "आपके कनेक्टेड अकाउंट को दिखने वाले रिपॉज़िटरी में से चुनें।",
+      "usePublicUrlHint": "किसी भी पब्लिक रिपॉज़िटरी का URL पेस्ट करें। क्रेडेंशियल की ज़रूरत नहीं।",
+      "noGitAccount": "अभी तक कोई Git अकाउंट कनेक्ट नहीं है।"
     },
     "actions": {
       "label": "क्रियाएँ",

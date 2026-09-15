@@ -3178,7 +3178,8 @@
       "incompleteHint": "Complete these items to continue.",
       "readyHint": "Review this configuration, then create the application.",
       "complete": "Add {field}",
-      "configured": "Configured"
+      "configured": "Configured",
+      "progress": "{done} of {total} ready"
     },
     "form": {
       "detailsTitle": "Application details",
@@ -3256,16 +3257,19 @@
       "blockedDatabase": "Needs a database",
       "blockedNode": "Needs Node",
       "blockedPhp": "Needs PHP",
-      "blockedPhpVersion": "Needs PHP {range}",
-      "blockedNodeVersion": "Needs Node {range}",
-      "blockedDatabaseEngines": "Needs {engines}",
       "categoryAll": "All",
-      "categoryPopular": "Popular",
       "categoryCms": "CMS",
       "categoryDevelopment": "Development",
       "categoryTools": "Tools",
       "categoryProductivity": "Productivity",
-      "categoryOthers": "Others"
+      "categoryOthers": "Others",
+      "categoryPopular": "Popular",
+      "blockedPhpVersion": "Needs PHP {range}",
+      "blockedNodeVersion": "Needs Node {range}",
+      "blockedDatabaseEngines": "Needs {engines}",
+      "useAccountHint": "Pick from the repositories your connected account can see.",
+      "usePublicUrlHint": "Paste any public repository URL. No credentials needed.",
+      "noGitAccount": "No Git account connected yet."
     },
     "actions": {
       "label": "Actions",

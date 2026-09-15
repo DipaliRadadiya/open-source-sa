@@ -3178,7 +3178,8 @@
       "incompleteHint": "Заполните эти пункты, чтобы продолжить.",
       "readyHint": "Проверьте конфигурацию и создайте приложение.",
       "complete": "Добавить {field}",
-      "configured": "Настроено"
+      "configured": "Настроено",
+      "progress": "Готово {done} из {total}"
     },
     "form": {
       "detailsTitle": "Сведения о приложении",
@@ -3256,16 +3257,19 @@
       "blockedDatabase": "Нужна база данных",
       "blockedNode": "Нужен Node",
       "blockedPhp": "Нужен PHP",
-      "blockedPhpVersion": "Нужен PHP {range}",
-      "blockedNodeVersion": "Нужен Node {range}",
-      "blockedDatabaseEngines": "Нужен {engines}",
       "categoryAll": "Все",
-      "categoryPopular": "Популярные",
       "categoryCms": "CMS",
       "categoryDevelopment": "Разработка",
       "categoryTools": "Инструменты",
       "categoryProductivity": "Продуктивность",
-      "categoryOthers": "Другое"
+      "categoryOthers": "Другое",
+      "categoryPopular": "Популярные",
+      "blockedPhpVersion": "Нужен PHP {range}",
+      "blockedNodeVersion": "Нужен Node {range}",
+      "blockedDatabaseEngines": "Нужен {engines}",
+      "useAccountHint": "Выберите из репозиториев, доступных подключённому аккаунту.",
+      "usePublicUrlHint": "Вставьте ссылку на любой публичный репозиторий. Учётные данные не нужны.",
+      "noGitAccount": "Аккаунт Git ещё не подключён."
     },
     "actions": {
       "label": "Действия",

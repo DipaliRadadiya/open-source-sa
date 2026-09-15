@@ -3178,7 +3178,8 @@
       "incompleteHint": "続行するにはこれらを完了してください。",
       "readyHint": "設定を確認し、アプリケーションを作成してください。",
       "complete": "{field} を追加",
-      "configured": "設定済み"
+      "configured": "設定済み",
+      "progress": "{total} 件中 {done} 件完了"
     },
     "form": {
       "detailsTitle": "アプリケーションの詳細",
@@ -3256,16 +3257,19 @@
       "blockedDatabase": "データベースが必要",
       "blockedNode": "Node が必要",
       "blockedPhp": "PHP が必要",
-      "blockedPhpVersion": "PHP {range} が必要",
-      "blockedNodeVersion": "Node {range} が必要",
-      "blockedDatabaseEngines": "{engines} が必要",
       "categoryAll": "すべて",
-      "categoryPopular": "人気",
       "categoryCms": "CMS",
       "categoryDevelopment": "開発",
       "categoryTools": "ツール",
       "categoryProductivity": "生産性",
-      "categoryOthers": "その他"
+      "categoryOthers": "その他",
+      "categoryPopular": "人気",
+      "blockedPhpVersion": "PHP {range} が必要",
+      "blockedNodeVersion": "Node {range} が必要",
+      "blockedDatabaseEngines": "{engines} が必要",
+      "useAccountHint": "接続済みアカウントから見えるリポジトリを選びます。",
+      "usePublicUrlHint": "公開リポジトリの URL を貼り付けます。認証情報は不要です。",
+      "noGitAccount": "Git アカウントはまだ接続されていません。"
     },
     "actions": {
       "label": "操作",

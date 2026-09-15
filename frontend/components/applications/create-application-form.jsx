@@ -8,12 +8,18 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   ArrowRight,
+  Check,
   CheckCircle2,
   ChevronDown,
   CircleAlert,
+  ExternalLink,
+  GitBranch,
+  Globe,
   Info,
+  LayoutGrid,
   Loader2,
   RefreshCw,
+  SlidersHorizontal,
   Sparkles,
   TriangleAlert,
   UserPlus,
@@ -115,11 +121,32 @@ function fieldLabel(config) {
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : label;
 }
 
-function SectionHeading({ number, title, description, headingId }) {
+/**
+ * A step marked by what it is FOR, and by whether it is finished.
+ *
+ * It was a number, which is the one thing a reader can already see — the
+ * sections are in order down the page, so "2" told them nothing the position
+ * had not. An icon says which of the three this is at a glance: the grid you
+ * pick from, the globe for the site's own name and address, the sliders for
+ * its settings.
+ *
+ * The tick still wins over the icon when a section has nothing outstanding.
+ * Progress is the more useful thing to know, and it comes from the same
+ * checklist the Create button trusts — so the badge and the button cannot
+ * disagree about whether you are done.
+ */
+function SectionHeading({ icon: Icon, title, description, headingId, done = false }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full border bg-background text-xs font-semibold text-muted-foreground">
-        {number}
+      <span
+        className={cn(
+          "flex size-7 shrink-0 items-center justify-center rounded-lg border transition-colors",
+          done
+            ? "border-success/30 bg-success/10 text-success"
+            : "border-primary/30 bg-primary/10 text-primary",
+        )}
+      >
+        {done ? <Check className="size-4" aria-hidden /> : <Icon className="size-4" aria-hidden />}
       </span>
       <div className="space-y-0.5">
         <h2 id={headingId} className="text-base font-semibold tracking-tight">{title}</h2>
@@ -933,6 +960,28 @@ export function CreateApplicationForm({
     ...configurationSummaryItems,
   ];
   const missingReadinessItems = readinessItems.filter((item) => !item.ready);
+
+  /*
+   * Which numbered section each outstanding item belongs to.
+   *
+   * Derived from the checklist rather than re-deciding it: two answers to
+   * "is this section finished" would eventually disagree, and the checklist is
+   * the one the submit button already trusts. Section 3 owns everything that
+   * is not the type or the three details — which is exactly what it renders —
+   * and it cannot be finished before a type is chosen, because until then it
+   * has no fields to be finished WITH.
+   */
+  const DETAIL_TARGETS = ["name", "domain", "system_user_id"];
+  const sectionDone = {
+    1: Boolean(selected),
+    2: !missingReadinessItems.some((item) => DETAIL_TARGETS.includes(item.target)),
+    3:
+      Boolean(selected) &&
+      !missingReadinessItems.some(
+        (item) => item.target !== "site_type" && !DETAIL_TARGETS.includes(item.target),
+      ),
+  };
+
   const submitReason = !selected
     ? t("form.submitNeedsType")
     : missingReadinessItems.length
@@ -1373,7 +1422,8 @@ export function CreateApplicationForm({
               aria-labelledby="application-type-heading"
             >
               <SectionHeading
-                number="1"
+                icon={LayoutGrid}
+                done={sectionDone[1]}
                 title={t("guided.stageType")}
                 description={t("guided.typeHint")}
                 headingId="application-type-heading"
@@ -1407,7 +1457,8 @@ export function CreateApplicationForm({
               aria-labelledby="application-details-heading"
             >
               <SectionHeading
-                number="2"
+                icon={Globe}
+                done={sectionDone[2]}
                 title={t("form.detailsTitle")}
                 description={t("form.detailsHint")}
                 headingId="application-details-heading"
@@ -1674,13 +1725,15 @@ export function CreateApplicationForm({
               aria-labelledby="application-configure-heading"
             >
               <SectionHeading
-                number="3"
+                icon={SlidersHorizontal}
+                done={sectionDone[3]}
                 title={t("guided.stageConfigure")}
-                description={
-                  selected
-                    ? t("guided.configureHint")
-                    : t("form.chooseTypeHint")
-                }
+                /* One sentence, not the same one twice. Before a type is
+                   chosen this said "Choose an application type to reveal its
+                   configuration fields" — and so did the dashed box directly
+                   under it, word for word, forty pixels apart. The heading
+                   describes the section either way; the box does the asking. */
+                description={t("guided.configureHint")}
                 headingId="application-configure-heading"
               />
               {selected ? (
@@ -1693,12 +1746,30 @@ export function CreateApplicationForm({
                           {t("form.repositoryHint")}
                         </p>
                       </div>
+                      {/* Cards, like the System user choice two sections up,
+                          and for the same reason: these are two different ways
+                          of working rather than a setting with an on and an
+                          off. Two bare radio dots gave the pair no weight on a
+                          form where every other decision is a box you press,
+                          and neither label said what it would COST — one wants
+                          a connected account, the other wants nothing at all.
+                          The hint is where that goes. */}
                       <ChoiceField
+                        variant="card"
+                        className="grid gap-2 @md:grid-cols-2"
                         value={gitSource}
                         onChange={setGitSource}
                         options={[
-                          { value: "account", label: t("useAccount") },
-                          { value: "public_url", label: t("usePublicUrl") },
+                          {
+                            value: "account",
+                            label: t("useAccount"),
+                            hint: t("form.useAccountHint"),
+                          },
+                          {
+                            value: "public_url",
+                            label: t("usePublicUrl"),
+                            hint: t("form.usePublicUrlHint"),
+                          },
                         ]}
                       />
                       {gitSource === "account" ? (
@@ -1756,16 +1827,25 @@ export function CreateApplicationForm({
                                     {t("loadFailed")}
                                   </FormDescription>
                                 ) : !gitAccounts.length && !gitAccountsFailed ? (
-                                  <span className="text-sm">
+                                  /* A state, not a stray link. The select above
+                                     is disabled and a lone blue "Connect Git"
+                                     under it read as a footnote rather than as
+                                     the reason nothing can be chosen — so this
+                                     says what is missing and offers the way out
+                                     on the same line. */
+                                  <div className="flex items-center gap-2 rounded-lg border border-dashed px-2.5 py-2 text-xs text-muted-foreground">
+                                    <GitBranch className="size-3.5 shrink-0" aria-hidden />
+                                    <span className="min-w-0 flex-1">{t("form.noGitAccount")}</span>
                                     <Link
                                       href="/integrations/git"
                                       target="_blank"
                                       rel="noreferrer"
-                                      className="text-primary hover:underline"
+                                      className="inline-flex shrink-0 items-center gap-1 font-medium text-primary hover:underline"
                                     >
                                       {t("connectGit")}
+                                      <ExternalLink className="size-3" aria-hidden />
                                     </Link>
-                                  </span>
+                                  </div>
                                 ) : null}
                                 <FormMessage />
                               </FormItem>
@@ -1851,7 +1931,7 @@ export function CreateApplicationForm({
                             render={({ field }) => (
                               <FormItem
                                 data-field-name="branch"
-                                className="min-w-0 @2xl:col-span-2"
+                                className="min-w-0"
                               >
                                 <FormLabel hint={t("branchHint")}>{t("branch")}</FormLabel>
                                 <ReasonTooltip
@@ -2017,7 +2097,13 @@ export function CreateApplicationForm({
               </div>
             ) : null}
 
-            <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            {/* Sticky, because this form is a screen and a half on a phone and
+                Create was at the bottom of it — the button you are working
+                towards should not be the one you have to go and find. It sits
+                in the flow rather than fixed to the viewport, so it never
+                covers the last field, and the blur keeps the fields readable
+                as they pass underneath. */}
+            <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 rounded-xl border bg-background/85 px-4 py-3 shadow-sm backdrop-blur-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 {selected ? t("guided.reviewHint", { brand }) : t("form.chooseTypeHint")}
               </p>

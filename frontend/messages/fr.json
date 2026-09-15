@@ -3178,7 +3178,8 @@
       "incompleteHint": "Complétez ces éléments pour continuer.",
       "readyHint": "Vérifiez cette configuration, puis créez l'application.",
       "complete": "Ajouter {field}",
-      "configured": "Configuré"
+      "configured": "Configuré",
+      "progress": "{done} sur {total} prêts"
     },
     "form": {
       "detailsTitle": "Détails de l'application",
@@ -3256,16 +3257,19 @@
       "blockedDatabase": "Nécessite une base de données",
       "blockedNode": "Nécessite Node",
       "blockedPhp": "Nécessite PHP",
-      "blockedPhpVersion": "Nécessite PHP {range}",
-      "blockedNodeVersion": "Nécessite Node {range}",
-      "blockedDatabaseEngines": "Nécessite {engines}",
       "categoryAll": "Tout",
-      "categoryPopular": "Populaires",
       "categoryCms": "CMS",
       "categoryDevelopment": "Développement",
       "categoryTools": "Outils",
       "categoryProductivity": "Productivité",
-      "categoryOthers": "Autres"
+      "categoryOthers": "Autres",
+      "categoryPopular": "Populaires",
+      "blockedPhpVersion": "Nécessite PHP {range}",
+      "blockedNodeVersion": "Nécessite Node {range}",
+      "blockedDatabaseEngines": "Nécessite {engines}",
+      "useAccountHint": "Choisissez parmi les dépôts que votre compte connecté peut voir.",
+      "usePublicUrlHint": "Collez l’URL de n’importe quel dépôt public. Aucun identifiant nécessaire.",
+      "noGitAccount": "Aucun compte Git connecté pour l’instant."
     },
     "actions": {
       "label": "Actions",
