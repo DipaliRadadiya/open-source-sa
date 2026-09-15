@@ -2896,7 +2896,6 @@
       "saved": "खाता अपडेट हो गया।",
       "namePlaceholder": "जैसे कंपनी GitHub",
       "workspacePlaceholder": "your-workspace-id",
-      "hostLabelHint": "आपके self-hosted GitLab या Gitea का पता। github.com के लिए इसे जैसा है वैसा ही रहने दें।",
       "workspaceLabelHint": "वह Bitbucket workspace जिसके repositories आप उपयोग करना चाहते हैं।"
     },
     "replace": {

@@ -106,3 +106,39 @@ test("auto_prepend_file cannot climb out of the site", () => {
   assert.equal(field.safeParse("prepend.php").success, true);
   assert.equal(field.safeParse("../../etc/passwd").success, false);
 });
+
+test("a field is explained by the ⓘ, never by a grey line under the control", () => {
+  /*
+   * This screen used both: seven fields on Basic had the ⓘ and eight on
+   * Advanced had a sentence printed under the input, so two fields doing the
+   * same job looked like different kinds of thing — and the sentences added
+   * eight lines to a form that is already sixteen numbers deep.
+   *
+   * `FormDescription` is the grey line. Its absence is the rule: what stays
+   * visible under a control is only what the VALUE provokes — the `error` and
+   * `warning` branches in `Stack`, and open_basedir's note, which says
+   * something different depending on whether the setting is on.
+   */
+  assert.doesNotMatch(
+    PHP_PANEL_SOURCE,
+    /<FormDescription/,
+    "an explanation under the control belongs behind the ⓘ",
+  );
+  assert.doesNotMatch(
+    PHP_PANEL_SOURCE,
+    /\bhint=\{t\(/,
+    "`explain` is the ⓘ; `hint` was the grey line and no field should ask for one",
+  );
+});
+
+test("the ⓘ is tied to the directive, so it cannot wrap away alone", () => {
+  /*
+   * `FormLabel`'s own `hint` prop appends the icon last. On "Restart a worker
+   * after this many requests (pm.max_requests)" — long enough to fill the
+   * column at every width from 1024 up — that put the icon on a second line
+   * with nothing beside it. Rendered as a child, it wraps with the directive.
+   */
+  assert.match(PHP_PANEL_SOURCE, /hint=\{directive \? undefined : explain\}/);
+  assert.match(PHP_PANEL_SOURCE, /whitespace-nowrap/);
+  assert.match(PHP_PANEL_SOURCE, /<LabelHint>\{explain\}<\/LabelHint>/);
+});

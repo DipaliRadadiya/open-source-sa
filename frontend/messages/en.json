@@ -2896,7 +2896,6 @@
       "saved": "Account updated.",
       "namePlaceholder": "e.g. Company GitHub",
       "workspacePlaceholder": "your-workspace-id",
-      "hostLabelHint": "The address of your self-hosted GitLab or Gitea. Leave it as it is for github.com.",
       "workspaceLabelHint": "The Bitbucket workspace whose repositories you want to use."
     },
     "replace": {

@@ -15,7 +15,6 @@ import { FormModal } from "@/components/ui/form-modal";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -101,11 +100,12 @@ export function EditDialog({ account, open, onOpenChange }) {
           name="label"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>{t("nameLabel")}</FormLabel>
+              <FormLabel required hint={t("nameHelp")}>
+                {t("nameLabel")}
+              </FormLabel>
               <FormControl>
                 <Input placeholder={t("namePlaceholder")} autoComplete="off" {...field} />
               </FormControl>
-              <FormDescription>{t("nameHelp")}</FormDescription>
               <FormMessage field={t("nameLabel")} />
             </FormItem>
           )}
@@ -138,7 +138,12 @@ export function EditDialog({ account, open, onOpenChange }) {
             name="host"
             render={({ field }) => (
               <FormItem>
-                <FormLabel hint={t("hostLabelHint")}>{t("hostLabel")}</FormLabel>
+                {/* One explanation, and it is the accurate one. The ⓘ used to
+                    carry a second: "your self-hosted GitLab or Gitea — leave it
+                    as it is for github.com", on a field that only ever renders
+                    for a GitLab account. Neither product it named can reach
+                    this box. */}
+                <FormLabel hint={t("hostHelp")}>{t("hostLabel")}</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="https://gitlab.example.com"
@@ -147,7 +152,6 @@ export function EditDialog({ account, open, onOpenChange }) {
                     {...field}
                   />
                 </FormControl>
-                <FormDescription>{t("hostHelp")}</FormDescription>
                 <FormMessage field={t("hostLabel")} />
               </FormItem>
             )}

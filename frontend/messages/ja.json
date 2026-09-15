@@ -2896,7 +2896,6 @@
       "saved": "アカウントを更新しました。",
       "namePlaceholder": "例: 会社用 GitHub",
       "workspacePlaceholder": "your-workspace-id",
-      "hostLabelHint": "セルフホストのGitLabまたはGiteaのアドレスです。github.comの場合はそのままにしてください。",
       "workspaceLabelHint": "使用するリポジトリがあるBitbucketのワークスペース。"
     },
     "replace": {

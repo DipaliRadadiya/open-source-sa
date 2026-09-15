@@ -47,4 +47,10 @@ function LabelHint({ children }) {
   return <InfoHint label={t("whatIsThis")}>{children}</InfoHint>
 }
 
-export { Label }
+/*
+ * Exported for the one case the `hint` prop cannot serve: a label that also
+ * prints its php.ini directive. The ⓘ goes last, so on a label long enough to
+ * wrap it broke away from the text and sat alone on the next line. Rendered as
+ * a child it can be tied to the directive and wrap with it.
+ */
+export { Label, LabelHint }

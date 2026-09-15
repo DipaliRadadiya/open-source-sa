@@ -184,7 +184,9 @@ export function ConnectForm({
           name="label"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>{t("nameLabel")}</FormLabel>
+              <FormLabel required hint={t("nameHelp")}>
+                {t("nameLabel")}
+              </FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("namePlaceholder", { provider: provider.title })}
@@ -192,7 +194,6 @@ export function ConnectForm({
                   {...field}
                 />
               </FormControl>
-              <FormDescription>{t("nameHelp")}</FormDescription>
               <FormMessage field={t("nameLabel")} />
             </FormItem>
           )}

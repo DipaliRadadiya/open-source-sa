@@ -41,6 +41,7 @@ import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { Combobox } from "@/components/ui/combobox";
 import { timezoneOptionsWith } from "@/lib/settings/timezone-options";
 import { Input } from "@/components/ui/input";
+import { LabelHint } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -59,7 +60,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -673,7 +673,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                      site was stuck on the built-in 1 MB. Worth saying, because
                      a site set up before that carries the old limit until its
                      vhost is next written, and saving here is what writes it. */
-                  hint={t("hints.upload")}
+                  explain={t("hints.upload")}
                 >
                   <ValueSelect
                     form={form}
@@ -729,7 +729,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                 name="allow_url_fopen"
                 label={t("fields.allowUrlFopen")}
                 directive="allow_url_fopen"
-                hint={t("hints.allowUrlFopen")}
+                explain={t("hints.allowUrlFopen")}
                 disabled={saving}
               />
 
@@ -754,7 +754,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   name="pm_type"
                   render={({ field }) => (
                     <FormItem>
-                      <Label label={t("fields.pmType")} directive="pm" />
+                      <Label label={t("fields.pmType")} directive="pm" explain={t("hints.pmType")} />
                       <FormControl>
                         <Combobox
                           options={["ondemand", "dynamic", "static"].map((value) => ({
@@ -766,7 +766,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                           disabled={saving}
                         />
                       </FormControl>
-                      <FormDescription>{t("hints.pmType")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -778,7 +777,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   placeholder={t("pmMaxRequestsPlaceholder")}
                   label={t("fields.maxRequests")}
                   directive="pm.max_requests"
-                  hint={t("hints.maxRequests")}
+                  explain={t("hints.maxRequests")}
                   disabled={saving}
                   min={0}
                   max={100000}
@@ -789,7 +788,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   placeholder={t("maxInputTimePlaceholder")}
                   label={t("fields.inputTime")}
                   directive="max_input_time"
-                  hint={t("hints.inputTime")}
+                  explain={t("hints.inputTime")}
                   disabled={saving}
                   min={-1}
                   max={3600}
@@ -800,7 +799,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   placeholder={t("sessionGcMaxlifetimePlaceholder")}
                   label={t("fields.sessionLifetime")}
                   directive="session.gc_maxlifetime"
-                  hint={t("hints.sessionLifetime")}
+                  explain={t("hints.sessionLifetime")}
                   disabled={saving}
                   min={60}
                   max={604800}
@@ -815,6 +814,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                         label={t("fields.timezone")}
                         name="php_timezone"
                         directive="date.timezone"
+                        explain={t("hints.timezone")}
                       />
                       <FormControl>
                         <Combobox
@@ -829,7 +829,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                           placeholder={t("fields.timezonePlaceholder")}
                         />
                       </FormControl>
-                      <FormDescription>{t("hints.timezone")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -841,7 +840,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   placeholder={t("autoPrependPlaceholder")}
                   label={t("fields.autoPrepend")}
                   directive="auto_prepend_file"
-                  hint={t("hints.autoPrepend")}
+                  explain={t("hints.autoPrepend")}
                   disabled={saving}
                   mono
                 />
@@ -855,7 +854,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   placeholder={t("postMaxSizePlaceholder")}
                   label={t("fields.post")}
                   directive="post_max_size"
-                  hint={t("hints.post")}
+                  explain={t("hints.post")}
                   disabled={saving}
                   mono
                 />
@@ -870,6 +869,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                       label={t("fields.directives")}
                       name="additional_directives"
                       directive="php_admin_value"
+                      explain={t("hints.directives")}
                     />
                     <FormControl>
                       <Textarea
@@ -881,7 +881,6 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                         placeholder={t("fields.directivesPlaceholder")}
                       />
                     </FormControl>
-                    <FormDescription>{t("hints.directives")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1183,14 +1182,14 @@ function formatBytes(bytes) {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 }
 
-function Stack({ label, name, directive, error, hint, warning, explain, children }) {
+function Stack({ label, name, directive, error, warning, explain, children }) {
   return (
     <FormItem>
       <Label label={label} name={name} directive={directive} explain={explain} />
       {children}
-      {/* The error replaces the hint rather than stacking under it: two lines
-          of small grey-and-red text below one control is where people stop
-          reading. */}
+      {/* Only what the current VALUE provokes. What the setting means lives
+          behind the ⓘ, so a refusal never has to compete with a definition for
+          the same line — which is where people stopped reading. */}
       {error ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : warning ? (
@@ -1198,8 +1197,6 @@ function Stack({ label, name, directive, error, hint, warning, explain, children
           <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
           {warning}
         </p>
-      ) : hint ? (
-        <p className="text-xs text-muted-foreground">{hint}</p>
       ) : null}
     </FormItem>
   );
@@ -1212,23 +1209,31 @@ function Stack({ label, name, directive, error, hint, warning, explain, children
 const OverrideContext = createContext(null);
 
 /*
- * `explain`, not `hint` — every other component in this file already has a
- * `hint` prop and it means the grey line UNDER the control. This one is the
- * "?" beside the label. Same word for both would be a trap for whoever edits
- * this next, and the two are not interchangeable: the grey line is a note
- * about the value, this is a definition of the setting.
+ * `explain` is the ⓘ beside the label, and it is now the ONLY way this screen
+ * explains a field. Half of them said it in a grey line under the control
+ * instead, which made two fields doing the same job look like different kinds
+ * of thing and added eight sentences to a form that is already sixteen numbers
+ * deep. What stays visible is only what the value provokes: an error, a
+ * warning, or a line that changes as you type.
  *
- * The directive is already printed beside the label, so the text behind the
- * "?" says what the setting does and never restates its name.
+ * The directive is already printed beside the label, so the text behind the ⓘ
+ * says what the setting does and never restates its name.
  */
 function Label({ label, name, directive, explain }) {
   return (
     <div className="flex min-h-5 items-center justify-between gap-2">
-      <FormLabel className="min-w-0 flex-wrap gap-1" hint={explain}>
+      <FormLabel className="min-w-0 flex-wrap gap-1" hint={directive ? undefined : explain}>
         <span>{label}</span>
+        {/* Tied to the directive rather than left to the `hint` prop, which
+            appends it last: "Restart a worker after this many requests
+            (pm.max_requests)" fills the column, and the ⓘ alone would drop to a
+            second line with nothing beside it. */}
         {directive ? (
-          <span className="font-mono text-xs font-normal text-muted-foreground">
-            ({directive})
+          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+            <span className="font-mono text-xs font-normal text-muted-foreground">
+              ({directive})
+            </span>
+            {explain ? <LabelHint>{explain}</LabelHint> : null}
           </span>
         ) : null}
       </FormLabel>
@@ -1346,14 +1351,14 @@ function SectionTitle({ icon: Icon, title }) {
   );
 }
 
-function NumberField({ form, name, label, directive, hint, disabled, min, max, placeholder }) {
+function NumberField({ form, name, label, directive, explain, disabled, min, max, placeholder }) {
   return (
     <FormField
       control={form.control}
       name={name}
       render={({ field }) => (
         <FormItem>
-          <Label label={label} name={name} directive={directive} />
+          <Label label={label} name={name} directive={directive} explain={explain} />
           <FormControl>
             <Input
               {...field}
@@ -1366,7 +1371,6 @@ function NumberField({ form, name, label, directive, hint, disabled, min, max, p
               className="tabular-nums"
             />
           </FormControl>
-          <FormDescription>{hint}</FormDescription>
           <FormMessage />
         </FormItem>
       )}
@@ -1374,14 +1378,14 @@ function NumberField({ form, name, label, directive, hint, disabled, min, max, p
   );
 }
 
-function TextField({ form, name, label, directive, hint, disabled, mono = false, placeholder }) {
+function TextField({ form, name, label, directive, explain, disabled, mono = false, placeholder }) {
   return (
     <FormField
       control={form.control}
       name={name}
       render={({ field }) => (
         <FormItem>
-          <Label label={label} name={name} directive={directive} />
+          <Label label={label} name={name} directive={directive} explain={explain} />
           <FormControl>
             <Input
               {...field}
@@ -1391,7 +1395,6 @@ function TextField({ form, name, label, directive, hint, disabled, mono = false,
               className={cn(mono && "font-mono text-xs")}
             />
           </FormControl>
-          <FormDescription>{hint}</FormDescription>
           <FormMessage />
         </FormItem>
       )}
@@ -1399,7 +1402,7 @@ function TextField({ form, name, label, directive, hint, disabled, mono = false,
   );
 }
 
-function ToggleRow({ form, name, label, directive, hint, disabled }) {
+function ToggleRow({ form, name, label, directive, explain, disabled }) {
   return (
     <FormField
       control={form.control}
@@ -1412,8 +1415,7 @@ function ToggleRow({ form, name, label, directive, hint, disabled }) {
               right-aligned like every other Reset on the page. The switch owns
               the far right, so Reset lands immediately left of it. */}
           <div className="min-w-0 flex-1 space-y-1">
-            <Label label={label} name={name} directive={directive} />
-            {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+            <Label label={label} name={name} directive={directive} explain={explain} />
           </div>
           <FormControl>
             <Switch
@@ -1551,7 +1553,11 @@ function OpenBasedir({ form, php, disabled }) {
             name="open_basedir_paths"
             render={({ field }) => (
               <FormItem>
-                <Label label={tb("extraLabel")} name="open_basedir_paths" />
+                <Label
+                  label={tb("extraLabel")}
+                  name="open_basedir_paths"
+                  explain={tb("extraHint")}
+                />
                 <FormControl>
                   <Textarea
                     {...field}
@@ -1562,7 +1568,6 @@ function OpenBasedir({ form, php, disabled }) {
                     disabled={disabled}
                   />
                 </FormControl>
-                <FormDescription>{tb("extraHint")}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
