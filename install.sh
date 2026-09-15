@@ -304,20 +304,43 @@ preflight() {
     # Ports, before any web server is installed. `ss` ships with iproute2 on
     # both supported releases. A web server that is already ours is not a
     # conflict — this is the re-run case.
+    # A web server on 80/443 is not automatically a conflict. Three cases:
+    #
+    #   ours          — a re-run. Always fine.
+    #   a supported   — an existing nginx/Apache, which is what a server being
+    #   web server      migrated from another panel looks like. The panel adds
+    #                   one vhost beside whatever is already there; it never
+    #                   rewrites global config, and `nginx -t` gates the reload.
+    #                   Refusing here forced the operator to stop their web
+    #                   server for the whole install, taking every hosted site
+    #                   offline to install a panel that was going to share that
+    #                   web server anyway.
+    #   anything else — a real conflict, and still fatal.
     local port
     for port in 80 443; do
-        if ss -ltnH "sport = :${port}" 2>/dev/null | grep -q .; then
-            if [[ -f /etc/nginx/sites-enabled/${PANEL_SLUG}.conf ]] \
-               || [[ -f /etc/apache2/sites-enabled/${PANEL_SLUG}.conf ]]; then
-                skip "port ${port} is in use by our own web server"
-            else
-                die "port ${port} is already in use by something else.
-     The panel needs 80 and 443. Stop that service and run this again:
-       ss -ltnp 'sport = :${port}'"
-            fi
+        ss -ltnH "sport = :${port}" 2>/dev/null | grep -q . || continue
+
+        if [[ -f /etc/nginx/sites-enabled/${PANEL_SLUG}.conf ]] \
+           || [[ -f /etc/apache2/sites-enabled/${PANEL_SLUG}.conf ]]; then
+            skip "port ${port} is in use by our own web server"
+            continue
         fi
+
+        local holder
+        holder=$(ss -ltnpH "sport = :${port}" 2>/dev/null | grep -oP 'users:\(\("\K[^"]+' | head -1)
+
+        case "$holder" in
+            nginx|apache2|httpd|litespeed|lshttpd)
+                skip "port ${port} is served by ${holder}, which the panel will share"
+                ;;
+            *)
+                die "port ${port} is already in use by ${holder:-something else}.
+     The panel needs 80 and 443, or a web server it can share them with.
+     Stop that service and run this again:
+       ss -ltnp 'sport = :${port}'"
+                ;;
+        esac
     done
-    ok "ports 80 and 443 are free"
 
     local free_mb
     free_mb=$(df -Pm /var | awk 'NR==2 {print $4}')
