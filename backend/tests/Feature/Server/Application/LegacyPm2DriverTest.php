@@ -172,6 +172,37 @@ it('survives a daemon that answers with something other than JSON', function () 
     expect(app(LegacyPm2Driver::class)->status(adoptedApp()))->toBeNull();
 });
 
+it('runs from a directory the site user can always enter', function () {
+    // `runuser` keeps the caller's working directory. The caller is the panel,
+    // and when the site user cannot enter it PM2 fails to spawn its daemon
+    // with `spawn /usr/local/bin/node EACCES` — a message that names the
+    // binary and says nothing about the directory that caused it.
+    //
+    // Diagnosed on a live v7 box: the same command failed from /home/ubuntu
+    // (0750, another user's home) and worked from /. It only works today
+    // because /var/www/panel happens to be world-traversable, which is a
+    // hardening decision nothing connects to PM2 working.
+    $cwds = new ArrayObject;
+
+    Process::fake(function ($p) use ($cwds) {
+        $cwds[] = $p->path;
+
+        return Process::result(output: '[]');
+    });
+
+    $application = adoptedApp();
+
+    app(LegacyPm2Driver::class)->restart($application);
+    app(LegacyPm2Driver::class)->status($application);
+    app(LegacyPm2Driver::class)->processesFor('appuser', '/home/appuser');
+
+    expect(collect($cwds))->not->toBeEmpty();
+
+    foreach ($cwds as $cwd) {
+        expect($cwd)->toBe('/');
+    }
+});
+
 it('falls back to the application name when adoption recorded none', function () {
     $ran = pm2Commands();
 

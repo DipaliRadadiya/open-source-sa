@@ -42,6 +42,26 @@ use App\Services\Server\ServerOpsResult;
  */
 class LegacyPm2Driver
 {
+    /**
+     * The directory every one of these commands runs from.
+     *
+     * `runuser` keeps the caller's working directory, and the caller here is
+     * the panel — a directory the site user has no business being able to
+     * enter. When it cannot, PM2 fails to spawn its daemon with
+     * `spawn /usr/local/bin/node EACCES`, which names the binary and says
+     * nothing about the directory that actually caused it. The binary is fine;
+     * `posix_spawn` fails because the child cannot resolve its own cwd.
+     *
+     * Diagnosed on a live v7 server: the identical command failed from
+     * `/home/ubuntu` (mode 0750, another user's home) and succeeded from `/`.
+     *
+     * It happens to work today only because `/var/www/panel` is world-
+     * traversable. That is a hardening decision, not a guarantee, and nothing
+     * connects it to whether PM2 commands run — so the directory is named here
+     * rather than inherited.
+     */
+    private const SAFE_CWD = '/';
+
     public function __construct(private ServerOps $serverOps) {}
 
     /**
@@ -91,6 +111,7 @@ class LegacyPm2Driver
             ],
             ['feature' => 'application', 'op' => 'pm2_jlist_user', 'user' => $username],
             timeout: (int) config('server.applications.pm2_timeout', 120),
+            cwd: self::SAFE_CWD,
         );
 
         if ($result->failed()) {
@@ -261,6 +282,7 @@ class LegacyPm2Driver
             ], $arguments),
             ['feature' => 'application', 'op' => $op, 'application' => $application->id],
             timeout: (int) config('server.applications.pm2_timeout', 120),
+            cwd: self::SAFE_CWD,
         );
     }
 }
