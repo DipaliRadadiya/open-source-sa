@@ -805,6 +805,18 @@ return [
         'pm2_binary' => env('SERVER_LEGACY_PM2_BINARY', 'pm2'),
         'pm2_timeout' => (int) env('SERVER_LEGACY_PM2_TIMEOUT', 120),
 
+        // The old panel's agent. Its HTTPS listener is hardcoded in its own
+        // source, which is why the port is the primary signal; the unit is
+        // named after a build-time variable and differs per white-label build,
+        // so that one is a pattern.
+        'legacy_agent_port' => (int) env('SERVER_LEGACY_AGENT_PORT', 43210),
+        'legacy_agent_unit_pattern' => env('SERVER_LEGACY_AGENT_UNIT_PATTERN', '/(serveravatar|sa-agent)/i'),
+        'legacy_agent_paths' => [
+            '/usr/local/bin/serveravatar-agent',
+            '/opt/serveravatar/serveravatar-agent',
+            '/home/backend/agent/serveravatar-agent',
+        ],
+
         /*
         | Asking a freshly started application for a page before calling it
         | provisioned.
