@@ -717,3 +717,39 @@ it('tells the screen which sources it may offer the action for', function () {
         // refusal left, and it is technical rather than policy.
         ->and($logs->firstWhere('key', 'journal')['clearable'] ?? false)->toBeFalse();
 });
+
+it('ships a registry whose clear policy matches what the panel documents', function () {
+    /*
+     * The shipped rows, not a fixture.
+     *
+     * Every other test here builds its own registry, which is right for
+     * behaviour — and means all of them would stay green if the real
+     * `config/server.php` said something different. That gap let the route
+     * file's comment claim the opposite policy (that the seven audit logs were
+     * "deliberately excluded" and answered 404) for as long as it did: nothing
+     * connected the decision to a test.
+     *
+     * Read straight from config rather than through the API, because this is
+     * about what we ship rather than what one server reports after filtering
+     * to files that exist.
+     */
+    // Re-evaluated from the shipped file rather than read through `config()`,
+    // which this file's own beforeEach replaces with a fixture — a guard a
+    // sibling test can satisfy is not a guard.
+    $registry = collect((require config_path('server.php'))['logs']);
+
+    // The operator's decision: these are clearable, and flagged so the screen
+    // confirms with copy that names what is being destroyed.
+    $sensitive = $registry->where('sensitive', true);
+
+    expect($sensitive->pluck('key')->sort()->values()->all())
+        ->toBe(['auth', 'fail2ban', 'kernel', 'letsencrypt', 'mail', 'syslog', 'ufw']);
+
+    // Sensitive and clearable are not alternatives. A sensitive row that was
+    // not clearable would be a confirmation dialog in front of a 404.
+    expect($sensitive->every(fn (array $row) => ($row['clearable'] ?? false) === true))->toBeTrue();
+
+    // And the journal stays out, for the one reason that is not policy: it is
+    // not a file, so there is nothing to truncate.
+    expect($registry->firstWhere('key', 'journal')['clearable'] ?? false)->toBeFalse();
+});
