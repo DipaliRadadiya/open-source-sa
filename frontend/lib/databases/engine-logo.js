@@ -16,14 +16,18 @@
  * path that renders as a broken image.
  */
 /*
- * `darkSize` exists because the supplied dark variants are not always the same
- * LOCKUP as the light one. MySQL's white file is a stacked mark — dolphin over
- * the word, 50×50 — where its light file is a wide horizontal wordmark at
- * 239×60. Rendered at the height that suits the wordmark, the stacked version
- * is twenty pixels tall and illegible, so it gets its own.
+ * `darkSize` exists because a dark variant need not be the same LOCKUP as its
+ * light one, and then it cannot share its height.
+ *
+ * MySQL no longer needs it. The white file shipped with the set was a stacked
+ * mark — dolphin over the word, 50×50 — against a 239×60 horizontal wordmark on
+ * the light theme, so the logo changed SHAPE with the theme and had to be drawn
+ * taller to stay legible. MySQL's mark is a single flat colour, so the white
+ * variant is now the same horizontal file with that colour swapped: same
+ * lockup, same height, both themes.
  */
 const ENGINE_LOGOS = {
-  mysql: { light: "mysql.svg", dark: "mysql-white.svg", darkSize: "h-8 w-auto max-w-12" },
+  mysql: { light: "mysql.svg", dark: "mysql-white.svg" },
   mariadb: { light: "mariadb.svg", dark: "mariadb-white.png" },
   mongodb: { light: "mongodb.png", dark: "mongodb-white.png" },
   /*

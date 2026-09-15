@@ -69,3 +69,31 @@ test("no engine logo file is left unused", () => {
   const orphans = fs.readdirSync("public/db-engines").filter((f) => !mapped.has(f));
   assert.deepEqual(orphans, [], `unused engine logos: ${orphans.join(", ")}`);
 });
+
+test("a dark variant keeps the light one's lockup", () => {
+  /*
+   * MySQL's supplied white file was a stacked mark — dolphin over the word,
+   * 50×50 — while its light file is a 239×60 horizontal wordmark. The logo
+   * therefore changed SHAPE when the theme changed, and needed its own height
+   * to stay legible at all. The white file is now the horizontal one with its
+   * single flat colour swapped.
+   *
+   * Compared as a RATIO, not as exact numbers: a variant may legitimately be
+   * exported at a different scale, but not at a different shape.
+   */
+  const ratio = (file) => {
+    const svg = fs.readFileSync(`public/db-engines/${file}`, "utf8").slice(0, 400);
+    const w = Number(svg.match(/width="(\d+(?:\.\d+)?)/)?.[1]);
+    const h = Number(svg.match(/height="(\d+(?:\.\d+)?)/)?.[1]);
+    return w && h ? w / h : null;
+  };
+  for (const [engine, pair] of Object.entries(ENGINE_LOGOS)) {
+    if (!pair.light.endsWith(".svg") || !pair.dark.endsWith(".svg")) continue;
+    const [a, b] = [ratio(pair.light), ratio(pair.dark)];
+    if (a === null || b === null) continue;
+    assert.ok(
+      Math.abs(a - b) / a < 0.05,
+      `${engine}'s variants are different shapes: ${a.toFixed(2)} vs ${b.toFixed(2)}`,
+    );
+  }
+});
