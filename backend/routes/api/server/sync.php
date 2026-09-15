@@ -19,6 +19,12 @@ Route::get('/server/sync/latest', [ServerSyncController::class, 'latest'])
 Route::post('/server/sync', [ServerSyncController::class, 'store'])
     ->middleware(['permission:sync,manage', 'throttle:10,1']);
 
+// The server-side half of adoption, which Sync itself may not do: retire the
+// old panel's agent, repair PM2's boot persistence, and give its logs the
+// rotation policy they have never had. Nothing here restarts an application.
+Route::post('/server/sync/handover', [ServerSyncController::class, 'handover'])
+    ->middleware(['permission:sync,manage', 'throttle:5,1']);
+
 Route::get('/server/sync/ignores', [ServerSyncController::class, 'ignores'])
     ->middleware('permission:sync');
 
