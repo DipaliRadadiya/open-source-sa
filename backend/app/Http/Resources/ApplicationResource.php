@@ -162,21 +162,6 @@ class ApplicationResource extends JsonResource
             // Git source: a null account means a public repository, which
             // needs no credentials.
             'git_account_id' => $this->git_account_id,
-
-            // Which service the code came from: github, gitlab or bitbucket.
-            //
-            // `site_type` cannot answer it — one GitSiteType covers all three,
-            // because the deploy recipe is identical and only the account's API
-            // differs — and `webhook.provider` is set only when deploy-on-push
-            // is configured, so it describes a different thing.
-            //
-            // Resolved once when the application is created, from the account
-            // if there is one and otherwise from the repository URL's host.
-            // Null means either an application created before this column
-            // existed, or a public URL on a host the panel does not recognise
-            // (a self-hosted GitLab, a Gitea) — in which case nothing can name
-            // the provider and inventing one would be worse than saying so.
-            'git_provider' => $this->git_provider,
             'repository' => $this->repository,
             'repository_url' => $this->repository_url,
             'branch' => $this->branch,

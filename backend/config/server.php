@@ -2368,23 +2368,6 @@ return [
         'max_redirects' => 3,
         'per_page' => 30,
 
-        // Which provider a public repository URL belongs to, by host.
-        //
-        // Only for the public-URL case: a site built from a connected account
-        // takes the provider from the account, where the user stated it. Here
-        // the host *is* the identity — github.com is GitHub, definitionally —
-        // and a host that is not on this list (a self-hosted GitLab, a Gitea)
-        // resolves to null rather than a guess. "We were not told" is a better
-        // answer than a wrong badge.
-        'public_hosts' => [
-            'github.com' => 'github',
-            'www.github.com' => 'github',
-            'gitlab.com' => 'gitlab',
-            'www.gitlab.com' => 'gitlab',
-            'bitbucket.org' => 'bitbucket',
-            'www.bitbucket.org' => 'bitbucket',
-        ],
-
         'providers' => [
             'github' => [
                 'driver' => GithubProvider::class,

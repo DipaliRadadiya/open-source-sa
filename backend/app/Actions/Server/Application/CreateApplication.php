@@ -8,7 +8,6 @@ use App\Enums\DomainType;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
-use App\Models\GitAccount;
 use App\Models\SystemUser;
 use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
@@ -113,7 +112,6 @@ class CreateApplication
                         : null,
                     'start_command' => $data['start_command'] ?? null,
                     'git_account_id' => $data['git_account_id'] ?? null,
-                    'git_provider' => $this->gitProvider($data),
                     'repository' => $data['repository'] ?? null,
                     'repository_url' => $data['repository_url'] ?? null,
                     'branch' => $data['branch'] ?? null,
@@ -205,40 +203,6 @@ class CreateApplication
         }
 
         return $settings;
-    }
-
-    /**
-     * Which git service this site's code comes from.
-     *
-     * Resolved once, here, from the same data that decides the repository —
-     * so the column cannot disagree with the URL sitting next to it.
-     *
-     * Two sources and one honest gap:
-     *
-     *   - A connected account states its provider; the user chose it when they
-     *     connected, so it is a fact rather than an inference.
-     *   - A public URL names its host, and for the three services the panel
-     *     knows, the host *is* the provider.
-     *   - Anything else — a self-hosted GitLab, a Gitea, a Bitbucket Server —
-     *     is null. The host tells us nothing there, and a wrong badge is worse
-     *     than an absent one.
-     *
-     * `repository_url` is validated by SafeProviderHost, which requires https,
-     * so there is no scp-style `git@host:owner/repo` form to parse here.
-     *
-     * @param  array<string, mixed>  $data
-     */
-    private function gitProvider(array $data): ?string
-    {
-        if (filled($data['git_account_id'] ?? null)) {
-            return GitAccount::query()->whereKey($data['git_account_id'])->value('provider');
-        }
-
-        $host = strtolower((string) parse_url((string) ($data['repository_url'] ?? ''), PHP_URL_HOST));
-
-        return $host === ''
-            ? null
-            : (config('server.git.public_hosts')[$host] ?? null);
     }
 
     /**
