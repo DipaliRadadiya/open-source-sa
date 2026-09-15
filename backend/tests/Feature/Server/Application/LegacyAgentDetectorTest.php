@@ -94,6 +94,20 @@ it('does not mistake another service on another port for the agent', function ()
     expect(app(LegacyAgentDetector::class)->running())->toBeFalse();
 });
 
+it('never identifies PM2\'s own boot unit as the agent', function () {
+    // `pm2 startup` creates `pm2-<user>.service`, which runs `pm2 resurrect`
+    // and is the only thing bringing adopted applications back at boot. It is
+    // not part of the old agent and must survive its removal. A caller that
+    // stops whatever this reports would otherwise take out boot persistence
+    // for every adopted application on the server.
+    agentFake(['unit' => 'pm2-appuser.service']);
+
+    $detected = app(LegacyAgentDetector::class)->describe();
+
+    expect($detected['running'])->toBeFalse()
+        ->and($detected['unit'])->toBeNull();
+});
+
 it('treats an unreadable server as not-detected rather than crashing', function () {
     // `ss` missing, systemctl refusing — a check that throws would block
     // adoption on every server where it could not answer.

@@ -97,6 +97,13 @@ class LegacyAgentDetector
      * Matched by pattern rather than an exact name: the unit is named after a
      * build-time `ServiceName`, so it is `serveravatar` on the vendor's own
      * builds and something else on a white-labelled one.
+     *
+     * The pattern must never match `pm2-<user>.service`. That unit is PM2's
+     * own, created by `pm2 startup`, and it is the only thing bringing adopted
+     * applications back at boot — it has to survive the old agent's removal. A
+     * caller stopping whatever this reports would otherwise remove boot
+     * persistence for every adopted application on the server. Covered by a
+     * test, because the failure would be invisible until a reboot.
      */
     private function activeUnit(): ?string
     {
