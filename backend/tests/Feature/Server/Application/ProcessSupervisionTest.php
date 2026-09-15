@@ -612,3 +612,120 @@ describe('the endpoint', function () {
             ->assertNotFound();
     });
 });
+
+/**
+ * An application adopted from the old panel, still run by its PM2 daemon.
+ *
+ * The routing lives in ProcessSupervisor rather than in its callers, so these
+ * assert through the same public API that GitDeployer, the environment
+ * controller and the restore steps use — none of which know two supervisors
+ * exist.
+ */
+describe('an adopted application', function () {
+    function pm2App(array $overrides = []): Application
+    {
+        return nodeApp(array_merge([
+            'supervisor_mode' => 'pm2',
+            'pm2_process_name' => 'legacy-api',
+        ], $overrides));
+    }
+
+    /** @return ArrayObject<int, string> */
+    function ranFor(callable $act): ArrayObject
+    {
+        $ran = new ArrayObject;
+
+        Process::fake(function ($p) use ($ran) {
+            $args = ($p->command[0] ?? '') === 'sudo' ? array_slice((array) $p->command, 2) : (array) $p->command;
+            $ran[] = implode(' ', $args);
+
+            return Process::result(output: '[]');
+        });
+
+        $act();
+
+        return $ran;
+    }
+
+    it('writes no unit on deploy, and restarts the daemon instead', function () {
+        $application = pm2App();
+
+        $ran = ranFor(fn () => app(ProcessSupervisor::class)->apply($application, '/home/appuser/api.test'));
+
+        // A deploy still has to get the new code into the running process.
+        expect(collect($ran)->contains(fn (string $c) => str_contains($c, 'pm2 restart legacy-api')))->toBeTrue()
+            ->and(collect($ran)->contains(fn (string $c) => str_contains($c, 'sv-app-')))->toBeFalse()
+            ->and(collect($ran)->contains(fn (string $c) => str_starts_with($c, 'systemctl')))->toBeFalse();
+    });
+
+    it('deletes from the daemon rather than looking for a unit', function () {
+        $application = pm2App();
+
+        $ran = ranFor(fn () => app(ProcessSupervisor::class)->remove($application));
+
+        expect(collect($ran)->contains(fn (string $c) => str_contains($c, 'pm2 delete legacy-api')))->toBeTrue()
+            ->and(collect($ran)->contains(fn (string $c) => str_contains($c, 'systemctl disable')))->toBeFalse();
+    });
+
+    it('sends start, stop and restart to the daemon', function (string $action) {
+        $application = pm2App();
+
+        $ran = ranFor(fn () => app(ProcessSupervisor::class)->{$action}($application));
+
+        expect(collect($ran)->contains(fn (string $c) => str_contains($c, "pm2 {$action} legacy-api")))->toBeTrue();
+    })->with(['start', 'stop', 'restart']);
+
+    it('has no slice of ours to release, and does not pretend to fail', function () {
+        $application = pm2App();
+
+        $ran = ranFor(fn () => expect(app(ProcessSupervisor::class)->releaseSlice($application)->ok)->toBeTrue());
+
+        // A deprovision must not stall on the absence of something that was
+        // never created.
+        expect(collect($ran)->contains(fn (string $c) => str_contains($c, '.slice')))->toBeFalse();
+    });
+
+    it('answers status in the same shape as a unit does', function () {
+        $application = pm2App();
+
+        Process::fake(fn () => Process::result(output: json_encode([
+            ['name' => 'legacy-api', 'pm2_env' => ['status' => 'online', 'restart_time' => 1], 'monit' => ['memory' => 40, 'cpu' => 2]],
+            ['name' => 'legacy-api', 'pm2_env' => ['status' => 'online', 'restart_time' => 0], 'monit' => ['memory' => 60, 'cpu' => 1]],
+        ])));
+
+        // Same keys either way, so nothing downstream branches on the
+        // supervisor; `supervisor` is there for anything that wants to label
+        // it, and the fields a given supervisor cannot answer are null rather
+        // than invented.
+        expect(app(ProcessSupervisor::class)->status($application))->toMatchArray([
+            'state' => 'online',
+            'sub_state' => null,
+            'since' => null,
+            'memory' => 100,
+            'restarts' => 1,
+            'instances' => 2,
+            'online' => 2,
+            'supervisor' => 'pm2',
+        ]);
+    });
+
+    it('is still known to run when adoption recorded no start command', function () {
+        // The old panel stored a package-manager invocation and rewrote it on
+        // the way to PM2, so there may be nothing here we could parse. What it
+        // has is a name the daemon knows it by.
+        expect(app(ProcessSupervisor::class)->runs(pm2App(['start_command' => null])))->toBeTrue();
+    });
+});
+
+it('labels a systemd application as one, and admits what it cannot count', function () {
+    Process::fake(fn () => Process::result(output: "ActiveState=active\nSubState=running\nMemoryCurrent=1024\nNRestarts=0\n"));
+
+    expect(app(ProcessSupervisor::class)->status(nodeApp()))->toMatchArray([
+        'state' => 'active',
+        'instances' => 1,
+        // The unit is one cgroup; how many workers live inside it is PM2's to
+        // know. Null rather than a guess.
+        'online' => null,
+        'supervisor' => 'systemd',
+    ]);
+});

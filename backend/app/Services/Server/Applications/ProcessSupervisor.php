@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Enums\SupervisorMode;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
@@ -28,6 +29,14 @@ use Illuminate\Support\Facades\View;
  *
  * An application has a process when it has a `start_command`, not when it has
  * a particular serving profile. PHP and static sites never touch this.
+ *
+ * One exception to "systemd owns the process", and it is a migration one: an
+ * application adopted from the old panel is already running under its per-user
+ * PM2 daemon, and taking it over cannot mean restarting a customer's site. Those
+ * are marked {@see SupervisorMode::Pm2} and every method here delegates to
+ * {@see LegacyPm2Driver}. The routing lives in this class rather than in its
+ * nineteen callers, so that a caller cannot forget which supervisor it is
+ * talking to and operate on a unit that does not exist.
  */
 class ProcessSupervisor
 {
@@ -36,10 +45,32 @@ class ProcessSupervisor
         private ManagedFile $files,
         private NodeRuntime $node,
         private ApplicationLogDirectory $logDirectory,
+        private LegacyPm2Driver $legacyPm2,
     ) {}
+
+    /**
+     * Whether this application is run by the old panel's daemon rather than a
+     * unit of ours.
+     *
+     * Every public method below asks this first and delegates. The alternative
+     * — nineteen call sites each learning that two supervisors exist — would
+     * mean every future caller having to remember, and the one that forgets
+     * would silently operate on a unit that does not exist.
+     */
+    public function legacy(Application $application): bool
+    {
+        return $application->supervisor_mode === SupervisorMode::Pm2;
+    }
 
     public function runs(Application $application): bool
     {
+        // An adopted application may have no `start_command` we could parse —
+        // the old panel stored a package-manager invocation and rewrote it on
+        // the way to PM2. What it does have is a name the daemon knows it by.
+        if ($this->legacy($application)) {
+            return filled($application->pm2_process_name) || filled($application->start_command);
+        }
+
         return filled($application->start_command);
     }
 
@@ -128,6 +159,17 @@ class ProcessSupervisor
      */
     public function apply(Application $application, string $documentRoot, bool $start = true): void
     {
+        // No unit to write. A deploy still has to put the new code into the
+        // running process, and PM2 restarting it is the whole of what `apply`
+        // means for an adopted application.
+        if ($this->legacy($application)) {
+            if ($start) {
+                $this->legacyPm2->restart($application);
+            }
+
+            return;
+        }
+
         $context = ['feature' => 'application', 'op' => 'unit_write', 'application' => $application->id];
 
         // Before the unit, not after: systemd creates the log *files* for
@@ -179,6 +221,12 @@ class ProcessSupervisor
      */
     public function remove(Application $application): void
     {
+        if ($this->legacy($application)) {
+            $this->legacyPm2->remove($application);
+
+            return;
+        }
+
         if (! $this->exists($application)) {
             return;
         }
@@ -213,6 +261,14 @@ class ProcessSupervisor
      */
     public function releaseSlice(Application $application): ServerOpsResult
     {
+        // An adopted application has no unit and therefore no slice of ours.
+        // Reported as done rather than failed: there is nothing to release, and
+        // a deprovision must not stall on the absence of something that was
+        // never created.
+        if ($this->legacy($application)) {
+            return new ServerOpsResult(ok: true, reference: '');
+        }
+
         return $this->serverOps->run(
             ['systemctl', 'stop', $this->slice($application)],
             ['feature' => 'application', 'op' => 'slice_release', 'application' => $application->id],
@@ -221,17 +277,23 @@ class ProcessSupervisor
 
     public function start(Application $application): ServerOpsResult
     {
-        return $this->systemctl('start', $application);
+        return $this->legacy($application)
+            ? $this->legacyPm2->start($application)
+            : $this->systemctl('start', $application);
     }
 
     public function stop(Application $application): ServerOpsResult
     {
-        return $this->systemctl('stop', $application);
+        return $this->legacy($application)
+            ? $this->legacyPm2->stop($application)
+            : $this->systemctl('stop', $application);
     }
 
     public function restart(Application $application): ServerOpsResult
     {
-        return $this->systemctl('restart', $application);
+        return $this->legacy($application)
+            ? $this->legacyPm2->restart($application)
+            : $this->systemctl('restart', $application);
     }
 
     /**
@@ -241,12 +303,38 @@ class ProcessSupervisor
      * free to drift the moment anything restarts, crashes or is touched from a
      * shell.
      *
-     * @return array{state: string, since: ?string, memory: ?int, restarts: ?int}|null
+     * Both supervisors answer in the same shape, so nothing downstream has to
+     * know which one is in use — `supervisor` says, for anything that wants to
+     * label it. The fields each can genuinely answer differ: systemd has no
+     * per-worker count and the daemon has no sub-state or start timestamp, and
+     * those are null rather than invented.
+     *
+     * @return array{state: string, sub_state: ?string, since: ?string, memory: ?int, restarts: ?int, instances: int, online: ?int, supervisor: string}|null
      */
     public function status(Application $application): ?array
     {
         if (! $this->runs($application)) {
             return null;
+        }
+
+        if ($this->legacy($application)) {
+            $status = $this->legacyPm2->status($application);
+
+            if ($status === null) {
+                return null;
+            }
+
+            return [
+                'state' => $status['state'],
+                // systemd's vocabulary, which the daemon has no equivalent for.
+                'sub_state' => null,
+                'since' => null,
+                'memory' => $status['memory'],
+                'restarts' => $status['restarts'],
+                'instances' => $status['instances'],
+                'online' => $status['online'],
+                'supervisor' => SupervisorMode::Pm2->value,
+            ];
         }
 
         $result = $this->serverOps->run(
@@ -273,11 +361,21 @@ class ProcessSupervisor
             // no cgroup yet; anything non-numeric is simply unknown.
             'memory' => is_numeric($memory) ? (int) $memory : null,
             'restarts' => is_numeric($restarts) ? (int) $restarts : null,
+            'instances' => $this->instances($application),
+            // The unit is one cgroup; how many workers are alive inside it is
+            // PM2's to know, and asking would mean a second command for a
+            // number nothing currently renders. Null is the honest answer.
+            'online' => null,
+            'supervisor' => SupervisorMode::Systemd->value,
         ];
     }
 
     public function active(Application $application): bool
     {
+        if ($this->legacy($application)) {
+            return $this->legacyPm2->active($application);
+        }
+
         return $this->serverOps->run(
             ['systemctl', 'is-active', '--quiet', $this->unit($application)],
             ['feature' => 'application', 'op' => 'unit_is_active', 'application' => $application->id],
