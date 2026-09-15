@@ -797,6 +797,14 @@ return [
     'applications' => [
         'systemd_dir' => env('SERVER_SYSTEMD_DIR', '/etc/systemd/system'),
 
+        // For applications adopted from the old panel, which are still run by
+        // its per-user PM2 daemon. Bare, so `runuser` resolves it on PATH: the
+        // old panel installed PM2 globally from NodeSource (`/usr/bin`) but
+        // then upgraded Node with `n`, which relocates the whole toolchain to
+        // `/usr/local` — so neither absolute path is right on every server.
+        'pm2_binary' => env('SERVER_LEGACY_PM2_BINARY', 'pm2'),
+        'pm2_timeout' => (int) env('SERVER_LEGACY_PM2_TIMEOUT', 120),
+
         /*
         | Asking a freshly started application for a page before calling it
         | provisioned.

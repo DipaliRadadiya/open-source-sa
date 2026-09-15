@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AiBotPolicy;
 use App\Enums\ApplicationStatus;
 use App\Enums\DomainType;
+use App\Enums\SupervisorMode;
 use App\Enums\WafCategory;
 use App\Enums\WafMode;
 use App\Services\Applications\SiteTypeManager;
@@ -24,7 +25,7 @@ use Illuminate\Support\Str;
 #[Fillable([
     'system_user_id', 'production_application_id', 'cloned_from_application_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
     'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
-    'build_command', 'deploy_script', 'start_command', 'package_manager', 'process_instances',
+    'build_command', 'deploy_script', 'start_command', 'package_manager', 'process_instances', 'supervisor_mode', 'pm2_process_name',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
     'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'directory_size_updated_at',
     'current_release_id', 'previous_release_path',
@@ -56,6 +57,7 @@ class Application extends Model
             'fail2ban_jail_content' => 'string',
             'fail2ban_filter_content' => 'string',
             'status' => ApplicationStatus::class,
+            'supervisor_mode' => SupervisorMode::class,
             'settings' => 'array',
             'steps' => 'array',
             'last_deployed_at' => 'datetime',
