@@ -3225,7 +3225,8 @@
       "refreshVersions": "Обновить",
       "refreshVersionsHint": "Обновить список версий {runtime}, установленных на этом сервере",
       "versionsAdded": "{runtime}: {versions} {count, plural, one {теперь доступна} few {теперь доступны} many {теперь доступны} other {теперь доступны}}.",
-      "versionsUnchanged": "Новых версий {runtime} пока нет. Версия, которая ещё устанавливается, появится после завершения."
+      "versionsUnchanged": "Новых версий {runtime} пока нет. Версия, которая ещё устанавливается, появится после завершения.",
+      "installDatabaseEngine": "Установить движок базы данных"
     },
     "actions": {
       "label": "Действия",

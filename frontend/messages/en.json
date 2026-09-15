@@ -3225,7 +3225,8 @@
       "refreshVersions": "Refresh",
       "refreshVersionsHint": "Refresh the {runtime} versions installed on this server",
       "versionsAdded": "{runtime} {versions} {count, plural, one {is} other {are}} now available.",
-      "versionsUnchanged": "No new {runtime} versions yet. One that is still installing will appear when it finishes."
+      "versionsUnchanged": "No new {runtime} versions yet. One that is still installing will appear when it finishes.",
+      "installDatabaseEngine": "Install a database engine"
     },
     "actions": {
       "label": "Actions",

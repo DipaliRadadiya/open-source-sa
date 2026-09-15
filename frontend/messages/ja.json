@@ -3225,7 +3225,8 @@
       "refreshVersions": "更新",
       "refreshVersionsHint": "このサーバーにインストールされている {runtime} のバージョンを更新",
       "versionsAdded": "{runtime} {versions} が{count, plural, other {#件}}利用可能になりました。",
-      "versionsUnchanged": "新しい {runtime} バージョンはまだありません。インストール中のものは完了次第表示されます。"
+      "versionsUnchanged": "新しい {runtime} バージョンはまだありません。インストール中のものは完了次第表示されます。",
+      "installDatabaseEngine": "データベースエンジンをインストール"
     },
     "actions": {
       "label": "操作",

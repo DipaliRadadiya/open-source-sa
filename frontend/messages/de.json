@@ -3225,7 +3225,8 @@
       "refreshVersions": "Aktualisieren",
       "refreshVersionsHint": "Die auf diesem Server installierten {runtime}-Versionen aktualisieren",
       "versionsAdded": "{runtime} {versions} {count, plural, one {ist} other {sind}} jetzt verfügbar.",
-      "versionsUnchanged": "Noch keine neuen {runtime}-Versionen. Eine, die noch installiert wird, erscheint, sobald sie fertig ist."
+      "versionsUnchanged": "Noch keine neuen {runtime}-Versionen. Eine, die noch installiert wird, erscheint, sobald sie fertig ist.",
+      "installDatabaseEngine": "Datenbank-Engine installieren"
     },
     "actions": {
       "label": "Aktionen",

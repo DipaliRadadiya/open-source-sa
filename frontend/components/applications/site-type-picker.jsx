@@ -45,15 +45,25 @@ function TypeIcon({ type, className }) {
  * the reason rather than hidden.
  */
 /**
- * Where to go and install a runtime this type needs, or null.
+ * Where to go and clear the thing blocking this type, or null.
  *
- * Only for a type blocked BY a runtime. A card the backend greyed for a web
- * server has nothing to install here, and a link that cannot help is worse
- * than none. Which runtime is read off the type's own range rather than a
- * field added for this: a type blocked on `runtime` that declares a PHP range
- * was blocked by PHP.
+ * Only for a blocker the reader can actually clear. A card the backend greyed
+ * for a web server has nothing to install here, and a link that cannot help is
+ * worse than none.
+ *
+ * Which runtime is read off the type's own range rather than a field added for
+ * this: a type blocked on `runtime` that declares a PHP range was blocked by
+ * PHP.
+ *
+ * A missing database engine is the same kind of blocker and was missing the
+ * same way out. The footer already said where to go, but only once for the
+ * whole list — so the row that actually told you the problem was the one place
+ * with no answer to it.
  */
-function runtimeFix(type) {
+function blockerFix(type) {
+  if (type?.unavailable_code === "database") {
+    return { href: "/databases", label: "form.installDatabaseEngine" };
+  }
   if (type?.unavailable_code !== "runtime") return null;
   if (type.php_version_range) return { href: "/php", label: "form.installPhpVersion" };
   if (type.node_version_range) return { href: "/node", label: "form.installNodeVersion" };
@@ -259,14 +269,14 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                               version is needed; this is where to go and get
                               one, so the reader does not have to work out that
                               PHP versions live on a page called PHP. */}
-                          {runtimeFix(type) ? (
+                          {blockerFix(type) ? (
                             <>
                               {" "}
                               <Link
-                                href={runtimeFix(type).href}
+                                href={blockerFix(type).href}
                                 className="font-medium underline underline-offset-2 hover:no-underline"
                               >
-                                {t(runtimeFix(type).label)}
+                                {t(blockerFix(type).label)}
                               </Link>
                             </>
                           ) : null}
@@ -300,9 +310,15 @@ export function SiteTypePicker({ types = [], value, onChange }) {
             reads a web-server refusal as a missing database. */}
         {types.some((type) => !type.available && type.unavailable_code === "database") ? (
           <div className="shrink-0 border-t px-3 py-2.5">
+            {/* Styled as a link, not as another grey line. It was
+                `text-muted-foreground`, which made the one clickable thing in
+                this popover look exactly like the explanatory text above it —
+                the way out of the blocker read as more description of it.
+                `text-primary` is what every other inline link in the panel
+                uses. */}
             <Link
               href="/databases"
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:underline"
+              className="flex items-center gap-1.5 text-xs font-medium text-primary underline-offset-4 hover:underline"
             >
               <Database className="size-3.5 shrink-0" />
               {t("form.typeNeedsDatabase")}

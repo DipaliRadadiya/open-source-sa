@@ -3225,7 +3225,8 @@
       "refreshVersions": "Atualizar",
       "refreshVersionsHint": "Atualizar as versões de {runtime} instaladas neste servidor",
       "versionsAdded": "{runtime} {versions} {count, plural, one {está} other {estão}} agora disponível(is).",
-      "versionsUnchanged": "Ainda não há novas versões de {runtime}. Uma que ainda está sendo instalada aparecerá quando terminar."
+      "versionsUnchanged": "Ainda não há novas versões de {runtime}. Uma que ainda está sendo instalada aparecerá quando terminar.",
+      "installDatabaseEngine": "Instalar um engine de banco de dados"
     },
     "actions": {
       "label": "Ações",

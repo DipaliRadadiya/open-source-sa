@@ -206,9 +206,16 @@ test("a runtime-blocked row carries its own way out, beside the reason", async (
   assert.match(picker, /href: "\/php", label: "form\.installPhpVersion"/);
   assert.match(picker, /href: "\/node", label: "form\.installNodeVersion"/);
 
-  // The link lives with the sentence, not in a footer under the list.
+  // A missing database engine is the same kind of blocker, and gets the same
+  // way out rather than only the one line in the footer.
+  assert.match(picker, /href: "\/databases", label: "form\.installDatabaseEngine"/);
+
+  // The link lives with the sentence, not in a footer under the list. Matched
+  // on the call shape rather than the helper's NAME — pinning the name made
+  // this fail the moment the helper grew past runtimes, which is a test
+  // failing about its own wording instead of about the panel.
   const reasonBlock = picker.slice(picker.indexOf("type.unavailable_reason ?"));
-  assert.match(reasonBlock.slice(0, 900), /runtimeFix\(type\)/, "the link renders inside the reason");
+  assert.match(reasonBlock.slice(0, 900), /\w+\(type\)\s*\?/, "the link renders inside the reason");
 
   // An unavailable row cannot be a disabled button, or the link inside it is
   // unreachable — by a mouse, by a screen reader, and by Playwright.
