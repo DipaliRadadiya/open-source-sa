@@ -198,7 +198,7 @@ test("the PHP page reads the range from the catalogue and survives losing it", a
   assert.match(page, /siteTypeTitle=/, "the PHP payload carries no site type, so the page passes it");
 });
 
-test("a runtime-blocked row carries its own way out, beside the reason", async () => {
+test("a blocked type says why, and the grid offers each way out exactly once", async () => {
   const fs = await import("node:fs");
   const picker = fs.readFileSync("components/applications/site-type-picker.jsx", "utf8");
 
@@ -210,24 +210,34 @@ test("a runtime-blocked row carries its own way out, beside the reason", async (
   // way out rather than only the one line in the footer.
   assert.match(picker, /href: "\/databases", label: "form\.installDatabaseEngine"/);
 
-  // The link lives with the sentence, not in a footer under the list. Matched
-  // on the call shape rather than the helper's NAME — pinning the name made
-  // this fail the moment the helper grew past runtimes, which is a test
-  // failing about its own wording instead of about the panel.
-  const reasonBlock = picker.slice(picker.indexOf("type.unavailable_reason ?"));
-  assert.match(reasonBlock.slice(0, 900), /\w+\(type\)\s*\?/, "the link renders inside the reason");
+  // The card still says WHY it cannot be chosen — greyed and silent is a bug
+  // report waiting to happen.
+  assert.match(picker, /type\.unavailable_reason/, "the reason renders on the card");
 
-  // An unavailable row cannot be a disabled button, or the link inside it is
-  // unreachable — by a mouse, by a screen reader, and by Playwright.
-  assert.match(picker, /const Row = disabled \? "div" : "button"/);
-  assert.doesNotMatch(picker, /"aria-disabled": true/, "it takes the nested link down with it");
+  /*
+   * The link no longer lives on the card, and that is the point.
+   *
+   * It did while this was a list: one link per row, beside the sentence. In a
+   * grid it meant thirteen cards on an unprovisioned server each repeating
+   * "Install a database engine" under a sentence they also each repeated, and
+   * the picker grew taller than the whole form beneath it. Eight cards blocked
+   * on one missing engine have one answer between them, so the links are
+   * deduplicated BY DESTINATION and shown once for the grid.
+   */
+  assert.match(picker, /byHref\.has\(fix\.href\)/, "one link per destination, not per card");
+  assert.match(picker, /href=\{fix\.href\}/, "and it is rendered");
 
-  // And the row must not dim wholesale: `opacity-60` on the row faded the
-  // link too, so the one clickable thing looked as switched off as the rest.
+  // An unavailable card cannot be a disabled button: it still holds text a
+  // screen reader has to reach, and Playwright refuses to read inside one.
+  assert.match(picker, /const \w+ = disabled \? "div" : "button"/);
+  assert.doesNotMatch(picker, /"aria-disabled": true/, "it takes the nested text down with it");
+
+  // The choice fades — mark, name, tagline — never the reason, which is the
+  // one part of a blocked card worth reading.
   assert.doesNotMatch(
     picker,
     /disabled && "opacity-60 hover:bg-transparent/,
-    "fade the choice — icon, name, tagline — never the reason or its link",
+    "fade the choice, not the reason",
   );
 
   for (const locale of ["en", "es", "hi"]) {

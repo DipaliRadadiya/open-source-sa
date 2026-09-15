@@ -3222,7 +3222,6 @@
       "repositorySearch": "リポジトリを検索…",
       "branchSearch": "ブランチを検索…",
       "typeSearch": "アプリケーションの種類を検索…",
-      "popular": "人気",
       "typeNoResults": "「{query}」に一致するアプリケーションの種類はありません。",
       "typeNeedsDatabase": "一部のオプションにはデータベースエンジンが必要です。データベースページからインストールしてください。",
       "startCommand": {
@@ -3253,7 +3252,20 @@
       "refreshVersionsHint": "このサーバーにインストールされている {runtime} のバージョンを更新",
       "versionsAdded": "{runtime} {versions} が{count, plural, other {#件}}利用可能になりました。",
       "versionsUnchanged": "新しい {runtime} バージョンはまだありません。インストール中のものは完了次第表示されます。",
-      "installDatabaseEngine": "データベースエンジンをインストール"
+      "installDatabaseEngine": "データベースエンジンをインストール",
+      "blockedDatabase": "データベースが必要",
+      "blockedNode": "Node が必要",
+      "blockedPhp": "PHP が必要",
+      "blockedPhpVersion": "PHP {range} が必要",
+      "blockedNodeVersion": "Node {range} が必要",
+      "blockedDatabaseEngines": "{engines} が必要",
+      "categoryAll": "すべて",
+      "categoryPopular": "人気",
+      "categoryCms": "CMS",
+      "categoryDevelopment": "開発",
+      "categoryTools": "ツール",
+      "categoryProductivity": "生産性",
+      "categoryOthers": "その他"
     },
     "actions": {
       "label": "操作",

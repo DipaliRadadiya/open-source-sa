@@ -84,3 +84,46 @@ test("no logo file is left unused", () => {
   const orphans = onDisk.filter((f) => !mapped.has(f));
   assert.deepEqual(orphans, [], `unused logo files: ${orphans.join(", ")}`);
 });
+
+test("the picker's category chips are buckets, not the API's own categories", async () => {
+  /*
+   * The catalogue carries 11 categories for 17 types and 8 of them hold
+   * exactly one: a row of eleven tabs where "education" opens on Moodle by
+   * itself. The chips fold those into four a person would reach for, and a
+   * category nobody has placed lands in `others` rather than vanishing from
+   * the grid.
+   */
+  const { CATEGORY_GROUPS, groupForType, groupsWithTypes } = await import(
+    "../lib/applications/type-categories.js"
+  );
+
+  assert.equal(groupForType({ category: "cms" }), "cms");
+  assert.equal(groupForType({ category: "ecommerce" }), "cms");
+  assert.equal(groupForType({ category: "monitoring" }), "tools");
+  assert.equal(groupForType({ category: "CMS" }), "cms", "the API's casing is not load-bearing");
+  assert.equal(groupForType({ category: "quantum-computing" }), "others");
+  assert.equal(groupForType({}), "others");
+
+  // No category is claimed by two buckets — the first match would win in
+  // silence and one chip would be permanently short.
+  const seen = new Set();
+  for (const group of CATEGORY_GROUPS) {
+    for (const category of group.categories) {
+      assert.equal(seen.has(category), false, `${category} is in two groups`);
+      seen.add(category);
+    }
+  }
+
+  // An empty bucket is not offered: a chip that filters to nothing is a
+  // promise the panel cannot keep.
+  const groups = groupsWithTypes([{ category: "cms" }, { category: "cms" }, { category: "developer" }]);
+  assert.deepEqual(
+    groups.map((g) => [g.key, g.count]),
+    [["cms", 2], ["development", 1]],
+  );
+
+  // `others` is last when it exists at all — it is where the unknown goes,
+  // not a peer of the buckets we chose.
+  const withUnknown = groupsWithTypes([{ category: "cms" }, { category: "nothing-we-know" }]);
+  assert.equal(withUnknown.at(-1).key, "others");
+});

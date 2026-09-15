@@ -3222,7 +3222,6 @@
       "repositorySearch": "Поиск репозиториев…",
       "branchSearch": "Поиск веток…",
       "typeSearch": "Поиск типов приложений…",
-      "popular": "Популярные",
       "typeNoResults": "Нет типов приложений, соответствующих «{query}».",
       "typeNeedsDatabase": "Для некоторых вариантов нужен сервер баз данных — установите его на странице «Базы данных».",
       "startCommand": {
@@ -3253,7 +3252,20 @@
       "refreshVersionsHint": "Обновить список версий {runtime}, установленных на этом сервере",
       "versionsAdded": "{runtime}: {versions} {count, plural, one {теперь доступна} few {теперь доступны} many {теперь доступны} other {теперь доступны}}.",
       "versionsUnchanged": "Новых версий {runtime} пока нет. Версия, которая ещё устанавливается, появится после завершения.",
-      "installDatabaseEngine": "Установить движок базы данных"
+      "installDatabaseEngine": "Установить движок базы данных",
+      "blockedDatabase": "Нужна база данных",
+      "blockedNode": "Нужен Node",
+      "blockedPhp": "Нужен PHP",
+      "blockedPhpVersion": "Нужен PHP {range}",
+      "blockedNodeVersion": "Нужен Node {range}",
+      "blockedDatabaseEngines": "Нужен {engines}",
+      "categoryAll": "Все",
+      "categoryPopular": "Популярные",
+      "categoryCms": "CMS",
+      "categoryDevelopment": "Разработка",
+      "categoryTools": "Инструменты",
+      "categoryProductivity": "Продуктивность",
+      "categoryOthers": "Другое"
     },
     "actions": {
       "label": "Действия",

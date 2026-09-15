@@ -3222,7 +3222,6 @@
       "repositorySearch": "Repositories suchen…",
       "branchSearch": "Branches suchen…",
       "typeSearch": "Anwendungstypen suchen…",
-      "popular": "Beliebt",
       "typeNoResults": "Kein Anwendungstyp passt zu „{query}“.",
       "typeNeedsDatabase": "Manche Optionen brauchen eine Datenbank-Engine — installieren Sie eine auf der Seite „Datenbanken“.",
       "startCommand": {
@@ -3253,7 +3252,20 @@
       "refreshVersionsHint": "Die auf diesem Server installierten {runtime}-Versionen aktualisieren",
       "versionsAdded": "{runtime} {versions} {count, plural, one {ist} other {sind}} jetzt verfügbar.",
       "versionsUnchanged": "Noch keine neuen {runtime}-Versionen. Eine, die noch installiert wird, erscheint, sobald sie fertig ist.",
-      "installDatabaseEngine": "Datenbank-Engine installieren"
+      "installDatabaseEngine": "Datenbank-Engine installieren",
+      "blockedDatabase": "Benötigt eine Datenbank",
+      "blockedNode": "Benötigt Node",
+      "blockedPhp": "Benötigt PHP",
+      "blockedPhpVersion": "Benötigt PHP {range}",
+      "blockedNodeVersion": "Benötigt Node {range}",
+      "blockedDatabaseEngines": "Benötigt {engines}",
+      "categoryAll": "Alle",
+      "categoryPopular": "Beliebt",
+      "categoryCms": "CMS",
+      "categoryDevelopment": "Entwicklung",
+      "categoryTools": "Werkzeuge",
+      "categoryProductivity": "Produktivität",
+      "categoryOthers": "Sonstige"
     },
     "actions": {
       "label": "Aktionen",

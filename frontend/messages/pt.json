@@ -3222,7 +3222,6 @@
       "repositorySearch": "Buscar repositórios…",
       "branchSearch": "Buscar branches…",
       "typeSearch": "Buscar tipos de aplicação…",
-      "popular": "Populares",
       "typeNoResults": "Nenhum tipo de aplicação corresponde a “{query}”.",
       "typeNeedsDatabase": "Algumas opções precisam de um banco de dados — instale um na página Bancos de dados.",
       "startCommand": {
@@ -3253,7 +3252,20 @@
       "refreshVersionsHint": "Atualizar as versões de {runtime} instaladas neste servidor",
       "versionsAdded": "{runtime} {versions} {count, plural, one {está} other {estão}} agora disponível(is).",
       "versionsUnchanged": "Ainda não há novas versões de {runtime}. Uma que ainda está sendo instalada aparecerá quando terminar.",
-      "installDatabaseEngine": "Instalar um engine de banco de dados"
+      "installDatabaseEngine": "Instalar um engine de banco de dados",
+      "blockedDatabase": "Precisa de um banco de dados",
+      "blockedNode": "Precisa do Node",
+      "blockedPhp": "Precisa do PHP",
+      "blockedPhpVersion": "Precisa do PHP {range}",
+      "blockedNodeVersion": "Precisa do Node {range}",
+      "blockedDatabaseEngines": "Precisa de {engines}",
+      "categoryAll": "Tudo",
+      "categoryPopular": "Populares",
+      "categoryCms": "CMS",
+      "categoryDevelopment": "Desenvolvimento",
+      "categoryTools": "Ferramentas",
+      "categoryProductivity": "Produtividade",
+      "categoryOthers": "Outros"
     },
     "actions": {
       "label": "Ações",

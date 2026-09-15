@@ -1,31 +1,26 @@
 import Link from "next/link";
 
 import { useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
-  Check,
-  ChevronsUpDown,
   Code2,
   LayoutTemplate,
   PackageOpen,
+  Download,
   Search,
-  Sparkles,
   TriangleAlert,
   X,
   Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { useChromeOffset } from "@/hooks/use-chrome-offset";
 import { siteTypeLogo } from "@/lib/applications/site-type-logo";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
+import { groupForType, groupsWithTypes } from "@/lib/applications/type-categories";
+import { rangeLabel } from "@/lib/runtime/version-range";
+import { acceptedEngines } from "@/lib/applications/database-readiness";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * The category glyph for a type with no logo of its own.
@@ -46,46 +41,29 @@ function TypeIcon({ type, className }) {
 }
 
 /**
- * The tile the icon sits in.
+ * The mark at the top of a card, or beside the chosen type.
  *
- * A brand tint is right behind a monochrome glyph and wrong behind a logo:
- * `bg-primary` on the selected row is a solid blue square, and Joomla's four
- * colours or Moodle's orange sitting on it read as a mistake rather than a
- * selection. A logo brings its own colour, so it gets a neutral surface and
- * the selection is shown by the row, which is where selection already lives.
+ * A logo needs no tile: it brings its own colour and shape, and a box around
+ * each one turns a wall of logos into a wall of boxes. Only the fallback glyph
+ * keeps a tile, because a lone grey icon floating in a card has nothing to hold
+ * it.
  */
-function TypeTile({ type, selected, dimmed }) {
-  // A logo needs no tile: it brings its own colour and shape, and a box around
-  // each one turns a list of logos into a list of boxes. The fixed-width slot
-  // and the height sizing both live in SiteTypeLogo now, so this row's names
-  // start at the same x as the list's do.
+function TypeTile({ type, dimmed, size = "h-9 w-14" }) {
   if (siteTypeLogo(type.name)) {
-    return (
-      <SiteTypeLogo name={type.name} size="h-8 w-10" className={cn(dimmed && "opacity-50")} />
-    );
+    return <SiteTypeLogo name={type.name} size={size} className={cn(dimmed && "opacity-50")} />;
   }
   return (
     <span
       className={cn(
-        "flex size-7 shrink-0 items-center justify-center rounded-md",
-        selected ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary",
+        "flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary",
         dimmed && "opacity-50",
       )}
     >
-      <TypeIcon type={type} className="size-4" />
+      <TypeIcon type={type} className="size-5" />
     </span>
   );
 }
 
-/**
- * The app type is the decision the whole rest of the form hangs off. A grid of
- * ~17 cards is scannable but eats a screen of height before the form even
- * starts, so it's a searchable dropdown instead: the trigger doubles as the
- * one-row summary of the choice, and the list keeps what made the cards useful —
- * icon, name, a one-line tagline so you learn what a thing is before picking,
- * popular-first ordering, and a type this server can't run shown disabled with
- * the reason rather than hidden.
- */
 /**
  * Where to go and clear the thing blocking this type, or null.
  *
@@ -99,9 +77,75 @@ function TypeTile({ type, selected, dimmed }) {
  *
  * A missing database engine is the same kind of blocker and was missing the
  * same way out. The footer already said where to go, but only once for the
- * whole list — so the row that actually told you the problem was the one place
+ * whole list — so the card that actually told you the problem was the one place
  * with no answer to it.
  */
+/**
+ * Three words for why a card is greyed, or null to fall back to the API's own
+ * sentence.
+ *
+ * The sentence is right but it is a sentence: "This application needs MySQL /
+ * MariaDB, which is not installed on this server" is three lines under a
+ * 190px card, and on a server with nothing installed it is the same three
+ * lines under twelve of them. Clipped to one line every card read "This
+ * application needs…", which is a row of identical stubs — technically the
+ * reason, practically noise.
+ *
+ * Keyed on `unavailable_code` and the range the type declares, exactly as
+ * blockerFix is. Anything else — a web-server refusal, something added
+ * upstream tomorrow — keeps the server's sentence, because a short label we
+ * have not written is worse than a long one that is true.
+ */
+function blockerLabel(type, { t, tEngines, format }) {
+  if (type?.unavailable_code === "database") {
+    /*
+     * The engines by name, from the catalogue's own `accepted_engines`.
+     *
+     * "Needs a database" is the same sentence for a WordPress that wants MySQL
+     * or MariaDB and a NodeBB that wants MongoDB or PostgreSQL, and someone
+     * whose server already runs one of the four cannot tell from it whether
+     * they are one click away or nowhere near. The list is the answer, and it
+     * is sent — `acceptedEngines` reads the field and falls back to the SQL
+     * pair only for an API old enough not to have it.
+     *
+     * `format.list` with a disjunction, not " / ": "MySQL or MariaDB" in
+     * English, "MySQL ou MariaDB" in French, and the separator each locale
+     * actually uses rather than a slash we picked.
+     */
+    const engines = acceptedEngines(type) ?? [];
+    const names = engines.map((engine) =>
+      tEngines.has(`engines.${engine}`) ? tEngines(`engines.${engine}`) : engine,
+    );
+    return names.length
+      ? t("form.blockedDatabaseEngines", { engines: format.list(names, { type: "disjunction" }) })
+      : t("form.blockedDatabase");
+  }
+  if (type?.unavailable_code !== "runtime") return null;
+
+  /*
+   * With the VERSIONS, not just the runtime's name.
+   *
+   * "Needs Node" is true of a server that has Node 18 installed and of one
+   * that has none, and those are different problems with different fixes —
+   * the first is a version bump, the second an install. The type declares the
+   * range it runs on, both ends inclusive and either end optional, so the
+   * card can say "Needs Node 20.19 – 24" and the reader knows before clicking
+   * whether what they have is close.
+   *
+   * `rangeLabel` returns "" for a range with neither end, which is a type that
+   * runs on anything — then the plain name is all there is to say.
+   */
+  if (type.php_version_range) {
+    const range = rangeLabel(type.php_version_range);
+    return range ? t("form.blockedPhpVersion", { range }) : t("form.blockedPhp");
+  }
+  if (type.node_version_range) {
+    const range = rangeLabel(type.node_version_range);
+    return range ? t("form.blockedNodeVersion", { range }) : t("form.blockedNode");
+  }
+  return null;
+}
+
 function blockerFix(type) {
   if (type?.unavailable_code === "database") {
     return { href: "/databases", label: "form.installDatabaseEngine" };
@@ -112,13 +156,32 @@ function blockerFix(type) {
   return null;
 }
 
+/**
+ * The application type: a grid of logos while nothing is chosen, one row after.
+ *
+ * This was a searchable dropdown for a while, and the reason was real — 17
+ * cards ate a screen of height before the form began. But that trade was made
+ * when a card was a grey glyph and a name, so a list row lost almost nothing.
+ * The types have had their own brand marks since 2026-09-14, and a logo is the
+ * thing people scan by; hiding them behind a trigger turned a recognition task
+ * back into a reading task. A user said so, in those words, within a day.
+ *
+ * The height objection is answered by making the grid a STAGE rather than a
+ * permanent block: it owns section 1 only until something is picked, then
+ * collapses to a single row with Change beside it, and the form below is no
+ * further down than it was with the dropdown. Nothing is behind an extra click
+ * either way — the dropdown needed one to open.
+ *
+ * Every behaviour the dropdown had is kept: search, popular first, the tagline
+ * that teaches what Statamic is, and an unavailable type shown greyed WITH its
+ * reason and the link that clears it, rather than hidden.
+ */
 export function SiteTypePicker({ types = [], value, onChange }) {
   const t = useTranslations("applications");
+  const tg = useTranslations("applications.guided");
   const tc = useTranslations("common");
-  const [open, setOpen] = useState(false);
-  // The sticky header is not empty space, whatever the positioning engine
-  // thinks — see hooks/use-chrome-offset.js.
-  const [chromeOffset, measureChrome] = useChromeOffset();
+  const tEngines = useTranslations("databases");
+  const format = useFormatter();
   const [query, setQuery] = useState("");
   const searchRef = useRef(null);
 
@@ -130,232 +193,280 @@ export function SiteTypePicker({ types = [], value, onChange }) {
       ),
     [types],
   );
+  const groups = useMemo(() => groupsWithTypes(types), [types]);
+  const popularCount = useMemo(() => types.filter((type) => type.popular).length, [types]);
+
+  /*
+   * The grid opens on Popular, not on all seventeen.
+   *
+   * There is no usage data to pick a category with — this panel collects none
+   * — and choosing one by intuition would hide sixteen applications behind a
+   * guess. `popular` is the backend's own flag, the one honest signal we have,
+   * and it already orders this list. Seven cards is three rows; All is the
+   * next chip along, and typing searches the whole catalogue regardless.
+   *
+   * A server whose catalogue flags nothing opens on All rather than on an
+   * empty grid.
+   */
+  const [activeGroup, setActiveGroup] = useState(() => (popularCount ? "popular" : "all"));
+
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    if (!term) return ordered;
-    return ordered.filter((type) =>
+    // Typing searches the WHOLE catalogue. A chip narrows what you are
+    // browsing; a search is someone who knows the name, and answering
+    // "PrestaShop" with "no results" because the CMS chip happened to be
+    // active is the panel arguing with a person who was right.
+    const pool = term
+      ? ordered
+      : activeGroup === "all"
+        ? ordered
+        : activeGroup === "popular"
+          ? ordered.filter((type) => type.popular)
+          : ordered.filter((type) => groupForType(type) === activeGroup);
+    if (!term) return pool;
+    return pool.filter((type) =>
       [type.title, type.tagline, type.category]
         .filter(Boolean)
         .some((text) => text.toLowerCase().includes(term)),
     );
-  }, [ordered, query]);
+  }, [ordered, query, activeGroup]);
 
   const selectedType = types.find((type) => type.name === value);
 
-  function handleOpenChange(next) {
-    if (next) measureChrome();
-    setOpen(next);
-    if (!next) setQuery("");
-  }
+  // One entry per DESTINATION, not per blocked card: "install a database
+  // engine" is the same answer for all eight of them.
+  const fixes = useMemo(() => {
+    const byHref = new Map();
+    for (const type of types) {
+      if (type.available) continue;
+      const fix = blockerFix(type);
+      if (fix && !byHref.has(fix.href)) byHref.set(fix.href, fix);
+    }
+    return [...byHref.values()];
+  }, [types]);
 
-  function pick(name) {
-    onChange(name);
-    handleOpenChange(false);
-  }
-
-  return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
+  /*
+   * Chosen: one row, and the grid is gone.
+   *
+   * Change clears the field rather than reopening a picker over the top of it,
+   * because the rest of the form is driven by this value — the fields in
+   * section 3 belong to the type, and leaving them mounted under a half-made
+   * decision is how a WordPress admin password ends up submitted with a Craft
+   * site.
+   */
+  if (selectedType) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-3">
+        <TypeTile type={selectedType} size="h-8 w-12" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-medium">{selectedType.title}</span>
+          {selectedType.tagline ? (
+            <span className="block truncate text-xs text-muted-foreground">
+              {selectedType.tagline}
+            </span>
+          ) : null}
+        </span>
         <Button
           type="button"
           variant="outline"
-          role="combobox"
-          aria-label={t("chooseType")}
-          aria-expanded={open}
-          className={cn(
-            "h-auto w-full justify-between gap-2 py-2 font-normal",
-            !selectedType && "text-muted-foreground",
-          )}
+          size="sm"
+          className="shrink-0"
+          onClick={() => {
+            setQuery("");
+            onChange("");
+          }}
         >
-          {selectedType ? (
-            <span className="flex min-w-0 items-center gap-2.5">
-              <TypeTile type={selectedType} />
-              <span className="min-w-0 text-left">
-                <span className="block truncate font-medium text-foreground">
-                  {selectedType.title}
-                </span>
-                {selectedType.tagline ? (
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {selectedType.tagline}
-                  </span>
-                ) : null}
-              </span>
-            </span>
-          ) : (
-            <span className="truncate">{t("form.typePlaceholder")}</span>
-          )}
-          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+          {tg("change")}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="flex max-h-(--radix-popover-content-available-height) w-(--radix-popover-trigger-width) flex-col p-0"
-        align="start"
-        collisionPadding={{ top: chromeOffset, bottom: 12, left: 12, right: 12 }}
-        onOpenAutoFocus={(event) => {
-          event.preventDefault();
-          searchRef.current?.focus();
-        }}
-      >
-        <div className="flex shrink-0 items-center gap-2 border-b px-3">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <Input
-            ref={searchRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t("form.typeSearch")}
-            className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
-            aria-label={t("form.typeSearch")}
-          />
-          {/* Inline rather than absolutely positioned: this input is
-              borderless inside the row, so there is no box to sit inside.
-              Focus returns to the field — clearing is almost always followed
-              by typing something else. */}
-          {query ? (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery("");
-                searchRef.current?.focus();
-              }}
-              aria-label={tc("clearSearch")}
-              className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          ) : null}
-        </div>
-        <div className="max-h-80 min-h-0 flex-1 overflow-y-auto p-1">
-          {filtered.length ? (
-            filtered.map((type) => {
-              const isSelected = type.name === value;
-              const disabled = !type.available;
-              /*
-               * An unavailable row is a `div`, not a disabled `button`.
-               *
-               * It cannot be chosen either way, and the reason underneath it
-               * now carries a link to the page that fixes it — an anchor
-               * inside a button is invalid markup, and inside a DISABLED one
-               * the click is swallowed before it reaches the link.
-               */
-              const Row = disabled ? "div" : "button";
-              // No `aria-disabled` on the unavailable row. It is a `div`, not a
-              // control, so there is nothing to mark disabled — and marking it
-              // takes the LINK inside it down with it: assistive tech announces
-              // a descendant of an aria-disabled element as unavailable, and
-              // Playwright refuses to click it for the same reason. The greying
-              // and the sentence are what say it cannot be chosen.
-              const rowProps = disabled
-                ? {}
-                : { type: "button", "aria-pressed": isSelected, onClick: () => pick(type.name) };
+      </div>
+    );
+  }
 
-              return (
-                <Row
-                  key={type.name}
-                  {...rowProps}
-                  className={cn(
-                    "flex w-full items-start gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    isSelected && "bg-accent/60",
-                    // NOT `opacity-60` on the row. Dimming the whole thing
-                    // dimmed the link inside the reason too, so the one part
-                    // that IS clickable looked as switched off as the rest.
-                    // What is unavailable is the choice — the icon, the name
-                    // and the tagline — and those are faded individually below.
-                    disabled && "hover:bg-transparent hover:text-inherit",
-                  )}
-                >
-                  <TypeTile type={type} selected={isSelected} dimmed={disabled} />
-                  <span className="min-w-0 flex-1">
-                    <span className={cn("flex items-center gap-2", disabled && "opacity-60")}>
-                      <span className="truncate text-sm font-medium">
-                        {type.title}
-                      </span>
-                      {type.popular ? (
-                        <Badge
-                          variant="secondary"
-                          className="shrink-0 gap-1 font-normal"
-                        >
-                          <Sparkles className="size-3" />
-                          {t("form.popular")}
-                        </Badge>
-                      ) : null}
+  return (
+    <div className="space-y-3">
+      {/* Above the grid, not inside a popover header: with 17 cards the search
+          is for the person who already knows the name, and it has to be the
+          first thing their cursor lands on. */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          ref={searchRef}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t("form.typeSearch")}
+          aria-label={t("form.typeSearch")}
+          className="ps-9 pe-9"
+        />
+        {query ? (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              searchRef.current?.focus();
+            }}
+            aria-label={tc("clearSearch")}
+            className="absolute end-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        ) : null}
+      </div>
+
+      {/* Chips, not tabs, and not the API's own categories.
+
+          The catalogue has 11 of those for 17 types and 8 hold exactly one, so
+          tabs would wrap to two rows to offer "education" → Moodle, alone.
+          These are four buckets a person would reach for, built in
+          type-categories.js, and a bucket with nothing in it is not rendered.
+
+          Chips rather than a Tabs component because this filters a grid that is
+          still fully searchable underneath — Tabs would claim these are
+          separate panels, and the search box above would then be lying about
+          how much it searches. */}
+      {groups.length > 1 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {/* Popular first, All last. The chips read as "here is the short
+              answer, here are the kinds, and here is everything" — All beside
+              Popular made the first two chips two ways of saying the same
+              thing, and pushed the categories out to where nobody looks. */}
+          {[
+            ...(popularCount ? [{ key: "popular", count: popularCount }] : []),
+            ...groups,
+            { key: "all", count: ordered.length },
+          ].map((group) => {
+            const active = group.key === activeGroup;
+            return (
+              <button
+                key={group.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setActiveGroup(group.key)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  active
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                {t(`form.category${group.key.charAt(0).toUpperCase()}${group.key.slice(1)}`)}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {filtered.length ? (
+        /* Container queries, not viewport ones: this grid sits in a column
+           beside a 20rem summary panel, so the window width says nothing about
+           how much room it has — the same reason the form's own fields are
+           laid out with `@` rules. */
+        <div className="grid grid-cols-1 gap-2 @xl:grid-cols-2 @3xl:grid-cols-3">
+          {filtered.map((type) => {
+            const disabled = !type.available;
+            /*
+             * An unavailable card is a `div`, not a disabled `button`.
+             *
+             * It cannot be chosen either way, and it still holds text a screen
+             * reader has to reach — inside a disabled button that text is
+             * skipped, and Playwright refuses to read it for the same reason.
+             */
+            const Card = disabled ? "div" : "button";
+            const cardProps = disabled
+              ? {}
+              : { type: "button", onClick: () => onChange(type.name) };
+
+            return (
+              <Card
+                key={type.name}
+                {...cardProps}
+                className={cn(
+                  // Logo beside the words, not above them. Centred cards were
+                  // four lines tall — mark, name, two of tagline — and
+                  // seventeen of those ran to 870px before the form began. The
+                  // same information laid out in a row is two lines and half
+                  // the height, which is the whole complaint answered without
+                  // hiding a single application.
+                  "flex w-full items-center gap-3 rounded-xl border bg-card p-2.5 text-left transition-colors",
+                  disabled
+                    ? "border-dashed"
+                    : "hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+                )}
+              >
+                {/* No "Popular" badge, though the data has the flag: six of
+                    seventeen qualify, and a grid where a third of what you see
+                    is labelled has labelled nothing. The order says it. */}
+                <TypeTile type={type} dimmed={disabled} size="h-8 w-10" />
+
+                <span className={cn("min-w-0 flex-1")}>
+                  {/* Every line here can be clipped by a narrow column or a
+                      long locale, and a clipped line reads as a whole one.
+                      TruncatedText measures and offers the rest on hover —
+                      only when there IS a rest, so the grid does not pop a
+                      bubble over text that plainly fits. */}
+                  <TruncatedText
+                    className={cn("text-sm font-medium", disabled && "opacity-60")}
+                  >
+                    {type.title}
+                  </TruncatedText>
+                  {/* The tagline gives way to the reason on a blocked card: at
+                      this size there is room for one line, and "needs MySQL or
+                      MariaDB" is the thing worth reading on a card that cannot
+                      be chosen. The bubble carries the server's whole sentence,
+                      which says what is installed as well as what is wanted. */}
+                  {disabled && type.unavailable_reason ? (
+                    <span className="mt-0.5 flex items-center gap-1 text-xs leading-4 text-destructive">
+                      <TriangleAlert className="size-3 shrink-0" />
+                      <TruncatedText tooltip={type.unavailable_reason}>
+                        {blockerLabel(type, { t, tEngines, format }) ?? type.unavailable_reason}
+                      </TruncatedText>
                     </span>
-                    {type.tagline ? (
-                      <span
-                        className={cn(
-                          "mt-0.5 block truncate text-xs leading-5 text-muted-foreground",
-                          disabled && "opacity-60",
-                        )}
-                      >
-                        {type.tagline}
-                      </span>
-                    ) : null}
-                    {disabled && type.unavailable_reason ? (
-                      <span className="mt-0.5 flex items-start gap-1 text-xs leading-5 text-destructive">
-                        <TriangleAlert className="mt-0.5 size-3 shrink-0" />
-                        <span>
-                          {type.unavailable_reason}
-                          {/* The fix, next to the fact. The sentence says which
-                              version is needed; this is where to go and get
-                              one, so the reader does not have to work out that
-                              PHP versions live on a page called PHP. */}
-                          {blockerFix(type) ? (
-                            <>
-                              {" "}
-                              <Link
-                                href={blockerFix(type).href}
-                                className="font-medium underline underline-offset-2 hover:no-underline"
-                              >
-                                {t(blockerFix(type).label)}
-                              </Link>
-                            </>
-                          ) : null}
-                        </span>
-                      </span>
-                    ) : null}
-                  </span>
-                  <Check
-                    className={cn(
-                      "mt-0.5 size-4 shrink-0 text-primary",
-                      isSelected ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                </Row>
-              );
-            })
-          ) : (
-            <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-              {t("form.typeNoResults", { query })}
-            </p>
-          )}
+                  ) : type.tagline ? (
+                    <TruncatedText className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                      {type.tagline}
+                    </TruncatedText>
+                  ) : null}
+                </span>
+
+              </Card>
+            );
+          })}
         </div>
+      ) : (
+        <p className="rounded-xl border border-dashed px-3 py-8 text-center text-sm text-muted-foreground">
+          {t("form.typeNoResults", { query })}
+        </p>
+      )}
 
-        {/* The grey card explains why it cannot be picked and stops there. This
-            is the one blocker the reader can clear themselves, so it gets the
-            way out — a link, not a fourth sentence.
+      {/* Every way out this grid has, once.
 
-            Matched on `unavailable_code`, which the API sends precisely so
-            this does not have to be inferred. It used to be read from
-            `needs_database` plus the absence of an installable runtime, which
-            reads a web-server refusal as a missing database. */}
-        {types.some((type) => !type.available && type.unavailable_code === "database") ? (
-          <div className="shrink-0 border-t px-3 py-2.5">
-            {/* Styled as a link, not as another grey line. It was
-                `text-muted-foreground`, which made the one clickable thing in
-                this popover look exactly like the explanatory text above it —
-                the way out of the blocker read as more description of it.
-                `text-primary` is what every other inline link in the panel
-                uses. */}
+          The cards say what they need; this says where to get it. Deduplicated
+          by destination, because eight cards blocked on the same missing
+          database engine have one answer between them, not eight — and
+          repeating it on each of them is what made a 17-card grid taller than
+          the entire form under it.
+
+          Matched on `unavailable_code`, which the API sends precisely so this
+          does not have to be inferred. It used to be read from `needs_database`
+          plus the absence of an installable runtime, which reads a web-server
+          refusal as a missing database. */}
+      {fixes.length ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          {fixes.map((fix) => (
             <Link
-              href="/databases"
+              key={fix.href}
+              href={fix.href}
               className="flex items-center gap-1.5 text-xs font-medium text-primary underline-offset-4 hover:underline"
             >
-              <Database className="size-3.5 shrink-0" />
-              {t("form.typeNeedsDatabase")}
+              {fix.href === "/databases" ? (
+                <Database className="size-3.5 shrink-0" />
+              ) : (
+                <Download className="size-3.5 shrink-0" />
+              )}
+              {t(fix.label)}
             </Link>
-          </div>
-        ) : null}
-      </PopoverContent>
-    </Popover>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

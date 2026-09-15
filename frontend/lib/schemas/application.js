@@ -41,9 +41,12 @@ export const siteTypeSchema = z.object({
   // used to infer the database case from `needs_database` plus a null runtime,
   // which reads a web-server refusal as a missing database.
   unavailable_code: z.string().nullish(),
-  // Engines this type can be installed on. Not sent today — `acceptedEngines`
-  // in lib/applications/database-readiness.js falls back — and declared here so
-  // it is not silently stripped the day it is.
+  // Engines this type can be installed on: ["mysql", "mariadb"] for WordPress,
+  // ["mongodb", "postgresql"] for NodeBB. Sent, and read — the create grid
+  // names them on a blocked card, and `acceptedEngines` in
+  // lib/applications/database-readiness.js decides what that card may offer.
+  // `[]` is a real answer and not an omission: a type with no installer has no
+  // list to be held to.
   accepted_engines: z.array(z.string()).nullish(),
   installable_runtime: z.string().nullish(),
   has_installer: z.boolean().default(false),

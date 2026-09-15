@@ -3222,7 +3222,6 @@
       "repositorySearch": "रिपॉज़िटरी खोजें…",
       "branchSearch": "ब्रांच खोजें…",
       "typeSearch": "एप्लिकेशन प्रकार खोजें…",
-      "popular": "लोकप्रिय",
       "typeNoResults": "“{query}” से मेल खाता कोई एप्लिकेशन प्रकार नहीं।",
       "typeNeedsDatabase": "कुछ विकल्पों के लिए डेटाबेस इंजन चाहिए — इसे Databases पेज से इंस्टॉल करें।",
       "startCommand": {
@@ -3253,7 +3252,20 @@
       "refreshVersionsHint": "इस सर्वर पर इंस्टॉल {runtime} वर्शन रिफ़्रेश करें",
       "versionsAdded": "{runtime} {versions} अब उपलब्ध {count, plural, one {है} other {हैं}}।",
       "versionsUnchanged": "अभी {runtime} का कोई नया वर्शन नहीं है। जो अब भी इंस्टॉल हो रहा है, वह पूरा होने पर दिखेगा।",
-      "installDatabaseEngine": "डेटाबेस इंजन इंस्टॉल करें"
+      "installDatabaseEngine": "डेटाबेस इंजन इंस्टॉल करें",
+      "blockedDatabase": "डेटाबेस चाहिए",
+      "blockedNode": "Node चाहिए",
+      "blockedPhp": "PHP चाहिए",
+      "blockedPhpVersion": "PHP {range} चाहिए",
+      "blockedNodeVersion": "Node {range} चाहिए",
+      "blockedDatabaseEngines": "{engines} चाहिए",
+      "categoryAll": "सभी",
+      "categoryPopular": "लोकप्रिय",
+      "categoryCms": "CMS",
+      "categoryDevelopment": "डेवलपमेंट",
+      "categoryTools": "टूल्स",
+      "categoryProductivity": "प्रोडक्टिविटी",
+      "categoryOthers": "अन्य"
     },
     "actions": {
       "label": "क्रियाएँ",
