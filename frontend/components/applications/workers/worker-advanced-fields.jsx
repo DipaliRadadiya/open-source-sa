@@ -47,7 +47,7 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
         name="directory"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("form.directory")}</FormLabel>
+            <FormLabel hint={t("form.directoryHint")}>{t("form.directory")}</FormLabel>
             <FormControl>
               <Input
                 className="font-mono"
@@ -58,7 +58,6 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
                 {...field}
               />
             </FormControl>
-            <p className="text-xs text-muted-foreground">{t("form.directoryHint")}</p>
             <FormMessage />
           </FormItem>
         )}
@@ -69,7 +68,7 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
         name="user"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("form.user")}</FormLabel>
+            <FormLabel hint={t("form.userHint")}>{t("form.user")}</FormLabel>
             <FormControl>
               <Input
                 className="font-mono"
@@ -82,7 +81,6 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
             </FormControl>
             {/* Empty is the safe answer and the common one, so it says what
                 empty means rather than leaving it to be inferred. */}
-            <p className="text-xs text-muted-foreground">{t("form.userHint")}</p>
             <FormMessage />
           </FormItem>
         )}
@@ -93,7 +91,7 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
         name="log_file"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("form.logFile")}</FormLabel>
+            <FormLabel hint={t("form.logFileHint")}>{t("form.logFile")}</FormLabel>
             <FormControl>
               <Input
                 className="font-mono"
@@ -104,7 +102,6 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
                 {...field}
               />
             </FormControl>
-            <p className="text-xs text-muted-foreground">{t("form.logFileHint")}</p>
             <FormMessage />
           </FormItem>
         )}
@@ -115,7 +112,7 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
         name="log_level"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("form.logLevel")}</FormLabel>
+            <FormLabel hint={t("form.logLevelHint")}>{t("form.logLevel")}</FormLabel>
             <Select
               value={field.value || ""}
               onValueChange={field.onChange}
@@ -134,7 +131,6 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">{t("form.logLevelHint")}</p>
             <FormMessage />
           </FormItem>
         )}
@@ -145,7 +141,7 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
         name="stop_wait_seconds"
         render={({ field }) => (
           <FormItem>
-            <FormLabel required>{t("form.stopWaitSeconds")}</FormLabel>
+            <FormLabel required hint={t("form.stopWaitSecondsHint")}>{t("form.stopWaitSeconds")}</FormLabel>
             <FormControl>
               <Input
                 placeholder="10"
@@ -157,7 +153,6 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
                 {...field}
               />
             </FormControl>
-            <p className="text-xs text-muted-foreground">{t("form.stopWaitSecondsHint")}</p>
             <FormMessage />
           </FormItem>
         )}
@@ -169,8 +164,7 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
         render={({ field }) => (
           <FormItem className="flex items-center justify-between rounded-lg border px-3 py-2.5">
             <div className="space-y-0.5">
-              <FormLabel>{t("form.autoStart")}</FormLabel>
-              <p className="text-xs text-muted-foreground">{t("form.autoStartHint")}</p>
+              <FormLabel hint={t("form.autoStartHint")}>{t("form.autoStart")}</FormLabel>
             </div>
             <FormControl>
               <Switch
@@ -188,7 +182,7 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
         name="extra_config"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t("form.extraConfig")}</FormLabel>
+            <FormLabel hint={t("form.extraConfigHint")}>{t("form.extraConfig")}</FormLabel>
             <FormControl>
               <Textarea
                 rows={3}
@@ -203,7 +197,6 @@ export function WorkerAdvancedFields({ form, disabled = false }) {
             {/* The API refuses a `[` here — these lines go inside a program
                 block, and opening a new section would rewrite somebody else's
                 worker. Said here rather than discovered as a 422. */}
-            <p className="text-xs text-muted-foreground">{t("form.extraConfigHint")}</p>
             <FormMessage />
           </FormItem>
         )}

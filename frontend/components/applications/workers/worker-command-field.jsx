@@ -38,7 +38,7 @@ export function WorkerCommandField({ form, presets, onPick, workers = [] }) {
       render={({ field }) => (
         <FormItem>
           <div className="flex items-center justify-between gap-2">
-            <FormLabel required>{t("form.command")}</FormLabel>
+            <FormLabel required hint={t("form.commandHint")}>{t("form.command")}</FormLabel>
             {presets.length > 0 ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -81,7 +81,6 @@ export function WorkerCommandField({ form, presets, onPick, workers = [] }) {
               {...field}
             />
           </FormControl>
-          <p className="text-xs text-muted-foreground">{t("form.commandHint")}</p>
           <FormMessage />
         </FormItem>
       )}

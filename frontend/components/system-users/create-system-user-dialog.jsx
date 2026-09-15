@@ -194,7 +194,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
             // Generate is positioned by the label but comes after the input in
             // the markup, so Tab reaches the field first.
             <FormItem className="relative">
-              <FormLabel>{t("create.password")}</FormLabel>
+              <FormLabel hint={t("create.passwordHint")}>{t("create.password")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   autoComplete="new-password"
@@ -217,7 +217,6 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                 <Sparkles className="size-3" />
                 {t("create.generate")}
               </Button>
-              <p className="text-xs text-muted-foreground">{t("create.passwordHint")}</p>
               <FormMessage field={t('create.password')} />
             </FormItem>
           )}
@@ -228,7 +227,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
           name="public_key"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("create.publicKey")}</FormLabel>
+              <FormLabel hint={t("create.publicKeyHint")}>{t("create.publicKey")}</FormLabel>
               <FormControl>
                 <Textarea
                   rows={3}
@@ -242,9 +241,6 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                   {...field}
                 />
               </FormControl>
-              <p className="text-xs text-muted-foreground">
-                {t("create.publicKeyHint")}
-              </p>
               <FormMessage field={t('create.publicKey')} />
             </FormItem>
           )}
@@ -268,7 +264,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                 name="shell"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("create.shell")}</FormLabel>
+                    <FormLabel hint={t("create.shellHint")}>{t("create.shell")}</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="w-full text-xs">
@@ -299,7 +295,6 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">{t("create.shellHint")}</p>
                     <FormMessage />
                   </FormItem>
                 )}

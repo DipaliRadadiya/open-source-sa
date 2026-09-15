@@ -196,7 +196,7 @@ export function CreateCronjobDialog({
             name="username"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>{t("form.username")}</FormLabel>
+                <FormLabel required hint={t("form.usernameHint")}>{t("form.username")}</FormLabel>
                 <FormControl>
                   <Input
                     className="font-mono"
@@ -205,9 +205,6 @@ export function CreateCronjobDialog({
                     {...field}
                   />
                 </FormControl>
-                <p className="text-xs text-muted-foreground">
-                  {t("form.usernameHint")}
-                </p>
                 <FormMessage />
               </FormItem>
             )}
@@ -229,8 +226,7 @@ export function CreateCronjobDialog({
           render={({ field }) => (
             <FormItem className="flex items-center justify-between rounded-lg border px-3 py-2.5">
               <div className="space-y-0.5">
-                <FormLabel>{t("form.active")}</FormLabel>
-                <p className="text-xs text-muted-foreground">{t("form.activeHint")}</p>
+                <FormLabel hint={t("form.activeHint")}>{t("form.active")}</FormLabel>
                 {/* The only field here without one. `active` is registered and
                     always sent, so a 422 on it would be set inline and render
                     nowhere — silent, exactly like the firewall and system-user

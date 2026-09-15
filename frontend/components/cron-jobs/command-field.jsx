@@ -207,7 +207,7 @@ export function CommandField({
 
       {needsPath ? (
         <FormItem>
-          <FormLabel required>{t("form.path")}</FormLabel>
+          <FormLabel required hint={t("form.pathHint")}>{t("form.path")}</FormLabel>
 
           {/* Pick the site, not its directory. Everyone typing this by hand was
               copying a path out of the sites list anyway, and a typo here fails
@@ -317,8 +317,6 @@ export function CommandField({
               />
             </FormControl>
           ) : null}
-
-          <p className="text-xs text-muted-foreground">{t("form.pathHint")}</p>
         </FormItem>
       ) : null}
     </div>

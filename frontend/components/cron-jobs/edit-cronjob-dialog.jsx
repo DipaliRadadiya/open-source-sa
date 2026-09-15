@@ -159,8 +159,7 @@ export function EditCronjobDialog({
           render={({ field }) => (
             <FormItem className="flex items-center justify-between rounded-lg border px-3 py-2.5">
               <div className="space-y-0.5">
-                <FormLabel>{t("form.active")}</FormLabel>
-                <p className="text-xs text-muted-foreground">{t("form.activeHint")}</p>
+                <FormLabel hint={t("form.activeHint")}>{t("form.active")}</FormLabel>
                 {/* Same missing slot as the create dialog. */}
                 <FormMessage />
               </div>

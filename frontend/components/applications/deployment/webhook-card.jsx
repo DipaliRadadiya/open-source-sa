@@ -387,7 +387,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
 
               {wantsToken ? (
                 <div className="space-y-1.5">
-                  <Label htmlFor="gitlab-token" className="text-sm">
+                  <Label htmlFor="gitlab-token" className="text-sm" hint={t("webhook.gitlabTokenHint")}>
                     {t("webhook.gitlabToken")}
                   </Label>
                   <Input
@@ -398,9 +398,6 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                     autoComplete="off"
                     className="font-mono text-xs"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {t("webhook.gitlabTokenHint")}
-                  </p>
                 </div>
               ) : null}
 

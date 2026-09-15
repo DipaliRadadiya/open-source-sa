@@ -232,7 +232,7 @@ export function CreateDatabaseDialog({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>{t("create.name")}</FormLabel>
+              <FormLabel required hint={t("create.nameHint")}>{t("create.name")}</FormLabel>
               <FormControl>
                 <Input
                   autoComplete="off"
@@ -243,9 +243,6 @@ export function CreateDatabaseDialog({
                 />
               </FormControl>
               {/* Says what IS allowed. "Invalid name" makes people guess. */}
-              <p className="text-xs text-muted-foreground">
-                {t("create.nameHint")}
-              </p>
               <FormMessage />
             </FormItem>
           )}
@@ -309,7 +306,7 @@ export function CreateDatabaseDialog({
             name="application_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("create.application")}</FormLabel>
+                <FormLabel hint={t("create.applicationHint")}>{t("create.application")}</FormLabel>
                 <FormControl>
                   <Combobox
                     value={field.value}
@@ -342,7 +339,6 @@ export function CreateDatabaseDialog({
                 {/* The backend asks for this sentence in as many words: someone
                     who links a database expecting the site to start using it
                     has been misled. */}
-                <FormDescription>{t("create.applicationHint")}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -355,10 +351,7 @@ export function CreateDatabaseDialog({
           render={({ field }) => (
             <FormItem className="flex flex-row items-start justify-between gap-4 rounded-lg border p-3">
               <div className="space-y-1">
-                <FormLabel>{t("create.withUser")}</FormLabel>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  {t("create.withUserHint")}
-                </p>
+                <FormLabel hint={t("create.withUserHint")}>{t("create.withUser")}</FormLabel>
               </div>
               <FormControl>
                 <Switch
@@ -452,7 +445,7 @@ export function CreateDatabaseDialog({
                 name="host"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>{t("create.host")}</FormLabel>
+                    <FormLabel required hint={t("create.hostHint")}>{t("create.host")}</FormLabel>
                     <FormControl>
                       <Input
                         autoComplete="off"
@@ -462,9 +455,6 @@ export function CreateDatabaseDialog({
                         {...field}
                       />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground">
-                      {t("create.hostHint")}
-                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -15,7 +15,6 @@ import { FormModal } from "@/components/ui/form-modal";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -96,11 +95,10 @@ export function WebRootDialog({ application, open, onOpenChange }) {
           name="web_root"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("label")}</FormLabel>
+              <FormLabel hint={t("hint")}>{t("label")}</FormLabel>
               <FormControl>
                 <Input {...field} placeholder="/public" className="font-mono text-sm" disabled={saving} />
               </FormControl>
-              <FormDescription>{t("hint")}</FormDescription>
               <FormMessage />
             </FormItem>
           )}

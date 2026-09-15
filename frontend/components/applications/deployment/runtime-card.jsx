@@ -22,7 +22,6 @@ import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -103,7 +102,7 @@ export function RuntimeCard({ application, canManage }) {
                 name="start_command"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>{t("startCommand")}</FormLabel>
+                    <FormLabel required hint={t("startCommandHint")}>{t("startCommand")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -114,7 +113,6 @@ export function RuntimeCard({ application, canManage }) {
                         disabled={!canManage || saving}
                       />
                     </FormControl>
-                    <FormDescription>{t("startCommandHint")}</FormDescription>
                     <FormMessage field={t("startCommand")} />
                   </FormItem>
                 )}
@@ -125,7 +123,7 @@ export function RuntimeCard({ application, canManage }) {
                 name="app_port"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("appPort")}</FormLabel>
+                    <FormLabel hint={t("appPortHint")}>{t("appPort")}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -136,7 +134,6 @@ export function RuntimeCard({ application, canManage }) {
                         disabled={!canManage || saving}
                       />
                     </FormControl>
-                    <FormDescription>{t("appPortHint")}</FormDescription>
                     <FormMessage field={t("appPort")} />
                   </FormItem>
                 )}

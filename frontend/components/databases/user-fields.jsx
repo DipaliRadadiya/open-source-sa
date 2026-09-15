@@ -105,7 +105,7 @@ export function UserFields({ form, access, lockUsername = false, remoteUsers = t
           name="host"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>{t("create.host")}</FormLabel>
+              <FormLabel required hint={t("create.hostHint")}>{t("create.host")}</FormLabel>
               <FormControl>
                 <Input
                   className="font-mono"
@@ -115,9 +115,6 @@ export function UserFields({ form, access, lockUsername = false, remoteUsers = t
                   {...field}
                 />
               </FormControl>
-              <p className="text-xs text-muted-foreground">
-                {t("create.hostHint")}
-              </p>
               <FormMessage />
             </FormItem>
           )}

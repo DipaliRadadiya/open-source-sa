@@ -23,7 +23,6 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 
 export function UserFormDialog({
@@ -252,8 +251,7 @@ export function UserFormDialog({
                 render={({ field }) => (
                   <FormItem className="space-y-2">
                     <div className="space-y-1">
-                      <FormLabel required>{t("form.roles")}</FormLabel>
-                      <FormDescription>{t("form.rolesHint")}</FormDescription>
+                      <FormLabel required hint={t("form.rolesHint")}>{t("form.roles")}</FormLabel>
                     </div>
                     <FormControl>
                       <RolesField
@@ -274,8 +272,7 @@ export function UserFormDialog({
                 render={({ field }) => (
                   <FormItem className="space-y-2">
                     <div className="space-y-1">
-                      <FormLabel>{t("form.isAdmin")}</FormLabel>
-                      <FormDescription>{t("form.isAdminHint")}</FormDescription>
+                      <FormLabel hint={t("form.isAdminHint")}>{t("form.isAdmin")}</FormLabel>
                     </div>
                     <label className="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/50">
                       <FormControl>

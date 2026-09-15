@@ -427,7 +427,7 @@ export function AddRuleDialog({
           ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor="fw-source">{t("add.source")}</Label>
+            <Label htmlFor="fw-source" hint={t("add.sourceHint")}>{t("add.source")}</Label>
             <div className="flex flex-wrap items-center gap-2">
               <Input
                 id="fw-source"
@@ -459,9 +459,6 @@ export function AddRuleDialog({
                 </Button>
               ) : null}
             </div>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {t("add.sourceHint")}
-            </p>
             {sourceError ? (
               <p role="alert" className="text-xs text-destructive">
                 {message(t, sourceError)}

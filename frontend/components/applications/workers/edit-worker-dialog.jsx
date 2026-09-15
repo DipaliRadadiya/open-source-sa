@@ -173,11 +173,10 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>{t("form.name")}</FormLabel>
+                <FormLabel required hint={t("form.nameHint")}>{t("form.name")}</FormLabel>
                 <FormControl>
                   <Input placeholder={t("form.namePlaceholder")} autoComplete="off" {...field} />
                 </FormControl>
-                <p className="text-xs text-muted-foreground">{t("form.nameHint")}</p>
                 <FormMessage />
               </FormItem>
             )}
@@ -188,7 +187,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
             name="processes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>{t("form.processes")}</FormLabel>
+                <FormLabel required hint={t("form.processesHint")}>{t("form.processes")}</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="1"
@@ -199,7 +198,6 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
                     {...field}
                   />
                 </FormControl>
-                <p className="text-xs text-muted-foreground">{t("form.processesHint")}</p>
                 <FormMessage />
               </FormItem>
             )}
@@ -224,8 +222,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
           render={({ field }) => (
             <FormItem className="flex items-center justify-between rounded-lg border px-3 py-2.5">
               <div className="space-y-0.5">
-                <FormLabel>{t("form.restartOnDeploy")}</FormLabel>
-                <p className="text-xs text-muted-foreground">{t("form.restartOnDeployHint")}</p>
+                <FormLabel hint={t("form.restartOnDeployHint")}>{t("form.restartOnDeploy")}</FormLabel>
               </div>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -240,8 +237,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
           render={({ field }) => (
             <FormItem className="flex items-center justify-between rounded-lg border px-3 py-2.5">
               <div className="space-y-0.5">
-                <FormLabel>{t("form.autoRestart")}</FormLabel>
-                <p className="text-xs text-muted-foreground">{t("form.autoRestartHint")}</p>
+                <FormLabel hint={t("form.autoRestartHint")}>{t("form.autoRestart")}</FormLabel>
               </div>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -256,8 +252,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
           render={({ field }) => (
             <FormItem className="flex items-center justify-between rounded-lg border px-3 py-2.5">
               <div className="space-y-0.5">
-                <FormLabel>{t("form.enabled")}</FormLabel>
-                <p className="text-xs text-muted-foreground">{t("form.enabledHint")}</p>
+                <FormLabel hint={t("form.enabledHint")}>{t("form.enabled")}</FormLabel>
               </div>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />

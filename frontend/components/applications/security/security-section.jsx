@@ -250,7 +250,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                           // second, instead of a keyboard user hitting "Generate"
                           // before they've even reached the field it fills.
                           <FormItem className="relative">
-                            <FormLabel required>{t("password")}</FormLabel>
+                            <FormLabel required hint={t("passwordHint")}>{t("password")}</FormLabel>
                             <FormControl>
                               <PasswordInput
                                 autoComplete="new-password"
@@ -283,7 +283,6 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   
                     {/* Explains both fields together — it belongs under the pair,
                         not tucked under just one of them. */}
-                    <p className="text-xs text-muted-foreground">{t("passwordHint")}</p>
   
                     {justSaved ? (
                       <div className="space-y-2 rounded-lg border bg-muted/40 p-3">

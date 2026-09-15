@@ -37,7 +37,7 @@ export function WorkerKindField({ form, workers = [], disabled = false }) {
       name="kind"
       render={({ field }) => (
         <FormItem>
-          <FormLabel required>{t("form.kind")}</FormLabel>
+          <FormLabel required hint={t("form.kindHint")}>{t("form.kind")}</FormLabel>
           <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
             <FormControl>
               <SelectTrigger className="w-full">
@@ -82,7 +82,6 @@ export function WorkerKindField({ form, workers = [], disabled = false }) {
               })}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">{t("form.kindHint")}</p>
           <FormMessage />
         </FormItem>
       )}

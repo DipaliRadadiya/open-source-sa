@@ -302,7 +302,7 @@ export function BackupSettingsFields({
               name="schedule_time"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>{t("scheduleTime")}</FormLabel>
+                  <FormLabel required hint={t("scheduleTimeHint")}>{t("scheduleTime")}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -318,7 +318,6 @@ export function BackupSettingsFields({
                       name is not worth a `/server/facts` shell-out on three
                       more pages — "not your computer's" is the part that
                       prevents the mistake. */}
-                  <FormDescription>{t("scheduleTimeHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

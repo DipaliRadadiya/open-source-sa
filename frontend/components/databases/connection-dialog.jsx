@@ -300,7 +300,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("password")}</FormLabel>
+              <FormLabel hint={t("passwordHint")}>{t("password")}</FormLabel>
               <FormControl>
                 <PasswordInput
                   autoComplete="new-password"
@@ -310,7 +310,6 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
                   {...field}
                 />
               </FormControl>
-              <p className="text-xs text-muted-foreground">{t("passwordHint")}</p>
               <FormMessage />
             </FormItem>
           )}

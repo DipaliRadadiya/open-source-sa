@@ -25,7 +25,6 @@ import {
   FormItem,
   FormLabel,
   FormControl,
-  FormDescription,
   FormMessage,
 } from "@/components/ui/form";
 
@@ -94,7 +93,7 @@ export function ProfileForm({ user, onDirtyChange }) {
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>{t("profile.username")}</FormLabel>
+                  <FormLabel required hint={t("profile.usernameHint")}>{t("profile.username")}</FormLabel>
                   <FormControl>
                     <Input
                       autoComplete="username"
@@ -103,7 +102,6 @@ export function ProfileForm({ user, onDirtyChange }) {
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>{t("profile.usernameHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

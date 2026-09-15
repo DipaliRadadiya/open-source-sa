@@ -67,7 +67,7 @@ export function DestinationFormFields({
     <>
       {onPresetChange ? (
         <FormItem>
-          <FormLabel required>{t("provider")}</FormLabel>
+          <FormLabel required hint={t("providerHint")}>{t("provider")}</FormLabel>
           <Select value={preset} onValueChange={onPresetChange} disabled={disabled}>
             <FormControl>
               <SelectTrigger className="w-full">
@@ -82,7 +82,6 @@ export function DestinationFormFields({
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">{t("providerHint")}</p>
         </FormItem>
       ) : null}
 
@@ -91,11 +90,10 @@ export function DestinationFormFields({
         name="name"
         render={({ field }) => (
           <FormItem>
-            <FormLabel required>{t("name")}</FormLabel>
+            <FormLabel required hint={t("nameHint")}>{t("name")}</FormLabel>
             <FormControl>
               <Input placeholder={t("namePlaceholder")} disabled={disabled} {...field} />
             </FormControl>
-            <p className="text-xs text-muted-foreground">{t("nameHint")}</p>
             <FormMessage />
           </FormItem>
         )}

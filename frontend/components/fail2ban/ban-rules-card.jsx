@@ -126,7 +126,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
           </p>
   
           <div className="space-y-2">
-            <Label htmlFor="f2b-maxretry">{t("settings.maxretry")}</Label>
+            <Label htmlFor="f2b-maxretry" hint={t("settings.maxretryHint")}>{t("settings.maxretry")}</Label>
             <Input
               id="f2b-maxretry"
               placeholder="5"
@@ -141,7 +141,6 @@ export function BanRulesCard({ settings, presets, canManage }) {
               // edit made while the request was in the air, without saying so.
               disabled={!canManage || pending}
             />
-            <p className="text-xs text-muted-foreground">{t("settings.maxretryHint")}</p>
           </div>
   
           <div className="space-y-2">
@@ -165,7 +164,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
           </div>
   
           <div className="space-y-2">
-            <Label htmlFor="f2b-bantime">{t("settings.bantime")}</Label>
+            <Label htmlFor="f2b-bantime" hint={t("settings.bantimeHint")}>{t("settings.bantime")}</Label>
             <Select value={bantime} onValueChange={setBantime} disabled={!canManage || pending}>
               <SelectTrigger id="f2b-bantime" className="w-full">
                 <SelectValue />
@@ -183,7 +182,6 @@ export function BanRulesCard({ settings, presets, canManage }) {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">{t("settings.bantimeHint")}</p>
           </div>
         </CardContent>
   

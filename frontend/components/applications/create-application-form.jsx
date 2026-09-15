@@ -1903,7 +1903,7 @@ export function CreateApplicationForm({
                             name="repository_url"
                             render={({ field }) => (
                               <FormItem data-field-name="repository_url" className="min-w-0">
-                                <FormLabel>{t("publicRepository")}</FormLabel>
+                                <FormLabel hint={t("publicRepositoryHint")}>{t("publicRepository")}</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="url"
@@ -1911,9 +1911,6 @@ export function CreateApplicationForm({
                                     {...field}
                                   />
                                 </FormControl>
-                                <FormDescription>
-                                  {t("publicRepositoryHint")}
-                                </FormDescription>
                                 <FormMessage />
                               </FormItem>
                             )}
