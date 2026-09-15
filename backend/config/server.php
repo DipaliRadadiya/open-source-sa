@@ -1835,6 +1835,20 @@ return [
             // Newest patch of this many majors, so the picker is a list
             // somebody can read rather than every release ever made.
             'installable_majors' => (int) env('SERVER_NODE_INSTALLABLE_MAJORS', 6),
+            // Offer versions Node itself has stopped supporting.
+            //
+            // Off, because installing one is a trap rather than a choice: a
+            // dead line gets no security fixes, and native modules stop
+            // shipping prebuilt binaries for it — which is how a one-click
+            // n8n install ended in a C++ compiler error on Node 21, a release
+            // that died in June 2024. The lifecycle badge was already there
+            // and was evidently not enough; a version nobody should install
+            // does not belong in the list of versions to install.
+            //
+            // On restores the old list for a server migrating an application
+            // that genuinely needs a dead runtime. Versions already installed
+            // are never hidden by this — only the offer to add new ones.
+            'offer_eol' => filter_var(env('SERVER_NODE_OFFER_EOL', false), FILTER_VALIDATE_BOOLEAN),
             'install_timeout' => (int) env('SERVER_NODE_INSTALL_TIMEOUT', 900),
         ],
 

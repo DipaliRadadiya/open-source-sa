@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'A registar as regras predefinidas da firewall',
         'refresh_npm_catalogue' => 'A atualizar o catálogo do npm',
+        'refresh_lifecycle_catalogue' => 'A atualizar o catálogo de ciclo de vida dos runtimes',
         'preflight_git' => 'Verificando o repositório do painel',
         'preflight' => 'A verificar se o servidor está pronto',
         'create_release' => 'A criar a nova versão',
@@ -44,6 +45,7 @@ return [
         'sync_privileges' => 'Não foi possível atualizar os privilégios do painel.',
         'record_firewall_defaults' => 'Não foi possível registar as regras predefinidas da firewall.',
         'refresh_npm_catalogue' => 'Não foi possível atualizar o catálogo do npm.',
+        'refresh_lifecycle_catalogue' => 'Não foi possível atualizar o catálogo de ciclo de vida dos runtimes.',
         'launch' => 'Não foi possível iniciar a atualização.',
         'preflight_git' => 'Não foi possível ler o repositório do painel.',
         'maintenance_on' => 'Não foi possível colocar o painel em modo de manutenção.',

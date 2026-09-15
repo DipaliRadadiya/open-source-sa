@@ -17,6 +17,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'Recording the firewall defaults',
         'refresh_npm_catalogue' => 'Refreshing the npm catalogue',
+        'refresh_lifecycle_catalogue' => 'Refreshing the runtime lifecycle catalogue',
         'preflight_git' => 'Checking the panel repository',
         'preflight' => 'Checking the server is ready',
         'create_release' => 'Building the new release',
@@ -57,6 +58,7 @@ return [
         'sync_privileges' => 'The panel’s privileges could not be updated.',
         'record_firewall_defaults' => 'The firewall defaults could not be recorded.',
         'refresh_npm_catalogue' => 'The npm catalogue could not be refreshed.',
+        'refresh_lifecycle_catalogue' => 'The runtime lifecycle catalogue could not be refreshed.',
         'launch' => 'The update could not be started.',
         'preflight_git' => 'The panel repository could not be read.',
         'maintenance_on' => 'The panel could not be put into maintenance mode.',

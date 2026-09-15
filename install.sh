@@ -1329,6 +1329,26 @@ setup_backend() {
         warn "npm catalogue not primed; the Node screen may offer an npm update that is not needed until the daily refresh runs"
     fi
 
+    # Prime the runtime lifecycle catalogue, for the same reason and with the
+    # same failure mode. The Node picker hides versions the project has ended
+    # support for, and "ended support" is read from this table — so an empty
+    # one means every dead release is offered as though it were fine. That is
+    # not cosmetic: a user picked Node 21, dead since June 2024, and the
+    # one-click n8n install died compiling a native module nobody publishes a
+    # prebuilt binary for any more.
+    #
+    # Non-fatal, and not `run`, for the reason the npm block above gives: this
+    # reaches out to github, and a third party being down must not fail an
+    # install. Failing open is deliberate on the read side too — unknown is
+    # not dead — so the only cost until the daily schedule catches up is the
+    # old behaviour.
+    if sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan runtimes:refresh-lifecycle' \
+        -- "$dir" "${PANEL_PHP_BIN}" >>"$LOG_FILE" 2>&1; then
+        ok "runtime lifecycle catalogue primed"
+    else
+        warn "runtime lifecycle catalogue not primed; end-of-life Node versions may be offered until the daily refresh runs"
+    fi
+
     # Tell the panel what we built. It can detect that nginx and PHP are here,
     # but not whether that was a deliberate `lemp` build or a box somebody
     # assembled by hand — and the difference matters to the setup page.

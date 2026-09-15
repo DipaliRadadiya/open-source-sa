@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'फ़ायरवॉल की डिफ़ॉल्ट नियम दर्ज किए जा रहे हैं',
         'refresh_npm_catalogue' => 'npm कैटलॉग रिफ़्रेश हो रहा है',
+        'refresh_lifecycle_catalogue' => 'रनटाइम लाइफ़साइकल कैटलॉग रिफ़्रेश हो रहा है',
         'preflight_git' => 'पैनल रिपॉजिटरी की जाँच की जा रही है',
         'preflight' => 'जाँच की जा रही है कि सर्वर तैयार है',
         'create_release' => 'नया रिलीज़ बनाया जा रहा है',
@@ -44,6 +45,7 @@ return [
         'sync_privileges' => 'पैनल के प्रिविलेज अपडेट नहीं हो सके।',
         'record_firewall_defaults' => 'फ़ायरवॉल के डिफ़ॉल्ट नियम दर्ज नहीं हो सके।',
         'refresh_npm_catalogue' => 'npm कैटलॉग रिफ़्रेश नहीं हो सका।',
+        'refresh_lifecycle_catalogue' => 'रनटाइम लाइफ़साइकल कैटलॉग रिफ़्रेश नहीं हो सका।',
         'launch' => 'अद्यतन शुरू नहीं किया जा सका।',
         'preflight_git' => 'पैनल रिपॉजिटरी नहीं पढ़ी जा सकी।',
         'maintenance_on' => 'पैनल को रखरखाव मोड में नहीं रखा जा सका।',

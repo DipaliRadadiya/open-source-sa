@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'Enregistrement des règles de pare-feu par défaut',
         'refresh_npm_catalogue' => 'Actualisation du catalogue npm',
+        'refresh_lifecycle_catalogue' => 'Actualisation du catalogue de cycle de vie des runtimes',
         'preflight_git' => 'Vérification du dépôt du panneau',
         'preflight' => 'Vérification que le serveur est prêt',
         'create_release' => 'Création de la nouvelle version',
@@ -44,6 +45,7 @@ return [
         'sync_privileges' => 'Les privilèges du panneau n’ont pas pu être mis à jour.',
         'record_firewall_defaults' => 'Les règles de pare-feu par défaut n’ont pas pu être enregistrées.',
         'refresh_npm_catalogue' => 'Le catalogue npm n’a pas pu être actualisé.',
+        'refresh_lifecycle_catalogue' => 'Le catalogue de cycle de vie des runtimes n’a pas pu être actualisé.',
         'launch' => 'La mise à jour n’a pas pu être lancée.',
         'preflight_git' => 'Le dépôt du panneau n’a pas pu être lu.',
         'maintenance_on' => 'Le panneau n’a pas pu être mis en mode maintenance.',

@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'ファイアウォールの既定ルールを記録しています',
         'refresh_npm_catalogue' => 'npm カタログを更新しています',
+        'refresh_lifecycle_catalogue' => 'ランタイムのサポート状況カタログを更新しています',
         'preflight_git' => 'パネルのリポジトリを確認しています',
         'preflight' => 'サーバーの準備を確認しています',
         'create_release' => '新しいリリースを作成しています',
@@ -44,6 +45,7 @@ return [
         'sync_privileges' => 'パネルの権限を更新できませんでした。',
         'record_firewall_defaults' => 'ファイアウォールの既定ルールを記録できませんでした。',
         'refresh_npm_catalogue' => 'npm カタログを更新できませんでした。',
+        'refresh_lifecycle_catalogue' => 'ランタイムのサポート状況カタログを更新できませんでした。',
         'launch' => '更新を開始できませんでした。',
         'preflight_git' => 'パネルのリポジトリを読み取れませんでした。',
         'maintenance_on' => 'パネルをメンテナンスモードにできませんでした。',

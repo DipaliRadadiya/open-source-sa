@@ -6,6 +6,7 @@ use App\Contracts\Runtime;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Runtime\InstallFailureClassifier;
+use App\Services\Runtime\LifecycleCatalog;
 use App\Services\Runtime\NpmCatalog;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -36,6 +37,7 @@ class NodeRuntime implements Runtime
         private ServerOps $serverOps,
         private InstallFailureClassifier $classifier,
         private NpmCatalog $npm,
+        private LifecycleCatalog $lifecycle,
     ) {}
 
     public function key(): string
@@ -122,8 +124,27 @@ class NodeRuntime implements Runtime
     }
 
     /**
-     * Versions offered in the picker: the LTS and current lines, not the
-     * hundreds of patch releases fnm would otherwise list.
+     * Versions offered in the picker: the supported lines, not the hundreds
+     * of patch releases fnm would otherwise list, and not the dead ones.
+     *
+     * 🔴 Dead lines were offered until 2026-09-15, and offering one is a trap
+     * rather than a choice. A user picked Node 21 — end of life since June
+     * 2024 — for a one-click n8n site, and the install died compiling
+     * `isolated-vm`: native modules ship prebuilt binaries per Node ABI, and
+     * nobody builds them for a release the project has buried. The version
+     * carried an EOL badge in the list it was offered from, which was not
+     * enough. A version nobody should install does not belong in the list of
+     * versions to install.
+     *
+     * "Dead" is read from {@see LifecycleCatalog} — Node's own
+     * `Release/schedule.json` — never inferred from an odd major number. That
+     * is the rule the catalog's own docblock states, and it is right: the
+     * convention is a convention, and a panel that hard-codes it would be
+     * confidently wrong the day it changed.
+     *
+     * Unknown means kept, not hidden. A box with no egress has never refreshed
+     * the catalog, and answering "no versions to install" there would turn an
+     * absent badge into an empty screen.
      *
      * @return array<int, string>
      */
@@ -137,15 +158,39 @@ class NodeRuntime implements Runtime
             ->map(fn (string $line) => $this->parseVersion($line))
             ->filter();
 
+        // One read for the whole list. `LifecycleCatalog::for()` queries the
+        // table on every call, and this asks about a dozen versions.
+        $lifecycle = $this->lifecycle->all()['node'] ?? [];
+        $offerEol = (bool) config('server.runtimes.node.offer_eol', false);
+
         // Newest patch of each major — a list of every patch release is a
         // dropdown nobody can use.
         return $remote
             ->groupBy(fn (string $version) => explode('.', $version)[0])
             ->map(fn ($group) => $group->sortByDesc(fn (string $v) => $this->sortKey($v))->first())
+            // Before the take, not after: dropping three dead lines out of a
+            // list of six would otherwise leave three, and the picker would
+            // get shorter every time a Node release died.
+            ->reject(fn (string $version) => ! $offerEol && $this->isEndOfLife($version, $lifecycle))
             ->sortByDesc(fn (string $v) => $this->sortKey($v))
             ->take((int) config('server.runtimes.node.installable_majors', 6))
             ->values()
             ->all();
+    }
+
+    /**
+     * Has Node stopped supporting this line?
+     *
+     * False for anything the catalog has no answer about, which is the honest
+     * reading: "we have not been told" is not "it is dead".
+     *
+     * @param  array<string, array<string, mixed>>  $lifecycle
+     */
+    private function isEndOfLife(string $version, array $lifecycle): bool
+    {
+        $major = explode('.', $version)[0];
+
+        return ($lifecycle[$major]['status'] ?? null) === 'eol';
     }
 
     public function fnmInstalled(): bool

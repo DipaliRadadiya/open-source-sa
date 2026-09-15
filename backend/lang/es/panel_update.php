@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'Registrando las reglas por defecto del firewall',
         'refresh_npm_catalogue' => 'Actualizando el catálogo de npm',
+        'refresh_lifecycle_catalogue' => 'Actualizando el catálogo de ciclo de vida de los runtimes',
         'preflight_git' => 'Comprobando el repositorio del panel',
         'preflight' => 'Comprobando que el servidor está listo',
         'create_release' => 'Creando la nueva versión',
@@ -44,6 +45,7 @@ return [
         'sync_privileges' => 'No se pudieron actualizar los privilegios del panel.',
         'record_firewall_defaults' => 'No se pudieron registrar las reglas por defecto del firewall.',
         'refresh_npm_catalogue' => 'No se pudo actualizar el catálogo de npm.',
+        'refresh_lifecycle_catalogue' => 'No se pudo actualizar el catálogo de ciclo de vida de los runtimes.',
         'launch' => 'No se pudo iniciar la actualización.',
         'preflight_git' => 'No se pudo leer el repositorio del panel.',
         'maintenance_on' => 'No se pudo poner el panel en modo de mantenimiento.',

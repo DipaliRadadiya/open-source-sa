@@ -3,6 +3,7 @@
 use App\Jobs\InstallNodeVersion;
 use App\Models\Application;
 use App\Models\NpmRelease;
+use App\Models\RuntimeLifecycle;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -135,6 +136,75 @@ it('offers one version per major rather than every patch release', function () {
     // A dropdown of every Node release ever made is not a dropdown.
     expect(collect(nodeSettings()['installable'])->pluck('version')->all())->toBe(['22.11.0', '20.19.1', '18.20.4']);
 });
+
+describe('versions Node itself has stopped supporting', function () {
+    /*
+     * 🔴 The report this exists to stop happening again.
+     *
+     * A user picked Node 21 — dead since June 2024 — for a one-click n8n site.
+     * The install ran for five minutes and died compiling `isolated-vm`:
+     * native modules ship prebuilt binaries per Node ABI, and nobody builds
+     * them for a buried release, so npm fell back to a C++ compile on a server
+     * that has no compiler. The version was carrying an EOL badge in the very
+     * list it was offered from, and that was not enough.
+     */
+    it('does not offer a dead line', function () {
+        eolNode('18');
+        fakeNode();
+
+        expect(collect(nodeSettings()['installable'])->pluck('version')->all())
+            ->toBe(['22.11.0', '20.19.1']);
+    });
+
+    it('still offers a line the catalog has no answer about', function () {
+        // A box with no egress has never refreshed the catalog. Hiding
+        // everything there would turn an absent badge into an empty screen —
+        // "we have not been told" is not "it is dead".
+        lifecycleNode('20', 'lts');
+        fakeNode();
+
+        expect(collect(nodeSettings()['installable'])->pluck('version')->all())
+            ->toBe(['22.11.0', '20.19.1', '18.20.4']);
+    });
+
+    it('offers dead lines again when the operator asks for them', function () {
+        // The escape hatch for a server migrating an application that
+        // genuinely needs a dead runtime.
+        config()->set('server.runtimes.node.offer_eol', true);
+        eolNode('18');
+        fakeNode();
+
+        expect(collect(nodeSettings()['installable'])->pluck('version')->all())
+            ->toBe(['22.11.0', '20.19.1', '18.20.4']);
+    });
+
+    it('never hides a dead version that is already installed', function () {
+        // Only the offer to add new ones is withdrawn. A site is running on
+        // that version; dropping it from the screen would leave the user
+        // unable to see, let alone move off, the runtime they are on.
+        eolNode('18');
+        fakeNode(installed: ['18.20.4', '22.11.0']);
+
+        expect(collect(nodeSettings()['versions'])->pluck('version')->all())
+            ->toContain('18.20.4');
+    });
+});
+
+/** Record a Node major as end of life, the way the lifecycle refresh would. */
+function eolNode(string $major): void
+{
+    lifecycleNode($major, 'eol');
+}
+
+function lifecycleNode(string $major, string $status): void
+{
+    RuntimeLifecycle::create([
+        'runtime' => 'node',
+        'version' => $major,
+        'status' => $status,
+        'eol_date' => $status === 'eol' ? '2024-06-01' : '2030-01-01',
+    ]);
+}
 
 it('counts how many sites pin each version', function () {
     fakeNode(installed: ['20.11.0']);

@@ -4,6 +4,7 @@ use App\Models\Application;
 use App\Models\RuntimeLifecycle;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Panel\UpdateScript;
 use App\Services\Runtime\LifecycleCatalog;
 use App\Services\Runtime\PinnedSites;
 use Database\Seeders\PermissionSeeder;
@@ -155,4 +156,38 @@ it('never makes a network call while answering a request', function () {
     Http::fake(fn () => throw new RuntimeException('a request must not reach the network'));
 
     $this->withHeader('Authorization', 'Bearer '.$this->token)->getJson('/api/php')->assertOk();
+});
+
+it('is primed by both the installer and the panel update script', function () {
+    /*
+     * 🔴 The npm-catalogue bug, one table over, found before it could bite.
+     *
+     * The Node picker now hides versions the project has ended support for,
+     * and it reads "ended support" from this table. An empty table means
+     * unknown, and unknown is deliberately treated as "keep offering it" — so
+     * a panel with no lifecycle data offers every dead release as though it
+     * were fine. Until this change the only thing that filled the table was a
+     * daily schedule, so every fresh install and every update spent up to a
+     * day in exactly that state, which is how a one-click n8n install ended in
+     * a C++ compiler error on Node 21.
+     */
+    expect(file_get_contents(base_path('../install.sh')))->toContain('artisan runtimes:refresh-lifecycle')
+        ->and(UpdateScript::STEPS)->toContain('refresh_lifecycle_catalogue');
+
+    // After `migrate`, because the table it writes to has to exist first.
+    $steps = array_flip(UpdateScript::STEPS);
+    expect($steps['refresh_lifecycle_catalogue'])->toBeGreaterThan($steps['migrate']);
+});
+
+it('does not fail an install or an update when github is unreachable', function () {
+    // Same trade as the npm catalogue: a panel that refuses to finish
+    // updating because someone else's API was down is worse than one that
+    // briefly offers a dead Node version. Both call sites guard the exit
+    // code, and the command itself must not report failure either.
+    Http::fake(fn () => Http::response('', 500));
+
+    $this->artisan('runtimes:refresh-lifecycle')->assertSuccessful();
+
+    expect(file_get_contents(base_path('app/Services/Panel/UpdateScript.php')))
+        ->toContain('artisan runtimes:refresh-lifecycle || echo');
 });

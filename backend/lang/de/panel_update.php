@@ -10,6 +10,7 @@ return [
     'steps' => [
         'record_firewall_defaults' => 'Firewall-Standardregeln werden erfasst',
         'refresh_npm_catalogue' => 'npm-Katalog wird aktualisiert',
+        'refresh_lifecycle_catalogue' => 'Laufzeit-Lebenszykluskatalog wird aktualisiert',
         'preflight_git' => 'Panel-Repository wird geprüft',
         'preflight' => 'Server wird auf Bereitschaft geprüft',
         'create_release' => 'Neues Release wird erstellt',
@@ -44,6 +45,7 @@ return [
         'sync_privileges' => 'Die Berechtigungen des Panels konnten nicht aktualisiert werden.',
         'record_firewall_defaults' => 'Die Firewall-Standardregeln konnten nicht erfasst werden.',
         'refresh_npm_catalogue' => 'Der npm-Katalog konnte nicht aktualisiert werden.',
+        'refresh_lifecycle_catalogue' => 'Der Laufzeit-Lebenszykluskatalog konnte nicht aktualisiert werden.',
         'launch' => 'Das Update konnte nicht gestartet werden.',
         'preflight_git' => 'Auf das Panel-Repository konnte nicht zugegriffen werden.',
         'maintenance_on' => 'Das Panel konnte nicht in den Wartungsmodus versetzt werden.',

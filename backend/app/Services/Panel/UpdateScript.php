@@ -38,6 +38,7 @@ class UpdateScript
         'resync_site_configs',
         'record_firewall_defaults',
         'refresh_npm_catalogue',
+        'refresh_lifecycle_catalogue',
         'optimize',
         'frontend_build',
         'sync_privileges',
@@ -298,6 +299,19 @@ class UpdateScript
         # happened above.)
         note refresh_npm_catalogue
         {$asUser}{$php} {$backend}/artisan runtimes:refresh-npm || echo "WARNING: npm catalogue not refreshed; the Node screen may offer an update that is not needed until the daily refresh runs"
+
+        # Same shape again, one table over. The Node picker stops offering
+        # versions the project has ended support for, and it reads "ended
+        # support" from `runtime_lifecycles` -- a table also written by one
+        # daily command and nothing else. An empty table means unknown, and
+        # unknown is deliberately treated as "keep offering it", so a panel
+        # that updates into this feature without the data keeps offering dead
+        # runtimes for up to a day. That is how a one-click n8n install ended
+        # in a C++ compiler error on Node 21.
+        #
+        # Non-fatal, same `||`, same reason: github is a third party.
+        note refresh_lifecycle_catalogue
+        {$asUser}{$php} {$backend}/artisan runtimes:refresh-lifecycle || echo "WARNING: runtime lifecycle catalogue not refreshed; end-of-life Node versions may be offered until the daily refresh runs"
 
         note optimize
         {$asUser}{$php} {$backend}/artisan optimize:clear
