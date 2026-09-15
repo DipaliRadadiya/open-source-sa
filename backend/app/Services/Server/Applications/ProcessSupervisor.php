@@ -14,12 +14,17 @@ use Illuminate\Support\Facades\View;
 /**
  * Runs and supervises an application's own process, via systemd.
  *
- * systemd rather than PM2 as the default, for reasons recorded in the deploy
- * design: one unit is one cgroup (so per-app metrics attribute correctly), boot
- * persistence is `systemctl enable` rather than PM2's save/startup dance, and
- * resource limits and hardening are native. PM2 arrives later as a *process
- * mode* running under a unit — `pm2-runtime` keeps cluster mode while systemd
- * keeps ownership of boot, cgroup and limits.
+ * systemd owns the process, always: one unit is one cgroup (so per-app metrics
+ * attribute correctly), boot persistence is `systemctl enable` rather than
+ * PM2's `startup`/`save` dance, and resource limits and hardening are native.
+ *
+ * PM2 now exists here, but as the unit's `ExecStart` rather than as an
+ * alternative to it. An application asking for more than one process gets
+ * `pm2-runtime`, which forks workers through Node's `cluster` module while
+ * systemd keeps the boot hook, the cgroup and the memory ceiling — the one
+ * thing systemd cannot do alone. A single-process application never sees it.
+ * {@see clustered()} for what decides, and `pm2-adoption-design.md` for why
+ * `pm2 startup`, `pm2 save` and the dump file are deliberately absent.
  *
  * An application has a process when it has a `start_command`, not when it has
  * a particular serving profile. PHP and static sites never touch this.
@@ -55,6 +60,51 @@ class ProcessSupervisor
         return 'sv-app-'.$application->id.'.slice';
     }
 
+    /**
+     * How many processes this application runs.
+     *
+     * One unless it asked for more, and never the host's core count: PM2's
+     * `-i max` reads the machine, so every application on an 8-core box would
+     * claim eight workers and the per-app `MemoryMax` would stop describing
+     * anything.
+     */
+    public function instances(Application $application): int
+    {
+        return max(1, (int) ($application->process_instances ?: 1));
+    }
+
+    /**
+     * Whether this application's unit runs PM2 rather than Node directly.
+     *
+     * Clustering is the only reason to. A single-process application gains
+     * nothing from the extra supervisor and loses the direct signal path
+     * between systemd and its own process.
+     */
+    public function clustered(Application $application): bool
+    {
+        return $this->instances($application) > 1 && $this->hasForkableEntrypoint($application);
+    }
+
+    /**
+     * PM2's state directory, per application.
+     *
+     * PM2 writes `logs/`, `pids/`, `pm2.pid` and its socket to `$PM2_HOME`,
+     * defaulting to `~/.pm2`. The unit sets `ProtectHome=read-only`, so left
+     * at the default PM2 cannot start at all — and the failure names the
+     * hardening rather than the directory, which is a long way from the cause.
+     *
+     * A sibling of the log directory rather than a child of the document root,
+     * for the reason the logs are: everything under the document root is a URL,
+     * and a socket and a pidfile are not things to publish. Per application,
+     * so that two sites under one system user cannot see each other's
+     * processes — which is exactly what the old panel's shared per-user daemon
+     * did.
+     */
+    public function pm2Home(Application $application): string
+    {
+        return $application->rootPath().'/pm2';
+    }
+
     public function unitPath(Application $application): string
     {
         $dir = rtrim((string) config('server.applications.systemd_dir', '/etc/systemd/system'), '/');
@@ -85,6 +135,7 @@ class ProcessSupervisor
         // StandardOutput cannot be opened fails to start with an error that
         // says nothing about a missing directory.
         $this->ensureLogDirectory($application);
+        $this->ensurePm2($application);
 
         $written = $this->files->put($this->unitPath($application), $this->render($application, $documentRoot), $context);
 
@@ -280,6 +331,44 @@ class ProcessSupervisor
         $this->files->put($this->logrotatePath($application), $this->renderLogrotate($application), $context);
     }
 
+    /**
+     * Create `$PM2_HOME`, owned by the site.
+     *
+     * Unlike the log directory — which root owns, because systemd opens
+     * `append:` targets in PID 1 before dropping privileges — this one is
+     * written by the application's own process. PM2 creates its socket and
+     * pidfile here as the site user, so the site user has to own it.
+     *
+     * Only for clustered applications: a single-process unit runs `node`
+     * directly and PM2 never appears.
+     */
+    private function ensurePm2(Application $application): void
+    {
+        if (! $this->clustered($application)) {
+            return;
+        }
+
+        // Into this application's own Node version. Runtimes here are
+        // per application via fnm, so there is no single global PM2 to install
+        // once — and a unit whose ExecStart names a `pm2-runtime` that was
+        // never installed fails at start with an error about a missing path.
+        try {
+            $this->node->installPm2((string) $application->node_version);
+        } catch (\Throwable $e) {
+            throw new ProvisioningFailedException('install_pm2', $e->getMessage());
+        }
+
+        $context = ['feature' => 'application', 'op' => 'unit_pm2_home', 'application' => $application->id];
+        $home = $this->pm2Home($application);
+        $user = $application->systemUser->username;
+
+        $this->serverOps->run(['mkdir', '-p', $home], $context);
+        $this->serverOps->run(['chown', $user.':'.$user, $home], $context);
+        // Nothing outside the site reads PM2's socket, and the directory sits
+        // in a home other system users can traverse.
+        $this->serverOps->run(['chmod', '0750', $home], $context);
+    }
+
     public function logrotatePath(Application $application): string
     {
         return '/etc/logrotate.d/sv-app-'.$application->id;
@@ -346,6 +435,9 @@ class ProcessSupervisor
             'path' => $this->path($application),
             'memoryMax' => $this->memoryMax($application),
             'slice' => $this->slice($application),
+            'clustered' => $this->clustered($application),
+            'pm2Home' => $this->pm2Home($application),
+            'startLimitInterval' => $this->clustered($application) ? 300 : 60,
         ])->render();
     }
 
@@ -370,7 +462,93 @@ class ProcessSupervisor
             }
         }
 
+        if ($this->clustered($application)) {
+            return $this->clusteredExecStart($application, $binary, $parts);
+        }
+
         return trim($binary.' '.implode(' ', $parts));
+    }
+
+    /**
+     * Whether the start command names a script PM2 can fork.
+     *
+     * Cluster mode is not a flag that can be applied to any command. Node's
+     * `cluster` module forks a *JavaScript file*; handed anything else — a
+     * package manager, a binary in `node_modules/.bin` — PM2 cannot hook into
+     * it and quietly runs a single fork-mode process instead. The old panel
+     * did exactly that, and its users chose four instances and got one with no
+     * error anywhere.
+     *
+     * So the entrypoint has to be `node <file>`. `StartCommand` already
+     * refuses the package managers; this is the narrower question of whether
+     * there is a file for PM2 to fork.
+     */
+    public function hasForkableEntrypoint(Application $application): bool
+    {
+        $parts = preg_split('/\s+/', trim((string) $application->start_command)) ?: [];
+        $binary = basename($parts[0] ?? '');
+
+        return $binary === 'node' && filled($parts[1] ?? null);
+    }
+
+    /**
+     * The same command, handed to `pm2-runtime` so it can be forked N times.
+     *
+     * `pm2-runtime`, never the `pm2` daemon: it stays in the foreground, so
+     * `Type=simple` tracks the real process, `Restart=always` still means
+     * something, and every worker lands in the unit's cgroup. The daemon form
+     * would fork away and leave systemd supervising nothing, which is how the
+     * old panel ended up needing `pm2 startup` and `pm2 save` to get a boot
+     * hook the unit already provides.
+     *
+     * `--raw` keeps the workers' output on stdout, where the unit's existing
+     * `StandardOutput=append:` already sends it — so PM2 writes no log files
+     * of its own and the logrotate policy beside them continues to be the only
+     * one that matters.
+     *
+     * Autorestart is left ON, which is the opposite of what supervising a
+     * single process calls for. PM2 restarts *workers* and systemd restarts
+     * the *parent*; they are not two supervisors racing for one process. With
+     * it off, a worker killed by the OOM killer simply stays dead — PM2 reports
+     * it stopped, systemd reports the unit active, and the application serves
+     * on N-1 workers with nothing anywhere saying so.
+     *
+     * The `--` matters: without it PM2 reads the application's own arguments as
+     * its own. Note that Node's `cluster` module hands every worker the
+     * *master's* argv, so an application that parses `process.argv` sees PM2's
+     * command line in cluster mode and not its own. That is PM2's behaviour
+     * rather than ours, it only bites when instances > 1, and the panel warns
+     * about it at the point the number is chosen.
+     *
+     * `$interpreter` is the resolved `node` for this application's version, and
+     * it is passed explicitly rather than left to PM2's `#!/usr/bin/env node`:
+     * runtimes here are per application via fnm, so "whichever node is on PATH"
+     * is a different answer per site and the wrong one for most of them.
+     *
+     * @param  list<string>  $arguments  the start command's words after `node`
+     */
+    private function clusteredExecStart(Application $application, string $interpreter, array $arguments): string
+    {
+        // Guaranteed by `hasForkableEntrypoint()`, which gates `clustered()`:
+        // the command is `node <script> [args]`, so the script is the first
+        // word after the interpreter and the rest belong to the application.
+        $script = array_shift($arguments) ?? '';
+
+        $command = [
+            $this->node->pm2RuntimePath((string) $application->node_version),
+            'start', $script,
+            '--interpreter', $interpreter,
+            '-i', (string) $this->instances($application),
+            '--name', rtrim($this->unit($application), '.service'),
+            '--raw',
+        ];
+
+        if ($arguments !== []) {
+            $command[] = '--';
+            $command = array_merge($command, $arguments);
+        }
+
+        return implode(' ', $command);
     }
 
     /**

@@ -1836,6 +1836,12 @@ return [
             // somebody can read rather than every release ever made.
             'installable_majors' => (int) env('SERVER_NODE_INSTALLABLE_MAJORS', 6),
             'install_timeout' => (int) env('SERVER_NODE_INSTALL_TIMEOUT', 900),
+            // PM2 is installed per Node version, for applications that run
+            // more than one process. Pinned rather than `@latest`: two servers
+            // provisioned a week apart would otherwise get different majors,
+            // and re-running the install would upgrade PM2 underneath running
+            // applications.
+            'pm2_version' => env('SERVER_PM2_VERSION', '6.0.13'),
         ],
 
         // Where "the newest npm this Node version can run" comes from. Read

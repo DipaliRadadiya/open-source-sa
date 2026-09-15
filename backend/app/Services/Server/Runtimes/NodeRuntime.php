@@ -175,6 +175,68 @@ class NodeRuntime implements Runtime
     }
 
     /**
+     * The absolute path to a version's `pm2-runtime`.
+     *
+     * Beside that version's `node`, because PM2 is installed *into* a version
+     * rather than once for the machine. The old panel ran a single global
+     * `npm install pm2@latest -g`, which works when there is one Node on the
+     * box; here every application can pin its own, and a global install would
+     * be tied to whichever version happened to own `/usr/local/bin`.
+     */
+    public function pm2RuntimePath(string $version): string
+    {
+        return dirname($this->binaryPath($version)).'/pm2-runtime';
+    }
+
+    public function pm2Installed(string $version): bool
+    {
+        return $this->serverOps->probe(
+            ['test', '-x', $this->pm2RuntimePath($version)],
+            ['feature' => 'runtime', 'op' => 'pm2_installed', 'version' => $version],
+        )->ok;
+    }
+
+    /**
+     * Install PM2 into one Node version.
+     *
+     * Pinned, not `@latest`. Two servers provisioned a week apart would
+     * otherwise get different majors, and re-running this on an existing
+     * server would silently upgrade PM2 underneath applications that are
+     * running — which is what the old panel did.
+     *
+     * Idempotent: a version that already has it is left alone, so this can be
+     * called on every switch to a version without paying for a reinstall.
+     *
+     * @throws SettingOperationException
+     */
+    public function installPm2(string $version, ?callable $onOutput = null): void
+    {
+        if ($this->pm2Installed($version)) {
+            return;
+        }
+
+        $binDir = dirname($this->binaryPath($version));
+        $pinned = 'pm2@'.config('server.runtimes.node.pm2_version', '6.0.13');
+
+        $this->must($this->serverOps->run(
+            [$binDir.'/npm', 'install', '-g', $pinned],
+            ['feature' => 'runtime', 'op' => 'pm2_install', 'version' => $version],
+            timeout: (int) config('server.runtimes.node.install_timeout', 900),
+            onOutput: $onOutput,
+        ));
+
+        // `npm -g` for an fnm version writes into that version's own prefix, so
+        // the binary should now be beside its node. Verified rather than
+        // assumed: a unit whose ExecStart points at a missing `pm2-runtime`
+        // fails at start time with an error that names the path and not the
+        // install that never happened.
+        $this->must($this->serverOps->run(
+            ['test', '-x', $this->pm2RuntimePath($version)],
+            ['feature' => 'runtime', 'op' => 'pm2_verify', 'version' => $version],
+        ));
+    }
+
+    /**
      * @throws SettingOperationException
      */
     public function install(string $version, ?callable $onOutput = null): void

@@ -23,6 +23,15 @@ WorkingDirectory={{ $documentRoot }}
 EnvironmentFile=-{{ $envPath }}
 Environment=NODE_ENV=production
 Environment=PATH={{ $path }}
+@if ($clustered)
+{{-- PM2 writes its socket, pidfile and state here. Left at its default of
+     ~/.pm2 it lands under ProtectHome=read-only and PM2 cannot start at all —
+     with an error that names the hardening rather than the directory. A
+     sibling of the log dir for the same reason the logs are there: everything
+     under the document root is a URL. Per application, so two sites under one
+     system user cannot see each other's processes. --}}
+Environment=PM2_HOME={{ $pm2Home }}
+@endif
 @if ($application->app_port)
 {{-- The port the panel allocated. The app is expected to read PORT; the
      reverse proxy is pointed at the same number, so the two cannot disagree. --}}
@@ -37,9 +46,15 @@ Restart=always
 RestartSec=5
 {{-- Without this a crash loop restarts forever at 5s intervals and buries the
      cause in the journal. Five failures in a minute stops the unit and leaves
-     it visibly failed, which is the state someone can act on. --}}
+     it visibly failed, which is the state someone can act on.
+
+     The window is wider under PM2 because the cycle is longer: PM2 retries the
+     workers itself and only then exits, so a full failure takes roughly 18s
+     rather than the ~5s a bare node process takes. Measured against 60s the
+     count never reached five and the unit restarted forever while still
+     reporting active — the exact failure this pair exists to prevent. --}}
 StartLimitBurst=5
-StartLimitIntervalSec=60
+StartLimitIntervalSec={{ $startLimitInterval }}
 
 {{-- One slice per application: per-app CPU and memory accounting comes free,
      and one runaway site cannot starve the others. --}}
@@ -56,7 +71,7 @@ ProtectHome=read-only
 {{-- The log directory sits beside public_html, not under it, so it needs
      naming here in its own right: ProtectHome=read-only makes the rest of
      /home unwritable, and systemd cannot append to a file it cannot write. --}}
-ReadWritePaths={{ $documentRoot }} {{ $logDir }}
+ReadWritePaths={{ $documentRoot }} {{ $logDir }}@if ($clustered) {{ $pm2Home }}@endif
 
 {{-- Files in the site's own directory rather than the journal, so the logs
      live with the application they belong to and an operator can reach them
