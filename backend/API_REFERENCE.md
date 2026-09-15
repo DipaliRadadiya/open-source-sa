@@ -704,7 +704,7 @@ Create + queue provisioning. Poll `GET /applications/{id}` until `status` leaves
   "system_user_id": 1,
   "site_user_password": "…",
   "web_root": "/",
-  "git_account_id": null,
+  "git_account_id": null, "git_provider": "github",
   "repository": null,
   "branch": null,
   "package_manager": null,
@@ -794,7 +794,13 @@ They are equal for fifteen of the seventeen site types, because most application
 
   "has_process": false,
 
-  "git_account_id": null, "repository": null, "repository_url": null, "branch": null,
+  "git_account_id": null, "git_provider": null, "repository": null, "repository_url": null, "branch": null,
+
+**`git_provider`** — `github` / `gitlab` / `bitbucket`, on both `index` and `show`. Which service the code came from, resolved **once when the application is created**: from the connected account if there is one, otherwise from the repository URL's host.
+
+**`site_type` cannot answer this** — it is `git` for all three, because one site type covers them all and only the account's API differs. Nor can `webhook.provider`, which is set only when deploy-on-push is configured and describes a different thing.
+
+**`null` has two meanings and both are honest:** an application created before this field existed, or a public URL on a host the panel does not recognise — a self-hosted GitLab, a Gitea, a Bitbucket Server. The host names no provider there, so none is claimed. Render the absence; do not fall back to a guess.
 
   "webhook": {
     "enabled": false, "provider": null, "url": null, "secret": null,
