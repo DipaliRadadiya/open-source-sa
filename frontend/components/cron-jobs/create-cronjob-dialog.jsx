@@ -157,7 +157,7 @@ export function CreateCronjobDialog({
           name="run_as"
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>{t("form.runAs")}</FormLabel>
+              <FormLabel required hint={t("form.runAsHint")}>{t("form.runAs")}</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   {/* SelectTrigger defaults to w-fit and h-8. The height lives

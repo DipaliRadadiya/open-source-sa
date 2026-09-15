@@ -259,7 +259,7 @@ export function CreateDatabaseDialog({
             name="engine"
             render={({ field }) => (
               <FormItem>
-                <FormLabel required>{t("create.engine")}</FormLabel>
+                <FormLabel required hint={t("create.engineHint")}>{t("create.engine")}</FormLabel>
                 <Select
                   value={field.value}
                   onValueChange={(next) => {

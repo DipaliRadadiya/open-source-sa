@@ -143,7 +143,7 @@ export function TargetPathDialog({
       {renderExtra ? <div>{renderExtra({ value, setValue, busy })}</div> : null}
 
       <div className="space-y-2">
-        <Label htmlFor="target-path">{t("targetDialog.pathLabel")}</Label>
+        <Label htmlFor="target-path" hint={t("targetDialog.pathLabelHint")}>{t("targetDialog.pathLabel")}</Label>
         <Input
           id="target-path"
           ref={inputRef}

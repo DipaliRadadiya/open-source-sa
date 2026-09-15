@@ -243,7 +243,7 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel required>{t("sshForm.name")}</FormLabel>
+                      <FormLabel required hint={t("sshForm.nameHint")}>{t("sshForm.name")}</FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t("sshForm.namePlaceholder")}

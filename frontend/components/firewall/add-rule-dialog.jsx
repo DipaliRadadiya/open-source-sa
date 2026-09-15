@@ -387,7 +387,7 @@ export function AddRuleDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fw-protocol">{t("add.protocol")}</Label>
+              <Label htmlFor="fw-protocol" hint={t("add.protocolHint")}>{t("add.protocol")}</Label>
               <Select
                 value={values.protocol}
                 onValueChange={(next) => form.setValue("protocol", next)}

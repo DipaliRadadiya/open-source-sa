@@ -522,7 +522,7 @@ export function BackupSettingsFields({
               name="database_excludes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("databaseExcludes")}</FormLabel>
+                  <FormLabel hint={t("databaseExcludesHint")}>{t("databaseExcludes")}</FormLabel>
                   <FormControl>
                     <Textarea
                       // `field-sizing-fixed` matters: the base Textarea sets

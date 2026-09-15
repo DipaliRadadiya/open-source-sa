@@ -235,7 +235,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
               name="host"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>{t("host")}</FormLabel>
+                  <FormLabel required hint={t("hostHint")}>{t("host")}</FormLabel>
                   <FormControl>
                     <Input
                       className="font-mono"
@@ -254,7 +254,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
               name="port"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required>{t("port")}</FormLabel>
+                  <FormLabel required hint={t("portHint")}>{t("port")}</FormLabel>
                   <FormControl>
                     <Input
                       className="font-mono"

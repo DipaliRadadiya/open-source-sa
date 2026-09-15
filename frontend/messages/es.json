@@ -722,7 +722,8 @@
       "removeTitle": "¿Eliminar clave SSH?",
       "removeDescription": "Esto elimina “{name}” de las claves autorizadas del usuario.",
       "removeConfirm": "Quitar",
-      "publicKeyHint": "La mitad .pub de un par de claves SSH. Es seguro compartirla: así es como el servidor lo reconoce. Nunca pegue aquí la clave privada."
+      "publicKeyHint": "La mitad .pub de un par de claves SSH. Es seguro compartirla: así es como el servidor lo reconoce. Nunca pegue aquí la clave privada.",
+      "nameHint": "Un nombre para que pueda distinguir esta clave más adelante, por ejemplo, a qué portátil pertenece."
     },
     "detail": {
       "back": "Usuarios del sistema",
@@ -940,7 +941,9 @@
       "commandHintPath": "cron usa un PATH mínimo: usa rutas absolutas, p. ej. /usr/bin/php.",
       "commandHintLog": "Añade >> /ruta/al/log 2>&1 para conservar la salida.",
       "serverTimeNote": "Se ejecuta en hora del servidor ({timezone})",
-      "runAsUnavailable": "No se pudo cargar la lista de cuentas. Elige «Otro usuario del sistema…» y escribe el nombre."
+      "runAsUnavailable": "No se pudo cargar la lista de cuentas. Elige «Otro usuario del sistema…» y escribe el nombre.",
+      "runAsHint": "La cuenta de Linux con la que se ejecuta el comando. Decide qué archivos puede leer y escribir el trabajo, y no se puede cambiar después.",
+      "scheduleHint": "Cada cuánto se ejecuta. Elija uno de los intervalos comunes, o elija Personalizado para escribir la programación usted mismo."
     },
     "toast": {
       "created": "Tarea cron creada",
@@ -1332,7 +1335,9 @@
       "banned": "{ip} bloqueada",
       "failed": "No hemos podido bloquear esa dirección.",
       "invalidIp": "Eso no es una dirección IP válida. Aquí no se admiten rangos.",
-      "selfWarning": "Esta es la dirección desde la que se accedió al panel. Bloquearla puede dejarte fuera del servidor."
+      "selfWarning": "Esta es la dirección desde la que se accedió al panel. Bloquearla puede dejarte fuera del servidor.",
+      "ipLabelHint": "La dirección que se va a bloquear. Verifique que no sea su propia conexión antes de guardar.",
+      "jailLabelHint": "Bajo qué conjunto de reglas se bloqueará la dirección. Cada jail supervisa un servicio, como SSH o el servidor web."
     },
     "settings": {
       "title": "Reglas de bloqueo",
@@ -1525,7 +1530,8 @@
       "onlyMyIp": "Solo mi IP",
       "onlyMyIpSet": "Tu IP",
       "wouldLockYouOut": "Esa es la dirección desde la que estás conectado. Bloquearla te dejaría fuera de este servidor.",
-      "protectedLocked": "Esta regla la creó el panel y está en uso. Su puerto, protocolo, acción y origen no se pueden cambiar mientras el cortafuegos esté activo; solo su nombre."
+      "protectedLocked": "Esta regla la creó el panel y está en uso. Su puerto, protocolo, acción y origen no se pueden cambiar mientras el cortafuegos esté activo; solo su nombre.",
+      "protocolHint": "TCPtransporta casi todo: sitios web, SSH, bases de datos. UDP es para DNS, VPN y algunos servidores de juegos."
     },
     "quick": {
       "title": "Añadir rápido",
@@ -2376,7 +2382,8 @@
         "charsetHint": "Qué caracteres puede almacenar la base de datos. UTF8 admite todos los idiomas y emojis: elija esta opción a menos que necesite otra distinta.",
         "collationHint": "Las reglas de idioma que se usan para ordenar y comparar el texto. Se derivan de la codificación."
       },
-      "accessHint": "Desde qué máquinas puede conectarse este usuario. Solo este servidor es la respuesta más segura y la correcta para un sitio alojado aquí. Evite \"desde cualquier lugar\" a menos que realmente necesite acceso remoto."
+      "accessHint": "Desde qué máquinas puede conectarse este usuario. Solo este servidor es la respuesta más segura y la correcta para un sitio alojado aquí. Evite \"desde cualquier lugar\" a menos que realmente necesite acceso remoto.",
+      "engineHint": "Sobre qué software de base de datos se ejecuta. No se puede cambiar después: mover una base de datos a otro motor significa crearla de nuevo."
     },
     "access": {
       "localhost": {
@@ -2485,7 +2492,9 @@
       "testFailed": "No se pudo ejecutar la prueba.",
       "action": "Conexión",
       "howHint": "Cómo llega un programa a esta base de datos. Un socket es más rápido pero solo funciona desde este servidor. TCP/IP funciona desde cualquier lugar desde donde este usuario tenga permitido conectarse.",
-      "socketPathHint": "El archivo mediante el cual se conecta un programa en este servidor, en lugar de un puerto de red. Déjelo como está a menos que la base de datos se haya instalado en una ubicación poco habitual."
+      "socketPathHint": "El archivo mediante el cual se conecta un programa en este servidor, en lugar de un puerto de red. Déjelo como está a menos que la base de datos se haya instalado en una ubicación poco habitual.",
+      "hostHint": "La dirección que usa un programa para llegar a esta base de datos. Desde este mismo servidor, es localhost.",
+      "portHint": "El puerto de red en el que escucha la base de datos: 3306 para MySQL y MariaDB, 5432 para PostgreSQL."
     },
     "credentials": {
       "title": "Datos de conexión",
@@ -3333,7 +3342,9 @@
           "307": "307 — Temporal, conserva el método",
           "308": "308 — Permanente, conserva el método"
         },
-        "redirectToHint": "La dirección a la que se envía a los visitantes en su lugar. Úselo cuando un dominio deba apuntar a otro en lugar de servir su propio sitio."
+        "redirectToHint": "La dirección a la que se envía a los visitantes en su lugar. Úselo cuando un dominio deba apuntar a otro en lugar de servir su propio sitio.",
+        "typeHint": "Principal es la dirección principal del sitio. Alias muestra el mismo sitio en una segunda dirección. Redirigir envía a los visitantes a otro lugar.",
+        "redirectStatusHint": "301 indica que la mudanza es permanente, así que los buscadores actualizan sus registros y los navegadores de los visitantes lo recuerdan. 302 indica que es temporal."
       },
       "type": {
         "alias": "Alias (mismo sitio, segundo nombre)",
@@ -3715,7 +3726,8 @@
       },
       "targetDialog": {
         "pathLabel": "Ruta",
-        "rootPlaceholder": "Raíz del sitio"
+        "rootPlaceholder": "Raíz del sitio",
+        "pathLabelHint": "Dónde colocarlo, contado desde la raíz de la carpeta del sitio."
       },
       "rename": {
         "title": "Renombrar o mover «{name}»",
@@ -4840,7 +4852,9 @@
       "locale": "El idioma en el que está configurado el sitio instalado. No cambia el idioma de este panel.",
       "language": "El idioma en el que está configurado el sitio instalado. No cambia el idioma de este panel.",
       "short_name": "Un identificador corto que se utiliza dentro de la aplicación. Solo letras y números, sin espacios."
-    }
+    },
+    "branchHint": "La rama desde la que desplegamos. Hacer push a cualquier otra rama deja este sitio como está.",
+    "repositoryHint": "Dónde reside el código de este sitio. Elija uno de la cuenta conectada arriba."
   },
   "panelUpdate": {
     "title": "Actualización del panel",
@@ -5374,7 +5388,8 @@
         "filesOnly": "Este sitio no tiene base de datos, por lo que solo se respaldarán sus archivos."
       },
       "automaticHint": "Ejecuta la copia de seguridad de forma programada en lugar de solo cuando presiona el botón.",
-      "fileExcludesHint": "Rutas a excluir de la copia de seguridad, una por línea. Vale la pena excluir cachés y registros; los archivos subidos, no."
+      "fileExcludesHint": "Rutas a excluir de la copia de seguridad, una por línea. Vale la pena excluir cachés y registros; los archivos subidos, no.",
+      "databaseExcludesHint": "Bases de datos que se excluirán de la copia de seguridad, una por línea. Útil para cachés y cualquier cosa que pueda reconstruir."
     },
     "history": {
       "allApplications": "Todos los sitios",

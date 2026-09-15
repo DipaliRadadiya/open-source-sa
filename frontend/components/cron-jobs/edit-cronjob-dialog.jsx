@@ -140,7 +140,7 @@ export function EditCronjobDialog({
         {/* Run-as is fixed server-side (change = delete + recreate), so it's
             shown as context rather than silently omitted. */}
         <FormItem>
-          <FormLabel>{t("form.runAs")}</FormLabel>
+          <FormLabel hint={t("form.runAsHint")}>{t("form.runAs")}</FormLabel>
           <Input value={job.username} readOnly disabled className="font-mono" />
           <p className="text-xs text-muted-foreground">{t("form.runAsLocked")}</p>
         </FormItem>

@@ -179,7 +179,8 @@
       "removeTitle": "Retirer la clé SSH ?",
       "removeDescription": "Ceci retire « {name} » des clés autorisées de l'utilisateur.",
       "removeConfirm": "Retirer",
-      "publicKeyHint": "La moitié .pub d’une paire de clés SSH. Elle peut être partagée sans risque : c’est grâce à elle que le serveur vous reconnaît. Ne collez jamais la clé privée ici."
+      "publicKeyHint": "La moitié .pub d’une paire de clés SSH. Elle peut être partagée sans risque : c’est grâce à elle que le serveur vous reconnaît. Ne collez jamais la clé privée ici.",
+      "nameHint": "Un nom pour pouvoir reconnaître cette clé plus tard — par exemple, l'ordinateur portable auquel elle appartient."
     },
     "detail": {
       "back": "Utilisateurs système",
@@ -940,7 +941,9 @@
       "commandHintPath": "cron s'exécute avec un PATH minimal — utilisez des chemins absolus, ex. /usr/bin/php.",
       "commandHintLog": "Ajoutez >> /chemin/du/log 2>&1 pour conserver la sortie.",
       "serverTimeNote": "S'exécute à l'heure du serveur ({timezone})",
-      "runAsUnavailable": "La liste des comptes n'a pas pu être chargée. Choisissez « Autre utilisateur OS… » et saisissez le nom d'utilisateur."
+      "runAsUnavailable": "La liste des comptes n'a pas pu être chargée. Choisissez « Autre utilisateur OS… » et saisissez le nom d'utilisateur.",
+      "runAsHint": "Le compte Linux sous lequel la commande s'exécute. Il détermine les fichiers que la tâche peut lire et écrire, et il ne peut pas être modifié ensuite.",
+      "scheduleHint": "La fréquence d'exécution. Choisissez l'une des cadences courantes, ou choisissez Personnalisé pour rédiger vous-même la planification."
     },
     "toast": {
       "created": "Tâche cron créée",
@@ -1332,7 +1335,9 @@
       "banned": "{ip} bannie",
       "failed": "Impossible de bannir cette adresse.",
       "invalidIp": "Ce n'est pas une adresse IP valide. Les plages ne sont pas autorisées ici.",
-      "selfWarning": "C'est l'adresse depuis laquelle ce panel a été contacté. La bannir peut vous verrouiller l'accès au serveur."
+      "selfWarning": "C'est l'adresse depuis laquelle ce panel a été contacté. La bannir peut vous verrouiller l'accès au serveur.",
+      "ipLabelHint": "L'adresse à bloquer. Vérifiez qu'il ne s'agit pas de votre propre connexion avant d'enregistrer.",
+      "jailLabelHint": "Le jeu de règles sous lequel bloquer l'adresse. Chaque jail surveille un service, comme SSH ou le serveur web."
     },
     "settings": {
       "title": "Règles de bannissement",
@@ -1525,7 +1530,8 @@
       "onlyMyIp": "Uniquement mon IP",
       "onlyMyIpSet": "Votre IP",
       "wouldLockYouOut": "C'est l'adresse depuis laquelle vous êtes connecté. La bloquer vous verrouillerait l'accès à ce serveur.",
-      "protectedLocked": "Cette règle a été créée par le panneau et est utilisée. Son port, protocole, action et source ne peuvent pas être modifiés tant que le pare-feu est activé — seul son nom."
+      "protectedLocked": "Cette règle a été créée par le panneau et est utilisée. Son port, protocole, action et source ne peuvent pas être modifiés tant que le pare-feu est activé — seul son nom.",
+      "protocolHint": "TCP transporte presque tout — sites web, SSH, bases de données. UDP sert pour DNS, VPN et certains serveurs de jeu."
     },
     "quick": {
       "title": "Ajout rapide",
@@ -2376,7 +2382,8 @@
         "charsetHint": "Les caractères que la base de données peut stocker. UTF8 prend en charge toutes les langues et les emoji — choisissez-le, sauf si quelque chose exige autre chose.",
         "collationHint": "Les règles linguistiques utilisées pour trier et comparer le texte. Cela découle de l'encodage."
       },
-      "accessHint": "Les machines depuis lesquelles cet utilisateur peut se connecter. Seul ce serveur est la réponse la plus sûre, et la bonne pour un site hébergé ici. Évitez « n’importe où » sauf si vous avez vraiment besoin d’un accès distant."
+      "accessHint": "Les machines depuis lesquelles cet utilisateur peut se connecter. Seul ce serveur est la réponse la plus sûre, et la bonne pour un site hébergé ici. Évitez « n’importe où » sauf si vous avez vraiment besoin d’un accès distant.",
+      "engineHint": "Le logiciel de base de données sur lequel celle-ci s'exécute. Il ne peut pas être modifié ensuite — déplacer une base de données vers un autre moteur implique de la recréer."
     },
     "access": {
       "localhost": {
@@ -2485,7 +2492,9 @@
       "testFailed": "Le test n'a pas pu être exécuté.",
       "action": "Connexion",
       "howHint": "Comment un programme atteint cette base de données. Un socket est plus rapide mais ne fonctionne que depuis ce serveur. TCP/IP fonctionne depuis n’importe quelle machine autorisée pour cet utilisateur.",
-      "socketPathHint": "Le fichier par lequel un programme sur ce serveur se connecte, à la place d’un port réseau. Gardez la valeur par défaut sauf si la base a été installée ailleurs."
+      "socketPathHint": "Le fichier par lequel un programme sur ce serveur se connecte, à la place d’un port réseau. Gardez la valeur par défaut sauf si la base a été installée ailleurs.",
+      "hostHint": "L'adresse qu'un programme utilise pour atteindre cette base de données. Depuis ce même serveur, c'est localhost.",
+      "portHint": "Le port réseau sur lequel la base de données écoute — 3306 pour MySQL et MariaDB, 5432 pour PostgreSQL."
     },
     "credentials": {
       "title": "Détails de connexion",
@@ -3333,7 +3342,9 @@
           "307": "307 — Temporaire, conserve la méthode",
           "308": "308 — Permanent, conserve la méthode"
         },
-        "redirectToHint": "L’adresse vers laquelle les visiteurs sont redirigés à la place. Utilisez ceci quand un domaine doit pointer vers un autre au lieu de servir son propre site."
+        "redirectToHint": "L’adresse vers laquelle les visiteurs sont redirigés à la place. Utilisez ceci quand un domaine doit pointer vers un autre au lieu de servir son propre site.",
+        "typeHint": "Primaire est l'adresse principale du site. Alias sert le même site à une seconde adresse. Rediriger envoie les visiteurs ailleurs.",
+        "redirectStatusHint": "301 indique que le déplacement est permanent, les moteurs de recherche mettent donc leurs registres à jour et les navigateurs des visiteurs le mémorisent. 302 indique qu'il est temporaire."
       },
       "type": {
         "alias": "Alias (même site, second nom)",
@@ -3715,7 +3726,8 @@
       },
       "targetDialog": {
         "pathLabel": "Chemin",
-        "rootPlaceholder": "Racine du site"
+        "rootPlaceholder": "Racine du site",
+        "pathLabelHint": "L'endroit où le placer, compté depuis la racine du dossier du site."
       },
       "rename": {
         "title": "Renommer ou déplacer « {name} »",
@@ -4840,7 +4852,9 @@
       "locale": "La langue dans laquelle le site installé est configuré. Cela ne modifie pas la langue de ce panneau.",
       "language": "La langue dans laquelle le site installé est configuré. Cela ne modifie pas la langue de ce panneau.",
       "short_name": "Un identifiant court utilisé à l'intérieur de l'application. Lettres et chiffres uniquement, sans espaces."
-    }
+    },
+    "branchHint": "La branche à partir de laquelle nous déployons. Pousser vers n'importe quelle autre branche laisse ce site inchangé.",
+    "repositoryHint": "L'endroit où vit le code de ce site. Choisissez-en un depuis le compte connecté ci-dessus."
   },
   "panelUpdate": {
     "title": "Mise à jour du panneau",
@@ -5374,7 +5388,8 @@
         "filesOnly": "Ce site n'a pas de base de données, donc seuls ses fichiers seront sauvegardés."
       },
       "automaticHint": "Lance la sauvegarde selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
-      "fileExcludesHint": "Chemins à exclure de la sauvegarde, un par ligne. Les caches et les logs méritent de l’être ; les téléversements, non."
+      "fileExcludesHint": "Chemins à exclure de la sauvegarde, un par ligne. Les caches et les logs méritent de l’être ; les téléversements, non.",
+      "databaseExcludesHint": "Bases de données à exclure de la sauvegarde, une par ligne. Utile pour les caches et tout ce que vous pouvez reconstruire."
     },
     "history": {
       "allApplications": "Tous les sites",

@@ -121,7 +121,7 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
         }
       >
         <div className="space-y-2">
-          <Label htmlFor="ban-ip">{t("ban.ipLabel")}</Label>
+          <Label htmlFor="ban-ip" hint={t("ban.ipLabelHint")}>{t("ban.ipLabel")}</Label>
           <Input
             id="ban-ip"
             value={ip}
@@ -159,7 +159,7 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="ban-jail">{t("ban.jailLabel")}</Label>
+          <Label htmlFor="ban-jail" hint={t("ban.jailLabelHint")}>{t("ban.jailLabel")}</Label>
           <Select value={jail} onValueChange={setChosen}>
             <SelectTrigger id="ban-jail" className="w-full">
               <SelectValue />

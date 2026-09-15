@@ -179,7 +179,8 @@
       "removeTitle": "SSH-Schlüssel entfernen?",
       "removeDescription": "Dies entfernt „{name}“ aus den autorisierten Schlüsseln des Benutzers.",
       "removeConfirm": "Entfernen",
-      "publicKeyHint": "Die .pub-Hälfte eines SSH-Schlüsselpaars. Sie darf weitergegeben werden — so erkennt der Server Sie. Fügen Sie hier niemals den privaten Schlüssel ein."
+      "publicKeyHint": "Die .pub-Hälfte eines SSH-Schlüsselpaars. Sie darf weitergegeben werden — so erkennt der Server Sie. Fügen Sie hier niemals den privaten Schlüssel ein.",
+      "nameHint": "Ein Name, damit Sie diesen Schlüssel später unterscheiden können – zum Beispiel, von welchem Laptop er stammt."
     },
     "detail": {
       "back": "Systembenutzer",
@@ -940,7 +941,9 @@
       "commandHintPath": "cron läuft mit einem minimalen PATH – verwenden Sie absolute Pfade, z. B. /usr/bin/php.",
       "commandHintLog": "Fügen Sie >> /path/to/log 2>&1 an, um die Ausgabe zu speichern.",
       "serverTimeNote": "Läuft in Serverzeit ({timezone})",
-      "runAsUnavailable": "Die Kontoliste konnte nicht geladen werden. Wählen Sie „Anderer OS-Benutzer…“ und geben Sie den Benutzernamen ein."
+      "runAsUnavailable": "Die Kontoliste konnte nicht geladen werden. Wählen Sie „Anderer OS-Benutzer…“ und geben Sie den Benutzernamen ein.",
+      "runAsHint": "Das Linux-Konto, unter dem der Befehl ausgeführt wird. Es legt fest, welche Dateien der Cron-Job lesen und schreiben kann, und kann nachträglich nicht geändert werden.",
+      "scheduleHint": "Wie oft er ausgeführt wird. Wählen Sie eine der üblichen Zeitpläne oder „Benutzerdefiniert“, um den Zeitplan selbst festzulegen."
     },
     "toast": {
       "created": "Cronjob erstellt",
@@ -1332,7 +1335,9 @@
       "banned": "{ip} gesperrt",
       "failed": "Diese Adresse konnte nicht gesperrt werden.",
       "invalidIp": "Das ist keine gültige IP-Adresse. Bereiche sind hier nicht erlaubt.",
-      "selfWarning": "Von dieser Adresse aus wurde dieses Panel erreicht. Sperren Sie sie, kann Sie das vom Server aussperren."
+      "selfWarning": "Von dieser Adresse aus wurde dieses Panel erreicht. Sperren Sie sie, kann Sie das vom Server aussperren.",
+      "ipLabelHint": "Die Adresse, die gesperrt werden soll. Prüfen Sie vor dem Speichern, dass es nicht Ihre eigene Verbindung ist.",
+      "jailLabelHint": "Welcher Regelsatz verwendet wird, um die Adresse zu sperren. Jedes Jail überwacht einen Dienst, etwa SSH oder den Webserver."
     },
     "settings": {
       "title": "Sperrregeln",
@@ -1525,7 +1530,8 @@
       "onlyMyIp": "Nur meine IP",
       "onlyMyIpSet": "Ihre IP",
       "wouldLockYouOut": "Das ist die Adresse, von der Sie verbunden sind. Sie zu blockieren würde Sie von diesem Server aussperren.",
-      "protectedLocked": "Diese Regel hat das Panel eingerichtet und sie ist in Benutzung. Port, Protokoll, Aktion und Quelle lassen sich bei eingeschalteter Firewall nicht ändern — nur der Name."
+      "protectedLocked": "Diese Regel hat das Panel eingerichtet und sie ist in Benutzung. Port, Protokoll, Aktion und Quelle lassen sich bei eingeschalteter Firewall nicht ändern — nur der Name.",
+      "protocolHint": "Über TCP läuft fast alles – Websites, SSH, Datenbanken. UDP wird für DNS, VPNs und einige Spieleserver verwendet."
     },
     "quick": {
       "title": "Schnell hinzufügen",
@@ -2376,7 +2382,8 @@
         "charsetHint": "Welche Zeichen die Datenbank speichern kann. UTF8 verarbeitet jede Sprache und Emojis — wählen Sie es, es sei denn, etwas erfordert etwas anderes.",
         "collationHint": "Die Sprachregeln, die zum Sortieren und Vergleichen von Text verwendet werden. Sie ergibt sich aus der Kodierung."
       },
-      "accessHint": "Von welchen Rechnern dieser Benutzer eine Verbindung herstellen darf. Nur dieser Server ist die sicherste Antwort und die richtige Wahl für eine hier gehostete Seite. Vermeiden Sie „von überall“, außer Sie benötigen tatsächlich Remote-Zugriff."
+      "accessHint": "Von welchen Rechnern dieser Benutzer eine Verbindung herstellen darf. Nur dieser Server ist die sicherste Antwort und die richtige Wahl für eine hier gehostete Seite. Vermeiden Sie „von überall“, außer Sie benötigen tatsächlich Remote-Zugriff.",
+      "engineHint": "Welche Datenbanksoftware hier verwendet wird. Dies kann nachträglich nicht geändert werden – eine Datenbank auf eine andere Engine umzuziehen bedeutet, sie neu zu erstellen."
     },
     "access": {
       "localhost": {
@@ -2485,7 +2492,9 @@
       "testFailed": "Der Test konnte nicht ausgeführt werden.",
       "action": "Verbindung",
       "howHint": "Wie ein Programm diese Datenbank erreicht. Ein Socket ist schneller, funktioniert aber nur von diesem Server. TCP/IP funktioniert von überall, wo diesem Benutzer Verbindungen erlaubt sind.",
-      "socketPathHint": "Die Datei, über die sich ein Programm auf diesem Server statt über einen Netzwerkport verbindet. Belassen Sie die Vorgabe, es sei denn, die Datenbank wurde an einem ungewöhnlichen Ort installiert."
+      "socketPathHint": "Die Datei, über die sich ein Programm auf diesem Server statt über einen Netzwerkport verbindet. Belassen Sie die Vorgabe, es sei denn, die Datenbank wurde an einem ungewöhnlichen Ort installiert.",
+      "hostHint": "Die Adresse, über die ein Programm diese Datenbank erreicht. Von diesem Server aus ist das localhost.",
+      "portHint": "Der Netzwerkport, auf dem die Datenbank erreichbar ist – 3306 für MySQL und MariaDB, 5432 für PostgreSQL."
     },
     "credentials": {
       "title": "Verbindungsdaten",
@@ -3333,7 +3342,9 @@
           "307": "307 — Vorübergehend, behält die Methode",
           "308": "308 — Dauerhaft, behält die Methode"
         },
-        "redirectToHint": "Die Adresse, an die Besucher stattdessen weitergeleitet werden. Verwenden Sie dies, wenn eine Domain auf eine andere zeigen soll, statt ihre eigene Seite bereitzustellen."
+        "redirectToHint": "Die Adresse, an die Besucher stattdessen weitergeleitet werden. Verwenden Sie dies, wenn eine Domain auf eine andere zeigen soll, statt ihre eigene Seite bereitzustellen.",
+        "typeHint": "„Primary“ ist die Hauptadresse der Seite. „Alias“ liefert dieselbe Seite unter einer zweiten Adresse aus. „Redirect“ leitet Besucher stattdessen woanders hin.",
+        "redirectStatusHint": "301 kennzeichnet den Umzug als dauerhaft, sodass Suchmaschinen ihre Einträge aktualisieren und Browser der Besucher ihn sich merken. 302 kennzeichnet ihn als vorübergehend."
       },
       "type": {
         "alias": "Alias (dieselbe Website, zweiter Name)",
@@ -3715,7 +3726,8 @@
       },
       "targetDialog": {
         "pathLabel": "Pfad",
-        "rootPlaceholder": "Website-Wurzel"
+        "rootPlaceholder": "Website-Wurzel",
+        "pathLabelHint": "Wo die Datei abgelegt wird, ausgehend vom obersten Verzeichnis der Seite."
       },
       "rename": {
         "title": "„{name}“ umbenennen oder verschieben",
@@ -4840,7 +4852,9 @@
       "locale": "Die Sprache, in der die installierte Website eingerichtet ist. Sie ändert nicht die Sprache dieses Panels.",
       "language": "Die Sprache, in der die installierte Website eingerichtet ist. Sie ändert nicht die Sprache dieses Panels.",
       "short_name": "Ein kurzer Bezeichner, der innerhalb der Anwendung verwendet wird. Nur Buchstaben und Zahlen, keine Leerzeichen."
-    }
+    },
+    "branchHint": "Der Branch, aus dem wir bereitstellen. Wenn Sie in einen anderen Branch pushen, bleibt diese Seite unverändert.",
+    "repositoryHint": "Wo der Code dieser Seite liegt. Wählen Sie eines aus dem oben verbundenen Konto aus."
   },
   "panelUpdate": {
     "title": "Panel-Update",
@@ -5374,7 +5388,8 @@
         "filesOnly": "Diese Website hat keine Datenbank, es werden also nur ihre Dateien gesichert."
       },
       "automaticHint": "Führt die Sicherung nach einem Zeitplan aus, statt nur auf Knopfdruck.",
-      "fileExcludesHint": "Pfade, die von der Sicherung ausgeschlossen werden, einer pro Zeile. Caches und Protokolle lohnen sich auszuschließen; Uploads nicht."
+      "fileExcludesHint": "Pfade, die von der Sicherung ausgeschlossen werden, einer pro Zeile. Caches und Protokolle lohnen sich auszuschließen; Uploads nicht.",
+      "databaseExcludesHint": "Datenbanken, die von der Sicherung ausgeschlossen werden, eine pro Zeile. Nützlich für Caches und alles, was sich neu aufbauen lässt."
     },
     "history": {
       "allApplications": "Alle Websites",

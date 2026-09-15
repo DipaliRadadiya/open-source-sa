@@ -125,7 +125,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
           name="type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("add.type")}</FormLabel>
+              <FormLabel hint={t("add.typeHint")}>{t("add.type")}</FormLabel>
               <Select value={field.value} onValueChange={field.onChange}>
                 <FormControl>
                   {/* w-full for the same reason as the certificate dialog:
@@ -174,7 +174,7 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
               name="redirect_status"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("add.redirectStatus")}</FormLabel>
+                  <FormLabel hint={t("add.redirectStatusHint")}>{t("add.redirectStatus")}</FormLabel>
                   <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
                     <FormControl>
                       <SelectTrigger className="w-full">

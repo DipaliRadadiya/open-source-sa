@@ -179,7 +179,8 @@
       "removeTitle": "Remove SSH key?",
       "removeDescription": "This removes “{name}” from the user's authorized keys.",
       "removeConfirm": "Remove",
-      "publicKeyHint": "The .pub half of an SSH key pair. It is safe to share — it is how the server recognises you. Never paste the private key here."
+      "publicKeyHint": "The .pub half of an SSH key pair. It is safe to share — it is how the server recognises you. Never paste the private key here.",
+      "nameHint": "A name so you can tell this key apart later — whose laptop it belongs to, for instance."
     },
     "detail": {
       "back": "System Users",
@@ -940,7 +941,9 @@
       "commandHintPath": "cron runs with a minimal PATH — use absolute paths, e.g. /usr/bin/php.",
       "commandHintLog": "Append >> /path/to/log 2>&1 to keep the output.",
       "serverTimeNote": "Runs in server time ({timezone})",
-      "runAsUnavailable": "The account list could not be loaded. Choose \"Other OS user…\" and type the username."
+      "runAsUnavailable": "The account list could not be loaded. Choose \"Other OS user…\" and type the username.",
+      "runAsHint": "The Linux account the command runs under. It decides which files the job can read and write, and it cannot be changed afterwards.",
+      "scheduleHint": "How often to run it. Pick one of the common timings, or choose Custom to write the schedule yourself."
     },
     "toast": {
       "created": "Cron job created",
@@ -1332,7 +1335,9 @@
       "banned": "{ip} banned",
       "failed": "We could not ban that address.",
       "invalidIp": "That is not a valid IP address. Ranges are not allowed here.",
-      "selfWarning": "This is the address this panel was reached from. Banning it may lock you out of the server."
+      "selfWarning": "This is the address this panel was reached from. Banning it may lock you out of the server.",
+      "ipLabelHint": "The address to block. Check it is not your own connection before you save.",
+      "jailLabelHint": "Which set of rules to ban the address under. Each jail watches one service, such as SSH or the web server."
     },
     "settings": {
       "title": "Ban rules",
@@ -1525,7 +1530,8 @@
       "onlyMyIp": "Only my IP",
       "onlyMyIpSet": "Your IP",
       "wouldLockYouOut": "That is the address you are connected from. Blocking it would lock you out of this server.",
-      "protectedLocked": "This rule was set up by the panel and is in use. Its port, protocol, action and source cannot be changed while the firewall is on — only its name."
+      "protectedLocked": "This rule was set up by the panel and is in use. Its port, protocol, action and source cannot be changed while the firewall is on — only its name.",
+      "protocolHint": "TCP carries almost everything — websites, SSH, databases. UDP is for DNS, VPNs and some game servers."
     },
     "quick": {
       "title": "Quick add",
@@ -2376,7 +2382,8 @@
         "charsetHint": "Which characters the database can store. UTF8 handles every language and emoji — pick it unless something needs otherwise.",
         "collationHint": "The language rules used to sort and compare text. It follows from the encoding."
       },
-      "accessHint": "Which machines this user may connect from. Only this server is the safest answer, and the right one for a site hosted here. Avoid anywhere unless you genuinely need remote access."
+      "accessHint": "Which machines this user may connect from. Only this server is the safest answer, and the right one for a site hosted here. Avoid anywhere unless you genuinely need remote access.",
+      "engineHint": "Which database software this runs on. It cannot be changed afterwards — moving a database to another engine means creating it again."
     },
     "access": {
       "localhost": {
@@ -2485,7 +2492,9 @@
       "testFailed": "The test could not be run.",
       "action": "Connection",
       "howHint": "How a program reaches this database. A socket is faster but only works from this server. TCP/IP works from anywhere this user is allowed to connect from.",
-      "socketPathHint": "The file a program on this server connects through instead of a network port. Leave the default unless the database was installed somewhere unusual."
+      "socketPathHint": "The file a program on this server connects through instead of a network port. Leave the default unless the database was installed somewhere unusual.",
+      "hostHint": "The address a program uses to reach this database. From this same server that is localhost.",
+      "portHint": "The network port the database listens on — 3306 for MySQL and MariaDB, 5432 for PostgreSQL."
     },
     "credentials": {
       "title": "Connection details",
@@ -3333,7 +3342,9 @@
           "307": "307 — Temporary, keeps the method",
           "308": "308 — Permanent, keeps the method"
         },
-        "redirectToHint": "The address visitors are sent to instead. Use this when a domain should point at another one rather than serve its own site."
+        "redirectToHint": "The address visitors are sent to instead. Use this when a domain should point at another one rather than serve its own site.",
+        "typeHint": "Primary is the site's main address. Alias serves the same site at a second address. Redirect sends visitors somewhere else instead.",
+        "redirectStatusHint": "301 says the move is permanent, so search engines update their records and visitors' browsers remember it. 302 says it is temporary."
       },
       "type": {
         "alias": "Alias (same site, second name)",
@@ -3715,7 +3726,8 @@
       },
       "targetDialog": {
         "pathLabel": "Path",
-        "rootPlaceholder": "Site root"
+        "rootPlaceholder": "Site root",
+        "pathLabelHint": "Where to put it, counted from the top of the site's folder."
       },
       "rename": {
         "title": "Rename or move \"{name}\"",
@@ -4840,7 +4852,9 @@
       "locale": "The language the installed site is set up in. It does not change this panel’s language.",
       "language": "The language the installed site is set up in. It does not change this panel’s language.",
       "short_name": "A short identifier used inside the application. Letters and numbers only, no spaces."
-    }
+    },
+    "branchHint": "The branch we deploy from. Pushing to any other branch leaves this site as it is.",
+    "repositoryHint": "Where this site's code lives. Pick one from the connected account above."
   },
   "panelUpdate": {
     "title": "Panel update",
@@ -5374,7 +5388,8 @@
         "filesOnly": "This site has no database, so only its files will be backed up."
       },
       "automaticHint": "Runs the backup on a schedule instead of only when you press the button.",
-      "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not."
+      "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not.",
+      "databaseExcludesHint": "Databases to leave out of the backup, one per line. Useful for caches and anything you can rebuild."
     },
     "history": {
       "allApplications": "All sites",

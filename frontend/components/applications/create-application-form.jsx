@@ -1781,7 +1781,7 @@ export function CreateApplicationForm({
                                     leaves every input's right edge aligned with
                                     the Branch field below. */}
                                 <div className="flex min-h-7 items-center justify-between gap-2">
-                                  <FormLabel className="min-w-0">
+                                  <FormLabel className="min-w-0" hint={t("repositoryHint")}>
                                     {t("repository")}
                                   </FormLabel>
                                   {/* Both actions read "Refresh"; the accessible
@@ -1853,7 +1853,7 @@ export function CreateApplicationForm({
                                 data-field-name="branch"
                                 className="min-w-0 @2xl:col-span-2"
                               >
-                                <FormLabel>{t("branch")}</FormLabel>
+                                <FormLabel hint={t("branchHint")}>{t("branch")}</FormLabel>
                                 <ReasonTooltip
                                   reason={
                                     !repository
@@ -1923,7 +1923,7 @@ export function CreateApplicationForm({
                             name="branch"
                             render={({ field }) => (
                               <FormItem data-field-name="branch" className="min-w-0">
-                                <FormLabel>{t("branch")}</FormLabel>
+                                <FormLabel hint={t("branchHint")}>{t("branch")}</FormLabel>
                                 <FormControl>
                                   <Input
                                     placeholder={t("branchPlaceholder")}

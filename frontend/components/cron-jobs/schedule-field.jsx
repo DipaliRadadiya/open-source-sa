@@ -121,7 +121,7 @@ export function ScheduleField({ form, presets, timezone }) {
           {/* Required like every other field it sits with: the form refuses to
               submit without a schedule, and the only way to learn that was to
               press Create and be told. */}
-          <FormLabel required>{t("form.schedule")}</FormLabel>
+          <FormLabel required hint={t("form.scheduleHint")}>{t("form.schedule")}</FormLabel>
           <Select value={selected} onValueChange={onPreset}>
             <FormControl>
               <SelectTrigger className="w-full">
