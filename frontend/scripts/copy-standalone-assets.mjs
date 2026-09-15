@@ -14,9 +14,11 @@
  * worked because the systemd unit happens to copy them in ExecStartPre; a
  * second install with a plainer unit showed blank rows and a green build.
  *
- * Running it from `postbuild` means `npm run build` produces something that
- * runs, rather than something that runs on the one machine configured to
- * finish the job.
+ * Chained onto `build` with `&&` rather than living in `postbuild`, because
+ * `npm run build --ignore-scripts` skips lifecycle hooks silently — and the
+ * documented restart for this panel is `npm ci --ignore-scripts && npm run
+ * build`. A hook would have reproduced the same invisible failure it exists to
+ * prevent, on the exact command most likely to be used.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -27,7 +29,7 @@ const standalone = path.join(root, ".next", "standalone");
 // Not a standalone build — `next start` serves both directories itself, and
 // there is nothing to copy to.
 if (!fs.existsSync(standalone)) {
-  console.log("postbuild: no .next/standalone — nothing to copy");
+  console.log("build: no .next/standalone — nothing to copy");
   process.exit(0);
 }
 
@@ -38,7 +40,7 @@ const copies = [
 
 for (const { from, to } of copies) {
   if (!fs.existsSync(from)) {
-    console.log(`postbuild: ${path.relative(root, from)} does not exist — skipped`);
+    console.log(`build: ${path.relative(root, from)} does not exist — skipped`);
     continue;
   }
   // Replaced rather than merged: a file deleted from `public` between builds
@@ -47,5 +49,5 @@ for (const { from, to } of copies) {
   fs.cpSync(from, to, { recursive: true });
 
   const count = fs.readdirSync(from, { recursive: true }).length;
-  console.log(`postbuild: ${path.relative(root, from)} → ${path.relative(root, to)} (${count} entries)`);
+  console.log(`build: ${path.relative(root, from)} → ${path.relative(root, to)} (${count} entries)`);
 }

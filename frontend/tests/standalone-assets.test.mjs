@@ -18,11 +18,19 @@ test("a standalone build copies public/ and .next/static into itself", () => {
    * been enough, and the build was green.
    */
   assert.match(config, /output:\s*['"]standalone['"]/, "the premise of this test");
-  assert.equal(
-    pkg.scripts?.postbuild,
-    "node scripts/copy-standalone-assets.mjs",
-    "npm run build must leave a standalone that can serve its own assets",
+  /*
+   * Chained onto `build`, NOT a `postbuild` hook. `npm run build
+   * --ignore-scripts` skips lifecycle hooks without a word, and the documented
+   * restart for this panel is `npm ci --ignore-scripts && npm run build` — so a
+   * hook reproduces the silent failure it exists to prevent, on the very
+   * command most likely to run it.
+   */
+  assert.match(
+    pkg.scripts?.build ?? "",
+    /next build && node scripts\/copy-standalone-assets\.mjs/,
+    "the copy must be part of the build command, not a skippable hook",
   );
+  assert.equal(pkg.scripts?.postbuild, undefined, "one mechanism, not two");
   assert.equal(fs.existsSync("scripts/copy-standalone-assets.mjs"), true);
 });
 
