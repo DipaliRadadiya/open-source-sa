@@ -18,6 +18,7 @@ import { Logo } from "@/components/logo";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { VisitSiteLink } from "@/components/applications/visit-site-link";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
+import { SidebarLevelTransition } from "@/components/sections/sidebar-level-transition";
 import { NavIcon } from "@/components/nav-icon";
 import {
   Sidebar,
@@ -196,6 +197,10 @@ export function AppSidebar({ items }) {
         </SidebarGroup>
       ) : null}
       <SidebarContent className="gap-0 py-2">
+        {/* Keyed on the level AND the application id: moving from one site
+            straight to another is also a level change to the person doing it,
+            even though `currentPanel` stays "application" throughout. */}
+        <SidebarLevelTransition level={insideApplication ? `application:${applicationId}` : "server"}>
         {groups.map((group) => (
           <SidebarGroup key={group.key} className="py-1">
             {group.key && (
@@ -240,6 +245,7 @@ export function AppSidebar({ items }) {
             </SidebarMenu>
           </SidebarGroup>
         ))}
+        </SidebarLevelTransition>
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
