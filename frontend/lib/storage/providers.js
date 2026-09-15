@@ -248,11 +248,14 @@ export function describeDestination(destination) {
  * backend would apply anyway. Without this the FTP TLS toggle renders as off
  * on first paint and then saves as on, which tells the user the opposite of
  * what will happen.
+ *
+ * Every other field starts as an empty string rather than absent: the renderer
+ * spreads the field straight onto the input, so a missing key makes React
+ * mount it uncontrolled and adopt it on the first keystroke. `cleanConfig`
+ * strips the blanks again before they are sent.
  */
 export function defaultConfig(provider) {
   return Object.fromEntries(
-    fieldsFor(provider)
-      .filter((f) => f.default !== undefined)
-      .map((f) => [f.name, f.default]),
+    fieldsFor(provider).map((f) => [f.name, f.default !== undefined ? f.default : ""]),
   );
 }

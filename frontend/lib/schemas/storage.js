@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { fieldsFor, isRequired, providerForPreset } from "@/lib/storage/providers";
+// Relative, not `@/`: the alias is a bundler feature, so a file that uses it
+// cannot be imported by `node --test`. This schema had no test for exactly
+// that reason, and shipped a create form whose button did nothing.
+import { fieldsFor, isRequired, providerForPreset } from "../storage/providers.js";
 
 export const storageDestinationSchema = z
   .object({
@@ -167,12 +170,33 @@ function configSchemaFor(preset, { requireSecrets = true } = {}) {
     const required = isRequired(field, preset) && (requireSecrets || field.kind !== "secret");
 
     if (required) {
-      // `.min(1)` on the base string type, expressed as a refinement so it
-      // applies uniformly to the union-typed fields too.
-      schema = schema.refine(
-        (v) => v !== undefined && v !== null && String(v).trim() !== "",
-        `required_${field.name}`,
-      );
+      /*
+       * Emptiness is judged BEFORE the field's own rules, and stops there.
+       *
+       * Chaining a refinement after the base type gave the wrong answer twice
+       * over. An untouched field is `undefined`, which `z.string()` rejects
+       * before any refinement runs, so the user read Zod's own "Invalid input:
+       * expected string, received undefined" — in English, on a panel with
+       * eight locales. Seeding the form with "" moved the failure rather than
+       * fixing it: "" fails the bucket-name pattern, so a field someone simply
+       * had not filled in was told it may only contain letters, numbers, dots,
+       * dashes and underscores.
+       *
+       * `requiredField` rather than `required_<name>`: these names are the
+       * API's snake_case — `access_key`, `service_account_json` — and the
+       * `required_*` catalogue is camelCase. FormMessage builds "Bucket is
+       * required" from the label the field already carries.
+       */
+      const rules = schema;
+      schema = z.any().superRefine((value, ctx) => {
+        if (String(value ?? "").trim() === "") {
+          ctx.addIssue({ code: "custom", message: "requiredField" });
+          return;
+        }
+        const parsed = rules.safeParse(value);
+        // Something WAS typed, so the field's own rule is the useful answer.
+        if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue(issue);
+      });
     } else {
       schema = schema.optional().or(z.literal(""));
     }
@@ -183,12 +207,22 @@ function configSchemaFor(preset, { requireSecrets = true } = {}) {
   return z.object(shape).passthrough();
 }
 
+/*
+ * No `preset` key, and that is the whole bug this once had.
+ *
+ * The preset is not a form value — it lives in component state, because it
+ * selects the SCHEMA and a resolver cannot be rebuilt from a value it is
+ * validating. Declaring it here anyway made every submit fail on a field the
+ * form never held and no input ever renders: Zod raised "required" at path
+ * `preset`, react-hook-form had nowhere to show it, and the Add button did
+ * nothing at all, for every provider, with no error and no request. The
+ * preset is already accounted for — it is the ARGUMENT to this function.
+ */
 export function createStorageDestinationSchema(preset) {
   const provider = providerForPreset(preset);
 
   return z
     .object({
-      preset: z.string(),
       name: nameField,
       prefix: prefixField,
       config: configSchemaFor(preset),

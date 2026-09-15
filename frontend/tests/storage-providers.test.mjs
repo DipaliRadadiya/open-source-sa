@@ -90,7 +90,15 @@ test("FTP defaults to TLS and passive mode", () => {
   // The default must match what the backend applies, or the toggle renders off
   // on first paint and saves as on — telling the user the opposite of what
   // will happen.
-  assert.deepEqual(defaultConfig("ftp"), { ssl: true, passive: true });
+  assert.deepEqual(defaultConfig("ftp"), {
+    host: "",
+    port: "",
+    username: "",
+    password: "",
+    root: "",
+    ssl: true,
+    passive: true,
+  });
 
   const ssl = fieldsFor("ftp").find((f) => f.name === "ssl");
   // Turning it off sends the password and every backup in the clear, so the
@@ -98,8 +106,27 @@ test("FTP defaults to TLS and passive mode", () => {
   assert.equal(ssl.warnWhenOff, "plainFtpWarning");
 });
 
-test("S3 has no config defaults to apply", () => {
-  assert.deepEqual(defaultConfig("s3"), {});
+test("every field a provider renders starts with a value", () => {
+  /*
+   * Not just the toggles. The renderer spreads the field straight onto the
+   * input, so a key that is missing from the defaults makes React mount that
+   * input uncontrolled and adopt it on the first keystroke — and left the
+   * value `undefined` at submit, where `z.string()` rejected it before the
+   * "this is required" refinement could run. What the user saw for it was
+   * Zod's own English sentence.
+   */
+  for (const provider of ["s3", "ftp", "sftp", "webdav", "google_drive"]) {
+    const defaults = defaultConfig(provider);
+    assert.deepEqual(
+      Object.keys(defaults).sort(),
+      fieldsFor(provider).map((f) => f.name).sort(),
+      `${provider} leaves a rendered field with no initial value`,
+    );
+  }
+
+  // A declared default still wins over the blank.
+  assert.equal(defaultConfig("ftp").ssl, true);
+  assert.equal(defaultConfig("s3").bucket, "");
 });
 
 test("rotation asks for the credentials this provider actually has", () => {
