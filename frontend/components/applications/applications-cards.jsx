@@ -8,6 +8,7 @@ import { ApplicationRowActions } from "@/components/applications/application-row
 import { ApplicationStatusBadge, ApplicationStatusNotes } from "@/components/applications/application-status-badge";
 import { DomainText } from "@/components/ui/domain-text";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
+import { gitProviderFor } from "@/lib/applications/git-provider";
 
 /**
  * The sites list on a narrow screen.
@@ -25,7 +26,12 @@ import { SiteTypeLogo } from "@/components/applications/site-type-logo";
  * The globe icon is dropped here for the same reason — it is identical on every
  * row, so it spends 44px saying nothing.
  */
-export function ApplicationsCards({ applications = [], canManage = false, canMagicLogin = false }) {
+export function ApplicationsCards({
+  applications = [],
+  canManage = false,
+  canMagicLogin = false,
+  gitProviders = new Map(),
+}) {
   const t = useTranslations("applications");
   const format = useFormatter();
 
@@ -36,7 +42,11 @@ export function ApplicationsCards({ applications = [], canManage = false, canMag
           <div className="flex items-start justify-between gap-2">
             {/* The logo the table now shows, so the narrow layout identifies a
                 site the same way the wide one does rather than by name alone. */}
-            <SiteTypeLogo name={application.site_type} className="mt-0.5" />
+            <SiteTypeLogo
+              name={application.site_type}
+              provider={gitProviderFor(application, gitProviders)}
+              className="mt-0.5"
+            />
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                 <Link

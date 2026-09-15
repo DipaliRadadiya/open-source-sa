@@ -5,6 +5,8 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplications, getSiteTypes } from "@/lib/applications/get-applications";
 import { getDatabaseCounts } from "@/lib/databases/get-databases";
+import { getGitAccounts } from "@/lib/git/get-git";
+import { providersByAccountId } from "@/lib/applications/git-provider";
 import { sitesMissingDatabase } from "@/lib/backups/database-availability";
 import { ApplicationsTable } from "@/components/applications/applications-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -45,6 +47,31 @@ export default async function ApplicationsPage({ searchParams }) {
   const dbCounts = can(permissions, "database", "view")
     ? await getDatabaseCounts()
     : { counts: null, known: false };
+
+  /*
+   * Only to learn which service each git site came from.
+   *
+   * A site built from a connected account carries `git_account_id` and a
+   * `repository` of "owner/repo" — no host anywhere in the payload — so the
+   * accounts list is the only thing that can name GitHub from GitLab. A
+   * public-URL site needs none of this; its address says so itself.
+   *
+   * Skipped entirely when no row needs it, and a failure costs the badges
+   * rather than the page: those rows keep the generic git mark, which is what
+   * every one of them showed until now. Same for a reader without the
+   * integration permission — the request would 403 and the answer is the same.
+   */
+  const needsGitAccounts =
+    can(permissions, "git", "view") &&
+    result.applications?.some(
+      (application) =>
+        application.site_type === "git" &&
+        application.git_account_id !== null &&
+        application.git_account_id !== undefined,
+    );
+  const gitProviders = needsGitAccounts
+    ? providersByAccountId(await getGitAccounts().then((r) => r.accounts ?? []).catch(() => []))
+    : new Map();
   if (result.failed) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
 
 
@@ -82,6 +109,7 @@ export default async function ApplicationsPage({ searchParams }) {
         // The catalog here is unfiltered by site type, so unlike the
         // Dashboard the row has to check `site_type` itself.
         canMagicLogin={can(appPermissions, "app_magic_login", "manage", "application")}
+        gitProviders={gitProviders}
         missingDatabase={sitesMissingDatabase(
           result.applications,
           siteTypes,
