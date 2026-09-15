@@ -3261,7 +3261,24 @@
       "stopped": "プロセスを停止しました。",
       "restarted": "プロセスを再起動しました。",
       "failed": "プロセスを変更できませんでした。",
-      "deployToStart": "このサイトは最初のデプロイが成功した後に起動します。"
+      "deployToStart": "このサイトは最初のデプロイが成功した後に起動します。",
+      "supervisorPm2": "PM2（引き継ぎ）",
+      "workers": "プロセス",
+      "workersCount": "{total}",
+      "workersDegraded": "{total} 中 {online} 稼働",
+      "convert": {
+        "action": "systemd ユニットに切り替える",
+        "title": "「{name}」を systemd ユニットに切り替えますか？",
+        "description": "このサイトは旧パネルの PM2 で稼働しています。systemd ユニットへの切り替えではアプリケーションが再起動します。",
+        "restarts": "アプリケーションが再起動します。通常は数秒で復帰します。",
+        "rollback": "切り替え後に応答しない場合は、すぐに PM2 へ戻します。失敗してもサイトは稼働したままです。",
+        "gains": "ユニットにすると、専用のメモリ上限、正確なメトリクス、ファイルと同じ場所のログが得られます。",
+        "confirm": "切り替えて再起動",
+        "converting": "切り替え中…",
+        "cancel": "キャンセル",
+        "done": "「{name}」は systemd ユニットで稼働するようになりました。",
+        "failed": "このアプリケーションを切り替えられませんでした。"
+      }
     },
     "domains": {
       "title": "ドメインと SSL",

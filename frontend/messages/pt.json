@@ -3261,7 +3261,24 @@
       "stopped": "O processo foi parado.",
       "restarted": "O processo foi reiniciado.",
       "failed": "Não foi possível alterar o processo.",
-      "deployToStart": "Este site inicia após o primeiro deploy bem-sucedido."
+      "deployToStart": "Este site inicia após o primeiro deploy bem-sucedido.",
+      "supervisorPm2": "PM2 (adotado)",
+      "workers": "Processos",
+      "workersCount": "{total}",
+      "workersDegraded": "{online} de {total} online",
+      "convert": {
+        "action": "Mudar para uma unidade systemd",
+        "title": "Mudar «{name}» para uma unidade systemd?",
+        "description": "Este site ainda é executado pelo PM2 do painel anterior. Mudá-lo para uma unidade systemd reinicia a aplicação.",
+        "restarts": "A aplicação reinicia. Normalmente volta em poucos segundos.",
+        "rollback": "Se depois não responder, repomo-la logo no PM2 — por isso uma falha deixa o seu site no ar.",
+        "gains": "Uma unidade dá a este site o seu próprio limite de memória, métricas exactas e os registos junto dos ficheiros.",
+        "confirm": "Mudar e reiniciar",
+        "converting": "A mudar…",
+        "cancel": "Cancelar",
+        "done": "«{name}» passa a correr sob uma unidade systemd.",
+        "failed": "Não foi possível mudar esta aplicação."
+      }
     },
     "domains": {
       "title": "Domínios e SSL",

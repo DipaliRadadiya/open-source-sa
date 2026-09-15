@@ -3261,7 +3261,24 @@
       "stopped": "Le processus a été arrêté.",
       "restarted": "Le processus a été redémarré.",
       "failed": "Nous n'avons pas pu modifier le processus.",
-      "deployToStart": "Ce site démarre après son premier déploiement réussi."
+      "deployToStart": "Ce site démarre après son premier déploiement réussi.",
+      "supervisorPm2": "PM2 (repris)",
+      "workers": "Processus",
+      "workersCount": "{total}",
+      "workersDegraded": "{online} sur {total} en ligne",
+      "convert": {
+        "action": "Passer à une unité systemd",
+        "title": "Passer « {name} » à une unité systemd ?",
+        "description": "Ce site est encore géré par le PM2 de l’ancien panneau. Le passage à une unité systemd redémarre l’application.",
+        "restarts": "L’application redémarre. Elle est généralement de retour en quelques secondes.",
+        "rollback": "Si elle ne répond pas ensuite, nous la remettons immédiatement sous PM2 — un échec laisse donc votre site en ligne.",
+        "gains": "Une unité donne à ce site sa propre limite mémoire, des métriques exactes et ses journaux à côté de ses fichiers.",
+        "confirm": "Passer et redémarrer",
+        "converting": "Passage…",
+        "cancel": "Annuler",
+        "done": "« {name} » tourne désormais sous une unité systemd.",
+        "failed": "Impossible de basculer cette application."
+      }
     },
     "domains": {
       "title": "Domaines et SSL",

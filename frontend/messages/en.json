@@ -3261,7 +3261,24 @@
       "stopped": "The process was stopped.",
       "restarted": "The process was restarted.",
       "failed": "We could not change the process.",
-      "deployToStart": "This site starts after its first successful deployment."
+      "deployToStart": "This site starts after its first successful deployment.",
+      "supervisorPm2": "PM2 (adopted)",
+      "workers": "Processes",
+      "workersCount": "{total}",
+      "workersDegraded": "{online} of {total} online",
+      "convert": {
+        "action": "Switch to a systemd unit",
+        "title": "Switch “{name}” to a systemd unit?",
+        "description": "This site is still run by the previous panel’s PM2. Moving it to a systemd unit restarts the application.",
+        "restarts": "The application restarts. It is usually back within a few seconds.",
+        "rollback": "If it does not answer afterwards, we put it straight back under PM2 — so a failure leaves your site up.",
+        "gains": "A unit gives this site its own memory limit, accurate per-site metrics and its logs beside the files.",
+        "confirm": "Switch and restart",
+        "converting": "Switching…",
+        "cancel": "Cancel",
+        "done": "“{name}” now runs under a systemd unit.",
+        "failed": "We could not switch this application."
+      }
     },
     "domains": {
       "title": "Domains and SSL",

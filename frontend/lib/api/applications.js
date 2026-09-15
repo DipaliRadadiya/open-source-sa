@@ -26,6 +26,18 @@ export function controlApplicationProcess(id, action) {
 }
 
 /**
+ * Move an adopted application off the old panel's PM2 and onto a systemd unit.
+ *
+ * Its own endpoint rather than a field on update, because it restarts the
+ * application — one supervisor has to release the port before the other can
+ * bind it. The API rolls back to PM2 if the unit will not serve a page, so a
+ * failure here means the site is still up, on the supervisor it started on.
+ */
+export function convertApplicationSupervisor(id) {
+  return api.post(`/applications/${id}/supervisor/convert`);
+}
+
+/**
  * Measure this site on disk, now, and store the result.
  *
  * Nothing else computes it from scratch: file operations queue a re-measure
