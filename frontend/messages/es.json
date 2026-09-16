@@ -2027,7 +2027,17 @@
       "loadFailed": "No se pudo leer el estado de ionCube Loader.",
       "removeConfirmTitle": "¿Eliminar ionCube Loader?",
       "removeConfirmBody": "Cualquier sitio en PHP {version} que ejecute software cifrado dejará de funcionar hasta que se vuelva a instalar.",
-      "hint": "Un archivo de código cerrado de ionCube, no un paquete apt — por eso aparece aquí y no en la lista de extensiones de arriba."
+      "hint": "Un archivo de código cerrado de ionCube, no un paquete apt: por eso tiene su propia pestaña en lugar de una fila en Extensiones.",
+      "onShort": "Activado",
+      "offShort": "Desactivado",
+      "unavailableShort": "No disponible",
+      "installingShort": "Instalando",
+      "removingShort": "Eliminando",
+      "failedShort": "Falló"
+    },
+    "tabs": {
+      "extensions": "Extensiones",
+      "ioncube": "ionCube"
     }
   },
   "node": {

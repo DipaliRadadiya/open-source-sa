@@ -2027,7 +2027,17 @@
       "loadFailed": "The ionCube Loader status could not be read.",
       "removeConfirmTitle": "Remove the ionCube Loader?",
       "removeConfirmBody": "Any site on PHP {version} running encrypted software will stop working until it is installed again.",
-      "hint": "A closed-source file from ionCube, not an apt package — that is why it is here and not in the extensions list above."
+      "hint": "A closed-source file from ionCube, not an apt package — that is why it has its own tab rather than a row in Extensions.",
+      "onShort": "On",
+      "offShort": "Off",
+      "unavailableShort": "Unavailable",
+      "installingShort": "Installing",
+      "removingShort": "Removing",
+      "failedShort": "Failed"
+    },
+    "tabs": {
+      "extensions": "Extensions",
+      "ioncube": "ionCube"
     }
   },
   "node": {

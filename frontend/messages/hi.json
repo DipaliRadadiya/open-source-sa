@@ -2027,7 +2027,17 @@
       "loadFailed": "ionCube Loader की स्थिति पढ़ी नहीं जा सकी।",
       "removeConfirmTitle": "ionCube Loader हटाएँ?",
       "removeConfirmBody": "PHP {version} पर एन्क्रिप्ट किया हुआ सॉफ़्टवेयर चलाने वाली कोई भी साइट तब तक काम करना बंद कर देगी जब तक कि यह दोबारा इंस्टॉल नहीं हो जाता।",
-      "hint": "ionCube की ओर से आने वाली बंद-सोर्स फ़ाइल, apt पैकेज नहीं — इसीलिए यह ऊपर extensions की सूची में नहीं है।"
+      "hint": "ionCube की एक क्लोज़्ड-सोर्स फ़ाइल, apt पैकेज नहीं — इसीलिए इसका अपना टैब है, एक्सटेंशन में एक पंक्ति नहीं।",
+      "onShort": "चालू",
+      "offShort": "बंद",
+      "unavailableShort": "उपलब्ध नहीं",
+      "installingShort": "इंस्टॉल हो रहा है",
+      "removingShort": "हटाया जा रहा है",
+      "failedShort": "विफल"
+    },
+    "tabs": {
+      "extensions": "एक्सटेंशन",
+      "ioncube": "ionCube"
     }
   },
   "node": {

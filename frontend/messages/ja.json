@@ -2027,7 +2027,17 @@
       "loadFailed": "ionCube Loader の状態を読み取れませんでした。",
       "removeConfirmTitle": "ionCube Loader を削除しますか?",
       "removeConfirmBody": "PHP {version} で動作している暗号化ソフトウェアをご利用のサイトは、再インストールするまで動作しなくなります。",
-      "hint": "ionCube のクローズドソースのファイルであり、apt パッケージではないため、上記の拡張機能一覧ではなくこちらに表示されています。"
+      "hint": "apt パッケージではなく、ionCube のクローズドソースファイルです。そのため拡張機能の一覧の行ではなく、独立したタブになっています。",
+      "onShort": "オン",
+      "offShort": "オフ",
+      "unavailableShort": "利用不可",
+      "installingShort": "インストール中",
+      "removingShort": "削除中",
+      "failedShort": "失敗しました"
+    },
+    "tabs": {
+      "extensions": "拡張機能",
+      "ioncube": "ionCube"
     }
   },
   "node": {

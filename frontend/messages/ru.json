@@ -2027,7 +2027,17 @@
       "loadFailed": "Не удалось получить статус ionCube Loader.",
       "removeConfirmTitle": "Удалить ionCube Loader?",
       "removeConfirmBody": "Любой сайт на PHP {version}, использующий зашифрованное ПО, перестанет работать до повторной установки.",
-      "hint": "Закрытый файл от ionCube, а не пакет apt — поэтому он находится здесь, а не в списке расширений выше."
+      "hint": "Закрытый файл от ionCube, а не пакет apt — поэтому у него отдельная вкладка, а не строка в разделе «Расширения».",
+      "onShort": "Вкл.",
+      "offShort": "Выкл.",
+      "unavailableShort": "Недоступно",
+      "installingShort": "Установка",
+      "removingShort": "Удаление",
+      "failedShort": "Ошибка"
+    },
+    "tabs": {
+      "extensions": "Расширения",
+      "ioncube": "ionCube"
     }
   },
   "node": {

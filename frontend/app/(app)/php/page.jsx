@@ -10,6 +10,7 @@ import { VersionSummary } from "@/components/php/version-summary";
 import { InstallVersionButton } from "@/components/runtime/install-version-button";
 import { ExtensionsCard } from "@/components/php/extensions-card";
 import { IonCubeCard } from "@/components/php/ioncube-card";
+import { PhpVersionTabs } from "@/components/php/version-tabs";
 import { IniEditor } from "@/components/php/ini-editor";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -187,30 +188,41 @@ export default async function PhpPage({ searchParams }) {
             // announced "Install failed" — a failure that had not happened.
             <RuntimeStatusNotice version={current} versionLabel={selected} namespace="php" />
           ) : (
-            <>
-              {/* Still conditional: a failed extensions fetch rendered nothing
-                  before and should keep doing so, rather than an empty list
-                  claiming this PHP has no extensions. */}
-              {extensions ? (
-                <ExtensionsCard
+            /*
+             * One at a time, not stacked. The extensions list is ~96 rows and
+             * anything under it starts a thousand pixels down — so whichever
+             * section came second was the one nobody found.
+             */
+            <PhpVersionTabs
+              initial={sp?.tab}
+              extensionCount={extensions?.extensions?.length}
+              ionCubeState={ioncube}
+              ionCubeFailed={ionCubeFailed}
+              extensions={
+                /* Still conditional: a failed extensions fetch rendered nothing
+                   before and should keep doing so, rather than an empty list
+                   claiming this PHP has no extensions. */
+                extensions ? (
+                  <ExtensionsCard
+                    version={selected}
+                    extensions={extensions.extensions}
+                    panelRequired={extensions.panel_required}
+                    canManage={canManage}
+                  />
+                ) : null
+              }
+              ioncube={
+                /* Rendered even when its own fetch failed — the card says so,
+                   where returning nothing would read as a feature that is not
+                   there. */
+                <IonCubeCard
                   version={selected}
-                  extensions={extensions.extensions}
-                  panelRequired={extensions.panel_required}
+                  ioncube={ioncube}
+                  failed={ionCubeFailed}
                   canManage={canManage}
                 />
-              ) : null}
-              {/* Under the extensions list, because it reads as the exception
-                  to it: everything above is an apt package, this one is not.
-                  Rendered even when its own fetch failed — the card says so,
-                  where returning nothing would read as a feature that is not
-                  there. */}
-              <IonCubeCard
-                version={selected}
-                ioncube={ioncube}
-                failed={ionCubeFailed}
-                canManage={canManage}
-              />
-            </>
+              }
+            />
           )}
         </div>
       )}
