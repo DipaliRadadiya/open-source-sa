@@ -202,12 +202,30 @@ export function SshForm({
                         value: "key",
                         label: t("signIn.option.key.label"),
                         hint: t("signIn.option.key.hint"),
-                        // The API refuses this with a 422 when no key is present
-                        // (its lockout guard). Blocking it here turns a rejection
-                        // you discover after confirming into a precondition you
-                        // can read before choosing — and names the fix.
+                        /*
+                         * The API refuses this with a 422 when no key is present
+                         * (its lockout guard). Blocking it here turns a rejection
+                         * you discover after confirming into a precondition you
+                         * can read before choosing — and names the fix.
+                         *
+                         * Keyed on the SAVED setting, not on `field.value`.
+                         *
+                         * `field.value` is the live radio state, so on a server
+                         * already set to key-only the option started enabled,
+                         * disabled itself the instant you picked "password", and
+                         * then could not be picked back — you could leave the
+                         * choice but not return to it without reloading the page.
+                         * Reported exactly that way.
+                         *
+                         * The lockout risk is a fact about the server, and it does
+                         * not change because someone clicked a radio button. Using
+                         * `defaults` means the option's availability holds still
+                         * while the form is being edited, which is the only way a
+                         * choice between two radios can work.
+                         */
                         disabledReason:
-                          security?.has_ssh_key === false && field.value
+                          security?.has_ssh_key === false &&
+                          defaults.password_authentication
                             ? t("signIn.option.key.noKey")
                             : null,
                       },
