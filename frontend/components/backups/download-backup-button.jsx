@@ -3,7 +3,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
-import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
+import { BACKUP_IN_FLIGHT, backupHasArchive } from "@/lib/schemas/backup";
 import { fetchBackupDownload } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
   const format = useFormatter();
   const [pending, setPending] = useState(false);
 
-  // Only a completed run has an archive. A run still in flight has not written
+  // Only a verified run has an archive. A run still in flight has not written
   // one yet, and a failed run never will — the API answers 422
   // download_no_artifact for both, and meeting that after a click is worse
   // than a button that says why up front.
@@ -36,11 +36,18 @@ export function DownloadBackupButton({ backup, canDownload, label = false }) {
   // partial archive to hand back, so the button could only ever have produced
   // a 422. `reason_title` is the run's own explanation of why it failed, which
   // is a better thing to read here than anything this file could word.
+  //
+  // The check itself was then written as `status !== "completed"`, and there is
+  // no "completed" backup — the success state is `verified`. So this blocked
+  // every backup that had ever worked and told the reader it had failed, beside
+  // a row whose own badge said Complete. Reported from exactly that screenshot.
+  // Asking the shared predicate rather than a literal is what stops the two
+  // screens drifting apart again.
   const blocker = !canDownload
     ? t("blocked.noPermission")
     : BACKUP_IN_FLIGHT.includes(backup.status)
       ? t("blocked.inFlight")
-      : backup.status !== "completed"
+      : !backupHasArchive(backup.status)
         ? (backup.reason_title ?? t("blocked.noArtifact"))
         : null;
 

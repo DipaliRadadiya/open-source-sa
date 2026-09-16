@@ -42,8 +42,28 @@ export function restorableTypes(backupType) {
   return [];
 }
 
+/**
+ * The one status that means the run finished and left an archive behind.
+ *
+ * There is no "completed" backup. `BackupStatus` on the backend is
+ * pending | running | verifying | verified | failed, and `verified` is the
+ * success state — the run wrote an archive and then proved it could read it
+ * back. The download button tested `status !== "completed"`, which is true of
+ * every backup that has ever existed, so Download was blocked on all of them
+ * and said the backup had failed while the row beside it said Complete.
+ *
+ * Named once here because two screens ask the same question. A string literal
+ * at each call site is how they came to disagree.
+ */
+export const BACKUP_SUCCEEDED = "verified";
+
 /** Only a verified backup can be restored — the first guard in the request. */
-export const RESTORABLE_STATUS = "verified";
+export const RESTORABLE_STATUS = BACKUP_SUCCEEDED;
+
+/** Whether this run left an archive to download or restore from. */
+export function backupHasArchive(status) {
+  return status === BACKUP_SUCCEEDED;
+}
 
 /** Statuses that mean a run is still in flight, so a second must not start. */
 export const BACKUP_IN_FLIGHT = ["pending", "running", "verifying"];

@@ -135,3 +135,48 @@ test("every new string is translated in all active locales", () => {
     }
   }
 });
+
+test("Download is offered on a verified backup, which is the success state", () => {
+  /*
+   * Reported from a screenshot: a row whose badge said "Complete" had a
+   * disabled Download whose tooltip said the backup had failed.
+   *
+   * The gate was `backup.status !== "completed"`. `BackupStatus` on the backend
+   * is pending | running | verifying | verified | failed — there is no
+   * "completed", so that test was true of EVERY backup and Download was blocked
+   * on all of them, including every one that had worked.
+   *
+   * Restore, two files away, used "verified" correctly the whole time. One
+   * screen asking the question with a literal and another with a different
+   * literal is how they came to disagree, so both now go through one predicate.
+   */
+  const button = fs.readFileSync("components/backups/download-backup-button.jsx", "utf8");
+  const schema = fs.readFileSync("lib/schemas/backup.js", "utf8");
+
+  assert.match(button, /!backupHasArchive\(backup\.status\)/);
+
+  /*
+   * Comments stripped before the negative assertion. The file explains the old
+   * broken expression in prose, so matching the raw source failed on the very
+   * comment documenting the fix — a test that fails on its own explanation is
+   * worse than no test, because the obvious response is to delete the words.
+   */
+  const code = button
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  assert.doesNotMatch(
+    code,
+    /status !== "completed"/,
+    "back to a status the API never sends, which blocks every working backup",
+  );
+
+  // The predicate must name a status the backend actually has.
+  const statuses = schema.match(/BACKUP_STATUSES = \[([^\]]+)\]/)[1];
+  assert.match(schema, /BACKUP_SUCCEEDED = "verified"/);
+  assert.match(statuses, /"verified"/, "the success state is not in the status list");
+  assert.doesNotMatch(statuses, /"completed"/, "completed is not a backup status");
+
+  // And restore must keep agreeing with it rather than carrying its own copy.
+  assert.match(schema, /RESTORABLE_STATUS = BACKUP_SUCCEEDED/);
+});
