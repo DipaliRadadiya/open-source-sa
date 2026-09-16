@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { Activity, Loader2, Plus, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { EngineLogo } from "@/components/databases/engine-logo";
+import { engineLogo } from "@/lib/databases/engine-logo";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { InstallConfirm } from "@/components/databases/install-confirm";
@@ -26,6 +28,59 @@ import {
  * it owns the complete lifecycle for an additional engine. Closing the install
  * confirmation must not close the only evidence that work was queued.
  */
+/**
+ * The version, without the packaging.
+ *
+ * Every engine buries the number in a different kind of noise:
+ *   PostgreSQL  "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)"  — the number twice
+ *   MariaDB     "10.11.14-MariaDB-0ubuntu0.24.04.1"      — no space at all
+ *   MongoDB     "8.0.31"                                  — already clean
+ *
+ * Splitting on a space fixed only PostgreSQL, which is what shipping the first
+ * attempt showed: MariaDB stayed three times wider than the tile it sat in.
+ * So this takes the leading dotted number, which is the answer to "which
+ * version", and leaves the full string on the tile's title.
+ */
+function shortVersion(version) {
+  if (typeof version !== "string") return null;
+  return version.match(/^\d+(?:\.\d+)*/)?.[0] ?? version.split(" ")[0] ?? null;
+}
+
+/**
+ * A logo, plus the name when the logo does not contain one.
+ *
+ * PostgreSQL's mark is the elephant alone, so a tile holding only the logo and
+ * a version number never says which engine it is. Its entry also carries its
+ * own `size` — it is square where the others are wide — which at tile scale
+ * rendered a 32px elephant beside 14px wordmarks, so the height is forced here.
+ */
+function EngineMark({ engine, status, t }) {
+  const name = t(`engines.${engine}`);
+  const wordmark = engineLogo(engine)?.wordmark;
+  return (
+    <>
+      <EngineLogo engine={engine} className="!h-4 w-auto max-w-16" />
+      {/*
+        The accessible name is assembled here, once.
+        
+        The logo images are `aria-hidden`, so a wordmark tile has no name at all
+        without the sr-only text — but on PostgreSQL, where the name is also
+        printed, having both said "PostgreSQL PostgreSQL". Caught by reading the
+        rendered text content, not by looking at it; the duplicate is invisible
+        on screen and only a screen reader would ever have met it.
+      */}
+      {wordmark ? (
+        <span className="sr-only">{status ? `${name} · ${status}` : name}</span>
+      ) : (
+        <>
+          <span className="text-xs font-medium">{name}</span>
+          {status ? <span className="sr-only">{status}</span> : null}
+        </>
+      )}
+    </>
+  );
+}
+
 export function EngineBar({ engines = [], canManage, summary }) {
   const t = useTranslations("databases");
   const router = useRouter();
@@ -63,33 +118,45 @@ export function EngineBar({ engines = [], canManage, summary }) {
     : failed.find((engine) => engine.install_message)?.install_message;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+    <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-e1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      {/*
+        One tile per engine, with the logo, rather than a run-on line of names.
+        
+        This was three names, three version strings and three green "Running"
+        badges on a single wrapping line — every part the same weight, nothing
+        grouped, and no logos at all on the page whose empty state had just been
+        given them. Reported as needing work, and it did.
+        
+        A green dot rather than a badge for the normal case: three identical
+        "Running" badges say the same thing three times and leave nothing louder
+        for the states that matter. Installing and failed keep their words.
+      */}
+      <div className="flex flex-wrap items-center gap-2">
         {running.map((engine) => (
           <span
             key={engine.engine}
-            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+            title={engine.version ?? undefined}
+            className="flex items-center gap-2 rounded-lg border bg-muted/30 px-2.5 py-1.5"
           >
-            <span className="font-medium">{t(`engines.${engine.engine}`)}</span>
-            {engine.version ? (
-              // A version is one token. Let the row wrap around it rather than
-              // splitting a distro suffix into what looks like a second value.
+            <span
+              aria-hidden
+              className="size-1.5 shrink-0 rounded-full bg-success"
+            />
+            <EngineMark engine={engine.engine} status={t("status.running")} t={t} />
+            {shortVersion(engine.version) ? (
               <span className="font-mono text-xs whitespace-nowrap text-muted-foreground">
-                {engine.version}
+                {shortVersion(engine.version)}
               </span>
             ) : null}
-            <Badge variant="success" className="font-normal">
-              {t("status.running")}
-            </Badge>
           </span>
         ))}
 
         {installing.map((engine) => (
           <span
             key={engine.engine}
-            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+            className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/5 px-2.5 py-1.5"
           >
-            <span className="font-medium">{t(`engines.${engine.engine}`)}</span>
+            <EngineMark engine={engine.engine} t={t} />
             <Badge variant="warning" className="font-normal">
               <Loader2 className="size-3 animate-spin" />
               {t("install.installing")}
@@ -100,9 +167,9 @@ export function EngineBar({ engines = [], canManage, summary }) {
         {failed.map((engine) => (
           <span
             key={engine.engine}
-            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+            className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-2.5 py-1.5"
           >
-            <span className="font-medium">{t(`engines.${engine.engine}`)}</span>
+            <EngineMark engine={engine.engine} t={t} />
             <Badge variant="destructive" className="font-normal">
               <TriangleAlert className="size-3" />
               {t("engineList.failed")}
@@ -116,6 +183,8 @@ export function EngineBar({ engines = [], canManage, summary }) {
           <p className="text-sm text-muted-foreground">{summary}</p>
         ) : null}
 
+        {/* Plain `outline`, which is now a filled button everywhere — the fix
+            went into the variant rather than into this one call site. */}
         <Button asChild variant="outline" size="sm">
           <Link href="/databases/monitor">
             <Activity className="size-4" />
