@@ -2202,7 +2202,7 @@
       "save": "Zeitplan speichern",
       "saved": "Automatische Bereinigung aktualisiert.",
       "failed": "Der Zeitplan konnte nicht gespeichert werden.",
-      "pickSomething": "Wählen Sie mindestens einen Eintrag zum Bereinigen.",
+      "pickSomething": "Wählen Sie mindestens einen Punkt zum Bereinigen aus, oder schalten Sie die automatische Bereinigung oben aus.",
       "lastRun": "Zuletzt ausgeführt {when}",
       "neverRun": "Noch nicht gelaufen.",
       "frequency": {
@@ -2593,7 +2593,8 @@
       "copyUsername": "Benutzernamen kopieren",
       "newPasswordRequired": "Neues Passwort (zum Umbenennen bei MongoDB erforderlich)",
       "nameIsFixed": "Der Name eines Datenbankbenutzers lässt sich nach dem Anlegen nicht ändern. Legen Sie stattdessen einen weiteren Benutzer an.",
-      "newPasswordRequiredHint": "MongoDB kann einen Benutzer nicht umbenennen, deshalb wird das Konto von Grund auf neu erstellt. Deshalb muss ein Passwort gesetzt werden."
+      "newPasswordRequiredHint": "MongoDB kann einen Benutzer nicht umbenennen, deshalb wird das Konto von Grund auf neu erstellt. Deshalb muss ein Passwort gesetzt werden.",
+      "passwordUnknown": "Das Panel kennt das Passwort nicht – dieses Konto stammt von einem anderen Server. Ändern Sie das Passwort, um eine Verbindungszeichenfolge zu erhalten."
     },
     "detail": {
       "size": "Größe",
@@ -3500,7 +3501,13 @@
         "replacesCurrent": "Das ersetzt das aktuelle Zertifikat ({current}). Ein hochgeladenes Zertifikat lässt sich hier nicht neu ausstellen.",
         "certificateHint": "Das Zertifikat, das Ihr Anbieter für diese Domain ausgestellt hat. Fügen Sie den gesamten Block ein, einschließlich der BEGIN- und END-Zeilen.",
         "privateKeyHint": "Der geheime Schlüssel, der zum Zertifikat gehört. Er wurde erstellt, als Sie es angefordert haben — geben Sie ihn niemals an andere weiter.",
-        "chainHint": "Die zusätzlichen Zertifikate, die Ihres zurück zu einer vertrauenswürdigen Stelle verknüpfen. Ohne sie zeigen einige Browser und Telefone eine Warnung. Ihr Anbieter liefert diese."
+        "chainHint": "Die zusätzlichen Zertifikate, die Ihres zurück zu einer vertrauenswürdigen Stelle verknüpfen. Ohne sie zeigen einige Browser und Telefone eine Warnung. Ihr Anbieter liefert diese.",
+        "servingStale": "Diese Website liefert Besuchern weiterhin ein älteres Zertifikat aus. Browser zeigen eine Sicherheitswarnung an, bis der Webserver neu geladen wird.",
+        "servingStaleDetail": "Ausgeliefert: läuft ab {served} · Auf der Festplatte: läuft ab {onDisk}",
+        "reloadWebServer": "{service} neu laden",
+        "reloaded": "Der Webserver wurde neu geladen.",
+        "reloadFailed": "Der Webserver konnte nicht neu geladen werden.",
+        "staleDomains": "{domains} steht auf diesem Zertifikat, gehört aber nicht mehr zu dieser Website. Die Verlängerung schlägt für das gesamte Zertifikat fehl, bis es neu ausgestellt wird."
       },
       "issueCertificate": "SSL-Zertifikat ausstellen",
       "description": "Namen, die diese Website erreichen, und ihr Zertifikat.",
@@ -4143,7 +4150,13 @@
           "custom": "Eigener"
         }
       },
-      "runsAsTooltip": "Läuft als {user}, nicht als der eigene Benutzer dieser Website."
+      "runsAsTooltip": "Läuft als {user}, nicht als der eigene Benutzer dieser Website.",
+      "supervisor": {
+        "missing": "Supervisor ist auf diesem Server nicht installiert. Worker laufen darunter, daher kann keiner starten, bevor er installiert ist.",
+        "install": "Supervisor installieren",
+        "installing": "Supervisor wird installiert. Das dauert einige Minuten und läuft im Hintergrund weiter.",
+        "installFailed": "Supervisor konnte nicht installiert werden."
+      }
     },
     "security": {
       "pageTitle": "Passwortschutz",

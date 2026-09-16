@@ -19,6 +19,7 @@ import {
   setForceHttps,
   deleteCertificate,
 } from "@/lib/api/domains";
+import { runServiceAction } from "@/lib/api/services";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,6 +47,10 @@ export function SslSection({
   certifiable = true,
   availableTypes = [],
   canManage = false,
+  // The panel's own web server, which is also its service key — the catalog is
+  // matched on exactly this value server-side. Null for a role that cannot read
+  // capabilities, which is why the stale alert falls back to a link.
+  webServer = null,
 }) {
   const t = useTranslations("applications.domains");
   const router = useRouter();
@@ -54,6 +59,29 @@ export function SslSection({
   const [issueOpen, setIssueOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [reloading, setReloading] = useState(false);
+
+  /*
+   * Reload the web server so it picks up the certificate already on disk.
+   *
+   * `reload` rather than `restart`: it re-reads configuration and certificates
+   * without dropping connections, and it stays available on the web server even
+   * though that unit is protected — the panel would go down with a stop.
+   */
+  async function reloadWebServer() {
+    setReloading(true);
+    try {
+      await runServiceAction(webServer, "reload");
+      toast.success(t("ssl.reloaded"));
+      // The served certificate is re-read server-side, so the banner only
+      // clears once the server agrees — not because we asked it to.
+      router.refresh();
+    } catch (error) {
+      toast.error(apiMessage(error, t("ssl.reloadFailed")));
+    } finally {
+      setReloading(false);
+    }
+  }
 
   const polling = isPending(cert);
 
@@ -216,6 +244,34 @@ export function SslSection({
     // it used to be green, headed "HTTPS is active", with the expiry in small
     // red text underneath, and the reassuring half was the loud half.
     const expired = cert.expired;
+    /*
+     * A green panel is a claim, and it must not be made while the site is
+     * handing visitors a certificate their browser rejects.
+     *
+     * Only rendering this showed it: the stale-certificate alert came out as a
+     * red box inside a green "HTTPS is active" frame with a healthy countdown
+     * above it. The frame contradicted its own contents, and the frame is what
+     * someone reads first. So a stale certificate is BROKEN for the purposes of
+     * this panel's tone, even though the file on disk is perfectly valid.
+     *
+     * The heading still says HTTPS is active, because it is — what is wrong is
+     * which certificate is being served, and the alert inside says exactly that.
+     */
+    const servingStale = cert.serving_stale === true;
+
+    /*
+     * Three tones, not two.
+     *
+     * The first attempt at this made a stale certificate use the expired tone,
+     * which turned the whole panel red — red frame, red alert inside it, red
+     * Remove button — and a wall of red says nothing because every part of it
+     * is shouting equally. Reported as exactly that.
+     *
+     * So a stale certificate makes the frame NEUTRAL rather than red: the green
+     * claim is withdrawn, which was the point, and the alert inside is then the
+     * only coloured thing on the panel, which is where the eye should land.
+     */
+    const tone = expired ? "bad" : servingStale ? "neutral" : "good";
     const expiryTone = expired
       ? "text-destructive"
       : cert.expiring_soon
@@ -225,12 +281,20 @@ export function SslSection({
       <div
         className={cn(
           "space-y-4 rounded-xl border p-4",
-          expired ? "border-destructive/30 bg-destructive/5" : "border-success/30 bg-success/5",
+          tone === "bad"
+            ? "border-destructive/30 bg-destructive/5"
+            : tone === "neutral"
+              ? "border-border"
+              : "border-success/30 bg-success/5",
         )}
       >
         <div className="flex flex-wrap items-start gap-3">
-          {expired ? (
+          {/* No green tick while the wrong certificate is going out, but no
+              second alarm either — the alert below carries that. */}
+          {tone === "bad" ? (
             <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
+          ) : tone === "neutral" ? (
+            <ShieldAlert className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
           ) : (
             <ShieldCheck className="mt-0.5 size-5 shrink-0 text-success" />
           )}
@@ -271,6 +335,82 @@ export function SslSection({
           </div>
         </div>
 
+        {/*
+          The file renewed and the running server never picked it up.
+          
+          This is the one certificate state where the panel and the browser
+          disagree: the countdown above says "expires in 60 days" from the file
+          on disk while every visitor is handed the old one and shown a warning.
+          Destructive rather than warning for that reason — it is live breakage,
+          not a thing to get round to.
+          
+          Strictly `=== true`. The field is null when nothing managed to complete
+          a handshake to look, and "we could not check" must never render as
+          either a problem or a tick.
+        */}
+        {cert.serving_stale === true ? (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+            <p className="flex items-start gap-2 text-sm text-destructive">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
+              <span>{t("ssl.servingStale")}</span>
+            </p>
+            {cert.served_expires_at ? (
+              <p className="mt-1 pl-6 text-xs text-muted-foreground">
+                {t("ssl.servingStaleDetail", {
+                  served: cert.served_expires_at,
+                  onDisk: cert.expires_at ?? "—",
+                })}
+              </p>
+            ) : null}
+            {canManage && webServer ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={reloadWebServer}
+                disabled={reloading}
+              >
+                {reloading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+                {t("ssl.reloadWebServer", { service: webServer })}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/*
+          Names on the certificate the site no longer has.
+          
+          Not cosmetic and not the same as `missing_domains`: certbot fails a
+          whole renewal if any one name in the lineage cannot be validated, so
+          this certificate has quietly stopped renewing for the domains that are
+          perfectly fine too. Nothing shows until it expires.
+        */}
+        {cert.stale_domains?.length ? (
+          <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
+            <p className="flex items-start gap-2 text-sm text-warning">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
+              <span>
+                {t("ssl.staleDomains", { domains: cert.stale_domains.join(", ") })}
+              </span>
+            </p>
+            {canManage ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={() => setIssueOpen(true)}
+              >
+                <RefreshCw className="size-4" />
+                {t("ssl.reissue")}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* A name added after issuance is not on the cert — the quiet failure. */}
         {cert.missing_domains?.length ? (
           <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
@@ -300,7 +440,11 @@ export function SslSection({
           <div
             className={cn(
               "flex flex-wrap items-center justify-between gap-3 border-t pt-3",
-              expired ? "border-destructive/20" : "border-success/20",
+              tone === "bad"
+                ? "border-destructive/20"
+                : tone === "neutral"
+                  ? "border-border"
+                  : "border-success/20",
             )}
           >
             <div className="flex items-center gap-3">

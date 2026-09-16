@@ -32,12 +32,33 @@ export const certificateSchema = z.object({
   status: z.string().nullish(),
   domains: z.array(z.string()).default([]),
   missing_domains: z.array(z.string()).default([]),
+  /*
+   * Names ON the certificate that the site no longer has — the mirror of
+   * `missing_domains`, and the more dangerous one. certbot fails a whole
+   * renewal if any single name in the lineage cannot be validated, so a
+   * certificate carrying a domain that has gone away has silently stopped
+   * renewing for every other name on it too.
+   */
+  stale_domains: z.array(z.string()).default([]),
   force_https: z.boolean().default(false),
   auto_renew: z.boolean().default(false),
   renewable: z.boolean().default(false),
   issued_at: z.string().nullish(),
   expires_at: z.string().nullish(),
   expires_at_human: z.string().nullish(),
+  /*
+   * What the web server is actually PRESENTING, as against what is on disk.
+   * They agree on a healthy site; when they do not, the file renewed and the
+   * running server never picked it up, so the countdown above is reassuring
+   * while every visitor gets a browser warning.
+   *
+   * `serving_stale` is deliberately nullable and NOT defaulted to false: null
+   * means nobody managed to complete a handshake to look, which is not the
+   * same as agreement and must never render as a tick.
+   */
+  serving_stale: z.boolean().nullish(),
+  served_expires_at: z.string().nullish(),
+  served_checked_at: z.string().nullish(),
   days_remaining: z.number().nullish(),
   expired: z.boolean().default(false),
   expiring_soon: z.boolean().default(false),

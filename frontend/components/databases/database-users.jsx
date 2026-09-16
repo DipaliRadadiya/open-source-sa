@@ -202,6 +202,17 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
               label={t("copyConnection")}
             />
           </div>
+        ) : user.password_known === false ? (
+          /*
+             Why the line above is missing, rather than nothing at all.
+             
+             The API withholds the connection string for a user adopted from a
+             migrated server — the engine keeps a hash, and a hash cannot be put
+             in a URL. Without this the row just quietly lacked the one thing
+             people open this screen for, which reads as the panel being broken
+             rather than as a fact about the account.
+          */
+          <p className="text-xs text-muted-foreground">{t("passwordUnknown")}</p>
         ) : null}
       </div>
 

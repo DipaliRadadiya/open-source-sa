@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CalendarClock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { saveCleanerSchedule } from "@/lib/api/disk-cleaner";
+import { deleteCleanerSchedule, saveCleanerSchedule } from "@/lib/api/disk-cleaner";
 import { clampPercent } from "@/lib/disk-cleaner/clamp-percent";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +69,30 @@ export function ScheduleCard({ schedule, categories, canManage }) {
   async function save() {
     setPending(true);
     try {
+      /*
+       * Turning it off with nothing ticked DELETES the schedule instead of
+       * saving an empty one.
+       *
+       * The API requires at least one category on every save — deliberately, so
+       * that an enabled schedule can never be a cron entry that runs on time and
+       * cleans nothing. But that rule applies to the `enabled: false` save too,
+       * so switching automatic cleanup off while no boxes were ticked sent
+       * `categories: []` and came back 422: the panel refusing to let someone
+       * turn off a feature they had turned on.
+       *
+       * DELETE is the endpoint for exactly this and has existed all along — it
+       * just had no caller. With categories still ticked the profile is kept and
+       * merely paused, which is worth preserving, so only the empty case removes
+       * it.
+       */
+      if (!enabled && picked.size === 0) {
+        await deleteCleanerSchedule();
+        toast.success(t("schedule.saved"));
+        setOpen(false);
+        router.refresh();
+        return;
+      }
+
       await saveCleanerSchedule({
         enabled,
         frequency,

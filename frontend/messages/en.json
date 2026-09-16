@@ -2202,7 +2202,7 @@
       "save": "Save schedule",
       "saved": "Automatic cleanup updated.",
       "failed": "The schedule could not be saved.",
-      "pickSomething": "Choose at least one thing to clean.",
+      "pickSomething": "Choose at least one thing to clean, or switch automatic cleanup off above.",
       "lastRun": "Last run {when}",
       "neverRun": "Hasn't run yet.",
       "frequency": {
@@ -2593,7 +2593,8 @@
       "copyUsername": "Copy username",
       "newPasswordRequired": "New password (required to rename on MongoDB)",
       "nameIsFixed": "A database user's name cannot be changed after it is created. Create another user instead.",
-      "newPasswordRequiredHint": "MongoDB cannot rename a user, so the account is created again from scratch. That is why it needs a password set."
+      "newPasswordRequiredHint": "MongoDB cannot rename a user, so the account is created again from scratch. That is why it needs a password set.",
+      "passwordUnknown": "Password not known to the panel — this account came from another server. Change the password to get a connection string."
     },
     "detail": {
       "size": "Size",
@@ -3500,7 +3501,13 @@
         "replacesCurrent": "This replaces the current {current} certificate. An uploaded certificate cannot be re-issued from here.",
         "certificateHint": "The certificate your provider issued for this domain. Paste the whole block, including the BEGIN and END lines.",
         "privateKeyHint": "The secret key that goes with the certificate. It was created when you requested it — never share it with anyone.",
-        "chainHint": "The extra certificates linking yours back to a trusted authority. Without them some browsers and phones show a warning. Your provider supplies these."
+        "chainHint": "The extra certificates linking yours back to a trusted authority. Without them some browsers and phones show a warning. Your provider supplies these.",
+        "servingStale": "This site is still handing visitors an older certificate. Browsers will show a security warning until the web server is reloaded.",
+        "servingStaleDetail": "Being served: expires {served} · On disk: expires {onDisk}",
+        "reloadWebServer": "Reload {service}",
+        "reloaded": "The web server was reloaded.",
+        "reloadFailed": "The web server could not be reloaded.",
+        "staleDomains": "{domains} is on this certificate but no longer on this site. Renewal fails for the whole certificate until it is reissued."
       },
       "issueCertificate": "Issue SSL certificate",
       "description": "Names that reach this site, and its certificate.",
@@ -4143,7 +4150,13 @@
           "custom": "Custom"
         }
       },
-      "runsAsTooltip": "Runs as {user}, not this site's own user."
+      "runsAsTooltip": "Runs as {user}, not this site's own user.",
+      "supervisor": {
+        "missing": "Supervisor is not installed on this server. Workers run under it, so none can start until it is.",
+        "install": "Install Supervisor",
+        "installing": "Installing Supervisor. This takes a few minutes and continues in the background.",
+        "installFailed": "Supervisor could not be installed."
+      }
     },
     "security": {
       "pageTitle": "Password Protection",

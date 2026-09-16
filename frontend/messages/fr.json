@@ -2202,7 +2202,7 @@
       "save": "Enregistrer la planification",
       "saved": "Nettoyage automatique mis à jour.",
       "failed": "La planification n'a pas pu être enregistrée.",
-      "pickSomething": "Choisissez au moins un élément à nettoyer.",
+      "pickSomething": "Choisissez au moins un élément à nettoyer, ou désactivez le nettoyage automatique ci-dessus.",
       "lastRun": "Dernière exécution {when}",
       "neverRun": "Pas encore exécuté.",
       "frequency": {
@@ -2593,7 +2593,8 @@
       "copyUsername": "Copier le nom d'utilisateur",
       "newPasswordRequired": "Nouveau mot de passe (requis pour renommer sur MongoDB)",
       "nameIsFixed": "Le nom d'un utilisateur de base de données ne peut pas être modifié après sa création. Créez un autre utilisateur.",
-      "newPasswordRequiredHint": "MongoDB ne peut pas renommer un utilisateur, donc le compte est recréé de zéro. C’est pourquoi il faut définir un mot de passe."
+      "newPasswordRequiredHint": "MongoDB ne peut pas renommer un utilisateur, donc le compte est recréé de zéro. C’est pourquoi il faut définir un mot de passe.",
+      "passwordUnknown": "Le panneau ne connaît pas le mot de passe : ce compte provient d'un autre serveur. Changez le mot de passe pour obtenir une chaîne de connexion."
     },
     "detail": {
       "size": "Taille",
@@ -3500,7 +3501,13 @@
         "replacesCurrent": "Ceci remplace le certificat {current} actuel. Un certificat téléversé ne peut pas être réémis depuis ici.",
         "certificateHint": "Le certificat émis par votre fournisseur pour ce domaine. Collez le bloc entier, y compris les lignes BEGIN et END.",
         "privateKeyHint": "La clé secrète qui va avec le certificat. Elle a été créée quand vous l’avez demandé — ne la partagez jamais avec personne.",
-        "chainHint": "Les certificats supplémentaires qui rattachent le vôtre à une autorité de confiance. Sans eux, certains navigateurs et téléphones affichent un avertissement. Votre fournisseur les fournit."
+        "chainHint": "Les certificats supplémentaires qui rattachent le vôtre à une autorité de confiance. Sans eux, certains navigateurs et téléphones affichent un avertissement. Votre fournisseur les fournit.",
+        "servingStale": "Ce site présente encore aux visiteurs un certificat plus ancien. Les navigateurs afficheront un avertissement de sécurité tant que le serveur web n'aura pas été rechargé.",
+        "servingStaleDetail": "Servi : expire {served} · Sur le disque : expire {onDisk}",
+        "reloadWebServer": "Recharger {service}",
+        "reloaded": "Le serveur web a été rechargé.",
+        "reloadFailed": "Le serveur web n'a pas pu être rechargé.",
+        "staleDomains": "{domains} figure sur ce certificat mais n'appartient plus à ce site. Le renouvellement échoue pour l'ensemble du certificat tant qu'il n'est pas réémis."
       },
       "issueCertificate": "Émettre un certificat SSL",
       "description": "Noms qui atteignent ce site, et son certificat.",
@@ -4143,7 +4150,13 @@
           "custom": "Personnalisé"
         }
       },
-      "runsAsTooltip": "S'exécute en tant que {user}, pas avec l'utilisateur du site."
+      "runsAsTooltip": "S'exécute en tant que {user}, pas avec l'utilisateur du site.",
+      "supervisor": {
+        "missing": "Supervisor n'est pas installé sur ce serveur. Les workers s'exécutent sous son contrôle, aucun ne peut donc démarrer tant qu'il ne l'est pas.",
+        "install": "Installer Supervisor",
+        "installing": "Installation de Supervisor. Cela prend quelques minutes et se poursuit en arrière-plan.",
+        "installFailed": "Supervisor n'a pas pu être installé."
+      }
     },
     "security": {
       "pageTitle": "Protection par mot de passe",

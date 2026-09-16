@@ -134,7 +134,22 @@ export function ApplicationStatusNotes({ application, className }) {
             })}
           </p>
         ) : (
-          <p className="font-mono text-xs text-destructive">{application.reference}</p>
+          /*
+             Bounded like its two siblings, which it was not.
+             
+             A support reference is a 36-character UUID in mono, and this was the
+             one branch of the three with no width on it, so it ran straight out
+             of a 14%-wide Status column and into Owner. Reported from a
+             screenshot of exactly that.
+             
+             `max-w-52 truncate` rather than a wrap: the column is fixed-width
+             and a second line would shift every row beneath it. A partial
+             reference is still recognisable as one, and the detail page one
+             click away shows it in full with a Copy button.
+          */
+          <p className="max-w-52 truncate font-mono text-xs text-destructive">
+            {application.reference}
+          </p>
         )
       ) : null}
       {processDown ? (

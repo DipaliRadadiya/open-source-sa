@@ -112,6 +112,7 @@ export default async function ApplicationDomainsPage({ params }) {
               certifiable={certifiable}
               availableTypes={availableTypes}
               canManage={canManage}
+              webServer={capabilities?.webServer ?? null}
             />
           }
         />

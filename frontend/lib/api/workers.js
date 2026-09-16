@@ -23,3 +23,15 @@ export function deleteWorker(appId, workerId) {
 export function runWorkerAction(appId, workerId, action) {
   return api.post(`/applications/${appId}/workers/${workerId}/${action}`);
 }
+
+/**
+ * Install supervisord, which every worker runs under.
+ *
+ * 202 and queued: apt can wait out the dpkg lock for minutes, so this never
+ * completes inside the request. `POST /workers` falls back to this same
+ * operation when supervisord is missing — this is the explicit door, for the
+ * case where someone can see it is missing before filling in a form.
+ */
+export function installSupervisor(appId) {
+  return api.post(`/applications/${appId}/workers/install-supervisor`);
+}

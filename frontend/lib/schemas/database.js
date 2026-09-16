@@ -148,6 +148,16 @@ export const databaseUserSchema = z.object({
   host: z.string().nullable().optional(),
   // Ready to paste into an app's config — the thing people actually came for.
   connection_string: z.string().nullable().optional(),
+  /*
+   * Whether the panel holds this user's password at all.
+   *
+   * False for a user adopted from a migrated server: the engine stores a hash,
+   * and a hash is not a password. The API already withholds `connection_string`
+   * in that case rather than handing back one with an empty password in it —
+   * this is what lets the screen say WHY the line is missing instead of simply
+   * omitting it and looking broken.
+   */
+  password_known: z.boolean().nullish(),
   created_at: z.string().nullable().optional(),
   created_at_human: z.string().nullable().optional(),
 });

@@ -10,6 +10,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { WorkerChecksAlert } from "@/components/applications/workers/worker-checks-alert";
+import { SupervisorMissingAlert } from "@/components/applications/workers/supervisor-missing-alert";
 import { WorkersTable } from "@/components/applications/workers/workers-table";
 import { WorkersCards } from "@/components/applications/workers/workers-cards";
 import { CreateWorkerDialog } from "@/components/applications/workers/create-worker-dialog";
@@ -34,7 +35,7 @@ const STATE_DOT = {
   stopped: "bg-muted-foreground/50",
 };
 
-export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChecks, canManage }) {
+export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChecks, supervisorMissing = false, canManage }) {
   const t = useTranslations("applications.workers");
   const [workers, setWorkers] = useState(initialWorkers);
   const [presets, setPresets] = useState(initialPresets);
@@ -130,6 +131,12 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
 
   return (
     <div className="space-y-4">
+      {/* Above the config warnings: nothing below matters on a server that
+          cannot run a worker at all. */}
+      {supervisorMissing ? (
+        <SupervisorMissingAlert appId={appId} canManage={canManage} />
+      ) : null}
+
       <WorkerChecksAlert checks={checks} />
 
       <div className="flex items-center justify-between gap-3">

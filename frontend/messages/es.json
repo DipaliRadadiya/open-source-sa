@@ -2202,7 +2202,7 @@
       "save": "Guardar programación",
       "saved": "Limpieza automática actualizada.",
       "failed": "No se pudo guardar la programación.",
-      "pickSomething": "Elige al menos una cosa que limpiar.",
+      "pickSomething": "Elige al menos una cosa que limpiar, o desactiva la limpieza automática arriba.",
       "lastRun": "Última ejecución {when}",
       "neverRun": "Todavía no se ha ejecutado.",
       "frequency": {
@@ -2593,7 +2593,8 @@
       "copyUsername": "Copiar nombre de usuario",
       "newPasswordRequired": "Nueva contraseña (obligatoria para renombrar en MongoDB)",
       "nameIsFixed": "El nombre de un usuario de base de datos no se puede cambiar después de crearlo. Crea otro usuario en su lugar.",
-      "newPasswordRequiredHint": "MongoDB no puede renombrar un usuario, así que la cuenta se vuelve a crear desde cero. Por eso es necesario establecer una contraseña."
+      "newPasswordRequiredHint": "MongoDB no puede renombrar un usuario, así que la cuenta se vuelve a crear desde cero. Por eso es necesario establecer una contraseña.",
+      "passwordUnknown": "El panel no conoce la contraseña: esta cuenta viene de otro servidor. Cambia la contraseña para obtener una cadena de conexión."
     },
     "detail": {
       "size": "Tamaño",
@@ -3500,7 +3501,13 @@
         "replacesCurrent": "Esto sustituye el certificado {current} actual. Un certificado subido no se puede reemitir desde aquí.",
         "certificateHint": "El certificado que su proveedor emitió para este dominio. Pegue todo el bloque, incluidas las líneas BEGIN y END.",
         "privateKeyHint": "La clave secreta que acompaña al certificado. Se creó cuando lo solicitó; nunca la comparta con nadie.",
-        "chainHint": "Los certificados adicionales que enlazan el suyo con una autoridad de confianza. Sin ellos, algunos navegadores y teléfonos muestran una advertencia. Su proveedor los suministra."
+        "chainHint": "Los certificados adicionales que enlazan el suyo con una autoridad de confianza. Sin ellos, algunos navegadores y teléfonos muestran una advertencia. Su proveedor los suministra.",
+        "servingStale": "Este sitio sigue entregando a los visitantes un certificado antiguo. Los navegadores mostrarán una advertencia de seguridad hasta que se recargue el servidor web.",
+        "servingStaleDetail": "Se sirve: caduca {served} · En disco: caduca {onDisk}",
+        "reloadWebServer": "Recargar {service}",
+        "reloaded": "Se recargó el servidor web.",
+        "reloadFailed": "No se pudo recargar el servidor web.",
+        "staleDomains": "{domains} está en este certificado pero ya no en este sitio. La renovación falla para todo el certificado hasta que se vuelva a emitir."
       },
       "issueCertificate": "Emitir certificado SSL",
       "description": "Nombres que llegan a este sitio y su certificado.",
@@ -4143,7 +4150,13 @@
           "custom": "Personalizado"
         }
       },
-      "runsAsTooltip": "Se ejecuta como {user}, no como el usuario propio del sitio."
+      "runsAsTooltip": "Se ejecuta como {user}, no como el usuario propio del sitio.",
+      "supervisor": {
+        "missing": "Supervisor no está instalado en este servidor. Los workers se ejecutan bajo él, así que ninguno puede arrancar hasta que lo esté.",
+        "install": "Instalar Supervisor",
+        "installing": "Instalando Supervisor. Tarda unos minutos y continúa en segundo plano.",
+        "installFailed": "No se pudo instalar Supervisor."
+      }
     },
     "security": {
       "pageTitle": "Protección con contraseña",

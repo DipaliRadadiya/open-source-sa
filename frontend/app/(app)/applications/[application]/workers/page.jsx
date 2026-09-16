@@ -5,6 +5,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getWorkers } from "@/lib/applications/get-workers";
+import { getServices } from "@/lib/services/get-services";
 import { WorkersPanel } from "@/components/applications/workers/workers-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -45,9 +46,27 @@ export default async function ApplicationWorkersPage({ params }) {
   const canManage = can(appPermissions, "app_worker", "manage", "application");
   const settled = application.status === "active";
 
-  const workersResult = settled
-    ? await getWorkers(id)
-    : { workers: [], presets: [], checks: [], failed: false };
+  /*
+   * Whether supervisord is on the box, read from the services list.
+   *
+   * A service nobody has ever installed is absent from that list entirely —
+   * ServiceManager returns null for it — so "no supervisor entry" is a reliable
+   * "not installed", and it needs no new endpoint.
+   *
+   * Without this the page looked completely normal on a server with no
+   * supervisord, and the only way to find out was to fill in the whole worker
+   * form and submit it: `POST /workers` answers 202 and starts an apt install
+   * instead of creating anything.
+   *
+   * A failure here is not an error on this page — it just means we cannot say,
+   * and the create dialog still handles the 202 the way it always did.
+   */
+  const [workersResult, services] = settled
+    ? await Promise.all([getWorkers(id), getServices().catch(() => ({ services: [], failed: true }))])
+    : [{ workers: [], presets: [], checks: [], failed: false }, { services: [], failed: true }];
+
+  const supervisorMissing =
+    !services.failed && !services.services.some((service) => service.key === "supervisor");
 
   return (
     <div className="space-y-6">
@@ -68,6 +87,7 @@ export default async function ApplicationWorkersPage({ params }) {
           initialWorkers={workersResult.workers}
           initialPresets={workersResult.presets}
           initialChecks={workersResult.checks}
+          supervisorMissing={supervisorMissing}
           canManage={canManage}
         />
       )}

@@ -2202,7 +2202,7 @@
       "save": "Salvar agendamento",
       "saved": "Limpeza automática atualizada.",
       "failed": "O agendamento não pôde ser salvo.",
-      "pickSomething": "Escolha pelo menos um item para limpar.",
+      "pickSomething": "Escolha pelo menos uma coisa para limpar, ou desligue a limpeza automática acima.",
       "lastRun": "Última execução {when}",
       "neverRun": "Ainda não foi executado.",
       "frequency": {
@@ -2593,7 +2593,8 @@
       "copyUsername": "Copiar nome de usuário",
       "newPasswordRequired": "Nova senha (obrigatória para renomear no MongoDB)",
       "nameIsFixed": "O nome de um usuário de banco de dados não pode ser alterado depois de criado. Crie outro usuário.",
-      "newPasswordRequiredHint": "O MongoDB não consegue renomear um usuário, então a conta é criada novamente do zero. Por isso é preciso definir uma senha."
+      "newPasswordRequiredHint": "O MongoDB não consegue renomear um usuário, então a conta é criada novamente do zero. Por isso é preciso definir uma senha.",
+      "passwordUnknown": "O painel não conhece a palavra-passe — esta conta veio de outro servidor. Altere a palavra-passe para obter uma string de ligação."
     },
     "detail": {
       "size": "Tamanho",
@@ -3500,7 +3501,13 @@
         "replacesCurrent": "Isso substitui o certificado atual {current}. Um certificado enviado não pode ser reemitido daqui.",
         "certificateHint": "O certificado que seu provedor emitiu para este domínio. Cole o bloco inteiro, incluindo as linhas BEGIN e END.",
         "privateKeyHint": "A chave secreta que acompanha o certificado. Foi criada quando você o solicitou — nunca compartilhe com ninguém.",
-        "chainHint": "Os certificados extras que ligam o seu de volta a uma autoridade confiável. Sem eles, alguns navegadores e celulares exibem um aviso. Seu provedor fornece esses certificados."
+        "chainHint": "Os certificados extras que ligam o seu de volta a uma autoridade confiável. Sem eles, alguns navegadores e celulares exibem um aviso. Seu provedor fornece esses certificados.",
+        "servingStale": "Este site continua a entregar aos visitantes um certificado mais antigo. Os navegadores mostrarão um aviso de segurança até que o servidor web seja recarregado.",
+        "servingStaleDetail": "A ser servido: expira {served} · Em disco: expira {onDisk}",
+        "reloadWebServer": "Recarregar {service}",
+        "reloaded": "O servidor web foi recarregado.",
+        "reloadFailed": "Não foi possível recarregar o servidor web.",
+        "staleDomains": "{domains} está neste certificado mas já não pertence a este site. A renovação falha para todo o certificado até que seja reemitido."
       },
       "issueCertificate": "Emitir certificado SSL",
       "description": "Nomes que acessam este site e seu certificado.",
@@ -4143,7 +4150,13 @@
           "custom": "Personalizado"
         }
       },
-      "runsAsTooltip": "Executa como {user}, não como o próprio usuário deste site."
+      "runsAsTooltip": "Executa como {user}, não como o próprio usuário deste site.",
+      "supervisor": {
+        "missing": "O Supervisor não está instalado neste servidor. Os workers correm sob ele, por isso nenhum pode arrancar até que esteja.",
+        "install": "Instalar o Supervisor",
+        "installing": "A instalar o Supervisor. Demora alguns minutos e continua em segundo plano.",
+        "installFailed": "Não foi possível instalar o Supervisor."
+      }
     },
     "security": {
       "pageTitle": "Proteção por senha",
