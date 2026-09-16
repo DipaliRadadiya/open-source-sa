@@ -63,9 +63,32 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    /*
+     * Elevation. Two layers at low alpha with a cool tint, because that is what
+     * reads as soft — one hard rgba drop is what makes a card look stamped onto
+     * the page rather than resting on it.
+     *
+     * Deliberately NOT paired with a tinted page background. Lifting cards by
+     * darkening everything behind them was tried and rejected: it made every
+     * other screen look worse, and a shadow that only works against a grey page
+     * is not a shadow, it is a cutout.
+     */
+    --shadow-e1: 0 1px 2px 0 rgb(16 24 40 / 0.025), 0 1px 3px 0 rgb(16 24 40 / 0.03);
+    --shadow-e2: 0 1px 2px 0 rgb(16 24 40 / 0.03), 0 4px 10px -2px rgb(16 24 40 / 0.045);
+    --shadow-e3: 0 2px 4px -1px rgb(16 24 40 / 0.04), 0 12px 24px -6px rgb(16 24 40 / 0.07);
 }
 
 :root {
+    /*
+     * White, and the page is white too. Separation is bought with the border
+     * and shadow, not with colour.
+     *
+     * Both alternatives were built, shipped and rejected in turn: tinting the
+     * PAGE dulled every other screen, and tinting the CARD looked wrong on its
+     * own. What is left is the arrangement this file started with, so the value
+     * is unremarkable — the comment is here so the next person knows it is a
+     * decision rather than something nobody got round to.
+     */
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.28 0.014 264);
     --popover: oklch(1 0 0);
@@ -104,7 +127,7 @@
     --console-error: oklch(0.72 0.17 25);
     --console-warning: oklch(0.82 0.13 75);
     --console-success: oklch(0.78 0.15 155);
-    --border: oklch(0.92 0.006 264);
+    --border: oklch(0.945 0.004 264);
     --input: oklch(0.92 0.006 264);
     /* Focus ring follows the brand primary (set at runtime by the theme). */
     --ring: var(--primary);
@@ -122,7 +145,7 @@
     --sidebar-primary-foreground: oklch(0.985 0 0);
     --sidebar-accent: oklch(0.968 0.004 264);
     --sidebar-accent-foreground: oklch(0.28 0.014 264);
-    --sidebar-border: oklch(0.92 0.006 264);
+    --sidebar-border: oklch(0.945 0.004 264);
     --sidebar-ring: var(--primary);
     --background: oklch(1 0 0);
     /* Soft dark grey rather than near-black — pure black on white reads harsh
@@ -152,7 +175,7 @@
        border needs to sit against a dark card rather than a white one. */
     --console: oklch(0.17 0.012 264);
     --console-border: oklch(0.26 0.012 264);
-    --border: oklch(1 0 0 / 10%);
+    --border: oklch(1 0 0 / 7%);
     --input: oklch(1 0 0 / 15%);
     --ring: var(--primary);
     /* Lifted lightness so the same hues stay readable on dark surfaces. */
@@ -167,7 +190,7 @@
     --sidebar-primary-foreground: oklch(0.985 0 0);
     --sidebar-accent: oklch(0.269 0 0);
     --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-border: oklch(1 0 0 / 7%);
     --sidebar-ring: var(--primary);
 }
 
