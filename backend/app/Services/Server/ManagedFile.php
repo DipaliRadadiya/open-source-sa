@@ -33,6 +33,36 @@ class ManagedFile
     }
 
     /**
+     * Read a panel-owned file back, as root.
+     *
+     * The counterpart `put()` never had, and its absence is why callers that
+     * needed the current contents of a file re-rendered them from the database
+     * instead — which answers a different question. A render says what the file
+     * *would* contain if the panel wrote it now; only a read says what is
+     * actually serving. The two agree right up until somebody edits the file by
+     * hand, which is exactly the moment the difference matters.
+     *
+     * Read `ok` before `output()`. An empty string is returned both for a file
+     * that is genuinely empty and for one that could not be read at all — a
+     * missing path, or a sudo grant that does not cover `cat` — and a caller
+     * that treats the second as the first will happily write emptiness over a
+     * working config. `ServerOpsResult::$answered` documents the same trap.
+     *
+     * Contents are not logged on success (ServerOps keeps stdout only on
+     * failure, or when a caller opts in with `log_output`), so reading a file
+     * that holds a credential does not copy it into the ops log.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    public function get(string $path, array $context = []): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['cat', $path],
+            array_merge($context, ['op' => 'read_file', 'path' => $path]),
+        );
+    }
+
+    /**
      * Point `link` at `target`, replacing whatever `link` was before.
      *
      * @param  array<string, mixed>  $context
