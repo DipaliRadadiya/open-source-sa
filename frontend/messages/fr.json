@@ -1773,7 +1773,6 @@
         "logTruncated": "Affichage des dernières lignes. Les lignes précédentes ont été omises.",
         "logUnreadable": "Le journal des mises à jour n'a pas pu être lu, donc la dernière exécution ne peut pas être rapportée.",
         "runNow": "Installer les mises à jour de sécurité",
-        "securityOnlyNote": "{count, plural, one {# autre mise à jour n'est pas installée ici : ce n'est pas un correctif de sécurité.} other {# autres mises à jour ne sont pas installées ici : ce ne sont pas des correctifs de sécurité.}}",
         "running": "Installation…",
         "runInProgress": "Une mise à jour est déjà en cours.",
         "runStarted": "Installation des mises à jour de sécurité en attente.",
@@ -1799,7 +1798,8 @@
           "dependencies": "Les paquets en attente ne peuvent pas être installés ensemble. Il faut généralement lancer apt à la main pour voir ce qui est retenu.",
           "worker": "Le processus qui exécutait la mise à jour a disparu — très probablement redémarré par la mise à jour elle-même. apt a peut-être fini le travail quand même : vérifiez le journal avant d'en lancer une autre.",
           "unknown": "La mise à jour a échoué. La sortie ci-dessous est ce qu'elle a dit."
-        }
+        },
+        "securityOnlyNote": "{count, plural, one {# autre mise à jour n'est pas installée ici : ce n'est pas un correctif de sécurité.} other {# autres mises à jour ne sont pas installées ici : ce ne sont pas des correctifs de sécurité.}}"
       },
       "reboot": {
         "title": "Redémarrage manuel",
@@ -3084,6 +3084,7 @@
     "branchPlaceholder": "Saisir une branche",
     "publicRepository": "URL du dépôt public",
     "publicRepositoryHint": "Utilisez une URL HTTPS. Les dépôts publics ne nécessitent pas de compte connecté.",
+    "publicRepositoryUsernameDropped": "Le nom d'utilisateur avant le @ sera supprimé : il n'est pas nécessaire pour un dépôt public.",
     "useAccount": "Utiliser un compte connecté",
     "usePublicUrl": "Utiliser une URL de dépôt public",
     "connectGit": "Connecter Git",

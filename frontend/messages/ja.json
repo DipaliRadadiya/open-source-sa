@@ -1773,7 +1773,6 @@
         "logTruncated": "最新の出力を表示しています。前の行は省略されました。",
         "logUnreadable": "更新ログを読み取れないため、前回の実行を報告できません。",
         "runNow": "セキュリティ更新をインストール",
-        "securityOnlyNote": "{count, plural, other {他の # 件の更新はここではインストールされません。セキュリティパッチではないためです。}}",
         "running": "インストール中…",
         "runInProgress": "更新はすでに実行中です。",
         "runStarted": "保留中のセキュリティ更新をインストールしています。",
@@ -1799,7 +1798,8 @@
           "dependencies": "保留中のパッケージを一緒にインストールできません。通常、何が保留されているかを確認するために apt を手動で実行する必要があります。",
           "worker": "アップグレードを実行していたプロセスが消えました — おそらくアップグレード自体によって再起動されたものです。apt が作業を完了した可能性もあります: 別のものを開始する前にログを確認してください。",
           "unknown": "アップグレードは失敗しました。下記はその出力です。"
-        }
+        },
+        "securityOnlyNote": "{count, plural, other {他の # 件の更新はここではインストールされません。セキュリティパッチではないためです。}}"
       },
       "reboot": {
         "title": "手動再起動",
@@ -3084,6 +3084,7 @@
     "branchPlaceholder": "ブランチを入力",
     "publicRepository": "公開リポジトリの URL",
     "publicRepositoryHint": "HTTPS の URL を使用してください。公開リポジトリは連携アカウントの必要はありません。",
+    "publicRepositoryUsernameDropped": "@ の前のユーザー名は削除されます。公開リポジトリには必要ありません。",
     "useAccount": "連携アカウントを使用",
     "usePublicUrl": "公開リポジトリの URL を使用",
     "connectGit": "Git を連携",

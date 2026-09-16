@@ -1773,7 +1773,6 @@
         "logTruncated": "Se muestra la salida más reciente. Se omitieron las líneas anteriores.",
         "logUnreadable": "No se pudo leer el registro de actualizaciones, así que no se puede informar de la última ejecución.",
         "runNow": "Instalar actualizaciones de seguridad",
-        "securityOnlyNote": "{count, plural, one {Aquí no se instala # actualización más: no es un parche de seguridad.} other {Aquí no se instalan # actualizaciones más: no son parches de seguridad.}}",
         "running": "Instalando…",
         "runInProgress": "Ya se está ejecutando una actualización.",
         "runStarted": "Instalando las actualizaciones de seguridad pendientes.",
@@ -1799,7 +1798,8 @@
           "dependencies": "Los paquetes pendientes no se pueden instalar juntos. Normalmente hay que ejecutar apt a mano para ver qué queda retenido.",
           "worker": "El proceso que ejecutaba la actualización desapareció, probablemente reiniciado por la propia actualización. apt puede haber terminado el trabajo igualmente: revisa el registro antes de empezar otra.",
           "unknown": "La actualización falló. La salida de abajo es lo que dijo."
-        }
+        },
+        "securityOnlyNote": "{count, plural, one {Aquí no se instala # actualización más: no es un parche de seguridad.} other {Aquí no se instalan # actualizaciones más: no son parches de seguridad.}}"
       },
       "reboot": {
         "pendingAt": "Hay un reinicio programado para {at}.",
@@ -3084,6 +3084,7 @@
     "branchPlaceholder": "Introduce una rama",
     "publicRepository": "URL de repositorio público",
     "publicRepositoryHint": "Usa una URL HTTPS. Los repositorios públicos no necesitan una cuenta conectada.",
+    "publicRepositoryUsernameDropped": "Se quitará el nombre de usuario que va antes de @: no hace falta para un repositorio público.",
     "useAccount": "Usar una cuenta conectada",
     "usePublicUrl": "Usar una URL de repositorio público",
     "connectGit": "Conectar Git",

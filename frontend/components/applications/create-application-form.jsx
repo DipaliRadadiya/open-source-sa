@@ -58,6 +58,7 @@ import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { cn } from "@/lib/utils";
 import { ChoiceField } from "@/components/ui/choice-field";
 import { initialDomainMode, ipToLabel, temporaryDomain } from "@/lib/applications/temporary-domain";
+import { normalizeRepositoryUrl } from "@/lib/applications/repository-url";
 import { TITLE_FIELDS, siteTitleFrom } from "@/lib/applications/site-title";
 import { declaredDefault, toggleValue } from "@/lib/applications/field-default";
 import {
@@ -1397,7 +1398,19 @@ export function CreateApplicationForm({
       if (gitSource === "account") {
         payload.git_account_id = Number(values.git_account_id);
         payload.repository = values.repository;
-      } else payload.repository_url = values.repository_url?.trim();
+      } else {
+        /*
+         * Bitbucket's Clone button gives `https://you@bitbucket.org/team/repo.git`
+         * and the API refuses any URL carrying a user component — rightly, since
+         * this string ends up in `git clone`. Reported as a valid Bitbucket URL
+         * being rejected with wording about a "self-hosted instance", which is
+         * the GitLab host field's message and explains nothing here.
+         *
+         * For a public repository the username prefix means nothing, so it is
+         * removed rather than refused. The field shows that it happened.
+         */
+        payload.repository_url = normalizeRepositoryUrl(values.repository_url).url;
+      }
       if (values.branch?.trim()) payload.branch = values.branch.trim();
     }
 
@@ -2029,6 +2042,14 @@ export function CreateApplicationForm({
                                     {...field}
                                   />
                                 </FormControl>
+                                {/* Said while the field is in front of you, not
+                                    as a 422 afterwards in the GitLab host
+                                    field's wording. */}
+                                {normalizeRepositoryUrl(repositoryUrl).strippedCredentials ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    {t("publicRepositoryUsernameDropped")}
+                                  </p>
+                                ) : null}
                                 <FormMessage />
                               </FormItem>
                             )}

@@ -1773,7 +1773,6 @@
         "logTruncated": "Showing the latest output. Earlier lines were omitted.",
         "logUnreadable": "The update log could not be read, so the last run cannot be reported.",
         "runNow": "Install security updates",
-        "securityOnlyNote": "{count, plural, one {# other update is not installed here — it is not a security patch.} other {# other updates are not installed here — they are not security patches.}}",
         "running": "Installing…",
         "runInProgress": "An update is already running.",
         "runStarted": "Installing the waiting security updates.",
@@ -1799,7 +1798,8 @@
           "dependencies": "The packages waiting cannot be installed together. This usually needs apt run by hand to see what is held back.",
           "worker": "The process running the upgrade disappeared — most likely restarted by the upgrade itself. apt may have finished the work anyway: check the log before starting another.",
           "unknown": "The upgrade failed. The output below is what it said."
-        }
+        },
+        "securityOnlyNote": "{count, plural, one {# other update is not installed here — it is not a security patch.} other {# other updates are not installed here — they are not security patches.}}"
       },
       "reboot": {
         "title": "Manual restart",
@@ -3084,6 +3084,7 @@
     "branchPlaceholder": "Enter a branch",
     "publicRepository": "Public repository URL",
     "publicRepositoryHint": "Use an HTTPS URL. Public repositories do not need a connected account.",
+    "publicRepositoryUsernameDropped": "The username before @ will be dropped — it is not needed for a public repository.",
     "useAccount": "Use a connected account",
     "usePublicUrl": "Use a public repository URL",
     "connectGit": "Connect Git",
