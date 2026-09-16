@@ -23,5 +23,10 @@ return [
     'ioncube_download_failed' => 'Le Loader ionCube n\'a pas pu être téléchargé. Vérifiez l\'accès Internet du serveur et réessayez.',
     'ioncube_invalid_loader' => 'Le fichier téléchargé n\'est pas un Loader ionCube valide pour ce serveur. Rien n\'a été installé.',
     'ioncube_install_failed' => 'Le Loader ionCube n\'a pas pu être installé.',
-    'ioncube_config_test_failed' => 'PHP a refusé de démarrer avec le Loader ionCube, il a donc été retiré. Vos sites n\'ont pas été affectés.',
+    'ioncube_discovery_failed' => 'La détection du Loader ionCube n\'a pas pu déterminer en toute sécurité votre installation PHP, donc rien n\'a été modifié.',
+    'ioncube_extraction_failed' => 'L\'archive ionCube n\'a pas pu être extraite.',
+    'ioncube_removal_failed' => 'Le Loader ionCube précédemment installé n\'a pas pu être supprimé. Consultez la référence pour plus de détails.',
+    'ioncube_reload_failed' => 'PHP n\'a pas pu être rechargé. Les modifications ne sont peut-être pas encore actives. Toutes les copies de récupération ont été conservées.',
+    'ioncube_rollback_failed' => 'La restauration a échoué ; toutes les copies de récupération ont été conservées. Une récupération manuelle est nécessaire.',
+    'ioncube_config_test_failed' => 'La validation de la configuration PHP a échoué. Les fichiers de configuration précédents ont été restaurés et PHP n\'a pas été rechargé.',
 ];

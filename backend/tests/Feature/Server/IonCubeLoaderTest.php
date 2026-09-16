@@ -1,10 +1,20 @@
 <?php
 
+use App\Enums\InstallStatus;
 use App\Exceptions\Server\Php\PhpConfigException;
 use App\Jobs\InstallIonCubeLoader;
 use App\Models\User;
+use App\Services\Runtime\InstallTracker;
+use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\IonCubeLoader;
+use App\Services\Server\Php\Stacks\LsphpPhpStack;
+use App\Services\Server\ServerOps;
 use Database\Seeders\PermissionSeeder;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
@@ -74,22 +84,47 @@ function fakeIonCube(array $options = []): ArrayObject
     $configTest = $options['config_test'] ?? true;
     $body = $options['body'] ?? elfHeader();
 
-    Process::fake(function ($process) use ($runs, $zts, $extract, $configTest, $body) {
+    Process::fake(function ($process) use ($runs, $zts, $extract, $configTest, $body, $options) {
         $command = (array) $process->command;
         $args = ($command[0] ?? '') === 'sudo' ? array_slice($command, 2) : $command;
         $runs[] = implode(' ', $args);
 
+        if (isset($options['fail']) && ($options['fail'])($args)) {
+            return Process::result(exitCode: 1, errorOutput: 'injected failure');
+        }
+        if ($options['real_files'] ?? false) {
+            $ok = match ($args[0] ?? '') {
+                'test' => ($args[1] ?? '') === '-e' ? file_exists($args[2]) : true,
+                'cp' => copy($args[2], $args[3]),
+                'install' => copy($args[3], $args[4]),
+                'tee' => file_put_contents($args[1], $process->input) !== false,
+                'rm' => ! file_exists($args[2]) || unlink($args[2]),
+                default => null,
+            };
+            if ($ok !== null) {
+                return Process::result(exitCode: $ok ? 0 : 1);
+            }
+        }
+        if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-e') {
+            return Process::result(exitCode: ($options['existing'] ?? false) ? 0 : 1);
+        }
         // PHP answering questions about itself: the extension directory and
         // whether this build is thread-safe.
         if (str_contains((string) ($args[0] ?? ''), 'php') && in_array('-r', $args, true)) {
             $code = $args[array_search('-r', $args, true) + 1] ?? '';
 
             return str_contains($code, 'PHP_ZTS')
-                ? Process::result(output: $zts ? '1' : '0')
-                : Process::result(output: '/usr/lib/php/20240924');
+                ? Process::result(output: ($options['zts_output'] ?? ($zts ? '1' : '0'))."\n")
+                : Process::result(output: $options['extension_dir'] ?? '/usr/lib/php/20240924');
         }
 
         if (($args[0] ?? '') === 'tar') {
+            if (($args[1] ?? '') === '-tzf') {
+                $suffix = $zts ? '_ts' : '';
+                $version = PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;
+
+                return Process::result(output: ($options['missing_member'] ?? false) ? '' : "ioncube/ioncube_loader_lin_{$version}{$suffix}.so\n");
+            }
             if (! $extract) {
                 return Process::result(exitCode: 2, errorOutput: 'tar: not found in archive');
             }
@@ -257,4 +292,241 @@ describe('the endpoints', function () {
             ->postJson("/api/php/versions/{$this->version}/ioncube")
             ->assertForbidden();
     });
+});
+
+function ionCubeError(callable $operation): array
+{
+    try {
+        $operation();
+    } catch (PhpConfigException $e) {
+        return $e->render(request())->getData(true);
+    }
+
+    test()->fail('Expected an ionCube failure');
+}
+
+it('distinguishes corrupt archives, missing members and failed extraction', function (array $options, string $key) {
+    $runs = fakeIonCube($options);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+    expect($error['message'])->toBe(__("errors/php.$key", ['version' => $this->version]))
+        ->and(collect($runs)->filter(fn ($c) => str_starts_with($c, 'install -m')))->toBeEmpty();
+})->with([
+    'corrupt archive' => [['fail' => fn ($args) => ($args[1] ?? '') === '-tzf'], 'ioncube_extraction_failed'],
+    'absent loader' => [['missing_member' => true], 'ioncube_unsupported_version'],
+    'extraction error' => [['extract' => false], 'ioncube_extraction_failed'],
+]);
+
+it('refuses unsafe or failed PHP discovery before downloading or writing', function (array $options) {
+    $runs = fakeIonCube($options);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_discovery_failed'))
+        ->and(collect($runs)->filter(fn ($c) => preg_match('/^(install|tee|cp|rm) /', $c)))->toBeEmpty();
+    Http::assertNothingSent();
+})->with([
+    'empty directory' => [['extension_dir' => '']],
+    'root directory' => [['extension_dir' => '/']],
+    'relative directory' => [['extension_dir' => 'relative/path']],
+    'traversal' => [['extension_dir' => '/usr/../tmp']],
+    'invalid thread safety' => [['zts_output' => 'unknown']],
+    'failed interpreter' => [['fail' => fn ($args) => in_array('-r', $args, true)]],
+    'nonexistent directory' => [['fail' => fn ($args) => ($args[1] ?? '') === '-d' && ($args[0] ?? '') === 'test']],
+]);
+
+it('restores existing loader and INIs instead of deleting them on reinstall failure', function () {
+    $runs = fakeIonCube(['existing' => true, 'config_test' => false]);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_config_test_failed'));
+    $restores = collect($runs)->filter(fn ($c) => preg_match('/^cp -p \S+\.bak /', $c))->values();
+    expect($restores)->toHaveCount(3)
+        ->and($restores[0])->toContain('.so.panel-ioncube-')
+        ->and(collect($runs)->filter(fn ($c) => str_starts_with($c, 'rm -f') && ! str_ends_with($c, '.bak')))->toBeEmpty()
+        ->and(collect($runs)->filter(fn ($c) => str_contains($c, 'systemctl reload')))->toBeEmpty();
+});
+
+it('retains backups and reports failed recovery rather than successful rollback', function () {
+    $runs = fakeIonCube([
+        'existing' => true, 'config_test' => false,
+        'fail' => fn ($args) => ($args[0] ?? '') === 'cp' && str_ends_with($args[2] ?? '', '.bak'),
+    ]);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_rollback_failed'))
+        ->and($error)->toHaveKey('reference')
+        ->and(collect($runs)->filter(fn ($c) => str_starts_with($c, 'rm -f')))->toBeEmpty();
+});
+
+it('does not delete the binary or reload when removing an INI fails', function () {
+    $runs = fakeIonCube([
+        'existing' => true,
+        'fail' => fn ($args) => ($args[0] ?? '') === 'rm' && str_ends_with($args[2] ?? '', '01-ioncube.ini'),
+    ]);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->remove($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_removal_failed'))
+        ->and(collect($runs)->filter(fn ($c) => str_starts_with($c, 'rm -f') && str_ends_with($c, '.so')))->toBeEmpty()
+        ->and(collect($runs)->filter(fn ($c) => str_contains($c, 'systemctl reload')))->toBeEmpty();
+});
+
+it('keeps the loader if rollback cannot remove a newly written INI', function () {
+    $runs = fakeIonCube([
+        'config_test' => false,
+        'fail' => fn ($args) => ($args[0] ?? '') === 'rm' && str_ends_with($args[2] ?? '', '01-ioncube.ini'),
+    ]);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_rollback_failed'))
+        ->and(collect($runs)->filter(fn ($c) => str_starts_with($c, 'rm -f') && str_ends_with($c, '.so')))->toBeEmpty();
+});
+
+it('records a failed reload as a failed install and retains recovery files', function () {
+    $runs = fakeIonCube(['existing' => true, 'fail' => fn ($args) => ($args[0] ?? '') === 'systemctl']);
+    $tracker = app(InstallTracker::class);
+    $tracker->start(InstallIonCubeLoader::RUNTIME, $this->version);
+    app()->call([new InstallIonCubeLoader($this->version, $this->admin->id), 'handle']);
+    expect($tracker->current(InstallIonCubeLoader::RUNTIME, $this->version)->status)
+        ->toBe(InstallStatus::Failed)
+        ->and(collect($runs)->filter(fn ($c) => str_starts_with($c, 'rm -f') && str_ends_with($c, '.bak')))->toBeEmpty();
+    $this->assertDatabaseMissing('activity_logs', ['type' => 'php', 'action' => 'ioncube_installed']);
+});
+
+it('fails removal on reload error instead of returning success', function () {
+    fakeIonCube(['existing' => true, 'fail' => fn ($args) => ($args[0] ?? '') === 'systemctl']);
+    $this->withToken($this->token)->deleteJson("/api/php/versions/{$this->version}/ioncube")
+        ->assertStatus(500)->assertJsonPath('message', __('errors/php.ioncube_reload_failed'));
+    $this->assertDatabaseMissing('activity_logs', ['type' => 'php', 'action' => 'ioncube_removed']);
+});
+
+it('authorizes removal and validates before reloading', function () {
+    $runs = fakeIonCube();
+    $this->withToken(User::factory()->create()->createToken('t')->plainTextToken)
+        ->deleteJson("/api/php/versions/{$this->version}/ioncube")->assertForbidden();
+    expect($runs)->toHaveCount(0);
+});
+
+it('validates removal before reloading', function () {
+    $runs = fakeIonCube();
+    $this->withToken($this->token)->deleteJson("/api/php/versions/{$this->version}/ioncube")->assertOk();
+    $commands = collect($runs)->values();
+    $test = $commands->search(fn ($c) => str_contains($c, 'php-fpm') && str_ends_with($c, '-t'));
+    $reload = $commands->search(fn ($c) => str_contains($c, 'systemctl reload'));
+    expect($test)->not->toBeFalse()->and($reload)->toBeGreaterThan($test);
+});
+
+it('aborts oversized transfers with or without a content length and cleans the sink', function (int $total, int $received) {
+    fakeIonCube();
+    config(['server.ioncube.max_bytes' => 10]);
+    $sink = null;
+    $continued = false;
+    Http::fake(function ($request, $options) use (&$sink, &$continued, $total, $received) {
+        $sink = $options['sink'];
+        file_put_contents($sink, 'partial');
+        expect($options['allow_redirects']['protocols'])->toBe(['https'])
+            ->and($options['protocols'])->toBe(['https']);
+        ($options['progress'])($total, $received, 0, 0);
+        $continued = true;
+
+        return Http::response('oversized');
+    });
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_download_failed'))
+        ->and($continued)->toBeFalse()
+        ->and($sink)->not->toBeNull()->and(file_exists(dirname($sink)))->toBeFalse();
+})->with([[11, 0], [0, 11]]);
+
+it('discovers the loader only before changing PHP configuration', function () {
+    $runs = fakeIonCube();
+    app(IonCubeLoader::class)->install($this->version);
+    $commands = collect($runs)->values();
+    $firstWrite = $commands->search(fn ($c) => str_starts_with($c, 'install -m'));
+    expect($commands->filter(fn ($c) => str_contains($c, ' -r ')))->toHaveCount(2)
+        ->and($commands->slice($firstWrite)->filter(fn ($c) => str_contains($c, ' -r ')))->toBeEmpty();
+});
+
+it('restores the original file bytes after a failed reinstall', function () {
+    $loader = "{$this->phpDir}/ioncube_loader_lin_{$this->version}.so";
+    file_put_contents($loader, 'old-loader');
+    $inis = [];
+    foreach (['cli', 'fpm'] as $sapi) {
+        $ini = "{$this->phpDir}/{$this->version}/{$sapi}/conf.d/01-ioncube.ini";
+        file_put_contents($ini, "; old {$sapi} configuration\nzend_extension={$loader}\n");
+        $inis[$ini] = file_get_contents($ini);
+    }
+    fakeIonCube(['real_files' => true, 'extension_dir' => $this->phpDir, 'config_test' => false]);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_config_test_failed'))
+        ->and(file_get_contents($loader))->toBe('old-loader');
+    foreach ($inis as $ini => $contents) {
+        expect(file_get_contents($ini))->toBe($contents);
+    }
+    expect(glob($loader.'.panel-ioncube-*.bak'))->toBeEmpty();
+});
+
+it('refuses an HTTP redirect through the real Guzzle middleware', function () {
+    fakeIonCube();
+    $history = [];
+    Http::fake(function ($request, $options) use (&$history) {
+        $handler = new MockHandler([
+            new Response(302, ['Location' => 'http://insecure.example/loader']),
+            new Response(200, [], 'must-not-be-read'),
+        ]);
+        $stack = HandlerStack::create($handler);
+        $stack->push(Middleware::history($history));
+        $client = new Client(['handler' => $stack]);
+        // Exercise the installer's actual transport policy, not a copy of it.
+        $client->get('https://vendor.example/loader', [
+            'protocols' => $options['protocols'],
+            'allow_redirects' => $options['allow_redirects'],
+        ]);
+
+        return Http::response('unexpected download');
+    });
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_download_failed'))
+        ->and($history)->toHaveCount(1);
+});
+
+it('tests LSPHP before restarting OpenLiteSpeed and preserves backups on restart failure', function () {
+    config([
+        'server.php_stacks.lsphp.binary_candidates' => ['/usr/bin/php'.$this->version],
+        'server.php_stacks.lsphp.ini_path' => "{$this->phpDir}/{$this->version}/litespeed/php.ini",
+        'server.php_stacks.lsphp.sapis' => ['litespeed'],
+        'server.php_stacks.lsphp.reload_command' => ['/usr/local/lsws/bin/lswsctrl', 'restart'],
+    ]);
+    $runs = fakeIonCube(['existing' => true, 'fail' => fn ($args) => str_ends_with($args[0] ?? '', 'lswsctrl')]);
+    $service = new IonCubeLoader(app(ServerOps::class), app(ManagedFile::class), app(LsphpPhpStack::class));
+    $error = ionCubeError(fn () => $service->install($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_reload_failed'));
+    $commands = collect($runs)->values();
+    $test = $commands->search(fn ($c) => str_contains($c, '/litespeed/php.ini -v'));
+    $reload = $commands->search(fn ($c) => str_contains($c, 'lswsctrl restart'));
+    expect($test)->not->toBeFalse()->and($reload)->toBeGreaterThan($test)
+        ->and($commands->filter(fn ($c) => str_starts_with($c, 'rm -f') && str_ends_with($c, '.bak')))->toBeEmpty();
+});
+
+it('restores a failed INI write without reloading', function () {
+    $runs = fakeIonCube(['existing' => true, 'fail' => fn ($args) => ($args[0] ?? '') === 'tee']);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_install_failed'))
+        ->and(collect($runs)->filter(fn ($c) => preg_match('/^cp -p \S+\.bak /', $c)))->toHaveCount(3)
+        ->and(collect($runs)->filter(fn ($c) => str_contains($c, 'systemctl reload')))->toBeEmpty();
+});
+
+it('does not remove the binary when the removal configuration test fails', function () {
+    $runs = fakeIonCube(['existing' => true, 'config_test' => false]);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->remove($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_config_test_failed'))
+        ->and(collect($runs)->filter(fn ($c) => str_starts_with($c, 'rm -f') && str_ends_with($c, '.so')))->toBeEmpty()
+        ->and(collect($runs)->filter(fn ($c) => str_contains($c, 'systemctl reload')))->toBeEmpty();
+});
+
+it('restores removed INIs if binary deletion fails', function () {
+    $runs = fakeIonCube(['existing' => true, 'fail' => fn ($args) => ($args[0] ?? '') === 'rm' && str_ends_with($args[2] ?? '', '.so')]);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->remove($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_removal_failed'))
+        ->and(collect($runs)->filter(fn ($c) => preg_match('/^cp -p \S+\.bak /', $c)))->toHaveCount(3)
+        ->and(collect($runs)->filter(fn ($c) => str_contains($c, 'systemctl reload')))->toBeEmpty();
+});
+
+it('refuses uncertain file state rather than treating a failed probe as absence', function () {
+    $runs = fakeIonCube(['fail' => fn ($args) => ($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-e']);
+    $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+    expect($error['message'])->toBe(__('errors/php.ioncube_discovery_failed'))
+        ->and(collect($runs)->filter(fn ($c) => preg_match('/^(install|tee|cp|rm) /', $c)))->toBeEmpty();
 });

@@ -1975,8 +1975,7 @@ return [
         )))),
 
         // Loaded before OPcache's `10-`, and that ordering is load-bearing:
-        // ionCube has to be in place before OPcache starts caching compiled
-        // code. Get it wrong and the site works until the cache warms up.
+        // Loading ionCube after OPcache can immediately prevent PHP from starting.
         'ini_name' => env('SERVER_IONCUBE_INI_NAME', '01-ioncube.ini'),
 
         // The archive was 29 MB in March 2026. The cap is for a response that

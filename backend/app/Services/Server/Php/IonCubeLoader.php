@@ -6,6 +6,7 @@ use App\Contracts\PhpStack;
 use App\Exceptions\Server\Php\PhpConfigException;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -124,6 +125,8 @@ class IonCubeLoader
             throw PhpConfigException::ionCubeUnsupportedVersion($version);
         }
 
+        $loader = $this->loaderPath($version);
+        $member = 'ioncube/'.basename($loader);
         $workDir = storage_path('app/ioncube/'.Str::random(8));
         $archive = $workDir.'/loaders.tar.gz';
 
@@ -132,13 +135,21 @@ class IonCubeLoader
 
             $this->download($archive);
 
-            $member = $this->memberFor($version);
-            $extracted = $this->extract($archive, $member, $workDir);
+            $extracted = $this->extract($archive, $member, $workDir, $version);
 
             $this->assertLoaderBinary($extracted, $version);
 
-            $this->place($version, $extracted);
-            $this->enable($version);
+            $backups = $this->snapshot($version, $loader);
+            try {
+                $this->place($version, $extracted, $loader);
+                $this->enable($version, $loader);
+            } catch (Throwable $e) {
+                $this->restore($version, $backups);
+                throw $e;
+            }
+
+            $this->reload($version);
+            $this->discardBackups($version, $backups);
         } finally {
             // The archive is 29 MB and the work directory is ours. Leaving it
             // behind would quietly fill the panel's own disk one install at a
@@ -156,13 +167,31 @@ class IonCubeLoader
      */
     public function remove(string $version): void
     {
-        foreach ($this->stack->sapis($version) as $sapi) {
-            $this->files->delete($this->iniPath($version, $sapi), $this->context($version, 'ioncube_remove_ini'));
+        $loader = $this->loaderPath($version);
+        $backups = $this->snapshot($version, $loader);
+        try {
+            foreach ($this->stack->sapis($version) as $sapi) {
+                $result = $this->files->delete($this->iniPath($version, $sapi), $this->context($version, 'ioncube_remove_ini'));
+                if ($result->failed()) {
+                    throw PhpConfigException::ionCubeRemovalFailed($result->reference);
+                }
+            }
+
+            $test = $this->stack->configTest($version);
+            if ($test->failed()) {
+                throw PhpConfigException::ionCubeConfigTestFailed($test->reference);
+            }
+            $result = $this->files->delete($loader, $this->context($version, 'ioncube_remove_loader'));
+            if ($result->failed()) {
+                throw PhpConfigException::ionCubeRemovalFailed($result->reference);
+            }
+        } catch (Throwable $e) {
+            $this->restore($version, $backups);
+            throw $e;
         }
 
-        $this->files->delete($this->loaderPath($version), $this->context($version, 'ioncube_remove_loader'));
-
-        $this->stack->reload($version);
+        $this->reload($version);
+        $this->discardBackups($version, $backups);
     }
 
     /**
@@ -190,7 +219,13 @@ class IonCubeLoader
                     // somebody on the path chose. There is no checksum to
                     // catch that afterwards, so it is refused here.
                     'protocols' => ['https'],
-                    'redirect.protocols' => ['https'],
+                    'allow_redirects' => ['protocols' => ['https']],
+                    'progress' => function ($total, $downloaded): void {
+                        $limit = (int) config('server.ioncube.max_bytes', 104857600);
+                        if ($total > $limit || $downloaded > $limit) {
+                            throw new \RuntimeException('ionCube archive exceeds download limit');
+                        }
+                    },
                 ])
                 ->sink($to)
                 ->get($url);
@@ -217,8 +252,15 @@ class IonCubeLoader
      *
      * @throws PhpConfigException
      */
-    private function extract(string $archive, string $member, string $workDir): string
+    private function extract(string $archive, string $member, string $workDir, string $version): string
     {
+        $listing = $this->serverOps->run(['tar', '-tzf', $archive], $this->context($version, 'ioncube_list'), timeout: 120);
+        if ($listing->failed()) {
+            throw PhpConfigException::ionCubeExtractionFailed($listing->reference);
+        }
+        if (! in_array($member, explode("\n", trim($listing->output())), true)) {
+            throw PhpConfigException::ionCubeUnsupportedVersion($version);
+        }
         $result = $this->serverOps->run(
             ['tar', '-xzf', $archive, '-C', $workDir, $member],
             $this->context('', 'ioncube_extract'),
@@ -228,9 +270,7 @@ class IonCubeLoader
         $path = $workDir.'/'.$member;
 
         if ($result->failed() || ! is_file($path)) {
-            // The likeliest cause by far: ionCube does not ship a loader for
-            // this PHP version, and the configured list said otherwise.
-            throw PhpConfigException::ionCubeUnsupportedVersion($version);
+            throw PhpConfigException::ionCubeExtractionFailed($result->reference);
         }
 
         return $path;
@@ -265,10 +305,10 @@ class IonCubeLoader
      *
      * @throws PhpConfigException
      */
-    private function place(string $version, string $extracted): void
+    private function place(string $version, string $extracted, string $loader): void
     {
         $result = $this->serverOps->run(
-            ['install', '-m', '0644', $extracted, $this->loaderPath($version)],
+            ['install', '-m', '0644', $extracted, $loader],
             $this->context($version, 'ioncube_install_loader'),
         );
 
@@ -281,27 +321,23 @@ class IonCubeLoader
      * Write the ini into every SAPI, test, and only then reload.
      *
      * 🔴 The ini is numbered `01-` so it loads **before** OPcache's `10-`.
-     * ionCube has to be in place before OPcache starts caching compiled code,
-     * and the failure when it is not is the worst kind: the site works until
-     * the cache warms up.
+     * Loading it after OPcache can immediately prevent PHP from starting.
      *
-     * If the config test fails the ini comes straight back out and nothing is
-     * reloaded. A bad `zend_extension` line does not break one site — it stops
+     * If the config test fails the caller restores the previous file state
+     * without reloading. A bad `zend_extension` line does not break one site — it stops
      * PHP from starting for every site on this version.
      *
      * @throws PhpConfigException
      */
-    private function enable(string $version): void
+    private function enable(string $version, string $loader): void
     {
         $line = "; Managed by the panel. ionCube Loader for PHP {$version}.\n"
-            ."zend_extension={$this->loaderPath($version)}\n";
+            ."zend_extension={$loader}\n";
 
         foreach ($this->stack->sapis($version) as $sapi) {
             $written = $this->files->put($this->iniPath($version, $sapi), $line, $this->context($version, 'ioncube_write_ini'));
 
             if ($written->failed()) {
-                $this->rollBack($version);
-
                 throw PhpConfigException::ionCubeInstallFailed($written->reference);
             }
         }
@@ -309,28 +345,77 @@ class IonCubeLoader
         $test = $this->stack->configTest($version);
 
         if ($test->failed()) {
-            $this->rollBack($version);
-
             throw PhpConfigException::ionCubeConfigTestFailed($test->reference);
         }
-
-        $this->stack->reload($version);
     }
 
-    /**
-     * Undo a half-applied install without reloading anything.
-     *
-     * The web server is still running the configuration it had before this
-     * ran, which is a working one. Reloading here is the one action that could
-     * turn a failed install into a downed server.
-     */
-    private function rollBack(string $version): void
+    /** @return array<string, ?string> Original path => recovery copy, or null if absent. */
+    private function snapshot(string $version, string $loader): array
     {
+        // Unique adjacent copies survive download cleanup and a failed recovery.
+        $suffix = '.panel-ioncube-'.Str::uuid().'.bak';
+        $backups = [];
+        $paths = [$loader];
         foreach ($this->stack->sapis($version) as $sapi) {
-            $this->files->delete($this->iniPath($version, $sapi), $this->context($version, 'ioncube_rollback'));
+            $paths[] = $this->iniPath($version, $sapi);
+        }
+        foreach ($paths as $path) {
+            $exists = $this->serverOps->run(['test', '-e', $path], $this->context($version, 'ioncube_snapshot'), expectedExitCodes: [1]);
+            if (! $exists->answered) {
+                throw PhpConfigException::ionCubeDiscoveryFailed($exists->reference);
+            }
+            $backups[$path] = null;
+            if ($exists->ok) {
+                $backup = $path.$suffix;
+                $copy = $this->serverOps->run(['cp', '-p', $path, $backup], $this->context($version, 'ioncube_backup'));
+                if ($copy->failed()) {
+                    throw PhpConfigException::ionCubeInstallFailed($copy->reference);
+                }
+                $backups[$path] = $backup;
+            }
         }
 
-        $this->files->delete($this->loaderPath($version), $this->context($version, 'ioncube_rollback'));
+        return $backups;
+    }
+
+    /** @param array<string, ?string> $backups */
+    private function restore(string $version, array $backups): void
+    {
+        // Restore an old binary before its INIs. For a fresh install, remove
+        // INIs first and never delete the binary if any INI removal fails.
+        $ordered = array_filter($backups, fn ($backup) => $backup !== null);
+        foreach (array_reverse($backups, true) as $path => $backup) {
+            if ($backup === null) {
+                $ordered[$path] = null;
+            }
+        }
+        foreach ($ordered as $path => $backup) {
+            $result = $backup === null
+                ? $this->files->delete($path, $this->context($version, 'ioncube_restore'))
+                : $this->serverOps->run(['cp', '-p', $backup, $path], $this->context($version, 'ioncube_restore'));
+            if ($result->failed()) {
+                throw PhpConfigException::ionCubeRollbackFailed($result->reference);
+            }
+        }
+        $this->discardBackups($version, $backups);
+    }
+
+    /** @param array<string, ?string> $backups */
+    private function discardBackups(string $version, array $backups): void
+    {
+        foreach (array_filter($backups) as $backup) {
+            // Cleanup failure is logged by ServerOps; it does not undo an
+            // otherwise successful operation. The recovery copy is harmless.
+            $this->files->delete($backup, $this->context($version, 'ioncube_cleanup_backup'));
+        }
+    }
+
+    private function reload(string $version): void
+    {
+        $result = $this->stack->reload($version);
+        if ($result->failed()) {
+            throw PhpConfigException::ionCubeReloadFailed($result->reference);
+        }
     }
 
     /**
@@ -348,7 +433,16 @@ class IonCubeLoader
             $this->context($version, 'ioncube_extension_dir'),
         );
 
-        return rtrim(trim($result->output()), '/');
+        $dir = rtrim(trim($result->output()), '/');
+        if ($result->failed() || ! preg_match('~^/[a-zA-Z0-9_./+-]+$~D', $dir) || in_array('..', explode('/', $dir), true)) {
+            throw PhpConfigException::ionCubeDiscoveryFailed($result->reference);
+        }
+        $exists = $this->serverOps->run(['test', '-d', $dir], $this->context($version, 'ioncube_extension_dir'));
+        if ($exists->failed()) {
+            throw PhpConfigException::ionCubeDiscoveryFailed($exists->reference);
+        }
+
+        return $dir;
     }
 
     public function loaderPath(string $version): string
@@ -369,11 +463,6 @@ class IonCubeLoader
         return "ioncube_loader_lin_{$version}{$suffix}.so";
     }
 
-    private function memberFor(string $version): string
-    {
-        return 'ioncube/'.$this->memberBasename($version);
-    }
-
     private function threadSafe(string $version): bool
     {
         $result = $this->serverOps->run(
@@ -381,7 +470,12 @@ class IonCubeLoader
             $this->context($version, 'ioncube_thread_safety'),
         );
 
-        return trim($result->output()) === '1';
+        $value = trim($result->output());
+        if ($result->failed() || ! in_array($value, ['0', '1'], true)) {
+            throw PhpConfigException::ionCubeDiscoveryFailed($result->reference);
+        }
+
+        return $value === '1';
     }
 
     private function iniPath(string $version, string $sapi): string
@@ -447,11 +541,7 @@ class IonCubeLoader
 
     private function cleanUp(string $workDir): void
     {
-        foreach ((array) glob($workDir.'/{,*/}*', GLOB_BRACE) as $path) {
-            is_dir($path) ? @rmdir($path) : @unlink($path);
-        }
-
-        @rmdir($workDir);
+        File::deleteDirectory($workDir);
     }
 
     /**

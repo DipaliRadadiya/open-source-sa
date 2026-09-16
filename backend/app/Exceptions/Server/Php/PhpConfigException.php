@@ -93,13 +93,54 @@ class PhpConfigException extends Exception
     }
 
     /**
-     * PHP refused to start with the loader in place, so it was taken back out
-     * and nothing was reloaded. Separate from a plain install failure because
-     * the user needs to know the server is still serving.
+     * Validation failed and the original file state was restored without a
+     * reload. This does not claim anything about the serving processes.
+     * A failed restoration uses the separate rollback factory below.
      */
     public static function ionCubeConfigTestFailed(string $reference): self
     {
         return new self('errors/php.ioncube_config_test_failed', 500, $reference);
+    }
+
+    /**
+     * Discovery is the safety check that decides whether an install is even
+     * safe to attempt. Failing here means we could not be sure what was
+     * already on disk, so nothing was changed — every subsequent step is
+     * built on top of that "we know" answer.
+     */
+    public static function ionCubeDiscoveryFailed(string $reference): self
+    {
+        return new self('errors/php.ioncube_discovery_failed', 500, $reference);
+    }
+
+    public static function ionCubeExtractionFailed(string $reference): self
+    {
+        return new self('errors/php.ioncube_extraction_failed', 500, $reference);
+    }
+
+    public static function ionCubeRemovalFailed(string $reference): self
+    {
+        return new self('errors/php.ioncube_removal_failed', 500, $reference);
+    }
+
+    /**
+     * The reload itself failed — not the change, but telling PHP to pick it
+     * up. The change may still be on disk waiting for the next reload, and
+     * the recovery files are still there in case it has to come back out.
+     */
+    public static function ionCubeReloadFailed(string $reference): self
+    {
+        return new self('errors/php.ioncube_reload_failed', 500, $reference);
+    }
+
+    /**
+     * Recovery could not complete. Any original-file backups are retained;
+     * a fresh install may have no originals to back up. Manual recovery is
+     * required rather than reporting that the change was safely undone.
+     */
+    public static function ionCubeRollbackFailed(string $reference): self
+    {
+        return new self('errors/php.ioncube_rollback_failed', 500, $reference);
     }
 
     public function render(Request $request): JsonResponse

@@ -23,5 +23,10 @@ return [
     'ioncube_download_failed' => 'ionCube Loader डाउनलोड नहीं हो सका। सर्वर की इंटरनेट पहुँच जाँचें और पुनः प्रयास करें।',
     'ioncube_invalid_loader' => 'डाउनलोड की गई फ़ाइल इस सर्वर के लिए वैध ionCube Loader नहीं है। कुछ भी इंस्टॉल नहीं किया गया।',
     'ioncube_install_failed' => 'ionCube Loader इंस्टॉल नहीं हो सका।',
-    'ioncube_config_test_failed' => 'ionCube Loader के साथ PHP शुरू नहीं हुआ, इसलिए उसे हटा दिया गया। आपकी साइटों पर कोई असर नहीं पड़ा।',
+    'ioncube_discovery_failed' => 'ionCube Loader की खोज आपके PHP इंस्टॉलेशन को सुरक्षित रूप से निर्धारित नहीं कर सकी, इसलिए कुछ भी नहीं बदला गया।',
+    'ioncube_extraction_failed' => 'ionCube संग्रह को निकाला नहीं जा सका।',
+    'ioncube_removal_failed' => 'पहले से इंस्टॉल किया गया ionCube Loader हटाया नहीं जा सका। विवरण के लिए रेफ़रेंस देखें।',
+    'ioncube_reload_failed' => 'PHP को पुनः लोड नहीं किया जा सका। परिवर्तन अभी सक्रिय नहीं हो सकते हैं। सभी रिकवरी प्रतियाँ सुरक्षित रखी गई हैं।',
+    'ioncube_rollback_failed' => 'वापसी (रोलबैक) विफल हुई; सभी रिकवरी प्रतियाँ सुरक्षित रखी गई हैं। मैन्युअल रिकवरी आवश्यक है।',
+    'ioncube_config_test_failed' => 'PHP कॉन्फ़िगरेशन सत्यापन विफल हुआ। पिछली कॉन्फ़िगरेशन फ़ाइलें बहाल कर दी गई हैं और PHP को पुनः लोड नहीं किया गया।',
 ];

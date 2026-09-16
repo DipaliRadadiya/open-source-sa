@@ -23,5 +23,10 @@ return [
     'ioncube_download_failed' => 'ionCube Loader をダウンロードできませんでした。サーバーのインターネット接続を確認して再試行してください。',
     'ioncube_invalid_loader' => 'ダウンロードしたファイルは、このサーバー用の有効な ionCube Loader ではありません。何もインストールされていません。',
     'ioncube_install_failed' => 'ionCube Loader をインストールできませんでした。',
-    'ioncube_config_test_failed' => 'ionCube Loader を組み込んだ状態では PHP が起動しなかったため、元に戻しました。サイトへの影響はありません。',
+    'ioncube_discovery_failed' => 'ionCube Loader の検出処理が PHP インストールを安全に特定できなかったため、変更は行われていません。',
+    'ioncube_extraction_failed' => 'ionCube アーカイブを展開できませんでした。',
+    'ioncube_removal_failed' => 'インストール済みの ionCube Loader を削除できませんでした。詳細はリファレンスを参照してください。',
+    'ioncube_reload_failed' => 'PHP を再読み込みできませんでした。変更はまだ有効になっていない可能性があります。リカバリーコピーはすべて保持されています。',
+    'ioncube_rollback_failed' => 'ロールバックに失敗しました。リカバリーコピーはすべて保持されています。手動での復旧が必要です。',
+    'ioncube_config_test_failed' => 'PHP 設定の検証に失敗しました。以前の設定ファイルは復元され、PHP は再読み込みされていません。',
 ];
