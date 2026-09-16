@@ -14,6 +14,10 @@
  * Keyed on the engine identifier the API sends. An engine with no entry
  * resolves to null and gets the generic database glyph, rather than a guessed
  * path that renders as a broken image.
+ *
+ * `wordmark` says whether the file spells the engine's name. Three of these do,
+ * so printing the name beside them reads "MySQL MySQL"; PostgreSQL's does not,
+ * and a caller using the logo as the sole identity has to know the difference.
  */
 /*
  * `darkSize` exists because a dark variant need not be the same LOCKUP as its
@@ -27,9 +31,9 @@
  * lockup, same height, both themes.
  */
 const ENGINE_LOGOS = {
-  mysql: { light: "mysql.svg", dark: "mysql-white.svg" },
-  mariadb: { light: "mariadb.svg", dark: "mariadb-white.png" },
-  mongodb: { light: "mongodb.png", dark: "mongodb-white.png" },
+  mysql: { light: "mysql.svg", dark: "mysql-white.svg", wordmark: true },
+  mariadb: { light: "mariadb.svg", dark: "mariadb-white.png", wordmark: true },
+  mongodb: { light: "mongodb.png", dark: "mongodb-white.png", wordmark: true },
   /*
    * The same file on both themes, and that is not an oversight. The other
    * three are wordmarks whose lettering is near-black; PostgreSQL's official
@@ -44,6 +48,13 @@ const ENGINE_LOGOS = {
     light: "postgresql.svg",
     dark: "postgresql.svg",
     size: "h-8 w-auto max-w-12",
+    /*
+     * The one mark with no name in it. Anywhere the logo is the only identity
+     * on screen, this engine needs its name printed beside it — an elephant
+     * says "PostgreSQL" to people who already knew, which is not who a first
+     * database screen is for.
+     */
+    wordmark: false,
   },
 };
 
@@ -56,6 +67,7 @@ export function engineLogo(engine) {
     dark: `/db-engines/${pair.dark}`,
     size: pair.size ?? null,
     darkSize: pair.darkSize ?? pair.size ?? null,
+    wordmark: pair.wordmark === true,
   };
 }
 

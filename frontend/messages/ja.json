@@ -2482,7 +2482,14 @@
       "failed": "インストールできませんでした",
       "notInstalled": "未インストール",
       "unreachable": "到達不能",
-      "unreachableHint": "このサーバーにありますが、パネルがまだ接続できません。"
+      "unreachableHint": "このサーバーにありますが、パネルがまだ接続できません。",
+      "recommended": "推奨",
+      "purpose": {
+        "mysql": "一般的な選択肢です。WordPress、Laravel とほとんどの PHP アプリで動作します。",
+        "mariadb": "MySQL をそのまま置き換えられます。コマンドもアプリも同じです。",
+        "mongodb": "テーブルではなくドキュメントを保存します。Node.js アプリでよく使われます。",
+        "postgresql": "複雑なクエリとデータの整合性に強みがあります。"
+      }
     },
     "confirmInstall": {
       "title": "{name} をインストールしますか？",

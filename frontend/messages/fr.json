@@ -2482,7 +2482,14 @@
       "failed": "Échec de l'installation",
       "notInstalled": "Non installé",
       "unreachable": "Injoignable",
-      "unreachableHint": "Il est sur ce serveur, mais le panneau ne peut pas encore s'y connecter."
+      "unreachableHint": "Il est sur ce serveur, mais le panneau ne peut pas encore s'y connecter.",
+      "recommended": "Recommandé",
+      "purpose": {
+        "mysql": "Le choix habituel. Fait tourner WordPress, Laravel et la plupart des applications PHP.",
+        "mariadb": "Un remplacement direct de MySQL : mêmes commandes, mêmes applications.",
+        "mongodb": "Stocke des documents plutôt que des tables. Courant avec les applications Node.js.",
+        "postgresql": "Excelle sur les requêtes complexes et la cohérence des données."
+      }
     },
     "confirmInstall": {
       "title": "Installer {name} ?",
