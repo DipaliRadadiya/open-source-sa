@@ -14,8 +14,26 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 hover:shadow-sm",
+        /*
+         * Filled, not hollow.
+         *
+         * This was `bg-background` — white on a white card — so the panel's
+         * most-used button variant (240 call sites) rendered as a hairline
+         * rectangle with text in it. Reported repeatedly, and finally as "that
+         * even not looks like button", which is exactly right: an outline with
+         * no fill is a boundary, not a surface, and a control has to look like
+         * a surface you can press.
+         *
+         * The border stays. The fill alone would vanish against `bg-muted`
+         * panels, which several screens use; keeping both means the button
+         * reads on every surface we have.
+         *
+         * Changed here rather than at the 240 call sites: they are all asking
+         * for the same thing — "a button that is not the primary action" — and
+         * that is one decision, not 240.
+         */
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-secondary hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_6%)] hover:text-foreground aria-expanded:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_6%)] aria-expanded:text-foreground dark:border-input dark:bg-input/40 dark:hover:bg-input/60",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

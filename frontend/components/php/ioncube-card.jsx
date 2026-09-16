@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Loader2, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
 
 import { installIonCube, removeIonCube } from "@/lib/api/php";
 import { apiMessage } from "@/lib/api/error-message";
@@ -138,11 +138,26 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
           <div className="shrink-0">
             <ReasonTooltip reason={canManage ? null : tp("noPermission")}>
               {installed ? (
+                /*
+                 * `destructive`, like every other button that takes something
+                 * off the server — "Remove certificate" one screen over, and 39
+                 * other places in the panel.
+                 *
+                 * This was `outline`, so an uninstall looked exactly like a
+                 * neutral action. Reported as "not even looks like remove
+                 * button", which is precisely the failure: the only thing
+                 * saying it was destructive was the word, and the word is the
+                 * part people skim.
+                 *
+                 * The confirmation dialog behind it is unchanged — the styling
+                 * is not the safety net, it is the warning before the net.
+                 */
                 <Button
-                  variant="outline"
+                  variant="destructive"
                   onClick={() => setConfirmOpen(true)}
                   disabled={!canManage || busy || installing}
                 >
+                  <Trash2 className="size-4" />
                   {t("remove")}
                 </Button>
               ) : (
