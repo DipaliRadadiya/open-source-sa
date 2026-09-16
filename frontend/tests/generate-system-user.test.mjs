@@ -43,7 +43,11 @@ test("the picker is hidden while generating", () => {
 test("the choice is not offered without permission", () => {
   // One possible answer means no choice to present; a disabled radio pair
   // would be two controls saying so.
-  assert.match(form, /\{canCreateSystemUser \? \(\s*<div className="grid gap-2/);
+  //
+  // Matched on the gate and the grid, NOT on the gap: pinning a spacing value
+  // here made a purely visual change fail a test about permissions, which
+  // teaches the next reader to edit the test rather than think about it.
+  assert.match(form, /\{canCreateSystemUser \? \(\s*<div className="grid gap-/);
 });
 
 test("the review row reads as answered when generating", () => {

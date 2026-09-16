@@ -76,8 +76,8 @@
     --secondary-foreground: oklch(0.28 0.014 264);
     --muted: oklch(0.968 0.004 264);
     --muted-foreground: oklch(0.552 0.012 264);
-    --accent: oklch(0.968 0.004 264);
-    --accent-foreground: oklch(0.28 0.014 264);
+    --accent: oklch(0.962 0.018 260);
+    --accent-foreground: oklch(0.32 0.09 260);
     --destructive: oklch(0.577 0.245 27.325);
     --success: oklch(0.62 0.16 150);
     /* Dark enough to read on its own tint. At 0.68 the amber badges and

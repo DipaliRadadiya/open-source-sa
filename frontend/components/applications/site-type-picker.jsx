@@ -461,7 +461,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                   "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                   active
                     ? "border-primary bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    : "border-transparent bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
               >
                 {t(`form.category${group.key.charAt(0).toUpperCase()}${group.key.slice(1)}`)}
@@ -476,7 +476,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
            beside a 20rem summary panel, so the window width says nothing about
            how much room it has — the same reason the form's own fields are
            laid out with `@` rules. */
-        <div className="grid grid-cols-1 gap-2 @xl:grid-cols-2 @3xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2 @3xl:grid-cols-3">
           {filtered.map((type) => {
             const disabled = !type.available;
             /*
@@ -517,7 +517,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                   // same information laid out in a row is two lines and half
                   // the height, which is the whole complaint answered without
                   // hiding a single application.
-                  "flex w-full items-center gap-3 rounded-xl border bg-card p-2.5 text-left transition-colors",
+                  "flex w-full items-center gap-3 rounded-xl border bg-muted/40 p-2.5 text-left transition-colors",
                   /*
                    * Dashed and faded means UNCHOOSABLE, not "something is
                    * missing".
@@ -532,7 +532,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                    */
                   !choosable && "border-dashed",
                   choosable &&
-                    "hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+                    "hover:border-primary/40 hover:bg-card hover:shadow-[0_1px_2px_rgb(0_0_0/0.04),0_2px_6px_rgb(0_0_0/0.05)] focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
                 )}
               >
                 {/* No "Popular" badge, though the data has the flag: six of
@@ -557,7 +557,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                       be chosen. The bubble carries the server's whole sentence,
                       which says what is installed as well as what is wanted. */}
                   {disabled && type.unavailable_reason ? (
-                    <span className="mt-0.5 flex items-center gap-1 text-xs leading-4 text-destructive">
+                    <span className="mt-0.5 flex items-center gap-1 text-xs leading-4 text-warning">
                       <TriangleAlert className="size-3 shrink-0" />
                       {/* The bubble carries one sentence PER blocker, stacked.
                           Joining them into a paragraph is how the second one

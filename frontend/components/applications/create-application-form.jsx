@@ -1438,7 +1438,7 @@ export function CreateApplicationForm({
               rem, so it grows with the text it has to hold. */}
           <div className="@container min-w-0 space-y-6">
             <section
-              className="space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
+              className="space-y-3 rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 sm:p-5"
               aria-labelledby="application-type-heading"
             >
               <SectionHeading
@@ -1491,7 +1491,7 @@ export function CreateApplicationForm({
             </section>
 
             <section
-              className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
+              className="space-y-4 rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 sm:p-5"
               aria-labelledby="application-details-heading"
             >
               <SectionHeading
@@ -1676,7 +1676,7 @@ export function CreateApplicationForm({
                           answer this question, and a disabled radio pair would
                           be two controls saying so. */}
                       {canCreateSystemUser ? (
-                        <div className="grid gap-2 @md:grid-cols-2">
+                        <div className="grid gap-4 @md:grid-cols-2">
                           {[
                             { generate: true, label: t("form.generateSystemUser"), hint: t("form.generateSystemUserHint") },
                             { generate: false, label: t("form.pickSystemUser"), hint: t("form.pickSystemUserHint") },
@@ -1759,7 +1759,7 @@ export function CreateApplicationForm({
             </section>
 
             <section
-              className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-5"
+              className="space-y-4 rounded-xl bg-card p-4 shadow-sm ring-1 ring-foreground/10 sm:p-5"
               aria-labelledby="application-configure-heading"
             >
               <SectionHeading
@@ -1794,7 +1794,7 @@ export function CreateApplicationForm({
                           The hint is where that goes. */}
                       <ChoiceField
                         variant="card"
-                        className="grid gap-2 @md:grid-cols-2"
+                        className="grid gap-4 @md:grid-cols-2"
                         value={gitSource}
                         onChange={setGitSource}
                         options={[
@@ -2141,7 +2141,7 @@ export function CreateApplicationForm({
                 in the flow rather than fixed to the viewport, so it never
                 covers the last field, and the blur keeps the fields readable
                 as they pass underneath. */}
-            <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 rounded-xl border bg-background/85 px-4 py-3 shadow-sm backdrop-blur-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 rounded-xl bg-background/85 px-4 py-3 shadow-sm ring-1 ring-foreground/10 backdrop-blur-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 {selected ? t("guided.reviewHint", { brand }) : t("form.chooseTypeHint")}
               </p>
