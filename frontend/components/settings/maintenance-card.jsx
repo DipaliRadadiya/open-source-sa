@@ -274,7 +274,7 @@ function UpdateStatus({ updates }) {
  * switched off, which makes "I patch manually, when I choose" a supported
  * posture rather than a gap.
  */
-function RunSecurityUpdates({ run, canManage }) {
+function RunSecurityUpdates({ run, canManage, total, security = 0 }) {
   const t = useTranslations("settings.maintenance");
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -383,6 +383,26 @@ function RunSecurityUpdates({ run, canManage }) {
             {running ? t("updates.running") : t("updates.runNow")}
           </Button>
         </ReasonTooltip>
+
+        {/*
+          Said BEFORE the button is pressed, not after.
+          
+          This card counts every upgradable package with apt-check, but the
+          button runs unattended-upgrades, whose Allowed-Origins are the
+          security suites — `noble-updates`, where most upgrades live, is not
+          among them and never will be. So "24 updates available" beside a
+          button reading "Install updates now" promised 24 and delivered the 2,
+          and on a box where even those are gated it delivered nothing at all:
+          reported as the button not working.
+          
+          Shown only when the two numbers actually disagree, so the common case
+          — every waiting update is a security one — stays quiet.
+        */}
+        {!running && typeof total === "number" && total > security ? (
+          <span className="text-xs text-muted-foreground">
+            {t("updates.securityOnlyNote", { count: total - security })}
+          </span>
+        ) : null}
 
         {running && reconnecting ? (
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -519,6 +539,8 @@ function UpdatesSection({ updates, canManage }) {
           <UpdateStatus updates={updates} />
 
           <RunSecurityUpdates
+            total={updates?.updates_available}
+            security={updates?.security_updates_available ?? 0}
             run={updates?.security_update ?? null}
             canManage={canManage}
           />
