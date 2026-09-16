@@ -83,15 +83,18 @@ export function acceptedEngines(type) {
  * has to be waited for, and one that is installed but unreachable is a service
  * to start — and telling someone to install what they already have is worse
  * than saying nothing.
+ *
+ * It no longer returns early for a type the backend already blocked. That
+ * skip is how "install MySQL" and "install Node" arrived on separate visits:
+ * whichever check spoke first silenced the rest. `blockers.js` collects them
+ * all and drops the server's own sentence when it has a better one for the
+ * same category, which is the same protection without the drip-feed.
  */
 export function databaseBlock({ type, engines, failed } = {}) {
   // A failed lookup says nothing about the server. Blocking the catalogue on
   // one endpoint's wobble is a worse failure than the one this prevents.
   if (failed) return null;
   if (!type?.needs_database) return null;
-  // Already blocked, with the backend's own reason. Two answers to the same
-  // question is how they end up disagreeing.
-  if (type.available === false) return null;
 
   const list = Array.isArray(engines) ? engines : [];
   if (list.length === 0) return null;
@@ -109,36 +112,15 @@ export function databaseBlock({ type, engines, failed } = {}) {
   if (found.some((engine) => engine?.installed === true && engine?.running === true)) return null;
 
   if (found.some((engine) => engine?.install_status === "installing")) {
-    return { state: "installing", engines: accepted };
+    return { kind: "database", state: "installing", engines: accepted };
   }
   if (found.some((engine) => engine?.installed === true)) {
-    return { state: "stopped", engines: accepted };
+    return { kind: "database", state: "stopped", engines: accepted };
   }
-  return { state: "missing", engines: accepted };
+  return { kind: "database", state: "missing", engines: accepted };
 }
 
-/**
- * The catalogue with the unusable types marked, in the shape the picker
- * already renders.
- *
- * Deliberately reuses `available` / `unavailable_reason` / `unavailable_code`
- * rather than adding a parallel flag: the grid, the greying, the reason line
- * and the install link all exist and work, and a second mechanism beside them
- * is how one gets forgotten.
+/*
+ * Marking the catalogue lives in `blockers.js` now — see the note at the end
+ * of `runtime-readiness.js` for why it cannot be done in two passes.
  */
-export function withDatabaseAvailability(siteTypes, engines, reasonFor) {
-  return (Array.isArray(siteTypes) ? siteTypes : []).map((type) => {
-    const block = databaseBlock({ type, ...(engines ?? {}) });
-    if (block === null) return type;
-
-    return {
-      ...type,
-      available: false,
-      unavailable_code: "database",
-      unavailable_reason: reasonFor(block),
-      // Nothing about a runtime. The picker reads this to offer a runtime
-      // install, and a database block is not one.
-      installable_runtime: null,
-    };
-  });
-}

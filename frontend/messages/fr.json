@@ -3269,7 +3269,10 @@
       "blockedDatabaseEngines": "Nécessite {engines}",
       "useAccountHint": "Choisissez parmi les dépôts que votre compte connecté peut voir.",
       "usePublicUrlHint": "Collez l’URL de n’importe quel dépôt public. Aucun identifiant nécessaire.",
-      "noGitAccount": "Aucun compte Git connecté pour l’instant."
+      "noGitAccount": "Aucun compte Git connecté pour l’instant.",
+      "needs": "Nécessite {items}",
+      "aDatabase": "une base de données",
+      "submitNeedsServices": "{count, plural, one {Installez d’abord le service dont cette application a besoin} other {Installez d’abord les services dont cette application a besoin}}"
     },
     "actions": {
       "label": "Actions",
@@ -4865,8 +4868,14 @@
       "resumeFailed": "Impossible de réactiver le site."
     },
     "unavailableRuntime": {
-      "php": "Ce site a besoin de PHP {range}, et ce serveur dispose de {installed}.",
-      "node": "Ce site a besoin de Node {range}, et ce serveur dispose de {installed}."
+      "php": {
+        "install": "Ce site a besoin de PHP {range}, et ce serveur dispose de {installed}. Installez PHP {suggest} pour le créer.",
+        "none": "Ce site a besoin de PHP {range}, et ce serveur dispose de {installed}. Aucune des versions de PHP proposées à l'installation n'entre dans cette plage."
+      },
+      "node": {
+        "install": "Ce site a besoin de Node {range}, et ce serveur dispose de {installed}. Installez Node {suggest} pour le créer.",
+        "none": "Ce site a besoin de Node {range}, et ce serveur dispose de {installed}. Aucune des versions de Node proposées à l'installation n'entre dans cette plage."
+      }
     },
     "gitAccountHint": "Un compte Git connecté, utilisé pour lire vos dépôts privés. Ajoutez-en un dans Intégrations si cette liste est vide.",
     "systemUserHint": "Le compte Linux qui possède les fichiers de ce site. Donner à chaque site son propre compte empêche un site de lire les données d’un autre.",
@@ -4888,7 +4897,46 @@
       "short_name": "Un identifiant court utilisé à l'intérieur de l'application. Lettres et chiffres uniquement, sans espaces."
     },
     "branchHint": "La branche à partir de laquelle nous déployons. Pousser vers n'importe quelle autre branche laisse ce site inchangé.",
-    "repositoryHint": "L'endroit où vit le code de ce site. Choisissez-en un depuis le compte connecté ci-dessus."
+    "repositoryHint": "L'endroit où vit le code de ce site. Choisissez-en un depuis le compte connecté ci-dessus.",
+    "requiredServices": {
+      "heading": "{app} a besoin de {count, plural, one {# service de plus} other {# services de plus}}",
+      "headingReady": "{app} peut maintenant être créé",
+      "sub": "Ils peuvent être installés pour vous — continuez à remplir le formulaire pendant ce temps.",
+      "subReady": "Tout ce dont cette application a besoin est sur le serveur.",
+      "subDenied": "Votre compte ne peut pas les installer : quelqu'un devra les ajouter avant que cette application puisse être créée.",
+      "install": "Installer les services nécessaires",
+      "installRetryAll": "Réessayer",
+      "retry": "Réessayer",
+      "footerIdle": "Ils s'installent l'un après l'autre : le second attend son tour.",
+      "footerWorking": "Cela peut prendre quelques minutes. Vous pouvez continuer à remplir le formulaire.",
+      "footerFailed": "{count, plural, one {# service ne s'est pas installé} other {# services ne se sont pas installés}}. Le reste est terminé.",
+      "footerReady": "Il n'y a plus rien à installer.",
+      "footerDenied": "Demandez à un administrateur de les installer.",
+      "state": {
+        "missing": "Non installé",
+        "queued": "En attente",
+        "installing": "Installation…",
+        "installed": "Installé",
+        "failed": "Échec",
+        "denied": "Autorisation requise",
+        "deniedReason": "Vous n'avez pas l'autorisation d'installer cela. Un administrateur le peut.",
+        "impossible": "Aucune version ne convient",
+        "impossibleReason": "Aucune des versions que ce panneau peut installer n’entre dans la plage dont cette application a besoin."
+      },
+      "step": {
+        "downloading": "Téléchargement…",
+        "configuring": "Configuration…",
+        "starting": "Démarrage…"
+      },
+      "purpose": {
+        "database": "Là où {app} stocke ses données",
+        "node": "L'environnement d'exécution de {app}",
+        "php": "L'environnement d'exécution de {app}"
+      },
+      "footerIdleOne": "L'installation se fait en arrière-plan — vous pouvez continuer à remplir le formulaire.",
+      "subImpossible": "Ce serveur ne peut pas faire tourner cette application en l’état.",
+      "footerImpossible": "Rien ici ne peut y remédier."
+    }
   },
   "panelUpdate": {
     "title": "Mise à jour du panneau",

@@ -3269,7 +3269,10 @@
       "blockedDatabaseEngines": "Necesita {engines}",
       "useAccountHint": "Elija entre los repositorios que ve su cuenta conectada.",
       "usePublicUrlHint": "Pegue la URL de cualquier repositorio público. No hacen falta credenciales.",
-      "noGitAccount": "Aún no hay ninguna cuenta de Git conectada."
+      "noGitAccount": "Aún no hay ninguna cuenta de Git conectada.",
+      "needs": "Necesita {items}",
+      "aDatabase": "una base de datos",
+      "submitNeedsServices": "{count, plural, one {Primero instala el servicio que necesita esta aplicación} other {Primero instala los servicios que necesita esta aplicación}}"
     },
     "actions": {
       "label": "Acciones",
@@ -4865,8 +4868,14 @@
       "resumeFailed": "No pudimos reanudar el sitio."
     },
     "unavailableRuntime": {
-      "php": "Este sitio necesita PHP {range} y este servidor tiene {installed}.",
-      "node": "Este sitio necesita Node {range} y este servidor tiene {installed}."
+      "php": {
+        "install": "Este sitio necesita PHP {range} y este servidor tiene {installed}. Instala PHP {suggest} para crearlo.",
+        "none": "Este sitio necesita PHP {range} y este servidor tiene {installed}. Ninguna de las versiones de PHP que se ofrecen para instalar entra en ese rango."
+      },
+      "node": {
+        "install": "Este sitio necesita Node {range} y este servidor tiene {installed}. Instala Node {suggest} para crearlo.",
+        "none": "Este sitio necesita Node {range} y este servidor tiene {installed}. Ninguna de las versiones de Node que se ofrecen para instalar entra en ese rango."
+      }
     },
     "gitAccountHint": "Una cuenta de Git conectada, utilizada para leer sus repositorios privados. Agregue una en Integraciones si esta lista está vacía.",
     "systemUserHint": "La cuenta de Linux que es dueña de los archivos de este sitio. Dar a cada sitio su propia cuenta impide que un sitio lea los datos de otro.",
@@ -4888,7 +4897,46 @@
       "short_name": "Un identificador corto que se utiliza dentro de la aplicación. Solo letras y números, sin espacios."
     },
     "branchHint": "La rama desde la que desplegamos. Hacer push a cualquier otra rama deja este sitio como está.",
-    "repositoryHint": "Dónde reside el código de este sitio. Elija uno de la cuenta conectada arriba."
+    "repositoryHint": "Dónde reside el código de este sitio. Elija uno de la cuenta conectada arriba.",
+    "requiredServices": {
+      "heading": "{app} necesita {count, plural, one {# servicio más} other {# servicios más}}",
+      "headingReady": "{app} ya se puede crear",
+      "sub": "Podemos instalarlos por ti: sigue rellenando el formulario mientras tanto.",
+      "subReady": "Todo lo que necesita esta aplicación está en el servidor.",
+      "subDenied": "Tu cuenta no puede instalarlos, así que alguien tendrá que añadirlos antes de crear esta aplicación.",
+      "install": "Instalar los servicios necesarios",
+      "installRetryAll": "Reintentar",
+      "retry": "Reintentar",
+      "footerIdle": "Se instalan uno detrás de otro, así que el segundo espera su turno.",
+      "footerWorking": "Esto puede tardar unos minutos. Puedes seguir rellenando el formulario.",
+      "footerFailed": "{count, plural, one {# servicio no se instaló} other {# servicios no se instalaron}}. El resto ya está.",
+      "footerReady": "No queda nada por instalar.",
+      "footerDenied": "Pide a un administrador que los instale.",
+      "state": {
+        "missing": "No instalado",
+        "queued": "En espera",
+        "installing": "Instalando…",
+        "installed": "Instalado",
+        "failed": "Falló",
+        "denied": "Requiere permiso",
+        "deniedReason": "No tienes permiso para instalar esto. Un administrador sí puede.",
+        "impossible": "Ninguna versión sirve",
+        "impossibleReason": "Ninguna de las versiones que este panel puede instalar entra en el rango que necesita esta aplicación."
+      },
+      "step": {
+        "downloading": "Descargando…",
+        "configuring": "Configurando…",
+        "starting": "Iniciando…"
+      },
+      "purpose": {
+        "database": "Donde {app} guarda sus datos",
+        "node": "El entorno de ejecución de {app}",
+        "php": "El entorno de ejecución de {app}"
+      },
+      "footerIdleOne": "Se instala en segundo plano: puedes seguir rellenando el formulario.",
+      "subImpossible": "Este servidor no puede ejecutar esta aplicación tal como está.",
+      "footerImpossible": "Nada de aquí puede resolverlo por sí solo."
+    }
   },
   "panelUpdate": {
     "title": "Actualización del panel",

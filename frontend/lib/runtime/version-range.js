@@ -67,8 +67,50 @@ export function versionWithin(version, range) {
   const min = range?.min ?? null;
   const max = range?.max ?? null;
   if (min !== null && compareVersions(version, min) < 0) return false;
-  if (max !== null && compareVersions(version, max) > 0) return false;
+  if (max !== null && compareVersions(toPrecisionOf(version, max), max) > 0) return false;
   return true;
+}
+
+/**
+ * A version cut to the number of segments the bound actually states.
+ *
+ * Only the UPPER bound, and only because of what a partial one means. n8n
+ * declares a max of `24` and the comment beside it in the backend says "Node
+ * 20.19 to 24.x inclusive" — the whole 24 line. Padding the missing segments
+ * with zero turned that into `24.0.0`, so a server running the current Node
+ * 24.20.0 was told it needed 20.19, which is end-of-life and deliberately not
+ * offered for install. A dead end from both directions, reported by a user.
+ *
+ * Cutting instead of padding says what the bound says: `24` compares majors,
+ * `8.1` compares major and minor, so PrestaShop's `8.1` still accepts PHP
+ * 8.1.9 and still refuses 8.2. A fully-stated bound is unchanged.
+ *
+ * The lower bound is left alone — it needs no help. `20.19` against 20.19.3
+ * already compares correctly, and cutting there would let 20.18.x in.
+ */
+function toPrecisionOf(version, bound) {
+  const segments = String(bound).split(".").length;
+  return String(version).split(".").slice(0, segments).join(".");
+}
+
+/**
+ * The newest version in a list that satisfies a range, or null.
+ *
+ * Fed the `installable` list rather than the installed one, to answer the
+ * question a blocked card leaves open: not "what does this need" but "what do
+ * I go and install". Printing the range alone is what sent a user hunting for
+ * Node 20.19 — the bottom of n8n's range, and a version this panel refuses to
+ * install because the line is dead. Newest, because among versions that all
+ * satisfy the range the supported one is the one to recommend.
+ *
+ * Null is a real answer and a different sentence: the range is satisfiable in
+ * principle and nothing we can install satisfies it.
+ */
+export function highestInRange(versions, range) {
+  return versionsInRange(versions, range)
+    .map((item) => item?.version)
+    .filter((version) => typeof version === "string" && version !== "")
+    .sort((a, b) => compareVersions(b, a))[0] ?? null;
 }
 
 /**

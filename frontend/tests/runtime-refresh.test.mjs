@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { withRuntimeAvailability } from "../lib/applications/runtime-readiness.js";
+import { withAvailability } from "../lib/applications/blockers.js";
 
 const root = path.join(import.meta.dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
@@ -91,17 +91,23 @@ test("the same refresh is what un-greys a type blocked by its PHP range", () => 
   };
   const reason = () => "needs a PHP version it can run on";
 
-  const [blocked] = withRuntimeAvailability(
+  const [blocked] = withAvailability(
     [prestashop],
-    { phpVersions: [{ version: "8.4" }], nodeVersions: [], failed: false },
+    { runtimes: { phpVersions: [{ version: "8.4" }], nodeVersions: [], failed: false } },
     reason,
   );
   assert.equal(blocked.available, false);
   assert.equal(blocked.unavailable_code, "runtime");
 
-  const [freed] = withRuntimeAvailability(
+  const [freed] = withAvailability(
     [prestashop],
-    { phpVersions: [{ version: "8.4" }, { version: "8.1" }], nodeVersions: [], failed: false },
+    {
+      runtimes: {
+        phpVersions: [{ version: "8.4" }, { version: "8.1" }],
+        nodeVersions: [],
+        failed: false,
+      },
+    },
     reason,
   );
   assert.equal(freed.available, true);

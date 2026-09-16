@@ -3269,7 +3269,10 @@
       "blockedDatabaseEngines": "Precisa de {engines}",
       "useAccountHint": "Escolha entre os repositórios que a sua conta conectada consegue ver.",
       "usePublicUrlHint": "Cole a URL de qualquer repositório público. Não são necessárias credenciais.",
-      "noGitAccount": "Nenhuma conta Git conectada ainda."
+      "noGitAccount": "Nenhuma conta Git conectada ainda.",
+      "needs": "Precisa de {items}",
+      "aDatabase": "um banco de dados",
+      "submitNeedsServices": "{count, plural, one {Instale primeiro o serviço de que esta aplicação precisa} other {Instale primeiro os serviços de que esta aplicação precisa}}"
     },
     "actions": {
       "label": "Ações",
@@ -4865,8 +4868,14 @@
       "resumeFailed": "Não conseguimos retomar o site."
     },
     "unavailableRuntime": {
-      "php": "Este site precisa de PHP {range}, e este servidor tem {installed}.",
-      "node": "Este site precisa de Node {range}, e este servidor tem {installed}."
+      "php": {
+        "install": "Este site precisa de PHP {range}, e este servidor tem {installed}. Instale o PHP {suggest} para criá-lo.",
+        "none": "Este site precisa de PHP {range}, e este servidor tem {installed}. Nenhuma das versões de PHP oferecidas para instalação está nesse intervalo."
+      },
+      "node": {
+        "install": "Este site precisa de Node {range}, e este servidor tem {installed}. Instale o Node {suggest} para criá-lo.",
+        "none": "Este site precisa de Node {range}, e este servidor tem {installed}. Nenhuma das versões de Node oferecidas para instalação está nesse intervalo."
+      }
     },
     "gitAccountHint": "Uma conta Git conectada, usada para ler seus repositórios privados. Adicione uma em Integrações se esta lista estiver vazia.",
     "systemUserHint": "A conta Linux que é dona dos arquivos deste site. Dar a cada site sua própria conta impede que um site leia os dados de outro.",
@@ -4888,7 +4897,46 @@
       "short_name": "Um identificador curto usado dentro do aplicativo. Apenas letras e números, sem espaços."
     },
     "branchHint": "A branch a partir da qual fazemos o deploy. Fazer push para qualquer outra branch deixa este site como está.",
-    "repositoryHint": "Onde fica o código deste site. Escolha um na conta conectada acima."
+    "repositoryHint": "Onde fica o código deste site. Escolha um na conta conectada acima.",
+    "requiredServices": {
+      "heading": "{app} precisa de {count, plural, one {mais # serviço} other {mais # serviços}}",
+      "headingReady": "{app} já pode ser criado",
+      "sub": "Podemos instalá-los por si — continue a preencher o formulário enquanto isso.",
+      "subReady": "Tudo o que esta aplicação precisa já está no servidor.",
+      "subDenied": "A sua conta não pode instalá-los, por isso alguém terá de os adicionar antes de esta aplicação poder ser criada.",
+      "install": "Instalar os serviços necessários",
+      "installRetryAll": "Tentar novamente",
+      "retry": "Tentar novamente",
+      "footerIdle": "Instalam-se um a seguir ao outro, por isso o segundo espera a sua vez.",
+      "footerWorking": "Isto pode demorar alguns minutos. Pode continuar a preencher o formulário.",
+      "footerFailed": "{count, plural, one {# serviço não foi instalado} other {# serviços não foram instalados}}. O resto está feito.",
+      "footerReady": "Não falta instalar nada.",
+      "footerDenied": "Peça a um administrador para os instalar.",
+      "state": {
+        "missing": "Não instalado",
+        "queued": "Aguardando",
+        "installing": "Instalando…",
+        "installed": "Instalado",
+        "failed": "Falhou",
+        "denied": "Precisa de permissão",
+        "deniedReason": "Não tem permissão para instalar isto. Um administrador tem.",
+        "impossible": "Nenhuma versão serve",
+        "impossibleReason": "Nenhuma das versões que este painel pode instalar está dentro do intervalo de que esta aplicação precisa."
+      },
+      "step": {
+        "downloading": "A descarregar…",
+        "configuring": "A configurar…",
+        "starting": "Iniciando…"
+      },
+      "purpose": {
+        "database": "Onde {app} guarda os seus dados",
+        "node": "O runtime em que {app} corre",
+        "php": "O runtime em que {app} corre"
+      },
+      "footerIdleOne": "Instala em segundo plano — pode continuar a preencher o formulário.",
+      "subImpossible": "Este servidor não consegue executar esta aplicação tal como está.",
+      "footerImpossible": "Nada aqui resolve isto sozinho."
+    }
   },
   "panelUpdate": {
     "title": "Atualização do painel",

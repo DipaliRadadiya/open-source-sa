@@ -20,6 +20,7 @@ import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { groupForType, groupsWithTypes } from "@/lib/applications/type-categories";
 import { rangeLabel } from "@/lib/runtime/version-range";
 import { acceptedEngines } from "@/lib/applications/database-readiness";
+import { blockersAreFixable } from "@/lib/applications/blockers";
 import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
@@ -96,7 +97,72 @@ function TypeTile({ type, dimmed, size = "h-9 w-14" }) {
  * upstream tomorrow — keeps the server's sentence, because a short label we
  * have not written is worse than a long one that is true.
  */
-function blockerLabel(type, { t, tEngines, format }) {
+function blockerItem(blocker, type, { t, tEngines, format }) {
+  if (blocker?.kind === "database") {
+    const names = engineNames(blocker.engines ?? acceptedEngines(type) ?? [], tEngines);
+    return names.length ? format.list(names, { type: "disjunction" }) : t("form.aDatabase");
+  }
+
+  if (blocker?.kind !== "runtime") return null;
+
+  const name = RUNTIME_NAMES[blocker.runtime];
+  if (!name) return null;
+  /*
+   * The version to install, not the range to satisfy.
+   *
+   * "Needs Node 20.19 – 24" is what the card said, and a user read the first
+   * number, went to install Node 20.19, and found it was not on offer — the
+   * 20 line is end-of-life and the install list hides those on purpose. They
+   * reported that n8n could not be installed at all.
+   *
+   * `suggest` is the newest version this panel WILL install that the range
+   * accepts, so the card names something that exists. The range is still the
+   * answer when nothing on offer fits: there is no version to name, and
+   * hiding that behind a tidier sentence would be the same failure again.
+   */
+  if (blocker.suggest) return `${name} ${blocker.suggest}`;
+  return blocker.label ? `${name} ${blocker.label}` : name;
+}
+
+/** Engine keys as the names the databases pages already use. */
+function engineNames(engines, tEngines) {
+  return (Array.isArray(engines) ? engines : []).map((engine) =>
+    tEngines.has(`engines.${engine}`) ? tEngines(`engines.${engine}`) : engine,
+  );
+}
+
+const RUNTIME_NAMES = { php: "PHP", node: "Node" };
+
+/**
+ * Every blocker in one line — "Needs Node 24 and MySQL or MariaDB".
+ *
+ * One line and not a list, because this sits under a 190px card. The tooltip
+ * carries the sentences; this carries the shopping list, and its whole job is
+ * that nobody leaves this page believing they have seen one errand when there
+ * are two.
+ *
+ * Null when any blocker has no short form — a web-server refusal, or a code
+ * added upstream tomorrow. Then the server's own sentence is shown instead,
+ * because a label we have not written is worse than a long one that is true.
+ */
+function blockerLine(type, { t, tEngines, format }) {
+  const blockers = Array.isArray(type?.blockers) ? type.blockers : [];
+  if (blockers.length === 0) return legacyBlockerLabel(type, { t, tEngines, format });
+
+  const items = blockers.map((blocker) => blockerItem(blocker, type, { t, tEngines, format }));
+  if (items.some((item) => !item)) return null;
+
+  return t("form.needs", { items: format.list(items, { type: "conjunction" }) });
+}
+
+/**
+ * The same line for a type that carries no `blockers` array.
+ *
+ * The array is added by the create page. Anything else rendering this picker —
+ * or a cached payload from before it existed — still gets a short label rather
+ * than a three-line sentence under a card.
+ */
+function legacyBlockerLabel(type, { t, tEngines, format }) {
   if (type?.unavailable_code === "database") {
     /*
      * The engines by name, from the catalogue's own `accepted_engines`.
@@ -146,14 +212,63 @@ function blockerLabel(type, { t, tEngines, format }) {
   return null;
 }
 
-function blockerFix(type) {
-  if (type?.unavailable_code === "database") {
-    return { href: "/databases", label: "form.installDatabaseEngine" };
+/** One sentence per blocker, stacked, for the card's tooltip. */
+function BlockerReasons({ type }) {
+  const reasons = (Array.isArray(type?.blockers) ? type.blockers : [])
+    .map((blocker) => blocker.reason)
+    .filter(Boolean);
+
+  if (reasons.length === 0) return type?.unavailable_reason ?? null;
+  if (reasons.length === 1) return reasons[0];
+
+  return (
+    <span className="flex flex-col gap-1">
+      {reasons.map((reason) => (
+        <span key={reason}>{reason}</span>
+      ))}
+    </span>
+  );
+}
+
+const RUNTIME_FIX = {
+  php: { href: "/php", label: "form.installPhpVersion" },
+  node: { href: "/node", label: "form.installNodeVersion" },
+};
+
+const DATABASE_FIX = { href: "/databases", label: "form.installDatabaseEngine" };
+
+/**
+ * Every place this type sends you, not just the first.
+ *
+ * Plural now: a type blocked on both a runtime and an engine has two errands,
+ * and naming one of them is how they get discovered one visit at a time.
+ *
+ * A runtime blocker with no `suggest` still links to its page — there is no
+ * version we can offer, but the page is where that becomes visible, and a card
+ * that names a dead end with no way to look at it is worse than one link that
+ * confirms it.
+ */
+function blockerFixes(type) {
+  const blockers = Array.isArray(type?.blockers) ? type.blockers : [];
+
+  if (blockers.length === 0) {
+    // The pre-`blockers` shape, kept for anything not fed by the create page.
+    if (type?.unavailable_code === "database") return [DATABASE_FIX];
+    if (type?.unavailable_code !== "runtime") return [];
+    if (type.php_version_range) return [RUNTIME_FIX.php];
+    if (type.node_version_range) return [RUNTIME_FIX.node];
+    return [];
   }
-  if (type?.unavailable_code !== "runtime") return null;
-  if (type.php_version_range) return { href: "/php", label: "form.installPhpVersion" };
-  if (type.node_version_range) return { href: "/node", label: "form.installNodeVersion" };
-  return null;
+
+  return blockers
+    .map((blocker) => {
+      if (blocker.kind === "database") return DATABASE_FIX;
+      if (blocker.kind === "runtime") return RUNTIME_FIX[blocker.runtime] ?? null;
+      // A web-server refusal has nothing to install. A link that cannot help
+      // is worse than none.
+      return null;
+    })
+    .filter(Boolean);
 }
 
 /**
@@ -239,8 +354,9 @@ export function SiteTypePicker({ types = [], value, onChange }) {
     const byHref = new Map();
     for (const type of types) {
       if (type.available) continue;
-      const fix = blockerFix(type);
-      if (fix && !byHref.has(fix.href)) byHref.set(fix.href, fix);
+      for (const fix of blockerFixes(type)) {
+        if (!byHref.has(fix.href)) byHref.set(fix.href, fix);
+      }
     }
     return [...byHref.values()];
   }, [types]);
@@ -364,16 +480,31 @@ export function SiteTypePicker({ types = [], value, onChange }) {
           {filtered.map((type) => {
             const disabled = !type.available;
             /*
-             * An unavailable card is a `div`, not a disabled `button`.
+             * A blocked card you can still CHOOSE.
+             *
+             * On a server with no engine and no Node, every card that needs one
+             * is greyed and dead — so the screen that offers to install them
+             * can never be reached, because reaching it means picking the very
+             * application the server cannot host yet. Choosing is not creating:
+             * it says "this is what I want", and what it needs follows.
+             *
+             * Only when everything blocking it is installable from here. The
+             * form below offers to install exactly those, and Create stays
+             * refused until the server says they are there — so the choice
+             * leads somewhere rather than to a create the API rejects.
+             */
+            const choosable = !disabled || blockersAreFixable(type);
+            /*
+             * An unchoosable card is a `div`, not a disabled `button`.
              *
              * It cannot be chosen either way, and it still holds text a screen
              * reader has to reach — inside a disabled button that text is
              * skipped, and Playwright refuses to read it for the same reason.
              */
-            const Card = disabled ? "div" : "button";
-            const cardProps = disabled
-              ? {}
-              : { type: "button", onClick: () => onChange(type.name) };
+            const Card = choosable ? "button" : "div";
+            const cardProps = choosable
+              ? { type: "button", onClick: () => onChange(type.name) }
+              : {};
 
             return (
               <Card
@@ -387,15 +518,27 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                   // the height, which is the whole complaint answered without
                   // hiding a single application.
                   "flex w-full items-center gap-3 rounded-xl border bg-card p-2.5 text-left transition-colors",
-                  disabled
-                    ? "border-dashed"
-                    : "hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+                  /*
+                   * Dashed and faded means UNCHOOSABLE, not "something is
+                   * missing".
+                   *
+                   * It was keyed on `disabled` at first, so a card that had
+                   * just become clickable still looked exactly as dead as one
+                   * that was not — same dashed border, same faded logo, same
+                   * greyed name. Nothing on screen had changed, which is
+                   * precisely what got reported. A control you can press has
+                   * to look like one; the reason line underneath is what
+                   * carries "but note this".
+                   */
+                  !choosable && "border-dashed",
+                  choosable &&
+                    "hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
                 )}
               >
                 {/* No "Popular" badge, though the data has the flag: six of
                     seventeen qualify, and a grid where a third of what you see
                     is labelled has labelled nothing. The order says it. */}
-                <TypeTile type={type} dimmed={disabled} size="h-8 w-10" />
+                <TypeTile type={type} dimmed={!choosable} size="h-8 w-10" />
 
                 <span className={cn("min-w-0 flex-1")}>
                   {/* Every line here can be clipped by a narrow column or a
@@ -404,7 +547,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                       only when there IS a rest, so the grid does not pop a
                       bubble over text that plainly fits. */}
                   <TruncatedText
-                    className={cn("text-sm font-medium", disabled && "opacity-60")}
+                    className={cn("text-sm font-medium", !choosable && "opacity-60")}
                   >
                     {type.title}
                   </TruncatedText>
@@ -416,8 +559,11 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                   {disabled && type.unavailable_reason ? (
                     <span className="mt-0.5 flex items-center gap-1 text-xs leading-4 text-destructive">
                       <TriangleAlert className="size-3 shrink-0" />
-                      <TruncatedText tooltip={type.unavailable_reason}>
-                        {blockerLabel(type, { t, tEngines, format }) ?? type.unavailable_reason}
+                      {/* The bubble carries one sentence PER blocker, stacked.
+                          Joining them into a paragraph is how the second one
+                          gets skimmed past, which is the whole complaint. */}
+                      <TruncatedText tooltip={<BlockerReasons type={type} />}>
+                        {blockerLine(type, { t, tEngines, format }) ?? type.unavailable_reason}
                       </TruncatedText>
                     </span>
                   ) : type.tagline ? (

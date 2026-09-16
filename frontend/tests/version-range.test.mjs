@@ -122,21 +122,20 @@ test("the range reads the way the backend says it", () => {
 });
 
 test("a blocked type is marked the way the picker already greys them", async () => {
-  const { runtimeBlock, withRuntimeAvailability } = await import(
-    "../lib/applications/runtime-readiness.js"
-  );
+  const { runtimeBlocks } = await import("../lib/applications/runtime-readiness.js");
+  const { withAvailability } = await import("../lib/applications/blockers.js");
 
   const prestashop = { name: "prestashop", available: true, php_version_range: PRESTASHOP };
   const wordpress = { name: "wordpress", available: true, php_version_range: null };
   const runtimes = { phpVersions: v("8.4"), nodeVersions: v("24") };
 
-  const block = runtimeBlock({ type: prestashop, ...runtimes });
+  const [block] = runtimeBlocks({ type: prestashop, ...runtimes });
   assert.equal(block.runtime, "php");
   assert.equal(block.label, "7.2 – 8.1");
   assert.deepEqual(block.installed, ["8.4"]);
-  assert.equal(runtimeBlock({ type: wordpress, ...runtimes }), null);
+  assert.deepEqual(runtimeBlocks({ type: wordpress, ...runtimes }), []);
 
-  const marked = withRuntimeAvailability([prestashop, wordpress], runtimes, () => "reason");
+  const marked = withAvailability([prestashop, wordpress], { runtimes }, () => "reason");
   assert.equal(marked[0].available, false);
   assert.equal(marked[0].unavailable_code, "runtime");
   assert.equal(marked[0].unavailable_reason, "reason");
@@ -149,26 +148,170 @@ test("a blocked type is marked the way the picker already greys them", async () 
 });
 
 test("a failed runtime lookup greys nothing", async () => {
-  const { runtimeBlock } = await import("../lib/applications/runtime-readiness.js");
+  const { runtimeBlocks } = await import("../lib/applications/runtime-readiness.js");
   const type = { name: "prestashop", available: true, php_version_range: PRESTASHOP };
-  assert.equal(
-    runtimeBlock({ type, phpVersions: v("8.4"), failed: true }),
-    null,
+  assert.deepEqual(
+    runtimeBlocks({ type, phpVersions: v("8.4"), failed: true }),
+    [],
     "one endpoint's wobble must not empty the catalogue",
   );
 });
 
-test("a type the backend already blocked keeps the backend's reason", async () => {
-  const { runtimeBlock } = await import("../lib/applications/runtime-readiness.js");
-  const type = { name: "prestashop", available: false, php_version_range: PRESTASHOP };
-  assert.equal(runtimeBlock({ type, phpVersions: v("8.4") }), null);
+test("the node range blocks on node versions, never on php ones", async () => {
+  const { runtimeBlocks } = await import("../lib/applications/runtime-readiness.js");
+  const nodebb = { name: "nodebb", available: true, node_version_range: NODEBB };
+  assert.equal(
+    runtimeBlocks({ type: nodebb, phpVersions: v("8.4"), nodeVersions: v("20") })[0].runtime,
+    "node",
+  );
+  assert.deepEqual(
+    runtimeBlocks({ type: nodebb, phpVersions: v("8.4"), nodeVersions: v("24") }),
+    [],
+  );
 });
 
-test("the node range blocks on node versions, never on php ones", async () => {
-  const { runtimeBlock } = await import("../lib/applications/runtime-readiness.js");
-  const nodebb = { name: "nodebb", available: true, node_version_range: NODEBB };
-  assert.equal(runtimeBlock({ type: nodebb, phpVersions: v("8.4"), nodeVersions: v("20") }).runtime, "node");
-  assert.equal(runtimeBlock({ type: nodebb, phpVersions: v("8.4"), nodeVersions: v("24") }), null);
+/*
+ * The user's report, in their words: "I wanted to install nextcloud and at
+ * first it told to install MySQL/MariaDB, I installed MySQL and got back to
+ * installing the nc app, and now its asking me to install node.js."
+ *
+ * Every assertion below is a place that used to answer with exactly one
+ * errand.
+ */
+test("a type failing two checks names BOTH, not one per visit", async () => {
+  const { typeBlockers } = await import("../lib/applications/blockers.js");
+
+  const type = {
+    name: "needy",
+    available: true,
+    needs_database: true,
+    accepted_engines: ["mysql"],
+    node_version_range: NODEBB,
+  };
+
+  const blockers = typeBlockers({
+    type,
+    runtimes: { phpVersions: v("8.4"), nodeVersions: v("20") },
+    engines: { engines: [{ engine: "mysql", installed: false }] },
+  });
+
+  assert.deepEqual(
+    blockers.map((blocker) => blocker.kind),
+    ["runtime", "database"],
+    "one visit, both errands",
+  );
+});
+
+test("a type declaring two runtimes names both of them", async () => {
+  const { runtimeBlocks } = await import("../lib/applications/runtime-readiness.js");
+
+  const both = runtimeBlocks({
+    type: { php_version_range: PRESTASHOP, node_version_range: NODEBB },
+    phpVersions: v("8.4"),
+    nodeVersions: v("20"),
+  });
+
+  assert.deepEqual(
+    both.map((blocker) => blocker.runtime),
+    ["php", "node"],
+    "returning on the first runtime hid the second until the first was fixed",
+  );
+});
+
+test("the server's own blocker fills a gap, and never doubles one we computed", async () => {
+  const { typeBlockers } = await import("../lib/applications/blockers.js");
+
+  const engines = { engines: [{ engine: "mysql", installed: false }] };
+  const base = { name: "wp", needs_database: true, accepted_engines: ["mysql"] };
+
+  // The API says "database" and so do we. Ours wins: it can tell missing from
+  // stopped from still-installing, and the API's sentence cannot.
+  const ourDatabase = typeBlockers({
+    type: {
+      ...base,
+      available: false,
+      unavailable_code: "database",
+      unavailable_reason: "server says database",
+    },
+    engines,
+  });
+  assert.deepEqual(ourDatabase.map((blocker) => blocker.kind), ["database"]);
+  assert.equal(ourDatabase[0].state, "missing");
+
+  // A category we cannot compute is kept, with the server's own sentence.
+  const unknown = typeBlockers({
+    type: {
+      ...base,
+      available: false,
+      unavailable_code: "something_new",
+      unavailable_reason: "server says something we have never seen",
+    },
+    engines,
+  });
+  assert.deepEqual(unknown.map((blocker) => blocker.kind), ["database", "server"]);
+  assert.equal(unknown[1].reason, "server says something we have never seen");
+});
+
+test("a web server that refuses the type ends the list", async () => {
+  const { typeBlockers } = await import("../lib/applications/blockers.js");
+
+  const blockers = typeBlockers({
+    type: {
+      name: "wp",
+      available: false,
+      needs_database: true,
+      accepted_engines: ["mysql"],
+      unavailable_code: "web_server",
+      unavailable_reason: "OpenLiteSpeed does not serve this",
+    },
+    engines: { engines: [{ engine: "mysql", installed: false }] },
+  });
+
+  assert.deepEqual(
+    blockers.map((blocker) => blocker.kind),
+    ["web_server"],
+    "nothing installable fixes it, so an errand underneath leads nowhere",
+  );
+});
+
+// --- The second half of the same report: "I couldn't install n8n because it
+// needed nodejs V20.19 which isn't available for install" ---
+
+test("a partial upper bound covers its whole line", () => {
+  // n8n declares max "24" and the backend's own comment beside it reads
+  // "Node 20.19 to 24.x inclusive". Padding it to 24.0.0 rejected the Node
+  // the server was actually running.
+  assert.equal(versionWithin("24.20.0", N8N), true, "24.20.0 IS Node 24");
+  assert.equal(versionWithin("24.0.0", N8N), true);
+  assert.equal(versionWithin("25.0.0", N8N), false, "the next line is still out");
+  // And the bound that states its minor still compares the minor.
+  assert.equal(versionWithin("8.1.9", PRESTASHOP), true, "8.1.9 IS PHP 8.1");
+  assert.equal(versionWithin("8.2.0", PRESTASHOP), false);
+});
+
+test("the card names a version on offer, not the bottom of the range", async () => {
+  const { highestInRange } = await import("../lib/runtime/version-range.js");
+  const { runtimeBlocks } = await import("../lib/applications/runtime-readiness.js");
+
+  // What the Node page actually offers: the 20 line is end-of-life and hidden,
+  // which is why the reporter could not find the 20.19 our message named.
+  const installable = v("24.20.0", "22.14.0");
+  assert.equal(highestInRange(installable, N8N), "24.20.0", "newest that fits, not oldest");
+
+  const [block] = runtimeBlocks({
+    type: { node_version_range: N8N },
+    nodeVersions: v("18.20.0"),
+    nodeInstallable: installable,
+  });
+  assert.equal(block.suggest, "24.20.0");
+
+  // Nothing on offer fits is a different sentence, not a worse guess.
+  const [dead] = runtimeBlocks({
+    type: { node_version_range: { min: "10", max: "12" } },
+    nodeVersions: v("18.20.0"),
+    nodeInstallable: installable,
+  });
+  assert.equal(dead.suggest, null);
 });
 
 // --- The same bug on the site's own PHP screen ---
@@ -227,10 +370,25 @@ test("a blocked type says why, and the grid offers each way out exactly once", a
   assert.match(picker, /byHref\.has\(fix\.href\)/, "one link per destination, not per card");
   assert.match(picker, /href=\{fix\.href\}/, "and it is rendered");
 
-  // An unavailable card cannot be a disabled button: it still holds text a
+  // An unchoosable card cannot be a disabled button: it still holds text a
   // screen reader has to reach, and Playwright refuses to read inside one.
-  assert.match(picker, /const \w+ = disabled \? "div" : "button"/);
+  assert.match(picker, /const Card = choosable \? "button" : "div"/);
   assert.doesNotMatch(picker, /"aria-disabled": true/, "it takes the nested text down with it");
+
+  /*
+   * A blocked card can be CHOSEN, but only where something is ready to act on
+   * the choice.
+   *
+   * On a server with no engine and no Node every card that needs one is dead,
+   * so the screen offering to install them is unreachable — you would have to
+   * pick the application the server cannot host to get to it. `allowBlocked`
+   * opens that, and defaults to false so the real form keeps refusing: a card
+   * leading to a create the API rejects is worse than one that says no now.
+   */
+  assert.match(picker, /blockersAreFixable\(type\)/);
+  // Submit is what stops a blocked type, now that the grid does not.
+  const form = fs.readFileSync("components/applications/create-application-form.jsx", "utf8");
+  assert.match(form, /form\.submitNeedsServices/, "a blocked type could be submitted");
 
   // The choice fades — mark, name, tagline — never the reason, which is the
   // one part of a blocked card worth reading.
@@ -240,19 +398,71 @@ test("a blocked type says why, and the grid offers each way out exactly once", a
     "fade the choice, not the reason",
   );
 
-  for (const locale of ["en", "es", "hi"]) {
+  // Two blockers, two errands: the line joins them and the footer links both.
+  assert.match(picker, /t\("form\.needs", \{ items:/, "the card names every blocker, not one");
+  assert.match(picker, /blockerFixes\(type\)/, "the footer collects every way out");
+
+  for (const locale of LOCALES) {
     const messages = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8")).applications;
     assert.ok(messages.form.installPhpVersion, `${locale} missing installPhpVersion`);
     assert.ok(messages.form.installNodeVersion, `${locale} missing installNodeVersion`);
-    // The instruction moved into the link, so the sentence must not repeat
-    // it. Matched on the clause that was removed rather than the word
-    // "install", which the `{installed}` placeholder contains.
-    assert.doesNotMatch(
-      messages.unavailableRuntime.php,
-      /version first/i,
-      `${locale} reason still gives the instruction the link now carries`,
-    );
+    assert.ok(messages.form.needs, `${locale} missing the combined line`);
+
+    /*
+     * The sentence names a VERSION, and the link's generic "Install a PHP
+     * version" is no longer the only instruction.
+     *
+     * That split was deliberate once and it is what the reporter hit: the
+     * card printed n8n's range, the link said "install a Node version", and
+     * between them nobody said WHICH — so they went after 20.19, the bottom
+     * of the range, which this panel refuses to install because the line is
+     * dead.
+     */
+    for (const runtime of ["php", "node"]) {
+      assert.match(
+        messages.unavailableRuntime[runtime].install,
+        /\{suggest\}/,
+        `${locale} ${runtime} reason does not name the version to install`,
+      );
+      assert.doesNotMatch(
+        messages.unavailableRuntime[runtime].none,
+        /\{suggest\}/,
+        `${locale} ${runtime} promises a version it has just said does not exist`,
+      );
+    }
   }
+});
+
+// Every active locale, from the routing file, so a new language cannot be
+// added with this screen left in English.
+const LOCALES = fs
+  .readFileSync("i18n/routing.js", "utf8")
+  .match(/export const locales = \[([^\]]+)\]/)[1]
+  .split(",")
+  .map((code) => code.trim().replace(/['"]/g, ""))
+  .filter(Boolean);
+
+test("only a blocker with an install button behind it makes a card choosable", async () => {
+  const { blockersAreFixable } = await import("../lib/applications/blockers.js");
+
+  assert.equal(
+    blockersAreFixable({ blockers: [{ kind: "runtime" }, { kind: "database" }] }),
+    true,
+    "both have an install endpoint and a screen",
+  );
+  assert.equal(
+    blockersAreFixable({ blockers: [{ kind: "web_server" }] }),
+    false,
+    "nothing installable fixes a web server that will not serve the type",
+  );
+  assert.equal(
+    blockersAreFixable({ blockers: [{ kind: "runtime" }, { kind: "web_server" }] }),
+    false,
+    "one unfixable blocker is enough — choosing it would lead nowhere",
+  );
+  // An available type is not "blocked but fixable"; it is simply available.
+  assert.equal(blockersAreFixable({ blockers: [] }), false);
+  assert.equal(blockersAreFixable({}), false);
 });
 
 test("the irreversible engine choice says so, keyed on the field not the engine", async () => {

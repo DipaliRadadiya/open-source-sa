@@ -3269,7 +3269,10 @@
       "blockedDatabaseEngines": "Needs {engines}",
       "useAccountHint": "Pick from the repositories your connected account can see.",
       "usePublicUrlHint": "Paste any public repository URL. No credentials needed.",
-      "noGitAccount": "No Git account connected yet."
+      "noGitAccount": "No Git account connected yet.",
+      "needs": "Needs {items}",
+      "aDatabase": "a database",
+      "submitNeedsServices": "{count, plural, one {Install the service this application needs first} other {Install the services this application needs first}}"
     },
     "actions": {
       "label": "Actions",
@@ -4865,8 +4868,14 @@
       "resumeFailed": "We couldn't resume the site."
     },
     "unavailableRuntime": {
-      "php": "This site needs PHP {range}, and this server has {installed}.",
-      "node": "This site needs Node {range}, and this server has {installed}."
+      "php": {
+        "install": "This site needs PHP {range}, and this server has {installed}. Install PHP {suggest} to create it.",
+        "none": "This site needs PHP {range}, and this server has {installed}. None of the PHP versions offered for install fit that range."
+      },
+      "node": {
+        "install": "This site needs Node {range}, and this server has {installed}. Install Node {suggest} to create it.",
+        "none": "This site needs Node {range}, and this server has {installed}. None of the Node versions offered for install fit that range."
+      }
     },
     "gitAccountHint": "A connected Git account, used to read your private repositories. Add one under Integrations if this list is empty.",
     "systemUserHint": "The Linux account that owns this site's files. Giving each site its own account stops one site from reading another's data.",
@@ -4888,7 +4897,46 @@
       "short_name": "A short identifier used inside the application. Letters and numbers only, no spaces."
     },
     "branchHint": "The branch we deploy from. Pushing to any other branch leaves this site as it is.",
-    "repositoryHint": "Where this site's code lives. Pick one from the connected account above."
+    "repositoryHint": "Where this site's code lives. Pick one from the connected account above.",
+    "requiredServices": {
+      "heading": "{app} needs {count, plural, one {# more service} other {# more services}}",
+      "headingReady": "{app} is ready to create",
+      "sub": "They can be installed for you — carry on filling in the form while they run.",
+      "subReady": "Everything this application needs is on the server.",
+      "subDenied": "Your account cannot install these, so they have to be added for you before this application can be created.",
+      "install": "Install required services",
+      "installRetryAll": "Try again",
+      "retry": "Retry",
+      "footerIdle": "They install one after another, so the second one waits its turn.",
+      "footerWorking": "This can take a few minutes. You can keep filling in the form.",
+      "footerFailed": "{count, plural, one {# service did not install} other {# services did not install}}. The rest are done.",
+      "footerReady": "Nothing left to install.",
+      "footerDenied": "Ask an administrator to install these.",
+      "state": {
+        "missing": "Not installed",
+        "queued": "Waiting",
+        "installing": "Installing…",
+        "installed": "Installed",
+        "failed": "Failed",
+        "denied": "Needs permission",
+        "deniedReason": "You do not have permission to install this. An administrator can.",
+        "impossible": "No version fits",
+        "impossibleReason": "None of the versions this panel can install fall inside the range this application needs."
+      },
+      "step": {
+        "downloading": "Downloading…",
+        "configuring": "Configuring…",
+        "starting": "Starting…"
+      },
+      "purpose": {
+        "database": "Where {app} stores its data",
+        "node": "The runtime {app} runs on",
+        "php": "The runtime {app} runs on"
+      },
+      "footerIdleOne": "It installs in the background — you can keep filling in the form.",
+      "subImpossible": "This server cannot run this application as it stands.",
+      "footerImpossible": "Nothing here can fix this on its own."
+    }
   },
   "panelUpdate": {
     "title": "Panel update",

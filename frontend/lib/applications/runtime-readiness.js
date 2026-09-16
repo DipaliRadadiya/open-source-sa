@@ -1,4 +1,4 @@
-import { rangeLabel, rangeUnsatisfied } from "../runtime/version-range.js";
+import { highestInRange, rangeLabel, rangeUnsatisfied } from "../runtime/version-range.js";
 
 /**
  * Whether this server's installed runtimes can actually run a site type.
@@ -18,71 +18,83 @@ import { rangeLabel, rangeUnsatisfied } from "../runtime/version-range.js";
  */
 
 const RUNTIMES = [
-  { key: "php", rangeField: "php_version_range", versionsField: "phpVersions" },
-  { key: "node", rangeField: "node_version_range", versionsField: "nodeVersions" },
+  {
+    key: "php",
+    rangeField: "php_version_range",
+    versionsField: "phpVersions",
+    installableField: "phpInstallable",
+  },
+  {
+    key: "node",
+    rangeField: "node_version_range",
+    versionsField: "nodeVersions",
+    installableField: "nodeInstallable",
+  },
 ];
 
 /**
- * Why this type's runtime rules out this server, or null when they do not.
+ * EVERY runtime whose range rules out this server — both of them when both do.
  *
- * Returns `{ runtime, range, installed }` — the caller needs all three to
- * write a sentence worth reading: which runtime, what it needs, what is here.
+ * Was `runtimeBlock`, singular, returning on the first failing runtime. A type
+ * declaring both a PHP and a Node range only ever reported the PHP one, so
+ * installing a PHP version earned you the Node message on the next visit.
+ * Plural here, and the caller decides how to show two.
+ *
+ * Each entry carries `{ runtime, range, label, installed, suggest }` — which
+ * runtime, what it needs, what is here, and the version to go and install.
  */
-export function runtimeBlock({ type, phpVersions, nodeVersions, failed } = {}) {
+export function runtimeBlocks({
+  type,
+  phpVersions,
+  nodeVersions,
+  phpInstallable,
+  nodeInstallable,
+  failed,
+} = {}) {
   // A failed lookup says nothing about the server, and greying the catalogue
   // on one endpoint's wobble is a worse failure than the one this prevents.
-  if (failed) return null;
-  // Already blocked, with the backend's own reason. Two answers to one
-  // question is how they start to disagree.
-  if (type?.available === false) return null;
+  if (failed) return [];
 
-  const available = { phpVersions, nodeVersions };
+  const available = { phpVersions, nodeVersions, phpInstallable, nodeInstallable };
 
-  for (const runtime of RUNTIMES) {
+  return RUNTIMES.flatMap((runtime) => {
     const range = type?.[runtime.rangeField];
     const installed = available[runtime.versionsField];
-    if (!rangeUnsatisfied(installed, range)) continue;
+    if (!rangeUnsatisfied(installed, range)) return [];
 
-    return {
-      runtime: runtime.key,
-      range,
-      label: rangeLabel(range),
-      installed: (Array.isArray(installed) ? installed : [])
-        .map((item) => item?.version)
-        .filter(Boolean),
-    };
-  }
-
-  return null;
-}
-
-/**
- * The catalogue with runtime-blocked types marked, in the shape the picker
- * already renders.
- *
- * Reuses `available` / `unavailable_reason` / `unavailable_code` for the same
- * reason the database check does: the grid, the greying and the reason line
- * all exist, and a second mechanism beside them is how one gets forgotten.
- *
- * `unavailable_code: "runtime"` is the backend's own value for this case, so a
- * card blocked here behaves exactly like one the backend blocked — including
- * the offer to install the runtime, which is the right action here too.
- */
-export function withRuntimeAvailability(siteTypes, runtimes, reasonFor) {
-  return (Array.isArray(siteTypes) ? siteTypes : []).map((type) => {
-    const block = runtimeBlock({ type, ...(runtimes ?? {}) });
-    if (block === null) return type;
-
-    return {
-      ...type,
-      available: false,
-      unavailable_code: "runtime",
-      unavailable_reason: reasonFor(block),
-      // Not `installable_runtime`: that offers to install the runtime this
-      // server lacks entirely. Here the runtime IS installed — the wrong
-      // version of it — and the fix is to add a version, which is a different
-      // screen and a different sentence. The reason carries the link.
-      installable_runtime: null,
-    };
+    return [
+      {
+        kind: "runtime",
+        runtime: runtime.key,
+        range,
+        label: rangeLabel(range),
+        installed: (Array.isArray(installed) ? installed : [])
+          .map((item) => item?.version)
+          .filter(Boolean),
+        /*
+         * The version to install, not the range to read.
+         *
+         * The card used to print n8n's range — "Needs Node 20.19 – 24" — and a
+         * user went looking for Node 20.19. It is not offered: the 20 line is
+         * end-of-life and the install list deliberately hides those. They gave
+         * up and reported that n8n could not be installed at all.
+         *
+         * So the answer comes from `installable`, which is the list the Node
+         * page will actually show them. Null when nothing on offer fits, and
+         * that is worth saying out loud rather than papering over — it means
+         * the range and this server genuinely cannot be reconciled today.
+         */
+        suggest: highestInRange(available[runtime.installableField], range),
+      },
+    ];
   });
 }
+
+/*
+ * Marking the catalogue lives in `blockers.js` now.
+ *
+ * It used to be here, and a matching one sat in `database-readiness.js`. Two
+ * decorators running in sequence is exactly the bug: the second deferred to
+ * whatever the first had decided, so a type failing both told you about one.
+ * Collecting has to happen in one place that can see every check.
+ */

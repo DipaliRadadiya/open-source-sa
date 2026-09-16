@@ -15,7 +15,7 @@ import { useRefresh } from "@/hooks/use-refresh";
  *
  * `useRefresh` re-runs the page's server component rather than fetching the
  * list itself. That keeps ONE source for the versions — the same fetch the
- * form was rendered from — and it also re-runs `withRuntimeAvailability`, so a
+ * form was rendered from — and it also re-runs `withAvailability`, so a
  * site type greyed out for having no usable PHP becomes selectable in the same
  * press. A client-side fetch into local state would have updated the select and
  * left the type cards stale, which is the half-refresh that looks like a bug.

@@ -3269,7 +3269,10 @@
       "blockedDatabaseEngines": "Benötigt {engines}",
       "useAccountHint": "Wählen Sie aus den Repositories, die Ihr verbundenes Konto sieht.",
       "usePublicUrlHint": "Fügen Sie die URL eines öffentlichen Repositories ein. Keine Zugangsdaten nötig.",
-      "noGitAccount": "Noch kein Git-Konto verbunden."
+      "noGitAccount": "Noch kein Git-Konto verbunden.",
+      "needs": "Benötigt {items}",
+      "aDatabase": "eine Datenbank",
+      "submitNeedsServices": "{count, plural, one {Installieren Sie zuerst den Dienst, den diese Anwendung braucht} other {Installieren Sie zuerst die Dienste, die diese Anwendung braucht}}"
     },
     "actions": {
       "label": "Aktionen",
@@ -4865,8 +4868,14 @@
       "resumeFailed": "Die Website konnte nicht fortgesetzt werden."
     },
     "unavailableRuntime": {
-      "php": "Diese Website braucht PHP {range}, und dieser Server hat {installed}.",
-      "node": "Diese Website braucht Node {range}, und dieser Server hat {installed}."
+      "php": {
+        "install": "Diese Website braucht PHP {range}, und dieser Server hat {installed}. Installieren Sie PHP {suggest}, um sie zu erstellen.",
+        "none": "Diese Website braucht PHP {range}, und dieser Server hat {installed}. Keine der zur Installation angebotenen PHP-Versionen liegt in diesem Bereich."
+      },
+      "node": {
+        "install": "Diese Website braucht Node {range}, und dieser Server hat {installed}. Installieren Sie Node {suggest}, um sie zu erstellen.",
+        "none": "Diese Website braucht Node {range}, und dieser Server hat {installed}. Keine der zur Installation angebotenen Node-Versionen liegt in diesem Bereich."
+      }
     },
     "gitAccountHint": "Ein verbundenes Git-Konto, das zum Lesen Ihrer privaten Repositorys verwendet wird. Fügen Sie unter Integrationen eines hinzu, falls diese Liste leer ist.",
     "systemUserHint": "Das Linux-Konto, dem die Dateien dieser Seite gehören. Wenn jede Seite ihr eigenes Konto erhält, kann eine Seite nicht die Daten einer anderen lesen.",
@@ -4888,7 +4897,46 @@
       "short_name": "Ein kurzer Bezeichner, der innerhalb der Anwendung verwendet wird. Nur Buchstaben und Zahlen, keine Leerzeichen."
     },
     "branchHint": "Der Branch, aus dem wir bereitstellen. Wenn Sie in einen anderen Branch pushen, bleibt diese Seite unverändert.",
-    "repositoryHint": "Wo der Code dieser Seite liegt. Wählen Sie eines aus dem oben verbundenen Konto aus."
+    "repositoryHint": "Wo der Code dieser Seite liegt. Wählen Sie eines aus dem oben verbundenen Konto aus.",
+    "requiredServices": {
+      "heading": "{app} braucht {count, plural, one {# weiteren Dienst} other {# weitere Dienste}}",
+      "headingReady": "{app} kann jetzt erstellt werden",
+      "sub": "Sie können hier installiert werden — füllen Sie das Formular in der Zwischenzeit weiter aus.",
+      "subReady": "Alles, was diese Anwendung braucht, ist auf dem Server.",
+      "subDenied": "Ihr Konto darf diese nicht installieren, also muss das jemand anderes tun, bevor diese Anwendung erstellt werden kann.",
+      "install": "Benötigte Dienste installieren",
+      "installRetryAll": "Erneut versuchen",
+      "retry": "Erneut versuchen",
+      "footerIdle": "Sie werden nacheinander installiert, der zweite wartet also.",
+      "footerWorking": "Das kann einige Minuten dauern. Sie können das Formular weiter ausfüllen.",
+      "footerFailed": "{count, plural, one {# Dienst wurde nicht installiert} other {# Dienste wurden nicht installiert}}. Der Rest ist fertig.",
+      "footerReady": "Es ist nichts mehr zu installieren.",
+      "footerDenied": "Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "state": {
+        "missing": "Nicht installiert",
+        "queued": "Wartet",
+        "installing": "Wird installiert…",
+        "installed": "Installiert",
+        "failed": "Fehlgeschlagen",
+        "denied": "Berechtigung nötig",
+        "deniedReason": "Sie haben keine Berechtigung, das zu installieren. Eine Administration kann es.",
+        "impossible": "Keine passende Version",
+        "impossibleReason": "Keine der Versionen, die dieses Panel installieren kann, liegt in dem Bereich, den diese Anwendung braucht."
+      },
+      "step": {
+        "downloading": "Wird heruntergeladen…",
+        "configuring": "Wird konfiguriert…",
+        "starting": "Wird gestartet…"
+      },
+      "purpose": {
+        "database": "Hier speichert {app} seine Daten",
+        "node": "Die Laufzeitumgebung von {app}",
+        "php": "Die Laufzeitumgebung von {app}"
+      },
+      "footerIdleOne": "Die Installation läuft im Hintergrund — Sie können das Formular weiter ausfüllen.",
+      "subImpossible": "Dieser Server kann diese Anwendung so nicht ausführen.",
+      "footerImpossible": "Von hier aus lässt sich das nicht beheben."
+    }
   },
   "panelUpdate": {
     "title": "Panel-Update",

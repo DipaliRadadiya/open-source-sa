@@ -87,6 +87,7 @@ import {
 } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { SiteTypePicker } from "@/components/applications/site-type-picker";
+import { RequiredServices } from "@/components/applications/required-services";
 import { RuntimeRefresh } from "@/components/applications/runtime-refresh";
 import {
   orphanFieldNames,
@@ -684,6 +685,12 @@ export function CreateApplicationForm({
   serverIp = null,
   temporaryDomainSuffixes = [],
   timezones = [],
+  engines = [],
+  phpVersionsAll = [],
+  nodeVersionsAll = [],
+  phpInstallable = [],
+  nodeInstallable = [],
+  canInstall = {},
 }) {
   const t = useTranslations("applications");
   // Both refresh actions show the same one-word label; only their accessible
@@ -982,11 +989,24 @@ export function CreateApplicationForm({
       ),
   };
 
+  /*
+   * A blocked application can be CHOSEN now, so submit has to stop it.
+   *
+   * The grid used to refuse the click, which was the whole problem — you could
+   * not reach the screen that installs what it needs. Choosing is allowed;
+   * creating is not, until the server says the blockers are gone. Without this
+   * the form would post and the API would refuse it after everything was
+   * filled in, which is exactly the shape of failure this work removes.
+   */
+  const outstandingServices = Array.isArray(selected?.blockers) ? selected.blockers.length : 0;
+
   const submitReason = !selected
     ? t("form.submitNeedsType")
-    : missingReadinessItems.length
-      ? t("form.submitMissing", { count: missingReadinessItems.length })
-      : null;
+    : outstandingServices
+      ? t("form.submitNeedsServices", { count: outstandingServices })
+      : missingReadinessItems.length
+        ? t("form.submitMissing", { count: missingReadinessItems.length })
+        : null;
   const suggestedDomain = form.formState.touchedFields.domain
     ? suggestApplicationDomain(domain)
     : null;
@@ -1446,6 +1466,24 @@ export function CreateApplicationForm({
                         onChange={field.onChange}
                       />
                     </div>
+                    {/* Only once something is chosen: "Nextcloud needs two
+                        more services" above an empty picker answers a question
+                        nobody has asked yet. What an application needs belongs
+                        to the application. */}
+                    {field.value ? (
+                      <RequiredServices
+                        // Remounts on a different application, so a finished
+                        // run cannot follow you to the next choice.
+                        key={field.value}
+                        type={siteTypes.find((item) => item.name === field.value)}
+                        engines={engines}
+                        phpVersions={phpVersionsAll}
+                        nodeVersions={nodeVersionsAll}
+                        phpInstallable={phpInstallable}
+                        nodeInstallable={nodeInstallable}
+                        canInstall={canInstall}
+                      />
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}

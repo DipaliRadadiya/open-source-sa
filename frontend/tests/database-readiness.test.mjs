@@ -6,8 +6,8 @@ import {
   databaseBlock,
   engineInstalling,
   noDatabaseEngine,
-  withDatabaseAvailability,
 } from "../lib/applications/database-readiness.js";
+import { withAvailability } from "../lib/applications/blockers.js";
 
 test("nothing installed is the only thing that warns", () => {
   assert.equal(noDatabaseEngine({ engines: [] }), true);
@@ -153,9 +153,9 @@ test("a declared engine list is preferred over the fallback", () => {
 });
 
 test("the marked catalogue is the shape the picker already renders", () => {
-  const marked = withDatabaseAvailability(
+  const marked = withAvailability(
     [wordpress, staticSite],
-    { engines: MONGO_ONLY },
+    { engines: { engines: MONGO_ONLY } },
     (block) => `blocked:${block.state}`,
   );
 

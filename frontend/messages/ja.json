@@ -3269,7 +3269,10 @@
       "blockedDatabaseEngines": "{engines} が必要",
       "useAccountHint": "接続済みアカウントから見えるリポジトリを選びます。",
       "usePublicUrlHint": "公開リポジトリの URL を貼り付けます。認証情報は不要です。",
-      "noGitAccount": "Git アカウントはまだ接続されていません。"
+      "noGitAccount": "Git アカウントはまだ接続されていません。",
+      "needs": "{items} が必要",
+      "aDatabase": "データベース",
+      "submitNeedsServices": "{count, plural, other {このアプリケーションに必要なサービスを先にインストールしてください}}"
     },
     "actions": {
       "label": "操作",
@@ -4865,8 +4868,14 @@
       "resumeFailed": "サイトを再開できませんでした。"
     },
     "unavailableRuntime": {
-      "php": "このサイトは PHP {range} を必要としますが、このサーバーには {installed} があります。",
-      "node": "このサイトは Node {range} を必要としますが、このサーバーには {installed} があります。"
+      "php": {
+        "install": "このサイトは PHP {range} を必要としますが、このサーバーには {installed} があります。 作成するには PHP {suggest} をインストールしてください。",
+        "none": "このサイトは PHP {range} を必要としますが、このサーバーには {installed} があります。 インストールできる PHP のバージョンに、この範囲に合うものはありません。"
+      },
+      "node": {
+        "install": "このサイトは Node {range} を必要としますが、このサーバーには {installed} があります。 作成するには Node {suggest} をインストールしてください。",
+        "none": "このサイトは Node {range} を必要としますが、このサーバーには {installed} があります。 インストールできる Node のバージョンに、この範囲に合うものはありません。"
+      }
     },
     "gitAccountHint": "接続されたGitアカウントで、プライベートリポジトリの読み取りに使われます。このリストが空の場合は「連携」から追加してください。",
     "systemUserHint": "このサイトのファイルを所有するLinuxアカウントです。サイトごとにアカウントを分けることで、別のサイトのデータを読めなくなります。",
@@ -4888,7 +4897,46 @@
       "short_name": "アプリ内部で使用される短い識別子です。英数字のみ使用でき、スペースは含められません。"
     },
     "branchHint": "デプロイ元のブランチです。他のブランチへプッシュしても、このサイトは変わりません。",
-    "repositoryHint": "このサイトのコードがある場所です。上の接続済みアカウントから選択してください。"
+    "repositoryHint": "このサイトのコードがある場所です。上の接続済みアカウントから選択してください。",
+    "requiredServices": {
+      "heading": "{app} には、あと {count, plural, other {# 個のサービス}}が必要です",
+      "headingReady": "{app} を作成できます",
+      "sub": "ここからインストールできます。その間もフォームの入力を続けられます。",
+      "subReady": "このアプリケーションに必要なものは、すべてサーバーにそろっています。",
+      "subDenied": "お使いのアカウントではインストールできません。このアプリケーションを作成する前に、ほかの方が追加する必要があります。",
+      "install": "必要なサービスをインストール",
+      "installRetryAll": "再試行",
+      "retry": "再試行",
+      "footerIdle": "順番にインストールされるため、2 つめは順番を待ちます。",
+      "footerWorking": "数分かかることがあります。フォームの入力は続けられます。",
+      "footerFailed": "{count, plural, other {# 個のサービス}}がインストールできませんでした。残りは完了しています。",
+      "footerReady": "インストールするものは残っていません。",
+      "footerDenied": "管理者にインストールを依頼してください。",
+      "state": {
+        "missing": "未インストール",
+        "queued": "待機中",
+        "installing": "インストール中…",
+        "installed": "インストール済み",
+        "failed": "失敗しました",
+        "denied": "権限が必要",
+        "deniedReason": "これをインストールする権限がありません。管理者なら可能です。",
+        "impossible": "該当するバージョンなし",
+        "impossibleReason": "このパネルでインストールできるバージョンの中に、このアプリケーションが必要とする範囲に合うものはありません。"
+      },
+      "step": {
+        "downloading": "ダウンロード中…",
+        "configuring": "設定中…",
+        "starting": "起動中…"
+      },
+      "purpose": {
+        "database": "{app} がデータを保存する場所",
+        "node": "{app} が動作するランタイム",
+        "php": "{app} が動作するランタイム"
+      },
+      "footerIdleOne": "バックグラウンドでインストールされます。フォームの入力は続けられます。",
+      "subImpossible": "このサーバーでは、現状このアプリケーションを動かせません。",
+      "footerImpossible": "ここから解決できることはありません。"
+    }
   },
   "panelUpdate": {
     "title": "パネルの更新",

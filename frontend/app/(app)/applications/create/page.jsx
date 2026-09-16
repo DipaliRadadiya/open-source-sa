@@ -9,12 +9,8 @@ import { getPhp } from "@/lib/php/get-php";
 import { getNode } from "@/lib/node/get-node";
 import { getTimezones } from "@/lib/settings/get-timezones";
 import { getEngines } from "@/lib/databases/get-databases";
-import {
-  engineInstalling,
-  noDatabaseEngine,
-  withDatabaseAvailability,
-} from "@/lib/applications/database-readiness";
-import { withRuntimeAvailability } from "@/lib/applications/runtime-readiness";
+import { engineInstalling, noDatabaseEngine } from "@/lib/applications/database-readiness";
+import { withAvailability } from "@/lib/applications/blockers";
 import { NoDatabaseEngineNotice } from "@/components/applications/no-database-engine-notice";
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -71,27 +67,43 @@ export default async function CreateApplicationPage({ searchParams }) {
   // list: the prefill below reads the same `available` the grid greys on, and
   // a link to ?type=wordpress on a server that cannot host it lands on an
   // empty picker instead of a card that is disabled and selected at once.
-  // Runtime first, then database: a type can fail both, and "install a PHP
-  // version this can run on" is the more specific of the two answers.
-  const withRuntime = withRuntimeAvailability(
+  //
+  // One pass over every check, not one pass per check. Two passes is what sent
+  // a user to install MySQL and then, on the next visit, Node.
+  const siteTypes = withAvailability(
     types.siteTypes,
-    { phpVersions, nodeVersions, failed: php.failed || node.failed },
-    (block) =>
-      t(`unavailableRuntime.${block.runtime}`, {
-        range: block.label,
-        installed: format.list(block.installed, { type: "conjunction" }),
-      }),
-  );
+    {
+      runtimes: {
+        phpVersions,
+        nodeVersions,
+        // The lists the PHP and Node pages will actually offer, so a blocked
+        // card can name a version that exists rather than a range that sent
+        // somebody hunting for an end-of-life release we refuse to install.
+        phpInstallable: php.data?.installable ?? [],
+        nodeInstallable: node.data?.installable ?? [],
+        failed: php.failed || node.failed,
+      },
+      engines,
+    },
+    (block) => {
+      if (block.kind === "runtime") {
+        const key = block.suggest ? "install" : "none";
+        return t(`unavailableRuntime.${block.runtime}.${key}`, {
+          range: block.label,
+          installed: format.list(block.installed, { type: "conjunction" }),
+          suggest: block.suggest ?? "",
+        });
+      }
 
-  const siteTypes = withDatabaseAvailability(withRuntime, engines, (block) =>
-    t(`unavailableDatabase.${block.state}`, {
-      // `t.has`, so an engine the backend adds before we have a label for it
-      // prints its own name rather than throwing on the create page.
-      engines: format.list(
-        block.engines.map((engine) => (tEngines.has(engine) ? tEngines(engine) : engine)),
-        { type: "disjunction" },
-      ),
-    }),
+      return t(`unavailableDatabase.${block.state}`, {
+        // `t.has`, so an engine the backend adds before we have a label for it
+        // prints its own name rather than throwing on the create page.
+        engines: format.list(
+          block.engines.map((engine) => (tEngines.has(engine) ? tEngines(engine) : engine)),
+          { type: "disjunction" },
+        ),
+      });
+    },
   );
 
   // Only a type the server actually offers, and only one it can actually
@@ -138,6 +150,20 @@ export default async function CreateApplicationPage({ searchParams }) {
         serverIp={capabilities?.serverIp ?? null}
         temporaryDomainSuffixes={capabilities?.temporaryDomainSuffixes ?? []}
         timezones={timezones ?? []}
+        // For the required-services panel: what is missing, what could be
+        // installed to fix it, and whether this reader is allowed to.
+        engines={engines?.engines ?? []}
+        // Unfiltered: `phpVersions` above drops anything not `ready`, which is
+        // precisely the version being installed.
+        phpVersionsAll={php.data?.versions ?? []}
+        nodeVersionsAll={node.data?.versions ?? []}
+        phpInstallable={php.data?.installable ?? []}
+        nodeInstallable={node.data?.installable ?? []}
+        canInstall={{
+          php: can(permissions, "php", "manage"),
+          node: can(permissions, "node", "manage"),
+          database: can(permissions, "database", "manage"),
+        }}
       />
     </div>
   );
