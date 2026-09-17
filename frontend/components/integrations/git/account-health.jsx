@@ -35,7 +35,7 @@ export function AccountHealth({ status, loading }) {
 
   // No row came back for this account at all — same class of non-answer as
   // `unknown`, and treated the same way.
-  if (!status) return <Note>{t("notChecked")}</Note>;
+  if (!status) return <StatusText>{t("notChecked")}</StatusText>;
 
   if (status.status === "invalid") {
     const revoked =
@@ -48,11 +48,11 @@ export function AccountHealth({ status, loading }) {
           {t("invalid")}
         </Badge>
         {revoked ? (
-          <Note tone="warn">
+          <StatusText tone="warn">
             {t("invalidHintRevoked", { provider: status.provider_title ?? "" })}
-          </Note>
+          </StatusText>
         ) : (
-          <Note>{status.status_title ?? t("invalidHint")}</Note>
+          <StatusText>{status.status_title ?? t("invalidHint")}</StatusText>
         )}
       </Line>
     );
@@ -66,7 +66,7 @@ export function AccountHealth({ status, loading }) {
           {t("unknown")}
         </Badge>
         {/* Said outright, because a grey badge alone still reads as trouble. */}
-        <Note>{t("unknownHint")}</Note>
+        <StatusText>{t("unknownHint")}</StatusText>
       </Line>
     );
   }
@@ -83,11 +83,11 @@ export function AccountHealth({ status, loading }) {
         {t("valid")}
       </Badge>
       {expiring ? (
-        <Note tone={days <= URGENT_DAYS ? "urgent" : "warn"}>
+        <StatusText tone={days <= URGENT_DAYS ? "urgent" : "warn"}>
           {days <= 0 ? t("expired") : t("expiresIn", { days })}
-        </Note>
+        </StatusText>
       ) : (
-        <Note>{status.checked_at ? t("checked") : null}</Note>
+        <StatusText>{status.checked_at ? t("checked") : null}</StatusText>
       )}
     </Line>
   );
@@ -97,7 +97,11 @@ function Line({ children }) {
   return <div className="flex flex-wrap items-center gap-x-2 gap-y-1">{children}</div>;
 }
 
-function Note({ children, tone }) {
+// Renamed off `Note` when the shared note box arrived under that name. This
+// is a different thing entirely — a line of tiny coloured status text, not a
+// bordered callout — and two components called Note is how the next person
+// imports the wrong one.
+function StatusText({ children, tone }) {
   if (!children) return null;
 
   const color =

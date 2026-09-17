@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { Bot, ChevronDown, Globe, Plus, ShieldBan, ShieldCheck, ShieldHalf, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Note } from "@/components/ui/note";
 import { updateApplicationBotBlocker } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import {
@@ -337,10 +338,7 @@ export function BotBlockerSection({
         {/* One line, not a paragraph: "AI bot" still needs a definition before
             the three options mean anything, but the options themselves carry the
             detail — repeating it up here turned the screen into a document. */}
-        <div className="flex items-center gap-2.5 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          <Bot className="size-4 shrink-0" />
-          <p>{t("explainer")}</p>
-        </div>
+        <Note icon={Bot}>{t("explainer")}</Note>
   
         <Card className="gap-0 overflow-hidden py-0 shadow-sm">
           <CardContent className="space-y-5 p-5">

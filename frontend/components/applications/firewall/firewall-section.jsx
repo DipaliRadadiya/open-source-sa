@@ -7,8 +7,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
-import { ChevronDown, ShieldCheck, Sliders } from "lucide-react";
+import { ChevronDown, Lightbulb, ShieldCheck, Sliders } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Note } from "@/components/ui/note";
 import { updateApplicationWaf } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
@@ -145,10 +146,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <div className="max-w-4xl space-y-4">
-        <div className="flex items-center gap-2.5 rounded-xl border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          <ShieldCheck className="size-4 shrink-0" />
-          <p>{t("explainer")}</p>
-        </div>
+        <Note icon={ShieldCheck}>{t("explainer")}</Note>
   
         <Card className="gap-0 overflow-hidden py-0 shadow-sm">
           <CardContent className="space-y-5 p-5">
@@ -195,10 +193,9 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   
             <Collapsible open={!enabled}>
               <CollapsibleContent className={COLLAPSIBLE_ANIMATION}>
-                <div className="rounded-lg bg-muted/40 p-3.5 text-sm">
-                  <p className="mb-1 font-medium">{t("whenToUseTitle")}</p>
-                  <p className="text-muted-foreground">{t("whenToUseBody")}</p>
-                </div>
+                <Note icon={Lightbulb} title={t("whenToUseTitle")}>
+                  {t("whenToUseBody")}
+                </Note>
               </CollapsibleContent>
             </Collapsible>
   

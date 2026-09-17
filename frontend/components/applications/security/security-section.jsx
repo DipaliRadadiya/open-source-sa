@@ -9,8 +9,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
-import { Eye, EyeOff, Lock, Sparkles, TriangleAlert, ExternalLink } from "lucide-react";
+import { Eye, EyeOff, Lightbulb, Lock, Sparkles, TriangleAlert, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Note } from "@/components/ui/note";
 import { securityFormSchema } from "@/lib/schemas/application";
 import { updateApplicationSecurity } from "@/lib/api/applications";
 import { generatePassword } from "@/lib/applications/generate-password";
@@ -187,10 +188,9 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                   this on" before anyone has to guess from the toggle alone. */}
               <Collapsible open={!enabled}>
                 <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-                  <div className="rounded-lg bg-muted/40 p-3.5 text-sm">
-                    <p className="mb-1 font-medium">{t("whenToUseTitle")}</p>
-                    <p className="text-muted-foreground">{t("whenToUseBody")}</p>
-                  </div>
+                  <Note icon={Lightbulb} title={t("whenToUseTitle")}>
+                    {t("whenToUseBody")}
+                  </Note>
                 </CollapsibleContent>
               </Collapsible>
   
