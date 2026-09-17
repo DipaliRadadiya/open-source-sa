@@ -16,7 +16,7 @@ import {
 } from "@/lib/navigation";
 import { useApplicationNav } from "@/components/sections/application-nav";
 import { Logo } from "@/components/logo";
-import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
+import { ApplicationStatusDot } from "@/components/applications/application-status-badge";
 import { VisitSiteLink } from "@/components/applications/visit-site-link";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 import { SidebarLevelTransition } from "@/components/sections/sidebar-level-transition";
@@ -159,25 +159,46 @@ export function AppSidebar({ items }) {
                 item={{ href: `/applications/${application.id}`, title: application.name }}
                 built
                 active={false}
-                className="h-auto min-h-20 items-start rounded-lg border border-sidebar-border/60 bg-sidebar-accent/40 px-3 py-3 shadow-xs hover:bg-sidebar-accent group-data-[collapsible=icon]:min-h-8!"
+                /*
+                  Tinted and edged, so the card reads as the subject the nav
+                  below belongs to rather than as another nav item.
+
+                  It used to be `bg-sidebar-accent/40` — a slightly darker grey
+                  on a grey rail, which gave it no edge at all. Reported as
+                  "everything looks same to sidebar", and that was the fault:
+                  not the card's internals, but that it had no boundary.
+                */
+                className="h-auto min-h-20 items-start rounded-xl border border-primary/25 bg-primary/5 p-3 hover:bg-primary/10 group-data-[collapsible=icon]:min-h-8! group-data-[collapsible=icon]:p-2!"
               >
                 <Link
                   href={`/applications/${application.id}`}
                   prefetch={false}
-                  className="min-w-0"
+                  className="min-w-0 flex-col items-stretch gap-0"
                 >
-                  <SiteTypeLogo name={application.site_type} size="h-5 w-9" className="mt-0.5" />
-                  <span className="min-w-0 leading-tight">
-                    <span className="block truncate font-semibold" title={application.name}>{application.name}</span>
-                    <span className="mt-1 block truncate text-xs text-muted-foreground">
-                      {application.domain}
+                  <span className="flex w-full min-w-0 items-center gap-2.5">
+                    {/* On its own white tile: the mark is the one piece of
+                        brand colour here and it needs a surface to sit on,
+                        or it reads as a stray glyph against the tint. */}
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background shadow-xs group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:border-0! group-data-[collapsible=icon]:bg-transparent! group-data-[collapsible=icon]:shadow-none!">
+                      <SiteTypeLogo name={application.site_type} size="h-5 w-5" />
                     </span>
-                    <span className="mt-2 flex min-w-0 items-center gap-1.5">
-                      <ApplicationStatusBadge application={application} />
-                      <span className="truncate text-xs text-muted-foreground">
-                        {application.site_type_title ?? application.site_type}
+                    {/* Hidden explicitly when the rail collapses to icons. The
+                        sidebar's own rule only hides a button's LAST span,
+                        which here is the domain line — leaving the name and
+                        status to overflow a 32px square by 14px, measured. */}
+                    <span className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
+                      <span className="block truncate text-sm font-semibold" title={application.name}>
+                        {application.name}
                       </span>
+                      <ApplicationStatusDot application={application} className="mt-1" />
                     </span>
+                  </span>
+                  {/* Its own full-width line, in a box: at 240px the domain is
+                      the longest string on the card, and sharing the name's
+                      column truncated it mid-host. The box is what stops a
+                      second grey line reading as more of the same. */}
+                  <span className="mt-2.5 block w-full truncate rounded-md bg-background/80 px-2 py-1 font-mono text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
+                    {application.domain}
                   </span>
                 </Link>
               </MobileNavLink>

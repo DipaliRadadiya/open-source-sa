@@ -72,6 +72,46 @@ export function ApplicationStatusBadge({ application }) {
   );
 }
 
+// The same four states as a dot rather than a filled pill. One tone per badge
+// variant, so this cannot drift from STATUS_VARIANTS above.
+const DOT_TONES = {
+  success: "bg-success",
+  destructive: "bg-destructive",
+  warning: "bg-warning",
+  secondary: "bg-muted-foreground/50",
+};
+
+/**
+ * Status as a dot and a word, for the sidebar's application card.
+ *
+ * Deliberately in THIS file, reusing `STATUS_VARIANTS` and the `is_disabled`
+ * precedence above rather than restating either. The header and the sidebar
+ * once held their own copies of that mapping and disagreed on screen — the
+ * same paused site read green "Running" in one and red "Running" in the other
+ * — which is the whole reason this module exists.
+ *
+ * A dot instead of a badge because the sidebar is a column of quiet nav items:
+ * a filled green pill was the loudest thing in it, for a fact that is true
+ * almost always. The pill stays where a status is the subject — the list, the
+ * page header — and this keeps the loud treatment available for a site that is
+ * actually in trouble, which still turns the dot red or amber.
+ */
+export function ApplicationStatusDot({ application, className }) {
+  const t = useTranslations("applications");
+  const paused = Boolean(application.is_disabled);
+  const variant = paused ? "warning" : (STATUS_VARIANTS[application.status] ?? "secondary");
+  const label = paused
+    ? t("paused")
+    : (t(`status.${application.status}`) ?? application.status_title ?? application.status);
+
+  return (
+    <span className={cn("flex min-w-0 items-center gap-1.5", className)}>
+      <span className={cn("size-1.5 shrink-0 rounded-full", DOT_TONES[variant] ?? DOT_TONES.secondary)} />
+      <span className="truncate text-xs text-muted-foreground">{label}</span>
+    </span>
+  );
+}
+
 export function ApplicationStatusNotes({ application, className }) {
   const t = useTranslations("applications");
   const processDown =
