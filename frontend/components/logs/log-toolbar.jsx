@@ -131,9 +131,22 @@ export function LogToolbar({
             It sits with the heading rather than with the controls below: it
             describes the source's state, it doesn't act on the view.
             No border — a boxed control would read as another input. */}
+        {/*
+         * py-1.5, and the same box in every state.
+         *
+         * There was no vertical padding at all: the container took its height
+         * from the Switch inside it, and in `paused` the Switch is replaced by
+         * a bare text button — so the tinted pill closed onto the text. At 20px
+         * tall and 197px wide with 8px of side padding, "Tail stopped — resume"
+         * read as cramped, which is exactly how it was reported.
+         *
+         * Padded in every state rather than only the tinted ones, so the pill
+         * does not change size at the moment the tail drops. Measured first:
+         * the row around it is 42px, so a 32px pill costs nothing in layout.
+         */}
         <div
           className={cn(
-            "flex shrink-0 items-center gap-2 rounded-lg px-2",
+            "flex h-8 shrink-0 items-center gap-2 rounded-full px-3",
             tailState === "reconnecting" && "bg-warning/10",
             tailState === "paused" && "bg-destructive/10",
           )}
