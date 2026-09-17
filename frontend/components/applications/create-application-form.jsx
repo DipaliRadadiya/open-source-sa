@@ -740,7 +740,13 @@ export function CreateApplicationForm({
   const [gitSource, setGitSource] = useState("account");
   const [repositories, setRepositories] = useState([]);
   const [branches, setBranches] = useState([]);
-  const [repositoriesState, setRepositoriesState] = useState("idle");
+  // "loading" from the start when an account is already chosen: the fetch
+  // effect fires on a non-empty id, but only the change handler sets this, so
+  // a preselected account left the repository picker reading as idle while its
+  // request was in flight.
+  const [repositoriesState, setRepositoriesState] = useState(() =>
+    gitAccounts.length === 1 ? "loading" : "idle",
+  );
   const [branchesState, setBranchesState] = useState("idle");
   // The site type the declared defaults were last applied for, so a change of
   // type can be told apart from the first render. Holds the type itself, not
@@ -760,6 +766,18 @@ export function CreateApplicationForm({
   const [scrollRequest, setScrollRequest] = useState(0);
   const formRef = useRef(null);
   const [createdSystemUsers, setCreatedSystemUsers] = useState([]);
+
+  /*
+   * The only connected account, preselected.
+   *
+   * With one account the Git step opened with an empty picker, and the
+   * repository list below it stayed idle until you opened a menu and chose the
+   * single entry — a question with one possible answer standing between you
+   * and the field you actually came to fill in.
+   *
+   * Still a picker. The moment a second account exists the choice is real.
+   */
+  const soleGitAccountId = gitAccounts.length === 1 ? String(gitAccounts[0].id) : "";
   const form = useForm({
     resolver: zodResolver(createApplicationSchema),
     mode: "onBlur",
@@ -777,7 +795,7 @@ export function CreateApplicationForm({
       // a form that defaults to a refusal is a form that is wrong on open.
       generate_system_user: canCreateSystemUser,
       system_user_id: "",
-      git_account_id: "",
+      git_account_id: soleGitAccountId,
       repository: "",
       branch: "",
     },

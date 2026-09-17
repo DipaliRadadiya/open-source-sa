@@ -72,6 +72,17 @@ export function IssueCertDialog({
   // unlabelled control.
   const fieldId = useId();
   const [pem, setPem] = useState({ certificate: "", private_key: "", chain: "" });
+  /*
+   * Per-field errors from the API, so a message about the key appears at the
+   * key rather than as a toast that names neither box.
+   *
+   * The backend attaches `starts_with` ("this is not PEM") to whichever field
+   * is malformed, and — importantly — attaches the certificate/key MISMATCH to
+   * `private_key`. That is the one error where being told which box is wrong is
+   * the whole of the help: two valid-looking PEM blocks that simply are not a
+   * pair look identical to a transient failure otherwise.
+   */
+  const [pemErrors, setPemErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   // Per-domain reachability refusals (422 errors.domain). Their presence is what
   // unlocks the "issue anyway" (force) path — never offered up front.
@@ -88,6 +99,7 @@ export function IssueCertDialog({
   function reset() {
     setType(defaultType);
     setPem({ certificate: "", private_key: "", chain: "" });
+    setPemErrors({});
     setRefusals([]);
     setDryRun(null);
     setStarting(false);
@@ -140,6 +152,7 @@ export function IssueCertDialog({
   async function submit(force = false) {
     setSubmitting(true);
     setRefusals([]);
+    setPemErrors({});
     const body =
       type === "custom"
         ? { type, certificate: pem.certificate, private_key: pem.private_key, chain: pem.chain || undefined }
@@ -151,9 +164,21 @@ export function IssueCertDialog({
       onIssued?.(cert);
       handleOpenChange(false);
     } catch (error) {
-      const domainErrors = error.response?.data?.errors?.domain;
+      const errors = error.response?.data?.errors ?? {};
+      const domainErrors = errors.domain;
+      const fieldErrors = Object.fromEntries(
+        ["certificate", "private_key", "chain"]
+          .map((field) => [field, errors[field]?.[0]])
+          .filter(([, message]) => Boolean(message)),
+      );
+
       if (Array.isArray(domainErrors) && domainErrors.length) {
         setRefusals(domainErrors);
+      } else if (Object.keys(fieldErrors).length) {
+        // Shown at the fields, not as a toast — a toast that says "the key does
+        // not match the certificate" while pointing at neither box leaves you
+        // rereading both.
+        setPemErrors(fieldErrors);
       } else {
         toast.error(apiMessage(error, t("ssl.issueFailed")));
       }
@@ -161,6 +186,19 @@ export function IssueCertDialog({
       setSubmitting(false);
     }
   }
+
+  /*
+   * Why Issue cannot run yet, or null.
+   *
+   * An uploaded certificate needs both PEM blocks. Issue was enabled with both
+   * boxes empty, so pressing it spent a round trip to be told what the form
+   * already knew — and the answer arrived as a toast naming neither field.
+   * Same ReasonTooltip + disabled pattern the webhook card uses.
+   */
+  const issueReason =
+    type === "custom" && !(pem.certificate.trim() && pem.private_key.trim())
+      ? t("ssl.uploadNeedsBoth")
+      : null;
 
   // Force skips the reachability check, so it is offered exactly when that
   // check is what said no — whether the user found out by trying to issue or
@@ -199,14 +237,16 @@ export function IssueCertDialog({
               {t("ssl.forceIssue")}
             </Button>
           ) : null}
-          <Button
-            type="button"
-            disabled={submitting || selected?.available === false}
-            onClick={() => submit(false)}
-          >
-            {submitting && <Loader2 className="size-4 animate-spin" />}
-            {t("ssl.issue")}
-          </Button>
+          <ReasonTooltip reason={submitting ? null : issueReason}>
+            <Button
+              type="button"
+              disabled={submitting || selected?.available === false || Boolean(issueReason)}
+              onClick={() => submit(false)}
+            >
+              {submitting && <Loader2 className="size-4 animate-spin" />}
+              {t("ssl.issue")}
+            </Button>
+          </ReasonTooltip>
         </>
       }
     >
@@ -380,7 +420,14 @@ export function IssueCertDialog({
               placeholder="-----BEGIN CERTIFICATE-----"
               value={pem.certificate}
               onChange={(e) => setPem((p) => ({ ...p, certificate: e.target.value }))}
+              aria-invalid={Boolean(pemErrors.certificate)}
+              aria-describedby={pemErrors.certificate ? `${fieldId}-certificate-error` : undefined}
             />
+            {pemErrors.certificate ? (
+              <p id={`${fieldId}-certificate-error`} className="text-sm text-destructive">
+                {pemErrors.certificate}
+              </p>
+            ) : null}
           </div>
           <div className="grid gap-2">
             <Label htmlFor={`${fieldId}-private_key`} hint={t("ssl.privateKeyHint")}>{t("ssl.privateKey")}</Label>
@@ -391,7 +438,14 @@ export function IssueCertDialog({
               placeholder="-----BEGIN PRIVATE KEY-----"
               value={pem.private_key}
               onChange={(e) => setPem((p) => ({ ...p, private_key: e.target.value }))}
+              aria-invalid={Boolean(pemErrors.private_key)}
+              aria-describedby={pemErrors.private_key ? `${fieldId}-private_key-error` : undefined}
             />
+            {pemErrors.private_key ? (
+              <p id={`${fieldId}-private_key-error`} className="text-sm text-destructive">
+                {pemErrors.private_key}
+              </p>
+            ) : null}
           </div>
           <div className="grid gap-2">
             <Label htmlFor={`${fieldId}-chain`} hint={t("ssl.chainHint")}>
@@ -404,7 +458,14 @@ export function IssueCertDialog({
               placeholder="-----BEGIN CERTIFICATE-----"
               value={pem.chain}
               onChange={(e) => setPem((p) => ({ ...p, chain: e.target.value }))}
+              aria-invalid={Boolean(pemErrors.chain)}
+              aria-describedby={pemErrors.chain ? `${fieldId}-chain-error` : undefined}
             />
+            {pemErrors.chain ? (
+              <p id={`${fieldId}-chain-error`} className="text-sm text-destructive">
+                {pemErrors.chain}
+              </p>
+            ) : null}
           </div>
         </div>
       ) : null}

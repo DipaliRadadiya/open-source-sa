@@ -3524,7 +3524,8 @@
         "reloadWebServer": "Recarregar {service}",
         "reloaded": "O servidor web foi recarregado.",
         "reloadFailed": "Não foi possível recarregar o servidor web.",
-        "staleDomains": "{domains} está neste certificado mas já não pertence a este site. A renovação falha para todo o certificado até que seja reemitido."
+        "staleDomains": "{domains} está neste certificado mas já não pertence a este site. A renovação falha para todo o certificado até que seja reemitido.",
+        "uploadNeedsBoth": "Cole o certificado e a respetiva chave privada."
       },
       "issueCertificate": "Emitir certificado SSL",
       "description": "Nomes que acessam este site e seu certificado.",

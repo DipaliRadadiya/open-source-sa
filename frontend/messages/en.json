@@ -3524,7 +3524,8 @@
         "reloadWebServer": "Reload {service}",
         "reloaded": "The web server was reloaded.",
         "reloadFailed": "The web server could not be reloaded.",
-        "staleDomains": "{domains} is on this certificate but no longer on this site. Renewal fails for the whole certificate until it is reissued."
+        "staleDomains": "{domains} is on this certificate but no longer on this site. Renewal fails for the whole certificate until it is reissued.",
+        "uploadNeedsBoth": "Paste both the certificate and its private key."
       },
       "issueCertificate": "Issue SSL certificate",
       "description": "Names that reach this site, and its certificate.",

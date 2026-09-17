@@ -3524,7 +3524,8 @@
         "reloadWebServer": "{service} neu laden",
         "reloaded": "Der Webserver wurde neu geladen.",
         "reloadFailed": "Der Webserver konnte nicht neu geladen werden.",
-        "staleDomains": "{domains} steht auf diesem Zertifikat, gehört aber nicht mehr zu dieser Website. Die Verlängerung schlägt für das gesamte Zertifikat fehl, bis es neu ausgestellt wird."
+        "staleDomains": "{domains} steht auf diesem Zertifikat, gehört aber nicht mehr zu dieser Website. Die Verlängerung schlägt für das gesamte Zertifikat fehl, bis es neu ausgestellt wird.",
+        "uploadNeedsBoth": "Fügen Sie sowohl das Zertifikat als auch den zugehörigen privaten Schlüssel ein."
       },
       "issueCertificate": "SSL-Zertifikat ausstellen",
       "description": "Namen, die diese Website erreichen, und ihr Zertifikat.",

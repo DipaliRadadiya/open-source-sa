@@ -29,7 +29,24 @@ import {
 export function RelinkGitAccountDialog({ application, accounts = [], open, onOpenChange }) {
   const t = useTranslations("applications.source");
   const router = useRouter();
-  const [accountId, setAccountId] = useState("");
+  /*
+   * Preselected when there is nothing to choose.
+   *
+   * With one connected account the dialog opened with an empty picker and a
+   * disabled Confirm, so relinking meant opening a menu, picking the only
+   * entry, and only then being allowed to proceed — a question with a single
+   * possible answer, asked before the answer was accepted.
+   *
+   * Still a picker, not a fixed value: the moment a second account exists the
+   * choice is real, and this is the screen for making it.
+   *
+   * Held as a named default because the two resets below must target it rather
+   * than "". This dialog is not remounted between opens — it takes an `open`
+   * prop — so resetting to the empty string would put the picker back to
+   * unanswered on the second open and quietly undo the preselection.
+   */
+  const defaultAccountId = accounts.length === 1 ? String(accounts[0].id) : "";
+  const [accountId, setAccountId] = useState(defaultAccountId);
   const [pending, setPending] = useState(false);
 
   async function confirm() {
@@ -38,7 +55,7 @@ export function RelinkGitAccountDialog({ application, accounts = [], open, onOpe
       await relinkGitAccount(application.id, { git_account_id: Number(accountId) });
       toast.success(t("relink.done"));
       onOpenChange?.(false);
-      setAccountId("");
+      setAccountId(defaultAccountId);
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("relink.failed")));
@@ -51,7 +68,7 @@ export function RelinkGitAccountDialog({ application, accounts = [], open, onOpe
     <ConfirmDialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) setAccountId("");
+        if (!next) setAccountId(defaultAccountId);
         onOpenChange?.(next);
       }}
       icon={Unlink}

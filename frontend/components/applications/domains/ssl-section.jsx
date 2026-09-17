@@ -482,8 +482,21 @@ export function SslSection({
                   present offered nothing but Remove — delete it and start
                   again was the only route out of a site that had stopped
                   serving HTTPS. The endpoint is the same POST; it replaces an
-                  existing certificate by design. */}
-              {expired ? (
+                  existing certificate by design.
+
+                  Offered BEFORE expiry too, for anything that will not renew
+                  itself. This card already tells those certificates they must
+                  be renewed by hand (`ssl.expiresManual`, keyed off the same
+                  flag) and then gave them no way to do it: the only button was
+                  Remove, so replacing one meant deleting it first and dropping
+                  the site to plain http in between. Waiting for `expired` means
+                  the one action that avoids an outage only appears once the
+                  outage has started.
+
+                  A renewing certificate still does not show it — there is
+                  nothing to do, and an always-present Reissue on a healthy
+                  Let's Encrypt cert is an invitation to spend rate limit. */}
+              {expired || !cert.renewable ? (
                 <Button size="sm" onClick={() => setIssueOpen(true)}>
                   <RefreshCw className="size-4" />
                   {t("ssl.reissue")}

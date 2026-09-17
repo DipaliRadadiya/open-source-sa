@@ -3524,7 +3524,8 @@
         "reloadWebServer": "{service} を再読み込み",
         "reloaded": "ウェブサーバーを再読み込みしました。",
         "reloadFailed": "ウェブサーバーを再読み込みできませんでした。",
-        "staleDomains": "{domains} はこの証明書に含まれていますが、このサイトのドメインではなくなりました。再発行するまで、証明書全体の更新が失敗します。"
+        "staleDomains": "{domains} はこの証明書に含まれていますが、このサイトのドメインではなくなりました。再発行するまで、証明書全体の更新が失敗します。",
+        "uploadNeedsBoth": "証明書と対応する秘密鍵の両方を貼り付けてください。"
       },
       "issueCertificate": "SSL 証明書を発行",
       "description": "このサイトに到達する名前と証明書。",
