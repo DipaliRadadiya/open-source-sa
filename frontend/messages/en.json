@@ -3871,7 +3871,8 @@
         "verbRead": "read",
         "verbWrite": "write",
         "verbExecute": "run it",
-        "invalidMode": "That is not a valid permission mode."
+        "invalidMode": "That is not a valid permission mode.",
+        "subtitleWithCurrentBoth": "Currently {mode} ({symbolic}). Who can read, write and execute this file or folder."
       },
       "delete": {
         "title": "Delete \"{name}\"?",
@@ -3948,7 +3949,10 @@
         "deleteSubmitForever": "Delete forever",
         "deleteDoneForever": "{count, plural, one {# item deleted for good.} other {# items deleted for good.}}",
         "targetFolderPlaceholder": "wp-content/keep",
-        "archiveNamePlaceholder": "site-backup"
+        "archiveNamePlaceholder": "site-backup",
+        "permissionsDescriptionCurrent": "Currently {mode} ({symbolic}). The same mode is applied to everything selected.",
+        "permissionsDescriptionMixed": "The selected items do not all have the same permissions. Saving applies one mode to every one of them.",
+        "permissionsChooseMode": "Choose the permissions to apply."
       },
       "size": {
         "failed": "That folder could not be measured."

@@ -8,7 +8,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { PermissionModeField } from "@/components/applications/files/permission-mode-field";
-import { modeParts } from "@/lib/files/describe-mode";
+import { modeParts, symbolicMode } from "@/lib/files/describe-mode";
 
 const DEFAULT_MODE = "644";
 
@@ -70,9 +70,21 @@ export function PermissionsDialog({ appId, file, open, onOpenChange }) {
       onSubmit={onSubmit}
       icon={Lock}
       title={t("permissionsDialog.title", { name: file.name })}
+      /*
+       * Names the mode BOTH ways, matching the listing's Permissions column.
+       *
+       * This said "Currently 644" while the column said "-rw-r--r--" for the
+       * same file, and the two were reported as disagreeing — reasonably, since
+       * nothing on either screen said they were one value in two notations.
+       */
       description={
         currentMode
-          ? t("permissionsDialog.subtitleWithCurrent", { mode: currentMode })
+          ? t(
+              symbolicMode(currentMode, file.type)
+                ? "permissionsDialog.subtitleWithCurrentBoth"
+                : "permissionsDialog.subtitleWithCurrent",
+              { mode: currentMode, symbolic: symbolicMode(currentMode, file.type) ?? "" },
+            )
           : t("permissionsDialog.subtitle")
       }
       footer={

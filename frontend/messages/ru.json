@@ -3871,7 +3871,8 @@
         "verbRead": "чтение",
         "verbWrite": "запись",
         "verbExecute": "выполнение",
-        "invalidMode": "Это недопустимый режим прав."
+        "invalidMode": "Это недопустимый режим прав.",
+        "subtitleWithCurrentBoth": "Сейчас {mode} ({symbolic}). Кто может читать, изменять и выполнять этот файл или папку."
       },
       "delete": {
         "title": "Удалить «{name}»?",
@@ -3948,7 +3949,10 @@
         "deleteSubmitForever": "Удалить навсегда",
         "deleteDoneForever": "{count, plural, one {# элемент удалён навсегда.} few {# элемента удалены навсегда.} many {# элементов удалены навсегда.} other {# элемента удалены навсегда.}}",
         "targetFolderPlaceholder": "wp-content/keep",
-        "archiveNamePlaceholder": "site-backup"
+        "archiveNamePlaceholder": "site-backup",
+        "permissionsDescriptionCurrent": "Сейчас {mode} ({symbolic}). Ко всему выбранному применяется один и тот же режим.",
+        "permissionsDescriptionMixed": "У выбранных объектов разные права доступа. При сохранении ко всем будет применён один режим.",
+        "permissionsChooseMode": "Выберите права доступа, которые нужно применить."
       },
       "size": {
         "failed": "Не удалось измерить эту папку."

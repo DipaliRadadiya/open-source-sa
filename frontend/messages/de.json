@@ -3871,7 +3871,8 @@
         "verbRead": "lesen",
         "verbWrite": "schreiben",
         "verbExecute": "ausführen",
-        "invalidMode": "Das ist kein gültiger Berechtigungsmodus."
+        "invalidMode": "Das ist kein gültiger Berechtigungsmodus.",
+        "subtitleWithCurrentBoth": "Aktuell {mode} ({symbolic}). Wer diese Datei oder diesen Ordner lesen, schreiben und ausführen darf."
       },
       "delete": {
         "title": "„{name}“ löschen?",
@@ -3948,7 +3949,10 @@
         "deleteSubmitForever": "Endgültig löschen",
         "deleteDoneForever": "{count, plural, one {# Eintrag endgültig gelöscht.} other {# Einträge endgültig gelöscht.}}",
         "targetFolderPlaceholder": "wp-content/keep",
-        "archiveNamePlaceholder": "website-backup"
+        "archiveNamePlaceholder": "website-backup",
+        "permissionsDescriptionCurrent": "Aktuell {mode} ({symbolic}). Derselbe Modus wird auf alles Ausgewählte angewendet.",
+        "permissionsDescriptionMixed": "Die ausgewählten Einträge haben nicht alle dieselben Berechtigungen. Beim Speichern wird ein Modus auf alle angewendet.",
+        "permissionsChooseMode": "Wählen Sie die anzuwendenden Berechtigungen."
       },
       "size": {
         "failed": "Dieser Ordner konnte nicht gemessen werden."

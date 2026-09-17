@@ -254,28 +254,41 @@ function PermissionsCell({ row }) {
   const file = row.original;
   if (!file.mode) return <span className="text-muted-foreground">—</span>;
   const worldWritable = isWorldWritable(file.mode);
+  const symbolic = symbolicMode(file.mode, file.type);
   return (
-    <span className="flex items-center gap-1.5 whitespace-nowrap font-mono text-xs text-muted-foreground">
-      {/* Symbolic, with the octal kept on hover: `drwxr-xr-x` is what anyone
-          reads at a glance, but `755` is what the chmod dialog and every
-          how-to guide talk in, so throwing it away would cost more than it
-          saves. */}
-      <span
-        className={worldWritable ? "font-medium text-destructive" : undefined}
-        title={file.mode}
-      >
-        {symbolicMode(file.mode, file.type) ?? file.mode}
+    /*
+     * Both notations, stacked, because they are one value.
+     *
+     * `drwxr-xr-x` is what anyone reads at a glance and shows WHICH of
+     * read/write/execute is missing; `755` is what the Permissions dialog,
+     * chmod and every how-to guide speak in. The octal was on hover only, so
+     * the column and the dialog looked like two different readings of the same
+     * file — reported as an inconsistency, and a fair reading of it.
+     *
+     * Stacked rather than side by side: measured with the sidebar in place,
+     * one line overflowed this column by 40px at 1024, 21px at 1152 and 2px at
+     * 1280, and the table only renders at all from 1024 up. Two lines need the
+     * width of the longer string alone, which already fit.
+     */
+    <span className="flex flex-col gap-0.5 whitespace-nowrap font-mono text-xs text-muted-foreground">
+      <span className="flex items-center gap-1.5">
+        <span className={worldWritable ? "font-medium text-destructive" : undefined}>
+          {symbolic ?? file.mode}
+        </span>
+        {worldWritable ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span tabIndex={0}>
+                <TriangleAlert className="size-3.5 shrink-0 text-destructive" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-60">{t("columns.worldWritableHint")}</TooltipContent>
+          </Tooltip>
+        ) : null}
       </span>
-      {worldWritable ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span tabIndex={0}>
-              <TriangleAlert className="size-3.5 shrink-0 text-destructive" />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-60">{t("columns.worldWritableHint")}</TooltipContent>
-        </Tooltip>
-      ) : null}
+      {/* Omitted when the mode could not be read symbolically — the line above
+          is then already the octal, and repeating it says nothing. */}
+      {symbolic ? <span className="text-muted-foreground/70">{file.mode}</span> : null}
     </span>
   );
 }

@@ -3871,7 +3871,8 @@
         "verbRead": "読み取り",
         "verbWrite": "書き込み",
         "verbExecute": "実行",
-        "invalidMode": "有効な権限モードではありません。"
+        "invalidMode": "有効な権限モードではありません。",
+        "subtitleWithCurrentBoth": "現在 {mode} ({symbolic})。このファイルまたはフォルダを読み取り・書き込み・実行できる対象です。"
       },
       "delete": {
         "title": "\"{name}\" を削除しますか?",
@@ -3948,7 +3949,10 @@
         "deleteSubmitForever": "完全に削除",
         "deleteDoneForever": "{count, plural, one {# 件を完全に削除しました。} other {# 件を完全に削除しました。}}",
         "targetFolderPlaceholder": "wp-content/keep",
-        "archiveNamePlaceholder": "site-backup"
+        "archiveNamePlaceholder": "site-backup",
+        "permissionsDescriptionCurrent": "現在 {mode} ({symbolic})。選択したすべてに同じモードが適用されます。",
+        "permissionsDescriptionMixed": "選択した項目の権限は同一ではありません。保存すると、すべてに同じモードが適用されます。",
+        "permissionsChooseMode": "適用する権限を選択してください。"
       },
       "size": {
         "failed": "そのフォルダーのサイズを計測できませんでした。"

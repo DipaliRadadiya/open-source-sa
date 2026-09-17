@@ -20,6 +20,12 @@ import {
 import { bulkResult } from "@/lib/files/bulk-result";
 import { apiMessage } from "@/lib/api/error-message";
 import { dirname, joinPath } from "@/lib/files/path-helpers";
+import { sharedMode, selectedFiles } from "@/lib/files/shared-mode";
+import { symbolicMode } from "@/lib/files/describe-mode";
+
+// Only ever a starting point for a selection whose modes differ — never
+// presented as anyone's current value.
+const DEFAULT_MODE = "644";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
@@ -39,7 +45,7 @@ import { PermanentDeleteField } from "@/components/applications/files/permanent-
  * and let the panel decide what to show. None of them reports success itself
  * when something failed — a toast cannot carry a list of paths.
  */
-export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult }) {
+export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChange, onResult }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -61,7 +67,46 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
   const [target, setTarget] = useState(() =>
     action === "compress" ? joinPath(path, "archive.zip") : "",
   );
-  const [mode, setMode] = useState("644");
+  /*
+   * Starts at what the selection actually has, not at a constant.
+   *
+   * This was `useState("644")`. Selecting one folder — 755 — and opening this
+   * offered 644 with "Read-only, the usual choice for files" pre-selected, on
+   * something that is not a file. Saving strips the execute bit, and a
+   * directory without execute cannot be opened: picking `wp-admin` and
+   * pressing Save took the WordPress admin down. The per-row dialog has always
+   * seeded from the file; only this one guessed.
+   *
+   * A mixed selection has no single current value, so nothing is claimed — the
+   * checkboxes start from the safe fallback and the description says they
+   * differ, rather than presenting one file's mode as if it were all of them.
+   */
+  const chosen = selectedFiles(files, paths);
+  const currentMode = sharedMode(chosen);
+  /*
+   * A mixed selection starts with NOTHING chosen, and Save stays disabled
+   * until someone picks a mode.
+   *
+   * Seeding the fallback here was the same fault as the old constant, one
+   * level over: it no longer CLAIMED to be current, but it was still
+   * pre-filled and one click from being applied. Selecting a 644 file and a
+   * 600 one and pressing Save without touching anything sent 644 for both —
+   * turning a secrets file readable by every account on the box, on a value
+   * nobody chose.
+   *
+   * Move and Copy in this same component already answer it this way, and the
+   * reasoning above them applies verbatim: an empty box asking a question
+   * beats a filled one answering it wrongly.
+   */
+  const mustChooseMode = action === "permissions" && !currentMode;
+  // Only for the `d`/`-`/`l` prefix on the symbolic form. A mixed selection
+  // gets the plain file prefix rather than calling a folder a file.
+  const sharedType = chosen.every((file) => file.type === chosen[0]?.type)
+    ? chosen[0]?.type
+    : null;
+  // Empty, not DEFAULT_MODE, when there is no shared current value — see
+  // `mustChooseMode`. The field renders no preset as chosen for "".
+  const [mode, setMode] = useState(() => currentMode ?? "");
   const [error, setError] = useState(null);
   const archiveFormat = useArchiveFormat();
   // Off every time the dialog mounts. BulkDialogs is mounted per action by the
@@ -184,7 +229,23 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
       }}
       icon={meta.icon}
       title={t(`bulk.${action}Title`, { count: paths.length })}
-      description={t(`bulk.${action}Description`)}
+      /*
+       * Permissions says what the selection is currently set to, the way the
+       * per-row dialog does — or that it has no single answer. "The same mode
+       * is applied to everything selected" described what Save would do and
+       * never what was already there, which is how a hardcoded 644 passed for
+       * a folder's current value.
+       */
+      description={
+        isPermissions
+          ? currentMode
+            ? t("bulk.permissionsDescriptionCurrent", {
+                mode: currentMode,
+                symbolic: symbolicMode(currentMode, sharedType) ?? currentMode,
+              })
+            : t("bulk.permissionsDescriptionMixed")
+          : t(`bulk.${action}Description`)
+      }
       footer={
         <>
           <Button
@@ -195,8 +256,24 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
           >
             {t("cancel")}
           </Button>
-          <ReasonTooltip reason={!busy && !isPermissions && !target.trim() ? tc("enterAValue") : null}>
-          <Button type="submit" disabled={busy || (!isPermissions && !target.trim())}>
+          {/* Disabled with a reason, never hidden — and for a mixed selection
+              the reason names what is missing rather than the generic "enter a
+              value", since there is no box to fill: a mode has to be chosen. */}
+          <ReasonTooltip
+            reason={
+              busy
+                ? null
+                : mustChooseMode && !mode
+                  ? t("bulk.permissionsChooseMode")
+                  : !isPermissions && !target.trim()
+                    ? tc("enterAValue")
+                    : null
+            }
+          >
+          <Button
+            type="submit"
+            disabled={busy || (isPermissions ? !mode : !target.trim())}
+          >
             {busy ? <Loader2 className="size-4 animate-spin" /> : null}
             {/* "Permissions" is the name of the job, not something you can do —
                 the single-file dialog says Save here, and so does this one. */}

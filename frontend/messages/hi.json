@@ -3871,7 +3871,8 @@
         "verbRead": "पढ़",
         "verbWrite": "लिख",
         "verbExecute": "चला",
-        "invalidMode": "यह मान्य परमिशन मोड नहीं है।"
+        "invalidMode": "यह मान्य परमिशन मोड नहीं है।",
+        "subtitleWithCurrentBoth": "वर्तमान में {mode} ({symbolic})। यह फ़ाइल या फ़ोल्डर कौन पढ़, लिख और चला सकता है।"
       },
       "delete": {
         "title": "\"{name}\" हटाएं?",
@@ -3948,7 +3949,10 @@
         "deleteSubmitForever": "हमेशा के लिए हटाएँ",
         "deleteDoneForever": "{count, plural, one {# चीज़ हमेशा के लिए हटाई।} other {# चीज़ें हमेशा के लिए हटाईं।}}",
         "targetFolderPlaceholder": "wp-content/keep",
-        "archiveNamePlaceholder": "site-backup"
+        "archiveNamePlaceholder": "site-backup",
+        "permissionsDescriptionCurrent": "वर्तमान में {mode} ({symbolic})। चुनी गई हर चीज़ पर यही मोड लागू होगा।",
+        "permissionsDescriptionMixed": "चुनी गई सभी चीज़ों की अनुमतियाँ एक जैसी नहीं हैं। सहेजने पर सभी पर एक ही मोड लागू होगा।",
+        "permissionsChooseMode": "लागू करने के लिए अनुमतियाँ चुनें।"
       },
       "size": {
         "failed": "उस फ़ोल्डर को मापा नहीं जा सका।"

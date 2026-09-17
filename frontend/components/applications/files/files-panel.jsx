@@ -453,6 +453,9 @@ export function FilesPanel({
           appId={appId}
           action={bulkAction}
           paths={selected}
+          // The rows themselves, not just their paths: the Permissions dialog
+          // has to start from what is actually set, and a path cannot say.
+          files={files}
           path={path}
           onOpenChange={(open) => !open && setBulkAction(null)}
           onResult={onBulkResult}

@@ -3871,7 +3871,8 @@
         "verbRead": "lire",
         "verbWrite": "écrire",
         "verbExecute": "l'exécuter",
-        "invalidMode": "Ce mode de permission n'est pas valide."
+        "invalidMode": "Ce mode de permission n'est pas valide.",
+        "subtitleWithCurrentBoth": "Actuellement {mode} ({symbolic}). Qui peut lire, écrire et exécuter ce fichier ou ce dossier."
       },
       "delete": {
         "title": "Supprimer « {name} » ?",
@@ -3948,7 +3949,10 @@
         "deleteSubmitForever": "Supprimer définitivement",
         "deleteDoneForever": "{count, plural, one {# élément supprimé définitivement.} other {# éléments supprimés définitivement.}}",
         "targetFolderPlaceholder": "wp-content/keep",
-        "archiveNamePlaceholder": "site-backup"
+        "archiveNamePlaceholder": "site-backup",
+        "permissionsDescriptionCurrent": "Actuellement {mode} ({symbolic}). Le même mode est appliqué à toute la sélection.",
+        "permissionsDescriptionMixed": "Les éléments sélectionnés n’ont pas tous les mêmes permissions. L’enregistrement applique un seul mode à tous.",
+        "permissionsChooseMode": "Choisissez les permissions à appliquer."
       },
       "size": {
         "failed": "Ce dossier n'a pas pu être mesuré."

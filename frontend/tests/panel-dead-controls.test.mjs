@@ -36,8 +36,13 @@ test("move and copy do not pre-fill the folder the files are already in", () => 
 
   // The guard that makes an empty field safe already existed — it was simply
   // unreachable behind the pre-filled value. It has to stay.
-  assert.match(bulk, /disabled=\{busy \|\| \(!isPermissions && !target\.trim\(\)\)\}/);
-  assert.match(bulk, /ReasonTooltip reason=\{[^}]*!target\.trim\(\)/);
+  //
+  // The expression now also covers Permissions, which grew the same problem
+  // later: a mixed selection starts with no mode chosen and must not be
+  // saveable untouched. Move and copy keep exactly the behaviour this test was
+  // written for — an empty target still disables Save.
+  assert.match(bulk, /disabled=\{busy \|\| \(isPermissions \? !mode : !target\.trim\(\)\)\}/);
+  assert.match(bulk, /!isPermissions && !target\.trim\(\)\s*\n?\s*\? tc\("enterAValue"\)/);
 });
 
 /* ---------------------------------------------------------------------------

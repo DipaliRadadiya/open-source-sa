@@ -3871,7 +3871,8 @@
         "verbRead": "ler",
         "verbWrite": "gravar",
         "verbExecute": "executar",
-        "invalidMode": "Este não é um modo de permissão válido."
+        "invalidMode": "Este não é um modo de permissão válido.",
+        "subtitleWithCurrentBoth": "Atualmente {mode} ({symbolic}). Quem pode ler, escrever e executar este arquivo ou pasta."
       },
       "delete": {
         "title": "Excluir \"{name}\"?",
@@ -3948,7 +3949,10 @@
         "deleteSubmitForever": "Excluir permanentemente",
         "deleteDoneForever": "{count, plural, one {# item excluído definitivamente.} other {# itens excluídos definitivamente.}}",
         "targetFolderPlaceholder": "wp-content/keep",
-        "archiveNamePlaceholder": "site-backup"
+        "archiveNamePlaceholder": "site-backup",
+        "permissionsDescriptionCurrent": "Atualmente {mode} ({symbolic}). O mesmo modo é aplicado a tudo o que está selecionado.",
+        "permissionsDescriptionMixed": "Os itens selecionados não têm todos as mesmas permissões. Salvar aplica um único modo a todos.",
+        "permissionsChooseMode": "Escolha as permissões a aplicar."
       },
       "size": {
         "failed": "Não foi possível medir essa pasta."
