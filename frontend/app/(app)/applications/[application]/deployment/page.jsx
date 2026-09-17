@@ -7,6 +7,7 @@ import { getApplication } from "@/lib/applications/get-applications";
 import { getWebhookProviders } from "@/lib/applications/get-webhook-providers";
 import { getGitAccounts } from "@/lib/git/get-git";
 import { getDeployments } from "@/lib/applications/get-deployments";
+import { gitProviderFromUrl } from "@/lib/applications/git-provider-from-url";
 import { DeploymentPanel } from "@/components/applications/deployment/deployment-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 
@@ -67,10 +68,20 @@ export default async function ApplicationDeploymentPage({ params }) {
       : Promise.resolve([]),
   ]);
 
-  // Null when the site has no linked account, or the account has gone: then
-  // the card keeps its full picker, which is the only honest thing left.
+  /*
+   * The account first, then the repository URL, then ask.
+   *
+   * A linked account states its provider outright. A public repository has no
+   * account — but for github.com, gitlab.com and bitbucket.org the URL on this
+   * same screen already answers it, and the card was asking anyway. Null only
+   * when neither can say: an unlinked site on a self-hosted host, or one whose
+   * account has gone. Then the full picker comes back, which is the only honest
+   * thing left.
+   */
   const gitProvider =
-    gitAccounts.find((a) => a.id === application.git_account_id)?.provider ?? null;
+    gitAccounts.find((a) => a.id === application.git_account_id)?.provider ??
+    gitProviderFromUrl(application.repository_url) ??
+    null;
 
   /*
    * Only the provider this site actually deploys from.

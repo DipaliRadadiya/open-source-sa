@@ -367,23 +367,45 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
               <p className="text-sm text-muted-foreground">
                 {t("webhook.disabledBody")}
               </p>
-              <div className="space-y-1.5">
-                <Label className="text-sm" hint={t("webhook.providerHint")}>{t("webhook.provider")}</Label>
-                <Select value={providerName} onValueChange={setProviderName}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue
-                      placeholder={t("webhook.providerPlaceholder")}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {providers.map((p) => (
-                      <SelectItem key={p.name} value={p.name}>
-                        {p.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/*
+               * One provider: state it, do not ask it.
+               *
+               * The page resolves the provider from the linked account, and
+               * failing that from the repository URL — so for a site on
+               * github.com, gitlab.com or bitbucket.org this list has exactly
+               * one entry. A dropdown with one option is a question with a
+               * single possible answer, and it read as though the panel had
+               * not worked something out that it plainly had.
+               *
+               * The picker stays for the case that is genuinely open: a
+               * self-hosted host the URL cannot identify.
+               */}
+              {providers.length === 1 ? (
+                <div className="space-y-1.5">
+                  <Label className="text-sm">{t("webhook.provider")}</Label>
+                  <p className="flex h-9 items-center rounded-lg border bg-muted/40 px-3 text-sm font-medium">
+                    {providers[0].title}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label className="text-sm" hint={t("webhook.providerHint")}>{t("webhook.provider")}</Label>
+                  <Select value={providerName} onValueChange={setProviderName}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue
+                        placeholder={t("webhook.providerPlaceholder")}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {providers.map((p) => (
+                        <SelectItem key={p.name} value={p.name}>
+                          {p.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {wantsToken ? (
                 <div className="space-y-1.5">
