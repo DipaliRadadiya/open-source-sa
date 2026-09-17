@@ -54,10 +54,32 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
 
   const isSelf = Boolean(yourIp) && ip.trim() === yourIp;
 
+  /*
+   * Reset at BOTH ends, because only one of them is guaranteed to run.
+   *
+   * Closing cleared the error and left the address behind, so typing something
+   * invalid, giving up, and coming back showed the rejected address sitting in
+   * the field again — reported exactly that way.
+   *
+   * Clearing on close alone is not enough either: the trigger below calls
+   * `setOpen(true)` itself, which never goes through this handler, so anything
+   * left by a path that skipped it (a close during `pending`, a future caller
+   * flipping `open`) would still be there on the next open.
+   */
+  function resetFields() {
+    setIp("");
+    setError(null);
+  }
+
   function handleOpenChange(next) {
     if (pending) return;
     setOpen(next);
-    if (!next) setError(null);
+    if (!next) resetFields();
+  }
+
+  function openDialog() {
+    resetFields();
+    setOpen(true);
   }
 
   async function submit(event) {
@@ -72,7 +94,7 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
       await banIp(ip.trim(), jail);
       toast.success(t("ban.banned", { ip: ip.trim() }));
       setOpen(false);
-      setIp("");
+      resetFields();
       refresh();
     } catch (err) {
       // 422 is usually "that address is on the ignore list" — the ban would be
@@ -89,7 +111,7 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
   return (
     <>
       <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
-        <Button disabled={!canManage} onClick={() => setOpen(true)}>
+        <Button disabled={!canManage} onClick={openDialog}>
           <Plus className="size-4" />
           {t("ban.action")}
         </Button>
