@@ -12,6 +12,19 @@ import { fileIconFor, isImageFile } from "@/lib/files/file-icon";
 import { canOpenFile } from "@/lib/files/openable";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
+/*
+ * Makes the name the click target for the whole row: the pseudo-element is
+ * positioned against the <li> (the nearest positioned ancestor), so it spans
+ * the row even though the name itself is a short box.
+ *
+ * `truncate` puts overflow:hidden on that name, which does NOT clip this — an
+ * absolutely positioned box whose containing block sits outside the
+ * overflowing element escapes its clipping. That is the sort of claim that is
+ * easy to get wrong, so the harness clicks the far right edge of a row rather
+ * than trusting the reasoning.
+ */
+const STRETCH = "after:absolute after:inset-0 after:rounded-xl";
+
 /**
  * Results for "Search entire site" — recursive, so unlike the folder table
  * each row can be anywhere on the site. Clicking a **file** opens it, same
@@ -20,6 +33,16 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
  * already the one you searched from. Clicking a **folder** navigates into
  * it, since that IS how folders open. The folder each result lives in is
  * still shown, as its own small link, for "take me there instead."
+ *
+ * The whole row is the target, not just the name. These rows are 66px tall
+ * and the name is one short string inside them, so the honest hit area was
+ * ~4% of what looks clickable — every click on the icon, the folder line or
+ * the empty space to the right did nothing, which reads as "search is
+ * broken" rather than "you missed". It's done with a stretched overlay on
+ * the name rather than by wrapping the row, because the row already holds a
+ * second link (the folder) and an <a> inside an <a> is not a thing; the
+ * overlay keeps one real control per destination and lifts the folder link
+ * above it.
  */
 export function SiteSearchResults({ appId, query, onAction }) {
   const t = useTranslations("applications.files");
@@ -86,14 +109,30 @@ export function SiteSearchResults({ appId, query, onAction }) {
         const folder = dirname(file.path);
         const folderHref = `/applications/${appId}/files?path=${encodeURIComponent(folder)}`;
         const folderLabel = folder ? t("siteSearch.inFolder", { folder }) : t("root");
+        // Into the folder itself — `folderHref` is its PARENT, which is the
+        // right answer for "where does this file live" and the wrong one for
+        // "open this folder". Sharing it meant clicking a search hit landed
+        // you one level above the thing you clicked.
+        const openDirHref = `/applications/${appId}/files?path=${encodeURIComponent(file.path)}`;
+        const openable = !symlink && !isDir && canOpenFile(file.name);
+        // Only rows that lead somewhere get the row-wide affordance; a
+        // hover state on a row that cannot be opened is a lie.
+        const interactive = isDir || openable;
 
         return (
-          <li key={file.path} className="flex items-center justify-between gap-3 rounded-xl border bg-card p-3">
+          <li
+            key={file.path}
+            className={cn(
+              "relative flex items-center justify-between gap-3 rounded-xl border bg-card p-3",
+              interactive &&
+                "transition-colors hover:bg-accent/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+            )}
+          >
             <div className="flex min-w-0 items-center gap-2.5">
               <Icon className={cn("size-4 shrink-0", symlink ? "text-muted-foreground" : className)} />
               <div className="min-w-0">
                 {isDir ? (
-                  <Link href={folderHref} className="block truncate font-medium hover:underline">
+                  <Link href={openDirHref} className={cn("block truncate font-medium hover:underline", STRETCH)}>
                     {file.name}
                   </Link>
                 ) : symlink ? (
@@ -107,7 +146,7 @@ export function SiteSearchResults({ appId, query, onAction }) {
                   </Tooltip>
                 ) : (
                   // Nothing to open — see the note in files-table.
-                  !canOpenFile(file.name) ? (
+                  !openable ? (
                     <span className="block w-full truncate font-medium" title={file.name}>
                       {file.name}
                     </span>
@@ -115,7 +154,7 @@ export function SiteSearchResults({ appId, query, onAction }) {
                     <button
                       type="button"
                       onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
-                      className="block w-full truncate text-left font-medium hover:underline"
+                      className={cn("block w-full cursor-pointer truncate text-left font-medium hover:underline", STRETCH)}
                     >
                       {file.name}
                     </button>
@@ -125,7 +164,9 @@ export function SiteSearchResults({ appId, query, onAction }) {
                   {isDir ? (
                     folderLabel
                   ) : (
-                    <Link href={folderHref} className="hover:text-foreground hover:underline">
+                    // Above the row overlay, so "take me to the folder" stays
+                    // reachable instead of being swallowed by "open the file".
+                    <Link href={folderHref} className="relative z-10 hover:text-foreground hover:underline">
                       {folderLabel}
                     </Link>
                   )}
