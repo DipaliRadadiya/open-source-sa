@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { Clock } from "lucide-react";
@@ -58,8 +58,26 @@ export function ScheduleField({ form, presets, timezone }) {
   // and left Save disabled because nothing was dirty.
   const selected = customMode || (expression && !matched) ? CUSTOM : matched?.key;
 
+  /*
+   * Picking "Custom" hands focus to the expression field.
+   *
+   * Custom is not a schedule, it is a mode: it changes nothing by itself, so
+   * `isDirty` stays false and Save stays disabled with "No changes made" —
+   * correct, and reported as a bug anyway, because the dropdown had visibly
+   * changed and a field had appeared. Every other way of changing the schedule
+   * enables Save; this was the one dead end.
+   *
+   * Force-dirtying instead would be a lie: it would arm a button that writes
+   * the value the job already has. Moving the cursor into the field that IS
+   * the change turns the dead end into the next step, and the first keystroke
+   * enables Save honestly.
+   */
+  const rawFieldRef = useRef(null);
+  const focusRawOnClose = useRef(false);
+
   function onPreset(key) {
     setCustomMode(key === CUSTOM);
+    focusRawOnClose.current = key === CUSTOM;
     const preset = presets.find((p) => p.key === key);
     if (preset?.expression) {
       /*
@@ -144,7 +162,20 @@ export function ScheduleField({ form, presets, timezone }) {
             </FormControl>
             {/* popper, not the default item-aligned: with 10 presets the menu
                 would otherwise open on top of the fields above it. */}
-            <SelectContent position="popper" className="max-h-72">
+            <SelectContent
+              /*
+               * Radix returns focus to the trigger on close, which is AFTER any
+               * effect or handler fired by the selection — a first attempt
+               * focused the field and watched Radix take it straight back, and
+               * the probe caught it (`activeElement` was the trigger button).
+               * This is the one moment where the redirect sticks.
+               */
+              onCloseAutoFocus={(event) => {
+                if (!focusRawOnClose.current) return;
+                focusRawOnClose.current = false;
+                event.preventDefault();
+                rawFieldRef.current?.focus();
+              }} position="popper" className="max-h-72">
               {grouped
                 ? buckets.map((bucket) => (
                     <SelectGroup key={bucket.group}>
@@ -175,6 +206,10 @@ export function ScheduleField({ form, presets, timezone }) {
                   spellCheck={false}
                   placeholder="* * * * *"
                   {...field}
+                  ref={(node) => {
+                    field.ref(node);
+                    rawFieldRef.current = node;
+                  }}
                 />
               </FormControl>
               <FormMessage />
