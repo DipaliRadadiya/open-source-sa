@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { MagicLoginLauncher } from "@/components/applications/magic-login-launcher";
 import { CopyButton } from "@/components/ui/copy-button";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
+import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 
 export const dynamic = "force-dynamic";
 
@@ -276,8 +277,27 @@ export default async function ApplicationDetailPage({ params }) {
     // as three unrelated blocks with the page's first card pushed 178px down.
     // The grid keeps gap-6, so cards still breathe; only the run-in tightens.
     <div className="space-y-4">
-      <div className="space-y-2">
+      {/*
+        An identity card, not a heading on white.
+
+        Forge, Plesk and MaxPlane all open a site page the same way: the app's
+        mark, its name, its state, its hostname and the quick actions, together
+        on one surface (see memory/research-application-dashboard.md). Ours was
+        four text nodes floating above the cards, which is why it did not read
+        as the subject of the page.
+      */}
+      <div className="rounded-xl border bg-muted/30 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            {/* The component existed and this page never used it — the one
+                screen about a single site was the only place not showing what
+                kind of site it is. */}
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border bg-background">
+              {/* No `provider`: that swaps in a Git host's mark, which needs
+                  the providers map this page does not load. The site type is
+                  the identity worth showing here anyway. */}
+              <SiteTypeLogo name={application.site_type} size="h-6 w-6" />
+            </span>
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">{application.name}</h1>
@@ -312,6 +332,7 @@ export default async function ApplicationDetailPage({ params }) {
               )}
               <CopyButton value={application.domain} />
             </div>
+          </div>
           </div>
 
           <div className="flex items-center gap-2">

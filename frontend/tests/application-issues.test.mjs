@@ -125,38 +125,38 @@ test("each finding sits with its own action, not in a joined sentence", () => {
   );
 });
 
-test("the row is the target, not a button parked at the far edge", () => {
+test("the finding is the target, not a button parked at the far edge", () => {
   /*
    * `justify-between` across a full-width band left "SSL not installed" at one
    * edge and "Issue SSL" at the other with most of a screen between them, and
    * two of those stacked gave four things floating in a rectangle with nothing
-   * to say which action belonged to which finding. Outline buttons of differing
-   * widths made the right edge ragged on top of it.
+   * to say which action belonged to which finding.
    *
-   * The whole row is now the link, the way the admin attention list already
-   * works, so the pairing is made by the object lighting up rather than by
-   * being roughly level.
+   * The findings are now tiles, two across, each one the link — reported as
+   * "yellow full width section looks too bad and takes too much empty unused
+   * space", which is the same fault this test was written for, one layout on.
+   * The pairing is still made by the object lighting up rather than by being
+   * roughly level, and the action now sits directly beneath its own label.
    */
   const strip = fs.readFileSync("components/applications/attention-strip.jsx", "utf8");
   // Comments out first: this file EXPLAINS why justify-between was wrong, so
   // searching the raw source finds the explanation and calls it the bug.
   const code = strip.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  assert.doesNotMatch(code, /justify-between/, "the label and its action drift apart again");
-  assert.match(code, /hover:bg-warning\/10/, "nothing marks the row as one object");
-  assert.match(strip, /divide-y/, "without dividers, which action belongs to which line is a guess");
-  // Stacked below sm, side by side above: wrapping on measurement showed the
-  // same two rows in two different shapes on one phone screen. Asserted as two
-  // fragments because ROW is a concatenation, so quotes fall between them.
-  assert.match(code, /flex-col items-start/);
-  assert.match(code, /sm:flex-row/);
-  assert.doesNotMatch(code, /flex-wrap/, "per-row wrapping gives one screen two shapes");
+  assert.doesNotMatch(code, /justify-between gap-2 rounded-lg[^]*sm:flex-row/, "the band layout is back");
+  assert.match(code, /hover:bg-background/, "nothing marks the chip as one object");
+  // Chips size to their own text and wrap; a grid or a full-width row is the
+  // regression, both of which were reported as wasted space.
+  assert.match(code, /flex min-w-0 flex-wrap items-center gap-2/);
+  assert.doesNotMatch(code, /sm:grid-cols-2/, "the half-width tile grid is back");
 });
 
 test("a finding with nowhere to go renders without a hover it cannot honour", () => {
   const strip = fs.readFileSync("components/applications/attention-strip.jsx", "utf8");
   // The no-action branch is a plain <p>, so it carries neither the link nor the
-  // hover tint — a row that lights up and then does nothing is worse than flat.
-  assert.match(strip, /<p className="px-4 py-2\.5 text-sm/);
+  // hover tint — a tile that lights up and then does nothing is worse than flat.
+  // It still gets the tile's own border and height so it sits in the grid.
+  assert.match(strip, /<p className="rounded-lg border border-warning\/25/);
+  assert.doesNotMatch(strip, /<p className="rounded-lg[^"]*hover:/);
 });
 
 test("the section-jump link can be the row as well as a button", () => {

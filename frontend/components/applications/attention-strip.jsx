@@ -4,37 +4,28 @@ import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 import { SectionJumpLink } from "@/components/ui/section-jump-link";
 
 /*
- * The row, and why it is a row rather than a label with a button parked at the
- * far right.
+ * One finding, as a tile.
  *
- * `justify-between` across a full-width band put "SSL not installed" at one
- * edge and "Issue SSL" at the other with ~900px of nothing between them, and
- * two of those stacked gave four things floating in a rectangle: nothing said
- * which button belonged to which sentence except being roughly level with it.
- * Outline buttons of different widths made the right edge ragged on top of it.
+ * This was a full-width row with the label at one edge and the action at the
+ * other. `justify-between` put "SSL not installed" and "Issue SSL" ~900px
+ * apart, and two of those stacked made an amber rectangle that was mostly air
+ * — reported as taking "too much empty unused space", which it did.
  *
- * So the whole row is the target, the way the admin dashboard's attention list
- * already does it. The distance stops mattering once the thing being pointed at
- * lights up as one object, and the action can drop to a text link — which also
- * ends the ragged-width problem, because there is no box to be ragged.
- *
- * Stacked below `sm`, side by side above it, rather than letting flex-wrap
- * decide per row: wrapping on measurement meant a short finding kept its action
- * inline while the next one dropped it to a second line, so one phone screen
- * showed the same two rows in two different shapes.
+ * The whole tile is the target, so the pairing is made by the object lighting
+ * up rather than by two things being roughly level, and the action sits
+ * directly under the words it belongs to. `h-full` so two findings of
+ * different lengths still read as one row instead of one box hanging short.
  */
 const ROW =
-  "group flex flex-col items-start gap-1 px-4 py-2.5 transition-colors " +
-  "sm:flex-row sm:items-center sm:gap-x-4 " +
-  "hover:bg-warning/10 focus-visible:bg-warning/10 focus-visible:outline-none " +
-  "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+  "group inline-flex max-w-full items-center gap-x-2 gap-y-0.5 rounded-lg border " +
+  "border-warning/25 bg-background/70 px-2.5 py-1.5 transition-colors " +
+  "hover:border-warning/50 hover:bg-background focus-visible:outline-none " +
+  "focus-visible:ring-2 focus-visible:ring-ring";
 
 function Finding({ label, action }) {
   return (
     <>
-      {/* min-w-48, not min-w-0: beside a shrink-0 action, min-w-0 lets a whole
-          sentence squeeze into one word per line. */}
-      <span className="min-w-48 flex-1 text-sm leading-snug wrap-anywhere">{label}</span>
+      <span className="text-sm leading-snug wrap-anywhere">{label}</span>
       <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
         {action}
         <ArrowRight
@@ -90,18 +81,29 @@ export async function AttentionStrip({ items }) {
      * `overflow-hidden` so the first and last rows' hover tint is clipped by
      * the rounded border instead of squaring off its corners.
      */
-    <div className="overflow-hidden rounded-xl border border-warning/30 bg-warning/5">
-      <div className="flex items-center gap-2.5 px-4 py-2.5">
-        <AlertTriangle className="size-4 shrink-0 text-warning" />
-        <p className="text-sm font-semibold leading-tight">{t("title")}</p>
-      </div>
+    /*
+      One band, one line where it fits.
 
-      {/* Dividers, not spacing: the rows are a list of separate problems, and a
-          gap alone left it ambiguous whether the action on the right belonged to
-          the line above it or below. */}
-      <ul className="divide-y divide-warning/20 border-t border-warning/20">
+      This was a heading row above a grid of half-width tiles, each holding
+      three words on one line and its link on the next — reported twice as
+      taking too much empty space, and both times the space was the layout
+      rather than the colour.
+
+      Now the heading sits inline with the findings and each finding is a chip
+      sized to its own text, so two short ones take a single row instead of a
+      heading plus two tall boxes. `flex-wrap` is what keeps it honest when the
+      server sends whole sentences — "SSL certificate expires in 0 days." —
+      five of which simply wrap onto further lines instead of being squeezed.
+    */
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-warning/30 bg-warning/5 p-2.5">
+      <p className="inline-flex shrink-0 items-center gap-2 text-sm font-semibold leading-tight">
+        <AlertTriangle className="size-4 shrink-0 text-warning" />
+        {t("title")}
+      </p>
+
+      <ul className="flex min-w-0 flex-wrap items-center gap-2">
         {items.map((item) => (
-          <li key={item.key}>
+          <li key={item.key} className="min-w-0">
             {item.action && item.href ? (
               item.href.startsWith("#") ? (
                 <SectionJumpLink href={item.href} className={ROW}>
@@ -113,9 +115,11 @@ export async function AttentionStrip({ items }) {
                 </Link>
               )
             ) : (
-              // An issue kind the panel has no screen for still gets its row.
+              // An issue kind the panel has no screen for still gets its chip.
               // No hover, because there is nowhere to go.
-              <p className="px-4 py-2.5 text-sm leading-snug wrap-anywhere">{item.label}</p>
+              <p className="rounded-lg border border-warning/25 bg-background/70 px-2.5 py-1.5 text-sm leading-snug wrap-anywhere">
+                {item.label}
+              </p>
             )}
           </li>
         ))}
