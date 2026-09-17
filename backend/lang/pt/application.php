@@ -136,7 +136,7 @@ return [
         'rendering_type' => 'A renderização no servidor executa a sua app e faz proxy para ela. As outras duas compilam ficheiros que o servidor web entrega diretamente — mais rápido e sem nada a manter em execução.',
         'repository_url' => 'Um repositório público — sem necessidade de conta. Deve ser um endereço https://.',
         'build_command' => 'Executado após baixar o código, ex.: composer install --no-dev',
-        'deploy_script' => 'Executa depois de obter o código, como o utilizador do site. Deixe vazio para usar o comando de build.',
+        'deploy_script' => 'É executado após obter o código, como o utilizador do site e na versão de PHP deste site. Deixe vazio para usar o comando de compilação.',
         'package_manager' => 'O que instala e compila as suas dependências. Preenche o comando de build abaixo — edite livremente depois.',
     ],
 
@@ -166,6 +166,9 @@ return [
         'harden' => 'Aplicando as configurações de segurança',
         'trust_domain' => 'Autorizando o domínio',
         'set_password' => 'Definindo a senha do administrador',
+        'script' => 'A executar o script de implantação',
+        'dependencies' => 'A verificar as dependências',
+        'verify' => 'A verificar se o site responde',
         'verify_serving' => 'A verificar se o site responde',
         'worker' => 'O processo em segundo plano parou',
     ],
@@ -180,6 +183,8 @@ return [
         'not_answering' => 'A aplicação iniciou mas nunca respondeu a um pedido. Consulte o registo da aplicação para saber porque não está à escuta.',
         'out_of_memory' => 'O servidor ficou sem memória durante esta etapa e o sistema interrompeu-a. Liberte memória, ou adicione swap, e tente novamente.',
         'no_build_tools' => 'Esta etapa precisava de compilar um módulo nativo e este servidor não tem compilador instalado. Instale as ferramentas de compilação, ou crie o site numa versão LTS do Node — essas normalmente incluem binários já compilados e não precisam de compilador.',
+        'composer_platform' => 'O Composer não conseguiu instalar as dependências desta aplicação com a versão de PHP definida para este site. A versão de PHP do site, ou uma das extensões de que necessita, não cumpre o que o projeto exige. Altere a versão de PHP do site para uma suportada, ou instale a extensão em falta, e implante novamente.',
+        'composer_dependencies_missing' => 'Este projeto precisa de dependências do Composer e nenhuma foi instalada, pelo que a aplicação não tem vendor/autoload.php e todos os pedidos irão falhar. Acrescente ao script de implantação um passo que execute composer install e implante novamente.',
     ],
 
     'port_free' => 'A porta :port está livre.',

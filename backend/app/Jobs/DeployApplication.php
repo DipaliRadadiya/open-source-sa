@@ -92,7 +92,15 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
 
         $previousStatus = $application->status;
 
-        $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'reference' => null]);
+        // `failed_reason` cleared with the rest of them. It was not, so a site
+        // that once failed for a nameable reason carried that sentence on its
+        // screen through every later deploy — including the successful ones.
+        $application->update([
+            'status' => ApplicationStatus::Provisioning,
+            'failed_step' => null,
+            'failed_reason' => null,
+            'reference' => null,
+        ]);
 
         try {
             // The code root, not the document root. A checkout always lands at
@@ -125,10 +133,15 @@ class DeployApplication implements ShouldBeUniqueUntilProcessing, ShouldQueue
                     ? ApplicationStatus::Active
                     : ApplicationStatus::Failed,
                 'failed_step' => $e->step,
+                // Dropped on the floor until now: the provisioning job has
+                // always persisted this, the deploy job never did, so every
+                // classification the panel can make was thrown away on exactly
+                // the path a user hits most — redeploying an existing site.
+                'failed_reason' => $e->reason,
                 'reference' => $e->reference,
             ]);
 
-            $recorder->fail($e->step, $e->reference);
+            $recorder->fail($e->step, $e->reference, $e->reason);
 
             $activityLogger->log('application.deploy_failed', $application, [
                 'name' => $application->name,

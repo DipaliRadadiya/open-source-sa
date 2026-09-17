@@ -136,7 +136,7 @@ return [
         'rendering_type' => 'El renderizado en servidor ejecuta tu app y hace de proxy hacia ella. Los otros dos compilan a archivos que el servidor web entrega directamente: más rápido y sin nada que mantener en ejecución.',
         'repository_url' => 'Un repositorio público: no hace falta cuenta. Debe ser una dirección https://.',
         'build_command' => 'Se ejecuta tras descargar el código, p. ej. composer install --no-dev',
-        'deploy_script' => 'Se ejecuta tras descargar el código, como tu usuario del sitio. Déjalo vacío para usar el comando de compilación.',
+        'deploy_script' => 'Se ejecuta después de obtener el código, como el usuario del sitio y con la versión de PHP de este sitio. Déjelo vacío para usar el comando de compilación.',
         'package_manager' => 'Lo que instala y compila tus dependencias. Rellena el comando de compilación de abajo; edítalo libremente después.',
     ],
 
@@ -166,6 +166,9 @@ return [
         'harden' => 'Aplicando ajustes de seguridad',
         'trust_domain' => 'Autorizando el dominio',
         'set_password' => 'Estableciendo la contraseña de administrador',
+        'script' => 'Ejecutando el script de despliegue',
+        'dependencies' => 'Comprobando las dependencias',
+        'verify' => 'Comprobando que el sitio responde',
         'verify_serving' => 'Comprobando que el sitio responde',
         'worker' => 'El proceso en segundo plano se detuvo',
     ],
@@ -180,6 +183,8 @@ return [
         'not_answering' => 'La aplicación se inició pero nunca respondió a una solicitud. Consulte el registro de la aplicación para ver por qué no está escuchando.',
         'out_of_memory' => 'El servidor se quedó sin memoria durante este paso y el sistema lo detuvo. Libere memoria, o añada swap, e inténtelo de nuevo.',
         'no_build_tools' => 'Este paso necesitaba compilar un módulo nativo y este servidor no tiene ningún compilador instalado. Instale las herramientas de compilación, o cree el sitio con una versión LTS de Node: normalmente incluyen binarios ya compilados y no necesitan compilador.',
+        'composer_platform' => 'Composer no pudo instalar las dependencias de esta aplicación con la versión de PHP configurada en el sitio. La versión de PHP del sitio, o alguna de las extensiones que necesita, no cumple lo que exige el proyecto. Cambie la versión de PHP del sitio a una compatible, o instale la extensión que falta, y vuelva a desplegar.',
+        'composer_dependencies_missing' => 'Este proyecto necesita dependencias de Composer y no se instaló ninguna, por lo que la aplicación no tiene vendor/autoload.php y todas las peticiones fallarán. Añada al script de despliegue un paso que ejecute composer install y vuelva a desplegar.',
     ],
 
     'port_free' => 'El puerto :port está libre.',

@@ -141,7 +141,7 @@ return [
         'rendering_type' => 'Server-side rendering runs your app and proxies to it. The other two build to files the web server hands out directly — faster, and nothing to keep running.',
         'repository_url' => 'A public repository — no account needed. Must be an https:// address.',
         'build_command' => 'Run after the code is fetched, e.g. composer install --no-dev',
-        'deploy_script' => 'Runs after the code is fetched, as your site user. Leave empty to use the build command.',
+        'deploy_script' => 'Runs after the code is fetched, as your site user and on this site\'s own PHP version. Leave empty to use the build command.',
         'package_manager' => 'What installs and builds your dependencies. Fills in the build command below — edit it freely afterward.',
     ],
 
@@ -171,6 +171,9 @@ return [
         'harden' => 'Applying security settings',
         'trust_domain' => 'Trusting the domain',
         'set_password' => 'Setting the admin password',
+        'script' => 'Running the deploy script',
+        'dependencies' => 'Checking the dependencies',
+        'verify' => 'Checking the site answers',
         'verify_serving' => 'Checking the site answers',
         'worker' => 'The background worker stopped',
     ],
@@ -185,6 +188,8 @@ return [
         'not_answering' => 'The application started but never answered a request. Check the application log for why it is not listening.',
         'out_of_memory' => 'The server ran out of memory during this step and it was stopped by the system. Free some memory, or add swap, and try again.',
         'no_build_tools' => 'This step needed to compile a native module, and this server has no compiler installed. Either install the build tools, or create the site on a long-term-support Node version — those usually ship ready-built binaries and need no compiler at all.',
+        'composer_platform' => 'Composer could not install this application\'s dependencies under the PHP version this site is set to. The site\'s PHP version, or one of the extensions it needs, does not meet what the project requires. Change the site\'s PHP version to one the project supports, or install the missing extension, and deploy again.',
+        'composer_dependencies_missing' => 'This project requires Composer dependencies and none were installed, so the application has no vendor/autoload.php and every request to it will fail. Add a build step that runs composer install to the deployment script, then deploy again.',
     ],
 
     'port_free' => 'Port :port is free.',

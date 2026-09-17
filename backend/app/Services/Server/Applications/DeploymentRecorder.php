@@ -124,11 +124,12 @@ class DeploymentRecorder
      * no commit to name and correctly shows none. Clearing it here would throw
      * away the more useful of the two answers to make them look alike.
      */
-    public function fail(string $step, ?string $reference): void
+    public function fail(string $step, ?string $reference, ?string $reason = null): void
     {
         $this->deployment?->update([
             'status' => DeploymentStatus::Failed,
             'failed_step' => $step,
+            'failed_reason' => $reason,
             'reference' => $reference,
             'finished_at' => now(),
         ]);

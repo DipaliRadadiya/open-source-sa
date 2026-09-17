@@ -1205,6 +1205,23 @@ return [
     'git_timeout' => (int) env('SERVER_GIT_TIMEOUT', 300),
     'build_timeout' => (int) env('SERVER_BUILD_TIMEOUT', 600),
 
+    /*
+    | Where the per-version `php` shims live.
+    |
+    | A deploy script runs `composer install` and `php artisan`, and both find
+    | their interpreter on `PATH`. The site's own binary cannot be put there
+    | directly the way Node's can: fnm gives every Node version its own `bin`
+    | directory, while apt puts every PHP in `/usr/bin` under a versioned name
+    | (`php8.2`, `php8.3`), so there is no directory to prepend that means
+    | "this version". A directory holding one symlink named `php` is that
+    | directory. One per version, reused by every site on it.
+    |
+    | Under `/var/lib` rather than `/tmp`: a shim that disappears on reboot
+    | would make the first deploy after one behave differently from the last
+    | deploy before it, which is the exact class of bug this fixes.
+    */
+    'php_shim_dir' => env('SERVER_PHP_SHIM_DIR', '/var/lib/panel/php-shims'),
+
     'site_types' => [
         WordPressSiteType::class,
         NextcloudSiteType::class,

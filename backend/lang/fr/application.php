@@ -136,7 +136,7 @@ return [
         'rendering_type' => 'Le rendu côté serveur exécute votre app et lui sert de proxy. Les deux autres compilent des fichiers que le serveur web sert directement — plus rapide, et rien à maintenir en marche.',
         'repository_url' => 'Un dépôt public — aucun compte requis. Doit être une adresse https://.',
         'build_command' => 'Exécutée après la récupération du code, ex. composer install --no-dev',
-        'deploy_script' => 'S\'exécute après la récupération du code, en tant qu\'utilisateur du site. Laissez vide pour utiliser la commande de build.',
+        'deploy_script' => 'S’exécute après la récupération du code, en tant qu’utilisateur du site et avec la version de PHP de ce site. Laissez vide pour utiliser la commande de build.',
         'package_manager' => 'Ce qui installe et compile vos dépendances. Remplit la commande de build ci-dessous — modifiable librement ensuite.',
     ],
 
@@ -166,6 +166,9 @@ return [
         'harden' => 'Application des réglages de sécurité',
         'trust_domain' => 'Autorisation du domaine',
         'set_password' => 'Définition du mot de passe administrateur',
+        'script' => 'Exécution du script de déploiement',
+        'dependencies' => 'Vérification des dépendances',
+        'verify' => 'Vérification que le site répond',
         'verify_serving' => 'Vérification que le site répond',
         'worker' => 'Le processus en arrière-plan s\'est arrêté',
     ],
@@ -180,6 +183,8 @@ return [
         'not_answering' => 'L\'application a démarré mais n\'a jamais répondu à une requête. Consultez le journal de l\'application pour savoir pourquoi elle n\'écoute pas.',
         'out_of_memory' => 'Le serveur a manqué de mémoire pendant cette étape et le système l\'a arrêtée. Libérez de la mémoire, ou ajoutez du swap, puis réessayez.',
         'no_build_tools' => 'Cette étape devait compiler un module natif, et aucun compilateur n’est installé sur ce serveur. Installez les outils de compilation, ou créez le site sur une version LTS de Node — celles-ci fournissent généralement des binaires précompilés et ne nécessitent aucun compilateur.',
+        'composer_platform' => 'Composer n’a pas pu installer les dépendances de cette application avec la version de PHP configurée pour ce site. La version de PHP du site, ou l’une des extensions dont elle a besoin, ne correspond pas à ce qu’exige le projet. Choisissez une version de PHP prise en charge par le projet, ou installez l’extension manquante, puis redéployez.',
+        'composer_dependencies_missing' => 'Ce projet nécessite des dépendances Composer et aucune n’a été installée : l’application n’a pas de vendor/autoload.php et toutes les requêtes échoueront. Ajoutez une étape composer install au script de déploiement, puis redéployez.',
     ],
 
     'port_free' => 'Le port :port est libre.',

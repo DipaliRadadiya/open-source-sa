@@ -37,6 +37,12 @@ class DeploymentResource extends JsonResource
 
             'steps' => $this->steps ?? [],
             'failed_step' => $this->failed_step,
+            'failed_reason' => $this->failed_reason,
+            // The sentence, rendered in the *viewer's* locale rather than
+            // stored in the actor's — the same rule the activity log follows.
+            'failed_reason_title' => $this->failed_reason === null
+                ? null
+                : __('application.failure_reason.'.$this->failed_reason),
             'reference' => $this->reference,
 
             // Only on the detail view. A list of fifty deploys each carrying

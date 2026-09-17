@@ -69,6 +69,17 @@ class ProvisioningFailedException extends Exception
             return 'no_build_tools';
         }
 
+        // Composer refused to resolve against the PHP it was run under.
+        //
+        // Same reasoning as the build tools above and the same risk: composer
+        // prints its whole dependency tree around the one line that matters,
+        // and "Your requirements could not be resolved" on its own sends the
+        // reader to look for a broken package when the answer is the site's
+        // PHP version.
+        if (self::mentionsPlatformRequirement($result)) {
+            return 'composer_platform';
+        }
+
         $exitCode = $result->result?->exitCode();
 
         if ($exitCode !== self::EXIT_KILLED) {
@@ -83,6 +94,51 @@ class ProvisioningFailedException extends Exception
         }
 
         return 'out_of_memory';
+    }
+
+    /**
+     * Did composer fail on a platform requirement — a PHP version or a PHP
+     * extension the interpreter it ran under does not provide?
+     *
+     * Measured against composer 2.10 on 2026-09-17 rather than remembered.
+     * Both failures exit 2 and say, in the body of a much longer report:
+     *
+     *   - Root composer.json requires php ^9.0 but your php version (8.4.23)
+     *     does not satisfy that requirement.
+     *   - Root composer.json requires PHP extension ext-foo * but it is
+     *     missing from your system. Install or enable PHP's foo extension.
+     *
+     * Matched on the distinctive tail of each rather than on "requirements
+     * could not be resolved", which composer also prints for an ordinary
+     * version conflict between two packages — a different problem, with a
+     * different fix, and this class's own rule is that a wrong reason sends
+     * someone to fix something that was never broken.
+     *
+     * That distinction was measured too, not assumed: an ordinary conflict
+     * (`monolog/monolog ^3` against `psr/log ^1`) reports "found psr/log[…]
+     * but it conflicts with your root composer.json require" and contains
+     * none of these needles, while a *dependency* needing a newer PHP ends in
+     * the same "does not satisfy that requirement" as a root one. So the
+     * phrase separates platform from package, which is exactly the cut.
+     */
+    private static function mentionsPlatformRequirement(ServerOpsResult $result): bool
+    {
+        $output = $result->errorOutput()."\n".$result->output();
+
+        foreach ([
+            'does not satisfy that requirement',
+            'but it is missing from your system',
+            // The runtime half of the same fault: composer's generated guard,
+            // reached when the install went through under one PHP and the code
+            // is then run under an older one.
+            'Composer detected issues in your platform',
+        ] as $needle) {
+            if (str_contains($output, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

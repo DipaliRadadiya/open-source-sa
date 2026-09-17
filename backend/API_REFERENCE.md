@@ -830,6 +830,8 @@ and fall back to `failed_step` + `reference` when it is `null`.
 | `out_of_memory` | The step was killed by the kernel's OOM killer — exit 137, **nothing written at all**, so the reference names an empty log. |
 | `serving_error` | The application started, but answers every request with a 5xx. Usually assets that did not build completely. |
 | `not_answering` | The application started but never answered a request at all. |
+| `composer_platform` | Composer refused to install the dependencies under the PHP version the site is set to — the version, or an extension, does not meet what the project requires. |
+| `composer_dependencies_missing` | The project requires Composer packages and none were installed, so there is no `vendor/autoload.php` and every request to the site would fail. Raised at the new `dependencies` step, **before** the site is curled. |
 
 The last two come from the `verify_serving` step, which is the final step of
 provisioning for any application that runs a process of its own. **Being
@@ -1311,6 +1313,7 @@ Newest first.
   "commit_author": "Priya Nair",
   "steps": ["init", "fetch", "checkout", "set_ownership", "seed_env", "script"],
   "failed_step": null,
+  "failed_reason": null, "failed_reason_title": null,
   "reference": null,
   "duration": 90,
   "started_at": "28-07-2026 11:00:00",
@@ -1323,7 +1326,7 @@ Newest first.
   "default_deploy_script": "cd {path}\ngit pull origin {branch}\ncomposer install --no-dev",
   "auto_deploy": false, "webhook_enabled": false,
   "last_commit": "a1b2c3d", "last_deployed_at": "28-07-2026 11:01:30",
-  "placeholders": ["{path}", "{branch}", "{domain}"]
+  "placeholders": ["{path}", "{branch}", "{domain}", "{php}"]
 }}
 ```
 
@@ -1338,6 +1341,26 @@ Newest first.
 `user` is **null for a webhook deploy** — nobody pressed anything, and inventing an actor would be a lie. Render it as "System". On `POST …/deployments` and `…/redeploy` the key is **absent entirely** (the relation is not loaded there); it is present on this list and on the single-deployment view.
 
 `steps` accumulates step names in the order they completed — `init`, `fetch`, `checkout`, `set_ownership`, `seed_env`, `script` — so the UI can show which stage a running deploy reached instead of a bare spinner. Don't hardcode the list; `seed_env` was added after the others and more may follow. It copies the repository's `.env.example` into place and generates a Laravel key, and it does nothing at all when the file already has contents or the repository ships no example. On a failure, `failed_step` names the one that broke and `reference` is the id to quote to support; the technical detail lives in the server-ops log under that id, never in the response.
+
+**A deployment carries `failed_reason` / `failed_reason_title` too**, as of
+2026-09-17 — the same codes and the same rule as the application's own fields
+above, rendered in the viewer's locale. Until now the deploy job threw its
+classification away, so every reason the panel could name was lost on the one
+path users hit most: redeploying an existing site.
+
+**The deploy script runs under the site's own PHP**, also as of 2026-09-17. It
+did not before: `composer install` resolved against whatever `/usr/bin/php`
+pointed at, so a site set to 8.2 on a box defaulting to 8.4 got dependencies
+built for 8.4 — and composer's generated `vendor/composer/platform_check.php`,
+required by `vendor/autoload.php`, then threw a `500` on every request while
+every step of the deploy showed green. Scripts need no change; `{php}` is
+available for a script that wants to name the interpreter explicitly.
+
+A new `dependencies` step runs after the script and before the verify: if the
+repository's `composer.json` requires real packages and `vendor/autoload.php`
+is not there, the deploy fails as `composer_dependencies_missing` rather than
+as an unexplained `500` from the verify. A manifest with only `require-dev`, or
+only platform entries (`php`, `ext-*`), is left alone.
 
 `duration` is whole seconds, and null until the deploy has both started and finished.
 

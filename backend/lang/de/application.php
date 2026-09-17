@@ -136,7 +136,7 @@ return [
         'rendering_type' => 'Server-Rendering führt deine App aus und leitet an sie weiter. Die anderen beiden bauen Dateien, die der Webserver direkt ausliefert – schneller, und nichts muss laufen.',
         'repository_url' => 'Ein öffentliches Repository — kein Konto nötig. Muss eine https://-Adresse sein.',
         'build_command' => 'Läuft nach dem Abrufen des Codes, z. B. composer install --no-dev',
-        'deploy_script' => 'Läuft nach dem Abrufen des Codes, als dein Website-Benutzer. Leer lassen, um den Build-Befehl zu verwenden.',
+        'deploy_script' => 'Läuft nach dem Abrufen des Codes, als Ihr Site-Benutzer und mit der PHP-Version dieser Site. Leer lassen, um den Build-Befehl zu verwenden.',
         'package_manager' => 'Was deine Abhängigkeiten installiert und baut. Füllt den Build-Befehl unten aus – danach frei bearbeitbar.',
     ],
 
@@ -166,6 +166,9 @@ return [
         'harden' => 'Sicherheitseinstellungen werden angewendet',
         'trust_domain' => 'Domain wird freigegeben',
         'set_password' => 'Administrator-Passwort wird gesetzt',
+        'script' => 'Deploy-Skript wird ausgeführt',
+        'dependencies' => 'Abhängigkeiten werden geprüft',
+        'verify' => 'Prüfen, ob die Website antwortet',
         'verify_serving' => 'Prüfen, ob die Website antwortet',
         'worker' => 'Der Hintergrundprozess wurde beendet',
     ],
@@ -180,6 +183,8 @@ return [
         'not_answering' => 'Die Anwendung wurde gestartet, hat aber nie auf eine Anfrage geantwortet. Im Anwendungsprotokoll steht, warum sie nicht lauscht.',
         'out_of_memory' => 'Dem Server ging bei diesem Schritt der Speicher aus und das System hat ihn beendet. Geben Sie Speicher frei oder fügen Sie Swap hinzu und versuchen Sie es erneut.',
         'no_build_tools' => 'Für diesen Schritt musste ein natives Modul kompiliert werden, und auf diesem Server ist kein Compiler installiert. Installieren Sie die Build-Tools, oder erstellen Sie die Site mit einer Node-LTS-Version — diese liefern in der Regel fertige Binärdateien und benötigen keinen Compiler.',
+        'composer_platform' => 'Composer konnte die Abhängigkeiten dieser Anwendung mit der für diese Site eingestellten PHP-Version nicht installieren. Die PHP-Version der Site oder eine der benötigten Erweiterungen erfüllt nicht, was das Projekt verlangt. Stellen Sie die Site auf eine unterstützte PHP-Version um oder installieren Sie die fehlende Erweiterung, und deployen Sie erneut.',
+        'composer_dependencies_missing' => 'Dieses Projekt benötigt Composer-Abhängigkeiten, es wurden aber keine installiert. Der Anwendung fehlt daher vendor/autoload.php und jede Anfrage schlägt fehl. Fügen Sie dem Deploy-Skript einen Schritt mit composer install hinzu und deployen Sie erneut.',
     ],
 
     'port_free' => 'Port :port ist frei.',

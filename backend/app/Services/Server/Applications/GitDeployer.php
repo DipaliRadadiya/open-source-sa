@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Models\Worker;
 use App\Services\Git\GitProviderManager;
 use App\Services\Server\Runtimes\NodeRuntime;
+use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\Log;
@@ -38,6 +39,7 @@ class GitDeployer
         private ServerOps $serverOps,
         private GitProviderManager $providers,
         private NodeRuntime $node,
+        private PhpRuntime $php,
         private ProcessSupervisor $supervisor,
         private ProvisionProgress $progress,
         private DeploymentRecorder $recorder,
@@ -153,6 +155,11 @@ class GitDeployer
             if (filled($this->script($application))) {
                 $this->runScript($application, $documentRoot);
             }
+
+            // Before the restarts and before the verify, because this is the
+            // question the verify cannot answer. Both orders end in a failed
+            // deploy; only this one says why.
+            $this->checkDependencies($application, $documentRoot);
 
             // New code is only live once the process running it has been
             // replaced. A deploy that pulls, builds and leaves the old process
@@ -529,6 +536,7 @@ class GitDeployer
         $script = implode("\n", [
             'set -e',
             $this->nodePath($application),
+            $this->phpPath($application),
             'cd '.escapeshellarg($documentRoot),
             $this->expand($this->script($application), $application, $documentRoot),
         ]);
@@ -544,11 +552,111 @@ class GitDeployer
 
         $this->recorder->step('script', $result);
 
+        // `fromResult`, not the bare constructor. The deploy script is where
+        // `composer install` and `npm ci` run, which makes it the step with the
+        // most classifiable failures in the whole panel — and it was the one
+        // step throwing with no reason attached at all, so the out-of-memory
+        // and missing-compiler classifications that exist for the marketplace
+        // installers never once applied to a git deploy.
         if ($result->failed()) {
-            throw new ProvisioningFailedException('script', $result->reference);
+            throw ProvisioningFailedException::fromResult('script', $result);
         }
 
         $this->progress->record('script');
+    }
+
+    /**
+     * A composer project must have its dependencies on disk before anything
+     * is asked to serve it.
+     *
+     * The failure this exists for is silent by construction: a site with no
+     * deploy script, or with one that never runs `composer install`, checks
+     * out cleanly, restarts cleanly, and then answers every request with a
+     * fatal on the missing `vendor/autoload.php`. The panel's only verdict was
+     * "curl returned HTTP 500" from the verify — correct, and useless, because
+     * the one fact needed to fix it is not in it.
+     *
+     * **Gated on the manifest actually requiring something.** Not on the mere
+     * presence of `composer.json`: a repository that carries one only to pin a
+     * linter has `require-dev` and no runtime dependencies at all, serves
+     * perfectly well with no `vendor/`, and deploys fine today. Failing that
+     * site would be this method causing the outage it was written to describe.
+     * Platform entries do not count either — `php` and `ext-*` are constraints
+     * on the interpreter, not packages that land in `vendor/`.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function checkDependencies(Application $application, string $codeRoot): void
+    {
+        $context = ['feature' => 'application', 'op' => 'check_dependencies', 'application' => $application->id];
+
+        $manifest = $this->serverOps->run(['cat', $codeRoot.'/composer.json'], $context);
+
+        if ($manifest->failed()) {
+            return; // Not a composer project, or unreadable — neither is ours to judge.
+        }
+
+        if (! $this->requiresPackages($manifest->output())) {
+            return;
+        }
+
+        $autoload = $this->serverOps->run(
+            ['test', '-f', $codeRoot.'/vendor/autoload.php'],
+            $context,
+        );
+
+        if ($autoload->ok) {
+            $this->progress->record('dependencies');
+
+            return;
+        }
+
+        $this->recorder->step('dependencies', $autoload);
+
+        $application->update([
+            'failed_step' => 'dependencies',
+            'reference' => $autoload->reference,
+        ]);
+
+        throw new ProvisioningFailedException(
+            'dependencies',
+            $autoload->reference,
+            'composer_dependencies_missing',
+        );
+    }
+
+    /**
+     * Does this `composer.json` require at least one real package?
+     *
+     * Malformed JSON answers no. A manifest we cannot parse is not evidence
+     * that anything is missing, and this check's whole licence to fail a
+     * deploy rests on being certain.
+     */
+    private function requiresPackages(string $json): bool
+    {
+        $manifest = json_decode($json, true);
+
+        if (! is_array($manifest) || ! isset($manifest['require']) || ! is_array($manifest['require'])) {
+            return false;
+        }
+
+        foreach (array_keys($manifest['require']) as $name) {
+            $name = strtolower((string) $name);
+
+            if ($name === 'php' || $name === 'hhvm') {
+                continue;
+            }
+
+            // `ext-`/`lib-` are the interpreter's own extensions and libraries;
+            // `composer-*-api` are composer's, satisfied by composer itself.
+            if (str_starts_with($name, 'ext-') || str_starts_with($name, 'lib-') || str_starts_with($name, 'composer-')) {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -576,6 +684,11 @@ class GitDeployer
     private function expand(string $script, Application $application, string $documentRoot): string
     {
         return strtr($script, [
+            // The site's own interpreter, spelled out. `php` on PATH already
+            // resolves to it, but a script written before that was true may
+            // name a version explicitly, and this is the way to do so without
+            // hardcoding a path that changes when the site's version does.
+            '{php}' => $this->phpBinary($application),
             '{path}' => $documentRoot,
             '{branch}' => $application->branch ?: 'main',
             '{domain}' => (string) $application->domain,
@@ -632,6 +745,128 @@ class GitDeployer
         $bin = dirname($this->node->binaryPath((string) $application->node_version));
 
         return 'export PATH='.escapeshellarg($bin).':"$PATH"; ';
+    }
+
+    /**
+     * The site's PHP binary, or the bare name when it cannot be resolved —
+     * which is what the script would have used anyway.
+     */
+    private function phpBinary(Application $application): string
+    {
+        $version = (string) $application->php_version;
+
+        if (preg_match('/^\d+\.\d+$/', $version) !== 1) {
+            return 'php';
+        }
+
+        return $this->php->binaryPath($version) ?: 'php';
+    }
+
+    /**
+     * `export PATH=…;` putting the site's own PHP first, or nothing when it
+     * cannot be established.
+     *
+     * The same bug as {@see nodePath()} and a worse one, because PHP is what
+     * `composer install` resolves its platform requirements against. A site
+     * set to 8.2 on a box whose default `php` is 8.4 had its dependencies
+     * resolved for 8.4 — and composer writes what it resolved against into
+     * `vendor/composer/platform_check.php`, which `vendor/autoload.php`
+     * requires on its way in. So the deploy succeeded, every step went green,
+     * and the site answered **every request with a 500** thrown by composer's
+     * own guard, saying a PHP version nobody had chosen was required.
+     *
+     * That is worse than Node's version of this because nothing in the output
+     * points at it: the build log shows a clean `composer install`, and the
+     * panel's only verdict is "curl returned HTTP 500".
+     *
+     * A symlink directory rather than `dirname($binary)`, which is what Node
+     * can do and PHP cannot: fnm gives each Node version its own `bin`, while
+     * apt puts every PHP in `/usr/bin` under a versioned name. Prepending
+     * `/usr/bin` selects nothing. A directory holding one symlink called `php`
+     * is the only shape that means "this version" to a `#!/usr/bin/env php`
+     * shebang — which is how composer itself is started.
+     */
+    private function phpPath(Application $application): string
+    {
+        $version = (string) $application->php_version;
+
+        // Not a version we are willing to interpolate into a path. Only ever
+        // set from validated input, so this is a guard against a future caller
+        // rather than against today's.
+        if (preg_match('/^\d+\.\d+$/', $version) !== 1) {
+            return '';
+        }
+
+        $binary = $this->php->binaryPath($version);
+
+        // A blank `php_binary_pattern` resolves to the bare name `php`, which
+        // is the operator saying "whatever is on PATH". Shimming that would
+        // point `php` at itself and override a deliberate choice.
+        if ($binary === '' || $binary === 'php') {
+            return '';
+        }
+
+        $shim = $this->ensurePhpShim($version, $binary);
+
+        return $shim === null ? '' : 'export PATH='.escapeshellarg($shim).':"$PATH"; ';
+    }
+
+    /**
+     * The shim directory for one PHP version, created if it is not there.
+     *
+     * Returns null when it could not be built, and null means the deploy runs
+     * exactly as it did before this method existed. **Deliberately never
+     * fatal**: a site whose chosen PHP has since been uninstalled would then
+     * fail its deploy inside a helper, reported as a step the user cannot map
+     * to anything they did. The `test -x` is what catches that case — a
+     * dangling symlink named `php` early on PATH would break a deploy that
+     * works today, which is the one outcome this must not produce.
+     */
+    private function ensurePhpShim(string $version, string $binary): ?string
+    {
+        $base = rtrim((string) config('server.php_shim_dir', ''), '/');
+
+        if ($base === '') {
+            return null;
+        }
+
+        $dir = $base.'/'.$version;
+        $link = $dir.'/php';
+
+        $context = ['feature' => 'application', 'op' => 'php_shim'];
+
+        $made = $this->serverOps->run(['mkdir', '-p', '-m', '0755', $dir], $context);
+
+        if ($made->failed()) {
+            return $this->skipShim($version, 'shim directory could not be created');
+        }
+
+        // `-f` to replace, `-n` so a re-run does not create the link *inside*
+        // the directory the old one points at.
+        $linked = $this->serverOps->run(['ln', '-sfn', $binary, $link], $context);
+
+        if ($linked->failed()) {
+            return $this->skipShim($version, 'shim could not be linked');
+        }
+
+        $usable = $this->serverOps->run(['test', '-x', $link], $context);
+
+        if ($usable->failed()) {
+            return $this->skipShim($version, "no executable PHP at {$binary}");
+        }
+
+        return $dir;
+    }
+
+    private function skipShim(string $version, string $detail): ?string
+    {
+        Log::channel('server-ops')->warning('php shim unavailable, deploy script will use the default php', [
+            'feature' => 'application',
+            'php_version' => $version,
+            'detail' => $detail,
+        ]);
+
+        return null;
     }
 
     /**

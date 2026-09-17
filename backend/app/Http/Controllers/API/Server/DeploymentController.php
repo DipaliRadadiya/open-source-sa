@@ -151,7 +151,7 @@ class DeploymentController extends Controller
 
             // The placeholders a script may use. Sent rather than hardcoded in
             // the frontend, the same way the cron command presets are.
-            'placeholders' => ['{path}', '{branch}', '{domain}'],
+            'placeholders' => ['{path}', '{branch}', '{domain}', '{php}'],
         ];
     }
 

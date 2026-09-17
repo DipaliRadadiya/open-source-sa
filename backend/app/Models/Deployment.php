@@ -12,7 +12,7 @@ class Deployment extends Model
     protected $fillable = [
         'application_id', 'user_id', 'trigger', 'status', 'branch',
         'commit_hash', 'commit_message', 'commit_author',
-        'steps', 'failed_step', 'reference', 'output',
+        'steps', 'failed_step', 'failed_reason', 'reference', 'output',
         'started_at', 'finished_at',
     ];
 
