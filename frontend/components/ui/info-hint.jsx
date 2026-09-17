@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 /**
- * An explanation that opens on hover with a mouse and on tap with a finger.
+ * An explanation that opens on hover with a mouse, on tap with a finger, and
+ * on a keyboard Tab onto it — but never from focus a dialog handed over.
  *
  * A popover rather than a tooltip, because Radix tooltips are hover- and
  * focus-only and dismiss themselves on pointer-down — on a touch screen the
@@ -42,6 +43,26 @@ export function InfoHint({ label, children, className }) {
     closeTimer.current = setTimeout(() => setOpen(false), 120);
   };
 
+  /*
+   * Focus opens this only when the focus came from the keyboard.
+   *
+   * A dialog hands focus to the first thing it can reach, and this icon sits
+   * ahead of its own field — so on every dialog whose first label carries a
+   * hint (about 18 of them), opening it popped this note over the control
+   * underneath, unasked. Reported on Storage → Add Destination, where it
+   * covered the Provider dropdown completely.
+   *
+   * `:focus-visible` is the distinction the browser already draws and the one
+   * that matters here: programmatic focus after a mouse click does not match
+   * it, a Tab onto the icon does. So the noise goes and the keyboard route
+   * stays — which is the whole reason focus opens this at all, since someone
+   * on a keyboard cannot hover.
+   */
+  const openOnKeyboardFocus = (event) => {
+    if (!event.currentTarget.matches(":focus-visible")) return;
+    openOnHover();
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
@@ -61,7 +82,7 @@ export function InfoHint({ label, children, className }) {
         onClick={(event) => event.stopPropagation()}
         onMouseEnter={openOnHover}
         onMouseLeave={closeOnLeave}
-        onFocus={openOnHover}
+        onFocus={openOnKeyboardFocus}
         onBlur={closeOnLeave}
       >
         <Info className="size-3.5" />
