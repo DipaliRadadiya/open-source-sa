@@ -25,9 +25,19 @@ const POLL_MS = 3000;
 const AUTO_FOLLOW_KEYS = new Set(["error", "application", "application_error"]);
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
 
-// Access lines carry an HTTP status (color by 2xx/3xx/4xx/5xx); everything else
-// is tinted by level word.
-const groupFor = (key) => (key === "access" ? "web" : "system");
+/*
+ * Which lines carry an HTTP status (colour and severity by 2xx/3xx/4xx/5xx)
+ * rather than a level word.
+ *
+ * `waf_detect` belongs here too. It is written by the web server in `combined`
+ * — byte for byte the same shape as the access log, as parse-detect-log.js says
+ * in as many words — but it was falling into "system", so `lineLevel` skipped
+ * the status parsing and looked for words like "error" that a combined line
+ * never contains. Every line came back with no level, so Errors and Warnings
+ * filtered the whole tab down to nothing and the severity tint never appeared.
+ */
+const WEB_FORMAT_KEYS = new Set(["access", "waf_detect"]);
+const groupFor = (key) => (WEB_FORMAT_KEYS.has(key) ? "web" : "system");
 
 export function ApplicationLogsPanel({
   appId,

@@ -44,8 +44,22 @@ export function BulkDialogs({ appId, action, paths, path, onOpenChange, onResult
   const tc = useTranslations("common");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  /*
+   * Compress gets a useful default; move and copy get none.
+   *
+   * All three used to start at `path` — the folder the selected files are
+   * already in. For compress that is right: the archive lands beside them. For
+   * move and copy it is the one destination guaranteed to fail, because every
+   * file is already there. Select twelve files, press Move, press Confirm, and
+   * every single one comes back "something is already at the destination".
+   *
+   * There is no better guess to make — the parent folder is no likelier than
+   * any other — so the field starts empty behind its placeholder and Confirm
+   * stays disabled until a destination is actually given. An empty box asking
+   * a question is better than a filled one answering it wrongly.
+   */
   const [target, setTarget] = useState(() =>
-    action === "compress" ? joinPath(path, "archive.zip") : path,
+    action === "compress" ? joinPath(path, "archive.zip") : "",
   );
   const [mode, setMode] = useState("644");
   const [error, setError] = useState(null);

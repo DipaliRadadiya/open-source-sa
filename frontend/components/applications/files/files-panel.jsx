@@ -395,6 +395,10 @@ export function FilesPanel({
               highlightPath={highlightPath}
               selected={selected}
               onToggle={toggleSelected}
+              // Same state the table gets — "Folder size" is in the card menu
+              // too, and without these it had nowhere to put its answer.
+              folderSizes={folderSizes}
+              sizingPath={sizingPath}
             />
           </div>
           <div className="hidden lg:block">

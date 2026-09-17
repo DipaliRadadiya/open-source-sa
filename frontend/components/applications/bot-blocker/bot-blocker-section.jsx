@@ -191,7 +191,18 @@ function RuleEditor({ kind, icon: Icon, bots, disabled, onAdd, onRemove }) {
           aria-invalid={Boolean(error)}
           className="h-8 font-mono text-xs"
         />
-        <Button type="button" variant="outline" size="sm" onClick={add} disabled={disabled}>
+        {/* `!draft.trim()`, matching the firewall's identical control.
+            `add()` already returns silently on an empty value, so the button
+            was enabled, clickable, and did nothing at all — no entry, no error,
+            not even focus back in the box. A control that responds to a click
+            by doing nothing is worse than one that is visibly unavailable. */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={add}
+          disabled={disabled || !draft.trim()}
+        >
           <Plus className="size-3.5" />
           {t("add")}
         </Button>

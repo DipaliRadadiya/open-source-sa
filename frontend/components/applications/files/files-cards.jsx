@@ -9,12 +9,34 @@ import { isImageFile } from "@/lib/files/file-icon";
 import { canOpenFile } from "@/lib/files/openable";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 
-export function FilesCards({ appId, data, canManage, onAction, busyPath, highlightPath, selected = [], onToggle }) {
+/*
+ * `folderSizes` and `sizingPath` are the same two pieces of state the desktop
+ * table's SizeCell reads. Without them the ⋯ → "Folder size" action on a phone
+ * ran, measured, stored the answer — and had nowhere to show it, so the menu
+ * closed and nothing ever happened. The action was only ever wired into the
+ * table.
+ */
+export function FilesCards({
+  appId,
+  data,
+  canManage,
+  onAction,
+  busyPath,
+  highlightPath,
+  selected = [],
+  onToggle,
+  folderSizes = {},
+  sizingPath = null,
+}) {
   const t = useTranslations("applications.files");
+  // "Measuring…" already exists one namespace up, shared with the dashboard.
+  // Adding a files-scoped copy would be a second string for one sentence.
+  const tSize = useTranslations("applications.size");
   return (
     <ul className="space-y-2">
       {data.map((file) => {
         const busy = busyPath === file.path;
+        const measuring = sizingPath === file.path;
         return (
           <li
             key={file.path}
@@ -104,7 +126,9 @@ export function FilesCards({ appId, data, canManage, onAction, busyPath, highlig
                       is printed in red right here, and the one screen where
                       you would go looking for it was hiding it. */}
                   {[
-                    file.size_human,
+                    // A measured folder size wins over the listing's own,
+                    // which is null for a directory until someone asks.
+                    measuring ? tSize("measuring") : folderSizes[file.path] ?? file.size_human,
                     file.modified_at_human,
                     file.owner ? [file.owner, file.group].filter(Boolean).join(":") : null,
                   ]

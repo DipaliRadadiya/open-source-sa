@@ -102,9 +102,24 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   const tc = useTranslations("common");
   const webhook = application.webhook ?? { enabled: false };
   const enabled = Boolean(webhook.enabled);
-  // Disabling retains the URL + secret + provider, so a hook that has ever been
-  // set up stays "configured" — that's what the header switch acts on.
-  const configured = Boolean(webhook.url || webhook.provider);
+  /*
+   * The PROVIDER is what makes a hook configured, not the URL.
+   *
+   * Disabling from the switch retains URL, secret and provider, so a hook that
+   * has ever been set up still reads as configured — that case is unchanged.
+   *
+   * Relinking the site's Git account is the case this fixes. The backend
+   * deliberately keeps `webhook_identifier` (it is the public half of the
+   * delivery address, and minting a new one would gain nothing) while clearing
+   * the provider and the secret. `webhook.url` is derived from that identifier,
+   * so it survived — and `url ||` made the card believe the hook was still set
+   * up. It rendered the on/off switch instead of the setup form, and flipping
+   * it posted `{ enabled: true, provider: null }`, which the API rejects with
+   * `required_if`. Error toast, every time, with no route back to the form.
+   *
+   * A URL is an address. It is not configuration.
+   */
+  const configured = Boolean(webhook.provider);
 
   /*
    * Preselected when there is nothing to choose.
