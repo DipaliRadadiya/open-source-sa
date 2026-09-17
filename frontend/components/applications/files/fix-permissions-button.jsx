@@ -41,7 +41,17 @@ export function FixPermissionsButton({ appId, canManage }) {
   return (
     <>
       <ReasonTooltip reason={canFix ? null : t("noPermission")}>
-        <Button variant="outline" size="sm" disabled={!canFix} onClick={() => setOpen(true)}>
+        {/* Outlined like everything else in the toolbar, with muted text to
+            sit behind New folder / New file. Ghost was tried and reverted: on
+            the toolbar's tinted strip a borderless control has no surface at
+            all and reads as a caption rather than something you can press. */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-muted-foreground"
+          disabled={!canFix}
+          onClick={() => setOpen(true)}
+        >
           <Wrench className="size-3.5" />
           {t("fixPermissions.action")}
         </Button>

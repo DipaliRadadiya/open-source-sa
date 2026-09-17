@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe, Trash2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
@@ -201,19 +202,43 @@ export function FilesPanel({
     }
   }
 
-  // Four plain, always-labeled buttons. A dropdown would save space that
-  // desktop doesn't need and costs an extra click every single time; icon-
-  // only would save space mobile doesn't have room to spend on guessing.
-  // `flex-wrap` handles the actual space constraint (narrow mobile) by
-  // letting the row become two, not by hiding what anything is.
+  // Plain, always-labeled buttons. A dropdown would save space that desktop
+  // doesn't need and costs an extra click every single time; icon-only would
+  // save space mobile doesn't have room to spend on guessing. `flex-wrap`
+  // handles the actual space constraint (narrow mobile) by letting the row
+  // become two, not by hiding what anything is.
+  //
+  // Grouped rather than listed: these eight controls do four unrelated jobs —
+  // looking at the folder, adding to it, repairing it, leaving it — and drawn
+  // as one flat row of equal pills they read as a pile. Upload is the only
+  // primary action here and used to sit sixth, weighted the same as Trash.
   const addButtons = (
     <div className="flex flex-wrap items-center gap-2">
-      {/* Files change from outside the panel — a deploy, a cron job, someone on
-          SSH — so the list can be stale without anything here having happened.
-          `size-8` to sit level with this row's `sm` buttons rather than standing
-          a notch taller. It re-runs the server component, so it refreshes the
-          trash view and a search result too, not just a directory listing. */}
-      <RefreshButton className="size-8" />
+      {/* Divides "looking at this folder" from "changing it". Without it the
+          eight controls read as one continuous run however they are weighted —
+          which is the actual complaint.
+
+          Shown on a CONTAINER query, not a viewport one: the strip is narrower
+          than the window by whatever the sidebar takes, so a `2xl:` guess
+          would be wrong on a collapsed sidebar and wrong again on a wide one.
+          Below the threshold the groups sit on separate lines, where the break
+          already separates them and this would be a rule dangling at the start
+          of a row.
+
+          73rem is measured, not chosen. The groups stop fitting on one line at
+          a strip width of 1176px, and a container query measures the CONTENT
+          box — 18px less than the border box this is drawn on. 72rem let the
+          rule appear at 1176 and its own 17px then caused the very wrap it
+          exists to avoid; 74rem held it back until 1216 and lost the divider
+          on a perfectly good single row at 1196. */}
+      <Separator
+        orientation="vertical"
+        // `!self-center` because the primitive sets `data-vertical:self-stretch`,
+        // which beats the row's `items-center`: stretched to the line box and
+        // then clamped to 20px, the rule pinned to the TOP and sat 6px above
+        // every button beside it.
+        className="mx-0.5 !h-5 !self-center hidden @[73rem]/toolbar:block"
+      />
       <ReasonTooltip reason={writeReason}>
         <Button variant="outline" size="sm" disabled={!canWrite} onClick={() => setNewFolderOpen(true)}>
           <FolderPlus className="size-3.5" />
@@ -232,21 +257,21 @@ export function FilesPanel({
           {t("uploadDialog.action")}
         </Button>
       </ReasonTooltip>
+      {/* Neither of these is part of adding a file: one repairs the folder,
+          one leaves it for another view. Separated and stepped down a weight
+          so the three buttons above keep the eye. */}
+      <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center" />
       <FixPermissionsButton appId={appId} canManage={canManage} />
       {/* Every panel that has a trash reaches it from this toolbar — cPanel and
           Plesk both use a button here that swaps the list. Nobody gives it its
-          own page, and a tab would compete with the breadcrumb. */}
-      {/* `outline`, matching New folder / New file / Fix permissions, because
-          it belongs to the same row of secondary actions. As a ghost it was the
-          only borderless control in the group and read as less real than its
-          neighbours.
+          own page, and a tab would compete with the breadcrumb.
 
           Deliberately NOT destructive-coloured: this opens the trash, it does
           not delete anything. Red is spent on the controls that actually
           destroy — Delete in the selection bar, and the permanent-delete
           confirm — and spending it on a safe navigation button is how people
           learn to click past red. The icon already says which view it is. */}
-      <Button variant="outline" size="sm" asChild>
+      <Button variant="outline" size="sm" className="text-muted-foreground" asChild>
         <Link href={`/applications/${appId}/files?trash=1`} prefetch={false}>
           <Trash2 className="size-3.5" />
           {t("trash.action")}
@@ -286,20 +311,44 @@ export function FilesPanel({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        {files.length > 0 ? (
-          <LocalSearchInput
-            value={query}
-            onChange={(next) => {
-              setQuery(next);
-              setSiteSearch(false);
-            }}
-            placeholder={t("searchPlaceholder")}
-          />
-        ) : (
-          <div />
-        )}
+      {/*
+        One toolbar on one surface, instead of eight controls floating on the
+        page over two rows.
+
+        The border and tint are doing real work: with nothing containing them
+        the pills had no relationship to each other or to the table they act
+        on, which is most of why the page read as unstructured rather than
+        merely busy. Search sits inside it too — on its own row it cost a whole
+        band of vertical space above the fold to hold one input.
+      */}
+      <div className="@container/toolbar flex flex-col gap-3 rounded-xl border bg-muted/30 p-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        {/* Sized to its contents, not `flex-1`: growing this group squeezed
+            the one beside it and pushed "Hide hidden files" onto a second
+            line while ~500px sat empty between them. When the row genuinely
+            runs out of width the two groups wrap as wholes, which is the
+            behaviour worth having on a phone. */}
         <div className="flex flex-wrap items-center gap-2">
+          {files.length > 0 ? (
+            <LocalSearchInput
+              value={query}
+              onChange={(next) => {
+                setQuery(next);
+                setSiteSearch(false);
+              }}
+              placeholder={t("searchPlaceholder")}
+              // 224px, not the default 320: measured, the two groups came to
+              // 1206px in a 1196px strip and wrapped over 10px. The field is
+              // still wider than the longest folder name anyone types into it.
+              className="sm:max-w-56"
+            />
+          ) : null}
+          {/* Files change from outside the panel — a deploy, a cron job,
+              someone on SSH — so the list can be stale without anything here
+              having happened. It re-runs the server component, so it refreshes
+              the trash view and a search result too, not just a listing.
+              Grouped with search and the view toggles because it is one of
+              them: none of these four change a single byte on disk. */}
+          <RefreshButton className="size-8" />
           {/* Context for the listing, not an action on it — so it sits with the
               other view controls rather than among New folder and Upload. It
               was a 340px rail beside the table until the table needed that
@@ -309,7 +358,7 @@ export function FilesPanel({
               the choice has to be in the URL to change what comes back. It
               also makes the view shareable and survives a reload. */}
           {files.length > 0 || hiddenCount > 0 ? (
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+            <Button asChild variant="outline" size="sm" className="text-muted-foreground">
               <Link
                 href={hiddenHref}
                 aria-pressed={!showHidden}
@@ -328,8 +377,8 @@ export function FilesPanel({
               </Link>
             </Button>
           ) : null}
-          {addButtons}
         </div>
+        {addButtons}
       </div>
 
       <BulkResultPanel result={bulkOutcome} onDismiss={() => setBulkOutcome(null)} />

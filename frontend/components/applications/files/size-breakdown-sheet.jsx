@@ -97,7 +97,7 @@ export function SizeBreakdownSheet({ breakdown }) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-muted-foreground">
+        <Button variant="outline" size="sm" className="text-muted-foreground">
           <PieChart className="size-4" aria-hidden />
           {t("trigger")}
         </Button>
