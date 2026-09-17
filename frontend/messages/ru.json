@@ -3254,6 +3254,7 @@
       "repositoryNeedsAccount": "Сначала выберите учётную запись Git.",
       "branchNeedsRepository": "Сначала выберите репозиторий.",
       "noOptions": "Для этого поля у выбранного типа сайта нет вариантов — выбирать нечего.",
+      "runtimeRequirement": "Этому приложению требуется {runtime} {range}.",
       "typePlaceholder": "Найдите и выберите тип приложения…",
       "domainMode": {
         "own": "Свой домен",

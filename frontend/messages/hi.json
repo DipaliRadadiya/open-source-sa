@@ -3254,6 +3254,7 @@
       "repositoryNeedsAccount": "पहले एक Git खाता चुनें।",
       "branchNeedsRepository": "पहले एक रिपॉज़िटरी चुनें।",
       "noOptions": "इस साइट प्रकार ने इस फ़ील्ड के लिए कोई विकल्प नहीं दिया, इसलिए चुनने को कुछ नहीं है।",
+      "runtimeRequirement": "इस ऐप्लिकेशन को {runtime} {range} चाहिए।",
       "typePlaceholder": "एप्लिकेशन प्रकार खोजें और चुनें…",
       "domainMode": {
         "own": "मेरा डोमेन",

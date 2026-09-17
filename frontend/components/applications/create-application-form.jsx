@@ -76,7 +76,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { timezoneOptions } from "@/lib/settings/timezone-options";
 import { preselectOption, preselectVersion } from "@/lib/runtime/preselect-version";
-import { versionsInRange, versionWithin } from "@/lib/runtime/version-range";
+import { rangeLabel, versionsInRange, versionWithin } from "@/lib/runtime/version-range";
 import {
   Form,
   FormControl,
@@ -317,6 +317,14 @@ function ConfigField({
   phpVersionsFailed,
   nodeVersions,
   nodeVersionsFailed,
+  // What the CHOSEN APPLICATION supports, so the field can say why the list is
+  // shorter than the server's. Not "the server default must be X": the
+  // installer runs on the site's own version (AbstractPhpInstaller::phpCommand
+  // reads `$application->php_version` and only falls back to the default when
+  // a site names none), so a note about the default would describe a rule this
+  // panel does not have.
+  phpRange,
+  nodeRange,
   timezones,
 }) {
   const t = useTranslations("applications");
@@ -340,6 +348,28 @@ function ConfigField({
         : false;
   const isRuntime =
     config.source === "php_versions" || config.source === "node_versions";
+
+  /*
+   * What this application supports, said out loud.
+   *
+   * The dropdown is already filtered to versions in range, which is correct and
+   * completely silent: on a server with PHP 8.1 and 8.3, an app needing 8.2+
+   * simply shows one option and never explains where the other went. Asked for
+   * as a note about the *server default* PHP — but nothing here depends on the
+   * default (the installer runs the site's own version), so the true statement
+   * is the application's own requirement.
+   *
+   * Only when there is a real bound. `rangeLabel` returns "" for a range with
+   * neither end, which is an app that runs on anything, and "PHP: any version"
+   * is noise on every other form.
+   */
+  const runtimeRange =
+    config.source === "php_versions"
+      ? phpRange
+      : config.source === "node_versions"
+        ? nodeRange
+        : null;
+  const runtimeRequirement = isRuntime ? rangeLabel(runtimeRange) : "";
   const isTimezone =
     config.source === "timezones" ||
     config.name === "timezone" ||
@@ -657,6 +687,13 @@ function ConfigField({
             <FormDescription className="flex items-start gap-1.5 text-warning">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               {t("form.databaseEnginePermanent")}
+            </FormDescription>
+          ) : runtimeRequirement ? (
+            <FormDescription>
+              {t("form.runtimeRequirement", {
+                runtime: config.source === "php_versions" ? "PHP" : "Node.js",
+                range: runtimeRequirement,
+              })}
             </FormDescription>
           ) : config.help ? (
             <FormDescription>{config.help}</FormDescription>
@@ -2086,6 +2123,8 @@ export function CreateApplicationForm({
                           phpVersionsFailed={phpVersionsFailed}
                           nodeVersions={typeNodeVersions}
                           nodeVersionsFailed={nodeVersionsFailed}
+                          phpRange={selected?.php_version_range ?? null}
+                          nodeRange={selected?.node_version_range ?? null}
                           timezones={timezones}
                         />
                       ))}

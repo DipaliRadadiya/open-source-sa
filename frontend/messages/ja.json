@@ -3254,6 +3254,7 @@
       "repositoryNeedsAccount": "まず Git アカウントを選択してください。",
       "branchNeedsRepository": "まずリポジトリを選択してください。",
       "noOptions": "このサイト種別ではこの項目に選択肢がないため、選択するものはありません。",
+      "runtimeRequirement": "このアプリケーションには {runtime} {range} が必要です。",
       "typePlaceholder": "アプリケーションの種類を検索して選択…",
       "domainMode": {
         "own": "自分のドメイン",

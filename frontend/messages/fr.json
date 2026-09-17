@@ -3254,6 +3254,7 @@
       "repositoryNeedsAccount": "Choisissez d'abord un compte Git.",
       "branchNeedsRepository": "Choisissez d'abord un dépôt.",
       "noOptions": "Ce type de site n'a proposé aucun choix pour ce champ, il n'y a rien à sélectionner.",
+      "runtimeRequirement": "Cette application nécessite {runtime} {range}.",
       "typePlaceholder": "Rechercher et sélectionner un type d'application…",
       "domainMode": {
         "own": "Mon domaine",
