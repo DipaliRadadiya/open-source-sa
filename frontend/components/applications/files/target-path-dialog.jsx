@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2 } from "lucide-react";
+import { Folder, Loader2 } from "lucide-react";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormModal } from "@/components/ui/form-modal";
@@ -54,6 +55,19 @@ export function TargetPathDialog({
   // Checked before the request goes out, so a wrong extension is an inline
   // message under the field instead of a toast after a round trip.
   validate,
+  /*
+   * The "where does this land" line under the field. Null hides it.
+   *
+   * A label rather than a boolean because the two dialogs that want it say
+   * different things — Extract pours files INTO the path, Compress writes one
+   * file AT it — and `destinationOf` is what makes that work: Extract's whole
+   * value is the folder, Compress's folder is the value minus the filename.
+   *
+   * Rename has neither: its field is a new NAME, and echoing it back underneath
+   * says nothing the field does not already show.
+   */
+  destinationLabel = null,
+  destinationOf = (value) => value,
 }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
@@ -64,6 +78,19 @@ export function TargetPathDialog({
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef(null);
+
+  /*
+   * The typed path as the breadcrumb would say it, and as a value to paste.
+   *
+   * Empty means the site's own root — the listing's `path=` convention
+   * everywhere else in this feature — so it gets the same words the breadcrumb
+   * uses rather than rendering as nothing at all.
+   */
+  const trimmedTarget = destinationOf(value.trim()).replace(/^\/+|\/+$/g, "");
+  const destinationValue = trimmedTarget;
+  const destinationText = trimmedTarget
+    ? trimmedTarget.split("/").filter(Boolean).join(" / ")
+    : t("root");
 
   useEffect(() => {
     // Runs after the value's committed to the DOM so the selection sticks.
@@ -156,6 +183,44 @@ export function TargetPathDialog({
           aria-invalid={Boolean(error)}
         />
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+        {/*
+         * Where this actually lands, spelled out and updated as you type.
+         *
+         * The field is relative to the top of the site's folder, and nothing on
+         * screen said so — at the site root it renders as an EMPTY box behind a
+         * "Site root" placeholder, which reads as an unanswered question rather
+         * than as the answer it is. Someone extracting an archive could not
+         * tell what they were about to overwrite or where.
+         *
+         * Deliberately NOT an absolute path. The file browser is rooted at
+         * `publicHtmlPath()` — the code root — and no field the API sends is
+         * reliably equal to it: `document_root` is deeper whenever a web root
+         * is set, and `path` (codePath) diverges for a non-git site with a
+         * custom web root. Printing either would be a confident guess at a
+         * location, which is worse than naming no location at all. Same
+         * vocabulary as the breadcrumb above the listing instead, so the two
+         * describe one place the same way.
+         */}
+        {destinationLabel ? (
+          <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="shrink-0">{destinationLabel}</span>
+            <span className="flex min-w-0 items-center gap-1 font-mono text-foreground">
+              <Folder className="size-3 shrink-0" aria-hidden />
+              <span className="truncate">{destinationText}</span>
+            </span>
+            {/* Nothing to copy at the site root — the path IS empty there,
+                and a button that puts an empty string on the clipboard is a
+                control that cannot do anything. */}
+            {destinationValue ? (
+              <CopyButton
+                value={destinationValue}
+                label={t("targetDialog.copyDestination")}
+                className="size-5 shrink-0"
+              />
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {warning ? (

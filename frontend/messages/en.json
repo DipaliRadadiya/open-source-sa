@@ -3807,7 +3807,9 @@
       "targetDialog": {
         "pathLabel": "Path",
         "rootPlaceholder": "Site root",
-        "pathLabelHint": "Where to put it, counted from the top of the site's folder."
+        "pathLabelHint": "Where to put it, counted from the top of the site's folder.",
+        "destination": "Extracts into",
+        "copyDestination": "Copy this path"
       },
       "rename": {
         "title": "Rename or move \"{name}\"",
@@ -3825,10 +3827,12 @@
       },
       "compressDialog": {
         "title": "Compress \"{name}\"",
-        "subtitle": "Packages this into a new archive next to it.",
+        "subtitle": "Packages this into a new archive. Choose where it goes below.",
         "submit": "Compress",
         "done": "\"{name}\" compressed.",
-        "failed": "Couldn't compress this item."
+        "failed": "Couldn't compress this item.",
+        "savesTo": "Saves to",
+        "folderMustExist": "The folder you choose must already exist — this will not create it."
       },
       "extractDialog": {
         "title": "Extract \"{name}\"",

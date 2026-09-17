@@ -30,6 +30,10 @@ export function ExtractDialog({ appId, file, open, onOpenChange }) {
       successMessage={() => t("extractDialog.done", { name: file.name })}
       failureMessage={t("extractDialog.failed")}
       warning={t("extractDialog.warning")}
+      // The one dialog where "which folder?" is the whole question — you are
+      // pouring an unknown number of files into a place you cannot see. The
+      // whole field IS the folder here, so no `destinationOf`.
+      destinationLabel={t("targetDialog.destination")}
     />
   );
 }

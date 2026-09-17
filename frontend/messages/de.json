@@ -3807,7 +3807,9 @@
       "targetDialog": {
         "pathLabel": "Pfad",
         "rootPlaceholder": "Website-Wurzel",
-        "pathLabelHint": "Wo die Datei abgelegt wird, ausgehend vom obersten Verzeichnis der Seite."
+        "pathLabelHint": "Wo die Datei abgelegt wird, ausgehend vom obersten Verzeichnis der Seite.",
+        "destination": "Entpackt nach",
+        "copyDestination": "Diesen Pfad kopieren"
       },
       "rename": {
         "title": "„{name}“ umbenennen oder verschieben",
@@ -3825,10 +3827,12 @@
       },
       "compressDialog": {
         "title": "„{name}“ komprimieren",
-        "subtitle": "Packt das in ein neues Archiv daneben.",
+        "subtitle": "Verpackt dies in ein neues Archiv. Wählen Sie unten den Speicherort.",
         "submit": "Komprimieren",
         "done": "„{name}“ komprimiert.",
-        "failed": "Dieser Eintrag konnte nicht komprimiert werden."
+        "failed": "Dieser Eintrag konnte nicht komprimiert werden.",
+        "savesTo": "Speichert in",
+        "folderMustExist": "Der gewählte Ordner muss bereits vorhanden sein — er wird nicht angelegt."
       },
       "extractDialog": {
         "title": "„{name}“ entpacken",

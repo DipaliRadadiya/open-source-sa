@@ -3807,7 +3807,9 @@
       "targetDialog": {
         "pathLabel": "Chemin",
         "rootPlaceholder": "Racine du site",
-        "pathLabelHint": "L'endroit où le placer, compté depuis la racine du dossier du site."
+        "pathLabelHint": "L'endroit où le placer, compté depuis la racine du dossier du site.",
+        "destination": "Extrait dans",
+        "copyDestination": "Copier ce chemin"
       },
       "rename": {
         "title": "Renommer ou déplacer « {name} »",
@@ -3825,10 +3827,12 @@
       },
       "compressDialog": {
         "title": "Compresser « {name} »",
-        "subtitle": "Empaquette ceci dans une nouvelle archive à côté.",
+        "subtitle": "Regroupe ceci dans une nouvelle archive. Choisissez ci-dessous où elle ira.",
         "submit": "Compresser",
         "done": "« {name} » compressé.",
-        "failed": "Impossible de compresser cet élément."
+        "failed": "Impossible de compresser cet élément.",
+        "savesTo": "Enregistre dans",
+        "folderMustExist": "Le dossier choisi doit déjà exister — il ne sera pas créé."
       },
       "extractDialog": {
         "title": "Extraire « {name} »",

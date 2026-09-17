@@ -3807,7 +3807,9 @@
       "targetDialog": {
         "pathLabel": "Ruta",
         "rootPlaceholder": "Raíz del sitio",
-        "pathLabelHint": "Dónde colocarlo, contado desde la raíz de la carpeta del sitio."
+        "pathLabelHint": "Dónde colocarlo, contado desde la raíz de la carpeta del sitio.",
+        "destination": "Se extrae en",
+        "copyDestination": "Copiar esta ruta"
       },
       "rename": {
         "title": "Renombrar o mover «{name}»",
@@ -3825,10 +3827,12 @@
       },
       "compressDialog": {
         "title": "Comprimir «{name}»",
-        "subtitle": "Lo empaqueta en un nuevo archivo comprimido junto a él.",
+        "subtitle": "Empaqueta esto en un archivo nuevo. Elige abajo dónde se guarda.",
         "submit": "Comprimir",
         "done": "«{name}» comprimido.",
-        "failed": "No se pudo comprimir este elemento."
+        "failed": "No se pudo comprimir este elemento.",
+        "savesTo": "Se guarda en",
+        "folderMustExist": "La carpeta que elijas ya debe existir; esto no la creará."
       },
       "extractDialog": {
         "title": "Extraer «{name}»",

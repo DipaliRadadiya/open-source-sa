@@ -3807,7 +3807,9 @@
       "targetDialog": {
         "pathLabel": "パス",
         "rootPlaceholder": "サイトルート",
-        "pathLabelHint": "サイトのフォルダの最上位からの位置で、保存先を指定します。"
+        "pathLabelHint": "サイトのフォルダの最上位からの位置で、保存先を指定します。",
+        "destination": "展開先",
+        "copyDestination": "このパスをコピー"
       },
       "rename": {
         "title": "\"{name}\" の名前を変更 / 移動",
@@ -3825,10 +3827,12 @@
       },
       "compressDialog": {
         "title": "\"{name}\" を圧縮",
-        "subtitle": "このアイテムを新しいアーカイブとして同じ場所に作成します。",
+        "subtitle": "これを新しいアーカイブにまとめます。保存先は下で選べます。",
         "submit": "圧縮",
         "done": "\"{name}\" を圧縮しました。",
-        "failed": "このアイテムを圧縮できませんでした。"
+        "failed": "このアイテムを圧縮できませんでした。",
+        "savesTo": "保存先",
+        "folderMustExist": "指定したフォルダーは既に存在している必要があります。自動では作成されません。"
       },
       "extractDialog": {
         "title": "\"{name}\" を展開",

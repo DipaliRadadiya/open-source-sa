@@ -3807,7 +3807,9 @@
       "targetDialog": {
         "pathLabel": "Caminho",
         "rootPlaceholder": "Raiz do site",
-        "pathLabelHint": "Onde colocá-lo, contado a partir do topo da pasta do site."
+        "pathLabelHint": "Onde colocá-lo, contado a partir do topo da pasta do site.",
+        "destination": "Extrai para",
+        "copyDestination": "Copiar este caminho"
       },
       "rename": {
         "title": "Renomear ou mover \"{name}\"",
@@ -3825,10 +3827,12 @@
       },
       "compressDialog": {
         "title": "Compactar \"{name}\"",
-        "subtitle": "Empacota isto em um novo arquivo ao lado.",
+        "subtitle": "Empacota isto num novo arquivo. Escolha abaixo onde fica guardado.",
         "submit": "Comprimir",
         "done": "\"{name}\" compactado.",
-        "failed": "Não foi possível compactar este item."
+        "failed": "Não foi possível compactar este item.",
+        "savesTo": "Guarda em",
+        "folderMustExist": "A pasta escolhida já tem de existir — esta ação não a cria."
       },
       "extractDialog": {
         "title": "Extrair \"{name}\"",
