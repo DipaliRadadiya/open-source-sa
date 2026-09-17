@@ -981,6 +981,87 @@ Reverse `disable` — restore the live vhost.
 
 ---
 
+### POST `/applications/{application}/detect-type`
+**Permission:** `application` (manage) | **Throttle:** 10/min
+
+Read the site's directory and report what is installed there. Records the
+verdict on the application; runs no installer and writes nothing to the site.
+
+**Response `200`:**
+```json
+{"site_type_detection": {
+  "detected": "wordpress", "detected_title": "WordPress",
+  "confidence": 95, "matched": "wp-config.php",
+  "checked_at": "2026-09-17T09:00:00+00:00", "suggested": "wordpress"
+}}
+```
+
+`suggested` is the type to *offer* the user, or `null` when there is nothing to
+offer. It is null — even with a confident verdict — for a git site, when the
+verdict equals the current type, below `confidence` 60, when the site is
+already a specific application, and for any detected type that cannot be
+relabelled to. Test that one field; the rules are not duplicated client-side.
+
+**Button-triggered on purpose.** A site's files arrive *after* it is created,
+so detecting when the screen opens would run against an empty directory and
+record "nothing found" at the one moment the answer is guaranteed wrong.
+
+`wp-config.php` is looked for one level above the web root as well as inside
+it, because moving it out of the web root is standard WordPress hardening.
+
+### PUT `/applications/{application}/site-type`
+**Permission:** `application` (manage) | **Throttle:** 10/min
+
+Relabel a site: tell the panel what is actually installed in it.
+
+**Request:** `{"site_type": "wordpress"}`
+
+**Response `200`:** `{"application": {"id": 1, "site_type": "wordpress"}}`
+
+**This changes what the panel offers, not what is on disk.** Nothing is
+installed or downloaded and no installer runs. The site type decides which
+screens a site gets — WordPress adds Staging, Clone and Magic Login — and this
+exists because a user who installs WordPress by hand into a Custom PHP site
+has, as far as the panel is concerned, a Custom PHP site forever.
+
+Allowed changes are **not symmetric** (`422` with a reason otherwise):
+
+| From | To | |
+|---|---|---|
+| `php`, `static` | `wordpress`, `joomla` | ✅ only if the disk agrees |
+| anything except `git` | `php`, `static` | ✅ always — no evidence needed |
+| `git` | anything | ❌ `git_cannot_change` |
+| anything | `git` | ❌ `git_not_a_target` |
+| a specific app | another specific app | ❌ `only_from_generic` |
+| `php`, `static` | any other app type | ❌ `not_suggestable` |
+| any type | itself | ❌ `unchanged` |
+
+A site type outside the catalog is a `422` on the `site_type` field itself —
+a malformed request, not a refused transition. The five refusals above are
+whole sentences saying what is in the way and what to do instead, because
+"invalid selection" would be true of all five and useful for none.
+
+The same `site_type_detection` object is on every application payload, so a
+screen can show a pending suggestion without calling Detect again. Its
+`checked_at` is null until Detect has run at least once.
+
+Widening **re-reads the disk at apply time** rather than trusting the stored
+verdict, which closes the window where the application is deleted between
+Detect and Apply.
+
+A **git site cannot be relabelled in either direction.** Its Deployments,
+Workers and `.env` screens exist because its type is `git`; removing them does
+not stop the supervisord workers running or the deploy webhook accepting
+pushes, so the change would orphan live processes rather than reconfigure them.
+
+Narrowing is always permitted because it gives up features and claims none —
+the escape hatch for a wrong guess, or a site since replaced by something else.
+
+On OpenLiteSpeed the site type is rendered into the vhost (`.htaccess` support
+for LiteSpeed Cache), so the config is republished, tested and reloaded. A
+**disabled** site's vhost is left alone — republishing it would put the site
+back online as a side effect of a relabel.
+
 ### PUT `/applications/{application}/web-root`
 **Permission:** `application` (manage) | **Throttle:** 10/min
 

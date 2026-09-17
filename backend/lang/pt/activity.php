@@ -183,6 +183,7 @@ return [
     'application.ai_bot_policy_updated' => 'Definiu a política do Bloqueador de Bots de IA de :name para :policy',
     'application.bot_rules_updated' => 'Atualizou as regras de bots personalizadas de :name (:blocked bloqueados, :allowed permitidos)',
     'application.web_root_changed' => 'Alterou a raiz web de :name para :web_root',
+    'application.site_type_changed' => 'Alterou o tipo de :name de :from para :to',
     'application.waf_updated' => 'Atualizou as definições da firewall de :name',
     'application.staging_created' => 'Criou um site de staging para :name',
     'application.staging_pushed' => 'Enviou o staging para :name (:mode)',

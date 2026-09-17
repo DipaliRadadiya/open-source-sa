@@ -177,6 +177,15 @@ return [
     | application. Only set where the exit status genuinely identifies
     | the cause; most failures carry the step and reference instead.
     */
+    'site_type_change' => [
+        'git_cannot_change' => 'Ce site est déployé depuis un dépôt git, son type ne peut donc pas être modifié. Ses écrans Déploiements, Workers et fichier d\'environnement existent à cause de ce type, et les supprimer n\'arrêterait pas les workers en arrière-plan ni n\'empêcherait le webhook de déploiement d\'accepter des pushes : cela retirerait seulement les écrans qui les gèrent.',
+        'git_not_a_target' => 'Un site ne peut pas être transformé en déploiement git. Cela nécessite un dépôt, une branche et un script de déploiement que le panneau gère, ce qui ne peut pas être créé à partir des fichiers déjà présents sur le serveur. Créez plutôt une application git.',
+        'unchanged' => 'Ce site est déjà défini sur ce type.',
+        'not_suggestable' => 'Ce site ne peut pas être changé vers ce type. Seules les applications que le panneau peut reconnaître sur le disque peuvent être réétiquetées — tout le reste revendiquerait des fonctionnalités que le site ne pourrait pas utiliser.',
+        'only_from_generic' => 'Seul un site PHP personnalisé ou statique peut être réétiqueté vers un autre type d\'application. Ce site est déjà défini sur une application précise, et transformer une application en une autre n\'est pas quelque chose qu\'une étiquette peut faire.',
+        'no_evidence' => 'Rien sur ce site ne ressemble à :type. Téléversez d\'abord l\'application, puis relancez Détecter : le panneau ne change le type d\'un site que lorsqu\'il peut voir l\'application dans le répertoire du site.',
+    ],
+
     'failure_reason' => [
         'attached_database_engine_mismatch' => 'Cette application a déjà une base de données associée, mais elle fonctionne sur un moteur que cette application ne peut pas utiliser. Détachez-la, ou associez-en une sur un moteur pris en charge, puis réessayez.',
         'serving_error' => 'L\'application a démarré mais répond à chaque requête par une erreur. Ses ressources n\'ont probablement pas été entièrement construites — voir le journal de l\'application.',

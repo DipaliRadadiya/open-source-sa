@@ -183,6 +183,7 @@ return [
     'application.ai_bot_policy_updated' => 'AI-Bot-Blocker-Richtlinie für :name auf :policy gesetzt',
     'application.bot_rules_updated' => 'Eigene Bot-Regeln für :name aktualisiert (:blocked blockiert, :allowed erlaubt)',
     'application.web_root_changed' => 'Web-Root von :name auf :web_root geändert',
+    'application.site_type_changed' => 'Typ von :name von :from zu :to geändert',
     'application.waf_updated' => 'Firewall-Einstellungen für :name aktualisiert',
     'application.staging_created' => 'Staging-Site für :name erstellt',
     'application.staging_pushed' => 'Staging auf :name gepusht (:mode)',

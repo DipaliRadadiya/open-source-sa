@@ -183,6 +183,7 @@ return [
     'application.ai_bot_policy_updated' => ':name के लिए AI बॉट ब्लॉकर नीति को :policy पर सेट किया',
     'application.bot_rules_updated' => ':name के लिए कस्टम बॉट नियम अपडेट किए (:blocked ब्लॉक, :allowed अनुमत)',
     'application.web_root_changed' => ':name का वेब रूट :web_root में बदला',
+    'application.site_type_changed' => ':name का प्रकार :from से :to में बदला',
     'application.waf_updated' => ':name के लिए फ़ायरवॉल सेटिंग्स अद्यतन कीं',
     'application.staging_created' => ':name के लिए स्टेजिंग साइट बनाई',
     'application.staging_pushed' => ':name पर स्टेजिंग पुश की (:mode)',

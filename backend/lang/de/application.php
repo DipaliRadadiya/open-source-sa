@@ -177,6 +177,15 @@ return [
     | application. Only set where the exit status genuinely identifies
     | the cause; most failures carry the step and reference instead.
     */
+    'site_type_change' => [
+        'git_cannot_change' => 'Diese Site wird aus einem Git-Repository bereitgestellt, daher kann ihr Typ nicht geändert werden. Die Bildschirme für Deployments, Worker und Umgebungsdatei existieren wegen dieses Typs, und sie zu entfernen würde weder die Hintergrund-Worker anhalten noch verhindern, dass der Deploy-Webhook Pushes annimmt – es würde nur die Bildschirme entfernen, die sie verwalten.',
+        'git_not_a_target' => 'Eine Site kann nicht in ein Git-Deployment umgewandelt werden. Dafür braucht es ein Repository, einen Branch und ein Deploy-Skript, die das Panel verwaltet, und das lässt sich nicht aus den Dateien erzeugen, die schon auf dem Server liegen. Erstelle stattdessen eine Git-Anwendung.',
+        'unchanged' => 'Diese Site ist bereits auf diesen Typ gesetzt.',
+        'not_suggestable' => 'Diese Site kann nicht auf diesen Typ geändert werden. Nur Anwendungen, die das Panel auf der Festplatte erkennen kann, lassen sich neu kennzeichnen – alles andere würde Funktionen beanspruchen, die die Site nicht nutzen kann.',
+        'only_from_generic' => 'Nur eine Custom-PHP- oder statische Site kann als anderer Anwendungstyp gekennzeichnet werden. Diese Site ist bereits auf eine bestimmte Anwendung gesetzt, und eine Anwendung in eine andere zu verwandeln kann eine Kennzeichnung nicht leisten.',
+        'no_evidence' => 'Nichts auf dieser Site sieht nach :type aus. Lade zuerst die Anwendung hoch und führe Erkennen erneut aus – das Panel ändert den Typ einer Site nur, wenn es die Anwendung im Verzeichnis der Site sehen kann.',
+    ],
+
     'failure_reason' => [
         'attached_database_engine_mismatch' => 'Diese Anwendung hat bereits eine Datenbank, die jedoch auf einer Engine läuft, die diese Anwendung nicht verwenden kann. Trennen Sie sie, oder verknüpfen Sie eine auf einer unterstützten Engine, und versuchen Sie es erneut.',
         'serving_error' => 'Die Anwendung wurde gestartet, beantwortet aber jede Anfrage mit einem Fehler. Wahrscheinlich wurden ihre Assets nicht vollständig gebaut — Einzelheiten im Anwendungsprotokoll.',

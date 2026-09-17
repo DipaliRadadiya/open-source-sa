@@ -1222,6 +1222,40 @@ return [
     */
     'php_shim_dir' => env('SERVER_PHP_SHIM_DIR', '/var/lib/panel/php-shims'),
 
+    /*
+    | Relabelling a site whose type is wrong.
+    |
+    | A user creates a Custom PHP site, installs WordPress into it by hand,
+    | and the panel goes on calling it Custom PHP — so it withholds Staging,
+    | Clone and Magic Login from a site that could use all three. `Detect`
+    | reads the disk and offers the correction.
+    |
+    | `suggestable` is NOT the list of types the detector can return, and the
+    | difference is the whole point. `SiteTypeDetector` resolves an `artisan`
+    | to `git`, which describes a checkout the panel owns — a repository, a
+    | branch, a deploy script, a webhook. None of that can be conjured from
+    | files on disk, so offering it would be offering a state the panel cannot
+    | enter. Only types a site can genuinely *be* relabelled as belong here.
+    |
+    | Deliberately short. WordPress (95) and Joomla (60) are the only
+    | signatures specific enough to act on; `index.php` and the no-match
+    | fallback both mean "there is PHP here", which is what the site already
+    | says it is.
+    */
+    'site_type_detection' => [
+        'suggestable' => ['wordpress', 'joomla'],
+
+        // Types that may be relabelled *away from*, and relabelled *to* as the
+        // escape hatch. Generic by nature: they promise nothing, so nothing is
+        // taken away by leaving them and nothing is claimed by arriving.
+        'generic' => ['php', 'static'],
+
+        // Below this, say nothing. `index.php` matches at 40 on every PHP site
+        // in existence, and a panel that nags about it is a panel people learn
+        // to dismiss without reading.
+        'min_confidence' => 60,
+    ],
+
     'site_types' => [
         WordPressSiteType::class,
         NextcloudSiteType::class,

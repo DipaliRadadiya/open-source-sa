@@ -177,6 +177,15 @@ return [
     | application. Only set where the exit status genuinely identifies
     | the cause; most failures carry the step and reference instead.
     */
+    'site_type_change' => [
+        'git_cannot_change' => 'Este sitio se despliega desde un repositorio git, así que su tipo no se puede cambiar. Sus pantallas de Despliegues, Workers y archivo de entorno existen por ese tipo, y quitarlas no detendría los workers en segundo plano ni evitaría que el webhook de despliegue acepte pushes: solo eliminaría las pantallas que los gestionan.',
+        'git_not_a_target' => 'Un sitio no puede convertirse en un despliegue git. Eso requiere un repositorio, una rama y un script de despliegue que el panel controle, y eso no se puede crear a partir de los archivos que ya están en el servidor. Crea una aplicación git en su lugar.',
+        'unchanged' => 'Este sitio ya está configurado con ese tipo.',
+        'not_suggestable' => 'Este sitio no se puede cambiar a ese tipo. Solo se pueden reetiquetar las aplicaciones que el panel puede reconocer en el disco; cualquier otra reclamaría funciones que el sitio no podría usar.',
+        'only_from_generic' => 'Solo un sitio PHP personalizado o estático puede reetiquetarse como otro tipo de aplicación. Este sitio ya está configurado con una aplicación concreta, y convertir una aplicación en otra no es algo que pueda hacer una etiqueta.',
+        'no_evidence' => 'Nada en este sitio parece :type. Sube primero la aplicación y vuelve a ejecutar Detectar: el panel solo cambia el tipo de un sitio cuando puede ver la aplicación en su propio directorio.',
+    ],
+
     'failure_reason' => [
         'attached_database_engine_mismatch' => 'Esta aplicación ya tiene una base de datos asociada, pero funciona con un motor que esta aplicación no puede usar. Desvincúlela, o asocie una en un motor compatible, e inténtelo de nuevo.',
         'serving_error' => 'La aplicación se inició pero responde a cada solicitud con un error. Lo más probable es que sus recursos no se compilaran por completo; consulte el registro de la aplicación.',

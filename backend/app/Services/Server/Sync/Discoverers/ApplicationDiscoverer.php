@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Models\ApplicationDomain;
 use App\Models\SyncRun;
 use App\Models\SystemUser;
+use App\Services\Applications\SiteTypeDetector;
 use App\Services\Server\ServerOps;
 use App\Services\Server\WebServers\WebServerManager;
 
@@ -28,6 +29,7 @@ class ApplicationDiscoverer implements Discoverable
     public function __construct(
         private ServerOps $serverOps,
         private WebServerManager $webServers,
+        private SiteTypeDetector $detector,
     ) {}
 
     public function resourceType(): string
@@ -173,7 +175,7 @@ class ApplicationDiscoverer implements Discoverable
                 continue;
             }
 
-            $type = $this->inferType($parsed['root']);
+            $type = $this->detector->detectAt($parsed['root'], ['feature' => 'sync'])->toDiscoveryAttributes();
 
             $found[] = [
                 'key' => $primary,
@@ -384,56 +386,5 @@ class ApplicationDiscoverer implements Discoverable
         );
 
         return $result->failed() ? null : (trim($result->output()) ?: null);
-    }
-
-    /**
-     * What kind of site this is, judged by what is on disk.
-     *
-     * Ordered most specific first: a Laravel repository has a `package.json`
-     * too, and a WordPress install has PHP files everywhere. The first match
-     * that is actually distinguishing wins.
-     *
-     * Confidence is not decoration. A `wp-config.php` means WordPress and
-     * little else; "there are PHP files here" means almost nothing, and the
-     * screen has to be able to say so.
-     *
-     * @return array{site_type: string, serving_profile: string, confidence: int, matched: string|null}
-     */
-    private function inferType(string $documentRoot): array
-    {
-        $signatures = [
-            // file => [site_type, serving_profile, confidence]
-            'wp-config.php' => ['wordpress', 'php', 95],
-            'artisan' => ['git', 'php', 80],
-            'bin/magento' => ['php', 'php', 70],
-            'configuration.php' => ['joomla', 'php', 60],
-            'index.php' => ['php', 'php', 40],
-            'index.html' => ['static', 'static', 40],
-        ];
-
-        foreach ($signatures as $file => [$siteType, $profile, $confidence]) {
-            // `test -f` rather than reading the directory: a listing of a site
-            // with 40,000 files to answer one yes/no question is not a trade
-            // worth making on a box that is also serving traffic.
-            $result = $this->serverOps->run(
-                ['test', '-f', rtrim($documentRoot, '/').'/'.$file],
-                ['feature' => 'sync', 'op' => 'infer_site_type'],
-                timeout: 15,
-            );
-
-            if ($result->ok) {
-                return [
-                    'site_type' => $siteType,
-                    'serving_profile' => $profile,
-                    'confidence' => $confidence,
-                    'matched' => $file,
-                ];
-            }
-        }
-
-        // Nothing recognisable. `php` rather than `static`, because serving a
-        // PHP application as a directory of files publishes its source, and
-        // the reverse mistake only costs a redundant handler.
-        return ['site_type' => 'php', 'serving_profile' => 'php', 'confidence' => 10, 'matched' => null];
     }
 }

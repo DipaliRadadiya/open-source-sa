@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Applications\SiteTypeSuggestion;
 use App\Services\Git\Webhooks\WebhookManager;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\WebServers\WebServerManager;
@@ -38,6 +39,11 @@ class ApplicationResource extends JsonResource
             'path' => $this->resource->codePath(),
             'site_type' => $this->site_type,
             'site_type_title' => __("application.types.{$this->site_type}.title"),
+            // What the last Detect found, and whether there is anything to
+            // offer the user about it. `suggested` is null unless relabelling
+            // would actually be allowed, so the frontend tests one field and
+            // reimplements none of the rules — see SiteTypeSuggestion.
+            'site_type_detection' => app(SiteTypeSuggestion::class)->describe($this->resource),
             'serving_profile' => $this->serving_profile,
             // How a git app was built. The serving profile is derived from it,
             // but the user chose *this*, so echo it back for the edit form.

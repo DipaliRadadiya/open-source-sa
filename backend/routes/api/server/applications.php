@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Server\ApplicationController;
 use App\Http\Controllers\API\Server\ApplicationDomainController;
+use App\Http\Controllers\API\Server\ApplicationSiteTypeController;
 use App\Http\Controllers\API\Server\ApplicationWebhookController;
 use App\Http\Controllers\API\Server\ApplicationWebRootController;
 use App\Http\Controllers\API\Server\CertificateController;
@@ -61,6 +62,23 @@ Route::post('/applications/{application}/enable', [ApplicationController::class,
 // vhost and reloads — and needs the throttle and the failure envelope that
 // go with one, not the plain-record semantics of `PUT /applications/{id}`.
 Route::put('/applications/{application}/web-root', [ApplicationWebRootController::class, 'update'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+
+// Site type. Read the disk to find out what is installed, then relabel the
+// site to match.
+//
+// Two endpoints because they are two different things: the first reads and
+// records, the second changes what the panel offers. Its own sub-resource
+// rather than a field on the generic update, for the same reason web-root is
+// one — a general update would advertise a freely editable field and honour it
+// only in some directions, and which directions are allowed is the whole
+// feature (see UpdateSiteTypeRequest).
+//
+// Throttled: detection spawns file probes against a site directory, and the
+// apply path republishes and reloads the web server's config.
+Route::post('/applications/{application}/detect-type', [ApplicationSiteTypeController::class, 'detect'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+Route::put('/applications/{application}/site-type', [ApplicationSiteTypeController::class, 'update'])
     ->middleware(['permission:application,manage', 'throttle:10,1']);
 
 // Deploy-on-push. The delivery endpoint itself is unauthenticated and lives in

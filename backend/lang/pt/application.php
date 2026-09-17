@@ -177,6 +177,15 @@ return [
     | application. Only set where the exit status genuinely identifies
     | the cause; most failures carry the step and reference instead.
     */
+    'site_type_change' => [
+        'git_cannot_change' => 'Este site é implantado a partir de um repositório git, portanto o seu tipo não pode ser alterado. As telas de Implantações, Workers e arquivo de ambiente existem por causa desse tipo, e removê-las não pararia os workers em segundo plano nem impediria o webhook de implantação de aceitar pushes — apenas retiraria as telas que os gerenciam.',
+        'git_not_a_target' => 'Um site não pode ser transformado em uma implantação git. Isso exige um repositório, uma branch e um script de implantação sob controle do painel, e isso não pode ser criado a partir dos arquivos já presentes no servidor. Crie uma aplicação git em vez disso.',
+        'unchanged' => 'Este site já está definido com esse tipo.',
+        'not_suggestable' => 'Este site não pode ser alterado para esse tipo. Apenas aplicações que o painel consegue reconhecer no disco podem ser reetiquetadas — qualquer outra reivindicaria recursos que o site não teria como usar.',
+        'only_from_generic' => 'Apenas um site PHP personalizado ou estático pode ser reetiquetado como outro tipo de aplicação. Este site já está definido com uma aplicação específica, e transformar uma aplicação em outra não é algo que uma etiqueta possa fazer.',
+        'no_evidence' => 'Nada neste site parece :type. Envie a aplicação primeiro e execute Detectar novamente — o painel só altera o tipo de um site quando consegue ver a aplicação no diretório do próprio site.',
+    ],
+
     'failure_reason' => [
         'attached_database_engine_mismatch' => 'Esta aplicação já tem uma base de dados associada, mas funciona num motor que esta aplicação não consegue usar. Desassocie-a, ou associe uma num motor suportado, e tente novamente.',
         'serving_error' => 'A aplicação iniciou mas responde a todos os pedidos com um erro. Os seus recursos provavelmente não foram totalmente construídos — consulte o registo da aplicação.',

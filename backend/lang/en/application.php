@@ -178,6 +178,20 @@ return [
         'worker' => 'The background worker stopped',
     ],
     /*
+    | Refusing to relabel a site, keyed by reason. Each says what is in the
+    | way and what to do instead — "invalid selection" would be true of all
+    | five and useful for none.
+    */
+    'site_type_change' => [
+        'git_cannot_change' => 'This site is deployed from a git repository, so its type cannot be changed. Its Deployments, Workers and environment file screens exist because of that type, and removing them would not stop the background workers running or the deploy webhook accepting pushes — it would only take away the screens that manage them.',
+        'git_not_a_target' => 'A site cannot be changed into a git deployment. That requires a repository, a branch and a deploy script for the panel to own, which cannot be created from the files already on the server. Create a git application instead.',
+        'unchanged' => 'This site is already set to that type.',
+        'not_suggestable' => 'This site cannot be changed to that type. Only applications the panel can recognise on disk can be relabelled — everything else would claim features the site has no way to use.',
+        'only_from_generic' => 'Only a Custom PHP or Static site can be relabelled to another application type. This site is already set to a specific application, and changing one application into another is not something a label can do.',
+        'no_evidence' => 'Nothing on this site looks like :type. Upload the application first, then run Detect again — the panel only changes a site\'s type when it can see the application in the site\'s own directory.',
+    ],
+
+    /*
     | Why provisioning failed, keyed by the `failed_reason` code on the
     | application. Only set where the exit status genuinely identifies
     | the cause; most failures carry the step and reference instead.
