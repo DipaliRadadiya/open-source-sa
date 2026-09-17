@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
-import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
+import { BACKUP_IN_FLIGHT, backupHasArchive } from "@/lib/schemas/backup";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -127,8 +127,20 @@ function DestinationCell({ row }) {
         {name}
       </span>
       {/* Named, not a bare "Copy": the icon sits beside the DESTINATION, so
-          an unlabelled one reads as copying the bucket's name. */}
-      {uid ? (
+          an unlabelled one reads as copying the bucket's name.
+
+          Only when there is something in the bucket to name. The uid is
+          stamped in `Backup::booted()` at creation — long before any upload is
+          attempted — so a run that failed to upload still carries one, and the
+          button offered to copy the name of an object that was never written.
+          On the row reported it sat next to "No archive" and a failure saying
+          the upload did not happen: a 36-character UUID that matches nothing in
+          the destination, which reads as the panel handing out a random string.
+
+          Same predicate the Download button uses, for the same reason — both
+          answer "is there an archive?", and two literals asking that question
+          separately is how they came to disagree once already. */}
+      {uid && backupHasArchive(row.original.status) ? (
         <CopyButton value={uid} label={t("copyUid")} className="size-6 shrink-0" />
       ) : null}
     </span>
