@@ -135,9 +135,14 @@ export function timeSeriesOption({
       data: series.map((s) => s.label),
       bottom: zoom ? 42 : 4,
       icon: "roundRect",
-      itemWidth: 10,
-      itemHeight: 10,
-      textStyle: { color: muted },
+      // 8px swatches with 6px of air, and 22px between entries. At 10px square
+      // with ECharts' default 10px item gap, the swatch sat as far from its own
+      // label as the entries sat from each other — so "In Out" read as four
+      // loose things rather than two pairs.
+      itemWidth: 8,
+      itemHeight: 8,
+      itemGap: 22,
+      textStyle: { color: muted, fontSize: 11, padding: [0, 0, 0, 2] },
     },
     tooltip: {
       trigger: "axis",
@@ -166,7 +171,10 @@ export function timeSeriesOption({
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { show: false },
-      axisLabel: { color: muted, hideOverlap: true, formatter: xLabel },
+      // 11px, matching the legend under it. The scale around the plot is
+      // annotation; at the same 12px as the card's body text it competed with
+      // the numbers it was supposed to be labelling.
+      axisLabel: { color: muted, fontSize: 11, hideOverlap: true, formatter: xLabel },
     },
     yAxis: axes.map((axis, index) => ({
       type: "value",
@@ -179,12 +187,23 @@ export function timeSeriesOption({
       axisTick: { show: false },
       // Only the first axis draws grid lines; two sets of them on one plot is
       // a grid that looks broken rather than two scales.
+      /*
+       * Solid and faint, not dashed.
+       *
+       * A dashed rule draws the eye along itself — it is a mark in its own
+       * right, and there are five of them behind every plot. The grid is
+       * scaffolding for reading heights off the line, so it wants to be barely
+       * there. Opacity rather than a lighter token because `--border` is
+       * already the faintest line in the system and the dark theme resolves it
+       * to an alpha over the surface, which cannot be lightened further.
+       */
       splitLine:
         index === 0
-          ? { lineStyle: { color: border, type: "dashed" } }
+          ? { lineStyle: { color: border, type: "solid", width: 1, opacity: 0.7 } }
           : { show: false },
       axisLabel: {
         color: muted,
+        fontSize: 11,
         ...(axis.formatter ? { formatter: axis.formatter } : {}),
       },
     })),
