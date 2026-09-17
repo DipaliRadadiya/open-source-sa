@@ -67,6 +67,18 @@ export function ApplicationLogsPanel({
   const [debouncedTerm, setDebouncedTerm] = useState("");
   const [severity, setSeverity] = useState("all");
   const [wrap, setWrap] = useState(false);
+  /*
+   * Which end the newest line sits at. Oldest-first by default, because that is
+   * how a console reads and how a live tail appends — the same default the
+   * server Logs panel uses.
+   *
+   * This was missing entirely. The toolbar renders the control from its own
+   * props and the panel passed neither, so `onNewestFirstChange` arrived as
+   * undefined and clicking "Newest first" threw `is not a function`. Nothing
+   * caught it: a missing prop is not a build error in plain JS, and the server
+   * Logs page — which does wire it — works, so the control looked proven.
+   */
+  const [newestFirst, setNewestFirst] = useState(false);
   const [follow, setFollow] = useState(AUTO_FOLLOW_KEYS.has(selected));
   const [busy, setBusy] = useState(false);
   const [tailState, setTailState] = useState("idle");
@@ -295,6 +307,8 @@ export function ApplicationLogsPanel({
           onFollowChange={setFollow}
           wrap={wrap}
           onWrapChange={setWrap}
+          newestFirst={newestFirst}
+          onNewestFirstChange={setNewestFirst}
           onReload={() => load()}
           onCopyVisible={() =>
             copy(
@@ -346,6 +360,7 @@ export function ApplicationLogsPanel({
           searchCapped={searchCapped}
           searchedLines={lineCount}
           wrap={wrap}
+          newestFirst={newestFirst}
           status={status}
           following={follow}
           onCopyLine={(text) => copy(text, t("copiedLine"))}
