@@ -2233,7 +2233,9 @@
       "everyTime": "toda vez",
       "turnOnFirst": "Ative o agendamento para escolher quando ele executa.",
       "enableHint": "Executa a limpeza de forma agendada em vez de apenas quando você aperta o botão.",
-      "onlyWhenHint": "Só limpa quando o disco estiver pelo menos assim de cheio, para que a limpeza de rotina não rode em um disco quase vazio."
+      "onlyWhenHint": "Só limpa quando o disco estiver pelo menos assim de cheio, para que a limpeza de rotina não rode em um disco quase vazio.",
+      "nextRun": "Próxima limpeza {when}",
+      "nextRunAtZone": "Próxima limpeza {when} · {time} {timezone}"
     },
     "runs": {
       "title": "Limpezas recentes",
@@ -5495,7 +5497,7 @@
         "monthly": "Executa no dia 1 de cada mês, no horário definido."
       },
       "scheduleTime": "Em que horário",
-      "scheduleTimeHint": "O relógio do próprio servidor, não o do seu computador.",
+      "scheduleTimeHint": "Não é o relógio do seu computador.",
       "retention": "Quantos manter",
       "retentionHint": "Cerca de {days, plural, one {# dia} other {# dias}} de histórico. Os mais antigos são excluídos.",
       "fileExcludes": "Arquivos e pastas",
@@ -5524,7 +5526,8 @@
       },
       "automaticHint": "Executa a cópia de segurança de forma agendada em vez de apenas quando você aperta o botão.",
       "fileExcludesHint": "Caminhos a serem deixados fora da cópia de segurança, um por linha. Caches e logs valem a pena excluir; uploads, não.",
-      "databaseExcludesHint": "Bancos de dados a serem excluídos da cópia de segurança, um por linha. Útil para caches e qualquer coisa que você possa reconstruir."
+      "databaseExcludesHint": "Bancos de dados a serem excluídos da cópia de segurança, um por linha. Útil para caches e qualquer coisa que você possa reconstruir.",
+      "scheduleTimeZone": "Executa no horário do projeto ({timezone})"
     },
     "history": {
       "allApplications": "Todos os sites",
@@ -5737,7 +5740,8 @@
         "runsShortly": "Executa em breve",
         "howOftenAt": "{frequency} às {time}",
         "keepsEverything": "Todos os backups mantidos",
-        "keepsNotApplicable": "Não aplicável"
+        "keepsNotApplicable": "Não aplicável",
+        "howOftenAtZone": "{frequency} às {time} · {timezone}"
       },
       "unknownReason": "O motivo não foi registrado.",
       "restore": "Restaurar",

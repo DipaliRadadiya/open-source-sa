@@ -2233,7 +2233,9 @@
       "everyTime": "毎回",
       "turnOnFirst": "スケジュールをオンにしてから実行タイミングを選んでください。",
       "enableHint": "ボタンを押したときだけでなく、スケジュールでクリーンアップを実行します。",
-      "onlyWhenHint": "ディスクが少なくともこの使用率になってからクリーンアップを実行するため、空きが多い状態では通常のクリーンアップは行われません。"
+      "onlyWhenHint": "ディスクが少なくともこの使用率になってからクリーンアップを実行するため、空きが多い状態では通常のクリーンアップは行われません。",
+      "nextRun": "次回のクリーンアップ: {when}",
+      "nextRunAtZone": "次回のクリーンアップ: {when} · {time} {timezone}"
     },
     "runs": {
       "title": "最近のクリーンアップ",
@@ -5495,7 +5497,7 @@
         "monthly": "設定した時刻に毎月1日に実行されます。"
       },
       "scheduleTime": "実行時刻",
-      "scheduleTimeHint": "サーバーの時計に基づきます。お使いのコンピュータの時刻ではありません。",
+      "scheduleTimeHint": "お使いのコンピュータの時刻ではありません。",
       "retention": "保持する件数",
       "retentionHint": "約 {days, plural, one {# 日} other {# 日}} 分の履歴を保持します。古いものは削除されます。",
       "fileExcludes": "ファイルとフォルダ",
@@ -5524,7 +5526,8 @@
       },
       "automaticHint": "ボタンを押したときだけでなく、スケジュールでバックアップを実行します。",
       "fileExcludesHint": "バックアップから除外するパスを1行ずつ指定します。キャッシュやログは除外する価値がありますが、アップロードは除外しないでください。",
-      "databaseExcludesHint": "バックアップから除外するデータベースを1行ずつ指定します。キャッシュや再構築可能なものに便利です。"
+      "databaseExcludesHint": "バックアップから除外するデータベースを1行ずつ指定します。キャッシュや再構築可能なものに便利です。",
+      "scheduleTimeZone": "プロジェクト時刻 ({timezone}) で実行されます"
     },
     "history": {
       "allApplications": "すべてのサイト",
@@ -5737,7 +5740,8 @@
         "runsShortly": "まもなく実行",
         "howOftenAt": "{frequency} {time}",
         "keepsEverything": "すべてのバックアップを保持",
-        "keepsNotApplicable": "該当なし"
+        "keepsNotApplicable": "該当なし",
+        "howOftenAtZone": "{frequency} {time} · {timezone}"
       },
       "unknownReason": "理由は記録されていません。",
       "restore": "復元",

@@ -69,6 +69,21 @@ export const cleanerScheduleSchema = z.object({
   notify: z.boolean().optional().default(false),
   last_run_at: z.string().nullable().optional(),
   last_run_at_human: z.string().nullable().optional(),
+  /*
+   * When the next clean happens, and which clock that is in. Sent since
+   * 2026-09-17; before that this screen could only say "weekly" and left the
+   * hour (03:00, kept an hour clear of the backups) to be discovered by
+   * watching for it.
+   *
+   * Null while the cleaner is off — the API declines to name a run that will
+   * not happen, so the card must not invent one either.
+   *
+   * `timezone` is the panel's clock, matching the backup target and
+   * deliberately NOT a cron job's. See backup.js for why the two differ.
+   */
+  next_run_at: z.string().nullable().optional(),
+  next_run_at_human: z.string().nullable().optional(),
+  timezone: z.string().nullable().optional(),
 });
 
 export const cleanerRunSchema = z.object({

@@ -2233,7 +2233,9 @@
       "everyTime": "every time",
       "turnOnFirst": "Turn the schedule on to choose when it runs.",
       "enableHint": "Runs the cleanup on a schedule instead of only when you press the button.",
-      "onlyWhenHint": "Only clean up once the disk is at least this full, so a routine cleanup does not run on a mostly empty disk."
+      "onlyWhenHint": "Only clean up once the disk is at least this full, so a routine cleanup does not run on a mostly empty disk.",
+      "nextRun": "Next clean {when}",
+      "nextRunAtZone": "Next clean {when} · {time} {timezone}"
     },
     "runs": {
       "title": "Recent cleanups",
@@ -5495,7 +5497,7 @@
         "monthly": "Runs on the 1st of each month, at the time you set."
       },
       "scheduleTime": "At what time",
-      "scheduleTimeHint": "The server's own clock, not your computer's.",
+      "scheduleTimeHint": "Not your computer's clock.",
       "retention": "How many to keep",
       "retentionHint": "About {days, plural, one {# day} other {# days}} of history. Older ones are deleted.",
       "fileExcludes": "Files and folders",
@@ -5524,7 +5526,8 @@
       },
       "automaticHint": "Runs the backup on a schedule instead of only when you press the button.",
       "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not.",
-      "databaseExcludesHint": "Databases to leave out of the backup, one per line. Useful for caches and anything you can rebuild."
+      "databaseExcludesHint": "Databases to leave out of the backup, one per line. Useful for caches and anything you can rebuild.",
+      "scheduleTimeZone": "Runs in project time ({timezone})"
     },
     "history": {
       "allApplications": "All sites",
@@ -5737,7 +5740,8 @@
         "runsShortly": "Runs shortly",
         "howOftenAt": "{frequency} at {time}",
         "keepsEverything": "Every backup kept",
-        "keepsNotApplicable": "Not applicable"
+        "keepsNotApplicable": "Not applicable",
+        "howOftenAtZone": "{frequency} at {time} · {timezone}"
       },
       "unknownReason": "The reason was not recorded.",
       "restore": "Restore",

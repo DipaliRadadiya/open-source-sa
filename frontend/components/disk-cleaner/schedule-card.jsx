@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CalendarClock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { deleteCleanerSchedule, saveCleanerSchedule } from "@/lib/api/disk-cleaner";
 import { clampPercent } from "@/lib/disk-cleaner/clamp-percent";
+import { clockTimeOf } from "@/lib/disk-cleaner/next-run";
+import { scheduleTimeLabel } from "@/lib/backups/schedule-time";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +47,9 @@ const FREQUENCIES = ["hourly", "daily", "weekly", "monthly"];
  */
 export function ScheduleCard({ schedule, categories, canManage }) {
   const t = useTranslations("diskCleaner");
+  // The hour is rendered in the reader's clock convention (AM/PM vs 24h) but
+  // never their timezone — same rule as a backup's schedule time.
+  const format = useFormatter();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -134,6 +139,30 @@ export function ScheduleCard({ schedule, categories, canManage }) {
       ? t("schedule.overThreshold", { percent: schedule.threshold_percent })
       : t("schedule.everyTime");
 
+  /*
+   * When the next clean lands, at what hour, on whose clock.
+   *
+   * "Runs every week" was the whole promise this card made, and it hides an
+   * hour the form never asks for. The API is the only source for it — the
+   * frequency's cron expression lives on the backend and a copy here would
+   * drift the first time it moves.
+   *
+   * The zone is named because the hour is not converted: 03:00 is 03:00 in
+   * `timezone`, which is the project's clock and not the reader's. Without the
+   * label a bare 3:00 AM reads as local to everyone who is not on it.
+   */
+  const nextClockTime = clockTimeOf(schedule?.next_run_at);
+  const nextRunLine =
+    schedule?.enabled && schedule?.next_run_at_human
+      ? nextClockTime && schedule?.timezone
+        ? t("schedule.nextRunAtZone", {
+            when: schedule.next_run_at_human,
+            time: scheduleTimeLabel(nextClockTime, format),
+            timezone: schedule.timezone,
+          })
+        : t("schedule.nextRun", { when: schedule.next_run_at_human })
+      : null;
+
   return (
     <>
       <Card className="gap-0 overflow-hidden py-0 shadow-sm">
@@ -179,13 +208,21 @@ export function ScheduleCard({ schedule, categories, canManage }) {
           )}
 
           <div className="mt-2 flex items-center justify-between gap-3">
-            {/* "Has it ever actually run" is the question that catches a
-                schedule which looks on but never fires. */}
-            <p className="truncate text-xs text-muted-foreground">
-              {schedule?.last_run_at_human
-                ? t("schedule.lastRun", { when: schedule.last_run_at_human })
-                : t("schedule.neverRun")}
-            </p>
+            <div className="min-w-0">
+              {/* "Has it ever actually run" is the question that catches a
+                  schedule which looks on but never fires. */}
+              <p className="truncate text-xs text-muted-foreground">
+                {schedule?.last_run_at_human
+                  ? t("schedule.lastRun", { when: schedule.last_run_at_human })
+                  : t("schedule.neverRun")}
+              </p>
+              {/* Null while the cleaner is off, because the API declines to
+                  name a run that will not happen — the card must not invent
+                  one either. */}
+              {nextRunLine ? (
+                <p className="truncate text-xs text-muted-foreground">{nextRunLine}</p>
+              ) : null}
+            </div>
 
             <ReasonTooltip reason={canManage ? null : t("noPermission")}>
               <Button

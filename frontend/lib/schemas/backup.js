@@ -171,8 +171,9 @@ export const backupTargetSchema = z
     retention_count: z.number(),
     frequency: z.string(),
     frequency_title: z.string().nullish(),
-    // "HH:MM" in the server's timezone. Nullish because a target that has never
-    // set a time stores none — not because the API withholds it.
+    // "HH:MM" in `timezone` below — the PANEL's clock, not the server's, which
+    // is what this comment used to claim. Nullish because a target that has
+    // never set a time stores none, not because the API withholds it.
     schedule_time: z.string().nullish(),
     enabled: z.boolean().default(true),
     file_excludes: z.array(z.string()).default([]),
@@ -184,6 +185,21 @@ export const backupTargetSchema = z
     // first time someone changes it.
     next_run_at: z.string().nullish(),
     next_run_at_human: z.string().nullish(),
+    /*
+     * Which clock `schedule_time` and `next_run_at` are in, IANA format.
+     *
+     * Listed here or it does not exist: the object is `.passthrough()`d but
+     * every screen reads the PARSED result, and an unlisted key is simply not
+     * on it. The backend has sent this since 2026-09-17 and the panel was
+     * dropping it on the floor.
+     *
+     * 🔴 Deliberately NOT the same value as a cron job's `timezone`, which
+     * names the server's clock because Linux cron runs on the OS clock.
+     * Backups do not — the scheduler resolves the slot against the app
+     * timezone. Same field name, same format, different value on purpose: do
+     * not "fix" one to match the other.
+     */
+    timezone: z.string().nullish(),
     is_due: z.boolean().nullish(),
     created_at: z.string().nullish(),
     updated_at: z.string().nullish(),

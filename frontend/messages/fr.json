@@ -2233,7 +2233,9 @@
       "everyTime": "à chaque exécution",
       "turnOnFirst": "Activez la planification pour choisir quand elle s'exécute.",
       "enableHint": "Lance le nettoyage selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
-      "onlyWhenHint": "Ne nettoie que lorsque le disque est au moins rempli à ce niveau, pour qu’un nettoyage de routine ne se déclenche pas sur un disque presque vide."
+      "onlyWhenHint": "Ne nettoie que lorsque le disque est au moins rempli à ce niveau, pour qu’un nettoyage de routine ne se déclenche pas sur un disque presque vide.",
+      "nextRun": "Prochain nettoyage {when}",
+      "nextRunAtZone": "Prochain nettoyage {when} · {time} {timezone}"
     },
     "runs": {
       "title": "Nettoyages récents",
@@ -5495,7 +5497,7 @@
         "monthly": "S'exécute le 1er de chaque mois, à l'heure que vous définissez."
       },
       "scheduleTime": "À quelle heure",
-      "scheduleTimeHint": "L'horloge du serveur, pas celle de votre ordinateur.",
+      "scheduleTimeHint": "Pas l’horloge de votre ordinateur.",
       "retention": "Combien en conserver",
       "retentionHint": "Environ {days, plural, one {# jour} other {# jours}} d'historique. Les plus anciennes sont supprimées.",
       "fileExcludes": "Fichiers et dossiers",
@@ -5524,7 +5526,8 @@
       },
       "automaticHint": "Lance la sauvegarde selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
       "fileExcludesHint": "Chemins à exclure de la sauvegarde, un par ligne. Les caches et les logs méritent de l’être ; les téléversements, non.",
-      "databaseExcludesHint": "Bases de données à exclure de la sauvegarde, une par ligne. Utile pour les caches et tout ce que vous pouvez reconstruire."
+      "databaseExcludesHint": "Bases de données à exclure de la sauvegarde, une par ligne. Utile pour les caches et tout ce que vous pouvez reconstruire.",
+      "scheduleTimeZone": "S’exécute à l’heure du projet ({timezone})"
     },
     "history": {
       "allApplications": "Tous les sites",
@@ -5737,7 +5740,8 @@
         "runsShortly": "S'exécute bientôt",
         "howOftenAt": "{frequency} à {time}",
         "keepsEverything": "Toutes les sauvegardes conservées",
-        "keepsNotApplicable": "Non applicable"
+        "keepsNotApplicable": "Non applicable",
+        "howOftenAtZone": "{frequency} à {time} · {timezone}"
       },
       "unknownReason": "La raison n'a pas été enregistrée.",
       "restore": "Restaurer",

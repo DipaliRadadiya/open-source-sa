@@ -2233,7 +2233,9 @@
       "everyTime": "jedes Mal",
       "turnOnFirst": "Schalten Sie den Zeitplan ein, um zu wählen, wann er läuft.",
       "enableHint": "Führt die Bereinigung nach einem Zeitplan aus, statt nur auf Knopfdruck.",
-      "onlyWhenHint": "Bereinigt erst, wenn der Speicher mindestens so voll ist, damit eine Routinebereinigung nicht auf einer fast leeren Festplatte läuft."
+      "onlyWhenHint": "Bereinigt erst, wenn der Speicher mindestens so voll ist, damit eine Routinebereinigung nicht auf einer fast leeren Festplatte läuft.",
+      "nextRun": "Nächste Bereinigung {when}",
+      "nextRunAtZone": "Nächste Bereinigung {when} · {time} {timezone}"
     },
     "runs": {
       "title": "Letzte Bereinigungen",
@@ -5495,7 +5497,7 @@
         "monthly": "Läuft am 1. jedes Monats, zur Zeit, die Sie festlegen."
       },
       "scheduleTime": "Zu welcher Zeit",
-      "scheduleTimeHint": "Die Uhr des Servers, nicht die Ihres Rechners.",
+      "scheduleTimeHint": "Nicht die Uhr Ihres Rechners.",
       "retention": "Wie viele behalten",
       "retentionHint": "Etwa {days, plural, one {# Tag} other {# Tage}} Verlauf. Ältere werden gelöscht.",
       "fileExcludes": "Dateien und Ordner",
@@ -5524,7 +5526,8 @@
       },
       "automaticHint": "Führt die Sicherung nach einem Zeitplan aus, statt nur auf Knopfdruck.",
       "fileExcludesHint": "Pfade, die von der Sicherung ausgeschlossen werden, einer pro Zeile. Caches und Protokolle lohnen sich auszuschließen; Uploads nicht.",
-      "databaseExcludesHint": "Datenbanken, die von der Sicherung ausgeschlossen werden, eine pro Zeile. Nützlich für Caches und alles, was sich neu aufbauen lässt."
+      "databaseExcludesHint": "Datenbanken, die von der Sicherung ausgeschlossen werden, eine pro Zeile. Nützlich für Caches und alles, was sich neu aufbauen lässt.",
+      "scheduleTimeZone": "Läuft in Projektzeit ({timezone})"
     },
     "history": {
       "allApplications": "Alle Websites",
@@ -5737,7 +5740,8 @@
         "runsShortly": "Läuft in Kürze",
         "howOftenAt": "{frequency} um {time}",
         "keepsEverything": "Jedes Backup wird behalten",
-        "keepsNotApplicable": "Nicht zutreffend"
+        "keepsNotApplicable": "Nicht zutreffend",
+        "howOftenAtZone": "{frequency} um {time} · {timezone}"
       },
       "unknownReason": "Der Grund wurde nicht aufgezeichnet.",
       "restore": "Wiederherstellen",

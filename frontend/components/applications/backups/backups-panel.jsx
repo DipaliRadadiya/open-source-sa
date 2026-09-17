@@ -351,11 +351,17 @@ function ProtectionCard({ target, lastBackup, canManage, running, blockedReason,
   // "Every day at 02:00", or just the interval when there is no time to name.
   // Built once: the sentence at the top of the card and the fact row below it
   // were describing the same schedule in two different amounts of detail.
+  /*
+   * The zone rides along with the time or not at all: "Every day at 2:00 AM"
+   * on its own reads as the reader's own clock, and the panel has no other
+   * place on this card that reveals otherwise.
+   */
   const schedule =
     target?.schedule_time && target.frequency !== "manual"
-      ? t("summary.howOftenAt", {
+      ? t(target.timezone ? "summary.howOftenAtZone" : "summary.howOftenAt", {
           frequency: target.frequency_title ?? target.frequency,
           time: scheduleTimeLabel(target.schedule_time, format),
+          timezone: target.timezone ?? "",
         })
       : (target?.frequency_title ?? target?.frequency);
 
@@ -369,12 +375,15 @@ function ProtectionCard({ target, lastBackup, canManage, running, blockedReason,
           // the settings dialog.
           //
           // Formatted for the reader's clock convention, NOT their timezone.
-          // The hour and minute are the server's and stay exactly as stored;
-          // only 24-hour versus AM/PM changes. That is what makes this agree
-          // with the picker that sets it, which is a native time input and
-          // renders in the browser's locale whatever we do — `lang` does not
-          // override it. Converting the zone would name an hour the scheduler
-          // never runs at, and this does not.
+          // The hour and minute are the PROJECT's — `target.timezone`, which
+          // is the app clock and not the server's, whatever this comment used
+          // to say — and stay exactly as stored; only 24-hour versus AM/PM
+          // changes. That is what makes this agree with the picker that sets
+          // it, which is a native time input and renders in the browser's
+          // locale whatever we do — `lang` does not override it. Converting
+          // the zone would name an hour the scheduler never runs at, and this
+          // does not; naming the zone beside it is what makes the unconverted
+          // number readable.
           value: schedule,
         },
         {

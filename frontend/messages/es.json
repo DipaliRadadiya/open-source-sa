@@ -2233,7 +2233,9 @@
       "everyTime": "siempre",
       "turnOnFirst": "Activa la programación para elegir cuándo se ejecuta.",
       "enableHint": "Ejecuta la limpieza de forma programada en lugar de solo cuando presiona el botón.",
-      "onlyWhenHint": "Solo limpia cuando el disco esté al menos así de lleno, para que una limpieza rutinaria no se ejecute en un disco casi vacío."
+      "onlyWhenHint": "Solo limpia cuando el disco esté al menos así de lleno, para que una limpieza rutinaria no se ejecute en un disco casi vacío.",
+      "nextRun": "Próxima limpieza {when}",
+      "nextRunAtZone": "Próxima limpieza {when} · {time} {timezone}"
     },
     "runs": {
       "title": "Limpiezas recientes",
@@ -5495,7 +5497,7 @@
         "monthly": "Se ejecuta el día 1 de cada mes, a la hora que elijas."
       },
       "scheduleTime": "A qué hora",
-      "scheduleTimeHint": "El reloj del servidor, no el de tu ordenador.",
+      "scheduleTimeHint": "No es el reloj de tu ordenador.",
       "retention": "Cuántas conservar",
       "retentionHint": "{days, plural, one {Un día} other {Unos # días}} de historial. Las más antiguas se eliminan.",
       "fileExcludes": "Archivos y carpetas",
@@ -5524,7 +5526,8 @@
       },
       "automaticHint": "Ejecuta la copia de seguridad de forma programada en lugar de solo cuando presiona el botón.",
       "fileExcludesHint": "Rutas a excluir de la copia de seguridad, una por línea. Vale la pena excluir cachés y registros; los archivos subidos, no.",
-      "databaseExcludesHint": "Bases de datos que se excluirán de la copia de seguridad, una por línea. Útil para cachés y cualquier cosa que pueda reconstruir."
+      "databaseExcludesHint": "Bases de datos que se excluirán de la copia de seguridad, una por línea. Útil para cachés y cualquier cosa que pueda reconstruir.",
+      "scheduleTimeZone": "Se ejecuta en hora del proyecto ({timezone})"
     },
     "history": {
       "allApplications": "Todos los sitios",
@@ -5737,7 +5740,8 @@
         "runsShortly": "Se ejecuta en breve",
         "howOftenAt": "{frequency} a las {time}",
         "keepsEverything": "Se conservan todas",
-        "keepsNotApplicable": "No aplicable"
+        "keepsNotApplicable": "No aplicable",
+        "howOftenAtZone": "{frequency} a las {time} · {timezone}"
       },
       "unknownReason": "No se registró el motivo.",
       "restore": "Restaurar",

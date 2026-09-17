@@ -5,6 +5,7 @@ import { useWatch } from "react-hook-form";
 import {
   CalendarClock,
   ChevronDown,
+  Clock,
   Database,
   ExternalLink,
   HardDrive,
@@ -104,6 +105,13 @@ export function BackupSettingsFields({
   databasesKnown = false,
 }) {
   const t = useTranslations("backups.form");
+  /*
+   * Only the API knows which clock the scheduler uses, so this is read off the
+   * target rather than assumed. A target being set up for the first time has
+   * not been told one yet — the line is then left out entirely instead of
+   * guessing UTC, which would be a specific claim nothing backs.
+   */
+  const scheduleTimezone = target?.timezone ?? null;
   const automatic = useWatch({ control: form.control, name: "enabled" });
   const frequency = useWatch({ control: form.control, name: "frequency" });
   const retention = useWatch({ control: form.control, name: "retention_count" });
@@ -312,12 +320,27 @@ export function BackupSettingsFields({
                       className="w-full tabular-nums"
                     />
                   </FormControl>
-                  {/* Server time, said out loud for the same reason the cron
-                      dialog says it: a browser in another timezone would
-                      otherwise read this as local and be hours out. The zone's
-                      name is not worth a `/server/facts` shell-out on three
-                      more pages — "not your computer's" is the part that
-                      prevents the mistake. */}
+                  {/*
+                    Which clock this time is in, said out loud for the same
+                    reason the cron dialog says it: a browser in another
+                    timezone reads a bare "02:00" as local and is hours out.
+                    Visible rather than tucked into the label's hint — this is
+                    the one field where the user TYPES a time, so it is where
+                    the wrong assumption gets made, and a hover tooltip never
+                    opens on touch at all.
+
+                    🔴 Project time, NOT server time. The cron dialog says
+                    server because Linux cron runs on the OS clock; the backup
+                    scheduler resolves this slot against the app timezone.
+                    Copying cron's wording here would be a confident wrong
+                    answer on any box where the two differ.
+                  */}
+                  {scheduleTimezone ? (
+                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Clock className="size-3.5 shrink-0" />
+                      {t("scheduleTimeZone", { timezone: scheduleTimezone })}
+                    </p>
+                  ) : null}
                   <FormMessage />
                 </FormItem>
               )}
