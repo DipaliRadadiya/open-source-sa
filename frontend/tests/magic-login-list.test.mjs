@@ -54,9 +54,16 @@ test("it does not appear twice on the application's own dashboard", () => {
 
 test("each row's dialog is mounted only once opened", () => {
   // Ten rows would otherwise each carry a dialog nobody asked for.
-  assert.match(actions, /\{showMagicLogin \? \(\s*<MagicLoginDialog/);
-  assert.match(actions, /key=\{magicLoginRun\}/);
-  assert.match(actions, /setMagicLoginRun\(\(n\) => n \+ 1\)/);
+  // Mounted only while there is a choice to make — which is also what keeps
+  // the list fresh, since `choice` only ever holds what `start()` just read.
+  assert.match(actions, /magicLogin\.choice \? \(\s*<MagicLoginDialog/);
+  assert.match(actions, /const magicLogin = useMagicLogin\(application\.id\)/);
+  /*
+   * preventDefault on select: Radix closes the menu on its own, and if that
+   * teardown runs first the user gesture is spent and `window.open` is blocked.
+   * Driven in a browser from a real dropdown to confirm the tab still opens.
+   */
+  assert.match(actions, /event\.preventDefault\(\);\s*setMenuOpen\(false\);\s*magicLogin\.start\(\)/);
 });
 
 test("Magic Login does not draw its own separator", () => {

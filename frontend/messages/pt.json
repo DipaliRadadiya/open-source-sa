@@ -3542,7 +3542,6 @@
       "subtitle": "Escolha com que administrador quer entrar. Não é preciso palavra-passe.",
       "signIn": "Entrar",
       "cancel": "Cancelar",
-      "loading": "A ler os administradores deste site…",
       "none": "Este site não tem contas de administrador.",
       "listFailed": "Não foi possível ler os administradores deste site.",
       "failed": "Não foi possível criar a ligação de acesso.",

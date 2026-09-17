@@ -8,6 +8,14 @@ const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
 
 const dialog = read("components/applications/magic-login-dialog.jsx");
 const launcher = read("components/applications/magic-login-launcher.jsx");
+/*
+ * The tab handling moved out of the dialog when magic login gained a second
+ * way in: one administrator now signs straight through, several still pick.
+ * The care below is shared by both paths and is the kind that gets half-copied,
+ * so it lives in one file and is asserted against that file.
+ */
+const tabs = read("lib/applications/magic-login-window.js");
+const hook = read("components/applications/use-magic-login.js");
 const page = read("app/(app)/applications/[application]/page.jsx");
 const navigation = read("lib/navigation.js");
 
@@ -30,26 +38,30 @@ test("the token is posted, never put in a URL", () => {
   // A token in a query string is written to the site's access log, the
   // browser's history and any outbound Referer — and this one buys a full
   // administrator session. The legacy product put it in the URL.
-  assert.match(dialog, /form\.method = "POST"/);
-  assert.match(dialog, /field\.name = "sv_magic_login"/);
-  assert.doesNotMatch(dialog, /sv_magic_login=/);
-  assert.doesNotMatch(dialog, /\?.*token/i);
+  assert.match(tabs, /form\.method = "POST"/);
+  assert.match(tabs, /field\.name = "sv_magic_login"/);
+  assert.doesNotMatch(code(tabs), /sv_magic_login=/);
+  assert.doesNotMatch(code(tabs), /\?.*token/i);
+  // And no caller may reach for the URL form instead.
+  for (const source of [dialog, hook]) {
+    assert.doesNotMatch(code(source), /window\.open\([^)]*token/i);
+  }
 });
 
 test("the form is built through the DOM, not written as HTML", () => {
   // Interpolating the token and the site URL into markup is injection-shaped.
   // "The token is alphanumeric" stops being true the day the format changes.
-  assert.match(dialog, /createElement\("form"\)/);
-  assert.match(dialog, /createElement\("input"\)/);
-  assert.doesNotMatch(dialog, /document\.write/);
-  assert.doesNotMatch(dialog, /innerHTML/);
+  assert.match(tabs, /createElement\("form"\)/);
+  assert.match(tabs, /createElement\("input"\)/);
+  assert.doesNotMatch(tabs, /document\.write/);
+  assert.doesNotMatch(tabs, /innerHTML/);
 });
 
 test("the opened tab cannot reach back into the panel", () => {
   // `noopener` in the feature string would make window.open return null and
   // cost us the handle the form needs, so the opener is severed by hand.
-  assert.match(dialog, /target\.opener = null/);
-  assert.doesNotMatch(dialog, /window\.open\([^)]*noopener/);
+  assert.match(tabs, /tab\.opener = null/);
+  assert.doesNotMatch(tabs, /window\.open\([^)]*noopener/);
 });
 
 test("the button is gated by the permission, not by a hardcoded site type", () => {
@@ -66,11 +78,66 @@ test("the button is gated by the permission, not by a hardcoded site type", () =
 });
 
 test("the administrator list is never reused across opens", () => {
-  // An account that was an administrator last time may not be one now, and a
-  // stale name offers a refusal the user cannot explain.
-  assert.match(launcher, /setRun\(\(n\) => n \+ 1\)/);
-  assert.match(launcher, /key=\{run\}/);
-  assert.doesNotMatch(dialog, /setAdmins\(null\);/);
+  /*
+   * An account that was an administrator last time may not be one now, and a
+   * stale name offers a refusal the user cannot explain.
+   *
+   * This used to be enforced with a remount key. It is structural now: the
+   * dialog is mounted only while `choice` is set, `choice` is set only by the
+   * fetch inside `start()`, and it is cleared on close — so there is no list
+   * that can outlive an open.
+   */
+  assert.match(hook, /getWordPressAdministrators\(appId\)/);
+  assert.match(hook, /setChoice\(\{ admins \}\)/);
+  assert.match(hook, /closeChoice: useCallback\(\(\) => setChoice\(null\)/);
+
+  for (const source of [launcher, read("components/applications/application-row-actions.jsx")]) {
+    assert.match(source, /choice \? \(\s*<MagicLoginDialog/);
+  }
+
+  // And the dialog must not have grown a fetch of its own again.
+  assert.doesNotMatch(dialog, /getWordPressAdministrators/);
+});
+
+test("one administrator signs straight in; none or several still pick", () => {
+  /*
+   * The picker asked the operator of a single-administrator site to choose
+   * from a list of one, then click again.
+   *
+   * Zero is deliberately NOT merged into the error path: "this site has no
+   * administrators" and "we could not ask WordPress" look identical as an
+   * empty list, and only one of them is the operator's problem.
+   */
+  assert.match(hook, /if \(admins\.length === 1\)/);
+  assert.match(hook, /createMagicLogin\(appId, admins\[0\]\.id\)/);
+  assert.match(hook, /submitMagicLogin\(tab, session\)/);
+  assert.match(dialog, /admins\.length === 0 \?/);
+});
+
+test("the tab is opened before anything is awaited", () => {
+  /*
+   * `window.open` is allowed by the user gesture, and an await spends it. The
+   * old flow minted the token FIRST and opened afterwards, which made the
+   * "popup blocked" path reachable on an ordinary click rather than only for
+   * people who had actually blocked popups — and adding the administrator
+   * lookup in front of it would have made that worse, not better.
+   *
+   * So in both paths the open must come before the first await.
+   */
+  for (const [name, source] of [["hook", hook], ["dialog", dialog]]) {
+    const body = code(source);
+    const opened = body.indexOf("openBlankTab()");
+    const awaited = body.indexOf("await ");
+    assert.ok(opened > -1, `${name} no longer opens a tab`);
+    assert.ok(
+      opened < awaited,
+      `${name} awaits before opening the tab, so the browser may block it`,
+    );
+  }
+
+  // A tab we are not going to use is never left behind — beside a picker it
+  // reads as a login that half-happened.
+  assert.match(hook, /discardTab\(tab\)/);
 });
 
 test("a permission with no url is kept out of the sidebar", () => {
@@ -84,7 +151,9 @@ test("a permission with no url is kept out of the sidebar", () => {
 
 test("every string exists in every locale", () => {
   const keys = [
-    "action", "title", "subtitle", "signIn", "cancel", "loading", "none",
+    // "loading" is gone: the dialog no longer waits for the list — it arrives
+    // already fetched, and the spinner moved to the button that fetched it.
+    "action", "title", "subtitle", "signIn", "cancel", "none",
     "listFailed", "failed", "popupBlocked", "redirecting", "auditNote",
   ];
 

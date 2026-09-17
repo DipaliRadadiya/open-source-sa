@@ -37,6 +37,7 @@ import { DeleteApplicationDialog } from "@/components/applications/delete-applic
 import { PauseApplicationDialog } from "@/components/applications/pause-application-dialog";
 import { WebRootDialog } from "@/components/applications/web-root-dialog";
 import { MagicLoginDialog } from "@/components/applications/magic-login-dialog";
+import { useMagicLogin } from "@/components/applications/use-magic-login";
 
 /**
  * The screens worth reaching from the header menu, in the order a site is
@@ -83,10 +84,13 @@ export function ApplicationRowActions({
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [magicLoginOpen, setMagicLoginOpen] = useState(false);
-  // Bumped per open so the dialog remounts and re-reads the administrator
-  // list; an account that was an administrator last time may not be one now.
-  const [magicLoginRun, setMagicLoginRun] = useState(0);
+  /*
+   * One administrator signs straight in; none or several opens the picker.
+   * The hook owns that decision and the tab, because the row menu and the site
+   * dashboard's button must behave identically and the sequence is easy to
+   * half-copy. See use-magic-login.js.
+   */
+  const magicLogin = useMagicLogin(application.id);
   /*
    * Close when the row changes underneath an open menu.
    *
@@ -218,9 +222,16 @@ export function ApplicationRowActions({
               right; the one that knows what follows it wins. */}
           {showMagicLogin ? (
             <DropdownMenuItem
-              onSelect={() => {
-                setMagicLoginRun((n) => n + 1);
-                setMagicLoginOpen(true);
+              /*
+               * `preventDefault` so Radix does not close the menu before the
+               * click has been used. `window.open` is allowed by the gesture
+               * this handler is running inside, and a menu that tears itself
+               * down first takes that with it.
+               */
+              onSelect={(event) => {
+                event.preventDefault();
+                setMenuOpen(false);
+                magicLogin.start();
               }}
             >
               <KeyRound className="size-4" />
@@ -324,12 +335,12 @@ export function ApplicationRowActions({
       />
       {/* Mounted only once it has been asked for. Every row of this list would
           otherwise carry a dialog nobody opened — and the list renders ten. */}
-      {showMagicLogin ? (
+      {magicLogin.choice ? (
         <MagicLoginDialog
-          key={magicLoginRun}
           appId={application.id}
-          open={magicLoginOpen}
-          onOpenChange={setMagicLoginOpen}
+          admins={magicLogin.choice.admins}
+          open
+          onOpenChange={(next) => !next && magicLogin.closeChoice()}
         />
       ) : null}
 

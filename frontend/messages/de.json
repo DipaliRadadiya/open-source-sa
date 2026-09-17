@@ -3542,7 +3542,6 @@
       "subtitle": "Wählen Sie, als welcher Administrator Sie sich anmelden möchten. Kein Passwort nötig.",
       "signIn": "Anmelden",
       "cancel": "Abbrechen",
-      "loading": "Administratoren dieser Website werden gelesen…",
       "none": "Diese Website hat keine Administratorkonten.",
       "listFailed": "Die Administratoren dieser Website konnten nicht gelesen werden.",
       "failed": "Der Anmeldelink konnte nicht erstellt werden.",

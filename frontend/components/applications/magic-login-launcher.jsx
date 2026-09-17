@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { KeyRound } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MagicLoginDialog } from "@/components/applications/magic-login-dialog";
+import { useMagicLogin } from "@/components/applications/use-magic-login";
 
 /**
  * The button and its dialog, together, so the Dashboard can stay a Server
@@ -16,28 +16,27 @@ import { MagicLoginDialog } from "@/components/applications/magic-login-dialog";
  */
 export function MagicLoginLauncher({ appId }) {
   const t = useTranslations("applications.magicLogin");
-  const [open, setOpen] = useState(false);
-  // Bumped on every open so the dialog remounts with empty state. The
-  // administrator list must never be the one from last time: an account that
-  // was an administrator then may not be one now, and a stale name offers a
-  // refusal the user cannot explain.
-  const [run, setRun] = useState(0);
+  const { start, pending, choice, closeChoice } = useMagicLogin(appId);
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          setRun((n) => n + 1);
-          setOpen(true);
-        }}
-      >
-        <KeyRound className="size-4" />
+      <Button type="button" variant="outline" size="sm" onClick={start} disabled={pending}>
+        {pending ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
         {t("action")}
       </Button>
-      <MagicLoginDialog key={run} appId={appId} open={open} onOpenChange={setOpen} />
+      {/*
+       * Rendered only while there is a choice, which also remounts it on every
+       * open — so the administrator list is always the one just fetched rather
+       * than the one from last time.
+       */}
+      {choice ? (
+        <MagicLoginDialog
+          appId={appId}
+          admins={choice.admins}
+          open
+          onOpenChange={(next) => !next && closeChoice()}
+        />
+      ) : null}
     </>
   );
 }

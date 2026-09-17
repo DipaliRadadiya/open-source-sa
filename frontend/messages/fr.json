@@ -3542,7 +3542,6 @@
       "subtitle": "Choisissez l'administrateur sous lequel vous connecter. Aucun mot de passe requis.",
       "signIn": "Se connecter",
       "cancel": "Annuler",
-      "loading": "Lecture des administrateurs de ce site…",
       "none": "Ce site n'a aucun compte administrateur.",
       "listFailed": "Impossible de lire les administrateurs de ce site.",
       "failed": "Impossible de créer le lien de connexion.",

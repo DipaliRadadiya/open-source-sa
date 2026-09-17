@@ -3542,7 +3542,6 @@
       "subtitle": "Choose an administrator to sign in as. No password needed.",
       "signIn": "Log in",
       "cancel": "Cancel",
-      "loading": "Reading this site's administrators…",
       "none": "This site has no administrator accounts.",
       "listFailed": "Couldn't read this site's administrators.",
       "failed": "Couldn't create the login link.",
