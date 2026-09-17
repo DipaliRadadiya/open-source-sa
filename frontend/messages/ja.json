@@ -3309,7 +3309,9 @@
       "noGitAccount": "Git アカウントはまだ接続されていません。",
       "needs": "{items} が必要",
       "aDatabase": "データベース",
-      "submitNeedsServices": "{count, plural, other {このアプリケーションに必要なサービスを先にインストールしてください}}"
+      "submitNeedsServices": "{count, plural, other {このアプリケーションに必要なサービスを先にインストールしてください}}",
+      "typeNoResultsInCategory": "{category} に「{query}」に一致するアプリケーションはありません。{count, plural, other {他のカテゴリに # 件あります}}。",
+      "typeSearchAllCategories": "すべてのカテゴリを検索"
     },
     "actions": {
       "label": "操作",

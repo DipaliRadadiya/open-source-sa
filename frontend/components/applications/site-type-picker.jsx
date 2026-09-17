@@ -325,26 +325,55 @@ export function SiteTypePicker({ types = [], value, onChange }) {
    */
   const [activeGroup, setActiveGroup] = useState(() => (popularCount ? "popular" : "all"));
 
+  // The chip's own label, so the empty state names the filter using the exact
+  // words on the chip the reader can see rather than a second vocabulary.
+  const groupLabel = (key) =>
+    t(`form.category${key.charAt(0).toUpperCase()}${key.slice(1)}`);
+
+  const matchesQuery = (type, term) =>
+    [type.title, type.tagline, type.category]
+      .filter(Boolean)
+      .some((text) => text.toLowerCase().includes(term));
+
+  const inGroup = (type) =>
+    activeGroup === "all"
+      ? true
+      : activeGroup === "popular"
+        ? Boolean(type.popular)
+        : groupForType(type) === activeGroup;
+
+  /*
+   * The chip and the search box narrow together.
+   *
+   * Typing used to search the WHOLE catalogue, chip be damned, to avoid
+   * answering someone who typed "PrestaShop" with "no results" just because
+   * the CMS chip happened to be active. The intent was right; the execution
+   * left the chip lit while being ignored, so the grid showed a CMS app under
+   * an active "Tools" filter and the screen contradicted itself.
+   *
+   * Both now apply, and the stranding case is answered where it belongs — in
+   * the empty state, which counts the matches the chip is hiding and offers
+   * one click to widen (see `hiddenByGroup` below). The filter tells the
+   * truth, and nobody who typed a real name hits a dead end.
+   */
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    // Typing searches the WHOLE catalogue. A chip narrows what you are
-    // browsing; a search is someone who knows the name, and answering
-    // "PrestaShop" with "no results" because the CMS chip happened to be
-    // active is the panel arguing with a person who was right.
-    const pool = term
-      ? ordered
-      : activeGroup === "all"
-        ? ordered
-        : activeGroup === "popular"
-          ? ordered.filter((type) => type.popular)
-          : ordered.filter((type) => groupForType(type) === activeGroup);
-    if (!term) return pool;
-    return pool.filter((type) =>
-      [type.title, type.tagline, type.category]
-        .filter(Boolean)
-        .some((text) => text.toLowerCase().includes(term)),
-    );
+    const pool = ordered.filter(inGroup);
+    return term ? pool.filter((type) => matchesQuery(type, term)) : pool;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ordered, query, activeGroup]);
+
+  /*
+   * How many the search WOULD find if the chip were not narrowing it. Zero
+   * means the term matches nothing anywhere, which is a different sentence
+   * from "nothing in Tools" and gets different words below.
+   */
+  const hiddenByGroup = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term || filtered.length) return 0;
+    return ordered.filter((type) => matchesQuery(type, term)).length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ordered, query, filtered.length]);
 
   const selectedType = types.find((type) => type.name === value);
 
@@ -464,7 +493,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
                     : "border-transparent bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
               >
-                {t(`form.category${group.key.charAt(0).toUpperCase()}${group.key.slice(1)}`)}
+                {groupLabel(group.key)}
               </button>
             );
           })}
@@ -578,9 +607,37 @@ export function SiteTypePicker({ types = [], value, onChange }) {
           })}
         </div>
       ) : (
-        <p className="rounded-xl border border-dashed px-3 py-8 text-center text-sm text-muted-foreground">
-          {t("form.typeNoResults", { query })}
-        </p>
+        /*
+         * Two different dead ends, two different answers.
+         *
+         * "No results for wordpress" under an active Tools chip is a half
+         * truth — it did match, in another category. Naming the chip is what
+         * makes the empty grid make sense, and the button is the one click
+         * back to the matches rather than asking someone to work out that a
+         * filter they set three actions ago is the reason.
+         */
+        <div className="rounded-xl border border-dashed px-3 py-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            {hiddenByGroup
+              ? t("form.typeNoResultsInCategory", {
+                  query,
+                  category: groupLabel(activeGroup),
+                  count: hiddenByGroup,
+                })
+              : t("form.typeNoResults", { query })}
+          </p>
+          {hiddenByGroup ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => setActiveGroup("all")}
+            >
+              {t("form.typeSearchAllCategories")}
+            </Button>
+          ) : null}
+        </div>
       )}
 
       {/* Every way out this grid has, once.

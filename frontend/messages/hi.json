@@ -3309,7 +3309,9 @@
       "noGitAccount": "अभी तक कोई Git अकाउंट कनेक्ट नहीं है।",
       "needs": "{items} चाहिए",
       "aDatabase": "डेटाबेस",
-      "submitNeedsServices": "{count, plural, one {पहले वह सेवा इंस्टॉल करें जो इस ऐप्लिकेशन को चाहिए} other {पहले वे सेवाएँ इंस्टॉल करें जो इस ऐप्लिकेशन को चाहिए}}"
+      "submitNeedsServices": "{count, plural, one {पहले वह सेवा इंस्टॉल करें जो इस ऐप्लिकेशन को चाहिए} other {पहले वे सेवाएँ इंस्टॉल करें जो इस ऐप्लिकेशन को चाहिए}}",
+      "typeNoResultsInCategory": "{category} में “{query}” से मेल खाने वाला कोई ऐप्लिकेशन नहीं — अन्य श्रेणियों में {count, plural, one {# मेल है} other {# मेल हैं}}।",
+      "typeSearchAllCategories": "सभी श्रेणियों में खोजें"
     },
     "actions": {
       "label": "क्रियाएँ",

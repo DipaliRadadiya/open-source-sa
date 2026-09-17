@@ -3309,7 +3309,9 @@
       "noGitAccount": "Aucun compte Git connecté pour l’instant.",
       "needs": "Nécessite {items}",
       "aDatabase": "une base de données",
-      "submitNeedsServices": "{count, plural, one {Installez d’abord le service dont cette application a besoin} other {Installez d’abord les services dont cette application a besoin}}"
+      "submitNeedsServices": "{count, plural, one {Installez d’abord le service dont cette application a besoin} other {Installez d’abord les services dont cette application a besoin}}",
+      "typeNoResultsInCategory": "Aucun type d’application ne correspond à « {query} » dans {category} — {count, plural, one {# correspondance se trouve} other {# correspondances se trouvent}} dans d’autres catégories.",
+      "typeSearchAllCategories": "Rechercher dans toutes les catégories"
     },
     "actions": {
       "label": "Actions",

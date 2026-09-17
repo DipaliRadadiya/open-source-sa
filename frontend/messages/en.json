@@ -3309,7 +3309,9 @@
       "noGitAccount": "No Git account connected yet.",
       "needs": "Needs {items}",
       "aDatabase": "a database",
-      "submitNeedsServices": "{count, plural, one {Install the service this application needs first} other {Install the services this application needs first}}"
+      "submitNeedsServices": "{count, plural, one {Install the service this application needs first} other {Install the services this application needs first}}",
+      "typeNoResultsInCategory": "No application types match “{query}” in {category} — {count, plural, one {# match is} other {# matches are}} in other categories.",
+      "typeSearchAllCategories": "Search all categories"
     },
     "actions": {
       "label": "Actions",
