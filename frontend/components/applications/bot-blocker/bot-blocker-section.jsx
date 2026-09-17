@@ -96,11 +96,36 @@ function botGroups(keys, policies, selected) {
   return groups;
 }
 
+/*
+ * Sorted, because this is a reference list — you come to it asking "is my
+ * crawler in here?".
+ *
+ * The API sends them in its own order (GPTBot, ClaudeBot, Google-Extended,
+ * CCBot, Bytespider…), so answering that question meant reading all 27 rather
+ * than jumping to a letter. `localeCompare` with `sensitivity: "base"` so
+ * `Meta-ExternalAgent` and `meta-externalagent` land next to each other
+ * instead of in separate A–Z and a–z runs.
+ *
+ * Display order only. `botGroups` above still walks the policies in its own
+ * order to dedupe, so what appears in which group is unchanged.
+ */
 function BotList({ bots }) {
+  const sorted = [...bots].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" }),
+  );
+
   return (
     <div className="flex flex-wrap gap-1.5">
-      {bots.map((bot) => (
-        <Badge key={bot} variant="outline" className="font-mono font-normal">
+      {sorted.map((bot) => (
+        <Badge
+          key={bot}
+          variant="outline"
+          /* Accent-tinted rather than white-on-grey: outline-only chips on the
+             panel's own tint had almost no edge, so 23 names read as one wash.
+             These are reference data, not a status — the tint gives them a
+             surface without claiming anything about each bot. */
+          className="border-primary/20 bg-primary/5 font-mono font-normal text-primary"
+        >
           {bot}
         </Badge>
       ))}
@@ -216,8 +241,18 @@ function RuleEditor({ kind, icon: Icon, bots, disabled, onAdd, onRemove }) {
 
 function BotGroup({ label, bots }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+    <div className="space-y-2">
+      {/* The heading has to win against 27 chips below it. As `text-xs
+          font-medium text-muted-foreground` it was lighter than the things it
+          was labelling, so three groups read as one wall — reported as not
+          being scannable. Foreground weight plus the count, which also answers
+          "how many are in this one" without counting pills. */}
+      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
+        {label}
+        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
+          {bots.length}
+        </span>
+      </p>
       <BotList bots={bots} />
     </div>
   );
@@ -497,7 +532,7 @@ export function BotBlockerSection({
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-                  <div className="mt-3 space-y-3 rounded-lg border bg-muted/30 p-3">
+                  <div className="mt-3 space-y-4 rounded-lg border bg-muted/30 p-3">
                     {shownGroups.length > 1 ? (
                       shownGroups.map((group) => (
                         <BotGroup
