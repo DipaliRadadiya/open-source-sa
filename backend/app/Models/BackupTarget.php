@@ -68,6 +68,30 @@ class BackupTarget extends Model
         return $this->hasMany(Backup::class);
     }
 
+    /**
+     * The timezone this schedule is interpreted in.
+     *
+     * The app's, because that is what `RunScheduledBackups` compares against:
+     * it calls `Date::now()`, and `isDue()` resolves the cron slot in the same
+     * zone. So "02:00" on this target means 02:00 here, and on a server set to
+     * anything else it does NOT mean 02:00 to the person who typed it.
+     *
+     * 🔴 **Not `ServerTimezone::get()`, and the difference is the whole point.**
+     * Cronjob uses that because Linux cron genuinely runs on the OS clock.
+     * Backups do not. Naming the server's timezone on a schedule evaluated in
+     * UTC would print a confident, specific, wrong time — worse than the bare
+     * number it replaces, since a user cannot tell it is wrong.
+     *
+     * A method rather than the config read inline in the resource: the day
+     * these move to server time, this is the one line that changes and the
+     * label follows. A resource holding its own copy is a label that goes
+     * stale the moment the clock moves — which is the bug this exists to fix.
+     */
+    public function scheduleTimezone(): string
+    {
+        return (string) config('app.timezone');
+    }
+
     public function cronExpression(): ?string
     {
         $base = self::CRON[$this->frequency] ?? null;

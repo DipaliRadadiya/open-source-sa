@@ -232,3 +232,44 @@ it('does not run again within the same slot', function () {
 
     expect(DiskCleanerRun::query()->count())->toBe(0);
 });
+
+/*
+| Saying which clock the schedule is in.
+|
+| The screen used to show "weekly" and nothing else: not the hour (03:00,
+| chosen to stay out of the backups' way) and not the timezone. A bare time
+| reads as local time to everyone who is not on the app's clock.
+*/
+
+it('says when the cleaner next runs, and in which timezone', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-29 12:00:00', 'UTC'));
+
+    DiskCleanerSchedule::create([
+        'enabled' => true,
+        'frequency' => 'daily',
+        'categories' => ['service_logs'],
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/disk-cleaner/schedule')
+        ->assertOk()
+        // 03:00 the following morning, in the zone the response names.
+        ->assertJsonPath('schedule.next_run_at', '30-07-2026 03:00:00')
+        ->assertJsonPath('schedule.timezone', 'UTC');
+});
+
+it('promises no next run while the cleaner is switched off', function () {
+    DiskCleanerSchedule::create([
+        'enabled' => false,
+        'frequency' => 'daily',
+        'categories' => ['service_logs'],
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/disk-cleaner/schedule')
+        ->assertOk()
+        ->assertJsonPath('schedule.next_run_at', null)
+        // Still named. Which clock the schedule is in is a property of the
+        // feature, not of this row being switched on.
+        ->assertJsonPath('schedule.timezone', 'UTC');
+});

@@ -59,6 +59,37 @@ class DiskCleanerSchedule extends Model
     }
 
     /**
+     * The timezone this schedule is interpreted in.
+     *
+     * The app's, because that is what the scheduler tick compares against.
+     * See BackupTarget::scheduleTimezone() for why this is deliberately not
+     * `ServerTimezone::get()` — the short version is that naming the server's
+     * clock on a schedule evaluated in UTC is a specific wrong answer, and a
+     * user cannot tell a specific wrong answer from a right one.
+     */
+    public function scheduleTimezone(): string
+    {
+        return (string) config('app.timezone');
+    }
+
+    /**
+     * When the cleaner will next run, or null when it is switched off.
+     *
+     * Published for the same reason BackupTarget publishes it: a screen that
+     * can only say "weekly" is asking the user to work out what that means,
+     * and every frequency in this table already hides an hour they were never
+     * told about (03:00, chosen to stay out of the backups' way).
+     */
+    public function nextRunAt(?DateTimeInterface $now = null): ?DateTimeInterface
+    {
+        if (! $this->enabled) {
+            return null;
+        }
+
+        return (new CronExpression($this->cronExpression()))->getNextRunDate($now ?? now());
+    }
+
+    /**
      * Whether a scheduled run is due: a cron slot has passed since the last run
      * (rotation-safe against missed scheduler ticks).
      */

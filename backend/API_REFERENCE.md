@@ -3008,6 +3008,7 @@ Backup settings for one application.
   "database_excludes": ["sessions", "cache"],
   "last_run_at": "28-07-2026 02:00:00", "last_run_at_human": "3 days ago",
   "next_run_at": "29-07-2026 02:00:00", "next_run_at_human": "in 20 hours",
+  "timezone": "UTC",
   "is_due": false,
   "created_at": "25-07-2026 14:30:00",
   "updated_at": "28-07-2026 02:00:05"
@@ -3016,7 +3017,11 @@ Backup settings for one application.
 
 There is no `schedule` or `retention` field — they are **`frequency`** and **`retention_count`**. There is no nested `storage_destination` object either: only `storage_destination_id` plus a flat `storage_destination_name` (and that name is present only when the endpoint loads the relation — it does here and on save).
 
-`frequency` is `manual` · `daily` · `weekly` · `monthly`; `schedule_time` is `HH:MM` in the server's timezone. `type` is `filesystem` · `database` · `full`.
+`frequency` is `manual` · `daily` · `weekly` · `monthly`; `schedule_time` is `HH:MM`. `type` is `filesystem` · `database` · `full`.
+
+🔴 **`schedule_time` and `next_run_at` are in `timezone`, which is the panel's clock — *not* the server's.** (This line previously said "the server's timezone" and was wrong.) The scheduler resolves the slot against the application timezone, so on a box set to anything else, `02:00` is not 02:00 to the person who typed it — a user on `Asia/Kolkata` gets it at 07:30. **Always render `timezone` beside the time**; a bare `02:00` reads as local time to everyone, and nothing else in the response reveals otherwise.
+
+⚠️ **Its value is deliberately different from a cron job's.** `CronjobResource.timezone` names the *server's* timezone, because Linux cron genuinely runs on the OS clock. Backups do not. Same field name and same IANA format across both, different value on purpose — do not "fix" one to match the other. (Even on a UTC box the two strings differ: the OS reports `Etc/UTC`, the app reports `UTC`.)
 
 **Read `is_due`, not `next_run_at`, to decide whether a run is imminent.** A brand-new target is due immediately — it will run on the next scheduler tick — while `next_run_at` names the next *scheduled* slot, which can be tomorrow. The two disagreeing is correct, not a bug.
 
@@ -4797,10 +4802,12 @@ See also `DELETE /applications/{application}/logs/{key}` for a site's own logs, 
 **Permission:** `disk_cleaner` (view)
 
 ```json
-{"schedule": {"enabled": true, "frequency": "daily", "categories": ["apt_cache", "journal"], "threshold_percent": 80, "last_run_at": "27-07-2026 03:00:00", "last_run_at_human": "2 days ago"}}
+{"schedule": {"enabled": true, "frequency": "daily", "categories": ["apt_cache", "journal"], "threshold_percent": 80, "last_run_at": "27-07-2026 03:00:00", "last_run_at_human": "2 days ago", "next_run_at": "30-07-2026 03:00:00", "next_run_at_human": "in 15 hours", "timezone": "UTC"}}
 ```
 
 `null` if no schedule is set.
+
+`frequency` hides an hour the form never asks for: the cleaner runs at **03:00**, one hour after backups, so the two do not contend for disk and CPU on a small VPS. `next_run_at` is what to show — it is `null` while `enabled` is false, rather than naming a run that will not happen, and `timezone` is the clock it is in (the panel's, **not** the server's — see `GET /applications/{application}/backup-target` for why the two differ).
 
 ---
 

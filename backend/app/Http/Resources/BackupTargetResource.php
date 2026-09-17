@@ -44,6 +44,15 @@ class BackupTargetResource extends JsonResource
             // disabled — there is no next run to promise.
             'next_run_at' => $nextRun?->format('d-m-Y H:i:s'),
             'next_run_at_human' => $nextRun?->diffForHumans(),
+            // Which clock `schedule_time` and `next_run_at` are in. Sent
+            // because without it they are a bare number, and a bare number
+            // reads as local time to everyone who is not on this one — a user
+            // on IST who asks for 02:00 gets it at 07:30 and has no way to
+            // tell from this response. Same field name and same IANA format as
+            // CronjobResource, so one meaning spans all three schedule
+            // screens. Note the *value* differs from a cron job's on purpose:
+            // see BackupTarget::scheduleTimezone().
+            'timezone' => $this->scheduleTimezone(),
             // A run the scheduler will pick up on its next tick, within a
             // minute. True for a target that has never run — the first backup
             // is taken immediately rather than at tonight's slot, so a UI

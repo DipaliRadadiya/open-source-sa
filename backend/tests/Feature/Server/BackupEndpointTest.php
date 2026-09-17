@@ -12,8 +12,10 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
+use App\Support\ServerTimezone;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 
@@ -815,4 +817,63 @@ describe('the destination on a backup row', function () {
         // costs nothing extra.
         expect($five)->toBe($one);
     });
+});
+
+/*
+| Saying which clock the schedule is in.
+|
+| A backup target's `schedule_time` is a bare "02:00" with no zone attached,
+| and `RunScheduledBackups` resolves it against the APP clock. So on a server
+| set to anything but that clock, the number on the screen is not the time the
+| backup runs — and nothing in the response let a user find that out.
+*/
+
+it('names the timezone its schedule is interpreted in', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-29 12:00:00', 'UTC'));
+
+    BackupTarget::create(array_merge(
+        ['application_id' => $this->application->id],
+        targetPayload(['schedule_time' => '02:00']),
+    ));
+
+    $this->withHeaders(backupHeaders())
+        ->getJson("/api/applications/{$this->application->id}/backup-target")
+        ->assertOk()
+        ->assertJsonPath('backup_target.timezone', 'UTC')
+        // The next run is in the zone just named, not some other one.
+        ->assertJsonPath('backup_target.next_run_at', '30-07-2026 02:00:00');
+
+    Carbon::setTestNow();
+});
+
+it('names the clock the scheduler uses, not the one the server runs on', function () {
+    // 🔴 The guard this feature exists for. Cronjob publishes
+    // `ServerTimezone::get()` because Linux cron really does run on the OS
+    // clock. Backups do not — they run on the app's. Copying Cronjob here
+    // would print "02:00 Asia/Kolkata" for a backup that fires at 02:00 UTC:
+    // a specific, confident, wrong answer, which a user cannot tell from a
+    // right one. Worse than the bare number it replaces.
+    //
+    // This also fails the day someone moves backups to server time and
+    // forgets the label — which is exactly today's bug, one level up.
+    $timezoneFile = sys_get_temp_dir().'/sv-oss-tz-'.uniqid();
+    file_put_contents($timezoneFile, "Asia/Kolkata\n");
+    config(['server.timezone_file' => $timezoneFile]);
+    ServerTimezone::forget();
+
+    expect(ServerTimezone::get())->toBe('Asia/Kolkata')
+        ->and(config('app.timezone'))->toBe('UTC');
+
+    BackupTarget::create(array_merge(
+        ['application_id' => $this->application->id],
+        targetPayload(['schedule_time' => '02:00']),
+    ));
+
+    $this->withHeaders(backupHeaders())
+        ->getJson("/api/applications/{$this->application->id}/backup-target")
+        ->assertOk()
+        ->assertJsonPath('backup_target.timezone', 'UTC');
+
+    ServerTimezone::forget();
+    @unlink($timezoneFile);
 });
