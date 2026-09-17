@@ -3031,7 +3031,7 @@
         "prunedReason": "The file holding this version has been deleted to stay within the backups kept.",
         "firstSaveReason": "This was the first save, so there is no earlier version to go back to.",
         "confirmTitle": "Restore the version from before this change?",
-        "confirmBody": "The current file is backed up first, so this is itself undoable. The application keeps running with the restored values.",
+        "confirmBody": "The current file is backed up first, so this is itself undoable.",
         "cancel": "Cancel",
         "confirmSubmit": "Restore",
         "showValues": "Show values",
@@ -3729,7 +3729,9 @@
         "title": "This folder is empty",
         "description": "Upload a file, or create a new file or folder to get started.",
         "filteredTitle": "No matching files",
-        "filteredDescription": "No files or folders in this directory match your search."
+        "filteredDescription": "No files or folders in this directory match your search.",
+        "hiddenOnlyTitle": "{count, plural, one {Nothing here but # hidden file} other {Nothing here but # hidden files}}",
+        "hiddenOnlyDescription": "Names beginning with a dot are hidden by default."
       },
       "searchPlaceholder": "Search this folder…",
       "itemCount": "{count, plural, =0 {No items} one {# item} other {# items}}",
@@ -4019,7 +4021,8 @@
           "fonts": "Fonts",
           "other": "Other"
         },
-        "trigger": "Storage"
+        "trigger": "Storage",
+        "measureFailed": "We could not measure this folder just now. Try again in a moment."
       }
     },
     "workers": {

@@ -3031,7 +3031,7 @@
         "prunedReason": "O arquivo que continha esta versão foi excluído para manter os backups dentro do limite.",
         "firstSaveReason": "Este foi o primeiro salvamento, então não há versão anterior para voltar.",
         "confirmTitle": "Restaurar a versão anterior a esta alteração?",
-        "confirmBody": "O arquivo atual é salvo antes, então isso também é reversível. A aplicação continua rodando com os valores restaurados.",
+        "confirmBody": "O ficheiro atual é guardado primeiro, pelo que esta ação também é reversível.",
         "cancel": "Cancelar",
         "confirmSubmit": "Restaurar",
         "showValues": "Mostrar valores",
@@ -3729,7 +3729,9 @@
         "title": "Esta pasta está vazia",
         "description": "Envie um arquivo ou crie um novo arquivo ou pasta para começar.",
         "filteredTitle": "Nenhum arquivo correspondente",
-        "filteredDescription": "Nenhum arquivo ou pasta nesta pasta corresponde à sua busca."
+        "filteredDescription": "Nenhum arquivo ou pasta nesta pasta corresponde à sua busca.",
+        "hiddenOnlyTitle": "{count, plural, one {Aqui só há # ficheiro oculto} other {Aqui só há # ficheiros ocultos}}",
+        "hiddenOnlyDescription": "Os nomes começados por um ponto ficam ocultos por predefinição."
       },
       "searchPlaceholder": "Buscar nesta pasta…",
       "itemCount": "{count, plural, =0 {Nenhum item} one {# item} other {# itens}}",
@@ -4019,7 +4021,8 @@
           "fonts": "Fontes",
           "other": "Outro"
         },
-        "trigger": "Armazenamento"
+        "trigger": "Armazenamento",
+        "measureFailed": "Não foi possível medir esta pasta neste momento. Tente novamente daqui a pouco."
       }
     },
     "workers": {

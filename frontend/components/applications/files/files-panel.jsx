@@ -344,6 +344,32 @@ export function FilesPanel({
 
       {siteSearch ? (
         <SiteSearchResults appId={appId} query={query} onAction={onAction} />
+      ) : files.length === 0 && !showHidden && hiddenCount > 0 ? (
+        /*
+         * There ARE files here — they are just hidden.
+         *
+         * "This folder is empty. Upload a file to get started." over a folder
+         * holding .env, .git and .htaccess is a false statement, and the
+         * suggested action is wrong too: what you want is to see them, not to
+         * add another. The count has always been on screen in the toggle above
+         * ("3 hidden"); only the state below it was ignoring it.
+         *
+         * The action reuses the same href the toggle uses, so there is one
+         * definition of what "show hidden" means on this page.
+         */
+        <EmptyState
+          icon={EyeOff}
+          title={t("empty.hiddenOnlyTitle", { count: hiddenCount })}
+          description={t("empty.hiddenOnlyDescription")}
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link href={hiddenHref} scroll={false}>
+                <Eye className="size-3.5" />
+                {t("hidden.show")}
+              </Link>
+            </Button>
+          }
+        />
       ) : files.length === 0 ? (
         <EmptyState icon={Folder} title={t("empty.title")} description={t("empty.description")} />
       ) : filtered.length === 0 ? (

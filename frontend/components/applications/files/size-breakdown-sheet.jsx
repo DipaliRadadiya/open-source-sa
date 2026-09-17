@@ -60,11 +60,31 @@ export function SizeBreakdownSheet({ breakdown }) {
     [slices, tokens, label],
   );
 
-  // Not measurable and empty are different answers. "This folder holds no
-  // files" is a fact; "the walk did not finish" is an apology, and showing the
-  // first when the second happened would be a confident lie about a disk.
-  const unavailable = breakdown && breakdown.available === false;
+  /*
+   * Not measurable and empty are different answers. "This folder holds no
+   * files" is a fact; "the walk did not finish" is an apology, and showing the
+   * first when the second happened would be a confident lie about a disk.
+   *
+   * `null` counts as not-measurable, which is the half this was missing.
+   * `getBreakdown` returns null on a non-ok response, a schema mismatch or a
+   * throw — and its docblock says so in as many words: "A failure returns null
+   * so the card can say it could not measure, which is a different sentence
+   * from 'this folder is empty'." Null is falsy, so it satisfied neither
+   * branch below and fell through to the ordinary subtitle: a folder holding
+   * gigabytes read as " across 0 files" with an empty chart, which is exactly
+   * the lie the comment was written to prevent.
+   */
+  const unavailable = !breakdown || breakdown.available === false;
   const empty = breakdown?.available && categories.length === 0;
+
+  /*
+   * And the two not-measurable reasons get their own sentences.
+   *
+   * `available: false` is the backend saying the walk was too big to finish —
+   * a specific, true cause. `null` is the request not arriving at all, where
+   * "too large" would be a confident guess at a reason we do not have.
+   */
+  const unavailableMessage = breakdown ? t("unavailable") : t("measureFailed");
 
   // Which token each category wears, so the legend's swatch matches the segment
   // it names. Past the fifth they are all the tail's grey — which is honest:
@@ -92,7 +112,7 @@ export function SizeBreakdownSheet({ breakdown }) {
           </SheetTitle>
           <SheetDescription>
             {unavailable
-              ? t("unavailable")
+              ? unavailableMessage
               : empty
                 ? t("empty")
                 : t("subtitle", {

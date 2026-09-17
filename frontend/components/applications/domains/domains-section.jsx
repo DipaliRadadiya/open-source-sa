@@ -57,6 +57,18 @@ const TYPE_VARIANT = {
   redirect: "outline",
 };
 
+/**
+ * Whether the site's certificate covers this exact name.
+ *
+ * `missing_domains` is the backend's own list of site names the certificate
+ * does NOT carry, so this needs no wildcard matching of its own — and when the
+ * list is empty for any reason the answer is "covered", which leaves every
+ * existing link untouched rather than downgrading a whole panel to http.
+ */
+function coveredByCertificate(certificate, domain) {
+  return !certificate?.missing_domains?.includes(domain);
+}
+
 export function DomainsSection({
   appId,
   domains = [],
@@ -284,8 +296,24 @@ export function DomainsSection({
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1">
-                    {/* Open the live site — https when a cert is active, else
-                        http. Shown to everyone; redirects serve nothing. */}
+                    {/*
+                      * Open the live site. Shown to everyone; redirects serve
+                      * nothing.
+                      *
+                      * https only when the certificate covers THIS name, not
+                      * merely when the site has one. `secured` is the site's
+                      * overall SSL status, so a domain added after the
+                      * certificate was issued got an https link straight into a
+                      * browser warning — the SSL card immediately below already
+                      * names that domain as uncovered.
+                      *
+                      * Keyed off `missing_domains` rather than the positive
+                      * `domains` list on purpose: if the backend has not
+                      * computed coverage, an empty `missing_domains` leaves
+                      * every link exactly as it is today, whereas an empty
+                      * `domains` would downgrade every site to http. It also
+                      * avoids re-implementing wildcard matching here.
+                      */}
                     {domain.dns_verified && domain.type !== "redirect" ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -296,7 +324,7 @@ export function DomainsSection({
                             className="size-8"
                           >
                             <a
-                              href={`${secured ? "https" : "http"}://${domain.domain}`}
+                              href={`${secured && coveredByCertificate(certificate, domain.domain) ? "https" : "http"}://${domain.domain}`}
                               target="_blank"
                               rel="noreferrer noopener"
                             >

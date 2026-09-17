@@ -3031,7 +3031,7 @@
         "prunedReason": "保持されているバックアップ数内に収めるため、このバージョンを含むファイルが削除されました。",
         "firstSaveReason": "最初の保存のため、戻れる以前のバージョンはありません。",
         "confirmTitle": "この変更前のバージョンを復元しますか？",
-        "confirmBody": "現在のファイルは先にバックアップされるため、この操作自体を取り消せます。アプリは復元された値で稼働し続けます。",
+        "confirmBody": "現在のファイルは先にバックアップされるため、この操作自体も元に戻せます。",
         "cancel": "キャンセル",
         "confirmSubmit": "復元",
         "showValues": "値を表示",
@@ -3729,7 +3729,9 @@
         "title": "このフォルダは空です",
         "description": "ファイルをアップロードするか、新しいファイル・フォルダを作成してください。",
         "filteredTitle": "一致するファイルがありません",
-        "filteredDescription": "このディレクトリ内に検索条件に一致するファイルまたはフォルダがありません。"
+        "filteredDescription": "このディレクトリ内に検索条件に一致するファイルまたはフォルダがありません。",
+        "hiddenOnlyTitle": "{count, plural, other {ここには非表示のファイルが # 件あるだけです}}",
+        "hiddenOnlyDescription": "ドットで始まる名前は既定で非表示になります。"
       },
       "searchPlaceholder": "このフォルダを検索…",
       "itemCount": "{count, plural, =0 {アイテムなし} other {# 件}}",
@@ -4019,7 +4021,8 @@
           "fonts": "フォント",
           "other": "その他"
         },
-        "trigger": "ストレージ"
+        "trigger": "ストレージ",
+        "measureFailed": "このフォルダーを今は計測できませんでした。しばらくしてからもう一度お試しください。"
       }
     },
     "workers": {

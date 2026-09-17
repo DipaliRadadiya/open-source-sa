@@ -3031,7 +3031,7 @@
         "prunedReason": "Le fichier contenant cette version a été supprimé pour rester dans les sauvegardes conservées.",
         "firstSaveReason": "C'était le premier enregistrement, il n'y a pas de version antérieure à laquelle revenir.",
         "confirmTitle": "Restaurer la version d'avant cette modification ?",
-        "confirmBody": "Le fichier actuel est d'abord sauvegardé, cette opération est donc elle-même annulable. L'application continue de fonctionner avec les valeurs restaurées.",
+        "confirmBody": "Le fichier actuel est sauvegardé au préalable, cette opération est donc elle aussi réversible.",
         "cancel": "Annuler",
         "confirmSubmit": "Restaurer",
         "showValues": "Afficher les valeurs",
@@ -3729,7 +3729,9 @@
         "title": "Ce dossier est vide",
         "description": "Téléversez un fichier, ou créez un nouveau fichier ou dossier pour commencer.",
         "filteredTitle": "Aucun fichier correspondant",
-        "filteredDescription": "Aucun fichier ou dossier de ce répertoire ne correspond à votre recherche."
+        "filteredDescription": "Aucun fichier ou dossier de ce répertoire ne correspond à votre recherche.",
+        "hiddenOnlyTitle": "{count, plural, one {Il n’y a ici que # fichier masqué} other {Il n’y a ici que # fichiers masqués}}",
+        "hiddenOnlyDescription": "Les noms commençant par un point sont masqués par défaut."
       },
       "searchPlaceholder": "Rechercher dans ce dossier…",
       "itemCount": "{count, plural, =0 {Aucun élément} one {# élément} other {# éléments}}",
@@ -4019,7 +4021,8 @@
           "fonts": "Polices",
           "other": "Autre"
         },
-        "trigger": "Stockage"
+        "trigger": "Stockage",
+        "measureFailed": "Nous n’avons pas pu mesurer ce dossier pour l’instant. Réessayez dans un instant."
       }
     },
     "workers": {

@@ -3031,7 +3031,7 @@
         "prunedReason": "Die Datei mit dieser Version wurde gelöscht, um die Zahl der aufbewahrten Backups einzuhalten.",
         "firstSaveReason": "Das war der erste Speichervorgang, es gibt also keine frühere Version.",
         "confirmTitle": "Die Version von vor dieser Änderung wiederherstellen?",
-        "confirmBody": "Die aktuelle Datei wird vorher gesichert, das lässt sich also selbst wieder zurücknehmen. Die Anwendung läuft mit den wiederhergestellten Werten weiter.",
+        "confirmBody": "Die aktuelle Datei wird zuerst gesichert, dieser Schritt lässt sich also ebenfalls rückgängig machen.",
         "cancel": "Abbrechen",
         "confirmSubmit": "Wiederherstellen",
         "showValues": "Werte zeigen",
@@ -3729,7 +3729,9 @@
         "title": "Dieser Ordner ist leer",
         "description": "Laden Sie eine Datei hoch oder erstellen Sie eine neue Datei oder einen Ordner, um zu beginnen.",
         "filteredTitle": "Keine passenden Dateien",
-        "filteredDescription": "Keine Datei und kein Ordner in diesem Verzeichnis passt zu Ihrer Suche."
+        "filteredDescription": "Keine Datei und kein Ordner in diesem Verzeichnis passt zu Ihrer Suche.",
+        "hiddenOnlyTitle": "{count, plural, one {Hier ist nur # ausgeblendete Datei} other {Hier sind nur # ausgeblendete Dateien}}",
+        "hiddenOnlyDescription": "Namen, die mit einem Punkt beginnen, sind standardmäßig ausgeblendet."
       },
       "searchPlaceholder": "In diesem Ordner suchen…",
       "itemCount": "{count, plural, =0 {Keine Einträge} one {# Eintrag} other {# Einträge}}",
@@ -4019,7 +4021,8 @@
           "fonts": "Schriften",
           "other": "Sonstiges"
         },
-        "trigger": "Speicher"
+        "trigger": "Speicher",
+        "measureFailed": "Dieser Ordner konnte gerade nicht gemessen werden. Versuchen Sie es gleich noch einmal."
       }
     },
     "workers": {

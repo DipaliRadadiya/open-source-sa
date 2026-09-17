@@ -102,9 +102,23 @@ export const REDIRECT_STATUSES = [301, 302, 307, 308];
 // option — promoting a name is a separate endpoint.
 export const addDomainFormSchema = z
   .object({
+    /*
+     * Lowercased before it is checked, not rejected for being typed in caps.
+     *
+     * Hostnames are case-insensitive, and the backend already does
+     * `strtolower(trim(...))` on this field before validating it — so
+     * `Example.com` was always going to be accepted and stored as
+     * `example.com`. Only this regex refused it, with "Enter a valid
+     * hostname", which is both wrong and unactionable: the name IS valid.
+     *
+     * Normalising here rather than loosening the regex to /i means the value
+     * the form submits is the value the server will store, so the row that
+     * comes back is not a surprise.
+     */
     domain: z
       .string()
       .trim()
+      .toLowerCase()
       .min(1, "domainRequired")
       .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/, "hostnameInvalid"),
     type: z.enum(["alias", "redirect"]).default("alias"),

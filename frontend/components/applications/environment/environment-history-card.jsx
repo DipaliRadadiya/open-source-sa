@@ -14,6 +14,8 @@ import {
 } from "@/lib/applications/environment-history";
 import { EnvironmentDiff } from "@/components/applications/environment/environment-diff";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,18 +44,35 @@ export function EnvironmentHistoryCard({
   entries,
   failed = false,
   canManage = false,
+  /*
+   * Whether this site runs a process that holds its environment in memory.
+   *
+   * The editor's own restore dialog has always offered a restart checkbox for
+   * these sites; this card — the same endpoint, the same action — sent no flag
+   * and told the reader "The application keeps running with the restored
+   * values." On a Node site that was simply untrue: the process kept running
+   * with the OLD ones. Two doors to one action cannot tell different stories.
+   */
+  requiresRestart = false,
 }) {
   const t = useTranslations("applications.environment.history");
+  // The restart control reuses the editor dialog's strings, which live one
+  // level up — so there is one sentence describing what restarting does.
+  const tEnv = useTranslations("applications.environment");
   const router = useRouter();
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Off by default, matching the editor's dialog: restarting is a visible
+  // interruption and should be asked for, not assumed.
+  const [restart, setRestart] = useState(false);
 
   async function confirmRestore() {
     setBusy(true);
     try {
-      await restoreEnvironment(appId, { backup: pending.backup });
+      await restoreEnvironment(appId, { backup: pending.backup, restart });
       toast.success(t("restored"));
       setPending(null);
+      setRestart(false);
       // A refresh, not local state: the restore changed the file the editor
       // above is showing, and leaving that stale would put the old text on
       // screen over the new file on disk.
@@ -99,7 +118,13 @@ export function EnvironmentHistoryCard({
 
       <ConfirmDialog
         open={pending !== null}
-        onOpenChange={(next) => (next ? null : setPending(null))}
+        onOpenChange={(next) => {
+          if (next) return;
+          setPending(null);
+          // Cleared on close so a checkbox ticked and then abandoned does not
+          // silently apply to the next restore.
+          setRestart(false);
+        }}
         icon={RotateCcw}
         title={t("confirmTitle")}
         description={t("confirmBody")}
@@ -107,7 +132,28 @@ export function EnvironmentHistoryCard({
         confirmLabel={t("confirmSubmit")}
         pending={busy}
         onConfirm={confirmRestore}
-      />
+      >
+        {/* Same control, same strings as the editor's restore dialog — one
+            wording for one decision. Only shown when the site actually has a
+            process to restart. */}
+        {requiresRestart ? (
+          <div className="flex items-start gap-2.5 rounded-lg border p-3">
+            <Checkbox
+              id="history-restore-restart"
+              checked={restart}
+              onCheckedChange={(v) => setRestart(v === true)}
+              className="mt-0.5"
+            />
+            <Label
+              htmlFor="history-restore-restart"
+              className="text-sm font-normal leading-relaxed"
+              hint={tEnv("restore.restartHint")}
+            >
+              {tEnv("restore.restart")}
+            </Label>
+          </div>
+        ) : null}
+      </ConfirmDialog>
     </Card>
   );
 }

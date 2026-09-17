@@ -88,6 +88,9 @@ export default async function ApplicationEnvironmentPage({ params }) {
             entries={historyResult.history}
             failed={historyResult.failed}
             canManage={canManage}
+            // Same signal the editor's restore dialog uses, from the same
+            // payload — so both doors to this action offer the same choice.
+            requiresRestart={envResult.environment.requires_restart}
           />
         </>
       )}
