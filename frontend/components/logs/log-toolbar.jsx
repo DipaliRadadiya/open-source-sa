@@ -13,8 +13,10 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { filterToggleClass } from "@/lib/theme/filter-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -226,11 +228,22 @@ export function LogToolbar({
               can run while tailing — grep can't (it re-reads the whole file).
               Segmented rather than a dropdown: three options, and "show me the
               errors" is the one-click reason people open this page. */}
-          <div
-            role="group"
-            aria-label={t("severityLabel")}
-            className="flex h-9 items-center overflow-hidden rounded-lg border divide-x"
-          >
+          {/*
+            Separate buttons, not one segmented strip.
+
+            As a joined strip with one lit segment this was the same picture as
+            the tab bar above it — a grey tray, one active cell — so the page
+            showed one control twice for two unrelated jobs: switching WHICH
+            log, and filtering the one you are in. Reported as "everything
+            looks equally important".
+
+            The tabs keep the segmented look, since that is what they are
+            everywhere else in the panel; this becomes what it actually is, a
+            set of filter toggles. Still three visible buttons rather than a
+            dropdown — "show me only errors" is the reason most people open
+            this page, and it should stay one click.
+          */}
+          <div role="group" aria-label={t("severityLabel")} className="flex items-center gap-1">
             {SEVERITY_FILTERS.map((key) => (
               <button
                 key={key}
@@ -239,11 +252,9 @@ export function LogToolbar({
                 disabled={disabled}
                 aria-pressed={severity === key}
                 className={cn(
-                  "flex h-full items-center px-3.5 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50",
-                  "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
-                  severity === key
-                    ? "bg-secondary font-medium text-secondary-foreground"
-                    : "text-muted-foreground hover:bg-muted",
+                  "flex h-9 items-center rounded-lg border px-3 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                  filterToggleClass(severity === key),
                 )}
               >
                 {t(`severity.${key}`)}
@@ -330,11 +341,24 @@ export function LogToolbar({
               actions — they change what you see and nothing else. This one
               destroys the thing being viewed, and putting it a pixel away from
               Reload is how a misclick becomes an unrecoverable one. */}
+          {/* Everything to the left changes what you SEE; everything from here
+              acts on the log itself. Same rule the Files toolbar uses, so one
+              grouping language covers both. */}
+          <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center" />
           {onClear ? (
             <Button
               type="button"
               variant="outline"
               size="sm"
+              /* h-9 and rounded-lg: `size="sm"` is 32px with an 8px radius,
+                 and every other control on this band is 36px with 10px. A
+                 button a notch shorter than its neighbours is most of why the
+                 row read as unrelated parts. */
+              /* Destructive weight, because the consequence is destructive.
+                 As a plain outline button it was indistinguishable from the
+                 "Last 200 lines" dropdown beside it — one changes the view,
+                 the other empties the file for good. */
+              className="h-9 rounded-lg border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={onClear}
               disabled={disabled || clearing}
             >
@@ -349,7 +373,10 @@ export function LogToolbar({
 
           {/* One segmented group, not four floating squares: these are view
               actions on the same object, so they read as a single control. */}
-          <div className="flex items-center overflow-hidden rounded-lg border divide-x">
+          {/* h-9 so the tray matches the controls beside it. Its children are
+              36px squares, which with the border made the group 38 — two pixels
+              taller than everything else on the row. */}
+          <div className="flex h-9 items-center overflow-hidden rounded-lg border divide-x">
             {/* Which end the newest line is at. A view action on the same
                 object as wrap, so it belongs in the same group rather than as
                 a seventh floating control. */}
@@ -401,7 +428,7 @@ function IconAction({ icon: Icon, label, onClick, href, active, disabled }) {
     // Square, borderless, square-cornered: the group's border and dividers do
     // the framing so the buttons read as segments of one control.
     className: cn(
-      "size-9 rounded-none",
+      "size-9 h-full rounded-none",
       active && "bg-secondary text-secondary-foreground",
     ),
     disabled,

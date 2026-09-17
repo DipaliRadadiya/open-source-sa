@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { Activity, Bot, FileQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { filterToggleClass } from "@/lib/theme/filter-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,8 +56,13 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
               key={range}
               asChild
               size="sm"
-              variant={range === days ? "secondary" : "ghost"}
-              className={cn("h-7 px-2 text-xs", range === days && "font-medium")}
+              /* Outline, never ghost: a borderless control in a card header
+                 reads as a label, which is how three clickable ranges came to
+                 look like static text. The active one is tinted rather than
+                 filled grey — same rule as the log viewer's severity filter,
+                 from one definition so the two cannot drift apart. */
+              variant="outline"
+              className={cn("h-8 px-2.5 text-xs", filterToggleClass(range === days))}
             >
               <Link
                 href={
