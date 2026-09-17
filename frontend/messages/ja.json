@@ -774,11 +774,13 @@
       "noRuntimes": "検出されませんでした",
       "copyIp": "IPアドレスをコピー",
       "servicesOk": "{count, plural, one {# 個のサービスが実行中} other {すべての # 個のサービスが実行中}}",
-      "servicesDown": "{count, plural, one {停止中: {names}} other {停止中: {names}}}"
+      "servicesDown": "{count, plural, one {停止中: {names}} other {停止中: {names}}}",
+      "noServices": "サービスが検出されませんでした",
+      "servicesDownCount": "{count, plural, other {{total} 件中 # 件のサービスが停止しています}}"
     },
     "charts": {
       "waiting": "サンプルを待機中…",
-      "noHistory": "まだサンプルがありません。サーバーは5分ごとに計測されます。",
+      "noHistory": "サンプルがいくつか収集されると推移が表示されます。サーバーは 5 分ごとに計測されます。",
       "load": {
         "title": "サーバ負荷",
         "description": "過去24時間の、サーバーコア数に対するキュー処理の量です。",
@@ -801,7 +803,8 @@
         "write": "書き込み",
         "iops": "{ops} IOPS"
       },
-      "time": "時間"
+      "time": "時間",
+      "noHistoryTitle": "24 時間分のサンプルはまだありません"
     },
     "processes": {
       "title": "プロセス",
@@ -811,7 +814,7 @@
       "cpu": "CPU %",
       "memory": "メモリ %",
       "command": "コマンド",
-      "empty": "プロセスの報告がありません。",
+      "empty": "稼働中のプロセスは報告されていません",
       "search": "コマンドまたはユーザーを検索…",
       "showing": "{total} 件中 {shown} 件を表示",
       "noMatch": "検索条件に一致するプロセスがありません。",
@@ -822,7 +825,10 @@
       "topDescription": "現在最も負荷の高いプロセスです。サーバー上のすべてのプロセスではありません。",
       "viewAll": "すべてのプロセスを表示",
       "loadFailed": "プロセス一覧を読み込めませんでした。",
-      "showLess": "折りたたむ"
+      "showLess": "折りたたむ",
+      "emptyDetail": "サーバーは負荷順のリストにプロセスを返しませんでした。",
+      "unavailable": "プロセス一覧を取得できません",
+      "unavailableDetail": "プロセスを読み取るためにこのサーバーへ接続できませんでした。"
     },
     "live": "ライブ",
     "historyLabel": "直近 24 時間",
@@ -854,7 +860,15 @@
       "failed": "プロセスを停止できませんでした。"
     },
     "diskUnknown": "不明",
-    "measuring": "計測中…"
+    "measuring": "計測中…",
+    "status": {
+      "normal": "正常",
+      "watch": "注意",
+      "high": "高い",
+      "off": "オフ",
+      "unknown": "不明"
+    },
+    "liveLabel": "現在"
   },
   "cronJobs": {
     "title": "Cronジョブ",

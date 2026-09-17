@@ -761,7 +761,7 @@
     "memory": "Memória",
     "disk": "Disco",
     "swap": "Swap",
-    "load": "Média de carga",
+    "load": "Carga média",
     "usedOf": "{used} de {total}",
     "free": "{free} livre",
     "cores": "{count} núcleos",
@@ -774,11 +774,13 @@
       "noRuntimes": "Nenhum detectado",
       "copyIp": "Copiar endereço IP",
       "servicesOk": "{count, plural, one {# serviço em execução} other {Todos os # serviços em execução}}",
-      "servicesDown": "{count, plural, one {Não está em execução: {names}} other {Não estão em execução: {names}}}"
+      "servicesDown": "{count, plural, one {Não está em execução: {names}} other {Não estão em execução: {names}}}",
+      "noServices": "Nenhum serviço detectado",
+      "servicesDownCount": "{count, plural, one {# de {total} serviços não está em execução} other {# de {total} serviços não estão em execução}}"
     },
     "charts": {
       "waiting": "Aguardando amostras…",
-      "noHistory": "Ainda sem amostras. O servidor é medido a cada cinco minutos.",
+      "noHistory": "As tendências aparecem depois de algumas amostras serem recolhidas. O servidor é medido a cada cinco minutos.",
       "load": {
         "title": "Carga do servidor",
         "description": "Trabalho na fila versus a quantidade de núcleos deste servidor, nas últimas 24 horas.",
@@ -801,7 +803,8 @@
         "write": "Escrita",
         "iops": "{ops} IOPS"
       },
-      "time": "Hora"
+      "time": "Hora",
+      "noHistoryTitle": "Ainda sem amostras de 24 h"
     },
     "processes": {
       "title": "Processos",
@@ -811,7 +814,7 @@
       "cpu": "CPU %",
       "memory": "Memória %",
       "command": "Comando",
-      "empty": "Nenhum processo reportado.",
+      "empty": "Nenhum processo ativo reportado",
       "search": "Buscar comando ou usuário…",
       "showing": "Exibindo {shown} de {total}",
       "noMatch": "Nenhum processo corresponde à sua busca.",
@@ -822,7 +825,10 @@
       "topDescription": "Os mais ativos agora — nem todos os processos do servidor.",
       "viewAll": "Ver todos os processos",
       "loadFailed": "Não foi possível ler a lista de processos.",
-      "showLess": "Mostrar menos"
+      "showLess": "Mostrar menos",
+      "emptyDetail": "O servidor não devolveu processos na sua lista ordenada por utilização.",
+      "unavailable": "Lista de processos indisponível",
+      "unavailableDetail": "O painel não conseguiu contactar este servidor para ler os processos."
     },
     "live": "Ao vivo",
     "historyLabel": "Últimas 24 horas",
@@ -854,7 +860,15 @@
       "failed": "Não foi possível parar o processo."
     },
     "diskUnknown": "Não reportado",
-    "measuring": "Medindo…"
+    "measuring": "Medindo…",
+    "status": {
+      "normal": "Normal",
+      "watch": "Vigiar",
+      "high": "Alto",
+      "off": "Desligado",
+      "unknown": "Desconhecido"
+    },
+    "liveLabel": "Agora"
   },
   "cronJobs": {
     "title": "Tarefas cron",

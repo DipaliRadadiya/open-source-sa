@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslations, useFormatter } from "next-intl";
-import { SearchX, CircleAlert } from "lucide-react";
+import { SearchX, CircleAlert, ListX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -96,9 +96,13 @@ function CommandCell({ row }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
+        {/* Foreground, not muted. The command is the row's identity — what the
+            other five columns are describing — and it was the only cell in the
+            smallest size AND the quietest colour, so the row led with its PID.
+            Stays text-xs: mono needs the width here more than the weight. */}
         <span
           tabIndex={0}
-          className="block w-full truncate font-mono text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="block w-full truncate font-mono text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           {row.original.command}
         </span>
@@ -190,20 +194,54 @@ export function ProcessTable({
       id: "actions",
       header: () => <span className="sr-only">{t("processes.actions")}</span>,
       enableSorting: false,
-      meta: { className: "w-12 text-right" },
+      // 64px = the 32px button plus the cell's own px-4 either side. w-12 was
+      // narrower than its contents, so the browser overrode it anyway and the
+      // declared width told the reader nothing true.
+      meta: { className: "w-16 text-right" },
       cell: ActionsCell,
     },
   ];
 
+  /*
+   * Two states, two meanings, two sentences.
+   *
+   * `failed` is the request: non-2xx, or a body the schema rejected. An empty
+   * `data` is a 200 whose list had nothing in it. They were being told apart
+   * here already, but both ended up describing the other's cause — the empty
+   * branch claimed the list could not be read, which is the failed branch's
+   * story. Whichever one a reader hits, it now describes only itself.
+   */
   if (failed) {
-    return <EmptyState icon={CircleAlert} title={t("loadFailed")} />;
+    return (
+      <EmptyState
+        compact
+        icon={CircleAlert}
+        title={t("processes.unavailable")}
+        description={t("processes.unavailableDetail")}
+      />
+    );
   }
 
   if (rows.length === 0) {
+    /*
+     * Compact: this sits inside a card that already carries a title and a
+     * description, so the page-sized empty state was a second empty box inside
+     * the first one.
+     *
+     * "Busy" is fair here even though there is no threshold: the endpoint only
+     * ever returns the top processes by CPU, so an empty response is the server
+     * reporting none of them — not the panel failing to ask. The detail says
+     * what would change it without promising a mechanism that does not exist.
+     */
     return query ? (
-      <EmptyState icon={SearchX} title={t("processes.noMatch")} />
+      <EmptyState compact icon={SearchX} title={t("processes.noMatch")} />
     ) : (
-      <EmptyState icon={SearchX} title={t("processes.empty")} />
+      <EmptyState
+        compact
+        icon={ListX}
+        title={t("processes.empty")}
+        description={t("processes.emptyDetail")}
+      />
     );
   }
 

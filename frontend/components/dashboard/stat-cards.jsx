@@ -1,12 +1,26 @@
 import { useTranslations, useFormatter } from "next-intl";
 import { Cpu, MemoryStick, HardDrive, Activity, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { StatCard, pct } from "@/components/ui/stat-card";
+import { pct, usageStatus } from "@/lib/metrics/usage-level";
+import { StatCard } from "@/components/ui/stat-card";
 
 export function StatCards({ metrics, stale = false, ratesReady = true }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
   const loading = !metrics;
+
+  /*
+   * The level word, from the same thresholds that colour the bar.
+   *
+   * `fallback` is for the two cards that have a real state but no percentage:
+   * a machine with no swap is Off, and a disk the collector could not read is
+   * Unknown. Everything else with no percentage gets no word at all rather
+   * than a guess.
+   */
+  const statusFor = (percent, fallback = null) => {
+    const key = usageStatus(percent) ?? fallback;
+    return key ? { key, label: t(`status.${key}`) } : null;
+  };
 
   // Locale-aware numbers: hi/es use different grouping and decimal marks.
   const percentText = (value, decimals = 0) =>
@@ -29,6 +43,12 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
   const disk = metrics?.disk;
   const load = metrics?.load;
   const cores = Number(cpu?.cores) || 0;
+  // Load is only meaningful against core count: >= cores means saturated. Held
+  // in one place so the bar and the level word cannot be computed differently.
+  const loadPercent =
+    cores > 0 && Number.isFinite(Number(load?.[15]))
+      ? (Number(load[15]) / cores) * 100
+      : null;
 
   return (
     // 5 cards: 1 → 2 → 5. A 3-col step would strand a single card on its own row.
@@ -58,6 +78,9 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
          */
         value={ratesReady ? percentText(cpu?.percent, 1) : t("measuring")}
         percent={ratesReady ? cpu?.percent : null}
+        // No word until the second sample lands: the card says "Measuring…"
+        // and a level beside it would be describing a number we do not have.
+        status={ratesReady ? statusFor(cpu?.percent) : null}
         hint={cpu?.cores ? t("cores", { count: cpu.cores }) : ""}
         loading={loading}
       />
@@ -66,6 +89,7 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         label={t("memory")}
         value={percentText(memory?.percent)}
         percent={memory?.percent}
+        status={statusFor(memory?.percent)}
         hint={
           memory?.total_human
             ? t("usedOf", { used: memory.used_human, total: memory.total_human })
@@ -82,6 +106,9 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
           Number(swap?.total) > 0 ? percentText(swap?.percent) : "—"
         }
         percent={Number(swap?.total) > 0 ? swap?.percent : null}
+        // "Off" is a fact about this machine, not a missing reading — plenty of
+        // servers run without swap on purpose.
+        status={Number(swap?.total) > 0 ? statusFor(swap?.percent) : statusFor(null, "off")}
         hint={
           Number(swap?.total) > 0 && swap?.used_human && swap?.total_human
             ? t("usedOf", { used: swap.used_human, total: swap.total_human })
@@ -104,6 +131,9 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         label={t("disk")}
         value={Number(disk?.total) > 0 ? percentText(disk?.percent) : "—"}
         percent={Number(disk?.total) > 0 ? disk?.percent : null}
+        // Unknown, NOT "Off": a disk that reports 0 total has not been measured,
+        // and there is no such thing as a server without one.
+        status={Number(disk?.total) > 0 ? statusFor(disk?.percent) : statusFor(null, "unknown")}
         hint={
           Number(disk?.total) > 0 && disk?.total_human
             ? t("usedOf", { used: disk.used_human, total: disk.total_human })
@@ -123,12 +153,8 @@ export function StatCards({ metrics, stale = false, ratesReady = true }) {
         // The headline deliberately favours the stable 15-minute average over
         // the noisier 1-minute figure.
         value={decimal(load?.[15])}
-        // Load is only meaningful against core count: >= cores means saturated.
-        percent={
-          cores > 0 && Number.isFinite(Number(load?.[15]))
-            ? (Number(load[15]) / cores) * 100
-            : null
-        }
+        percent={loadPercent}
+        status={statusFor(loadPercent)}
         hint={cores ? t("ofCores", { count: cores }) : ""}
         sub={load ? `${t("loadHint")}: ${decimal(load[5])}` : ""}
         hasSub

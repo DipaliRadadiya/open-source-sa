@@ -774,11 +774,13 @@
       "noRuntimes": "Ninguno detectado",
       "copyIp": "Copiar la dirección IP",
       "servicesOk": "{count, plural, one {# servicio en ejecución} other {Los # servicios están en ejecución}}",
-      "servicesDown": "{count, plural, one {No está en ejecución: {names}} other {No están en ejecución: {names}}}"
+      "servicesDown": "{count, plural, one {No está en ejecución: {names}} other {No están en ejecución: {names}}}",
+      "noServices": "No se detectaron servicios",
+      "servicesDownCount": "{count, plural, one {# de {total} servicios no está en ejecución} other {# de {total} servicios no están en ejecución}}"
     },
     "charts": {
       "waiting": "Esperando muestras…",
-      "noHistory": "Aún no hay muestras. El servidor se mide cada cinco minutos.",
+      "noHistory": "Las tendencias aparecerán cuando se hayan recopilado algunas muestras. El servidor se mide cada cinco minutos.",
       "load": {
         "title": "Carga del servidor",
         "description": "Trabajo en cola frente a los núcleos que tiene este servidor, durante las últimas 24 horas.",
@@ -801,7 +803,8 @@
         "write": "Escritura",
         "iops": "{ops} IOPS"
       },
-      "time": "Hora"
+      "time": "Hora",
+      "noHistoryTitle": "Aún no hay muestras de 24 h"
     },
     "processes": {
       "title": "Procesos",
@@ -811,7 +814,7 @@
       "cpu": "CPU %",
       "memory": "Memoria %",
       "command": "Comando",
-      "empty": "No se han reportado procesos.",
+      "empty": "No se informaron procesos activos",
       "search": "Buscar comando o usuario…",
       "showing": "Mostrando {shown} de estos {total}",
       "noMatch": "Ningún proceso coincide con tu búsqueda.",
@@ -822,7 +825,10 @@
       "topDescription": "Los más ocupados ahora mismo, no todos los procesos del servidor.",
       "viewAll": "Ver todos los procesos",
       "loadFailed": "No se pudo leer la lista de procesos.",
-      "showLess": "Mostrar menos"
+      "showLess": "Mostrar menos",
+      "emptyDetail": "El servidor no devolvió ningún proceso en su lista ordenada por uso.",
+      "unavailable": "Lista de procesos no disponible",
+      "unavailableDetail": "El panel no pudo conectarse a este servidor para leer sus procesos."
     },
     "live": "En vivo",
     "historyLabel": "Últimas 24 horas",
@@ -854,7 +860,15 @@
       "failed": "No se pudo detener el proceso."
     },
     "diskUnknown": "No informado",
-    "measuring": "Midiendo…"
+    "measuring": "Midiendo…",
+    "status": {
+      "normal": "Normal",
+      "watch": "Vigilar",
+      "high": "Alto",
+      "off": "Desactivada",
+      "unknown": "Desconocido"
+    },
+    "liveLabel": "Ahora mismo"
   },
   "cronJobs": {
     "title": "Tareas cron",

@@ -86,7 +86,21 @@ export function KillProcessButton({ process, canManage }) {
               // colour, everywhere in the product.
               className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
               disabled={!canManage}
-              disabledReason={canManage ? undefined : t("kill.noPermission")}
+              /*
+               * No `disabledReason` here, deliberately.
+               *
+               * Button renders its OWN ReasonTooltip whenever one is passed,
+               * and it only stands down for a parent that supplies the reason
+               * through context. The wrapper above is a hand-rolled Radix
+               * Tooltip, which sets no context — so without permission this
+               * control had two tooltips saying the same sentence, and two tab
+               * stops (both wrapper spans take tabIndex={0}) for one dead
+               * button. On a touch screen the inner one is a Popover, nested
+               * inside a TooltipTrigger.
+               *
+               * The tooltip above already switches its own text on canManage,
+               * so it covers both states on its own.
+               */
               onClick={() => {
                 setOfferForce(false);
                 setConfirming(true);

@@ -774,11 +774,13 @@
       "noRuntimes": "Keine erkannt",
       "copyIp": "IP-Adresse kopieren",
       "servicesOk": "{count, plural, one {# Dienst läuft} other {Alle # Dienste laufen}}",
-      "servicesDown": "{count, plural, one {Nicht aktiv: {names}} other {Nicht aktiv: {names}}}"
+      "servicesDown": "{count, plural, one {Nicht aktiv: {names}} other {Nicht aktiv: {names}}}",
+      "noServices": "Keine Dienste gefunden",
+      "servicesDownCount": "{count, plural, one {# von {total} Diensten läuft nicht} other {# von {total} Diensten laufen nicht}}"
     },
     "charts": {
       "waiting": "Warte auf Messwerte…",
-      "noHistory": "Noch keine Messwerte. Der Server wird alle fünf Minuten gemessen.",
+      "noHistory": "Verläufe erscheinen, sobald einige Messwerte erfasst wurden. Der Server wird alle fünf Minuten gemessen.",
       "load": {
         "title": "Serverlast",
         "description": "Wartende Auslastung im Verhältnis zur Anzahl der Kerne dieses Servers, über die letzten 24 Stunden.",
@@ -801,7 +803,8 @@
         "write": "Schreiben",
         "iops": "{ops} IOPS"
       },
-      "time": "Zeit"
+      "time": "Zeit",
+      "noHistoryTitle": "Noch keine 24-Stunden-Messwerte"
     },
     "processes": {
       "title": "Prozesse",
@@ -811,7 +814,7 @@
       "cpu": "CPU %",
       "memory": "Speicher %",
       "command": "Befehl",
-      "empty": "Keine Prozesse gemeldet.",
+      "empty": "Keine aktiven Prozesse gemeldet",
       "search": "Befehl oder Benutzer suchen…",
       "showing": "Zeigt {shown} von diesen {total}",
       "noMatch": "Keine Prozesse entsprechen Ihrer Suche.",
@@ -822,7 +825,10 @@
       "topDescription": "Die derzeit aktivsten — nicht alle Prozesse auf dem Server.",
       "viewAll": "Alle Prozesse anzeigen",
       "loadFailed": "Die Prozessliste konnte nicht gelesen werden.",
-      "showLess": "Weniger anzeigen"
+      "showLess": "Weniger anzeigen",
+      "emptyDetail": "Der Server hat in seiner nach Auslastung sortierten Liste keine Prozesse zurückgegeben.",
+      "unavailable": "Prozessliste nicht verfügbar",
+      "unavailableDetail": "Das Panel konnte diesen Server nicht erreichen, um seine Prozesse zu lesen."
     },
     "live": "Live",
     "historyLabel": "Letzte 24 Stunden",
@@ -854,7 +860,15 @@
       "failed": "Der Prozess konnte nicht gestoppt werden."
     },
     "diskUnknown": "Nicht gemeldet",
-    "measuring": "Wird gemessen…"
+    "measuring": "Wird gemessen…",
+    "status": {
+      "normal": "Normal",
+      "watch": "Beobachten",
+      "high": "Hoch",
+      "off": "Aus",
+      "unknown": "Unbekannt"
+    },
+    "liveLabel": "Aktuell"
   },
   "cronJobs": {
     "title": "Cronjobs",

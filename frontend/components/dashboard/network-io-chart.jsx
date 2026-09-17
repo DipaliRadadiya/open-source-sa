@@ -2,8 +2,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { ArrowDownUp } from "lucide-react";
 import { formatRate } from "@/lib/format/bytes";
 import { clockFormatter } from "@/lib/format/time";
-import { Badge } from "@/components/ui/badge";
-import { LiveChartCard } from "@/components/dashboard/live-chart-card";
+import { ChartPill, LiveChartCard } from "@/components/dashboard/live-chart-card";
 import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
   axisMax,
@@ -56,18 +55,18 @@ export function NetworkIoChart({ series, metrics, timeZone, stale }) {
       stale={stale}
       badges={
         <>
-          <Badge
-            variant="outline"
-            className="gap-1 border-chart-2/30 bg-chart-2/10 font-medium tabular-nums text-chart-2"
-          >
-            ↓ {rate(metrics?.network?.in)}
-          </Badge>
-          <Badge
-            variant="outline"
-            className="gap-1 border-chart-1/30 bg-chart-1/10 font-medium tabular-nums text-chart-1"
-          >
-            ↑ {rate(metrics?.network?.out)}
-          </Badge>
+          {/* Dots match the line tokens above, so the pill and its line are the
+              same colour without the value having to be. */}
+          <ChartPill
+            dotClassName="bg-chart-2"
+            label={t("charts.network.in")}
+            value={rate(metrics?.network?.in)}
+          />
+          <ChartPill
+            dotClassName="bg-chart-1"
+            label={t("charts.network.out")}
+            value={rate(metrics?.network?.out)}
+          />
         </>
       }
     >

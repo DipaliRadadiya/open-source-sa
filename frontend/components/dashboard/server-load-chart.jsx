@@ -84,6 +84,8 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
       title={t("charts.load.title")}
       description={t("charts.load.description")}
       ready={history.length >= 2}
+      compactEmpty
+      emptyTitle={t("charts.noHistoryTitle")}
       emptyMessage={t("charts.noHistory")}
       // The newest COLLECTED sample, not the live poll: this card is the last
       // day, and a header number from a different clock than the line under it

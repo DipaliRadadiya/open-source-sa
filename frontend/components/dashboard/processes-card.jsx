@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp, ListTree } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,11 +44,14 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
   const [query, setQuery] = useState("");
 
   return (
-    <Card>
+    // Same chrome as every other card on this page.
+    <Card className={cn("[--card-spacing:--spacing(5)]", PANEL_CARD)}>
       <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
-            <ListTree className="size-4 text-primary" />
+          <CardTitle as="h2" className="flex items-center gap-2.5 text-lg font-semibold">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
+              <ListTree className="size-4" />
+            </span>
             {t("processes.title")}
           </CardTitle>
           <CardDescription>{t("processes.topDescription")}</CardDescription>
@@ -85,18 +90,19 @@ function ProcessesCardInner({ data, failed, total, canManage }) {
       </CardHeader>
 
       <CardContent>
-        {failed ? (
-          <p className="text-sm text-muted-foreground">{t("processes.loadFailed")}</p>
-        ) : (
-          <ProcessTable
-            data={data}
-            query={query}
-            failed={failed}
-            total={total}
-            canManage={canManage}
-            limit={open ? null : PREVIEW_COUNT}
-          />
-        )}
+        {/* The failed case used to short-circuit into a bare grey sentence
+            here, which meant ProcessTable's own failed branch was unreachable
+            and the two states looked nothing alike — one a framed empty state,
+            the other a line of text. One path now, and the table decides which
+            of the two it is. */}
+        <ProcessTable
+          data={data}
+          query={query}
+          failed={failed}
+          total={total}
+          canManage={canManage}
+          limit={open ? null : PREVIEW_COUNT}
+        />
       </CardContent>
     </Card>
   );

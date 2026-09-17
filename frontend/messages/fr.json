@@ -761,7 +761,7 @@
     "memory": "Mémoire",
     "disk": "Disque",
     "swap": "Swap",
-    "load": "Charge moyenne",
+    "load": "Charge moy.",
     "usedOf": "{used} sur {total}",
     "free": "{free} libre",
     "cores": "{count} cœurs",
@@ -774,11 +774,13 @@
       "noRuntimes": "Aucun détecté",
       "copyIp": "Copier l'adresse IP",
       "servicesOk": "{count, plural, one {# service en cours} other {# services en cours}}",
-      "servicesDown": "{count, plural, one {Arrêté : {names}} other {Arrêtés : {names}}}"
+      "servicesDown": "{count, plural, one {Arrêté : {names}} other {Arrêtés : {names}}}",
+      "noServices": "Aucun service détecté",
+      "servicesDownCount": "{count, plural, one {# service sur {total} ne fonctionne pas} other {# services sur {total} ne fonctionnent pas}}"
     },
     "charts": {
       "waiting": "En attente d'échantillons…",
-      "noHistory": "Aucun échantillon pour l'instant. Le serveur est mesuré toutes les cinq minutes.",
+      "noHistory": "Les tendances apparaîtront une fois quelques relevés collectés. Le serveur est mesuré toutes les cinq minutes.",
       "load": {
         "title": "Charge du serveur",
         "description": "Charge en file d'attente par rapport au nombre de cœurs, sur les dernières 24 heures.",
@@ -801,7 +803,8 @@
         "write": "Écriture",
         "iops": "{ops} IOPS"
       },
-      "time": "Heure"
+      "time": "Heure",
+      "noHistoryTitle": "Aucun relevé sur 24 h pour l’instant"
     },
     "processes": {
       "title": "Processus",
@@ -811,7 +814,7 @@
       "cpu": "% CPU",
       "memory": "% mémoire",
       "command": "Commande",
-      "empty": "Aucun processus signalé.",
+      "empty": "Aucun processus actif signalé",
       "search": "Rechercher une commande ou un utilisateur…",
       "showing": "Affichage de {shown} sur ces {total}",
       "noMatch": "Aucun processus ne correspond à votre recherche.",
@@ -822,7 +825,10 @@
       "topDescription": "Les plus actifs en ce moment — pas tous les processus du serveur.",
       "viewAll": "Voir tous les processus",
       "loadFailed": "Impossible de lire la liste des processus.",
-      "showLess": "Afficher moins"
+      "showLess": "Afficher moins",
+      "emptyDetail": "Le serveur n’a renvoyé aucun processus dans sa liste triée par charge.",
+      "unavailable": "Liste des processus indisponible",
+      "unavailableDetail": "Le panneau n’a pas pu joindre ce serveur pour lire ses processus."
     },
     "live": "En direct",
     "historyLabel": "Dernières 24 heures",
@@ -854,7 +860,15 @@
       "failed": "Le processus n'a pas pu être arrêté."
     },
     "diskUnknown": "Non signalé",
-    "measuring": "Mesure…"
+    "measuring": "Mesure…",
+    "status": {
+      "normal": "Normal",
+      "watch": "À surveiller",
+      "high": "Élevé",
+      "off": "Désactivé",
+      "unknown": "Inconnu"
+    },
+    "liveLabel": "Maintenant"
   },
   "cronJobs": {
     "title": "Tâches cron",

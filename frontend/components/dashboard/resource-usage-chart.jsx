@@ -80,6 +80,8 @@ export function ResourceUsageChart({ history = [], timeZone }) {
       title={t("charts.usage.title")}
       description={t("charts.usage.description")}
       ready={history.length >= 2}
+      compactEmpty
+      emptyTitle={t("charts.noHistoryTitle")}
       emptyMessage={t("charts.noHistory")}
       // Read off the newest collected sample so the header and the line agree.
       summary={

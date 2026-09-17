@@ -761,7 +761,7 @@
     "memory": "Memory",
     "disk": "Disk",
     "swap": "Swap",
-    "load": "Load average",
+    "load": "Load avg",
     "usedOf": "{used} of {total}",
     "free": "{free} free",
     "cores": "{count} cores",
@@ -774,11 +774,13 @@
       "noRuntimes": "None detected",
       "copyIp": "Copy IP address",
       "servicesOk": "{count, plural, one {# service running} other {All # services running}}",
-      "servicesDown": "{count, plural, one {Not running: {names}} other {Not running: {names}}}"
+      "servicesDown": "{count, plural, one {Not running: {names}} other {Not running: {names}}}",
+      "noServices": "No services detected",
+      "servicesDownCount": "{count, plural, one {# of {total} services is not running} other {# of {total} services are not running}}"
     },
     "charts": {
       "waiting": "Waiting for samples…",
-      "noHistory": "No samples yet. The server is measured every five minutes.",
+      "noHistory": "Trends appear once a few samples have been collected. The server is measured every five minutes.",
       "load": {
         "title": "Server load",
         "description": "Queued work against how many cores this server has, over the last 24 hours.",
@@ -801,7 +803,8 @@
         "write": "Write",
         "iops": "{ops} IOPS"
       },
-      "time": "Time"
+      "time": "Time",
+      "noHistoryTitle": "No 24h samples yet"
     },
     "processes": {
       "title": "Processes",
@@ -811,7 +814,7 @@
       "cpu": "CPU %",
       "memory": "Memory %",
       "command": "Command",
-      "empty": "No processes reported.",
+      "empty": "No busy processes reported",
       "search": "Search command or user…",
       "showing": "Showing {shown} of these {total}",
       "noMatch": "No processes match your search.",
@@ -822,7 +825,10 @@
       "topDescription": "The busiest right now — not every process on the server.",
       "viewAll": "View all processes",
       "loadFailed": "Could not read the process list.",
-      "showLess": "Show less"
+      "showLess": "Show less",
+      "emptyDetail": "The server returned no processes in its busiest-first list.",
+      "unavailable": "Process list unavailable",
+      "unavailableDetail": "The panel could not reach this server to read its processes."
     },
     "live": "Live",
     "historyLabel": "Last 24 hours",
@@ -854,7 +860,15 @@
       "failed": "The process could not be stopped."
     },
     "diskUnknown": "Not reported",
-    "measuring": "Measuring…"
+    "measuring": "Measuring…",
+    "status": {
+      "normal": "Normal",
+      "watch": "Watch",
+      "high": "High",
+      "off": "Off",
+      "unknown": "Unknown"
+    },
+    "liveLabel": "Right now"
   },
   "cronJobs": {
     "title": "Cron jobs",

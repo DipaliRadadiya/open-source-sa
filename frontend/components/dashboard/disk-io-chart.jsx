@@ -2,8 +2,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { HardDrive } from "lucide-react";
 import { formatRate } from "@/lib/format/bytes";
 import { clockFormatter } from "@/lib/format/time";
-import { Badge } from "@/components/ui/badge";
-import { LiveChartCard } from "@/components/dashboard/live-chart-card";
+import { ChartPill, LiveChartCard } from "@/components/dashboard/live-chart-card";
 import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
   axisMax,
@@ -80,24 +79,21 @@ export function DiskIoChart({ series: chartSeries, metrics, timeZone, stale }) {
       stale={stale}
       badges={
         <>
-          <Badge
-            variant="outline"
-            className="gap-1 border-chart-2/30 bg-chart-2/10 font-medium tabular-nums text-chart-2"
-          >
-            ↓ {rate(metrics?.disk_io?.read)}
-            <span className="text-[10px] opacity-80">
-              {t("charts.disk.iops", { ops: ops(metrics?.disk_io?.read_ops) })}
-            </span>
-          </Badge>
-          <Badge
-            variant="outline"
-            className="gap-1 border-chart-1/30 bg-chart-1/10 font-medium tabular-nums text-chart-1"
-          >
-            ↑ {rate(metrics?.disk_io?.write)}
-            <span className="text-[10px] opacity-80">
-              {t("charts.disk.iops", { ops: ops(metrics?.disk_io?.write_ops) })}
-            </span>
-          </Badge>
+          {/* The op count rides along as `note` — same slot, same size as the
+              rest of the pill. It was text-[10px] at 80% opacity, which is an
+              off-scale size dimmed again on top of an already-tinted colour. */}
+          <ChartPill
+            dotClassName="bg-chart-2"
+            label={t("charts.disk.read")}
+            value={rate(metrics?.disk_io?.read)}
+            note={t("charts.disk.iops", { ops: ops(metrics?.disk_io?.read_ops) })}
+          />
+          <ChartPill
+            dotClassName="bg-chart-1"
+            label={t("charts.disk.write")}
+            value={rate(metrics?.disk_io?.write)}
+            note={t("charts.disk.iops", { ops: ops(metrics?.disk_io?.write_ops) })}
+          />
         </>
       }
     >

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations, useFormatter } from "next-intl";
-import { CircleAlert, History } from "lucide-react";
+import { CircleAlert, History, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clockFormatter } from "@/lib/format/time";
 import { useLiveMetrics } from "@/components/dashboard/use-live-metrics";
@@ -101,6 +101,28 @@ function LiveStatus({ failed, updatedAt, timeZone }) {
   );
 }
 
+/**
+ * Names one of the two clocks on this page.
+ *
+ * "Last 24 hours" used to be a lone 12px muted line with a `pt-2` on it, which
+ * labelled the block below but left the block ABOVE it unnamed — so the page
+ * read as some charts, then a section. Both groups get the same heading now;
+ * the rule under it is what makes them read as regions rather than as captions.
+ *
+ * h2 under the page h1, which is why the cards inside dropped to h3.
+ */
+function SectionHeading({ icon: Icon, title, children }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b pb-2">
+      <h2 className="flex items-center gap-2 text-sm font-semibold">
+        <Icon className="size-4 text-muted-foreground" />
+        {title}
+      </h2>
+      {children}
+    </div>
+  );
+}
+
 export function LiveMetricsSection({ timeZone, history = [] }) {
   const t = useTranslations("serverDashboard");
   const { metrics, series, failed, updatedAt, ratesReady } = useLiveMetrics();
@@ -109,34 +131,41 @@ export function LiveMetricsSection({ timeZone, history = [] }) {
   const stale = failed && Boolean(metrics);
 
   return (
-    <div className="space-y-4">
+    // space-y-6 matches the page's own rhythm, so a section break here is worth
+    // exactly as much as the break between this and the Processes card.
+    <div className="space-y-6">
       {/* Grouped by clock, not by subject. Everything under the Live badge is
           the 3s poll; everything under the 24h label is the five-minute
           collector. Mixing the two under one "Live" badge is exactly the
           question this page kept being asked. */}
       <ConnectionAnnouncement failed={failed} />
-      <LiveStatus failed={failed} updatedAt={updatedAt} timeZone={timeZone} />
-      <StatCards metrics={metrics} stale={stale} ratesReady={ratesReady} />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <NetworkIoChart
-          series={series}
-          metrics={metrics}
-          timeZone={timeZone}
-          stale={stale}
-        />
-        <DiskIoChart series={series} metrics={metrics} timeZone={timeZone} stale={stale} />
-      </div>
 
-      <div className="flex items-center gap-2 pt-2">
-        <History className="size-3.5 text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground">
-          {t("historyLabel")}
-        </span>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ServerLoadChart history={history} metrics={metrics} timeZone={timeZone} />
-        <ResourceUsageChart history={history} timeZone={timeZone} />
-      </div>
+      <section className="space-y-4">
+        {/* The Live pill sits IN the heading row rather than above it — it is
+            this section's status, and as a floating row it belonged to nothing
+            in particular. */}
+        <SectionHeading icon={Radio} title={t("liveLabel")}>
+          <LiveStatus failed={failed} updatedAt={updatedAt} timeZone={timeZone} />
+        </SectionHeading>
+        <StatCards metrics={metrics} stale={stale} ratesReady={ratesReady} />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <NetworkIoChart
+            series={series}
+            metrics={metrics}
+            timeZone={timeZone}
+            stale={stale}
+          />
+          <DiskIoChart series={series} metrics={metrics} timeZone={timeZone} stale={stale} />
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <SectionHeading icon={History} title={t("historyLabel")} />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ServerLoadChart history={history} metrics={metrics} timeZone={timeZone} />
+          <ResourceUsageChart history={history} timeZone={timeZone} />
+        </div>
+      </section>
     </div>
   );
 }
