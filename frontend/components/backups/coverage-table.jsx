@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { scheduleTimeLabel } from "@/lib/backups/schedule-time";
 import { History, MoreHorizontal, PlayCircle, Settings2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -103,12 +104,32 @@ function TypeCell({ row }) {
 
 function ScheduleCell({ row }) {
   const t = useTranslations("backups.coverage");
+  const format = useFormatter();
   const { target } = row.original;
   if (!target) return <Placeholder>{t("placeholders.schedule")}</Placeholder>;
+
+  /*
+   * The hour, which this column has never shown.
+   *
+   * It was written on 2026-08-07, a day before `schedule_time` reached the
+   * frontend, so "Daily" was all there was to say — and nothing came back to
+   * it once the field arrived. This is the one screen that lists every site's
+   * schedule side by side, and answering "when does this run" meant opening
+   * each site in turn.
+   *
+   * Its own line rather than joined to the frequency: measured, the column is
+   * 96px at 1024–1280 and "Daily · 2:00 AM" needs 99. A manual target has no
+   * hour to name and gets no line.
+   */
+  const time =
+    target.frequency !== "manual" && target.schedule_time
+      ? scheduleTimeLabel(target.schedule_time, format)
+      : null;
 
   return (
     <div className="min-w-0">
       <p className="truncate text-sm">{target.frequency_title ?? target.frequency}</p>
+      {time ? <p className="truncate text-xs tabular-nums">{time}</p> : null}
       <p className="truncate text-xs tabular-nums text-muted-foreground">
         {t("keeps", { count: target.retention_count })}
       </p>

@@ -5429,7 +5429,8 @@
       },
       "runsShortly": "Executa em breve",
       "notSetUpLine": "Não configurado — nada deste site está sendo copiado.",
-      "needsDestination": "Nenhum destino de armazenamento configurado ainda. Adicione um em Integrações → Armazenamento primeiro."
+      "needsDestination": "Nenhum destino de armazenamento configurado ainda. Adicione um em Integrações → Armazenamento primeiro.",
+      "timesShownIn": "Horários exibidos em {timezone}"
     },
     "setup": {
       "title": "Configurar backups",

@@ -5429,7 +5429,8 @@
       },
       "runsShortly": "जल्द ही चलेगा",
       "notSetUpLine": "सेट अप नहीं है — इस साइट का कुछ भी बैकअप नहीं हो रहा।",
-      "needsDestination": "अभी कोई स्टोरेज डेस्टिनेशन सेट नहीं है। पहले Integrations → Storage में एक जोड़ें।"
+      "needsDestination": "अभी कोई स्टोरेज डेस्टिनेशन सेट नहीं है। पहले Integrations → Storage में एक जोड़ें।",
+      "timesShownIn": "समय {timezone} में दिखाया गया है"
     },
     "setup": {
       "title": "बैकअप सेट करें",

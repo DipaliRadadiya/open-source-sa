@@ -5429,7 +5429,8 @@
       },
       "runsShortly": "まもなく実行",
       "notSetUpLine": "未設定 — このサイトのバックアップはまだ行われていません。",
-      "needsDestination": "ストレージ先がまだ設定されていません。まず連携 → ストレージから追加してください。"
+      "needsDestination": "ストレージ先がまだ設定されていません。まず連携 → ストレージから追加してください。",
+      "timesShownIn": "表示時刻は {timezone} です"
     },
     "setup": {
       "title": "バックアップを設定",

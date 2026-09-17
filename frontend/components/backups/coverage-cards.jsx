@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { scheduleTimeLabel } from "@/lib/backups/schedule-time";
 import { History, PlayCircle, Settings2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,22 @@ import { COVERAGE_STATE } from "@/components/backups/status-meta";
 export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
+  const format = useFormatter();
+
+  // "Daily · 2:00 AM · keeps 7", dropping the hour a manual target does not
+  // have rather than leaving a stray separator behind it. The zone is named
+  // on the site's own backups page; repeating it on every card would bury the
+  // three facts this row exists to show.
+  const scheduleFact = (target) =>
+    [
+      target.frequency_title ?? target.frequency,
+      target.frequency !== "manual" && target.schedule_time
+        ? scheduleTimeLabel(target.schedule_time, format)
+        : null,
+      t("keeps", { count: target.retention_count }),
+    ]
+      .filter(Boolean)
+      .join(" · ");
 
   if (rows.length === 0) {
     return (
@@ -75,11 +92,10 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
               <CardFact
                 label={t("columns.schedule")}
                 className={cn(!target && "text-muted-foreground/70")}
-                value={
-                  target
-                    ? `${target.frequency_title ?? target.frequency} · ${t("keeps", { count: target.retention_count })}`
-                    : t("placeholders.schedule")
-                }
+                /* The hour too, same as the table — a fact row has the width
+                   for it, and the phone layout falling behind the desktop one
+                   is how this column went a month without it. */
+                value={target ? scheduleFact(target) : t("placeholders.schedule")}
               />
               <CardFact
                 label={t("columns.storage")}

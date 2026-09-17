@@ -5429,7 +5429,8 @@
       },
       "runsShortly": "Se ejecuta en breve",
       "notSetUpLine": "Sin configurar: no se respalda nada de este sitio.",
-      "needsDestination": "Aún no hay ningún destino de almacenamiento. Añade uno en Integraciones → Almacenamiento primero."
+      "needsDestination": "Aún no hay ningún destino de almacenamiento. Añade uno en Integraciones → Almacenamiento primero.",
+      "timesShownIn": "Horas mostradas en {timezone}"
     },
     "setup": {
       "title": "Configurar copias de seguridad",

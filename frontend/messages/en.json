@@ -5429,7 +5429,8 @@
       },
       "runsShortly": "Runs shortly",
       "notSetUpLine": "Not set up — nothing on this site is being backed up.",
-      "needsDestination": "No storage destination is set up yet. Add one under Integrations → Storage first."
+      "needsDestination": "No storage destination is set up yet. Add one under Integrations → Storage first.",
+      "timesShownIn": "Times shown in {timezone}"
     },
     "setup": {
       "title": "Set up backups",

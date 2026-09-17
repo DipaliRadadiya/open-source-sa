@@ -5429,7 +5429,8 @@
       },
       "runsShortly": "S'exécute bientôt",
       "notSetUpLine": "Non configurée — rien n'est sauvegardé sur ce site.",
-      "needsDestination": "Aucune destination de stockage n'est encore configurée. Ajoutez-en une via Intégrations → Stockage."
+      "needsDestination": "Aucune destination de stockage n'est encore configurée. Ajoutez-en une via Intégrations → Stockage.",
+      "timesShownIn": "Heures affichées en {timezone}"
     },
     "setup": {
       "title": "Configurer les sauvegardes",

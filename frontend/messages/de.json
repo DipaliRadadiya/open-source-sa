@@ -5429,7 +5429,8 @@
       },
       "runsShortly": "Läuft in Kürze",
       "notSetUpLine": "Nicht eingerichtet — von dieser Website wird nichts gesichert.",
-      "needsDestination": "Es ist noch kein Speicherziel eingerichtet. Fügen Sie zuerst eines unter Integrationen → Speicher hinzu."
+      "needsDestination": "Es ist noch kein Speicherziel eingerichtet. Fügen Sie zuerst eines unter Integrationen → Speicher hinzu.",
+      "timesShownIn": "Zeiten in {timezone}"
     },
     "setup": {
       "title": "Backups einrichten",

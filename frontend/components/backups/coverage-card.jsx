@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { SearchX, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Clock, SearchX, ShieldAlert, ShieldCheck } from "lucide-react";
 import { BACKUP_IN_FLIGHT, BACKUP_TYPES } from "@/lib/schemas/backup";
 import { runBackupNow } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
@@ -109,6 +109,16 @@ export function CoverageCard({
   }, [justStarted]);
 
   const listProps = { rows, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyId };
+
+  /*
+   * The clock the Schedule column's hours are in.
+   *
+   * Only when every configured target agrees, and never invented: an older
+   * backend that sends no timezone leaves the caption off rather than
+   * asserting UTC over hours it cannot vouch for.
+   */
+  const scheduleZones = new Set(rows.map((row) => row.target?.timezone).filter(Boolean));
+  const scheduleTimezone = scheduleZones.size === 1 ? [...scheduleZones][0] : null;
 
   // Pressing "Run backup" used to leave the row unchanged until someone
   // reloaded. While any site's newest run is still being written, re-run the
@@ -233,6 +243,22 @@ export function CoverageCard({
           />
         ) : (
           <>
+            {/*
+              Which clock the hours in the Schedule column are on, said once
+              for the whole list — every target on a server shares it.
+
+              Not in the column header, which is where it first went: the
+              header is the widest thing in a 96px column, and "Schedule ·
+              Asia/Kolkata" pushed the table 96px further into horizontal
+              scroll at 1024 and 1280. Measured before and after; here it
+              costs the table nothing.
+            */}
+            {scheduleTimezone ? (
+              <p className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock className="size-3.5 shrink-0" />
+                {t("timesShownIn", { timezone: scheduleTimezone })}
+              </p>
+            ) : null}
             <div className="lg:hidden">
               <CoverageCards {...listProps} />
             </div>
