@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Services\Server\Applications\ApplicationConfigMutator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisionProgress;
+use App\Services\Server\Php\PhpShim;
 use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 
@@ -27,8 +28,9 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
         ApplicationConfigMutator $configMutator,
         ProcessSupervisor $supervisor,
         RuntimeOwnership $ownership,
+        PhpShim $shim,
     ) {
-        parent::__construct($serverOps, $progress, $configMutator, $supervisor, $ownership);
+        parent::__construct($serverOps, $progress, $configMutator, $supervisor, $ownership, $shim);
     }
 
     /**

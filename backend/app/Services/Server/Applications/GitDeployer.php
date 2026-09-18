@@ -6,6 +6,7 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\Worker;
 use App\Services\Git\GitProviderManager;
+use App\Services\Server\Php\PhpShim;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\ServerOps;
@@ -43,6 +44,7 @@ class GitDeployer
         private ProcessSupervisor $supervisor,
         private ProvisionProgress $progress,
         private DeploymentRecorder $recorder,
+        private PhpShim $shim,
     ) {}
 
     /**
@@ -788,85 +790,7 @@ class GitDeployer
      */
     private function phpPath(Application $application): string
     {
-        $version = (string) $application->php_version;
-
-        // Not a version we are willing to interpolate into a path. Only ever
-        // set from validated input, so this is a guard against a future caller
-        // rather than against today's.
-        if (preg_match('/^\d+\.\d+$/', $version) !== 1) {
-            return '';
-        }
-
-        $binary = $this->php->binaryPath($version);
-
-        // A blank `php_binary_pattern` resolves to the bare name `php`, which
-        // is the operator saying "whatever is on PATH". Shimming that would
-        // point `php` at itself and override a deliberate choice.
-        if ($binary === '' || $binary === 'php') {
-            return '';
-        }
-
-        $shim = $this->ensurePhpShim($version, $binary);
-
-        return $shim === null ? '' : 'export PATH='.escapeshellarg($shim).':"$PATH"; ';
-    }
-
-    /**
-     * The shim directory for one PHP version, created if it is not there.
-     *
-     * Returns null when it could not be built, and null means the deploy runs
-     * exactly as it did before this method existed. **Deliberately never
-     * fatal**: a site whose chosen PHP has since been uninstalled would then
-     * fail its deploy inside a helper, reported as a step the user cannot map
-     * to anything they did. The `test -x` is what catches that case — a
-     * dangling symlink named `php` early on PATH would break a deploy that
-     * works today, which is the one outcome this must not produce.
-     */
-    private function ensurePhpShim(string $version, string $binary): ?string
-    {
-        $base = rtrim((string) config('server.php_shim_dir', ''), '/');
-
-        if ($base === '') {
-            return null;
-        }
-
-        $dir = $base.'/'.$version;
-        $link = $dir.'/php';
-
-        $context = ['feature' => 'application', 'op' => 'php_shim'];
-
-        $made = $this->serverOps->run(['mkdir', '-p', '-m', '0755', $dir], $context);
-
-        if ($made->failed()) {
-            return $this->skipShim($version, 'shim directory could not be created');
-        }
-
-        // `-f` to replace, `-n` so a re-run does not create the link *inside*
-        // the directory the old one points at.
-        $linked = $this->serverOps->run(['ln', '-sfn', $binary, $link], $context);
-
-        if ($linked->failed()) {
-            return $this->skipShim($version, 'shim could not be linked');
-        }
-
-        $usable = $this->serverOps->run(['test', '-x', $link], $context);
-
-        if ($usable->failed()) {
-            return $this->skipShim($version, "no executable PHP at {$binary}");
-        }
-
-        return $dir;
-    }
-
-    private function skipShim(string $version, string $detail): ?string
-    {
-        Log::channel('server-ops')->warning('php shim unavailable, deploy script will use the default php', [
-            'feature' => 'application',
-            'php_version' => $version,
-            'detail' => $detail,
-        ]);
-
-        return null;
+        return $this->shim->exportFor($application);
     }
 
     /**

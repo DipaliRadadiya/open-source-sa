@@ -9,6 +9,7 @@ use App\Services\Server\Applications\ApplicationConfigMutator;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\ProvisioningBudget;
 use App\Services\Server\Applications\ProvisionProgress;
+use App\Services\Server\Php\PhpShim;
 use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -36,6 +37,7 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         protected ApplicationConfigMutator $configMutator,
         protected ProcessSupervisor $supervisor,
         protected RuntimeOwnership $ownership,
+        protected PhpShim $shim,
     ) {}
 
     /**
@@ -376,10 +378,29 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         // happens to be: that is the panel's own application root, and Composer
         // reads configuration from its working directory. An empty directory is
         // fine as a create-project target — only a non-empty one is refused.
-        $this->runAsSiteUser('download', $application, array_merge([
-            (string) config('server.composer_binary', 'composer'),
-            'create-project', $package, $work,
-        ], $flags), null, $work);
+        //
+        // 🔴 **Under the site's PHP, not the server's.** Composer is a PHAR
+        // whose shebang is `#!/usr/bin/env php`, so it starts under whatever
+        // `php` is first on PATH — the server default — no matter which
+        // version the site was created with. Composer then resolves the
+        // package against *that* interpreter, and for Craft it does not fail:
+        // it **resolves backwards** and installs Craft 4 on a site the panel
+        // reports as Craft 5, with no error anywhere. Statamic is the same
+        // shape.
+        //
+        // The other nine PHP installers were never exposed to this because
+        // they name an interpreter explicitly through `phpCommand()`. This is
+        // the one path where a program chooses its own PHP, so it is the one
+        // path that needs the shim — the same shim `GitDeployer` uses, for the
+        // same reason, extracted rather than copied.
+        $this->runAsSiteUser('download', $application, array_merge(
+            $this->shim->envPrefixFor($application),
+            [
+                (string) config('server.composer_binary', 'composer'),
+                'create-project', $package, $work,
+            ],
+            $flags,
+        ), null, $work);
 
         // The placeholder lives in the document root, which is a directory
         // inside what is about to be copied over. Both of these projects ship
