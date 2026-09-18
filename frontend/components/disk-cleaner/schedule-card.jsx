@@ -203,9 +203,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
               )}
               <span className="text-xs text-muted-foreground">{whenLine}</span>
             </div>
-          ) : (
-            <p className="mt-2 text-xs text-muted-foreground">{t("schedule.summaryOff")}</p>
-          )}
+          ) : null}
 
           <div className="mt-2 flex items-center justify-between gap-3">
             <div className="min-w-0">
