@@ -140,7 +140,30 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
         // it: a listing is what this page is for, and it was still giving up
         // 340px of it to context. The breakdown is now a sheet off the
         // toolbar, so the listing gets the whole row at every size.
+        /*
+         * Keyed on the path, so changing folder starts the panel fresh.
+         *
+         * Reported twice as "clicking a search result does nothing". It DID
+         * something — the URL and the breadcrumb both moved — but navigating
+         * here is a client-side transition into the same component instance,
+         * so every piece of the panel's state survived it. `siteSearch` was
+         * still true, so the screen kept rendering the search results you had
+         * just clicked out of: a new breadcrumb above an unchanged list, which
+         * is indistinguishable from a dead link.
+         *
+         * `selected` had the same fault and a worse consequence — a selection
+         * made in one folder stayed live in the next, with the previous
+         * folder's paths, so a bulk action would have run against files that
+         * were no longer on screen.
+         *
+         * A key rather than an effect per field: everything this panel holds —
+         * the query, the selection, the flash highlight, an open dialog — is
+         * about the folder you are looking at, and all of it should end when
+         * you leave. `showHidden` deliberately does NOT remount: it is the
+         * same folder, so a selection survives toggling hidden files.
+         */
         <FilesPanel
+            key={filesResult.path}
             appId={id}
             initialPath={filesResult.path}
             initialFiles={filesResult.files}
