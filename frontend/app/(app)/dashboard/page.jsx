@@ -9,7 +9,8 @@ import { historySeries } from "@/lib/server/history-series";
 import { getServerProcesses } from "@/lib/server/get-server-processes";
 import { getServiceHealth } from "@/lib/server/get-service-health";
 import { getSetup } from "@/lib/setup/get-setup";
-import { getApplications } from "@/lib/applications/get-applications";
+import { getAllApplications } from "@/lib/applications/get-applications";
+import { attentionFindings } from "@/lib/dashboard/attention";
 import { SetupBanner } from "@/components/setup/setup-banner";
 import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
 import { LiveMetricsSection } from "@/components/dashboard/live-metrics-section";
@@ -57,16 +58,27 @@ export default async function DashboardPage() {
         // rather than claiming everything is fine.
         getServiceHealth(),
         getServerHistory(),
-        // Not fetched for a reader who could never be offered the card anyway.
-        canViewApplications ? getApplications("") : Promise.resolve(null),
+        // Not fetched for a reader who could be shown neither the card nor the
+        // health chip.
+        //
+        // The whole list, not a page of it: `getApplications("")` stops at ten,
+        // which answers "are there none" but would scan only the first page for
+        // problems — a broken site on page two would never be mentioned. Capped
+        // at the API's own maximum of 100, so a server past that loses the tail
+        // here; the honest fix at that point is a server-wide issues endpoint
+        // rather than a bigger number.
+        canViewApplications ? getAllApplications() : Promise.resolve(null),
       ])
     : [null, { data: [], failed: false }, null, [], null];
 
-  // Only on a total we actually got. A failed list read means "could not ask",
-  // and "you have no sites" is a claim worth making only when it is true —
-  // announcing an empty server on the strength of a failed request would greet
-  // someone with fifty sites by inviting them to create their first.
-  const firstRun = Boolean(appResult && !appResult.failed && appResult.meta.total === 0);
+  // Both of these are claims about the server, and a failed read is not
+  // evidence for either. "You have no sites" told to somebody with fifty, or
+  // "everything is fine" told over an unanswered request, are the two ways this
+  // could lie, and `failed` is what stops both.
+  const known = Boolean(appResult && !appResult.failed);
+  const applications = known ? appResult.applications : [];
+  const firstRun = known && applications.length === 0;
+  const attention = attentionFindings(applications);
 
   return (
     <div className="space-y-6">
@@ -92,7 +104,7 @@ export default async function DashboardPage() {
           {/* Identity first — "which machine am I on" is read once, on
               arrival — then the live numbers, then four even charts: the last
               day for load and usage, then the live throughput pair. */}
-          <ServerInfoCard facts={facts} health={health} />
+          <ServerInfoCard facts={facts} health={health} siteAttention={attention} />
           <LiveMetricsSection
             timeZone={facts?.timezone}
             history={historySeries(history)}

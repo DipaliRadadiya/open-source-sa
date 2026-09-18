@@ -868,7 +868,26 @@
       "off": "Desactivada",
       "unknown": "Desconocido"
     },
-    "liveLabel": "Ahora mismo"
+    "liveLabel": "Ahora mismo",
+    "attention": {
+      "title": "Requiere atención",
+      "count": "{count, plural, one {# sitio requiere atención} other {# sitios requieren atención}}",
+      "insecure": {
+        "chip": "{site} no tiene certificado SSL",
+        "detail": "Los visitantes llegan por HTTP sin cifrar, así que los navegadores les muestran un aviso de «No es seguro».",
+        "action": "Configurar SSL"
+      },
+      "failed": {
+        "chip": "{site} no terminó de configurarse",
+        "detail": "La configuración de este sitio se detuvo a medias, así que todavía no se está sirviendo.",
+        "action": "Ver qué falló"
+      },
+      "git": {
+        "chip": "{site} perdió su cuenta de Git",
+        "detail": "La cuenta desde la que despliega ya no existe, así que el próximo despliegue fallará.",
+        "action": "Reconectar el despliegue"
+      }
+    }
   },
   "cronJobs": {
     "title": "Tareas cron",

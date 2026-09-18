@@ -27,21 +27,42 @@ test("the empty state declares its own client boundary", () => {
   assert.match(emptyState.split("\n")[0], /^"use client";$/);
 });
 
-test("an empty server is claimed only on a total we actually received", () => {
+test("an empty server is claimed only on a list we actually received", () => {
   /*
    * `failed` is not the same as zero. A list read that errored means "could
    * not ask", and treating that as an empty server would greet someone who
-   * has fifty sites by inviting them to create their first.
+   * has fifty sites by inviting them to create their first. The same guard
+   * covers the health chip: "nothing is wrong" over an unanswered request is
+   * the more dangerous of the two lies.
    */
-  const match = dashboard.match(/const firstRun = ([^;]+);/);
-  assert.ok(match, "firstRun is derived in one place");
-  assert.match(match[1], /!appResult\.failed/);
-  assert.match(match[1], /meta\.total === 0/);
+  const known = dashboard.match(/const known = ([^;]+);/);
+  assert.ok(known, "`known` is derived in one place");
+  assert.match(known[1], /!appResult\.failed/);
+
+  const firstRun = dashboard.match(/const firstRun = ([^;]+);/);
+  assert.ok(firstRun, "firstRun is derived in one place");
+  assert.match(firstRun[1], /known/);
+  assert.match(firstRun[1], /length === 0/);
 });
 
-test("the count is not fetched for a reader who could never be offered the card", () => {
+test("the list is not fetched for a reader who could be shown neither", () => {
   assert.match(dashboard, /canViewApplications = can\(permissions, "application", "view"\)/);
-  assert.match(dashboard, /canViewApplications \? getApplications\(""\) : Promise\.resolve\(null\)/);
+  assert.match(dashboard, /canViewApplications \? getAllApplications\(\) : Promise\.resolve\(null\)/);
+});
+
+test("every site is scanned, not just the first page", () => {
+  /*
+   * `getApplications("")` stops at ten. That answers "are there none", which
+   * is all the first-run card needed, but the health chip scans for problems —
+   * and a broken site on page two would simply never have been mentioned.
+   * `getAllApplications` asks for the API's maximum instead.
+   */
+  // Comments stripped first: the comment above that line explains the change
+  // by naming the old call, and a bare grep reads its own explanation as the
+  // bug it is describing.
+  const code = dashboard.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  assert.match(code, /getAllApplications\(\)/);
+  assert.doesNotMatch(code, /getApplications\(""\)/);
 });
 
 test("the card is fetched alongside the rest, not after it", () => {

@@ -868,7 +868,26 @@
       "off": "Off",
       "unknown": "Unknown"
     },
-    "liveLabel": "Right now"
+    "liveLabel": "Right now",
+    "attention": {
+      "title": "Needs attention",
+      "count": "{count, plural, one {# site needs attention} other {# sites need attention}}",
+      "insecure": {
+        "chip": "{site} has no SSL certificate",
+        "detail": "Visitors reach it over plain HTTP, so browsers show them a \"Not secure\" warning.",
+        "action": "Set up SSL"
+      },
+      "failed": {
+        "chip": "{site} did not finish setting up",
+        "detail": "Setting this site up stopped partway, so it is not serving yet.",
+        "action": "See what failed"
+      },
+      "git": {
+        "chip": "{site} lost its Git account",
+        "detail": "The account it deploys from is gone, so the next deployment will fail.",
+        "action": "Reconnect deployment"
+      }
+    }
   },
   "cronJobs": {
     "title": "Cron Jobs",

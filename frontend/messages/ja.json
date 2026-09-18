@@ -868,7 +868,26 @@
       "off": "オフ",
       "unknown": "不明"
     },
-    "liveLabel": "現在"
+    "liveLabel": "現在",
+    "attention": {
+      "title": "対応が必要",
+      "count": "{count, plural, other {# 件のサイトが対応を必要としています}}",
+      "insecure": {
+        "chip": "{site} に SSL 証明書がありません",
+        "detail": "訪問者は暗号化されていない HTTP で接続するため、ブラウザーに「保護されていない通信」の警告が表示されます。",
+        "action": "SSL を設定"
+      },
+      "failed": {
+        "chip": "{site} のセットアップが完了しませんでした",
+        "detail": "このサイトのセットアップが途中で停止したため、まだ配信されていません。",
+        "action": "失敗の内容を見る"
+      },
+      "git": {
+        "chip": "{site} の Git アカウントが失われました",
+        "detail": "デプロイ元のアカウントが存在しないため、次のデプロイは失敗します。",
+        "action": "デプロイを再接続"
+      }
+    }
   },
   "cronJobs": {
     "title": "Cronジョブ",

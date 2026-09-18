@@ -868,7 +868,26 @@
       "off": "Aus",
       "unknown": "Unbekannt"
     },
-    "liveLabel": "Aktuell"
+    "liveLabel": "Aktuell",
+    "attention": {
+      "title": "Handlungsbedarf",
+      "count": "{count, plural, one {# Website erfordert Aufmerksamkeit} other {# Websites erfordern Aufmerksamkeit}}",
+      "insecure": {
+        "chip": "{site} hat kein SSL-Zertifikat",
+        "detail": "Besucher erreichen die Website über unverschlüsseltes HTTP, daher zeigen Browser ihnen eine Warnung „Nicht sicher“ an.",
+        "action": "SSL einrichten"
+      },
+      "failed": {
+        "chip": "{site} wurde nicht fertig eingerichtet",
+        "detail": "Die Einrichtung dieser Website ist auf halbem Weg stehen geblieben, daher wird sie noch nicht ausgeliefert.",
+        "action": "Fehler ansehen"
+      },
+      "git": {
+        "chip": "{site} hat sein Git-Konto verloren",
+        "detail": "Das Konto, aus dem bereitgestellt wird, existiert nicht mehr, daher wird die nächste Bereitstellung fehlschlagen.",
+        "action": "Bereitstellung neu verbinden"
+      }
+    }
   },
   "cronJobs": {
     "title": "Cronjobs",

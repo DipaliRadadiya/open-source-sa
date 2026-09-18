@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { SiteAttention } from "@/components/dashboard/site-attention";
 
 function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
   return (
@@ -60,7 +61,7 @@ function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
  * page they fit on one line and the band costs a third of the height, which is
  * what lets the four charts below sit in an even 2×2 grid.
  */
-export async function ServerInfoCard({ facts, health }) {
+export async function ServerInfoCard({ facts, health, siteAttention = [] }) {
   const t = await getTranslations("serverDashboard");
   const runtimes = Object.entries(facts?.runtimes ?? {}).filter(([, v]) => v);
   const down = health?.down ?? [];
@@ -203,7 +204,14 @@ export async function ServerInfoCard({ facts, health }) {
           )}
         </div>
 
-        <ServiceHealthLine health={health} down={down} t={t} />
+        {/* Two chips, one question. "Is the machine running" and "are the sites
+            on it healthy" belong on the same line — and putting site health
+            here rather than in a block of its own costs the dashboard no height
+            at all, which is the whole reason it is here. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <SiteAttention findings={siteAttention} />
+          <ServiceHealthLine health={health} down={down} t={t} />
+        </div>
       </CardFooter>
     </Card>
   );

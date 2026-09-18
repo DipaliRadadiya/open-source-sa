@@ -868,7 +868,26 @@
       "off": "Désactivé",
       "unknown": "Inconnu"
     },
-    "liveLabel": "Maintenant"
+    "liveLabel": "Maintenant",
+    "attention": {
+      "title": "À vérifier",
+      "count": "{count, plural, one {# site nécessite votre attention} other {# sites nécessitent votre attention}}",
+      "insecure": {
+        "chip": "{site} n’a aucun certificat SSL",
+        "detail": "Les visiteurs y accèdent en HTTP non chiffré, les navigateurs leur affichent donc un avertissement « Non sécurisé ».",
+        "action": "Configurer le SSL"
+      },
+      "failed": {
+        "chip": "{site} n’a pas fini son installation",
+        "detail": "L’installation de ce site s’est arrêtée en cours de route, il n’est donc pas encore servi.",
+        "action": "Voir l’échec"
+      },
+      "git": {
+        "chip": "{site} a perdu son compte Git",
+        "detail": "Le compte depuis lequel il est déployé n’existe plus, le prochain déploiement échouera donc.",
+        "action": "Reconnecter le déploiement"
+      }
+    }
   },
   "cronJobs": {
     "title": "Tâches cron",
