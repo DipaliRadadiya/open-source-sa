@@ -110,6 +110,11 @@ export function resolveNavItems(items, applicationId) {
  * "8G" is the name of the upstream ruleset, not a description of the feature —
  * it tells somebody looking for a web firewall nothing at all. The API keeps
  * its name; only the label changes.
+ *
+ * Only this one. The per-application fail2ban screen had the same shape of
+ * disagreement — nav said "Fail2ban", the page said "Attack protection" — and
+ * was settled the other way, by renaming the PAGE to Fail2ban. The tool's own
+ * name is what people search for, and both fail2ban screens now use it.
  */
 export function navTitle(item, t) {
   if (item.name === "app_firewall") return t("navTitles.app_firewall");

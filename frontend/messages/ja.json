@@ -4668,19 +4668,19 @@
       "presetsLabelHint": "小・中・大のサイトに合わせた設定です。出発点として利用し、その後も各値は変更できます。"
     },
     "fail2ban": {
-      "pageTitle": "攻撃防御",
+      "pageTitle": "Fail2ban",
       "pageSubtitle": "このサイトへの攻撃を続けるアドレスをブロックします。",
       "loadFailed": "このサイトの防御を確認できませんでした。",
       "provisioning": "このサイトは現在セットアップ中です。完了後に防御を追加できます。",
       "empty": {
-        "title": "攻撃防御が設定されていません",
+        "title": "Fail2ban が設定されていません",
         "body": "このサイトのアクセスログを監視するものがいないため、誰でもパスワードを推測し放題です。設定すると、後から編集できる初期構成が作成されます。",
-        "action": "攻撃防御を設定"
+        "action": "Fail2ban を設定"
       },
       "state": {
-        "on": "攻撃防御が有効です",
+        "on": "Fail2ban が有効です",
         "onBody": "fail2ban がこのサイトのアクセスログを監視し、以下のフィルターに一致するアドレスをブロックしています。",
-        "setup": "攻撃防御を設定中",
+        "setup": "Fail2ban を設定中",
         "setupBody": "以下の 2 つのファイルはパネルのデフォルトから開始されます。保存するまでこのサイトは監視されません。"
       },
       "files": {
@@ -4698,16 +4698,16 @@
       "nothingToSave": "変更はありません",
       "bothRequired": "両方のファイルに内容が必要です",
       "noPermission": "このサイトに対する fail2ban の管理権限がロールに含まれていません。管理者に付与を依頼してください。",
-      "saved": "攻撃防御を保存して再読込しました。",
+      "saved": "Fail2ban を保存して再読込しました。",
       "saveFailed": "保存できませんでした。",
       "testFailed": "fail2ban がこの設定を拒否しました。",
       "removeAction": "防御を解除",
-      "removeTitle": "攻撃防御を解除しますか？",
+      "removeTitle": "Fail2ban を解除しますか？",
       "removeBody": "jail と filter のファイルが削除され、fail2ban の監視が停止します。すでにブロックされているアドレスも解除されます。",
       "removeConfirm": "削除する",
-      "removed": "攻撃防御を解除しました。",
+      "removed": "Fail2ban を解除しました。",
       "removeFailed": "解除できませんでした。",
-      "createAction": "攻撃防御を有効化",
+      "createAction": "Fail2ban を有効化",
       "removeBodyDirty": "jail と filter のファイルが削除され、fail2ban の監視が停止します。すでにブロックされているアドレスも解除されます — 加えて {count, plural, other {未保存の # ファイルも一緒に削除されます}}。",
       "tooLong": "設定が長すぎます。各ファイルは 65,535 文字未満である必要があります。",
       "invalidConfig": "設定を保存できません。両方のファイルに内容が入力されているか確認してください。"

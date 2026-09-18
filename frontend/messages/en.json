@@ -611,7 +611,7 @@
       "type": "Type"
     },
     "mine": {
-      "title": "Activity log",
+      "title": "Activity Log",
       "subtitle": "What you have done in the panel. Other people's actions aren't shown here.",
       "loadFailed": "We couldn't load your activity.",
       "empty": "You haven't done anything yet.",
@@ -871,7 +871,7 @@
     "liveLabel": "Right now"
   },
   "cronJobs": {
-    "title": "Cron jobs",
+    "title": "Cron Jobs",
     "subtitle": "Scheduled commands that run automatically on this server.",
     "addJob": "Add cron job",
     "cancel": "Cancel",
@@ -1021,7 +1021,7 @@
     }
   },
   "logs": {
-    "title": "Logs",
+    "title": "System Logs",
     "subtitle": "Read log files from this server.",
     "subtitleWithLocked": "Read log files from this server. {count} of {total} need elevated access and can’t be opened yet.",
     "sourcesLabel": "Log sources",
@@ -4668,19 +4668,19 @@
       "presetsLabelHint": "Ready-made settings sized for small, medium and large sites. A starting point — you can still change any value afterwards."
     },
     "fail2ban": {
-      "pageTitle": "Attack protection",
+      "pageTitle": "Fail2ban",
       "pageSubtitle": "Bans addresses that keep attacking this site.",
       "loadFailed": "We could not check this site's protection.",
       "provisioning": "This site is still being set up. Protection can be added once it finishes.",
       "empty": {
-        "title": "Attack protection is not set up",
+        "title": "Fail2ban is not set up",
         "body": "Nothing is watching this site's access log, so an address can keep guessing passwords as long as it likes. Setting it up gives you a starting configuration you can edit.",
-        "action": "Set up attack protection"
+        "action": "Set up Fail2ban"
       },
       "state": {
-        "on": "Attack protection is on",
+        "on": "Fail2ban is on",
         "onBody": "fail2ban is watching this site's access log and banning addresses that match the filter below.",
-        "setup": "Setting up attack protection",
+        "setup": "Setting up Fail2ban",
         "setupBody": "Both files below start from the panel's defaults. Nothing is watching this site until you save them."
       },
       "files": {
@@ -4698,16 +4698,16 @@
       "nothingToSave": "Nothing has changed",
       "bothRequired": "Both files need contents",
       "noPermission": "Your role does not include Fail2ban for this site with Manage access. Ask an administrator to grant it.",
-      "saved": "Attack protection saved and reloaded.",
+      "saved": "Fail2ban saved and reloaded.",
       "saveFailed": "That could not be saved.",
       "testFailed": "fail2ban rejected this configuration.",
       "removeAction": "Remove protection",
-      "removeTitle": "Remove attack protection?",
+      "removeTitle": "Remove Fail2ban?",
       "removeBody": "The jail and filter files are deleted and fail2ban stops watching this site. Anyone already banned is released.",
       "removeConfirm": "Remove it",
-      "removed": "Attack protection removed.",
+      "removed": "Fail2ban removed.",
       "removeFailed": "That could not be removed.",
-      "createAction": "Turn on attack protection",
+      "createAction": "Turn on Fail2ban",
       "removeBodyDirty": "The jail and filter files are deleted and fail2ban stops watching this site. Anyone already banned is released — and {count, plural, one {the file you have edited but not saved goes with them} other {the # files you have edited but not saved go with them}}.",
       "tooLong": "That config is too long. Each file has to stay under 65,535 characters.",
       "invalidConfig": "That config cannot be saved. Check both files are filled in."
@@ -5876,7 +5876,7 @@
     }
   },
   "sync": {
-    "title": "Server sync",
+    "title": "Server Sync",
     "subtitle": "Find websites, users and settings that already exist on this server but aren't in the panel yet, then add them.",
     "common": {
       "cancel": "Cancel"

@@ -228,7 +228,7 @@
       "dashboard": "Painel",
       "users": "Usuários",
       "roles": "Papéis",
-      "activityLog": "Log de atividades",
+      "activityLog": "Registro de atividades",
       "panelUpdate": "Atualização do painel",
       "doctor": "Saúde do sistema",
       "errorLogs": "Log de erros",
@@ -4668,19 +4668,19 @@
       "presetsLabelHint": "Configurações prontas dimensionadas para sites pequenos, médios e grandes. Um ponto de partida — você ainda pode alterar qualquer valor depois."
     },
     "fail2ban": {
-      "pageTitle": "Proteção contra ataques",
+      "pageTitle": "Fail2ban",
       "pageSubtitle": "Bane endereços que insistem em atacar este site.",
       "loadFailed": "Não foi possível verificar a proteção deste site.",
       "provisioning": "Este site ainda está sendo configurado. A proteção pode ser adicionada quando terminar.",
       "empty": {
-        "title": "Proteção contra ataques não configurada",
+        "title": "Fail2ban não configurado",
         "body": "Ninguém está vigiando o log de acesso deste site, então um endereço pode ficar tentando senhas à vontade. Configurar oferece uma configuração inicial que você pode editar.",
-        "action": "Configurar proteção contra ataques"
+        "action": "Configurar Fail2ban"
       },
       "state": {
-        "on": "Proteção contra ataques ativada",
+        "on": "Fail2ban ativado",
         "onBody": "O fail2ban está vigiando o log de acesso deste site e banindo endereços que casam com o filtro abaixo.",
-        "setup": "Configurando proteção contra ataques",
+        "setup": "Configurando Fail2ban",
         "setupBody": "Os dois arquivos abaixo começam com os padrões do painel. Nada está vigiando este site até você salvá-los."
       },
       "files": {
@@ -4698,16 +4698,16 @@
       "nothingToSave": "Nada foi alterado",
       "bothRequired": "Os dois arquivos precisam ter conteúdo",
       "noPermission": "Seu papel não inclui Fail2ban para este site com acesso de Gerenciar. Peça a um administrador para concedê-lo.",
-      "saved": "Proteção contra ataques salva e recarregada.",
+      "saved": "Fail2ban salvo e recarregado.",
       "saveFailed": "Não foi possível salvar.",
       "testFailed": "O fail2ban rejeitou esta configuração.",
       "removeAction": "Remover proteção",
-      "removeTitle": "Remover proteção contra ataques?",
+      "removeTitle": "Remover Fail2ban?",
       "removeBody": "Os arquivos de jail e filtro são excluídos e o fail2ban para de vigiar este site. Qualquer endereço já banido é liberado.",
       "removeConfirm": "Remover",
-      "removed": "Proteção contra ataques removida.",
+      "removed": "Fail2ban removido.",
       "removeFailed": "Não foi possível remover.",
-      "createAction": "Ativar proteção contra ataques",
+      "createAction": "Ativar Fail2ban",
       "removeBodyDirty": "Os arquivos de jail e filtro são excluídos e o fail2ban para de vigiar este site. Qualquer endereço já banido é liberado — e {count, plural, one {o arquivo que você editou mas não salvou vai junto} other {os # arquivos que você editou mas não salvou vão junto}}.",
       "tooLong": "Esta configuração é longa demais. Cada arquivo precisa ter menos de 65.535 caracteres.",
       "invalidConfig": "Esta configuração não pode ser salva. Verifique se os dois arquivos estão preenchidos."

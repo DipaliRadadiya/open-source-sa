@@ -4668,19 +4668,19 @@
       "presetsLabelHint": "Fertige Einstellungen, zugeschnitten auf kleine, mittlere und große Seiten. Ein Ausgangspunkt — Sie können danach jeden Wert weiterhin ändern."
     },
     "fail2ban": {
-      "pageTitle": "Angriffsschutz",
+      "pageTitle": "Fail2ban",
       "pageSubtitle": "Sperrt Adressen, die diese Website immer wieder angreifen.",
       "loadFailed": "Der Schutz dieser Website konnte nicht geprüft werden.",
       "provisioning": "Diese Website wird noch eingerichtet. Schutz lässt sich hinzufügen, sobald das fertig ist.",
       "empty": {
-        "title": "Der Angriffsschutz ist nicht eingerichtet",
+        "title": "Fail2ban ist nicht eingerichtet",
         "body": "Niemand beobachtet das Zugriffsprotokoll dieser Website, eine Adresse kann also beliebig lange Passwörter erraten. Beim Einrichten bekommen Sie eine Startkonfiguration, die Sie bearbeiten können.",
-        "action": "Angriffsschutz einrichten"
+        "action": "Fail2ban einrichten"
       },
       "state": {
-        "on": "Der Angriffsschutz ist an",
+        "on": "Fail2ban ist an",
         "onBody": "fail2ban beobachtet das Zugriffsprotokoll dieser Website und sperrt Adressen, die auf den Filter unten passen.",
-        "setup": "Angriffsschutz wird eingerichtet",
+        "setup": "Fail2ban wird eingerichtet",
         "setupBody": "Beide Dateien unten beginnen mit den Standardwerten des Panels. Bis Sie sie speichern, beobachtet niemand diese Website."
       },
       "files": {
@@ -4698,16 +4698,16 @@
       "nothingToSave": "Nichts hat sich geändert",
       "bothRequired": "Beide Dateien brauchen Inhalt",
       "noPermission": "Ihre Rolle enthält nicht „Fail2ban“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
-      "saved": "Angriffsschutz gespeichert und neu geladen.",
+      "saved": "Fail2ban gespeichert und neu geladen.",
       "saveFailed": "Das konnte nicht gespeichert werden.",
       "testFailed": "fail2ban hat diese Konfiguration abgelehnt.",
       "removeAction": "Schutz entfernen",
-      "removeTitle": "Angriffsschutz entfernen?",
+      "removeTitle": "Fail2ban entfernen?",
       "removeBody": "Die Jail- und Filterdateien werden gelöscht und fail2ban beobachtet diese Website nicht mehr. Bereits gesperrte Adressen werden freigegeben.",
       "removeConfirm": "Entfernen",
-      "removed": "Angriffsschutz entfernt.",
+      "removed": "Fail2ban entfernt.",
       "removeFailed": "Das konnte nicht entfernt werden.",
-      "createAction": "Angriffsschutz einschalten",
+      "createAction": "Fail2ban einschalten",
       "removeBodyDirty": "Die Jail- und Filterdateien werden gelöscht und fail2ban beobachtet diese Website nicht mehr. Bereits gesperrte Adressen werden freigegeben — und {count, plural, one {die Datei, die Sie bearbeitet, aber nicht gespeichert haben, geht mit} other {die # Dateien, die Sie bearbeitet, aber nicht gespeichert haben, gehen mit}}.",
       "tooLong": "Diese Konfiguration ist zu lang. Jede Datei muss unter 65.535 Zeichen bleiben.",
       "invalidConfig": "Diese Konfiguration kann nicht gespeichert werden. Prüfen Sie, ob beide Dateien gefüllt sind."

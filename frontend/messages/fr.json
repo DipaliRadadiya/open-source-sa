@@ -4668,19 +4668,19 @@
       "presetsLabelHint": "Réglages prêts à l’emploi dimensionnés pour des sites petits, moyens ou grands. Un point de départ — vous pouvez encore modifier n’importe quelle valeur ensuite."
     },
     "fail2ban": {
-      "pageTitle": "Protection anti-attaques",
+      "pageTitle": "Fail2ban",
       "pageSubtitle": "Bannit les adresses qui continuent d'attaquer ce site.",
       "loadFailed": "Impossible de vérifier la protection de ce site.",
       "provisioning": "Ce site est encore en cours de configuration. La protection pourra être ajoutée une fois terminée.",
       "empty": {
-        "title": "La protection anti-attaques n'est pas configurée",
+        "title": "Fail2ban n'est pas configuré",
         "body": "Personne ne surveille le journal d'accès de ce site, une adresse peut donc deviner des mots de passe aussi longtemps qu'elle le souhaite. La configuration vous donne une base que vous pouvez modifier.",
-        "action": "Configurer la protection anti-attaques"
+        "action": "Configurer Fail2ban"
       },
       "state": {
-        "on": "La protection anti-attaques est activée",
+        "on": "Fail2ban est activé",
         "onBody": "fail2ban surveille le journal d'accès de ce site et bannit les adresses correspondant au filtre ci-dessous.",
-        "setup": "Configuration de la protection anti-attaques",
+        "setup": "Configuration de Fail2ban",
         "setupBody": "Les deux fichiers ci-dessous partent des valeurs par défaut du panneau. Personne ne surveille ce site tant que vous ne les avez pas enregistrés."
       },
       "files": {
@@ -4698,16 +4698,16 @@
       "nothingToSave": "Rien n'a changé",
       "bothRequired": "Les deux fichiers doivent contenir quelque chose",
       "noPermission": "Votre rôle n'inclut pas Fail2ban pour ce site avec l'accès Gérer. Demandez à un administrateur de l'accorder.",
-      "saved": "Protection anti-attaques enregistrée et rechargée.",
+      "saved": "Fail2ban enregistré et rechargé.",
       "saveFailed": "Enregistrement impossible.",
       "testFailed": "fail2ban a refusé cette configuration.",
       "removeAction": "Retirer la protection",
-      "removeTitle": "Retirer la protection anti-attaques ?",
+      "removeTitle": "Retirer Fail2ban ?",
       "removeBody": "Les fichiers jail et filter sont supprimés et fail2ban arrête de surveiller ce site. Toute adresse déjà bannie est libérée.",
       "removeConfirm": "Le retirer",
-      "removed": "Protection anti-attaques retirée.",
+      "removed": "Fail2ban retiré.",
       "removeFailed": "Suppression impossible.",
-      "createAction": "Activer la protection anti-attaques",
+      "createAction": "Activer Fail2ban",
       "removeBodyDirty": "Les fichiers jail et filter sont supprimés et fail2ban arrête de surveiller ce site. Toute adresse déjà bannie est libérée — et {count, plural, one {le fichier que vous avez modifié mais pas enregistré disparaît avec eux} other {les # fichiers que vous avez modifiés mais pas enregistrés disparaissent avec eux}}.",
       "tooLong": "Cette configuration est trop longue. Chaque fichier doit rester sous 65 535 caractères.",
       "invalidConfig": "Cette configuration ne peut pas être enregistrée. Vérifiez que les deux fichiers sont remplis."

@@ -4668,19 +4668,19 @@
       "presetsLabelHint": "Configuraciones prediseñadas dimensionadas para sitios pequeños, medianos y grandes. Un punto de partida: aún puede cambiar cualquier valor después."
     },
     "fail2ban": {
-      "pageTitle": "Protección contra ataques",
+      "pageTitle": "Fail2ban",
       "pageSubtitle": "Bloquea direcciones que atacan este sitio de forma repetida.",
       "loadFailed": "No pudimos comprobar la protección de este sitio.",
       "provisioning": "Este sitio aún se está creando. La protección se puede añadir cuando termine.",
       "empty": {
-        "title": "La protección contra ataques no está configurada",
+        "title": "Fail2ban no está configurado",
         "body": "Nada vigila el registro de acceso de este sitio, así que una dirección puede seguir probando contraseñas indefinidamente. Al configurarla obtienes una configuración inicial que puedes editar.",
-        "action": "Configurar la protección"
+        "action": "Configurar Fail2ban"
       },
       "state": {
-        "on": "La protección contra ataques está activa",
+        "on": "Fail2ban está activo",
         "onBody": "fail2ban vigila el registro de acceso de este sitio y bloquea las direcciones que coinciden con el filtro de abajo.",
-        "setup": "Configurando la protección contra ataques",
+        "setup": "Configurando Fail2ban",
         "setupBody": "Ambos archivos parten de los valores por defecto del panel. Nada vigila este sitio hasta que los guardes."
       },
       "files": {
@@ -4698,16 +4698,16 @@
       "nothingToSave": "No ha cambiado nada",
       "bothRequired": "Ambos archivos necesitan contenido",
       "noPermission": "Tu rol no incluye Fail2ban de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
-      "saved": "Protección guardada y recargada.",
+      "saved": "Fail2ban guardado y recargado.",
       "saveFailed": "No se pudo guardar.",
       "testFailed": "fail2ban rechazó esta configuración.",
       "removeAction": "Quitar la protección",
-      "removeTitle": "¿Quitar la protección contra ataques?",
+      "removeTitle": "¿Quitar Fail2ban?",
       "removeBody": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar este sitio. Quien esté bloqueado quedará liberado.",
       "removeConfirm": "Quitarla",
-      "removed": "Protección eliminada.",
+      "removed": "Fail2ban eliminado.",
       "removeFailed": "No se pudo eliminar.",
-      "createAction": "Activar la protección",
+      "createAction": "Activar Fail2ban",
       "removeBodyDirty": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar este sitio. Quien esté bloqueado quedará liberado, y {count, plural, one {el archivo que has editado sin guardar se perderá} other {los # archivos que has editado sin guardar se perderán}}.",
       "tooLong": "Esa configuración es demasiado larga. Cada archivo debe tener menos de 65.535 caracteres.",
       "invalidConfig": "Esa configuración no se puede guardar. Comprueba que ambos archivos estén completos."
