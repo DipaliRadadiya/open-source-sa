@@ -140,7 +140,38 @@ function SystemUsersList({ data, meta, shells = [], canManage = false }) {
     { id: "sudo", header: t("sudo"), cell: SudoCell },
     { id: "ssh", header: t("ssh"), cell: SshCell },
     { id: "applications", header: t("columns.applications"), cell: ApplicationsCell },
-    { accessorKey: "created_at_human", header: t("columns.created"), cell: CreatedCell },
+    /*
+     * Held back until 2xl, because this table does not fit and something has
+     * to give.
+     *
+     * Measured at 1440: nine columns want 1222px in a 1118px box, so Created
+     * was cut and Actions — the row menu, the only column that DOES anything —
+     * sat entirely off the right edge. You could still reach it by scrolling,
+     * but a table whose controls are past the horizon is a table people think
+     * is broken. Dropping Created brings it to 1106 and everything fits from
+     * 1440 up.
+     *
+     * Created is the one to drop, for the same reason the applications table
+     * drops it first: it is not actionable, it never changes, and nothing is
+     * decided by it. Every other column here either identifies the account
+     * (Username, Home) or is a control (Password, Shell, Sudo, SSH).
+     *
+     * NOT Home, which looks redundant with Username and is not: `home_path` is
+     * read from /etc/passwd by SystemUserDiscoverer during Server Sync, so an
+     * adopted server's accounts can live anywhere, and those are precisely the
+     * users who need to see it.
+     *
+     * Below 1440 the table still scrolls. That is left alone deliberately —
+     * ScrollFade already fades only the edge there is more content towards and
+     * drops the fade on arrival, so the affordance is honest; and the cards
+     * below lg are the real answer for narrow screens.
+     */
+    {
+      accessorKey: "created_at_human",
+      header: t("columns.created"),
+      meta: { className: "hidden 2xl:table-cell" },
+      cell: CreatedCell,
+    },
     ...(canManage
       ? [
           {
