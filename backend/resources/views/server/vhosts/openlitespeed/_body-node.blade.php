@@ -1,0 +1,133 @@
+{{-- Managed by the panel. Manual edits are overwritten on the next deploy. --}}
+{{--
+    The file that DESCRIBES a site. Its declaration — `<name>.conf` — carries
+    the listeners, vhDomain, rewrite rules and TLS, because that is the half
+    OpenLiteSpeed needs in order to route a request here at all.
+
+    Derived from the single-file template rather than rewritten, so the reasons
+    written into it survive.
+--}}
+
+     OpenLiteSpeed proxies by declaring the backend as an external application
+     of type `proxy` and pointing a context at it — not with a `proxy_pass`
+     style directive. Source: docs.openlitespeed.org/config/reverseproxy. --}}
+docRoot                   {{ $documentRoot }}
+enableGzip                1
+
+{{-- The site's own `post_max_size`, in bytes. OpenLiteSpeed's default is
+     effectively unlimited, so this was never a 413 here either — it is set so
+     one site behaves the same whichever web server the box runs. --}}
+maxReqBodySize            {{ $maxBodySize }}
+
+
+{{-- The ACME challenge is served from one shared directory rather than the
+     site's own document root, so node and proxy sites — which serve nothing
+     from disk — have somewhere for certbot to drop the token. Declared as its
+     own context so the rewrite below cannot swallow it: a WordPress site would
+     otherwise hand the token to index.php and answer with its 404 page, which
+     Let's Encrypt reads as unauthorized and which costs one of five attempts
+     an hour. --}}
+context /.well-known/acme-challenge {
+  location                {{ $challengeRoot }}/.well-known/acme-challenge
+  allowBrowse             1
+  addDefaultCharset       off
+}
+
+errorlog $VH_ROOT/logs/error.log {
+  useServer               0
+  logLevel                WARN
+  rollingSize             10M
+}
+
+accesslog $VH_ROOT/logs/access.log {
+  useServer               0
+  rollingSize             10M
+  keepDays                30
+}
+
+{{-- The backend, as an external application. `address` carries the scheme
+     here, unlike the websocket block below. --}}
+extprocessor {{ $appName }} {
+  type                    proxy
+  address                 http://127.0.0.1:{{ $appPort }}
+  maxConns                100
+  initTimeout             60
+  retryTimeout            0
+  respBuffer              0
+}
+
+{{-- Everything goes to the app. A Node application owns its own routing, so
+     there is no static context ahead of this. --}}
+context / {
+  type                    proxy
+  handler                 {{ $appName }}
+  addDefaultCharset       off
+@if ($basicAuth)
+  realm                   {{ $basicAuth['realm'] }}
+@endif
+}
+
+@if ($basicAuth)
+{{-- Best-effort: OLS's realm/userDB syntax has not been exercised against
+     real hardware, unlike the nginx and Apache blocks above (see the
+     project's other OLS notes on this same gap). The ACME context above is
+     more specific and matches first, so it is unaffected either way. --}}
+realm {{ $basicAuth['realm'] }} {
+  userDB {
+    location               {{ $basicAuth['htpasswdPath'] }}
+    userNameSeparator      :
+  }
+}
+@endif
+
+{{-- WebSockets are a separate block in OpenLiteSpeed, not a header dance:
+     traffic carrying the upgrade request is matched here and everything else
+     falls through to the context above. Note the address has **no scheme** —
+     OLS wants host:port. It does not support a WSS backend, which is fine
+     because the client's TLS terminates here. --}}
+websocket / {
+  address                 127.0.0.1:{{ $appPort }}
+}
+
+{{-- A rewrite block only when there is something to rewrite — a redirect,
+     HTTPS-force, or an active bot policy. OLS routes redirect names here as
+     aliases, so they must be sent on explicitly or they would serve the
+     site under a second name. --}}
+@if (! $certificate || $redirects->isNotEmpty() || $forceHttps || $botBlock)
+rewrite {
+  enable                  1
+@if (! $certificate)
+  RewriteCond %{HTTPS} =on
+  RewriteRule ^ - [F,L]
+@endif
+@if ($botBlock)
+  {{-- Checked first — a blocked bot gets [F] (403) immediately, ahead of
+       HTTPS-force or any redirect. Apache mod_rewrite syntax, which OLS
+       implements here, not nginx's. --}}
+  RewriteCond %{HTTP_USER_AGENT} ({{ $botBlock }}) [NC]
+  RewriteRule ^ - [F,L]
+@endif
+@if ($forceHttps)
+  {{-- Force HTTPS. The ACME exclusion is not optional: without it renewal
+       stops working, and the redirect goes on pointing confidently at a
+       certificate that has expired. --}}
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+  RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+@endif
+@foreach ($redirects as $redirect)
+  RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
+  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: $canonicalUrl }}/$1 [R={{ $redirect->redirect_status }},L]
+@endforeach
+}
+@endif
+
+{{-- No `php.conf` here: this site runs no PHP, so there are no PHP settings to
+     put in one. The old panel has no OpenLiteSpeed template for a node or
+     static site at all — its OLS stack is PHP-only and MERN sites went to
+     nginx — so this pair is this panel's own, following the same split.
+
+     The snippet include is still load-bearing: it is where a customer's own
+     directives live. A glob matching nothing is fine. --}}
+include {{ $snippetDirs['conf'] }}/*.conf
+include {{ $acmeAliasConf }}
