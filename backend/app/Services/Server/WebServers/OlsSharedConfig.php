@@ -261,6 +261,70 @@ class OlsSharedConfig
      *                                                                             the key pair a newly created secure listener presents, or null
      *                                                                             when it could not be confirmed on disk
      */
+    /**
+     * Remove a site's `virtualHost` block and `map` line from the text outside
+     * the managed markers, so the managed region can own them.
+     *
+     * Brace-counted rather than regex-matched: a `virtualHost` block is
+     * delimited by braces and a pattern that stops at the first `}` would cut
+     * one in half, leaving a config that fails to parse — which on this file
+     * means the whole server, not one site.
+     *
+     * Only ever called for a name the panel is about to write, and only
+     * outside the markers; everything else is copied through.
+     */
+    private function absorbUnmanaged(string $contents, string $name): string
+    {
+        $lines = preg_split('/\r?\n/', $contents) ?: [];
+        $quoted = preg_quote($name, '/');
+
+        $out = [];
+        $managed = false;
+        $depth = 0;
+        $dropping = false;
+
+        foreach ($lines as $line) {
+            // Anything between any BEGIN/END pair belongs to the panel already.
+            if (preg_match('/### (BEGIN|END) panel-managed/', $line, $marker) === 1) {
+                $managed = $marker[1] === 'BEGIN';
+                $out[] = $line;
+
+                continue;
+            }
+
+            if ($managed) {
+                $out[] = $line;
+
+                continue;
+            }
+
+            if ($dropping) {
+                $depth += substr_count($line, '{') - substr_count($line, '}');
+
+                if ($depth <= 0) {
+                    $dropping = false;
+                }
+
+                continue;
+            }
+
+            if (preg_match('/^\s*virtualHost\s+'.$quoted.'\s*\{/', $line) === 1) {
+                $depth = substr_count($line, '{') - substr_count($line, '}');
+                $dropping = $depth > 0;
+
+                continue;
+            }
+
+            if (preg_match('/^\s*map\s+'.$quoted.'\s/', $line) === 1) {
+                continue;
+            }
+
+            $out[] = $line;
+        }
+
+        return implode("\n", $out);
+    }
+
     private function render(string $contents, array $sites, ?array $tlsFallback = null): string
     {
         if ($tlsFallback !== null) {
@@ -268,6 +332,26 @@ class OlsSharedConfig
         }
 
         ksort($sites);
+
+        // Take over any entry for these sites that is sitting outside the
+        // markers, rather than writing a second one beside it.
+        //
+        // `sites()` reads the managed regions only, which is correct for a file
+        // this panel wrote and wrong for one it inherited: a server migrated
+        // from the old panel already has `virtualHost <name>` and `map <name>`
+        // for every site, written before these markers existed. Adding ours
+        // without removing theirs leaves OpenLiteSpeed with two definitions of
+        // one site — in the file whose mistakes are not one broken site but all
+        // of them.
+        //
+        // Scoped to exactly the names being written, so config for anything
+        // else — hand-written or from the WebAdmin console — is still copied
+        // through untouched, which is the rule this file exists to keep. And it
+        // rides the write that already backs the file up, tests it, and rolls
+        // back if the test fails.
+        foreach (array_keys($sites) as $name) {
+            $contents = $this->absorbUnmanaged($contents, (string) $name);
+        }
 
         $vhosts = [];
         $maps = [];

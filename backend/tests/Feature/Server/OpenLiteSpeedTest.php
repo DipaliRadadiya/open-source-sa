@@ -280,7 +280,56 @@ describe('the shared httpd_config.conf', function () {
 
         // The region is rebuilt rather than appended to, so a re-provision
         // cannot duplicate a site.
+        file_put_contents('/tmp/out.conf', sharedConfig());
         expect(substr_count(sharedConfig(), 'virtualHost shop.test {'))->toBe(1);
+    });
+
+    it('takes over an entry the old panel left outside the markers', function () {
+        /*
+         * The migration case, and the one that would have damaged a real
+         * server. A box that ran the old panel already has `virtualHost <site>`
+         * and `map <site>` in httpd_config.conf, written before these markers
+         * existed. `sites()` reads the managed regions only — correct for a
+         * file this panel wrote, wrong for one it inherited — so registering
+         * the site would add a second definition beside the first.
+         *
+         * Two `virtualHost` blocks for one name, in the file whose mistakes are
+         * not one broken site but every site on the box.
+         */
+        $migrated = <<<'CONF'
+        serverName                SomeServer
+
+        listener Default {
+          address                 *:80
+          map                     shop.test shop.test
+        }
+
+        virtualHost shop.test {
+          vhRoot                  /home/shopuser/shop.test/
+          configFile              /etc/sureshcloud-ols/shop.test/main.conf
+        }
+
+        # A hand-written virtual host the operator added themselves.
+        virtualHost legacy {
+          configFile              $SERVER_ROOT/conf/vhosts/legacy/vhconf.conf
+        }
+        CONF;
+
+        fakeOls($migrated);
+
+        app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        expect(substr_count(sharedConfig(), 'virtualHost shop.test {'))->toBe(1)
+            // Two maps, not one: a site is mapped into the plain listener and
+            // the secure one. The old panel's single unmanaged map is gone, and
+            // both of these sit inside managed regions.
+            ->and(substr_count(sharedConfig(), 'map                     shop.test'))->toBe(2)
+            // The inherited block was absorbed, not left beside ours: its
+            // configFile named the old panel's path and no longer appears.
+            ->and(sharedConfig())->not->toContain('/etc/sureshcloud-ols/shop.test/main.conf')
+            ->and(sharedConfig())->toContain('### BEGIN panel-managed virtual hosts')
+            // And somebody else's config is still none of our business.
+            ->and(sharedConfig())->toContain('virtualHost legacy {');
     });
 
     it('points vhRoot at the site, not at the config directory', function () {
