@@ -9,7 +9,9 @@ import { historySeries } from "@/lib/server/history-series";
 import { getServerProcesses } from "@/lib/server/get-server-processes";
 import { getServiceHealth } from "@/lib/server/get-service-health";
 import { getSetup } from "@/lib/setup/get-setup";
+import { getApplications } from "@/lib/applications/get-applications";
 import { SetupBanner } from "@/components/setup/setup-banner";
+import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
 import { LiveMetricsSection } from "@/components/dashboard/live-metrics-section";
 import { ServerInfoCard } from "@/components/dashboard/server-info-card";
 import { ProcessesCard } from "@/components/dashboard/processes-card";
@@ -39,10 +41,15 @@ export default async function DashboardPage() {
   const allowed = can(permissions, "dashboard", "view");
   // Stopping a process is a write, so it needs `manage`, not `view`.
   const canManage = can(permissions, "dashboard", "manage");
+  // The landing route is the one screen a first-time user is guaranteed to
+  // see, and until now it was the same monitoring page whether the server had
+  // fifty sites or none. Asking how many there are is what lets it lead with
+  // the thing they came for instead of an idle machine's vital signs.
+  const canViewApplications = can(permissions, "application", "view");
   // Load and resource usage are the last 24 hours, from the five-minute
   // `server:sample-metrics` collector. Fetched here, once per render — polling
   // a table that gains a row every five minutes would be pointless.
-  const [facts, processResult, health, history] = allowed
+  const [facts, processResult, health, history, appResult] = allowed
     ? await Promise.all([
         getServerFacts(),
         getServerProcesses(),
@@ -50,8 +57,16 @@ export default async function DashboardPage() {
         // rather than claiming everything is fine.
         getServiceHealth(),
         getServerHistory(),
+        // Not fetched for a reader who could never be offered the card anyway.
+        canViewApplications ? getApplications("") : Promise.resolve(null),
       ])
-    : [null, { data: [], failed: false }, null, []];
+    : [null, { data: [], failed: false }, null, [], null];
+
+  // Only on a total we actually got. A failed list read means "could not ask",
+  // and "you have no sites" is a claim worth making only when it is true —
+  // announcing an empty server on the strength of a failed request would greet
+  // someone with fifty sites by inviting them to create their first.
+  const firstRun = Boolean(appResult && !appResult.failed && appResult.meta.total === 0);
 
   return (
     <div className="space-y-6">
@@ -64,6 +79,16 @@ export default async function DashboardPage() {
 
       {allowed ? (
         <>
+          {/* Above the server's own content on a server that has none of the
+              user's yet: the invitation is the only thing on this page they can
+              act on, and the compact layout keeps the live numbers in view
+              rather than pushing them past the fold. */}
+          {firstRun ? (
+            <ApplicationEmptyState
+              canManage={can(permissions, "application", "manage")}
+              compact
+            />
+          ) : null}
           {/* Identity first — "which machine am I on" is read once, on
               arrival — then the live numbers, then four even charts: the last
               day for load and usage, then the live throughput pair. */}
