@@ -198,3 +198,42 @@ it('can still delete a site on a migrated server', function () {
         // What the guard asks: under the root, and not the root itself.
         ->and($directory !== $root && str_starts_with($directory, $root.'/'))->toBeTrue();
 });
+
+describe('the three-file structure', function () {
+    it('splits a site into a declaration, a body and its php settings', function () {
+        /*
+         * The old panel's shape, and the reason it is worth copying rather than
+         * merely tolerating: `<name>.conf` declares the site — listeners,
+         * vhDomain, rewrite, vhssl — and includes `<name>/main.conf`, which
+         * describes it. httpd_config.conf pulls the whole directory in with one
+         * `include <root>/*.conf`, so it needs no per-site block and no listener
+         * map at all. The shared file stops being something every site edits.
+         */
+        ServerCapability::query()->first()->forceFill(['ols_vhost_root' => '/etc/sureshcloud-ols'])->save();
+
+        $layout = app(OlsVhostLayout::class);
+
+        expect($layout->declarationPath('shop'))->toBe('/etc/sureshcloud-ols/shop.conf')
+            ->and($layout->bodyPath('shop'))->toBe('/etc/sureshcloud-ols/shop/main.conf')
+            ->and($layout->phpPath('shop'))->toBe('/etc/sureshcloud-ols/shop/php.conf');
+    });
+
+    it('keeps the body under whatever this server calls a vhost file', function () {
+        $layout = app(OlsVhostLayout::class);
+
+        // No legacy root recorded, so this panel's own name.
+        expect($layout->bodyPath('shop'))->toBe('/usr/local/lsws/conf/vhosts/shop/vhconf.conf')
+            ->and($layout->declarationPath('shop'))->toBe('/usr/local/lsws/conf/vhosts/shop.conf');
+    });
+
+    it('puts a sites snippets inside the site, where a migrated box already has them', function () {
+        // `rewrites/` is not decoration: the old panel generates WordPress
+        // rewrite rules and the AI bot blocker into it, and a rewrite of the
+        // vhost that drops the include silently disables both.
+        expect(app(OlsVhostLayout::class)->snippetDirs('/home/shopuser/shop'))
+            ->toBe([
+                'conf' => '/home/shopuser/shop/conf/openlitespeed',
+                'rewrites' => '/home/shopuser/shop/conf/openlitespeed/rewrites',
+            ]);
+    });
+});
