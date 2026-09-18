@@ -3114,7 +3114,8 @@
       "status": "状態",
       "owner": "オーナー",
       "size": "サイズ",
-      "created": "作成日"
+      "created": "作成日",
+      "php": "PHP"
     },
     "empty": {
       "title": "サーバーは最初のアプリケーションの準備ができています",
@@ -4997,7 +4998,8 @@
       "footerIdleOne": "バックグラウンドでインストールされます。フォームの入力は続けられます。",
       "subImpossible": "このサーバーでは、現状このアプリケーションを動かせません。",
       "footerImpossible": "ここから解決できることはありません。"
-    }
+    },
+    "phpFact": "PHP {version}"
   },
   "panelUpdate": {
     "title": "パネルの更新",

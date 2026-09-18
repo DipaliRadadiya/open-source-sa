@@ -3114,7 +3114,8 @@
       "status": "Statut",
       "owner": "Propriétaire",
       "size": "Taille",
-      "created": "Créé le"
+      "created": "Créé le",
+      "php": "PHP"
     },
     "empty": {
       "title": "Votre serveur est prêt pour sa première application",
@@ -4997,7 +4998,8 @@
       "footerIdleOne": "L'installation se fait en arrière-plan — vous pouvez continuer à remplir le formulaire.",
       "subImpossible": "Ce serveur ne peut pas faire tourner cette application en l’état.",
       "footerImpossible": "Rien ici ne peut y remédier."
-    }
+    },
+    "phpFact": "PHP {version}"
   },
   "panelUpdate": {
     "title": "Mise à jour du panneau",

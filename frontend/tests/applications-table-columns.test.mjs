@@ -96,10 +96,15 @@ test("every cell that can hold a long value can also shrink", () => {
   // `block` before `truncate`: on an inline span there is no box to overflow,
   // so the ellipsis never appears. And a clipped value needs a title, or the
   // row simply stops saying which account a site runs as.
-  for (const cell of ["TypeCell", "OwnerCell"]) {
+  // `PhpCell` replaced `TypeCell` when the Type column was dropped — the logo
+  // names the framework now. Same requirement either way: the cell holds a
+  // value that can be longer than its column.
+  for (const cell of ["PhpCell", "OwnerCell"]) {
     const body = table.slice(table.indexOf(`function ${cell}`), table.indexOf(`function ${cell}`) + 400);
     assert.match(body, /block truncate/, `${cell} truncates inline, so it never truncates`);
-    assert.match(body, /title=\{value\}/, `${cell} clips without saying what it clipped`);
+    // `?? undefined` on PhpCell: a site with no PHP renders "—", and a tooltip
+    // reading "—" explains nothing.
+    assert.match(body, /title=\{value( \?\? undefined)?\}/, `${cell} clips without saying what it clipped`);
   }
 
   assert.match(table, /<span className="truncate" title=\{row\.original\.name\}>/);

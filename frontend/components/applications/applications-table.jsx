@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useFormatter, useTranslations } from "next-intl";
 import { formatBytes } from "@/lib/format/bytes";
 import { ChevronRight, Plus, SearchX } from "lucide-react";
+import { TlsMark, isServedOverTls } from "@/components/applications/tls-mark";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { Badge } from "@/components/ui/badge";
 import { VisitSiteLink } from "@/components/applications/visit-site-link";
@@ -44,11 +45,21 @@ import {
 /* `block` before `truncate`: on an inline span the ellipsis never appears,
  * because there is no box to overflow. The title carries the whole value —
  * clipping a username without one hides which account a site runs as. */
-function TypeCell({ row }) {
-  const value = row.original.site_type_title ?? row.original.site_type;
+/*
+ * The version only, because the column says PHP. "PHP 8.4" under a "PHP"
+ * header is the label twice.
+ *
+ * An em-dash for the sites this does not apply to — Node, static, anything the
+ * API returns `null` for. The same dash `OwnerCell` uses, so a column with
+ * nothing in it looks the same everywhere in this table rather than blank in
+ * one place and dashed in another. Tabular numerals so the versions line up
+ * down the column instead of drifting with digit width.
+ */
+function PhpCell({ row }) {
+  const value = row.original.php_version;
   return (
-    <span className="block truncate text-muted-foreground" title={value}>
-      {value}
+    <span className="block truncate tabular-nums text-muted-foreground" title={value ?? undefined}>
+      {value ?? "—"}
     </span>
   );
 }
@@ -146,7 +157,7 @@ function ActionsCell({ row, table }) {
 
 function NameCell({ row, missingDatabase = false, gitProvider = null }) {
   const t = useTranslations("applications");
-  return <div className="flex min-w-0 items-center gap-3"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} /><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate" title={row.original.name}>{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1"><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
+  return <div className="flex min-w-0 items-center gap-3"><SiteTypeLogo name={row.original.site_type} provider={gitProvider} label={row.original.site_type_title ?? row.original.site_type} /><div className="min-w-0"><div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><Link href={`/applications/${row.original.id}`} prefetch={false} className="group inline-flex min-w-0 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline"><span className="truncate" title={row.original.name}>{row.original.name}</span><ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link>{/* A copy and the site it copies sit next to each other in this list under near-identical names. Marking the copy is the difference between editing the right site and the wrong one. */}{row.original.is_staging ? <Badge variant="warning" className="shrink-0 font-normal">{t("stagingBadge")}</Badge> : null}{/* Only for a site type that needs a database and has none: its backups will not contain one, and nothing else in this list would say so. */}{missingDatabase ? <Badge variant="warning" className="shrink-0 font-normal">{t("noDatabaseBadge")}</Badge> : null}</div><div className="flex min-w-0 items-center gap-1">{/* The padlock goes beside the DOMAIN, not in a column of its own: TLS is a property of the address, which is the convention every browser already taught people, and `url` only ever describes this one domain. It also costs no width in a table that is already at 100%. */}<TlsMark application={row.original} label={isServedOverTls(row.original) ? t("domains.secured") : t("domains.noCertificate")} /><DomainText domain={row.original.domain} className="font-mono text-xs text-muted-foreground" />{row.original.status === "active" && row.original.url ? <VisitSiteLink href={row.original.url} label={t("actions.visitNamed", { domain: row.original.domain })} className="size-5" /> : null}</div></div></div>;
 }
 
 
@@ -289,8 +300,24 @@ function ApplicationsList({
       // that has stopped saying anything. Created is the one whose absence
       // costs least — it is not actionable, it never changes, and the detail
       // page carries it.
-      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[32%] xl:w-[30%]" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
-      { accessorKey: "site_type_title", header: () => <SortHeader col="site_type">{t("columns.type")}</SortHeader>, meta: { className: "w-[15%] xl:w-[11%]" }, cell: TypeCell },
+      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[38%] xl:w-[33%]" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
+      /*
+       * PHP stands where Type stood. The logo carries the type now — it is
+       * labelled and hoverable — and a version is much shorter than "Craft
+       * CMS", so the slot narrows from 15/11 to 9/8 and the surplus goes to
+       * Application, which grew a padlock.
+       *
+       * Not sortable. Sorting sites by framework was not wanted and sorting
+       * them by PHP version is a stranger request still; the API also
+       * allow-lists sort columns, so offering one it does not accept is a 500
+       * rather than a fallback.
+       *
+       * Totals, because `fixedLayout` SILENTLY squeezes a column when they are
+       * wrong rather than erroring:
+       *   lg  38 + 9 + 16 + 16 + 14 + 7          = 100
+       *   xl  33 + 8 + 14 + 13 + 11 + 14 + 7     = 100
+       */
+      { id: "php", header: t("columns.php"), meta: { className: "w-[9%] xl:w-[8%]" }, cell: PhpCell },
       { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: "w-[16%] xl:w-[14%]" }, cell: StatusCell },
       // Not sortable, and deliberately so on the API's side: the owner lives on
       // a relation, so ordering by it would mean a join, and the list can

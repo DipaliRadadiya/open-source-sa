@@ -42,11 +42,37 @@ import { ProviderLogo } from "@/components/integrations/git/provider-logo";
  * square box would make Akaunting and Craft fill it and set the row's floor
  * while Moodle used a quarter of it and read as a smudge.
  */
-export function SiteTypeLogo({ name, provider, className, size = "h-7 w-12" }) {
+/**
+ * `label` names the type, for the one caller where the mark is the ONLY thing
+ * saying what this site is.
+ *
+ * Off by default, and that is not an oversight. Everywhere else the type is
+ * already written next to the logo — the mobile cards print it, the detail
+ * header prints it, the picker prints it — so naming the image there would
+ * make a screen reader say "WordPress WordPress", and a `title` would pop a
+ * tooltip over text you can already read. The applications TABLE is the
+ * exception: its Type column is gone, so the mark carries the fact alone and
+ * has to be readable and hoverable.
+ *
+ * Most of these marks do not spell their own name — the WordPress W, Craft's
+ * C, Joomla's and Nextcloud's glyphs — so an unlabelled one is genuinely
+ * anonymous rather than merely redundant.
+ */
+export function SiteTypeLogo({ name, provider, className, size = "h-7 w-12", label = null }) {
   const logo = siteTypeLogo(name);
 
   return (
-    <span className={cn("flex shrink-0 items-center justify-center", size, className)}>
+    <span
+      className={cn("flex shrink-0 items-center justify-center", size, className)}
+      title={label ?? undefined}
+      // The name goes on the WRAPPER, not on the <img>. Two of the three
+      // branches below are not images at all — a Lucide provider mark and the
+      // Globe2 fallback — and an `alt` would have named only the middle one,
+      // leaving a git row and a type with no logo file anonymous. The image
+      // stays aria-hidden either way so nothing is announced twice.
+      role={label ? "img" : undefined}
+      aria-label={label ?? undefined}
+    >
       {/* A git site shows the service it came from, where that is known: every
           one of them is "From Git repo" with the same mark otherwise, and which
           service it is is the one thing that distinguishes them. GitHub's own

@@ -8,6 +8,7 @@ import { ApplicationRowActions } from "@/components/applications/application-row
 import { ApplicationStatusBadge, ApplicationStatusNotes } from "@/components/applications/application-status-badge";
 import { DomainText } from "@/components/ui/domain-text";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
+import { TlsMark, isServedOverTls } from "@/components/applications/tls-mark";
 import { gitProviderFor } from "@/lib/applications/git-provider";
 
 /**
@@ -65,10 +66,19 @@ export function ApplicationsCards({
                   </Badge>
                 ) : null}
               </div>
-              <DomainText
-                domain={application.domain}
-                className="font-mono text-xs text-muted-foreground"
-              />
+              {/* Same padlock in the same place as the table's. The card still
+                  prints the type as text below, so the logo stays unlabelled
+                  here — see SiteTypeLogo. */}
+              <div className="flex min-w-0 items-center gap-1">
+                <TlsMark
+                  application={application}
+                  label={isServedOverTls(application) ? t("domains.secured") : t("domains.noCertificate")}
+                />
+                <DomainText
+                  domain={application.domain}
+                  className="font-mono text-xs text-muted-foreground"
+                />
+              </div>
             </div>
             {/* shrink-0 so the menu keeps its place however long the name is —
                 it is the reason this card exists. */}
@@ -85,6 +95,16 @@ export function ApplicationsCards({
             <span className="truncate text-foreground">
               {application.site_type_title ?? application.site_type}
             </span>
+            {/* OMITTED when the API has no version, not dashed — the same rule
+                the size fact below follows, and for the same reason: a dash in
+                a wrapped list of facts reads as a value, where in a table
+                column it reads as an empty cell. Node and static sites simply
+                have nothing to say here. */}
+            {application.php_version ? (
+              <span className="whitespace-nowrap tabular-nums">
+                {t("phpFact", { version: application.php_version })}
+              </span>
+            ) : null}
             <span className="truncate font-mono">{application.system_user?.username ?? "—"}</span>
             {/* Same fact as the table's Size column — the cards are this list
                 below lg, not a different list. Without the measurement date

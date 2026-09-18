@@ -3114,7 +3114,8 @@
       "status": "Status",
       "owner": "Owner",
       "size": "Size",
-      "created": "Created"
+      "created": "Created",
+      "php": "PHP"
     },
     "empty": {
       "title": "Your server is ready for its first application",
@@ -4997,7 +4998,8 @@
       "footerIdleOne": "It installs in the background — you can keep filling in the form.",
       "subImpossible": "This server cannot run this application as it stands.",
       "footerImpossible": "Nothing here can fix this on its own."
-    }
+    },
+    "phpFact": "PHP {version}"
   },
   "panelUpdate": {
     "title": "Panel update",

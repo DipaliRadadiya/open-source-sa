@@ -3114,7 +3114,8 @@
       "status": "Estado",
       "owner": "Propietario",
       "size": "Tamaño",
-      "created": "Creada"
+      "created": "Creada",
+      "php": "PHP"
     },
     "empty": {
       "title": "Tu servidor está listo para su primera aplicación",
@@ -4997,7 +4998,8 @@
       "footerIdleOne": "Se instala en segundo plano: puedes seguir rellenando el formulario.",
       "subImpossible": "Este servidor no puede ejecutar esta aplicación tal como está.",
       "footerImpossible": "Nada de aquí puede resolverlo por sí solo."
-    }
+    },
+    "phpFact": "PHP {version}"
   },
   "panelUpdate": {
     "title": "Actualización del panel",
