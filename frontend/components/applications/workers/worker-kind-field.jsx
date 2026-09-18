@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { WORKER_KINDS, conflictingKind } from "@/lib/applications/worker-kind";
+import { workerKinds, conflictingKind } from "@/lib/applications/worker-kind";
 import {
   Select,
   SelectContent,
@@ -28,7 +28,7 @@ import {
  *
  * Above the command, because it frames what the command is meant to be.
  */
-export function WorkerKindField({ form, workers = [], disabled = false }) {
+export function WorkerKindField({ form, presets = [], workers = [], disabled = false }) {
   const t = useTranslations("applications.workers");
 
   return (
@@ -45,7 +45,7 @@ export function WorkerKindField({ form, workers = [], disabled = false }) {
               </SelectTrigger>
             </FormControl>
             <SelectContent>
-              {WORKER_KINDS.map((kind) => {
+              {workerKinds(presets, field.value).map((kind) => {
                 /*
                  * The same refusal the template menu already shows, on the
                  * other control that sets this field — otherwise the menu

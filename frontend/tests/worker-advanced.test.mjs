@@ -215,8 +215,18 @@ test("every new validation code resolves in every locale", () => {
  * while `SaveWorkerRequest` had accepted `kind` on update all along.
  */
 test("both dialogs offer the kind, and exclude the right workers from the check", async () => {
-  const { conflictingKind, WORKER_KINDS } = await import("../lib/applications/worker-kind.js");
-  assert.deepEqual(WORKER_KINDS, ["queue", "horizon", "custom"]);
+  const { conflictingKind, workerKinds } = await import("../lib/applications/worker-kind.js");
+  /*
+   * The kinds now come from the API's presets rather than a fixed list here —
+   * see tests/worker-kinds-from-presets.test.mjs. The fixed list mirrored what
+   * SaveWorkerRequest accepts, which is all three on every site; the presets
+   * say which ones the site can actually run. Everything below about the
+   * conflict rule is unchanged.
+   */
+  assert.deepEqual(
+    workerKinds([{ kind: "queue" }, { kind: "horizon" }, { kind: "custom" }]),
+    ["queue", "horizon", "custom"],
+  );
 
   const queue = [{ id: 1, kind: "queue" }];
   assert.equal(conflictingKind("horizon", queue), "queue");
@@ -233,13 +243,13 @@ test("both dialogs offer the kind, and exclude the right workers from the check"
     "utf8",
   );
   assert.match(edit, /workers\.filter\(\(w\) => w\.id !== worker\.id\)/, "edit counts the worker against itself");
-  assert.match(edit, /<WorkerKindField form=\{form\} workers=\{others\} \/>/);
+  assert.match(edit, /<WorkerKindField form=\{form\} presets=\{presets\} workers=\{others\} \/>/);
 
   const create = readFileSync(
     new URL("../components/applications/workers/create-worker-dialog.jsx", import.meta.url),
     "utf8",
   );
-  assert.match(create, /<WorkerKindField form=\{form\} workers=\{workers\} \/>/);
+  assert.match(create, /<WorkerKindField form=\{form\} presets=\{presets\} workers=\{workers\} \/>/);
 });
 
 test("the conflict rule has exactly one copy", () => {

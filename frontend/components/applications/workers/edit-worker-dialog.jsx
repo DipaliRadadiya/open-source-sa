@@ -207,7 +207,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
         {/* Both controls set `kind`, and both must exclude this worker from the
             conflict check — changing a site's only queue worker into a Horizon
             one is the edit that is always safe. */}
-        <WorkerKindField form={form} workers={others} />
+        <WorkerKindField form={form} presets={presets} workers={others} />
 
         <WorkerCommandField
           form={form}

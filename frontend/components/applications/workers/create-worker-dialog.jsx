@@ -224,7 +224,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
 
         {/* No filtering here: nothing has been created yet, so every worker on
             the site counts against the choice. */}
-        <WorkerKindField form={form} workers={workers} />
+        <WorkerKindField form={form} presets={presets} workers={workers} />
 
         <WorkerCommandField form={form} presets={presets} workers={workers} onPick={onPickPreset} />
 

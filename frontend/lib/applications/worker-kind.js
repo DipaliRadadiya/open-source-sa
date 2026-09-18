@@ -16,7 +16,32 @@
  * template picker both set the same field, and two copies of "which kinds
  * cannot coexist" is how they start disagreeing.
  */
-export const WORKER_KINDS = ["queue", "horizon", "custom"];
+/**
+ * The kinds this site can actually run, from the API's own presets.
+ *
+ * `WorkerPresets::for()` picks them by framework: Laravel and Statamic get
+ * queue and horizon, Craft gets queue, everything else gets custom alone. So
+ * the presets already answer "which kinds suit this site" — each one carries an
+ * explicit `kind` — and the frontend has no business deciding it a second time.
+ *
+ * It used to be a fixed `["queue","horizon","custom"]`, which mirrored what
+ * SaveWorkerRequest ACCEPTS rather than what the site can use. A Node site was
+ * offered Queue worker, and picking it produced a worker whose graceful restart
+ * is `php artisan queue:restart` — a command that site has no way to run.
+ *
+ * `current` is always included even when no preset offers it: Server Sync can
+ * adopt a worker whose kind the detector would not suggest, and an option
+ * missing from its own select renders as an empty control. Same reasoning as
+ * never disabling the value already chosen.
+ */
+export function workerKinds(presets = [], current = null) {
+  const kinds = [];
+  for (const preset of presets) {
+    if (preset?.kind && !kinds.includes(preset.kind)) kinds.push(preset.kind);
+  }
+  if (current && !kinds.includes(current)) kinds.push(current);
+  return kinds;
+}
 
 // Horizon supervises its own queue workers. Running both means every job is
 // picked up twice and neither tool can see the other, so the API refuses it —
