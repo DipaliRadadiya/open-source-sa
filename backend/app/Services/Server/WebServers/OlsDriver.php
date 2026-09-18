@@ -180,16 +180,27 @@ class OlsDriver extends AbstractWebServerDriver
 
     /**
      * Per-site directory, unlike the single file the other drivers write.
+     *
+     * Both halves come from the server rather than from config, because a
+     * server migrated from the old panel has neither: its vhosts live under
+     * `/etc/<brand>-ols/` and are called `main.conf`. Writing this panel's path
+     * on such a box would put the config somewhere the shared `httpd_config`
+     * does not point, which is a site that serves nothing while every file
+     * involved looks correct.
+     *
+     * Writing where the server already points is also what makes taking one
+     * over cheap: the `virtualHost` blocks are already right, so adoption does
+     * not have to edit the one file whose mistakes break every site at once.
      */
     public function configPath(Application $application): string
     {
-        $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', '/usr/local/lsws/conf/vhosts'), '/');
+        $layout = app(OlsVhostLayout::class);
 
         // Keyed by the application, same as the other drivers — see
         // AbstractWebServerDriver::configPath(). `vhRoot()` deliberately does
         // not follow: that is the document root, which is where the site's
         // files actually live, and it is addressed by domain everywhere else.
-        return "{$root}/{$this->fileName($application)}/vhconf.conf";
+        return $layout->root()."/{$this->fileName($application)}/".$layout->filename();
     }
 
     /**

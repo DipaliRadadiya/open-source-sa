@@ -54,6 +54,34 @@ class OlsVhostLayout
     }
 
     /**
+     * Is this server using a layout the old panel left behind?
+     *
+     * Recorded only when detection found one, so this is the same question as
+     * "did this box come from the old panel", asked without another probe.
+     */
+    public function isLegacy(): bool
+    {
+        $recorded = ServerCapability::query()->value('ols_vhost_root');
+
+        return is_string($recorded) && $recorded !== '';
+    }
+
+    /**
+     * What this server calls a vhost file.
+     *
+     * Per server, not per site, and deliberately so. A migrated box keeps the
+     * old panel's name for the sites it already had *and* uses it for sites
+     * created afterwards, because one box with two layouts is a box where
+     * every later question — which file does this site use, which does the
+     * shared config point at — has to be asked per site forever. Following the
+     * layout the server already has is the whole point of detecting it.
+     */
+    public function filename(): string
+    {
+        return $this->isLegacy() ? 'main.conf' : self::FILENAMES[0];
+    }
+
+    /**
      * Look for a vhost root the old panel wrote, and record it if one is
      * there.
      *

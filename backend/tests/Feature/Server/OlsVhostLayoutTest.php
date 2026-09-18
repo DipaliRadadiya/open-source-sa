@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Application;
 use App\Models\ServerCapability;
+use App\Services\Server\WebServers\OlsDriver;
 use App\Services\Server\WebServers\OlsVhostLayout;
 use Illuminate\Support\Facades\Process;
 
@@ -109,4 +111,32 @@ it('looks for both filenames, ours first', function () {
     expect(OlsVhostLayout::FILENAMES)->toBe(['vhconf.conf', 'main.conf'])
         ->and(app(OlsVhostLayout::class)->nameTests())
         ->toBe(['-name', 'vhconf.conf', '-o', '-name', 'main.conf']);
+});
+
+it('writes a vhost where a migrated server already points', function () {
+    /*
+     * The half that makes adoption cheap. The old panel's `httpd_config.conf`
+     * already has a `virtualHost` block naming
+     * `/etc/<brand>-ols/<site>/main.conf`. Writing there means taking a server
+     * over needs no edit to that file at all — and editing it is the dangerous
+     * part of OpenLiteSpeed support, because a mistake is not one broken site,
+     * it is all of them.
+     *
+     * Writing this panel's own path instead would leave the config somewhere
+     * nothing points at: a site serving nothing while every file involved
+     * looks correct.
+     */
+    ServerCapability::query()->first()->forceFill(['ols_vhost_root' => '/etc/sureshcloud-ols'])->save();
+
+    $application = Application::factory()->create(['slug' => 'shop', 'domain' => 'shop.example.com']);
+
+    expect(app(OlsDriver::class)->configPath($application))
+        ->toBe('/etc/sureshcloud-ols/shop/main.conf');
+});
+
+it('writes its own layout on a server that never ran the old panel', function () {
+    $application = Application::factory()->create(['slug' => 'shop', 'domain' => 'shop.example.com']);
+
+    expect(app(OlsDriver::class)->configPath($application))
+        ->toBe('/usr/local/lsws/conf/vhosts/shop/vhconf.conf');
 });
