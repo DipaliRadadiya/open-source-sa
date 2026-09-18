@@ -267,6 +267,17 @@ class FpmPhpStack implements PhpStack
         return $this->root()."/{$version}/mods-available";
     }
 
+    /**
+     * Debian's layout: `mods-available` holds the real ini files and each
+     * SAPI's `conf.d` holds the numbered symlinks the interpreter reads. The
+     * scanned one is `conf.d`, and it is per-SAPI — cli and fpm can genuinely
+     * differ about which extensions are on.
+     */
+    public function scanDir(string $version, string $sapi): string
+    {
+        return $this->sapiDir($version, $sapi).'/conf.d';
+    }
+
     public function logPath(string $version): ?string
     {
         return str_replace(

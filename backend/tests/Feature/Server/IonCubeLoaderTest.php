@@ -17,6 +17,7 @@ use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
@@ -529,4 +530,108 @@ it('refuses uncertain file state rather than treating a failed probe as absence'
     $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
     expect($error['message'])->toBe(__('errors/php.ioncube_discovery_failed'))
         ->and(collect($runs)->filter(fn ($c) => preg_match('/^(install|tee|cp|rm) /', $c)))->toBeEmpty();
+});
+
+/*
+| Where the ini goes.
+|
+| 🔴 Measured from LiteSpeed's shipped package on 2026-09-18, after a real
+| OpenLiteSpeed server reported ionCube as not installed. `lsphp85` on noble is
+| built with:
+|
+|   --with-config-file-path=/usr/local/lsws/lsphp85/etc/php/8.5/litespeed/
+|   --with-config-file-scan-dir=/usr/local/lsws/lsphp85/etc/php/8.5/mods-available/
+|
+| read out of the binary's own configure line, and the package contains
+| `litespeed/` and `mods-available/` and NO `conf.d` at all.
+|
+| The old code composed `sapiDir()."/conf.d"` — Debian's layout — which on that
+| stack is wrong twice: absent, so `tee` failed and the install aborted; and
+| unscanned, so merely creating it would have produced an install that reported
+| success and never loaded. The second is the dangerous one, and it is what
+| these tests exist to prevent coming back.
+*/
+
+it('writes the loader ini where LSPHP actually scans, not into a conf.d', function () {
+    config([
+        'server.php_stacks.lsphp.binary_candidates' => ['/usr/bin/php'.$this->version],
+        'server.php_stacks.lsphp.ini_path' => "{$this->phpDir}/{$this->version}/litespeed/php.ini",
+        'server.php_stacks.lsphp.sapis' => ['litespeed'],
+    ]);
+
+    $runs = fakeIonCube(['existing' => true]);
+    $service = new IonCubeLoader(app(ServerOps::class), app(ManagedFile::class), app(LsphpPhpStack::class));
+
+    $service->install($this->version);
+
+    $written = collect($runs)->first(fn (string $c) => str_starts_with($c, 'tee ') && str_contains($c, 'ioncube'));
+
+    // Sibling of the `litespeed/` ini directory, exactly as the real tree has
+    // it: /usr/local/lsws/lsphp85/etc/php/8.5/mods-available.
+    expect($written)->toContain("{$this->phpDir}/{$this->version}/mods-available/01-ioncube.ini")
+        // Said explicitly: the old path must not survive anywhere. A test that
+        // only checked the new one would still pass if both were written.
+        ->and(collect($runs)->filter(fn (string $c) => str_contains($c, 'conf.d')))->toBeEmpty();
+});
+
+it('keeps writing to conf.d on php-fpm, where that is the scanned directory', function () {
+    // The other half of the fix. Changing where an extension is enabled is
+    // only safe if the servers that work today do not move, so "nothing
+    // changed" is asserted rather than assumed.
+    $runs = fakeIonCube(['existing' => true]);
+
+    app(IonCubeLoader::class)->install($this->version);
+
+    $written = collect($runs)->filter(fn (string $c) => str_starts_with($c, 'tee ') && str_contains($c, 'ioncube'));
+
+    expect($written)->not->toBeEmpty()
+        ->and($written->every(fn (string $c) => str_contains($c, "/{$this->version}/")
+            && str_contains($c, '/conf.d/01-ioncube.ini')))->toBeTrue();
+});
+
+it('creates the scan directory before writing into it', function () {
+    // `tee` does not create parents. Ordering, not just presence: a mkdir that
+    // ran after the write would satisfy a "did it mkdir" assertion and fix
+    // nothing.
+    $runs = fakeIonCube(['existing' => true]);
+
+    app(IonCubeLoader::class)->install($this->version);
+
+    $commands = collect($runs)->values();
+    $mkdir = $commands->search(fn (string $c) => str_starts_with($c, 'mkdir -p') && str_contains($c, 'conf.d'));
+    $write = $commands->search(fn (string $c) => str_starts_with($c, 'tee ') && str_contains($c, 'ioncube'));
+
+    expect($mkdir)->not->toBeFalse()
+        ->and($write)->not->toBeFalse()
+        ->and($mkdir)->toBeLessThan($write);
+});
+
+it('reports not-installed without writing a failure to the error log', function () {
+    // A real OpenLiteSpeed server produced this entry, and it was the only
+    // thing the operator could see: "Server operation failed." with a
+    // reference, for `test -f` answering exit 1 — the ordinary answer on every
+    // server that has not installed ionCube.
+    //
+    // Log::listen rather than Log::shouldReceive: mocking the facade turns
+    // every unrelated log call in the request into a test failure.
+    config([
+        'server.php_stacks.lsphp.binary_candidates' => ['/usr/bin/php'.$this->version],
+        'server.php_stacks.lsphp.ini_path' => "{$this->phpDir}/{$this->version}/litespeed/php.ini",
+        'server.php_stacks.lsphp.sapis' => ['litespeed'],
+    ]);
+
+    Process::fake(fn () => Process::result(exitCode: 1));
+
+    $levels = [];
+    Log::listen(function ($message) use (&$levels) {
+        if (($message->context['op'] ?? null) === 'ioncube_status') {
+            $levels[] = $message->level;
+        }
+    });
+
+    $service = new IonCubeLoader(app(ServerOps::class), app(ManagedFile::class), app(LsphpPhpStack::class));
+
+    expect($service->status($this->version)['installed'])->toBeFalse()
+        ->and($levels)->not->toBeEmpty()
+        ->and(collect($levels)->contains('error'))->toBeFalse();
 });

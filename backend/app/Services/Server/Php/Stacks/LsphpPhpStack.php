@@ -340,6 +340,35 @@ class LsphpPhpStack implements PhpStack
     }
 
     /**
+     * `mods-available`, and **not** a per-SAPI `conf.d`.
+     *
+     * Measured, not assumed. `lsphp85` on noble is built with:
+     *
+     *   --with-config-file-path=/usr/local/lsws/lsphp85/etc/php/8.5/litespeed/
+     *   --with-config-file-scan-dir=/usr/local/lsws/lsphp85/etc/php/8.5/mods-available/
+     *
+     * read out of the shipped binary's own configure line, and the package
+     * contains `litespeed/` and `mods-available/` and no `conf.d` anywhere.
+     * LiteSpeed flattened Debian's two-directory arrangement: there is no
+     * symlink farm here, the scanned directory holds the ini files themselves.
+     *
+     * The `$sapi` argument is ignored because there is only ever one —
+     * `litespeed` — and a per-SAPI split would be inventing a distinction this
+     * stack does not have.
+     *
+     * 🔴 This is what ionCube got wrong. It composed `sapiDir()."/conf.d"`,
+     * which on OpenLiteSpeed is both absent (so `tee` failed and the install
+     * aborted) and unscanned (so creating it would have produced an install
+     * that reported success and never loaded). The second half is the
+     * dangerous one, and it is the reason this is a stack method rather than a
+     * `mkdir` at the call site.
+     */
+    public function scanDir(string $version, string $sapi): string
+    {
+        return $this->modsDir($version);
+    }
+
+    /**
      * LSPHP writes into the web server's error log rather than one of its own,
      * so there is no per-version file to offer. Null keeps it off the Logs
      * screen instead of listing a path that will never exist.

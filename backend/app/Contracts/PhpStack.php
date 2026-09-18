@@ -191,6 +191,23 @@ interface PhpStack
     /** Directory holding the mods-available ini files. */
     public function modsDir(string $version): string;
 
+    /**
+     * The directory this PHP actually scans for extra ini files.
+     *
+     * 🔴 **Not `sapiDir()."/conf.d"`.** That is the Debian layout and true only
+     * of php-fpm. LSPHP is built with
+     * `--with-config-file-scan-dir=…/etc/php/{version}/mods-available/` — read
+     * out of the shipped binary, not documentation — and its package contains
+     * no `conf.d` at all.
+     *
+     * Asked of the stack rather than composed by the caller because getting it
+     * wrong is silent in the worst direction: writing a `zend_extension` into a
+     * directory nothing scans produces an install that reports success and
+     * never loads. A missing directory at least fails loudly; an unscanned one
+     * does not. ionCube on OpenLiteSpeed did both.
+     */
+    public function scanDir(string $version, string $sapi): string;
+
     /** Where this version logs, or null if it has no log of its own. */
     public function logPath(string $version): ?string;
 }

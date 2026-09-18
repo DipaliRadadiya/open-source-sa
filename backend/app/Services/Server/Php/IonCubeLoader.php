@@ -335,7 +335,24 @@ class IonCubeLoader
             ."zend_extension={$loader}\n";
 
         foreach ($this->stack->sapis($version) as $sapi) {
-            $written = $this->files->put($this->iniPath($version, $sapi), $line, $this->context($version, 'ioncube_write_ini'));
+            $path = $this->iniPath($version, $sapi);
+
+            // `tee` does not create parent directories, and a scan directory
+            // is not guaranteed to exist: it comes from a package on the FPM
+            // stacks and the panel has already been bitten once by assuming
+            // otherwise (see SupervisorMissingException). Failing here is
+            // loud but unhelpful — "No such file or directory" against a path
+            // the user never chose.
+            $dir = $this->serverOps->run(
+                ['mkdir', '-p', dirname($path)],
+                $this->context($version, 'ioncube_ensure_ini_dir'),
+            );
+
+            if ($dir->failed()) {
+                throw PhpConfigException::ionCubeInstallFailed($dir->reference);
+            }
+
+            $written = $this->files->put($path, $line, $this->context($version, 'ioncube_write_ini'));
 
             if ($written->failed()) {
                 throw PhpConfigException::ionCubeInstallFailed($written->reference);
@@ -478,9 +495,19 @@ class IonCubeLoader
         return $value === '1';
     }
 
+    /**
+     * Where the ini goes — the directory this PHP really scans.
+     *
+     * 🔴 Was `sapiDir()."/conf.d"`, which is Debian's layout and wrong on
+     * OpenLiteSpeed in both directions: LSPHP ships no `conf.d` (so `tee`
+     * failed with "No such file or directory" and the install aborted) and
+     * scans `mods-available` instead (so creating the directory would have
+     * given an install that reported success and never loaded). The stack
+     * answers this now; see PhpStack::scanDir().
+     */
     private function iniPath(string $version, string $sapi): string
     {
-        return $this->stack->sapiDir($version, $sapi).'/conf.d/'
+        return $this->stack->scanDir($version, $sapi).'/'
             .(string) config('server.ioncube.ini_name', '01-ioncube.ini');
     }
 
@@ -489,7 +516,13 @@ class IonCubeLoader
         $sapis = $this->stack->sapis($version);
 
         foreach ($sapis as $sapi) {
-            if ($this->serverOps->run(
+            // `probe()`, not `run()`: `test -f` answers exit 1 for "no file",
+            // which is the ordinary answer on every server without ionCube.
+            // Through `run()` each one was logged as a failed server operation
+            // and shown on the admin error dashboard as "Server operation
+            // failed." with a reference — an alarming entry for a question
+            // that had been answered correctly. Reported from a real server.
+            if ($this->serverOps->probe(
                 ['test', '-f', $this->iniPath($version, $sapi)],
                 $this->context($version, 'ioncube_status'),
             )->failed()) {
