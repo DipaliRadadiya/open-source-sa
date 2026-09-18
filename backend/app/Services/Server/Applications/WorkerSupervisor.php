@@ -7,6 +7,7 @@ use App\Exceptions\Server\Application\SupervisorMissingException;
 use App\Exceptions\Server\Application\WorkerControlException;
 use App\Models\Worker;
 use App\Services\Server\ManagedFile;
+use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\View;
@@ -45,6 +46,7 @@ class WorkerSupervisor
         private ServerOps $serverOps,
         private ManagedFile $files,
         private FrameworkDetector $frameworks,
+        private PhpRuntime $php,
     ) {}
 
     /** `sv-worker-shop-queue` — the program name. */
@@ -286,7 +288,14 @@ class WorkerSupervisor
     {
         $application = $worker->application;
         $root = $this->directory($worker);
-        $php = 'php'.($application->php_version ?: '');
+
+        // Resolved, not bare. This is run directly rather than through
+        // supervisor, so the bare `php8.4` it used to build relied on PATH
+        // holding a versioned name — which no stack provides on OpenLiteSpeed,
+        // where PATH has `php` and nothing else. So "restart to pick up new
+        // code" failed there for a second, separate reason from the program
+        // command itself.
+        $php = $this->phpBinary('php'.($application->php_version ?: ''), $worker);
 
         if (! in_array($worker->kind, [Worker::KIND_QUEUE, Worker::KIND_HORIZON], true)) {
             return null;
@@ -360,6 +369,17 @@ class WorkerSupervisor
      * whose worker silently ran on 8.4 is the kind of difference that only
      * shows up as a serialisation error weeks later. Resolved for the same
      * reason the systemd unit had to.
+     *
+     * 🔴 **Resolved by the stack, not by writing `/usr/bin/`**, which is what
+     * this did until 2026-09-18 and which is only true on the FPM stacks. An
+     * OpenLiteSpeed box has no ondrej PHP at all — `install.sh` says so, and
+     * creates `/usr/local/bin/php` precisely because nothing else puts a `php`
+     * on PATH there. PHP lives at `/usr/local/lsws/lsphpXX/bin/php`. So every
+     * PHP worker on an OLS server was written pointing at a file that does not
+     * exist, supervisord could not start the program, and the panel offered
+     * the screen anyway. `PhpStack::binaryPath()` already knew the answer for
+     * both stacks; this simply asks it. Same root cause as the deploy script
+     * having no PHP pinned (`15af6678`), one feature over.
      */
     private function command(Worker $worker): string
     {
@@ -367,10 +387,41 @@ class WorkerSupervisor
         $binary = array_shift($parts) ?? '';
 
         if (! str_starts_with($binary, '/') && str_starts_with($binary, 'php')) {
-            $binary = '/usr/bin/'.$binary;
+            $binary = $this->phpBinary($binary, $worker);
         }
 
         return trim($binary.' '.implode(' ', $parts));
+    }
+
+    /**
+     * A typed `php` / `php8.2` resolved to this stack's real binary.
+     *
+     * The version comes from what the user typed when they typed one: somebody
+     * who wrote `php8.2` on a site set to 8.4 meant 8.2, and the old
+     * `/usr/bin/`.$binary honoured that. A bare `php` falls back to the site's
+     * own version, which is the question they were actually answering.
+     *
+     * **Never fatal.** Anything unresolvable — a version that is not `X.Y`, an
+     * empty answer, or the bare `php` an operator gets from a blank
+     * `SERVER_PHP_BINARY_PATTERN` — leaves the name exactly as typed and lets
+     * PATH decide, which is what happens today. A failure to resolve must not
+     * turn a worker that runs into one that does not.
+     */
+    private function phpBinary(string $typed, Worker $worker): string
+    {
+        $version = substr($typed, 3);
+
+        if ($version === '') {
+            $version = (string) $worker->application?->php_version;
+        }
+
+        if (preg_match('/^\d+\.\d+$/', $version) !== 1) {
+            return $typed;
+        }
+
+        $resolved = $this->php->binaryPath($version);
+
+        return ($resolved === '' || $resolved === 'php') ? $typed : $resolved;
     }
 
     /**

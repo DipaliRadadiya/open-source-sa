@@ -1,5 +1,6 @@
 <?php
 
+use App\Contracts\PhpStack;
 use App\Jobs\InstallSupervisor;
 use App\Models\Application;
 use App\Models\SystemUser;
@@ -9,6 +10,8 @@ use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\FrameworkDetector;
 use App\Services\Server\Applications\WorkerSupervisor;
 use App\Services\Server\LogManager;
+use App\Services\Server\Php\Stacks\LsphpPhpStack;
+use App\Services\Server\ServerOps;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
@@ -1007,4 +1010,155 @@ describe('a create that fails on the server', function () {
 
         expect(Worker::query()->count())->toBe(1);
     });
+});
+
+/*
+| Which PHP a worker actually starts under.
+|
+| This wrote `/usr/bin/`.$binary by hand until 2026-09-18, which is true only
+| on the FPM stacks. An OpenLiteSpeed box has no ondrej PHP at all — install.sh
+| says so, and creates /usr/local/bin/php precisely because nothing else puts a
+| `php` on PATH there. So every PHP worker on an OLS server was written
+| pointing at a file that does not exist, supervisord could not start the
+| program, and the panel offered the Workers screen regardless.
+|
+| The real LsphpPhpStack is bound rather than a stub: its `detect()` falls back
+| to the first configured candidate when nothing is on disk, so on a box with
+| no lsws tree it returns the documented path deterministically. A stub would
+| only prove the test agrees with itself.
+*/
+
+function useLsphpStack(): void
+{
+    app()->instance(PhpStack::class, new LsphpPhpStack(app(ServerOps::class)));
+}
+
+it('starts a worker on LSPHP when the server runs OpenLiteSpeed', function () {
+    useLsphpStack();
+    fakeWorkerSupervisor();
+
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertCreated();
+
+    Process::assertRan(fn ($process) => str_contains(
+        (string) $process->input,
+        'command=/usr/local/lsws/lsphp84/bin/php artisan queue:work',
+    ));
+
+    // Said explicitly, because this is the whole bug: the old path must not
+    // survive anywhere in the program block.
+    Process::assertRan(fn ($process) => ! str_contains((string) $process->input, '/usr/bin/php'));
+});
+
+it('writes exactly what it wrote before on an nginx or apache server', function () {
+    // The FPM stack is the default binding, so this is the untouched path. It
+    // is asserted rather than assumed: the fix is only safe if boxes that work
+    // today do not move, and "nothing changed" is a claim that needs a test
+    // like any other.
+    fakeWorkerSupervisor();
+
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertCreated();
+
+    Process::assertRan(fn ($process) => str_contains(
+        (string) $process->input,
+        'command=/usr/bin/php8.4 artisan queue:work',
+    ));
+});
+
+it('honours the version the user typed over the version the site is set to', function () {
+    useLsphpStack();
+    fakeWorkerSupervisor();
+
+    // The site is on 8.4. Somebody who writes php8.2 means 8.2 — the old
+    // `/usr/bin/`.$binary honoured that, and resolving must not quietly
+    // "correct" them onto the site's version.
+    $this->actingAs($this->admin)
+        ->postJson(workerUrl(), workerPayload(['command' => 'php8.2 artisan queue:work']))
+        ->assertCreated();
+
+    Process::assertRan(fn ($process) => str_contains(
+        (string) $process->input,
+        'command=/usr/local/lsws/lsphp82/bin/php artisan queue:work',
+    ));
+});
+
+it('falls back to the site version for a bare php', function () {
+    useLsphpStack();
+    fakeWorkerSupervisor();
+
+    $this->actingAs($this->admin)
+        ->postJson(workerUrl(), workerPayload(['command' => 'php artisan queue:work']))
+        ->assertCreated();
+
+    Process::assertRan(fn ($process) => str_contains(
+        (string) $process->input,
+        'command=/usr/local/lsws/lsphp84/bin/php artisan queue:work',
+    ));
+});
+
+it('leaves a command that is not php alone', function () {
+    useLsphpStack();
+    fakeWorkerSupervisor();
+
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload([
+        'command' => '/usr/local/bin/myscript --loop',
+        'kind' => 'custom',
+    ]))->assertCreated();
+
+    Process::assertRan(fn ($process) => str_contains((string) $process->input, 'command=/usr/local/bin/myscript --loop'));
+});
+
+it('keeps the typed name when the operator has blanked the binary pattern', function () {
+    // A blank SERVER_PHP_BINARY_PATTERN is an operator saying "use whatever is
+    // on PATH", and FpmPhpStack answers the bare `php` for it. Typed `php8.2`
+    // must survive that: collapsing it to `php` would silently move the worker
+    // onto whatever version PATH happens to give, which is the bug this whole
+    // change exists to stop — just with the versions the other way round.
+    //
+    // Deliberately a *versioned* name. With a bare `php` the resolved and
+    // unresolved answers are both the string "php", so the test could not tell
+    // the guard from its absence — which is exactly how it first passed with
+    // the fallback sabotaged out.
+    config(['server.php_binary_pattern' => '']);
+    fakeWorkerSupervisor();
+
+    $this->actingAs($this->admin)
+        ->postJson(workerUrl(), workerPayload(['command' => 'php8.2 artisan queue:work']))
+        ->assertCreated();
+
+    Process::assertRan(fn ($process) => str_contains((string) $process->input, 'command=php8.2 artisan queue:work'));
+});
+
+it('never writes an empty command when no candidate path is configured', function () {
+    // `detect()` answers '' when its candidate list is empty. Falling through
+    // with that would write `command= artisan queue:work` — a program block
+    // supervisord cannot start, produced by a config mistake rather than by
+    // anything the user did. Keep the typed name and let PATH decide, which is
+    // the behaviour a worker had before any of this.
+    useLsphpStack();
+    config(['server.php_stacks.lsphp.binary_candidates' => []]);
+    fakeWorkerSupervisor();
+
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertCreated();
+
+    Process::assertRan(fn ($process) => str_contains((string) $process->input, 'command=php8.4 artisan queue:work'));
+});
+
+it('restarts a worker with the resolved php, not a bare versioned name', function () {
+    useLsphpStack();
+    fakeWorkerSupervisor();
+
+    $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload())->assertCreated();
+
+    $worker = Worker::firstOrFail();
+    WorkerFake::$ran = [];
+
+    $this->actingAs($this->admin)->postJson(workerUrl("/{$worker->id}/restart"))->assertOk();
+
+    // `php8.4 artisan queue:restart` relied on a versioned name being on PATH,
+    // which no stack provides on OpenLiteSpeed — PATH there has `php` and
+    // nothing else. A second, separate failure from the program command.
+    expect(collect(WorkerFake::$ran)->contains(
+        fn (string $command) => str_contains($command, '/usr/local/lsws/lsphp84/bin/php')
+            && str_contains($command, 'artisan queue:restart'),
+    ))->toBeTrue();
 });
