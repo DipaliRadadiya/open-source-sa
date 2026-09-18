@@ -320,7 +320,14 @@ class OlsDriver extends AbstractWebServerDriver
         }
 
         $directory = dirname($this->configPath($application));
-        $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', '/usr/local/lsws/conf/vhosts'), '/');
+
+        // The same root `configPath()` just used. Reading the configured one
+        // here instead made the guard below compare two different layouts on a
+        // migrated server: the directory under `/etc/<brand>-ols/` can never
+        // sit beneath the configured root, so every delete aborted. It failed
+        // closed, which is the right direction to be wrong in, but the effect
+        // was that a site on such a box could not be removed at all.
+        $root = rtrim(app(OlsVhostLayout::class)->root(), '/');
 
         // `rm -rf` on a path built from a record is the most destructive
         // command in the panel. The slug is a slug by construction, but a

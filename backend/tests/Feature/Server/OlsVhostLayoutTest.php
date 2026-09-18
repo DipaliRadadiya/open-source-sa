@@ -175,3 +175,26 @@ it('names a migrated site after its directory, not after main.conf', function ()
 
     expect($name)->toBe('shop');
 });
+
+it('can still delete a site on a migrated server', function () {
+    /*
+     * `remove()` guards its `rm -rf` by requiring the directory to sit beneath
+     * the vhost root — the most destructive command in the panel, and a blank
+     * slug would otherwise make it the root itself.
+     *
+     * The guard read the *configured* root while the directory came from the
+     * detected one, so on a migrated box they could never agree and every
+     * delete aborted. Failing closed is the right direction to be wrong in; the
+     * effect was still that a site on such a server could not be removed.
+     */
+    ServerCapability::query()->first()->forceFill(['ols_vhost_root' => '/etc/sureshcloud-ols'])->save();
+
+    $application = Application::factory()->create(['slug' => 'shop', 'domain' => 'shop.example.com']);
+
+    $directory = dirname(app(OlsDriver::class)->configPath($application));
+    $root = rtrim(app(OlsVhostLayout::class)->root(), '/');
+
+    expect($directory)->toBe('/etc/sureshcloud-ols/shop')
+        // What the guard asks: under the root, and not the root itself.
+        ->and($directory !== $root && str_starts_with($directory, $root.'/'))->toBeTrue();
+});
