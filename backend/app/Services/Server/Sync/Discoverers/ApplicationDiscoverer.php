@@ -10,6 +10,7 @@ use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Services\Applications\SiteTypeDetector;
 use App\Services\Server\ServerOps;
+use App\Services\Server\WebServers\OlsVhostLayout;
 use App\Services\Server\WebServers\WebServerManager;
 
 /**
@@ -269,13 +270,29 @@ class ApplicationDiscoverer implements Discoverable
         $driver = $this->webServers->driver()->name();
 
         if ($driver === 'openlitespeed') {
-            $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root'), '/');
+            $layout = app(OlsVhostLayout::class);
 
-            // Exactly two levels: <vhost_root>/<site>/vhconf.conf. Deeper would
-            // pick up the per-site logs directory the templates write beside it.
-            return $root === '' ? null : [
-                'find', $root, '-mindepth', '2', '-maxdepth', '2', '-type', 'f', '-name', 'vhconf.conf',
-            ];
+            // Looked for here rather than read from the record, because this
+            // is the one moment the panel is deliberately inspecting the box
+            // and the only moment the answer can change: a server acquires the
+            // old panel's directory by having had the old panel, which is true
+            // before the first sync and never becomes true afterwards. Sync is
+            // queued and already slow; two `find` calls are not what makes it
+            // so.
+            $root = $layout->detect();
+
+            // Exactly two levels: <root>/<site>/<vhost file>. Deeper would pick
+            // up the per-site logs directory the templates write beside it.
+            //
+            // Both filenames, because a server migrated from the old panel has
+            // `main.conf` in a directory this panel did not choose. Matching
+            // only our own name found zero sites on exactly the servers this
+            // feature exists for, and reported it as a clean sync.
+            return $root === '' ? null : array_merge(
+                ['find', $root, '-mindepth', '2', '-maxdepth', '2', '-type', 'f', '('],
+                $layout->nameTests(),
+                [')'],
+            );
         }
 
         $directory = rtrim((string) config("server.web_server_drivers.{$driver}.sites_available_dir"), '/');

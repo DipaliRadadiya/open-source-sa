@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
  * The single row describing this server. See the migration for why `stack`
  * and `capabilities` are separate.
  */
-#[Fillable(['stack', 'web_server', 'capabilities', 'source', 'verified_at'])]
+#[Fillable(['stack', 'web_server', 'ols_vhost_root', 'capabilities', 'source', 'verified_at'])]
 class ServerCapability extends Model
 {
     /**

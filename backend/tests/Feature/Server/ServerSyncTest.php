@@ -1802,4 +1802,71 @@ describe('discovering sites on OpenLiteSpeed', function () {
         expect($found)->toHaveCount(1)
             ->and($found[0]['key'])->toBe('blog.example.com');
     });
+
+    it('finds sites a migrated server keeps under the old panels branded directory', function () {
+        /*
+         * The whole point of the layout detection. A v7 server that installs
+         * this panel keeps its vhosts at `/etc/<brand>-ols/<site>/main.conf` —
+         * wrong root *and* wrong filename — so a sync that globbed only
+         * `<configured root>/<site>/vhconf.conf` found nothing and reported a
+         * clean run. "No sites found" is also what a correct run on an empty
+         * box looks like, so nothing about it appeared broken.
+         *
+         * `sureshcloud` rather than `serveravatar` deliberately: the brand is
+         * the old panel's build-time name, and a real box has already been seen
+         * carrying a reseller's instead of the one in the source.
+         */
+        Process::fake(function ($process) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+
+            if ($binary === 'getent') {
+                return Process::result(output: "siteowner:x:1001:1001::/home/siteowner:/bin/bash\n");
+            }
+
+            if ($binary === 'find') {
+                // Which `/etc/*-ols` directories exist.
+                if (in_array('*-ols', $args, true)) {
+                    return Process::result(output: "/etc/sureshcloud-ols\n");
+                }
+
+                $directory = rtrim((string) ($args[1] ?? ''), '/');
+
+                // A probe carries `-quit`; the listing does not. Only the
+                // branded directory holds anything: this panel has never
+                // written a vhost on this box.
+                if (in_array('-quit', $args, true)) {
+                    return $directory === '/etc/sureshcloud-ols'
+                        ? Process::result(output: "/etc/sureshcloud-ols/shop/main.conf\n")
+                        : Process::result(output: '');
+                }
+
+                return $directory === '/etc/sureshcloud-ols'
+                    ? Process::result(output: "/etc/sureshcloud-ols/shop/main.conf\n")
+                    : Process::result(output: '');
+            }
+
+            if ($binary === 'cat') {
+                return Process::result(
+                    output: "docRoot /home/siteowner/shop/public_html\nvhDomain shop.example.com\n",
+                );
+            }
+
+            if ($binary === 'stat') {
+                return Process::result(output: "siteowner\n");
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        $found = app(ApplicationDiscoverer::class)->discover($this->run);
+
+        expect($found)->toHaveCount(1)
+            ->and($found[0]['key'])->toBe('shop.example.com')
+            // Named after its directory, exactly as with `vhconf.conf`.
+            ->and($found[0]['evidence']['path'])->toBe('/etc/sureshcloud-ols/shop/main.conf')
+            // And the root is recorded, so everything afterwards writes where
+            // the shared httpd_config already points.
+            ->and(ServerCapability::query()->value('ols_vhost_root'))->toBe('/etc/sureshcloud-ols');
+    });
 });
