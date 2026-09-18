@@ -95,6 +95,14 @@ class N8nInstaller extends AbstractNodeInstaller
             'N8N_WEBHOOK_URL' => $application->url('/'),
             'N8N_EDITOR_BASE_URL' => $application->url(),
             'N8N_PROXY_HOPS' => '1',
+            // n8n's own default is the `dev` channel — `releaseChannel = 'dev'`
+            // in @n8n/config's GenericConfig — and the editor puts that channel
+            // in the browser tab, so every site the panel created announced
+            // itself as [DEV] to the customer running it in production.
+            //
+            // Not NODE_ENV, which the unit already sets to production; this is
+            // a separate n8n concept and the unit's variable does not reach it.
+            'N8N_RELEASE_TYPE' => 'stable',
             'GENERIC_TIMEZONE' => (string) config('app.timezone', 'UTC'),
             'N8N_DIAGNOSTICS_ENABLED' => 'false',
         ];
@@ -123,6 +131,17 @@ class N8nInstaller extends AbstractNodeInstaller
             'N8N_SECURE_COOKIE' => $scheme === 'https' ? 'true' : 'false',
             'N8N_WEBHOOK_URL' => rtrim($url, '/').'/',
             'N8N_EDITOR_BASE_URL' => rtrim($url, '/'),
+            // Nothing to do with the URL, and here on purpose.
+            //
+            // Adding the variable to `environment()` fixes sites created after
+            // this change and abandons every site already running — the same
+            // shape as a shipped migration that only ever reaches fresh
+            // installs. This is the one path that rewrites a live site's
+            // environment, and the loop below appends a key it does not find,
+            // so an existing site repairs itself the next time its certificate
+            // is issued or removed. A site whose certificate never changes
+            // again still needs a hand.
+            'N8N_RELEASE_TYPE' => 'stable',
         ];
 
         $changed = $this->configMutator->transform($application, $path, function (string $contents) use ($values): string {

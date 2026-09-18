@@ -220,7 +220,32 @@ it('keeps n8n inside the site, with a key generated before first start', functio
         // every site has for its first few minutes — so the very first visit
         // to a site the panel had just called ready hit a wall telling the
         // user to go and set an environment variable.
-        ->toContain('N8N_SECURE_COOKIE="false"');
+        ->toContain('N8N_SECURE_COOKIE="false"')
+        // n8n's own default is the `dev` release channel, and the editor puts
+        // that channel in the browser tab — so a customer's production
+        // automation announced itself as [DEV] on every page. Separate from the
+        // unit's NODE_ENV=production, which does not reach this setting.
+        ->toContain('N8N_RELEASE_TYPE="stable"');
+});
+
+it('repairs the release channel on a site that predates it', function () {
+    /*
+     * The half that is easy to miss. Writing the variable in `environment()`
+     * fixes sites created afterwards and leaves every existing site on the dev
+     * channel forever, with nothing to report it — a shipped installer change
+     * reaches fresh installs only.
+     *
+     * `syncUrl()` is the one path that rewrites a live site's environment, and
+     * it appends a key it cannot find, so an existing site repairs itself the
+     * next time a certificate is issued or removed.
+     */
+    $application = oneClickApp('n8n');
+    $application->forceFill(['status' => 'active'])->save();
+
+    app(N8nInstaller::class)->syncUrl($application, 'https://n8n.test');
+
+    expect(rewrittenTo('/home/apps/n8n/public_html/.env'))
+        ->toContain('N8N_RELEASE_TYPE="stable"');
 });
 
 it('restarts n8n when its public URL changes', function () {
