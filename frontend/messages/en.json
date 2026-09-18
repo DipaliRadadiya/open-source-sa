@@ -4999,7 +4999,30 @@
       "subImpossible": "This server cannot run this application as it stands.",
       "footerImpossible": "Nothing here can fix this on its own."
     },
-    "phpFact": "PHP {version}"
+    "phpFact": "PHP {version}",
+    "siteTypeDetection": {
+      "detectHint": "Check what is installed here",
+      "reviewHint": "Review what was found",
+      "detectFailed": "Could not read the site directory.",
+      "looksLike": "Looks like {type}",
+      "looksLikeBecause": "Looks like {type} — {file} found",
+      "nothingFound": "Nothing recognisable found on the last check",
+      "confirmTitle": "Treat this site as {type}?",
+      "confirmFound": "{file} is present in this site’s directory.",
+      "confirmNarrow": "The panel will stop offering this site’s application-specific screens.",
+      "confirmAction": "Change type",
+      "applied": "This site is now treated as {type}.",
+      "failed": "Could not change the site type.",
+      "changesLabel": "What changes",
+      "changesBody": "The panel starts offering the screens it keeps for {type} sites.",
+      "unchangedLabel": "What stays the same",
+      "unchangedBody": "Your files, database and settings. Nothing is installed, downloaded or moved.",
+      "reversible": "You can set it back to {from} at any time.",
+      "reviewAction": "Review",
+      "detectAction": "Check what is installed",
+      "changeTo": "Change type to {type}",
+      "menuHint": "Site type options"
+    }
   },
   "panelUpdate": {
     "title": "Panel update",

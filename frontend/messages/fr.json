@@ -4999,7 +4999,30 @@
       "subImpossible": "Ce serveur ne peut pas faire tourner cette application en l’état.",
       "footerImpossible": "Rien ici ne peut y remédier."
     },
-    "phpFact": "PHP {version}"
+    "phpFact": "PHP {version}",
+    "siteTypeDetection": {
+      "detectHint": "Vérifier ce qui est installé ici",
+      "reviewHint": "Examiner ce qui a été trouvé",
+      "detectFailed": "Impossible de lire le répertoire du site.",
+      "looksLike": "Ressemble à {type}",
+      "looksLikeBecause": "Ressemble à {type} — {file} trouvé",
+      "nothingFound": "Rien de reconnaissable trouvé lors de la dernière vérification",
+      "confirmTitle": "Traiter ce site comme {type} ?",
+      "confirmFound": "{file} est présent dans le répertoire de ce site.",
+      "confirmNarrow": "Le panneau cessera de proposer les écrans spécifiques à l’application de ce site.",
+      "confirmAction": "Changer le type",
+      "applied": "Ce site est désormais traité comme {type}.",
+      "failed": "Impossible de changer le type du site.",
+      "changesLabel": "Ce qui change",
+      "changesBody": "Le panneau commencera à proposer les écrans prévus pour les sites {type}.",
+      "unchangedLabel": "Ce qui reste identique",
+      "unchangedBody": "Vos fichiers, la base de données et les réglages. Rien n’est installé, téléchargé ni déplacé.",
+      "reversible": "Vous pouvez revenir à {from} à tout moment.",
+      "reviewAction": "Examiner",
+      "detectAction": "Vérifier ce qui est installé",
+      "changeTo": "Changer le type en {type}",
+      "menuHint": "Options du type de site"
+    }
   },
   "panelUpdate": {
     "title": "Mise à jour du panneau",

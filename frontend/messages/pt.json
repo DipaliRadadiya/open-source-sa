@@ -4999,7 +4999,30 @@
       "subImpossible": "Este servidor não consegue executar esta aplicação tal como está.",
       "footerImpossible": "Nada aqui resolve isto sozinho."
     },
-    "phpFact": "PHP {version}"
+    "phpFact": "PHP {version}",
+    "siteTypeDetection": {
+      "detectHint": "Verificar o que está instalado aqui",
+      "reviewHint": "Revisar o que foi encontrado",
+      "detectFailed": "Não foi possível ler o diretório do site.",
+      "looksLike": "Parece {type}",
+      "looksLikeBecause": "Parece {type} — {file} encontrado",
+      "nothingFound": "Nada reconhecível encontrado na última verificação",
+      "confirmTitle": "Tratar este site como {type}?",
+      "confirmFound": "{file} está presente no diretório deste site.",
+      "confirmNarrow": "O painel deixará de oferecer as telas específicas da aplicação deste site.",
+      "confirmAction": "Alterar o tipo",
+      "applied": "Este site agora é tratado como {type}.",
+      "failed": "Não foi possível alterar o tipo do site.",
+      "changesLabel": "O que muda",
+      "changesBody": "O painel passará a oferecer as telas que mantém para sites {type}.",
+      "unchangedLabel": "O que permanece igual",
+      "unchangedBody": "Seus arquivos, o banco de dados e as configurações. Nada é instalado, baixado ou movido.",
+      "reversible": "Você pode voltar para {from} a qualquer momento.",
+      "reviewAction": "Revisar",
+      "detectAction": "Verificar o que está instalado",
+      "changeTo": "Alterar o tipo para {type}",
+      "menuHint": "Opções do tipo de site"
+    }
   },
   "panelUpdate": {
     "title": "Atualização do painel",

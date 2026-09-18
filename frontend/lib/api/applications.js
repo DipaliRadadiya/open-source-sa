@@ -41,6 +41,44 @@ export function measureApplicationSize(id) {
 }
 
 /**
+ * Read the site's own directory and say what is installed in it.
+ *
+ * A POST because it records its verdict as well as returning it — the same
+ * shape as `POST /domains/{domain}/verify`. Returns
+ * `{ site_type_detection: {...} }`, never a full application.
+ *
+ * Throttled 10/min server-side, so the button must be disabled while this is
+ * in flight rather than relying on the user not double-clicking.
+ *
+ * A git site is not probed at all and comes back with its previous (usually
+ * empty) verdict unchanged: its type can never be changed, so every finding
+ * would be one nothing may act on.
+ */
+export function detectApplicationSiteType(id) {
+  return api.post(`/applications/${id}/detect-type`);
+}
+
+/**
+ * Relabel a site — tell the panel what is actually installed in it.
+ *
+ * **This changes what the panel offers, not what is on disk.** No installer
+ * runs and nothing is downloaded; the type decides which screens the site
+ * gets. Synchronous, and it returns the FULL `{ application }` because the
+ * change alters which sidebar items exist — so callers re-read the route
+ * rather than patching a field locally.
+ *
+ * Refuses, with a sentence worth showing verbatim, when: the site is (or the
+ * target is) a git deployment, the type is unchanged, the target is not one
+ * the panel can recognise on disk, the current type is not generic, or the
+ * disk does not actually contain the target. That last check is re-probed HERE
+ * at apply time rather than trusting the stored verdict, so there is nothing
+ * for this side to guard against going stale.
+ */
+export function changeApplicationSiteType(id, siteType) {
+  return api.put(`/applications/${id}/site-type`, { site_type: siteType });
+}
+
+/**
  * Turn a site's visitors away without taking anything apart.
  *
  * The web server config is pointed at a small holding page and reloaded. Files,

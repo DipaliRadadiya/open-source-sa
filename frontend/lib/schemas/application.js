@@ -130,6 +130,34 @@ export const applicationSchema = z.object({
   url: z.string().nullish(),
   site_type: z.string(),
   site_type_title: z.string().nullish(),
+  /*
+   * What the panel found when it last read the disk, and whether it has a
+   * relabel to offer.
+   *
+   * Undeclared until now, so Zod stripped it from every application response
+   * and the whole feature was invisible on this side — the same class as `url`
+   * and `disk_io`. The API has been sending it all along.
+   *
+   * All nullish: nothing is populated until somebody presses Detect, which is
+   * deliberate on the backend's part (a site's files arrive *after* it is
+   * created, so probing on page-open would cache "nothing found" at the one
+   * moment that answer is guaranteed wrong).
+   *
+   * `matched` is the file the verdict rests on — `wp-config.php`, not a score —
+   * and it exists so the note can say WHY. `suggested` is pre-validated
+   * against every refusal the apply endpoint would make, so a suggestion the
+   * user accepts cannot come back a 422.
+   */
+  site_type_detection: z
+    .object({
+      detected: z.string().nullish(),
+      detected_title: z.string().nullish(),
+      confidence: z.number().nullish(),
+      matched: z.string().nullish(),
+      checked_at: z.string().nullish(),
+      suggested: z.string().nullish(),
+    })
+    .nullish(),
   serving_profile: z.string().nullish(),
   rendering_type: z.string().nullish(),
   status: z.enum(["pending", "provisioning", "active", "failed"]).catch("pending"),

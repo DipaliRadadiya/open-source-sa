@@ -4999,7 +4999,30 @@
       "subImpossible": "Dieser Server kann diese Anwendung so nicht ausführen.",
       "footerImpossible": "Von hier aus lässt sich das nicht beheben."
     },
-    "phpFact": "PHP {version}"
+    "phpFact": "PHP {version}",
+    "siteTypeDetection": {
+      "detectHint": "Prüfen, was hier installiert ist",
+      "reviewHint": "Gefundenes überprüfen",
+      "detectFailed": "Das Verzeichnis der Website konnte nicht gelesen werden.",
+      "looksLike": "Sieht aus wie {type}",
+      "looksLikeBecause": "Sieht aus wie {type} — {file} gefunden",
+      "nothingFound": "Bei der letzten Prüfung wurde nichts Erkennbares gefunden",
+      "confirmTitle": "Diese Website als {type} behandeln?",
+      "confirmFound": "{file} ist im Verzeichnis dieser Website vorhanden.",
+      "confirmNarrow": "Das Panel bietet die anwendungsspezifischen Seiten dieser Website nicht mehr an.",
+      "confirmAction": "Typ ändern",
+      "applied": "Diese Website wird jetzt als {type} behandelt.",
+      "failed": "Der Website-Typ konnte nicht geändert werden.",
+      "changesLabel": "Was sich ändert",
+      "changesBody": "Das Panel bietet ab dann die Seiten an, die es für {type}-Websites vorsieht.",
+      "unchangedLabel": "Was gleich bleibt",
+      "unchangedBody": "Ihre Dateien, die Datenbank und die Einstellungen. Es wird nichts installiert, heruntergeladen oder verschoben.",
+      "reversible": "Sie können jederzeit zu {from} zurückwechseln.",
+      "reviewAction": "Ansehen",
+      "detectAction": "Prüfen, was installiert ist",
+      "changeTo": "Typ zu {type} ändern",
+      "menuHint": "Optionen für den Website-Typ"
+    }
   },
   "panelUpdate": {
     "title": "Panel-Update",

@@ -4999,7 +4999,30 @@
       "subImpossible": "यह सर्वर इस ऐप्लिकेशन को इस रूप में नहीं चला सकता।",
       "footerImpossible": "यहाँ से इसे ठीक नहीं किया जा सकता।"
     },
-    "phpFact": "PHP {version}"
+    "phpFact": "PHP {version}",
+    "siteTypeDetection": {
+      "detectHint": "जाँचें कि यहाँ क्या इंस्टॉल है",
+      "reviewHint": "जो मिला उसकी समीक्षा करें",
+      "detectFailed": "साइट डायरेक्टरी पढ़ी नहीं जा सकी।",
+      "looksLike": "{type} जैसा लगता है",
+      "looksLikeBecause": "{type} जैसा लगता है — {file} मिला",
+      "nothingFound": "पिछली जाँच में कुछ पहचानने योग्य नहीं मिला",
+      "confirmTitle": "इस साइट को {type} मानें?",
+      "confirmFound": "{file} इस साइट की डायरेक्टरी में मौजूद है।",
+      "confirmNarrow": "पैनल इस साइट की एप्लिकेशन-विशिष्ट स्क्रीन दिखाना बंद कर देगा।",
+      "confirmAction": "प्रकार बदलें",
+      "applied": "इस साइट को अब {type} माना जा रहा है।",
+      "failed": "साइट का प्रकार बदला नहीं जा सका।",
+      "changesLabel": "क्या बदलेगा",
+      "changesBody": "पैनल {type} साइटों के लिए उपलब्ध स्क्रीन दिखाना शुरू कर देगा।",
+      "unchangedLabel": "क्या वैसा ही रहेगा",
+      "unchangedBody": "आपकी फ़ाइलें, डेटाबेस और सेटिंग्स। कुछ भी इंस्टॉल, डाउनलोड या स्थानांतरित नहीं होता।",
+      "reversible": "आप इसे कभी भी {from} पर वापस सेट कर सकते हैं।",
+      "reviewAction": "देखें",
+      "detectAction": "जाँचें कि क्या इंस्टॉल है",
+      "changeTo": "प्रकार बदलकर {type} करें",
+      "menuHint": "साइट प्रकार विकल्प"
+    }
   },
   "panelUpdate": {
     "title": "पैनल अपडेट",

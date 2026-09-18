@@ -4999,7 +4999,30 @@
       "subImpossible": "このサーバーでは、現状このアプリケーションを動かせません。",
       "footerImpossible": "ここから解決できることはありません。"
     },
-    "phpFact": "PHP {version}"
+    "phpFact": "PHP {version}",
+    "siteTypeDetection": {
+      "detectHint": "ここに何がインストールされているか確認",
+      "reviewHint": "検出結果を確認",
+      "detectFailed": "サイトのディレクトリを読み取れませんでした。",
+      "looksLike": "{type} のようです",
+      "looksLikeBecause": "{type} のようです — {file} が見つかりました",
+      "nothingFound": "前回の確認では認識できるものが見つかりませんでした",
+      "confirmTitle": "このサイトを {type} として扱いますか？",
+      "confirmFound": "このサイトのディレクトリに {file} があります。",
+      "confirmNarrow": "パネルはこのサイトのアプリケーション固有の画面を表示しなくなります。",
+      "confirmAction": "種類を変更",
+      "applied": "このサイトは {type} として扱われるようになりました。",
+      "failed": "サイトの種類を変更できませんでした。",
+      "changesLabel": "変わること",
+      "changesBody": "パネルが {type} サイト用に用意している画面を表示するようになります。",
+      "unchangedLabel": "変わらないこと",
+      "unchangedBody": "ファイル、データベース、設定。インストール、ダウンロード、移動は行われません。",
+      "reversible": "いつでも {from} に戻せます。",
+      "reviewAction": "確認",
+      "detectAction": "インストール内容を確認",
+      "changeTo": "種類を {type} に変更",
+      "menuHint": "サイト種類のオプション"
+    }
   },
   "panelUpdate": {
     "title": "パネルの更新",

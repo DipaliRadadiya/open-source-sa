@@ -126,9 +126,17 @@ export default async function ApplicationDetailPage({ params }) {
     settled && canSeeDatabases
       ? getApplicationDatabases(id)
       : Promise.resolve({ databases: [], failed: false }),
-    // `needs_database` is on the site TYPE, never on the application, so the
-    // "is a missing database a problem here?" question needs this list.
-    settled && canSeeDatabases
+    /*
+     * Two readers now, hence the wider gate.
+     *
+     * `needs_database` is on the site TYPE, never on the application, so the
+     * "is a missing database a problem here?" question needs this list. The
+     * facts card also needs it to NAME a relabel target, and someone who can
+     * manage this site but not see its databases is a real combination — on
+     * the old `canSeeDatabases` gate they got an empty catalog and silently
+     * lost the ability to change the type back.
+     */
+    settled && (canSeeDatabases || canManage)
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
     // What the card's Attach picker can offer, and what its Create dialog
@@ -407,6 +415,10 @@ export default async function ApplicationDetailPage({ params }) {
           <SiteFactsCard
             application={application}
             canManage={canManage}
+            // For naming a relabel target. Type titles are not in our messages
+            // at all — they arrive translated on the catalog — so without this
+            // the card can offer a change it cannot label.
+            siteTypes={siteTypes.siteTypes}
             className="lg:col-span-2 xl:col-span-3"
           />
           <ProtectionCard application={application} items={protectionItems} />

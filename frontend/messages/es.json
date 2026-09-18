@@ -4999,7 +4999,30 @@
       "subImpossible": "Este servidor no puede ejecutar esta aplicación tal como está.",
       "footerImpossible": "Nada de aquí puede resolverlo por sí solo."
     },
-    "phpFact": "PHP {version}"
+    "phpFact": "PHP {version}",
+    "siteTypeDetection": {
+      "detectHint": "Comprobar qué hay instalado aquí",
+      "reviewHint": "Revisar lo que se encontró",
+      "detectFailed": "No se pudo leer el directorio del sitio.",
+      "looksLike": "Parece {type}",
+      "looksLikeBecause": "Parece {type} — se encontró {file}",
+      "nothingFound": "No se encontró nada reconocible en la última comprobación",
+      "confirmTitle": "¿Tratar este sitio como {type}?",
+      "confirmFound": "{file} está presente en el directorio de este sitio.",
+      "confirmNarrow": "El panel dejará de ofrecer las pantallas específicas de la aplicación de este sitio.",
+      "confirmAction": "Cambiar el tipo",
+      "applied": "Este sitio ahora se trata como {type}.",
+      "failed": "No se pudo cambiar el tipo de sitio.",
+      "changesLabel": "Qué cambia",
+      "changesBody": "El panel empezará a ofrecer las pantallas que tiene para sitios {type}.",
+      "unchangedLabel": "Qué se mantiene igual",
+      "unchangedBody": "Tus archivos, la base de datos y la configuración. No se instala, descarga ni mueve nada.",
+      "reversible": "Puedes volver a {from} en cualquier momento.",
+      "reviewAction": "Revisar",
+      "detectAction": "Comprobar qué hay instalado",
+      "changeTo": "Cambiar el tipo a {type}",
+      "menuHint": "Opciones del tipo de sitio"
+    }
   },
   "panelUpdate": {
     "title": "Actualización del panel",
