@@ -54,63 +54,6 @@ class OlsVhostLayout
     }
 
     /**
-     * The file that *declares* a site to OpenLiteSpeed.
-     *
-     * The old panel splits a site across two files and this is the outer one:
-     * `virtualhost <name> { listeners; vhDomain; rewrite{}; vhssl{}; include
-     * <body> }`. Its directory is pulled in wholesale by a single
-     * `include <root>/*.conf` in httpd_config.conf, which is why that file
-     * needs no per-site entry and no listener map — the site names its own
-     * listeners and domains from inside its own file.
-     *
-     * That is the whole reason this shape is worth copying rather than merely
-     * tolerating: the shared config stops being something every site edits.
-     */
-    public function declarationPath(string $name): string
-    {
-        return $this->root()."/{$name}.conf";
-    }
-
-    /**
-     * The file that *describes* a site: roots, logs, handlers, processors.
-     *
-     * Included by the declaration rather than named by a `configFile`
-     * directive, so the two are one unit as far as OpenLiteSpeed is concerned.
-     */
-    public function bodyPath(string $name): string
-    {
-        return $this->root()."/{$name}/".$this->filename();
-    }
-
-    /**
-     * PHP and lsapi settings, included by the body.
-     *
-     * Its own file so a PHP version change rewrites this and nothing else —
-     * the vhost, its logs and anything the customer added stay untouched.
-     */
-    public function phpPath(string $name): string
-    {
-        return $this->root()."/{$name}/php.conf";
-    }
-
-    /**
-     * Where a site's own OpenLiteSpeed snippets live, given its directory.
-     *
-     * Inside the site, not beside the panel's config, because that is where
-     * the old panel put them and a migrated server already has files there —
-     * `rewrites/` in particular holds generated WordPress rewrite rules and
-     * the AI bot blocker, which are not decoration.
-     *
-     * @return array{conf: string, rewrites: string}
-     */
-    public function snippetDirs(string $siteDirectory): array
-    {
-        $base = rtrim($siteDirectory, '/').'/conf/openlitespeed';
-
-        return ['conf' => $base, 'rewrites' => $base.'/rewrites'];
-    }
-
-    /**
      * Is this server using a layout the old panel left behind?
      *
      * Recorded only when detection found one, so this is the same question as
