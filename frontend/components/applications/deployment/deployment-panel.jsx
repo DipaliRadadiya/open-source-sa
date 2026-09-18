@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { History, Settings2, Webhook } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 import { deployApplication } from "@/lib/api/applications";
 import { readApplication } from "@/lib/api/deployment";
 import { applicationSchema } from "@/lib/schemas/application";
@@ -18,6 +21,10 @@ import { DeployHistoryCard } from "@/components/applications/deployment/deploy-h
 // A deploy flips status to "provisioning" while it runs; poll the resource so
 // steps[] and the commit/timestamp update in place without leaving the page.
 const POLL_MS = 2500;
+
+// Matching components/applications/domains/domains-ssl-tabs.jsx exactly:
+// !h-auto overrides shadcn TabsList's hard-coded height so the py padding lands.
+const TRIGGER = "!h-auto gap-2 px-4 py-2";
 
 export function DeploymentPanel({
   application: initial,
@@ -34,6 +41,7 @@ export function DeploymentPanel({
   const router = useRouter();
   const [application, setApplication] = useState(initial);
   const [deploying, setDeploying] = useState(false);
+  const [tab, setTab] = useState("history");
   const pollRef = useRef(null);
   // The failure banner and the build log sit in two different cards; this is
   // the one place that can see both.
@@ -52,6 +60,21 @@ export function DeploymentPanel({
   }, []);
 
   useEffect(() => () => stopPoll(), [stopPoll]);
+
+  /*
+   * Switch tab and open the log in one go.
+   *
+   * No waiting for the tab to become active first: every TabsContent here is
+   * `forceMount`, so the history card is mounted from the start and its ref is
+   * live whichever tab is showing. An earlier version parked the deployment in
+   * state and opened it from an effect once the tab changed, which was both a
+   * `set-state-in-effect` lint error and a dance around a problem that
+   * `forceMount` had already solved.
+   */
+  const showBuildLog = useCallback((deployment) => {
+    setTab("history");
+    historyRef.current?.show(deployment);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -126,43 +149,78 @@ export function DeploymentPanel({
 
   return (
     <div className="space-y-6">
+      {/* The hero, outside the tabs: what is deployed and the button that
+          changes it are the two things that must be true on every tab. Five
+          cards of identical weight is what made this page read as a wall, and
+          the flattest part was that the thing the page exists for had the same
+          weight as the port number. */}
       <DeployCard
         application={application}
         deploying={deploying}
         canManage={canManage}
         canViewLogs={canViewLogs}
         onDeploy={deploy}
-        onShowBuildLog={lastFailed ? () => historyRef.current?.show(lastFailed) : null}
-      />
-      {/* What a deploy runs, before the record of what it ran. */}
-      {settings ? (
-        <DeploySettingsCard
-          applicationId={application.id}
-          application={application}
-          settings={settings}
-          canManage={canManage}
-        />
-      ) : null}
-
-      {/* Only a site that runs a process has one to start, and the fields are
-          meaningless on a static or PHP site — the API nulls them there. */}
-      {application.has_process ? (
-        <RuntimeCard application={application} canManage={canManage} />
-      ) : null}
-
-      <WebhookCard
-        application={application}
-        providers={providers}
-        canManage={canManage}
-        onChange={setApplication}
+        onShowBuildLog={lastFailed ? () => showBuildLog(lastFailed) : null}
       />
 
-      <DeployHistoryCard
-        applicationId={application.id}
-        deployments={deployments}
-        canManage={canManage}
-        ref={historyRef}
-      />
+      <Tabs value={tab} onValueChange={setTab} className="gap-4">
+        <ScrollFade>
+          <TabsList className="!h-auto w-fit gap-1 p-1">
+            <TabsTrigger value="history" className={TRIGGER}>
+              <History className="size-4" />
+              {t("tabs.history")}
+            </TabsTrigger>
+            <TabsTrigger value="settings" className={TRIGGER}>
+              <Settings2 className="size-4" />
+              {t("tabs.settings")}
+            </TabsTrigger>
+            <TabsTrigger value="automation" className={TRIGGER}>
+              <Webhook className="size-4" />
+              {t("tabs.automation")}
+            </TabsTrigger>
+          </TabsList>
+        </ScrollFade>
+
+        {/* History first: it is what you want the second after pressing Deploy,
+            and it used to be a thousand pixels below the button. */}
+        <TabsContent value="history" forceMount className="data-[state=inactive]:hidden">
+          <DeployHistoryCard
+            applicationId={application.id}
+            deployments={deployments}
+            canManage={canManage}
+            ref={historyRef}
+          />
+        </TabsContent>
+
+        <TabsContent
+          value="settings"
+          forceMount
+          className="space-y-6 data-[state=inactive]:hidden"
+        >
+          {settings ? (
+            <DeploySettingsCard
+              applicationId={application.id}
+              application={application}
+              settings={settings}
+              canManage={canManage}
+            />
+          ) : null}
+          {/* Only a site that runs a process has one to start, and the fields
+              are meaningless on a static or PHP site — the API nulls them. */}
+          {application.has_process ? (
+            <RuntimeCard application={application} canManage={canManage} />
+          ) : null}
+        </TabsContent>
+
+        <TabsContent value="automation" forceMount className="data-[state=inactive]:hidden">
+          <WebhookCard
+            application={application}
+            providers={providers}
+            canManage={canManage}
+            onChange={setApplication}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

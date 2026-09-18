@@ -3646,7 +3646,8 @@
         "off": "Désactivé",
         "offBody": "Le déploiement automatique est désactivé. Activez-le pour déployer à chaque push sur {branch} — votre URL et votre secret de webhook sont conservés.",
         "providerHint": "Le service sur lequel se trouve le dépôt. C’est lui qui détermine comment nous vérifions qu’une requête entrante vient vraiment de lui.",
-        "urlHint": "Collez ceci dans les paramètres webhook de votre dépôt. C’est l’adresse que votre service Git appelle lorsqu’il y a du nouveau code."
+        "urlHint": "Collez ceci dans les paramètres webhook de votre dépôt. C’est l’adresse que votre service Git appelle lorsqu’il y a du nouveau code.",
+        "disabledBodyNamed": "L’activer crée une URL de webhook et un secret pour {provider}. Vous les ajoutez à votre dépôt à l’étape suivante."
       },
       "cancel": "Annuler",
       "runtime": {
@@ -3685,7 +3686,9 @@
           "empty": "Le dépôt n'a signalé aucune branche — saisissez le nom à la place.",
           "error": "Impossible de charger les branches depuis le dépôt. Saisissez le nom à la place.",
           "unlinked": "Ce site n'a pas de compte Git fonctionnel, donc les branches ne peuvent pas être listées. Reconnectez-le sur la page de l'application."
-        }
+        },
+        "title": "Ce qu’exécute un déploiement",
+        "subtitle": "La branche extraite, et les commandes qui construisent le site ensuite."
       },
       "history": {
         "empty": {
@@ -3705,6 +3708,11 @@
         "noPermission": "Votre rôle n'inclut pas Déploiement pour ce site avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
         "title": "Historique des déploiements",
         "subtitle": "Chaque déploiement, du plus récent au plus ancien. Ouvrez-en un pour lire son journal de build."
+      },
+      "tabs": {
+        "history": "Historique",
+        "settings": "Paramètres",
+        "automation": "Automatisation"
       }
     },
     "files": {

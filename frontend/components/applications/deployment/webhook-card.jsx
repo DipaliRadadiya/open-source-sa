@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -211,10 +212,15 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   }
 
   return (
-    <Card>
+    <Card className={PANEL_CARD}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Webhook className="size-4 text-primary" />
+        {/* The same mark every other card on this page wears. It was an inline
+            icon beside the text here and a tinted square everywhere else, which
+            is the "three of five styled differently" tell. */}
+        <CardTitle className="flex items-center gap-2.5">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
+            <Webhook className="size-4" />
+          </span>
           {t("webhook.title")}
         </CardTitle>
         <CardDescription>
@@ -239,6 +245,31 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                 {enabled ? t("webhook.on") : t("webhook.off")}
               </Badge>
             )}
+          </CardAction>
+        ) : canManage && providers.length ? (
+          /*
+           * The same slot, configured or not.
+           *
+           * Once a hook exists the on/off control is the switch up here; before
+           * it exists, Enable was down in the body — so the one control that
+           * turns this feature on moved across the card depending on a state
+           * the reader cannot see. Top-right in both cases, like Deploy now on
+           * the card above.
+           *
+           * Still disabled with a reason when a provider genuinely has to be
+           * chosen first; that picker stays in the body where the choice is.
+           */
+          <CardAction>
+            <ReasonTooltip reason={!providerName && !busy ? tc("chooseAnOption") : null}>
+              <Button onClick={enable} disabled={!providerName || busy}>
+                {busy ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Webhook className="size-4" />
+                )}
+                {t("webhook.enable")}
+              </Button>
+            </ReasonTooltip>
           </CardAction>
         ) : null}
       </CardHeader>
@@ -377,10 +408,26 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
             {t("webhook.disabledBody")}
           </p>
         ) : providers.length ? (
-          <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+          /*
+           * One sentence and one button.
+           *
+           * This was a two-column wall: the subtitle said "automatically deploy
+           * whenever you push to main", the body underneath said the same thing
+           * again in longer words, a labelled field stated a provider nobody
+           * had been asked to choose, and half the card was setup steps reading
+           * "paste the URL below, paste the secret into Secret" — while no URL
+           * and no secret existed yet, because neither is created until this
+           * button is pressed.
+           *
+           * The steps are not removed, they are MOVED: they belong to the
+           * configured state, next to the URL and secret they refer to.
+           */
+          <div className="space-y-4">
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {t("webhook.disabledBody")}
+              <p className="max-w-prose text-sm text-muted-foreground">
+                {providers.length === 1
+                  ? t("webhook.disabledBodyNamed", { provider: providers[0].title })
+                  : t("webhook.disabledBody")}
               </p>
               {/*
                * One provider: state it, do not ask it.
@@ -395,14 +442,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                * The picker stays for the case that is genuinely open: a
                * self-hosted host the URL cannot identify.
                */}
-              {providers.length === 1 ? (
-                <div className="space-y-1.5">
-                  <Label className="text-sm">{t("webhook.provider")}</Label>
-                  <p className="flex h-9 items-center rounded-lg border bg-muted/40 px-3 text-sm font-medium">
-                    {providers[0].title}
-                  </p>
-                </div>
-              ) : (
+              {providers.length === 1 ? null : (
                 <div className="space-y-1.5">
                   <Label className="text-sm" hint={t("webhook.providerHint")}>{t("webhook.provider")}</Label>
                   <Select value={providerName} onValueChange={setProviderName}>
@@ -438,23 +478,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                 </div>
               ) : null}
 
-              <ReasonTooltip reason={!providerName && !busy ? tc("chooseAnOption") : null}>
-                <Button onClick={enable} disabled={!providerName || busy}>
-                  {busy ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Webhook className="size-4" />
-                  )}
-                  {t("webhook.enable")}
-                </Button>
-              </ReasonTooltip>
             </div>
-
-            <Instructions
-              label={t("webhook.howTo")}
-              text={selectedProvider?.instructions}
-              placeholder={t("webhook.pickProviderHint")}
-            />
           </div>
         ) : (
           <p className="text-sm text-destructive">

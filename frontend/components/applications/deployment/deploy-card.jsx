@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
+  Clock,
+  FolderGit2,
   GitBranch,
   GitCommitHorizontal,
   Info,
@@ -19,6 +21,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
+import { PANEL_CARD } from "@/lib/theme/card-chrome";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Progress } from "@/components/ui/progress";
@@ -45,10 +49,15 @@ function commitUrl(repositoryUrl, sha) {
   }
 }
 
-function Fact({ label, children }) {
+function Fact({ icon: Icon, label, children }) {
   return (
     <div className="min-w-0 space-y-1">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
+      {/* 1.5 stroke, not Lucide's default 2 — these sit at 14px in a dense
+          row, where the default reads as heavy. */}
+      <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
+        {label}
+      </dt>
       <dd className="min-w-0">{children}</dd>
     </div>
   );
@@ -102,9 +111,18 @@ export function DeployCard({
   const evidence = evidenceFor(application.failed_step, application);
 
   return (
-    <Card>
+    <Card className={cn(PANEL_CARD, "border-primary/20 bg-gradient-to-br from-primary/[0.04] via-card to-card")}>
       <CardHeader>
-        <CardTitle>{t("deploy.title")}</CardTitle>
+        {/* Filled, where the tab cards get a 10%-alpha tint: this is the one
+            card on the page that is not a peer of the others. */}
+        <CardTitle className="flex items-center gap-2.5">
+          {/* Filled, where the tab cards get a 10%-alpha tint: this is the one
+              card on the page that is not a peer of the others. */}
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-e1">
+            <Rocket className="size-4" />
+          </span>
+          {t("deploy.title")}
+        </CardTitle>
         <CardDescription>{t("deploy.subtitle")}</CardDescription>
         {canManage ? (
           <CardAction>
@@ -170,7 +188,7 @@ export function DeployCard({
 
         {/* Four facts across the full width instead of two hugging the left. */}
         <dl className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2 md:grid-cols-4">
-          <Fact label={t("deploy.repository")}>
+          <Fact icon={FolderGit2} label={t("deploy.repository")}>
             {repository ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -189,16 +207,12 @@ export function DeployCard({
               <span className="block truncate font-mono text-xs">—</span>
             )}
           </Fact>
-          <Fact label={t("deploy.branch")}>
-            <span className="inline-flex items-center gap-1.5 font-mono text-xs">
-              <GitBranch className="size-3.5 text-muted-foreground" />
-              {branch}
-            </span>
+          <Fact icon={GitBranch} label={t("deploy.branch")}>
+            <span className="block truncate font-mono text-xs">{branch}</span>
           </Fact>
-          <Fact label={t("deploy.commit")}>
+          <Fact icon={GitCommitHorizontal} label={t("deploy.commit")}>
             {commit ? (
               <span className="flex flex-wrap items-center gap-1.5">
-                <GitCommitHorizontal className="size-3.5 text-muted-foreground" />
                 {commitHref ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -223,7 +237,7 @@ export function DeployCard({
               <span className="text-sm text-muted-foreground">—</span>
             )}
           </Fact>
-          <Fact label={t("deploy.lastDeploy")}>
+          <Fact icon={Clock} label={t("deploy.lastDeploy")}>
             {application.last_deployed_at ? (
               <Tooltip>
                 <TooltipTrigger asChild>

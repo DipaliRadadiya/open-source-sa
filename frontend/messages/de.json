@@ -3646,7 +3646,8 @@
         "off": "Aus",
         "offBody": "Automatisches Deployen ist aus. Schalten Sie es ein, um bei jedem Push auf {branch} zu deployen — Ihre Webhook-URL und Ihr Secret bleiben erhalten.",
         "providerHint": "Auf welchem Dienst das Repository liegt. Er bestimmt, wie wir prüfen, ob eine eingehende Anfrage wirklich von dort stammt.",
-        "urlHint": "Fügen Sie dies in die Webhook-Einstellungen Ihres Repositorys ein. Es ist die Adresse, die Ihr Git-Dienst bei neuem Code aufruft."
+        "urlHint": "Fügen Sie dies in die Webhook-Einstellungen Ihres Repositorys ein. Es ist die Adresse, die Ihr Git-Dienst bei neuem Code aufruft.",
+        "disabledBodyNamed": "Beim Aktivieren werden eine Webhook-URL und ein Secret für {provider} erstellt. Sie fügen beides im nächsten Schritt in Ihr Repository ein."
       },
       "cancel": "Abbrechen",
       "runtime": {
@@ -3685,7 +3686,9 @@
           "empty": "Das Repository hat keine Branches gemeldet — tippen Sie den Namen stattdessen ein.",
           "error": "Die Branches konnten nicht aus dem Repository geladen werden. Tippen Sie den Namen stattdessen ein.",
           "unlinked": "Diese Website hat kein funktionierendes Git-Konto, daher lassen sich keine Branches auflisten. Verbinden Sie sie auf der Anwendungsseite neu."
-        }
+        },
+        "title": "Was bei einer Bereitstellung läuft",
+        "subtitle": "Der Branch, der ausgecheckt wird, und die Befehle, die die Website danach bauen."
       },
       "history": {
         "empty": {
@@ -3705,6 +3708,11 @@
         "noPermission": "Ihre Rolle enthält nicht „Deployment“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "title": "Deploy-Verlauf",
         "subtitle": "Jedes Deployment, neueste zuerst. Öffnen Sie eines, um sein Build-Protokoll zu lesen."
+      },
+      "tabs": {
+        "history": "Verlauf",
+        "settings": "Einstellungen",
+        "automation": "Automatisierung"
       }
     },
     "files": {

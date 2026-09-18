@@ -2,7 +2,7 @@ import { useCallback, useImperativeHandle, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { CircleAlert, CircleCheck, GitCommitHorizontal, Loader2, RotateCw, Rocket } from "lucide-react";
+import { CircleAlert, CircleCheck, GitCommitHorizontal, History, Loader2, RotateCw, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchDeployment, redeployDeployment } from "@/lib/api/deployment";
 import { deploymentResponseSchema } from "@/lib/schemas/deploy-history";
@@ -10,6 +10,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Card, CardContent } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -107,15 +108,20 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
   }
 
   return (
-    <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+    <Card className={cn("gap-0 overflow-hidden py-0", PANEL_CARD)}>
       {/* A deploy takes a minute or two. Without this the row says "Running"
           until someone reloads, which reads as stuck. */}
       {running ? <AutoRefresh intervalMs={5000} stopAfterMs={900000} /> : null}
 
       <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
+            <History className="size-4" />
+          </span>
         <div className="space-y-1">
           <p className="font-semibold">{t("title")}</p>
           <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        </div>
         </div>
       </div>
 

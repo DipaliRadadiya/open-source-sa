@@ -3646,7 +3646,8 @@
         "off": "Desligado",
         "offBody": "O auto-deploy está desligado. Ative para fazer deploy em cada push para {branch} — sua URL e segredo do webhook são mantidos.",
         "providerHint": "Em qual serviço está o repositório. Ele define como verificamos se uma requisição realmente veio deles.",
-        "urlHint": "Cole isso nas configurações de webhook do seu repositório. É o endereço que seu serviço de Git chama quando há novo código."
+        "urlHint": "Cole isso nas configurações de webhook do seu repositório. É o endereço que seu serviço de Git chama quando há novo código.",
+        "disabledBodyNamed": "Ativar isso cria uma URL de webhook e um secret para {provider}. Você os adiciona ao seu repositório na próxima etapa."
       },
       "cancel": "Cancelar",
       "runtime": {
@@ -3685,7 +3686,9 @@
           "empty": "O repositório não reportou branches — digite o nome.",
           "error": "Não foi possível carregar as branches do repositório. Digite o nome.",
           "unlinked": "Este site não tem uma conta Git funcional, então as branches não podem ser listadas. Reconecte na página da aplicação."
-        }
+        },
+        "title": "O que uma implantação executa",
+        "subtitle": "O branch que é baixado e os comandos que constroem o site depois."
       },
       "history": {
         "empty": {
@@ -3705,6 +3708,11 @@
         "noPermission": "Seu papel não inclui Deploy para este site com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
         "title": "Histórico de deploy",
         "subtitle": "Cada deploy, mais recente primeiro. Abra um para ler seu log de build."
+      },
+      "tabs": {
+        "history": "Histórico",
+        "settings": "Configurações",
+        "automation": "Automação"
       }
     },
     "files": {

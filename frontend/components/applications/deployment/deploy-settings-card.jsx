@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, FileCode2 } from "lucide-react";
 import { deploySettingsFormSchema } from "@/lib/schemas/deploy-history";
 import { updateDeploySettings } from "@/lib/api/deployment";
 import { getBranches } from "@/lib/api/applications";
@@ -19,19 +19,13 @@ import {
 import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { CardSaveFooter } from "@/components/ui/card-save-footer";
+import { Row, Section, SectionActions } from "@/components/settings/setting-row";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
-  FormControl,
-  FormDescription,
   FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
 
 /**
@@ -130,6 +124,33 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
    * Only tokens whose value is actually known get one. A token the backend
    * adds later still lists, without an invented value beside it.
    */
+  const scriptRef = useRef(null);
+
+  /*
+   * Drop a token where the cursor is.
+   *
+   * They were a read-only list, so using one meant reading `{path}` off the
+   * screen and typing it out by hand — a chance to mistype the one thing on
+   * this card that has to be exact.
+   */
+  function insertToken(token) {
+    const el = scriptRef.current;
+    const current = form.getValues("deploy_script") ?? "";
+    if (!el) {
+      form.setValue("deploy_script", `${current}${token}`, { shouldDirty: true });
+      return;
+    }
+    const start = el.selectionStart ?? current.length;
+    const end = el.selectionEnd ?? start;
+    const next = `${current.slice(0, start)}${token}${current.slice(end)}`;
+    form.setValue("deploy_script", next, { shouldDirty: true });
+    // Put the caret after what was just inserted, so typing continues there.
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + token.length, start + token.length);
+    });
+  }
+
   const placeholderValues = {
     "{path}": application?.document_root,
     "{branch}": branchNow || "main",
@@ -155,133 +176,189 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(save)}>
-          <Card className="gap-0 overflow-hidden py-0 shadow-sm">
-            <CardContent className="space-y-5 px-5 py-5">
-              <FormField
-                control={form.control}
-                name="branch"
-                render={({ field }) => (
-                  <FormItem className="min-w-0">
-                    <FormLabel>{t("branch")}</FormLabel>
-                    <FormControl>
-                      {/* The list when we can be sure of it, free text when we
-                          cannot — see lib/applications/branch-picker.js. The
-                          one thing never rendered is an empty disabled picker,
-                          which reads as "your branch is gone". */}
-                      {mode === "picker" ? (
-                        <Combobox
-                          options={branchOptions(branches, field.value)}
-                          value={field.value ?? ""}
-                          onChange={field.onChange}
-                          placeholder={t("branchPlaceholder")}
-                          searchPlaceholder={t("branchSearch")}
-                          disabled={!canManage || saving}
-                        />
-                      ) : (
-                        <Input
-                          {...field}
-                          placeholder={t("branchPlaceholder")}
-                          disabled={!canManage || saving}
-                          className="font-mono text-sm"
-                        />
-                      )}
-                    </FormControl>
-                    <FormDescription
-                      className={notice === "error" || notice === "unlinked" ? "text-destructive" : undefined}
-                    >
-                      {notice ? t(`branchNotice.${notice}`) : t("branchHint")}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          {/*
+           * The panel's settings card, not a hand-rolled one.
+           *
+           * `Section`/`Row` is the locked convention five settings forms
+           * already use: header band with a tinted mark, rows whose label and
+           * hint sit LEFT of a fixed control column, and an action band that
+           * puts the Save inside the same box as the rows it saves. This card
+           * had ignored all of it and stacked label-over-control down the full
+           * width of the page — which is why a four-character branch name got
+           * an input elevenhundred pixels wide, and why the card read as a
+           * flat form rather than as settings.
+           */}
+          <Section
+            icon={FileCode2}
+            title={t("title")}
+            description={t("subtitle")}
+            readOnly={!canManage}
+            actions={
+              <SectionActions
+                label={t("save")}
+                isDirty={form.formState.isDirty}
+                pending={saving}
+                onDiscard={() =>
+                  form.reset({
+                    branch: settings.branch ?? "main",
+                    deploy_script: settings.deploy_script ?? "",
+                  })
+                }
+                canManage={canManage}
               />
-  
-              <FormField
-                control={form.control}
-                name="deploy_script"
-                render={({ field }) => (
-                  <FormItem className="min-w-0">
-                    <div className="flex min-h-6 flex-wrap items-center justify-between gap-2">
-                      <FormLabel>{t("script")}</FormLabel>
-                      {/* Only worth offering once it differs from the default —
-                          otherwise it is a button that does nothing. */}
-                      {canManage && settings.default_deploy_script && !isDefault ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 gap-1.5 px-2 text-xs"
-                          onClick={() =>
-                            form.setValue("deploy_script", settings.default_deploy_script, {
-                              shouldDirty: true,
-                            })
-                          }
-                        >
-                          <RotateCcw className="size-3" />
-                          {t("resetScript")}
-                        </Button>
-                      ) : null}
-                    </div>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        rows={10}
-                        spellCheck={false}
-                        disabled={!canManage || saving}
-                        className="font-mono text-xs"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {settings.deploy_script_customised ? t("scriptHint") : t("scriptFallbackHint")}
-                      {settings.placeholders?.length ? (
-                        <span className="mt-1.5 block space-y-0.5">
-                          <span className="block">{t("placeholders")}</span>
-                          {settings.placeholders.map((token) => (
-                            <span key={token} className="flex flex-wrap items-baseline gap-1.5">
-                              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
-                                {token}
-                              </code>
-                              {placeholderValues[token] ? (
-                                <>
-                                  <span aria-hidden>→</span>
-                                  {/* Breaks anywhere: a document root is long
-                                      and unbroken, and letting it push the card
-                                      wide is worse than letting it wrap. */}
-                                  <span className="min-w-0 font-mono text-[11px] break-all text-foreground">
-                                    {placeholderValues[token]}
-                                  </span>
-                                </>
-                              ) : null}
-                            </span>
-                          ))}
-                        </span>
-                      ) : null}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-  
-            <CardSaveFooter
-              submit
-              saving={saving}
-              dirty={form.formState.isDirty}
-              saveReason={
-                !canManage ? t("noPermission") : !form.formState.isDirty ? t("nothingToSave") : null
-              }
-              onDiscard={() =>
-                form.reset({
-                  branch: settings.branch ?? "main",
-                  deploy_script: settings.deploy_script ?? "",
-                })
-              }
-              saveLabel={t("save")}
-              note={t("saveNote")}
+            }
+          >
+            <FormField
+              control={form.control}
+              name="branch"
+              render={({ field }) => (
+                <Row
+                  wide
+                  label={t("branch")}
+                  /*
+                   * Two different things wearing two different tones.
+                   *
+                   * `loading`, `empty` and `error` describe a fallback the card
+                   * has already applied — the field still works, you just type
+                   * the name. As red text they read as though the save had
+                   * failed. They are hints.
+                   *
+                   * `unlinked` is the one the reader must go and fix: no
+                   * working Git account, so nothing here will deploy. That
+                   * belongs in Row's `error` slot, which is the destructive
+                   * one. Rewriting this card onto Row dropped the distinction
+                   * entirely and made all four muted.
+                   */
+                  hint={notice && notice !== "unlinked" ? t(`branchNotice.${notice}`) : t("branchHint")}
+                  error={notice === "unlinked" ? t("branchNotice.unlinked") : undefined}
+                >
+                  {/* The list when we can be sure of it, free text when we
+                      cannot — see lib/applications/branch-picker.js. The one
+                      thing never rendered is an empty disabled picker, which
+                      reads as "your branch is gone". */}
+                  {mode === "picker" ? (
+                    <Combobox
+                      options={branchOptions(branches, field.value)}
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      placeholder={t("branchPlaceholder")}
+                      searchPlaceholder={t("branchSearch")}
+                      disabled={!canManage || saving}
+                    />
+                  ) : (
+                    <Input
+                      {...field}
+                      placeholder={t("branchPlaceholder")}
+                      disabled={!canManage || saving}
+                      className="font-mono text-sm"
+                    />
+                  )}
+                </Row>
+              )}
             />
-          </Card>
+
+            {/* `wide`: a deploy script is many lines of code and has no business
+                in the 14rem control column a branch name belongs in. */}
+            <FormField
+              control={form.control}
+              name="deploy_script"
+              render={({ field }) => (
+                <Row
+                  wide
+                  label={t("script")}
+                  hint={settings.deploy_script_customised ? t("scriptHint") : t("scriptFallbackHint")}
+                >
+                  <div className="flex justify-end">
+                    {canManage && settings.default_deploy_script && !isDefault ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 gap-1.5 px-2 text-xs"
+                        onClick={() =>
+                          form.setValue("deploy_script", settings.default_deploy_script, {
+                            shouldDirty: true,
+                          })
+                        }
+                      >
+                        <RotateCcw className="size-3" />
+                        {t("resetScript")}
+                      </Button>
+                    ) : null}
+                  </div>
+                  <Textarea
+                    {...field}
+                    ref={(el) => {
+                      field.ref(el);
+                      scriptRef.current = el;
+                    }}
+                    rows={10}
+                    spellCheck={false}
+                    disabled={!canManage || saving}
+                    className="font-mono text-xs leading-relaxed"
+                  />
+                  {settings.placeholders?.length ? (
+                    <TokenList
+                      label={t("placeholders")}
+                      tokens={settings.placeholders}
+                      values={placeholderValues}
+                      onInsert={canManage && !saving ? insertToken : null}
+                    />
+                  ) : null}
+                </Row>
+              )}
+            />
+          </Section>
         </form>
       </Form>
     </DisabledReasonProvider>
+  );
+}
+
+/**
+ * The tokens a deploy script may use, and what each expands to.
+ *
+ * This was four rows of mono text inside the field's FormDescription — a
+ * reference table wearing a caption's clothes, which is why it read as debug
+ * output left on the page. It is a small surface of its own now, and the
+ * tokens are buttons: clicking one drops it at the cursor, so the one string
+ * on this card that has to be exact never has to be typed.
+ *
+ * A token the panel cannot resolve (`{php}` on a site with no PHP) keeps its
+ * row and simply has no value beside it. In the old stacked layout that left a
+ * dangling arrow pointing at nothing.
+ */
+function TokenList({ label, tokens, values, onInsert }) {
+  return (
+    <div className="rounded-lg border bg-muted/30 p-3">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">{label}</p>
+      <dl className="grid gap-x-3 gap-y-1.5 sm:grid-cols-[auto_minmax(0,1fr)]">
+        {tokens.map((token) => (
+          <Fragment key={token}>
+            <dt className="min-w-0">
+              {onInsert ? (
+                <button
+                  type="button"
+                  onClick={() => onInsert(token)}
+                  title={token}
+                  className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] ring-1 ring-inset ring-border transition-colors hover:bg-primary/10 hover:text-primary hover:ring-primary/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  {token}
+                </button>
+              ) : (
+                <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] ring-1 ring-inset ring-border">
+                  {token}
+                </code>
+              )}
+            </dt>
+            {/* break-all: a document root is long and unbroken, and letting it
+                push the card wide is worse than letting it wrap. */}
+            <dd className="min-w-0 self-center font-mono text-[11px] break-all text-muted-foreground">
+              {values[token] ?? ""}
+            </dd>
+          </Fragment>
+        ))}
+      </dl>
+    </div>
   );
 }

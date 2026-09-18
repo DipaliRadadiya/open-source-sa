@@ -3646,7 +3646,8 @@
         "off": "Off",
         "offBody": "Auto-deploy is off. Turn it on to deploy on every push to {branch} — your webhook URL and secret are kept.",
         "providerHint": "Which service the repository is on. It decides how we check that an incoming request really came from them.",
-        "urlHint": "Paste this into your repository's webhook settings. It is the address your Git service calls when there is new code."
+        "urlHint": "Paste this into your repository's webhook settings. It is the address your Git service calls when there is new code.",
+        "disabledBodyNamed": "Turning this on creates a webhook URL and secret for {provider}. You add them to your repository in the next step."
       },
       "cancel": "Cancel",
       "runtime": {
@@ -3685,7 +3686,9 @@
           "empty": "The repository reported no branches — type the name instead.",
           "error": "Couldn't load branches from the repository. Type the name instead.",
           "unlinked": "This site has no working Git account, so branches can't be listed. Reconnect it on the application page."
-        }
+        },
+        "title": "What a deploy runs",
+        "subtitle": "The branch to check out, and the commands that build the site afterwards."
       },
       "history": {
         "empty": {
@@ -3705,6 +3708,11 @@
         "noPermission": "Your role does not include Deployment for this site with Manage access. Ask an administrator to grant it.",
         "title": "Deploy history",
         "subtitle": "Every deploy, newest first. Open one to read its build log."
+      },
+      "tabs": {
+        "history": "History",
+        "settings": "Settings",
+        "automation": "Automation"
       }
     },
     "files": {

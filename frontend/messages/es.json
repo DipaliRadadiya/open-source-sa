@@ -3646,7 +3646,8 @@
         "off": "Desactivado",
         "offBody": "El despliegue automático está desactivado. Actívalo para desplegar con cada push a {branch}: se conservan tu URL de webhook y el secreto.",
         "providerHint": "El servicio en el que se encuentra el repositorio. Él decide cómo verificamos que una solicitud entrante realmente provenga de ellos.",
-        "urlHint": "Péguelo en la configuración de webhook de su repositorio. Es la dirección que su servicio Git llama cuando hay código nuevo."
+        "urlHint": "Péguelo en la configuración de webhook de su repositorio. Es la dirección que su servicio Git llama cuando hay código nuevo.",
+        "disabledBodyNamed": "Al activarlo se crean una URL de webhook y un secreto para {provider}. Los añades a tu repositorio en el siguiente paso."
       },
       "cancel": "Cancelar",
       "runtime": {
@@ -3685,7 +3686,9 @@
           "empty": "El repositorio no informó de ninguna rama: escribe el nombre.",
           "error": "No se pudieron cargar las ramas del repositorio. Escribe el nombre.",
           "unlinked": "Este sitio no tiene una cuenta de Git operativa, así que no se pueden listar las ramas. Vuelve a conectarla en la página de la aplicación."
-        }
+        },
+        "title": "Qué ejecuta un despliegue",
+        "subtitle": "La rama que se descarga y los comandos que construyen el sitio después."
       },
       "history": {
         "empty": {
@@ -3705,6 +3708,11 @@
         "noPermission": "Tu rol no incluye Despliegue de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
         "title": "Historial de despliegues",
         "subtitle": "Todos los despliegues, del más reciente al más antiguo. Abre uno para leer su registro."
+      },
+      "tabs": {
+        "history": "Historial",
+        "settings": "Ajustes",
+        "automation": "Automatización"
       }
     },
     "files": {
