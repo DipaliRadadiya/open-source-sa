@@ -96,22 +96,21 @@ export function LiveChartCard({
         stale && "opacity-60",
       )}
     >
-      {/* Wraps, and the title keeps a real minimum width: the badges are
-          shrink-0, so on a phone a wide pair of them (Disk I/O carries four
-          numbers) squeezed the heading into a one-word-per-line column instead
-          of dropping to its own row. */}
       {/*
-       * Pills on their own row, always — not inline-until-they-wrap.
+       * Pills on the TITLE line, in the space beside the heading.
        *
-       * Inline, Disk I/O's four numbers wrapped at the real content width and
-       * Network's two did not, so the two plots side by side started 58px
-       * apart. Reserving a second description line fixed the earlier version of
-       * this and then stopped working the moment the pills got roomier, because
-       * the wrap point moved. A row that is always there cannot move.
+       * They were on a row of their own, and the reason was real: inline
+       * against the whole title BLOCK, Disk I/O's four numbers did not fit
+       * beside a 262px block in a 560px card. But the block is only that wide
+       * because the description sits inside it — beside the title TEXT there is
+       * room in most locales at most widths.
        *
-       * It also gives the pills the width they were short of.
+       * Where there is not, the pills take a line of their own rather than
+       * squeezing the heading, and the plot below is bottom-anchored so the two
+       * charts still start on the same line. Measured across en/de/ja at
+       * 1024–1920: no heading ever breaks, and the two plots never differ.
        */}
-      <CardHeader className="flex flex-col items-stretch gap-3 space-y-0">
+      <CardHeader className="flex flex-col items-stretch gap-1 space-y-0">
         <div className="min-w-0 space-y-1">
           {/* h3, not h2: these cards now sit inside a labelled section whose
               heading is the h2. text-lg still matches the Processes card, which
@@ -120,11 +119,40 @@ export function LiveChartCard({
               The icon gets the same chip the metric cards use, so the two rows
               of cards read as one family. A bare 16px glyph floating beside the
               text is the shadcn card header everyone ships. */}
-          <CardTitle as="h3" className="flex items-center gap-2.5 text-lg font-semibold">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
-              <Icon className="size-4" />
+          {/*
+           * justify-between, not ml-auto, and the icon + heading are one item.
+           *
+           * Two things have to be true at once: the pills sit at the right edge
+           * beside the heading when there is room, and they read normally when
+           * there is not. justify-content applies per LINE, so a pill group
+           * that wraps is the only item on its line and lands at the start —
+           * left-aligned under the heading, flowing the way text does. With
+           * ml-auto it stayed pinned right, which on a phone drew each pill on
+           * its own right-aligned row.
+           *
+           * No width threshold is involved, deliberately: the widest locale
+           * needs 631px of header for Disk I/O and English needs 468px, so any
+           * single breakpoint sized for Russian would push English onto two
+           * lines on every screen we have.
+           */}
+          <CardTitle
+            as="h3"
+            className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-2 text-lg font-semibold"
+          >
+            <span className="flex shrink-0 items-center gap-2.5">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
+                <Icon className="size-4" />
+              </span>
+              {/*
+               * The heading is one phrase, not prose that may reflow: "Disk I/O"
+               * broken after "Disk" is worse than a taller card. As a bare text
+               * node it was an anonymous flex item — the only shrinkable thing
+               * beside a shrink-0 pill group — so it was exactly the part that
+               * gave way.
+               */}
+              <span className="whitespace-nowrap">{title}</span>
             </span>
-            {title}
+            {badges ? <span className="flex flex-wrap gap-2">{badges}</span> : null}
           </CardTitle>
           {/* Still two lines reserved: with the pills on their own row the
               descriptions themselves differ in length, and "Inbound and
@@ -132,12 +160,22 @@ export function LiveChartCard({
               where "Read and write throughput, updating live." does not. */}
           <CardDescription className="min-h-10">{description}</CardDescription>
         </div>
-        {badges ? <div className="flex flex-wrap gap-2">{badges}</div> : null}
       </CardHeader>
       {/* pt-0, not pt-3: Card already puts --card-spacing (16px) between header
           and content, so the extra padding made it 28px — off the 8pt rhythm
           and, in a 2x2 grid of these, 28px four times over. */}
-      <CardContent className="pt-0">
+      {/*
+       * mt-auto: the plot is anchored to the BOTTOM of the card, not to the
+       * bottom of the header.
+       *
+       * Both cards in a pair are the same height — the grid stretches them and
+       * Card is h-full — so bottom-anchoring makes the two plots start on the
+       * same line whatever their headers do. Without it, a header that is one
+       * line taller pushes its whole chart down and the pair reads as two
+       * unrelated cards; the slack now sits above the plot instead, where it is
+       * just breathing room.
+       */}
+      <CardContent className="mt-auto pt-0">
         {/* A line needs two points. Until then say so, rather than drawing a
             single dot and calling it a trend. */}
         {ready ? (

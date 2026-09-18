@@ -222,7 +222,8 @@ test("the cards inside a section drop to h3", () => {
    * heading outline where a section and the cards it contains are peers.
    * Processes keeps h2 — it is a direct child of the page, not of a section.
    */
-  assert.match(chartCard, /<CardTitle as="h3"/);
+  // Attribute, not the opening line: the tag is wrapped across lines now.
+  assert.match(chartCard, /<CardTitle\s[\s\S]{0,80}?as="h3"/);
   assert.match(
     fs.readFileSync("components/dashboard/processes-card.jsx", "utf8"),
     /<CardTitle as="h2"/,
@@ -276,24 +277,57 @@ test("the value keeps foreground contrast; only the dot carries the series colou
   assert.match(chartCard, /size-2 shrink-0 rounded-full/);
 });
 
-test("the pills sit on their own row, so the two plots cannot drift apart", () => {
+test("the live pills sit on the chart's title line", () => {
   /*
-   * Inline, Disk I/O's four numbers wrapped at the real content width and
-   * Network's two did not — the two plots beside each other started 58px apart.
-   * Reserving a second description line fixed an earlier version of this and
-   * then stopped working the moment the pills got roomier, because the wrap
-   * point moved. A row that is always there cannot move.
+   * They were on a row beneath the description, and the reason was real:
+   * inline against the whole title BLOCK, Disk I/O's four numbers did not fit
+   * beside a 262px block in a 560px card, so its header grew and the two plots
+   * started 42px apart.
    *
-   * Measured after the change: both live plots start at 158px, both 24h plots
-   * at 116px.
+   * The block is only that wide because the description sits inside it. Beside
+   * the title TEXT there is ~428px and Disk's pills need 334px, which is where
+   * they are now.
+   *
+   * Where there is not, they take a line of their own — see the two tests
+   * below, which are the whole reason this is safe to do.
    */
-  assert.match(chartCard, /<CardHeader className="flex flex-col items-stretch gap-3/);
-  const code = chartCard.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  assert.doesNotMatch(
-    code,
-    /CardHeader className="flex flex-row flex-wrap/,
-    "the pills can share the title's row again",
-  );
+  const title = chartCard.slice(chartCard.indexOf("<CardTitle"), chartCard.indexOf("</CardTitle>"));
+  assert.match(title, /\{badges\}/, "the pills left the title line");
+  // One render site only — a second would draw them twice.
+  assert.equal((chartCard.match(/\{badges\}/g) ?? []).length, 1);
+});
+
+test("the heading is never the thing that gives way", () => {
+  /*
+   * As a bare text node the title was an anonymous flex item — the only
+   * shrinkable thing on a row with a shrink-0 pill group — so at 1280 English
+   * it rendered as "Disk / I/O" on two lines, and at 1024–1366 German BOTH
+   * headings broke. The pills yield now, not the words.
+   *
+   * justify-between rather than ml-auto is load-bearing: justify-content
+   * applies per line, so a pill group that wraps is alone on its line and
+   * lands at the start. Pinned right it drew one right-aligned pill per row on
+   * a phone.
+   */
+  const title = chartCard.slice(chartCard.indexOf("<CardTitle"), chartCard.indexOf("</CardTitle>"));
+  assert.match(title, /whitespace-nowrap">\{title\}/, "the heading can break mid-phrase again");
+  assert.match(title, /justify-between/);
+  assert.doesNotMatch(title, /ml-auto/, "wrapped pills would pin right");
+  assert.match(title, /flex-wrap/, "the pills need a line to fall to");
+});
+
+test("the plot is anchored to the bottom of the card, not the header", () => {
+  /*
+   * What the eye actually checks in a pair of charts is whether the two plots
+   * start on the same line. Both cards are the same height — the grid stretches
+   * them and Card is h-full — so bottom-anchoring the content makes that true
+   * whatever the headers do, and a one-line-taller header costs nothing.
+   *
+   * Without it the pair is 38px out at every width where one card's pills wrap
+   * and the other's do not: en 1024/1280, de 1440, ja 1024–1440.
+   */
+  const code = chartCard.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+  assert.match(code, /<CardContent className="[^"]*\bmt-auto\b/);
 });
 
 test("both I/O pills render the same component, so they cannot drift apart", () => {
