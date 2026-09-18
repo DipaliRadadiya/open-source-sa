@@ -205,7 +205,45 @@ describe('the generated update script', function () {
         $dry = app(UpdateScript::class)->render($this->update, '99.0.0', dryRun: true);
 
         expect($dry)->toContain('note preflight_git')
-            ->and($dry)->toMatch('/\nnote preflight_git\n\s*sudo -u \'panel\' -H git -c /');
+            ->and($dry)->toMatch('/note preflight_git\n(.|\n)*?sudo -u \'panel\' -H git -c /');
+    });
+
+    it('repairs root-owned files inside .git before fetching', function () {
+        /*
+         * Reported from the field and reproduced on a real box:
+         *
+         *     error: cannot open '.git/FETCH_HEAD': Permission denied
+         *
+         * install.sh hands the tree to the app user and then runs `git config`
+         * — and on a re-run, `git fetch` — as root, leaving root-owned files
+         * inside .git. Every later fetch as the app user then fails on
+         * whichever file root got to first.
+         *
+         * `safe.directory` does not cover it: that forgives git's ownership
+         * check, not the filesystem's permissions. install.sh is fixed too, but
+         * a shipped installer change reaches fresh installs only, so the repair
+         * has to run here — on the boxes that already have the problem.
+         */
+        $script = app(UpdateScript::class)->render($this->update, '99.0.0');
+
+        expect($script)->toMatch('/chown -R panel:panel \S+\/\.git/');
+    });
+
+    it('proves git can write, not just read, before maintenance mode', function () {
+        /*
+         * `rev-parse HEAD` only reads. It passed on exactly the boxes where the
+         * next command — a fetch, which writes FETCH_HEAD — was about to fail,
+         * so the check answered a different question than the caller asked and
+         * the real failure landed later, mid-update.
+         */
+        $script = app(UpdateScript::class)->render($this->update, '99.0.0');
+
+        expect($script)->toContain('test -w')
+            // Ordering is the point: after `preflight_git`, and before
+            // maintenance mode. A write test that runs later is just a more
+            // accurate way to fail at the same bad moment.
+            ->and(strpos($script, 'test -w'))->toBeGreaterThan(strpos($script, 'note preflight_git'))
+            ->and(strpos($script, 'test -w'))->toBeLessThan(strpos($script, 'note maintenance_on'));
     });
 
     it('carries the safe.directory exception on every git call', function () {

@@ -167,7 +167,21 @@ class ReleaseUpdateScript
         note preflight
         # Real in both modes. A dry run exists to answer "would this work", and
         # one that echoes every command cannot answer it.
+        # Repair ownership inside .git before anything writes to it.
+        #
+        # install.sh hands the tree to the app user and then runs git as root,
+        # leaving root-owned files in .git; a later fetch as the app user dies
+        # with "cannot open '.git/FETCH_HEAD': Permission denied". install.sh is
+        # fixed, but that reaches fresh installs only — the repair belongs here,
+        # where it runs on the boxes that already have the problem.
+        #
+        # `safe.directory` does not help: it forgives git's ownership check, not
+        # the filesystem's permissions.
+        chown -R {$user}:{$user} {$repository}/.git
         git -c safe.directory={$repository} -C {$repository} rev-parse HEAD > /dev/null
+        # And a write, not just a read: `rev-parse` passed on exactly the boxes
+        # where the fetch was about to fail.
+        {$asUser}test -w {$repository}/.git
         test -f {$this->layout->sharedPath()}/.env
         # An APP_KEY that is absent means a release would generate its own, and
         # every encrypted column — storage secrets, git tokens, database

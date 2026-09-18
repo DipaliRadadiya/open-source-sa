@@ -204,7 +204,24 @@ class UpdateScript
         # step depends on: that git can operate on this repository as this
         # user. Cheap enough to be worth doing before maintenance mode goes on.
         note preflight_git
+        # Repair ownership inside .git before anything reads or writes it.
+        #
+        # install.sh hands the tree to the app user and then runs `git config`
+        # — and on a re-run, `git fetch` — as root, which leaves root-owned
+        # files behind in .git. Every later fetch as the app user then dies
+        # with "cannot open '.git/FETCH_HEAD': Permission denied". install.sh
+        # is fixed, but a shipped installer change reaches fresh installs only,
+        # so the repair has to live here, on the boxes that already have it.
+        #
+        # `safe.directory` does not help: it forgives git's *ownership check*,
+        # not the filesystem's permissions.
+        chown -R {$user}:{$user} {$repo}/.git
         {$git} rev-parse HEAD > /dev/null
+        # A write, not just a read. `rev-parse HEAD` only reads, so it passed
+        # on exactly the boxes where the fetch was about to fail — the check
+        # answering a different question than the caller was asking. This one
+        # fails before maintenance mode goes on rather than after.
+        {$asUser}test -w {$repo}/.git
 
         # Fetch and compare before maintenance. A panel deployed from main can
         # already contain the latest release plus newer commits; VERSION used

@@ -1068,8 +1068,11 @@ fetch_source() {
     fi
 
     if [[ -d "${APP_DIR}/.git" ]]; then
-        run git -C "$APP_DIR" fetch --depth 1 origin "$REPO_BRANCH"
-        run git -C "$APP_DIR" reset --hard "origin/${REPO_BRANCH}"
+        # As ${APP_USER}: a fetch run as root writes a root-owned
+        # .git/FETCH_HEAD, and the panel's own updater — which fetches as
+        # ${APP_USER} — can then never rewrite it.
+        run sudo -u "${APP_USER}" -H git -C "$APP_DIR" fetch --depth 1 origin "$REPO_BRANCH"
+        run sudo -u "${APP_USER}" -H git -C "$APP_DIR" reset --hard "origin/${REPO_BRANCH}"
         ok "updated to the latest ${REPO_BRANCH}"
     else
         mkdir -p "$(dirname "$APP_DIR")"
@@ -1101,7 +1104,15 @@ fetch_source() {
     # as an uncommitted change forever after — which the panel-update
     # preflight's clean-working-tree check takes at face value and refuses to
     # update on, despite there being nothing to lose.
-    run git -C "$APP_DIR" config core.fileMode false
+    #
+    # Run as ${APP_USER}, not as root. `git config` rewrites .git/config, and a
+    # root-owned .git/config is how a tree handed to ${APP_USER} two lines ago
+    # ends up with root-owned files in it again. The same shape further up —
+    # `git -C "$APP_DIR" fetch` on a re-run — leaves a root-owned
+    # .git/FETCH_HEAD, and every later `sudo -u ${APP_USER} git fetch` then
+    # dies with "cannot open '.git/FETCH_HEAD': Permission denied". Reported
+    # from the field, reproduced on a real box.
+    run sudo -u "${APP_USER}" -H git -C "$APP_DIR" config core.fileMode false
     ok "git mode tracking disabled (storage permissions are not source control)"
 }
 

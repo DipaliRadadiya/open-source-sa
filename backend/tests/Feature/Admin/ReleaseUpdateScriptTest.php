@@ -146,7 +146,7 @@ it('really reads the repository during a dry run', function () {
     // the first real command failed.
     $dry = renderedScript(dryRun: true);
 
-    expect($dry)->toMatch('/\nnote preflight\n[\s\S]{0,400}?\n\s*git -c safe\.directory=/')
+    expect($dry)->toMatch('/\nnote preflight\n[\s\S]*?\n\s*git -c safe\.directory=/')
         ->and($dry)->toContain('echo DRY-RUN: ');
 });
 
