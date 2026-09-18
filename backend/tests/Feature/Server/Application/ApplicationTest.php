@@ -2,6 +2,7 @@
 
 use App\Actions\Server\Application\CreateApplication;
 use App\Models\Application;
+use App\Models\AppPackageRelease;
 use App\Models\GitAccount;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
@@ -468,12 +469,26 @@ describe('node version constraints', function () {
         ])->assertStatus(422)->assertJsonValidationErrors('node_version');
     });
 
-    it('refuses a Node version above the ceiling, which n8n has and NodeBB does not', function () {
+    it('refuses a Node above the ceiling when the release declares one', function () {
         capableServer();
 
-        // The ceiling is the half that is easy to forget: too *new* is just as
-        // fatal for n8n, which refuses to start outside the range it documents
-        // rather than warning about it.
+        /*
+         * The ceiling is the half that is easy to forget: too *new* is just as
+         * fatal for an application that refuses to start outside its range
+         * rather than warning about it.
+         *
+         * Driven by a stored release now, not a literal in the site type. n8n
+         * 1.x really did publish `>=20.19 <= 24.x`; 2.x publishes `>=24.0.0`
+         * and no ceiling at all. Pinning the rule to whichever the site type
+         * happened to name was how the two drifted apart in the first place,
+         * so the test states the release and asserts the consequence.
+         */
+        AppPackageRelease::create([
+            'package' => 'n8n',
+            'version' => '1.123.81',
+            'node_range' => '>=20.19 <= 24.x',
+        ]);
+
         $this->withHeaders(appHeaders())->postJson('/api/applications', [
             'site_type' => 'n8n',
             'name' => 'Flows',
@@ -481,6 +496,27 @@ describe('node version constraints', function () {
             'system_user_id' => test()->su->id,
             'node_version' => '25',
         ])->assertStatus(422)->assertJsonValidationErrors('node_version');
+    });
+
+    it('allows a Node the current release does not exclude', function () {
+        capableServer();
+
+        // The same rule, the other way round, and the reason the ceiling had
+        // to stop being hand-written: n8n 2.x declares no upper bound, so a
+        // literal `max` would refuse a Node the application accepts.
+        AppPackageRelease::create([
+            'package' => 'n8n',
+            'version' => '2.39.7',
+            'node_range' => '>=24.0.0',
+        ]);
+
+        $this->withHeaders(appHeaders())->postJson('/api/applications', [
+            'site_type' => 'n8n',
+            'name' => 'Flows',
+            'domain' => 'flows.example.com',
+            'system_user_id' => test()->su->id,
+            'node_version' => '25',
+        ])->assertCreated();
     });
 
     it('refuses a Node its installed n8n cannot run on, even though 1.x could', function () {
@@ -536,11 +572,12 @@ describe('node version constraints', function () {
 
         $types = collect($response->json('site_types'))->keyBy('name');
 
-        // n8n's floor and ceiling are the same major on purpose: 2.x wants
-        // Node 24 and refuses anything else, so the picker offers one version
-        // and the operator never has to hold an opinion about Node.
+        // n8n's floor comes from the release being installed — 2.x declares
+        // `>=24.0.0` — and it publishes no ceiling, so neither does this. The
+        // fallback in the site type is what answers here, since no release is
+        // stored in this test.
         expect($types['nodebb']['node_version_range'])->toBe(['min' => '22', 'max' => null])
-            ->and($types['n8n']['node_version_range'])->toBe(['min' => '24', 'max' => '24'])
+            ->and($types['n8n']['node_version_range'])->toBe(['min' => '24', 'max' => null])
             ->and($types['wordpress']['node_version_range'])->toBeNull();
     });
 });

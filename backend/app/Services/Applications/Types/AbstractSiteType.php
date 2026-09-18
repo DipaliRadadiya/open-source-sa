@@ -304,6 +304,15 @@ abstract class AbstractSiteType implements SiteType
     }
 
     /**
+     * Nothing by default. A type that installs an npm package says so, and
+     * gets its Node range read off that package instead of written down.
+     */
+    public function npmPackage(): ?string
+    {
+        return null;
+    }
+
+    /**
      * No opinion by default, and that is the honest answer for most types: a
      * blank PHP site or a git deployment runs whatever the user's code runs.
      * Only a type whose application publishes a supported range overrides it.

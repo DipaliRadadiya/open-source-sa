@@ -2,6 +2,8 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Services\Runtime\AppPackageCatalog;
+
 /**
  * n8n — workflow automation.
  *
@@ -64,29 +66,35 @@ class N8nSiteType extends AbstractSiteType
     }
 
     /**
-     * Node 24 only, because that is what the version being installed accepts.
+     * What the release being installed says it runs on.
      *
-     * n8n 2.x declares `engines: {node: ">=24.0.0"}`, so the old floor of 20.19
-     * — correct for 1.x — would now let someone create a site on a Node the
-     * application refuses. The ceiling stays closed for the reason it was
-     * closed before: n8n refuses to start outside its range rather than
-     * warning, so a too-new Node is as fatal as a too-old one, and an open
-     * `max` invites the identical failure from the other end.
+     * Read from the package rather than written down here. The installer
+     * resolves `latest`, so a range typed into this file is a transcription
+     * that ages: it read `20.19`-`24` while n8n 1.x declared
+     * `>=20.19 <= 24.x`, and stayed there after 2.x moved to `>=24.0.0` with
+     * no ceiling at all. The two facts have to agree and nothing checked that
+     * they did, because the failure arrives later and somewhere else - a site
+     * that installs without complaint and then refuses to start.
      *
-     * One value in the range is the point. The picker filters to versions in
-     * range, so an n8n site offers exactly one Node and nobody has to know why
-     * — the operator does not care which Node it is, only that the app runs.
-     *
-     * ⚠️ This is coupled to `server.installers.n8n.version`, which is `latest`
-     * and therefore moves on its own. When n8n's next major raises its floor,
-     * this number has to move with it or new installs get an application that
-     * will not start on the only Node the form allows. Pinning the major, or
-     * reading `engines.node` off the registry at install time, is what would
-     * remove the coupling.
+     * The literal below is the fallback, not the answer: it is what a server
+     * with no egress or an unrefreshed catalog offers. Deliberately the narrow
+     * reading of the release current when it was written - being too strict
+     * costs somebody a version in a dropdown, being too loose hands them a site
+     * that will not boot.
      */
     public function supportedNodeRange(): ?array
     {
-        return ['min' => '24', 'max' => '24'];
+        return app(AppPackageCatalog::class)->nodeRange($this->npmPackage())
+            ?? ['min' => '24', 'max' => null];
+    }
+
+    /**
+     * The npm package this site type installs, so the catalog knows what to
+     * ask the registry about.
+     */
+    public function npmPackage(): ?string
+    {
+        return 'n8n';
     }
 
     public function fields(): array

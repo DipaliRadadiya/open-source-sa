@@ -42,6 +42,15 @@ Schedule::command('runtimes:refresh-lifecycle')->daily()->withoutOverlapping();
 // the number only has to be right by the time somebody opens the screen.
 Schedule::command('runtimes:refresh-npm')->daily()->withoutOverlapping();
 
+// The Node range a one-click application accepts, read off the release the
+// installer would actually fetch. Same rule as above and for the same reason:
+// the create form must never block on the registry, so the answer is stored
+// and a server with no egress keeps offering the last one anybody had. Daily,
+// because a package's `engines.node` changes at most a few times a year — and
+// when it does, the picker has to move with it or the form offers a Node the
+// application refuses to start on.
+Schedule::command('runtimes:refresh-app-packages')->daily()->withoutOverlapping();
+
 // Renewal happens outside the panel — certbot's own timer swaps the file every
 // sixty days and tells nothing. Without this the SSL screen counts down from
 // the date captured at issuance and eventually reports "expired" on a site

@@ -98,6 +98,16 @@ interface SiteType
     public function supportedNodeRange(): ?array;
 
     /**
+     * The npm package this type installs, when it installs one.
+     *
+     * Exists so the Node range can be read off the release instead of
+     * transcribed into a site type and left to age. Null for a type that
+     * installs from anywhere else — a tarball, a git clone — or installs
+     * nothing at all.
+     */
+    public function npmPackage(): ?string;
+
+    /**
      * The PHP versions this application will actually run on.
      *
      * `['min' => '8.3', 'max' => null]` — either end may be null for open, and
