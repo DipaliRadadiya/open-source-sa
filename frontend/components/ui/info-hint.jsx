@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useHoverPopover } from "@/lib/hooks/use-hover-popover";
 
 /**
  * An explanation that opens on hover with a mouse, on tap with a finger, and
@@ -24,47 +24,15 @@ import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/compone
 const TOOLTIP_SKIN =
   "w-auto max-w-xs gap-0 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-none ring-0";
 export function InfoHint({ label, children, className }) {
-  const [open, setOpen] = useState(false);
-  // Cancelled when the pointer lands on the panel, so crossing the gap between
-  // the icon and its own content does not close it mid-move.
-  const closeTimer = useRef(null);
-
-  const canHover = () =>
-    typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
-
-  const openOnHover = () => {
-    if (!canHover()) return;
-    clearTimeout(closeTimer.current);
-    setOpen(true);
-  };
-
-  const closeOnLeave = () => {
-    if (!canHover()) return;
-    closeTimer.current = setTimeout(() => setOpen(false), 120);
-  };
-
-  /*
-   * Focus opens this only when the focus came from the keyboard.
-   *
-   * A dialog hands focus to the first thing it can reach, and this icon sits
-   * ahead of its own field — so on every dialog whose first label carries a
-   * hint (about 18 of them), opening it popped this note over the control
-   * underneath, unasked. Reported on Storage → Add Destination, where it
-   * covered the Provider dropdown completely.
-   *
-   * `:focus-visible` is the distinction the browser already draws and the one
-   * that matters here: programmatic focus after a mouse click does not match
-   * it, a Tab onto the icon does. So the noise goes and the keyboard route
-   * stays — which is the whole reason focus opens this at all, since someone
-   * on a keyboard cannot hover.
-   */
-  const openOnKeyboardFocus = (event) => {
-    if (!event.currentTarget.matches(":focus-visible")) return;
-    openOnHover();
-  };
+  // Shared with the dashboard's site-health chip. The hover-with-a-grace-period
+  // behaviour, the `(hover: hover)` gate and the keyboard rule are all subtle
+  // enough that a second copy would drift from this one.
+  const { open, onOpenChange, triggerProps, contentProps } = useHoverPopover({
+    focusOpens: true,
+  });
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger
         type="button"
         aria-label={label}
@@ -80,10 +48,7 @@ export function InfoHint({ label, children, className }) {
         // rather than preventDefault — Radix skips its own click handler when
         // the default is prevented, so the popover would never open.
         onClick={(event) => event.stopPropagation()}
-        onMouseEnter={openOnHover}
-        onMouseLeave={closeOnLeave}
-        onFocus={openOnKeyboardFocus}
-        onBlur={closeOnLeave}
+        {...triggerProps}
       >
         <Info className="size-3.5" />
       </PopoverTrigger>
@@ -91,8 +56,7 @@ export function InfoHint({ label, children, className }) {
         className={TOOLTIP_SKIN}
         // Without this the panel is unreadable with a mouse: it would close the
         // moment the pointer left the icon to reach it.
-        onMouseEnter={openOnHover}
-        onMouseLeave={closeOnLeave}
+        {...contentProps}
         // Hover-opened content must not steal focus, or the row's control loses
         // it every time the pointer passes over the icon.
         onOpenAutoFocus={(event) => event.preventDefault()}

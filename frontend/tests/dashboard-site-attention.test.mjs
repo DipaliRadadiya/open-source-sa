@@ -151,3 +151,52 @@ test("'Needs attention' keeps the wording the panel already used", () => {
     assert.equal(m.serverDashboard.attention.title, admin, `${locale} says it two ways`);
   }
 });
+
+/* -------------------------------------------------------------------------
+ * Discoverability — Krishna: "user will not directly know that on click of
+ * this badge give detail because it is badge."
+ *
+ * He was right, and the reason is its neighbours: the same footer row carries
+ * php 8.4, node 24 and "All 9 services running", none of which do anything. A
+ * chip that opens a panel while sitting in a line of chips that do not has no
+ * way to say so.
+ * ---------------------------------------------------------------------- */
+
+test("the chip carries a visible sign that it opens something", () => {
+  /*
+   * The cue has to be VISIBLE, not behavioural: hover alone leaves a phone and
+   * a keyboard with nothing, and "if a control doesn't look interactive, it
+   * isn't" (product-design-foundations-research.md [127-138]).
+   */
+  const source = read("components/dashboard/site-attention.jsx");
+  const trigger = source.slice(source.indexOf("<PopoverTrigger"), source.indexOf("</PopoverTrigger>"));
+  assert.match(trigger, /<ChevronDown/, "no chevron: nothing says it opens");
+  // And it reports the state rather than pointing the same way regardless.
+  assert.match(trigger, /open && "rotate-180"/);
+});
+
+test("hover is an addition to the click, never a replacement", () => {
+  // The panel holds a link to the screen that fixes the problem. Reaching it
+  // has to be possible without a pointer, so the button stays a button.
+  const source = read("components/dashboard/site-attention.jsx");
+  assert.match(source, /<button type="button"/);
+  assert.match(source, /useHoverPopover\(/);
+});
+
+test("a hover-opened panel does not steal focus, a clicked one takes it", () => {
+  /*
+   * Both halves matter. Hover-opening while someone is typing elsewhere must
+   * not move the caret; a click or Enter must hand focus over or the Fix
+   * button inside is unreachable from the keyboard.
+   */
+  const source = read("components/dashboard/site-attention.jsx");
+  assert.match(source, /onOpenAutoFocus=\{\(event\) => \{\s*if \(hoverOpened\.current\) event\.preventDefault\(\);/);
+});
+
+test("the pointer can travel from chip to panel without losing it", () => {
+  // There is a gap between the two. Without the content's own hover handlers
+  // it closes the moment you set off towards it.
+  const source = read("components/dashboard/site-attention.jsx");
+  const content = source.slice(source.indexOf("<PopoverContent"));
+  assert.match(content, /\{\.\.\.contentProps\}/);
+});
