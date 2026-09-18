@@ -4,7 +4,7 @@ return [
     'issues' => [
         'certificate' => [
             'expired' => 'El certificado SSL ha caducado.',
-            'expiring' => 'El certificado SSL caduca en :days días.',
+            'expiring' => 'El certificado SSL caduca en 1 día.|El certificado SSL caduca en :days días.',
         ],
         'worker' => [
             'stopped' => 'El proceso de la aplicación está detenido.',

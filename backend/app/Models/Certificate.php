@@ -100,10 +100,26 @@ class Certificate extends Model
      * Worth surfacing because certificate lifetimes are shrinking: Let's
      * Encrypt has begun issuing shorter-lived certificates, and a renewal that
      * silently stopped working now has far less slack before the site breaks.
+     *
+     * Null means "no expiry known" — a pending, issuing or failed certificate
+     * has no date yet. That is NOT zero days, and the distinction matters: this
+     * was written as `$this->expires_at?->diffInDays(...) * -1`, where the
+     * null-safe operator short-circuits only the call, leaving `null * -1` to
+     * evaluate as `0`. Every freshly created application therefore reported a
+     * certificate expiring today, and the dashboard called it critical.
+     *
+     * Rounded up, not truncated: Carbon 3 returns a float here, and a cast to
+     * int rounds toward zero, so a certificate with ten hours left came out as
+     * `0` as well. A certificate that still has any life in it reports at least
+     * one day; only a genuinely expired one goes negative.
      */
     public function daysRemaining(): ?int
     {
-        return $this->expires_at?->diffInDays(now(), false) * -1;
+        if ($this->expires_at === null) {
+            return null;
+        }
+
+        return (int) ceil($this->expires_at->diffInDays(now(), false) * -1);
     }
 
     /**

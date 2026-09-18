@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Enums\CertificateStatus;
 use App\Enums\DomainType;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
@@ -59,6 +60,17 @@ class AppIssueDetector
             return null;
         }
 
+        // Only a certificate that is actually on disk and being served can be
+        // near expiry. A row in any other state has no `expires_at` yet, and a
+        // pending one exists from the moment the application is created —
+        // auto-issue inserts it before certbot has run. Reading a countdown off
+        // that row is how a brand new site came to announce, critically, that
+        // its certificate expired today. A failed issue is a real problem, but
+        // it is `reason`'s to report, not an expiry warning's.
+        if ($cert->status !== CertificateStatus::Active) {
+            return null;
+        }
+
         if ($cert->expired()) {
             return [
                 'type' => 'certificate',
@@ -76,7 +88,10 @@ class AppIssueDetector
             return [
                 'type' => 'certificate',
                 'severity' => $days <= 7 ? 'critical' : 'warning',
-                'message' => __('app_dashboard.issues.certificate.expiring', ['days' => $days]),
+                // `trans_choice`, because `ceil()` above guarantees a live
+                // certificate reports at least one day and "expires in 1 days"
+                // is the sentence that produces.
+                'message' => trans_choice('app_dashboard.issues.certificate.expiring', $days, ['days' => $days]),
                 'meta' => [
                     'expires_at' => $cert->expires_at?->format('d-m-Y H:i:s'),
                     'days_remaining' => $days,

@@ -4,6 +4,9 @@ return [
     'issues' => [
         'certificate' => [
             'expired' => 'SSL 証明書の有効期限が切れています。',
+            // Deliberately one form where the other locales gained two: read
+            // through `trans_choice`, and Japanese has no plural inflection to
+            // select between.
             'expiring' => 'SSL 証明書はあと :days 日で期限切れになります。',
         ],
         'worker' => [

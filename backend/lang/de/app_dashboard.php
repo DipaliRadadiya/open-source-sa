@@ -4,7 +4,7 @@ return [
     'issues' => [
         'certificate' => [
             'expired' => 'Das SSL-Zertifikat ist abgelaufen.',
-            'expiring' => 'Das SSL-Zertifikat läuft in :days Tagen ab.',
+            'expiring' => 'Das SSL-Zertifikat läuft in 1 Tag ab.|Das SSL-Zertifikat läuft in :days Tagen ab.',
         ],
         'worker' => [
             'stopped' => 'Der Anwendungsprozess ist gestoppt.',

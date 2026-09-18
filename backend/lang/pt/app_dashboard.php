@@ -4,7 +4,7 @@ return [
     'issues' => [
         'certificate' => [
             'expired' => 'O certificado SSL expirou.',
-            'expiring' => 'O certificado SSL expira em :days dias.',
+            'expiring' => 'O certificado SSL expira em 1 dia.|O certificado SSL expira em :days dias.',
         ],
         'worker' => [
             'stopped' => 'O processo da aplicação está parado.',

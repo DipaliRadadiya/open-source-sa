@@ -4,7 +4,7 @@ return [
     'issues' => [
         'certificate' => [
             'expired' => 'SSL certificate has expired.',
-            'expiring' => 'SSL certificate expires in :days days.',
+            'expiring' => 'SSL certificate expires in 1 day.|SSL certificate expires in :days days.',
         ],
         'worker' => [
             'stopped' => 'Application process is stopped.',

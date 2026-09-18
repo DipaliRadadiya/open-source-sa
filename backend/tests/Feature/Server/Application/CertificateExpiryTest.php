@@ -96,6 +96,29 @@ it('surfaces the refreshed date and the warning flag through the API', function 
         ->and($response->json('certificate.days_remaining'))->toBeGreaterThan(1000);
 });
 
+/*
+ * Null is the honest answer for a certificate with no expiry date, and it has
+ * to survive all the way to the client: `expiring_soon` guards on
+ * `daysRemaining() !== null`, a check that could never fire while the method
+ * turned a null expiry into 0.
+ */
+it('reports no days remaining for a certificate that has no expiry yet', function () {
+    $this->certificate->update([
+        'status' => CertificateStatus::Pending,
+        'expires_at' => null,
+    ]);
+
+    expect($this->certificate->fresh()->daysRemaining())->toBeNull();
+
+    $response = $this->actingAs($this->admin)
+        ->getJson("/api/applications/{$this->application->id}/certificate")
+        ->assertOk();
+
+    expect($response->json('certificate.days_remaining'))->toBeNull()
+        ->and($response->json('certificate.expiring_soon'))->toBeFalse()
+        ->and($response->json('certificate.expired'))->toBeFalse();
+});
+
 it('does not touch certificates that are not active', function () {
     $this->certificate->update(['status' => CertificateStatus::Pending]);
 

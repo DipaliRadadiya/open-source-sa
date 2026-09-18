@@ -147,6 +147,74 @@ it('does not flag a certificate with more than 30 days remaining', function () {
     expect($issues)->toHaveCount(0);
 });
 
+/*
+ * The state every application passes through on creation: auto-issue writes a
+ * pending row before certbot runs, so `expires_at` is null. Reported from a
+ * real panel as a brand new site announcing "SSL certificate expires in 0
+ * days" at critical severity — `null * -1` is 0, and 0 is inside every
+ * threshold below.
+ *
+ * Every certificate case above pins Active, which is exactly why the suite
+ * stayed green through it.
+ */
+it('does not flag a pending certificate that has no expiry yet', function () {
+    Certificate::factory()->create([
+        'application_id' => $this->application->id,
+        'status' => CertificateStatus::Pending,
+        'expires_at' => null,
+    ]);
+
+    $issues = makeDetector()->issues($this->application);
+
+    expect($issues->where('type', 'certificate'))->toHaveCount(0);
+});
+
+it('does not flag a certificate that is still being issued', function () {
+    Certificate::factory()->create([
+        'application_id' => $this->application->id,
+        'status' => CertificateStatus::Issuing,
+        'expires_at' => null,
+    ]);
+
+    $issues = makeDetector()->issues($this->application);
+
+    expect($issues->where('type', 'certificate'))->toHaveCount(0);
+});
+
+// A failed issue is a real problem and the card reports it through `reason`.
+// Dressing it up as an expiry warning names the wrong cause.
+it('does not flag a failed certificate as expiring', function () {
+    Certificate::factory()->create([
+        'application_id' => $this->application->id,
+        'status' => CertificateStatus::Failed,
+        'expires_at' => null,
+    ]);
+
+    $issues = makeDetector()->issues($this->application);
+
+    expect($issues->where('type', 'certificate'))->toHaveCount(0);
+});
+
+/*
+ * Carbon 3 returns a float from `diffInDays`, and the `?int` return truncated
+ * it toward zero — so a certificate with hours left reported the same "0 days"
+ * as the pending row above, for an entirely different reason.
+ */
+it('reports a certificate with hours left as one day, not zero', function () {
+    Certificate::factory()->create([
+        'application_id' => $this->application->id,
+        'status' => CertificateStatus::Active,
+        'expires_at' => now()->addHours(10),
+    ]);
+
+    $issues = makeDetector()->issues($this->application);
+
+    expect($issues)->toHaveCount(1)
+        ->and($issues->first()['severity'])->toBe('critical')
+        ->and($issues->first()['meta']['days_remaining'])->toBe(1)
+        ->and($issues->first()['message'])->toBe('SSL certificate expires in 1 day.');
+});
+
 // ---------------------------------------------------------------------------
 // Worker
 // ---------------------------------------------------------------------------
