@@ -2,7 +2,9 @@
 
 use App\Models\Application;
 use App\Models\ServerCapability;
+use App\Services\Server\Sync\Discoverers\ApplicationDiscoverer;
 use App\Services\Server\WebServers\OlsDriver;
+use App\Services\Server\WebServers\OlsSharedConfig;
 use App\Services\Server\WebServers\OlsVhostLayout;
 use Illuminate\Support\Facades\Process;
 
@@ -139,4 +141,37 @@ it('writes its own layout on a server that never ran the old panel', function ()
 
     expect(app(OlsDriver::class)->configPath($application))
         ->toBe('/usr/local/lsws/conf/vhosts/shop/vhconf.conf');
+});
+
+it('points the shared config at the same file the driver writes', function () {
+    /*
+     * The two halves have to agree. `configPath()` learned where a migrated
+     * server keeps its vhosts and `vhostBlock()` did not, so the panel wrote
+     * config to one path and told OpenLiteSpeed to read another. Every file
+     * involved looks correct on its own and the site serves nothing.
+     */
+    ServerCapability::query()->first()->forceFill(['ols_vhost_root' => '/etc/sureshcloud-ols'])->save();
+
+    $application = Application::factory()->create(['slug' => 'shop', 'domain' => 'shop.example.com']);
+    $written = app(OlsDriver::class)->configPath($application);
+
+    $block = (new ReflectionMethod(OlsSharedConfig::class, 'vhostBlock'))
+        ->invoke(app(OlsSharedConfig::class), 'shop', '/home/shopuser/shop');
+
+    expect($block)->toContain("configFile              {$written}")
+        ->and($written)->toBe('/etc/sureshcloud-ols/shop/main.conf');
+});
+
+it('names a migrated site after its directory, not after main.conf', function () {
+    /*
+     * Every OpenLiteSpeed vhost file has a fixed name, so the basename would
+     * call every site on the box the same thing — and the tracked-slug and
+     * exclusion checks are keyed on it. That was handled for `vhconf.conf` and
+     * reintroduced one layout over: a v7 path ends in `main.conf`, fell through
+     * to the filename branch, and every site became `main`.
+     */
+    $name = (new ReflectionMethod(ApplicationDiscoverer::class, 'vhostName'))
+        ->invoke(app(ApplicationDiscoverer::class), '/etc/sureshcloud-ols/shop/main.conf');
+
+    expect($name)->toBe('shop');
 });

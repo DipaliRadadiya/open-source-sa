@@ -400,7 +400,16 @@ class OlsSharedConfig
      */
     private function vhostBlock(string $name, string $vhRoot): string
     {
-        $conf = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', '/usr/local/lsws/conf/vhosts'), '/');
+        // From the layout, not from config, and this is the half that was
+        // missed: `OlsDriver::configPath()` learned where a migrated server
+        // keeps its vhosts, and this — the block telling OpenLiteSpeed which
+        // file to read — did not. The panel would then write config to
+        // `/etc/<brand>-ols/<site>/main.conf` and point the server at
+        // `<configured root>/<site>/vhconf.conf`. Two paths, one site, and
+        // every file involved looking correct on its own.
+        $layout = app(OlsVhostLayout::class);
+        $conf = $layout->root();
+        $file = $layout->filename();
         $vhRoot = rtrim($vhRoot, '/');
 
         return implode("\n", [
@@ -410,7 +419,7 @@ class OlsSharedConfig
             // vhRoot — put the document root outside the only tree the vhost
             // was allowed to read. Every request would have been refused.
             "  vhRoot                  {$vhRoot}/",
-            "  configFile              {$conf}/{$name}/vhconf.conf",
+            "  configFile              {$conf}/{$name}/{$file}",
             '  allowSymbolLink         1',
             '  enableScript            1',
             '  restrained              1',

@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Services\Server\Php\MemoryBudget;
 use App\Services\Server\Php\PhpStackManager;
 use App\Services\Server\Php\PoolManager;
+use App\Services\Server\WebServers\OlsVhostLayout;
 
 /**
  * Whether each PHP site actually has the pool the panel thinks it has, and
@@ -234,7 +235,10 @@ class PhpIsolationCheck implements DoctorCheck
      */
     private function vhostsRunningAsNobody(): array
     {
-        $root = rtrim((string) config('server.web_server_drivers.openlitespeed.vhost_root', ''), '/');
+        // Where this server actually keeps them, not where config guesses: a
+        // migrated box uses the old panel's branded directory, and globbing the
+        // configured one there finds nothing.
+        $root = rtrim(app(OlsVhostLayout::class)->root(), '/');
 
         if ($root === '' || ! is_dir($root)) {
             return [];
@@ -242,7 +246,17 @@ class PhpIsolationCheck implements DoctorCheck
 
         $offenders = [];
 
-        foreach ((array) glob($root.'/*/vhconf.conf') as $path) {
+        // Both names a vhost may have. A server migrated from the old panel
+        // calls it `main.conf`, and matching only ours meant this check saw no
+        // sites at all there and reported clean — a check that cannot see is
+        // worse than no check, because it answers.
+        $paths = [];
+
+        foreach (OlsVhostLayout::FILENAMES as $filename) {
+            $paths = array_merge($paths, (array) glob($root.'/*/'.$filename));
+        }
+
+        foreach ($paths as $path) {
             $contents = @file_get_contents((string) $path);
 
             // Unreadable is not the same as missing. Reporting a permissions

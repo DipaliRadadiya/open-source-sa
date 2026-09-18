@@ -303,14 +303,20 @@ class ApplicationDiscoverer implements Discoverable
     /**
      * The site's name as this web server records it.
      *
-     * For nginx and Apache that is the file. For OpenLiteSpeed every file is
-     * called `vhconf.conf`, so the *directory* is the name — taking the
-     * basename there would have given every site on the box the same one, and
-     * the tracked-slug and exclusion checks are both keyed on it.
+     * For nginx and Apache that is the file. For OpenLiteSpeed the file has a
+     * fixed name and the *directory* is the site, so the basename would give
+     * every site on the box the same one — and the tracked-slug and exclusion
+     * checks are both keyed on it.
+     *
+     * Checked against every name a vhost may have, not just ours. A server
+     * migrated from the old panel calls it `main.conf`, and matching only
+     * `vhconf.conf` meant those fell through to the filename branch and every
+     * site on such a box was called `main` — the exact failure the paragraph
+     * above describes, reintroduced one layout over.
      */
     private function vhostName(string $path): string
     {
-        if (basename($path) === 'vhconf.conf') {
+        if (in_array(basename($path), OlsVhostLayout::FILENAMES, true)) {
             return basename(dirname($path));
         }
 
