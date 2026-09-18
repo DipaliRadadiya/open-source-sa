@@ -32,6 +32,30 @@ it('reads the range off the release rather than a literal', function () {
         ->toBe(['min' => '24.0.0', 'max' => null]);
 });
 
+it('asks the registry in a way the version endpoint accepts', function () {
+    /*
+     * Found on a real box after this shipped green everywhere else.
+     *
+     * `application/vnd.npm.install-v1+json` selects the abbreviated packument
+     * and is only defined for the package endpoint. On the single-version
+     * endpoint the registry may answer 406 Not Acceptable, and whether it does
+     * depends on which CDN edge takes the request — so the header gave 200 on
+     * one machine and 406 on another, which is a refresh that works in
+     * development and silently stores nothing in production.
+     */
+    Http::fake([
+        'registry.npmjs.org/*' => Http::response([
+            'version' => '2.39.7',
+            'engines' => ['node' => '>=24.0.0'],
+        ]),
+    ]);
+
+    app(AppPackageCatalog::class)->refresh(['n8n' => 'latest']);
+
+    Http::assertSent(fn ($request) => ! collect($request->headers()['Accept'] ?? [])
+        ->contains(fn (string $value) => str_contains($value, 'vnd.npm.install-v1+json')));
+});
+
 it('keeps yesterdays range when the registry cannot be reached', function () {
     AppPackageRelease::create(['package' => 'n8n', 'version' => '2.39.7', 'node_range' => '>=24.0.0']);
 

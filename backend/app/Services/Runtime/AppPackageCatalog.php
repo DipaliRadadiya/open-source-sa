@@ -164,11 +164,20 @@ class AppPackageCatalog
      */
     private function fetch(string $package, string $pin): ?array
     {
+        // No `application/vnd.npm.install-v1+json` here, deliberately, even
+        // though NpmCatalog sends it two files away.
+        //
+        // That header selects the *abbreviated packument* and is only defined
+        // for the package endpoint (`/n8n`). This is the single-version
+        // endpoint (`/n8n/latest`), where the registry may answer **406 Not
+        // Acceptable** — and whether it does depends on which CDN edge answers.
+        // Copying the header from NpmCatalog gave 200 from one machine and 406
+        // from another, which is a refresh that works on the developer's box
+        // and silently stores nothing on the customer's.
+        //
+        // The document is one release's metadata either way, so the header
+        // bought nothing here even where it was tolerated.
         $response = Http::timeout((int) config('server.runtimes.npm.timeout', 30))
-            // Same header NpmCatalog sends: without it the registry returns
-            // every release's full metadata for a document we read two fields
-            // from.
-            ->withHeaders(['Accept' => 'application/vnd.npm.install-v1+json'])
             ->get('https://registry.npmjs.org/'.rawurlencode($package).'/'.rawurlencode($pin));
 
         if (! $response->successful()) {
