@@ -1776,8 +1776,8 @@
         "rebootTimeHint": "Server time. Choose a period of low traffic.",
         "withUsersHint": "Disabled, the restart waits for all sessions to end. Enabled, active sessions are terminated.",
         "description": "Security patches, and the restarts they need.",
-        "pending": "{security, plural, =0 {{total, plural, one {# update available} other {# updates available}}} other {{total, plural, other {# updates available}}, # security}}",
-        "upToDate": "No updates waiting.",
+        "pending": "{count, plural, one {# security update waiting} other {# security updates waiting}}",
+        "upToDate": "No security updates waiting.",
         "checked": "Checked {when}",
         "neverChecked": "Never checked",
         "neverRun": "Automatic updates are on but have never run yet.",
@@ -1812,8 +1812,7 @@
           "dependencies": "The packages waiting cannot be installed together. This usually needs apt run by hand to see what is held back.",
           "worker": "The process running the upgrade disappeared — most likely restarted by the upgrade itself. apt may have finished the work anyway: check the log before starting another.",
           "unknown": "The upgrade failed. The output below is what it said."
-        },
-        "securityOnlyNote": "{count, plural, one {# other update is not installed here — it is not a security patch.} other {# other updates are not installed here — they are not security patches.}}"
+        }
       },
       "reboot": {
         "title": "Manual restart",

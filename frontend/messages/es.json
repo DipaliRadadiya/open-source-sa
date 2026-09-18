@@ -1776,8 +1776,8 @@
         "rebootTimeHint": "Hora del servidor. Elige un periodo de poco tráfico.",
         "withUsersHint": "Desactivado, el reinicio espera a que terminen todas las sesiones. Activado, las sesiones activas se cierran.",
         "description": "Parches de seguridad y los reinicios que necesitan.",
-        "pending": "{security, plural, =0 {{total, plural, one {# actualización disponible} other {# actualizaciones disponibles}}} other {{total, plural, other {# actualizaciones disponibles}}, # de seguridad}}",
-        "upToDate": "No hay actualizaciones pendientes.",
+        "pending": "{count, plural, one {# actualización de seguridad pendiente} other {# actualizaciones de seguridad pendientes}}",
+        "upToDate": "No hay actualizaciones de seguridad pendientes.",
         "checked": "Comprobado {when}",
         "neverChecked": "Nunca comprobado",
         "neverRun": "Las actualizaciones automáticas están activas pero aún no se han ejecutado.",
@@ -1812,8 +1812,7 @@
           "dependencies": "Los paquetes pendientes no se pueden instalar juntos. Normalmente hay que ejecutar apt a mano para ver qué queda retenido.",
           "worker": "El proceso que ejecutaba la actualización desapareció, probablemente reiniciado por la propia actualización. apt puede haber terminado el trabajo igualmente: revisa el registro antes de empezar otra.",
           "unknown": "La actualización falló. La salida de abajo es lo que dijo."
-        },
-        "securityOnlyNote": "{count, plural, one {Aquí no se instala # actualización más: no es un parche de seguridad.} other {Aquí no se instalan # actualizaciones más: no son parches de seguridad.}}"
+        }
       },
       "reboot": {
         "pendingAt": "Hay un reinicio programado para {at}.",

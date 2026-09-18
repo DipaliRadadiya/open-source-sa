@@ -1776,8 +1776,8 @@
         "rebootTimeHint": "Heure du serveur. Choisissez une période de faible trafic.",
         "withUsersHint": "Désactivé, le redémarrage attend la fin de toutes les sessions. Activé, les sessions actives sont terminées.",
         "description": "Correctifs de sécurité et les redémarrages qu'ils nécessitent.",
-        "pending": "{security, plural, =0 {{total, plural, one {# mise à jour disponible} other {# mises à jour disponibles}}} other {{total, plural, other {# mises à jour disponibles}}, # de sécurité}}",
-        "upToDate": "Aucune mise à jour en attente.",
+        "pending": "{count, plural, one {# mise à jour de sécurité en attente} other {# mises à jour de sécurité en attente}}",
+        "upToDate": "Aucune mise à jour de sécurité en attente.",
         "checked": "Vérifié {when}",
         "neverChecked": "Jamais vérifié",
         "neverRun": "Les mises à jour automatiques sont activées mais n'ont jamais été exécutées.",
@@ -1812,8 +1812,7 @@
           "dependencies": "Les paquets en attente ne peuvent pas être installés ensemble. Il faut généralement lancer apt à la main pour voir ce qui est retenu.",
           "worker": "Le processus qui exécutait la mise à jour a disparu — très probablement redémarré par la mise à jour elle-même. apt a peut-être fini le travail quand même : vérifiez le journal avant d'en lancer une autre.",
           "unknown": "La mise à jour a échoué. La sortie ci-dessous est ce qu'elle a dit."
-        },
-        "securityOnlyNote": "{count, plural, one {# autre mise à jour n'est pas installée ici : ce n'est pas un correctif de sécurité.} other {# autres mises à jour ne sont pas installées ici : ce ne sont pas des correctifs de sécurité.}}"
+        }
       },
       "reboot": {
         "title": "Redémarrage manuel",

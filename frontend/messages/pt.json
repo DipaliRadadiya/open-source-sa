@@ -1776,8 +1776,8 @@
         "rebootTimeHint": "Horário do servidor. Escolha um período de pouco tráfego.",
         "withUsersHint": "Desativado, o reinício espera todas as sessões terminarem. Ativado, sessões ativas são encerradas.",
         "description": "Patches de segurança e os reinícios que eles exigem.",
-        "pending": "{security, plural, =0 {{total, plural, one {# atualização disponível} other {# atualizações disponíveis}}} other {{total, plural, other {# atualizações disponíveis}}, # de segurança}}",
-        "upToDate": "Nenhuma atualização pendente.",
+        "pending": "{count, plural, one {# atualização de segurança pendente} other {# atualizações de segurança pendentes}}",
+        "upToDate": "Nenhuma atualização de segurança pendente.",
         "checked": "Verificado {when}",
         "neverChecked": "Nunca verificado",
         "neverRun": "As atualizações automáticas estão ativadas, mas nunca rodaram.",
@@ -1812,8 +1812,7 @@
           "dependencies": "Os pacotes pendentes não podem ser instalados juntos. Geralmente é preciso rodar o apt manualmente para ver o que está retido.",
           "worker": "O processo que rodava a atualização sumiu — provavelmente reiniciado pela própria atualização. O apt pode ter concluído o trabalho mesmo assim: confira o log antes de iniciar outra.",
           "unknown": "A atualização falhou. A saída abaixo é o que ela disse."
-        },
-        "securityOnlyNote": "{count, plural, one {Mais # atualização não é instalada aqui — não é um patch de segurança.} other {Mais # atualizações não são instaladas aqui — não são patches de segurança.}}"
+        }
       },
       "reboot": {
         "title": "Reinício manual",

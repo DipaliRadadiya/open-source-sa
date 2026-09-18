@@ -1776,8 +1776,8 @@
         "rebootTimeHint": "Serverzeit. Wählen Sie einen Zeitraum mit wenig Datenverkehr.",
         "withUsersHint": "Deaktiviert wartet der Neustart, bis alle Sitzungen beendet sind. Aktiviert werden aktive Sitzungen beendet.",
         "description": "Sicherheitspatches und die dafür nötigen Neustarts.",
-        "pending": "{security, plural, =0 {{total, plural, one {# Update verfügbar} other {# Updates verfügbar}}} other {{total, plural, other {# Updates verfügbar}}, # Sicherheitsupdates}}",
-        "upToDate": "Keine Updates ausstehend.",
+        "pending": "{count, plural, one {# Sicherheitsupdate ausstehend} other {# Sicherheitsupdates ausstehend}}",
+        "upToDate": "Keine Sicherheitsupdates ausstehend.",
         "checked": "Geprüft {when}",
         "neverChecked": "Nie geprüft",
         "neverRun": "Automatische Updates sind aktiviert, wurden aber noch nie ausgeführt.",
@@ -1812,8 +1812,7 @@
           "dependencies": "Die wartenden Pakete lassen sich nicht gemeinsam installieren. Dafür muss apt meist von Hand ausgeführt werden, um zu sehen, was zurückgehalten wird.",
           "worker": "Der Prozess, der das Upgrade ausführte, ist verschwunden — höchstwahrscheinlich vom Upgrade selbst neu gestartet. apt hat die Arbeit möglicherweise trotzdem beendet: prüfe das Protokoll, bevor du ein weiteres startest.",
           "unknown": "Das Upgrade ist fehlgeschlagen. Die Ausgabe unten ist, was es gesagt hat."
-        },
-        "securityOnlyNote": "{count, plural, one {# weiteres Update wird hier nicht installiert – es ist kein Sicherheitspatch.} other {# weitere Updates werden hier nicht installiert – es sind keine Sicherheitspatches.}}"
+        }
       },
       "reboot": {
         "title": "Manueller Neustart",

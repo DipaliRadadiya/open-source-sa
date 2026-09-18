@@ -138,8 +138,17 @@ export function MaintenanceCard({
  */
 function UpdateStatus({ updates }) {
   const t = useTranslations("settings.maintenance");
-  const total = updates?.updates_available;
-  const security = updates?.security_updates_available ?? 0;
+
+  // The security count, and nothing else.
+  //
+  // This card's every control acts on security updates alone: the toggle says
+  // "security patches only", the button runs unattended-upgrades against
+  // Allowed-Origins. Reporting the total therefore put the one number the card
+  // cannot act on in the headline — "34 updates available" beside a button that
+  // installs none of them, which is what people reported as the button being
+  // broken. `updates_available` is still on the API for anything that wants it;
+  // it just does not belong in this card's answer.
+  const security = updates?.security_updates_available ?? null;
 
   const failed = updates?.unattended_last_result === "failed";
   // The panel could not open the log, which is not the same answer as the log
@@ -151,11 +160,11 @@ function UpdateStatus({ updates }) {
   // Nothing true left to say. Previously this returned on a null count alone,
   // which meant a failed run went unreported whenever the *unrelated* apt-check
   // command also failed — the reason was hidden behind a different question.
-  if (total == null && !failed && !unreadable && !neverRun) return null;
+  if (security == null && !failed && !unreadable && !neverRun) return null;
 
   const tone = failed
     ? "border-destructive/30 bg-destructive/5 text-destructive"
-    : unreadable || total == null
+    : unreadable || security == null
       ? // Not green: green here would be a claim about a count nobody has.
         "border-warning/40 bg-warning/10"
       : security > 0
@@ -171,7 +180,7 @@ function UpdateStatus({ updates }) {
     >
       {failed ? (
         <CircleAlert className="size-4 shrink-0" />
-      ) : unreadable || total == null || security > 0 ? (
+      ) : unreadable || security == null || security > 0 ? (
         <TriangleAlert className="size-4 shrink-0 text-warning" />
       ) : (
         <CircleCheck className="size-4 shrink-0 text-success" />
@@ -180,10 +189,10 @@ function UpdateStatus({ updates }) {
       {/* Omitted entirely when the count is unknown, rather than guessed at:
         `null` is "nobody knows" and `0` is "nothing is waiting", and the
         sentences below carry the state in either case. */}
-      {total == null ? null : (
+      {security == null ? null : (
         <span className="font-medium">
-          {total > 0
-            ? t("updates.pending", { total, security })
+          {security > 0
+            ? t("updates.pending", { count: security })
             : t("updates.upToDate")}
         </span>
       )}
@@ -274,7 +283,7 @@ function UpdateStatus({ updates }) {
  * switched off, which makes "I patch manually, when I choose" a supported
  * posture rather than a gap.
  */
-function RunSecurityUpdates({ run, canManage, total, security = 0 }) {
+function RunSecurityUpdates({ run, canManage }) {
   const t = useTranslations("settings.maintenance");
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -385,25 +394,13 @@ function RunSecurityUpdates({ run, canManage, total, security = 0 }) {
         </ReasonTooltip>
 
         {/*
-          Said BEFORE the button is pressed, not after.
-          
-          This card counts every upgradable package with apt-check, but the
-          button runs unattended-upgrades, whose Allowed-Origins are the
-          security suites — `noble-updates`, where most upgrades live, is not
-          among them and never will be. So "24 updates available" beside a
-          button reading "Install updates now" promised 24 and delivered the 2,
-          and on a box where even those are gated it delivered nothing at all:
-          reported as the button not working.
-          
-          Shown only when the two numbers actually disagree, so the common case
-          — every waiting update is a security one — stays quiet.
+          The note that used to sit here — "N other updates are not installed
+          here" — existed to reconcile two numbers the card showed at once. The
+          card now reports only the security count, so there is nothing left to
+          reconcile: the headline, this button and the toggle above all describe
+          the same set of packages. Explaining a contradiction is worse than not
+          having one.
         */}
-        {!running && typeof total === "number" && total > security ? (
-          <span className="text-xs text-muted-foreground">
-            {t("updates.securityOnlyNote", { count: total - security })}
-          </span>
-        ) : null}
-
         {running && reconnecting ? (
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             <WifiOff className="size-3.5 shrink-0" />
@@ -539,8 +536,6 @@ function UpdatesSection({ updates, canManage }) {
           <UpdateStatus updates={updates} />
 
           <RunSecurityUpdates
-            total={updates?.updates_available}
-            security={updates?.security_updates_available ?? 0}
             run={updates?.security_update ?? null}
             canManage={canManage}
           />
