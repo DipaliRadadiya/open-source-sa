@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { findActiveNavItem, resolveNavItems } from "@/lib/navigation";
+import { findActiveNavItem, navTitle, resolveNavItems } from "@/lib/navigation";
 import { usePageCrumb } from "@/components/sections/page-crumb";
 import { useUnsaved } from "@/components/ui/unsaved-guard";
 import {
@@ -46,7 +46,11 @@ export function AppBreadcrumb({ items }) {
     applicationId ? item.level === "application" : item.level !== "application",
   );
   const current = findActiveNavItem(panelItems, pathname);
-  const title = current?.title;
+  // `navTitle`, not `current.title`: the catalog calls the firewall screen "8G
+  // Firewall" after the upstream ruleset, and the frontend renames it. The
+  // sidebar went through the override and this did not, so the same screen was
+  // "Web Firewall" in the rail and "8G Firewall" in the trail above it.
+  const title = current ? navTitle(current, t) : undefined;
 
   const trail = [];
   // A page that owns its whole trail. Account is reached from the user menu
