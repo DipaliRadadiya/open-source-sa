@@ -96,6 +96,18 @@ function TypeCell({ row }) {
 }
 
 /**
+ * Enough of the uid to recognise it in a bucket listing, and no more.
+ *
+ * Eight characters is the git-short-hash convention and it is plenty here: the
+ * uid exists to be matched against object names in a bucket, and the first
+ * block of a v4 UUID does that. The full value is what gets copied.
+ */
+function uidFragment(uid) {
+  const text = String(uid);
+  return text.length > 8 ? `${text.slice(0, 8)}…` : text;
+}
+
+/**
  * Where the archive was written.
  *
  * Read from the backup's OWN target, not the site's current one — the setting
@@ -118,18 +130,29 @@ function DestinationCell({ row }) {
    * The destination says WHICH bucket; `uid` says which object in it. They
    * belong together — on their own, "Cloudflare" and a list of UUIDs in a
    * bucket cannot be matched up, which is the whole reason the backend started
-   * sending it. Copy rather than display: it is 36 characters nobody reads,
-   * and the only useful thing to do with it is paste it somewhere else.
+   * sending it.
+   *
+   * The uid gets its OWN line, and a visible fragment of itself, because the
+   * copy button used to sit inline right after "Cloudflare" with nothing to
+   * show what it would copy. Reported as "copy for destination is not
+   * working": it works — the clipboard does receive the uid and the tick does
+   * appear — but positioned next to the bucket name it reads as "copy
+   * Cloudflare", so what lands in your paste buffer is a 36-character UUID you
+   * did not ask for. That is indistinguishable from broken. The aria-label
+   * already said "archive's file name"; a label you only get by hovering does
+   * not fix a button whose position makes a different promise.
+   *
+   * A FRAGMENT, not the whole uid: this column has no fixed width, and 36 mono
+   * characters is what gave the table a 1244px floor and overflowed its
+   * container by 270px at 1024 the last time something long went in here. The
+   * full value stays on the clipboard and in `title`.
    */
   return (
-    <span className="flex min-w-0 items-center gap-1">
+    <span className="flex min-w-0 flex-col gap-0.5">
       <span className="truncate text-sm" title={name}>
         {name}
       </span>
-      {/* Named, not a bare "Copy": the icon sits beside the DESTINATION, so
-          an unlabelled one reads as copying the bucket's name.
-
-          Only when there is something in the bucket to name. The uid is
+      {/* Only when there is something in the bucket to name. The uid is
           stamped in `Backup::booted()` at creation — long before any upload is
           attempted — so a run that failed to upload still carries one, and the
           button offered to copy the name of an object that was never written.
@@ -141,7 +164,12 @@ function DestinationCell({ row }) {
           answer "is there an archive?", and two literals asking that question
           separately is how they came to disagree once already. */}
       {uid && backupHasArchive(row.original.status) ? (
-        <CopyButton value={uid} label={t("copyUid")} className="size-6 shrink-0" />
+        <span className="flex min-w-0 items-center gap-0.5">
+          <span className="truncate font-mono text-xs text-muted-foreground" title={uid}>
+            {uidFragment(uid)}
+          </span>
+          <CopyButton value={uid} label={t("copyUid")} className="size-6 shrink-0" />
+        </span>
       ) : null}
     </span>
   );
