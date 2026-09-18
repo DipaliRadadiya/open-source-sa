@@ -92,4 +92,23 @@ class MauticSiteType extends AbstractSiteType
             'mailer_password' => ['required', 'string', 'max:500'],
         ];
     }
+
+    /**
+     * Mautic 7.2.0, measured 2026-09-18.
+     *
+     * Mautic is the one application here that publishes this machine-readably:
+     * `app/release_metadata.json` in the release itself carries
+     * `minimum_php_version: 8.2.0` and `maximum_php_version: 8.5.99`. Taken
+     * from there rather than from the requirements page, because that file is
+     * what ships with the build we install.
+     *
+     * The ceiling is real, not caution. Mautic refuses to run outright —
+     * "Mautic does not support PHP version X at this time. To use Mautic, you
+     * will need to downgrade." — so an out-of-range version is a dead install,
+     * not a degraded one.
+     */
+    public function supportedPhpRange(): ?array
+    {
+        return ['min' => '8.2', 'max' => '8.5'];
+    }
 }

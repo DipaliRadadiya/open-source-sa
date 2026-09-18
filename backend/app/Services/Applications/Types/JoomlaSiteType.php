@@ -84,4 +84,19 @@ class JoomlaSiteType extends AbstractSiteType
             'table_prefix' => ['nullable', 'string', 'max:15', 'regex:/^[A-Za-z0-9_]+$/'],
         ];
     }
+
+    /**
+     * Joomla 6.1.3, measured 2026-09-18.
+     *
+     * `composer.json` in the release declares `"php": "^8.3.0"`. The panel
+     * installs whatever `joomla/joomla-cms` tags as latest, so this tracks the
+     * 6.x line.
+     *
+     * No ceiling: `^8.3.0` admits every 8.x, and Joomla states none. Inventing
+     * one would refuse a version Joomla supports the day PHP ships it.
+     */
+    public function supportedPhpRange(): ?array
+    {
+        return ['min' => '8.3', 'max' => null];
+    }
 }

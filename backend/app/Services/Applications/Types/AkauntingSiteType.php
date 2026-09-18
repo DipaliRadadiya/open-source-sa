@@ -81,4 +81,18 @@ class AkauntingSiteType extends AbstractSiteType
             'table_prefix' => ['nullable', 'string', 'max:10', 'regex:/^[a-z0-9_]+$/'],
         ];
     }
+
+    /**
+     * Akaunting 3.2.4, measured 2026-09-18.
+     *
+     * `composer.json` declares `"php": "^8.1"`. The floor matters: Akaunting
+     * checks during its own install and stops, so a lower version is a
+     * half-provisioned site rather than a warning.
+     *
+     * No ceiling, because `^8.1` admits every 8.x and Akaunting names none.
+     */
+    public function supportedPhpRange(): ?array
+    {
+        return ['min' => '8.1', 'max' => null];
+    }
 }

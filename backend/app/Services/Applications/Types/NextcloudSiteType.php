@@ -61,4 +61,22 @@ class NextcloudSiteType extends AbstractSiteType
             'admin_password' => ['required', 'string', 'min:10'],
         ];
     }
+
+    /**
+     * Nextcloud 35.0.0, measured 2026-09-18.
+     *
+     * Read from `lib/versioncheck.php` in the release, which is Nextcloud
+     * refusing to boot rather than documentation describing it: below 80300 it
+     * prints "requires at least PHP 8.3", and from 80600 it prints "not
+     * compatible with PHP>=8.6". So the supported band is 8.3 up to and
+     * including 8.5.
+     *
+     * Note the ceiling is expressed as "< 8.6" upstream, which is why it is
+     * 8.5 here and not 8.4: guessing a tighter bound would refuse a version
+     * Nextcloud accepts.
+     */
+    public function supportedPhpRange(): ?array
+    {
+        return ['min' => '8.3', 'max' => '8.5'];
+    }
 }

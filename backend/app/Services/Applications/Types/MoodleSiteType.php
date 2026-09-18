@@ -71,4 +71,25 @@ class MoodleSiteType extends AbstractSiteType
             'table_prefix' => ['nullable', 'string', 'max:10', 'regex:/^[a-z0-9_]+$/'],
         ];
     }
+
+    /**
+     * Moodle 5.0.9+, measured 2026-09-18.
+     *
+     * 🔴 **Pinned, not latest.** `server.installers.moodle.download_url` is
+     * `stable500`, so the panel installs the 5.0 line however new Moodle gets.
+     * The range has to describe *that*, and a proposal of 8.3 was refused for
+     * being Moodle 5.2's floor — correct for a release we do not install.
+     *
+     * Read from `admin/environment.xml` inside the tarball the panel actually
+     * downloads: the `<MOODLE version="5.0">` block declares
+     * `<PHP version="8.2.0" level="required">` and no upper bound at all,
+     * hence the null ceiling.
+     *
+     * If `stable500` is ever bumped, this moves with it — which is the whole
+     * argument for deriving these from the release rather than typing them.
+     */
+    public function supportedPhpRange(): ?array
+    {
+        return ['min' => '8.2', 'max' => null];
+    }
 }

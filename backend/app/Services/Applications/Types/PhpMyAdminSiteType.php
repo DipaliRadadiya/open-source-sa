@@ -78,4 +78,21 @@ class PhpMyAdminSiteType extends AbstractSiteType
             'app_clone',
         ]));
     }
+
+    /**
+     * phpMyAdmin 5.2.3, measured 2026-09-18.
+     *
+     * `composer.json` declares `"php": "^7.2.5 || ^8.0"`.
+     *
+     * 🔴 **No ceiling, deliberately.** A proposed `max => 8.3` was refused
+     * because nothing supports it: `^8.0` admits every 8.x, and phpMyAdmin's
+     * own FAQ only ever states minimums — "Since release 5.2, phpMyAdmin
+     * supports only PHP 7.2 and newer." 5.2.3 shipped in October 2025, almost
+     * a year after PHP 8.4, and declares no incompatibility with it. A ceiling
+     * with no source behind it refuses working versions for nothing.
+     */
+    public function supportedPhpRange(): ?array
+    {
+        return ['min' => '7.2', 'max' => null];
+    }
 }

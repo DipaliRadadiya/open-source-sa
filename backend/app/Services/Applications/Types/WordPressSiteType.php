@@ -123,4 +123,23 @@ class WordPressSiteType extends AbstractSiteType
     {
         return app(WordPressCloneStrategy::class);
     }
+
+    /**
+     * WordPress, measured 2026-09-18.
+     *
+     * `wp-includes/version.php` carries `$required_php_version = '7.4'` — the
+     * value WordPress itself enforces before it will run.
+     *
+     * No ceiling, and that is WordPress's own position: it supports new PHP
+     * releases rather than declaring an upper bound. Recording a maximum here
+     * would refuse versions that work.
+     *
+     * The floor is deliberately WordPress's rather than a tidier modern one. A
+     * range exists to stop installs that cannot work, not to express a
+     * preference — and 7.4 is what the application will actually start on.
+     */
+    public function supportedPhpRange(): ?array
+    {
+        return ['min' => '7.4', 'max' => null];
+    }
 }
