@@ -23,9 +23,6 @@ import { dirname, joinPath } from "@/lib/files/path-helpers";
 import { sharedMode, selectedFiles } from "@/lib/files/shared-mode";
 import { symbolicMode } from "@/lib/files/describe-mode";
 
-// Only ever a starting point for a selection whose modes differ — never
-// presented as anyone's current value.
-const DEFAULT_MODE = "644";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
@@ -104,8 +101,10 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
   const sharedType = chosen.every((file) => file.type === chosen[0]?.type)
     ? chosen[0]?.type
     : null;
-  // Empty, not DEFAULT_MODE, when there is no shared current value — see
-  // `mustChooseMode`. The field renders no preset as chosen for "".
+  // Empty, never a hardcoded default, when the selection has no shared current
+  // value — see `mustChooseMode`. The field renders no preset as chosen for "".
+  // This used to seed "644", which on a 755 folder was one click from removing
+  // its execute bit and breaking the directory.
   const [mode, setMode] = useState(() => currentMode ?? "");
   const [error, setError] = useState(null);
   const archiveFormat = useArchiveFormat();

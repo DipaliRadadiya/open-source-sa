@@ -372,7 +372,6 @@ export function SiteTypePicker({ types = [], value, onChange }) {
     const term = query.trim().toLowerCase();
     if (!term || filtered.length) return 0;
     return ordered.filter((type) => matchesQuery(type, term)).length;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ordered, query, filtered.length]);
 
   const selectedType = types.find((type) => type.name === value);
