@@ -228,6 +228,18 @@ it('keeps n8n inside the site, with a key generated before first start', functio
         ->toContain('N8N_RELEASE_TYPE="stable"');
 });
 
+it('installs the release n8n calls current, not a pinned major', function () {
+    /*
+     * Held on `1` until 2026-09-18, by which point that resolved to 1.123.81 —
+     * a version npm had begun tagging `rc` while stable was on 2.x. Nothing
+     * reported it, because a pin that is a year out of date looks exactly like
+     * a pin that is deliberate.
+     */
+    app(ApplicationProvisioner::class)->provision(oneClickApp('n8n'));
+
+    expect(ranCommands())->toContain('npm install --omit=dev --no-audit --no-fund n8n@latest');
+});
+
 it('repairs the release channel on a site that predates it', function () {
     /*
      * The half that is easy to miss. Writing the variable in `environment()`

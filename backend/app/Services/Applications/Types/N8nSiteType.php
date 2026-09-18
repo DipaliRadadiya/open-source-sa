@@ -64,13 +64,29 @@ class N8nSiteType extends AbstractSiteType
     }
 
     /**
-     * n8n documents a closed range — Node 20.19 to 24.x inclusive — and it is
-     * the ceiling that matters here: n8n refuses to start on a version outside
-     * it rather than warning, so a too-new Node is as fatal as a too-old one.
+     * Node 24 only, because that is what the version being installed accepts.
+     *
+     * n8n 2.x declares `engines: {node: ">=24.0.0"}`, so the old floor of 20.19
+     * — correct for 1.x — would now let someone create a site on a Node the
+     * application refuses. The ceiling stays closed for the reason it was
+     * closed before: n8n refuses to start outside its range rather than
+     * warning, so a too-new Node is as fatal as a too-old one, and an open
+     * `max` invites the identical failure from the other end.
+     *
+     * One value in the range is the point. The picker filters to versions in
+     * range, so an n8n site offers exactly one Node and nobody has to know why
+     * — the operator does not care which Node it is, only that the app runs.
+     *
+     * ⚠️ This is coupled to `server.installers.n8n.version`, which is `latest`
+     * and therefore moves on its own. When n8n's next major raises its floor,
+     * this number has to move with it or new installs get an application that
+     * will not start on the only Node the form allows. Pinning the major, or
+     * reading `engines.node` off the registry at install time, is what would
+     * remove the coupling.
      */
     public function supportedNodeRange(): ?array
     {
-        return ['min' => '20.19', 'max' => '24'];
+        return ['min' => '24', 'max' => '24'];
     }
 
     public function fields(): array

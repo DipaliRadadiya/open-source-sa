@@ -1180,32 +1180,26 @@ return [
 
         'n8n' => [
             'driver' => N8nInstaller::class,
-            // Held on major 1 deliberately, and this is the note that was
-            // missing when it looked like an accident.
+            // Current stable, deliberately, and it moves on its own.
             //
-            // `1` resolves to the newest 1.x — 1.123.81 at the time of
-            // writing, which npm now tags `rc` — while n8n's `latest` and
-            // `stable` tags are both on 2.x. So this is a major version
-            // behind, on purpose, until one thing exists that does not yet:
+            // `latest` and `stable` are both published by n8n and agree, so
+            // this tracks the release they call current rather than a number
+            // that silently ages. What is current:
+            // `curl -s https://registry.npmjs.org/-/package/n8n/dist-tags`.
             //
-            // **n8n 2.x declares `engines: {node: ">=24.0.0"}`, and nothing
-            // here can enforce that.** The Node picker offers the newest patch
-            // of `installable_majors` majors and the user chooses; npm treats
-            // `engines` as a warning rather than a refusal. So bumping this to
-            // `2` today lets someone create an n8n site on Node 20, watch the
-            // install report success, and find out later — which is the exact
-            // shape of the failure recorded against `offer_eol` below, where a
-            // one-click n8n install ended in a C++ compiler error on Node 21.
+            // It was held on major `1` until 2026-09-18, which by then meant
+            // 1.123.81 — a version npm had started tagging `rc` while stable
+            // was on 2.x.
             //
-            // `EngineVersionSupport` already solves this for databases: an
-            // installer names a minimum and provisioning refuses before the
-            // application's own installer can die confusingly. Runtimes have
-            // no equivalent. Build that, then set this to `2` — in that order.
-            //
-            // Checking what is current: `curl -s
-            // https://registry.npmjs.org/-/package/n8n/dist-tags` — n8n
-            // publishes both `latest` and `stable`, and they agree.
-            'version' => env('SERVER_N8N_VERSION', '1'),
+            // ⚠️ Coupled to N8nSiteType::supportedNodeRange(). n8n refuses to
+            // start outside the Node range it documents, so the two have to
+            // agree: 2.x wants Node 24, and the site type allows exactly that.
+            // A moving version pin and a hand-written range will drift the day
+            // n8n's next major raises its floor — new installs would get an
+            // application that cannot run on the only Node the form offers.
+            // Pin the major, or derive the range from `engines.node` at
+            // install time, to remove the coupling.
+            'version' => env('SERVER_N8N_VERSION', 'latest'),
             // The largest npm install in the catalog by some distance.
             'timeout' => (int) env('SERVER_N8N_TIMEOUT', 1800),
         ],

@@ -472,13 +472,33 @@ describe('node version constraints', function () {
         capableServer();
 
         // The ceiling is the half that is easy to forget: too *new* is just as
-        // fatal for n8n, which supports 20.19 through 24.x and refuses the rest.
+        // fatal for n8n, which refuses to start outside the range it documents
+        // rather than warning about it.
         $this->withHeaders(appHeaders())->postJson('/api/applications', [
             'site_type' => 'n8n',
             'name' => 'Flows',
             'domain' => 'flows.example.com',
             'system_user_id' => test()->su->id,
             'node_version' => '25',
+        ])->assertStatus(422)->assertJsonValidationErrors('node_version');
+    });
+
+    it('refuses a Node its installed n8n cannot run on, even though 1.x could', function () {
+        capableServer();
+
+        /*
+         * The floor moved with the version. n8n 1.x ran from 20.19 and this
+         * would have been accepted; 2.x declares `engines: {node: ">=24.0.0"}`,
+         * and the installer now fetches `latest`. A range left on the old floor
+         * would hand someone an application that installs without complaint and
+         * refuses to start — which is the whole failure this rule exists for.
+         */
+        $this->withHeaders(appHeaders())->postJson('/api/applications', [
+            'site_type' => 'n8n',
+            'name' => 'Flows',
+            'domain' => 'flows.example.com',
+            'system_user_id' => test()->su->id,
+            'node_version' => '22',
         ])->assertStatus(422)->assertJsonValidationErrors('node_version');
     });
 
@@ -516,8 +536,11 @@ describe('node version constraints', function () {
 
         $types = collect($response->json('site_types'))->keyBy('name');
 
+        // n8n's floor and ceiling are the same major on purpose: 2.x wants
+        // Node 24 and refuses anything else, so the picker offers one version
+        // and the operator never has to hold an opinion about Node.
         expect($types['nodebb']['node_version_range'])->toBe(['min' => '22', 'max' => null])
-            ->and($types['n8n']['node_version_range'])->toBe(['min' => '20.19', 'max' => '24'])
+            ->and($types['n8n']['node_version_range'])->toBe(['min' => '24', 'max' => '24'])
             ->and($types['wordpress']['node_version_range'])->toBeNull();
     });
 });
