@@ -119,11 +119,20 @@ function StateBadge({ service }) {
      * work is the failure this whole screen exists to stop.
      */
     case "impossible":
+      /*
+       * Two different impossibilities, and the badge has to say which.
+       *
+       * "No version fits" is about a RANGE — PrestaShop wanting PHP 7.2-8.1
+       * against an install list of 8.3 and 8.4. For an engine the vendor has
+       * published nothing for, there is no range and no version; the label was
+       * simply wrong, and the correct sentence was hidden in a tooltip nobody
+       * on a touch screen can open.
+       */
       return (
-        <ReasonTooltip reason={t("state.impossibleReason")}>
+        <ReasonTooltip reason={service.reason ?? t("state.impossibleReason")}>
           <Badge variant="destructive" className="font-normal">
             <CircleAlert className="size-3" />
-            {t("state.impossible")}
+            {service.reason ? t("state.unavailableHere") : t("state.impossible")}
           </Badge>
         </ReasonTooltip>
       );
@@ -220,26 +229,47 @@ export function RequiredServicesPanel({
           states and separate failures, and a sentence can hold neither. */}
       <ul className="divide-y">
         {services.map((service) => (
-          <li key={service.key} className="flex items-center gap-3 px-4 py-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <ServiceMark service={service} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{service.name}</span>
-              <span className="block truncate text-xs text-muted-foreground">
-                {service.state === "failed" && service.error
-                  ? service.error
-                  : t(`purpose.${service.kind}`, { app: typeTitle })}
+          <li key={service.key} className="px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <ServiceMark service={service} />
               </span>
-            </span>
-            <span className="flex shrink-0 items-center gap-2">
-              <StateBadge service={service} />
-              {service.state === "failed" ? (
-                <Button size="sm" variant="outline" onClick={() => onRetry?.(service)}>
-                  {t("retry")}
-                </Button>
-              ) : null}
-            </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{service.name}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {service.state === "failed" && service.error
+                    ? service.error
+                    : t(`purpose.${service.kind}`, { app: typeTitle })}
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                <StateBadge service={service} />
+                {service.state === "failed" ? (
+                  <Button size="sm" variant="outline" onClick={() => onRetry?.(service)}>
+                    {t("retry")}
+                  </Button>
+                ) : null}
+              </span>
+            </div>
+
+            {/*
+             * The reason, in the row, at full length.
+             *
+             * It was only in the badge's tooltip. A tooltip does not open on a
+             * touch screen and nobody hovers a badge they have already read as
+             * a label, so the one sentence that explains a dead end was
+             * effectively unpublished — the same mistake as the engine card,
+             * where the text was right and invisible.
+             *
+             * Only for this state. A row that is merely missing has a button
+             * and needs no paragraph.
+             */}
+            {service.reason ? (
+              <p className="mt-2 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2.5 text-xs leading-relaxed text-destructive">
+                <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                <span>{service.reason}</span>
+              </p>
+            ) : null}
           </li>
         ))}
       </ul>

@@ -5022,7 +5022,8 @@
         "denied": "Precisa de permissão",
         "deniedReason": "Não tem permissão para instalar isto. Um administrador tem.",
         "impossible": "Nenhuma versão serve",
-        "impossibleReason": "Nenhuma das versões que este painel pode instalar está dentro do intervalo de que esta aplicação precisa."
+        "impossibleReason": "Nenhuma das versões que este painel pode instalar está dentro do intervalo de que esta aplicação precisa.",
+        "unavailableHere": "Indisponível aqui"
       },
       "step": {
         "downloading": "A descarregar…",

@@ -5022,7 +5022,8 @@
         "denied": "Autorisation requise",
         "deniedReason": "Vous n'avez pas l'autorisation d'installer cela. Un administrateur le peut.",
         "impossible": "Aucune version ne convient",
-        "impossibleReason": "Aucune des versions que ce panneau peut installer n’entre dans la plage dont cette application a besoin."
+        "impossibleReason": "Aucune des versions que ce panneau peut installer n’entre dans la plage dont cette application a besoin.",
+        "unavailableHere": "Indisponible ici"
       },
       "step": {
         "downloading": "Téléchargement…",

@@ -5022,7 +5022,8 @@
         "denied": "Berechtigung nötig",
         "deniedReason": "Sie haben keine Berechtigung, das zu installieren. Eine Administration kann es.",
         "impossible": "Keine passende Version",
-        "impossibleReason": "Keine der Versionen, die dieses Panel installieren kann, liegt in dem Bereich, den diese Anwendung braucht."
+        "impossibleReason": "Keine der Versionen, die dieses Panel installieren kann, liegt in dem Bereich, den diese Anwendung braucht.",
+        "unavailableHere": "Hier nicht verfügbar"
       },
       "step": {
         "downloading": "Wird heruntergeladen…",

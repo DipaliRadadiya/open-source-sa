@@ -216,6 +216,10 @@ function EngineCard({
     !failed &&
     !installing;
 
+  // Whether the note explains a state that BLOCKS installing, rather than
+  // commenting on one in progress. Only these get the notice treatment.
+  const blockedState = !installing && !failed && !present && !engine.installable;
+
   // The explanation under the name: the server's own words for a failure, or
   // ours for a state it never reports.
   const note = engine.install_progress
@@ -359,9 +363,27 @@ function EngineCard({
         <p
           className={cn(
             "text-xs leading-relaxed",
-            failed ? "text-destructive" : "text-muted-foreground",
+            failed
+              ? "text-destructive"
+              : blockedState
+                ? /*
+                   * A blocked state, not commentary.
+                   *
+                   * As muted text this sat directly under the engine's tagline
+                   * in the same size and colour, so it read as a second line of
+                   * description and got skimmed — which is the one thing it
+                   * cannot afford, because it is the answer to "why is there no
+                   * Install button".
+                   *
+                   * Same treatment a blocked site-type card uses: warning tone
+                   * and the alert glyph. The backend shapes both payloads the
+                   * same way so that the two can look the same.
+                   */
+                  "flex items-start gap-1.5 rounded-lg border border-warning/30 bg-warning/5 p-2.5 text-warning"
+                : "text-muted-foreground",
           )}
         >
+          {blockedState ? <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden /> : null}
           {note}
         </p>
       ) : null}

@@ -5022,7 +5022,8 @@
         "denied": "Requiere permiso",
         "deniedReason": "No tienes permiso para instalar esto. Un administrador sí puede.",
         "impossible": "Ninguna versión sirve",
-        "impossibleReason": "Ninguna de las versiones que este panel puede instalar entra en el rango que necesita esta aplicación."
+        "impossibleReason": "Ninguna de las versiones que este panel puede instalar entra en el rango que necesita esta aplicación.",
+        "unavailableHere": "No disponible aquí"
       },
       "step": {
         "downloading": "Descargando…",

@@ -111,6 +111,17 @@ function liveState(row, { engines, phpVersions, nodeVersions, canInstall, errors
     if (engine?.installed === true && engine?.running === true) return "installed";
     if (engine?.install_status === "installing") return "installing";
     if (engine?.install_status === "failed") return "failed";
+    /*
+     * An engine the panel cannot install here at all — MongoDB on Ubuntu
+     * 26.04, where the vendor has published no server build. NodeBB needs it,
+     * so the create form was offering an Install button whose only outcome is
+     * a 422.
+     *
+     * The runtime branch below has drawn this line for a while: "Null means
+     * nothing we can install fits… Offering a button there would be a button
+     * that cannot work." Same state, same word — `impossible`, not `missing`.
+     */
+    if (engine && engine.installable === false && !engine.installed) return "impossible";
     if (!canInstall.database) return "denied";
     return "missing";
   }
@@ -151,10 +162,27 @@ export function RequiredServices({
 
   const services = useMemo(
     () =>
-      rows.map((row) => ({
-        ...row,
-        state: liveState(row, { engines, phpVersions, nodeVersions, canInstall, errors }),
-      })),
+      rows.map((row) => {
+        const state = liveState(row, { engines, phpVersions, nodeVersions, canInstall, errors });
+
+        return {
+          ...row,
+          state,
+          /*
+           * Why it is impossible, in the server's words, when it has them.
+           *
+           * The generic sentence is about version ranges — "nothing we can
+           * install fits" — which is true of PrestaShop and PHP and says
+           * nothing useful about an engine the vendor has not shipped for this
+           * Ubuntu release.
+           */
+          reason:
+            state === "impossible" && row.kind === "database"
+              ? ((engines ?? []).find((item) => item?.engine === row.engine)?.unavailable?.reason ??
+                null)
+              : null,
+        };
+      }),
     [rows, engines, phpVersions, nodeVersions, canInstall, errors],
   );
 

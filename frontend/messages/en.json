@@ -5022,7 +5022,8 @@
         "denied": "Needs permission",
         "deniedReason": "You do not have permission to install this. An administrator can.",
         "impossible": "No version fits",
-        "impossibleReason": "None of the versions this panel can install fall inside the range this application needs."
+        "impossibleReason": "None of the versions this panel can install fall inside the range this application needs.",
+        "unavailableHere": "Not available here"
       },
       "step": {
         "downloading": "Downloading…",
