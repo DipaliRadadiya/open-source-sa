@@ -92,7 +92,23 @@ export function StatCard({
     // PANEL_CARD carries the ring and shadow — see lib/theme/card-chrome.js for
     // why the shadow has to be an arbitrary value to take effect at all.
     <Card className={cn("gap-0 overflow-hidden bg-gradient-to-t from-primary/5 to-card py-0", PANEL_CARD)}>
-      <CardContent className="px-4 py-3.5">
+      {/*
+       * A container, so the value row can answer to the CARD's width rather
+       * than the window's.
+       *
+       * Measured across all eight locales: the value and its hint want up to
+       * 209px side by side — "Wird gemessen… + 4 Kerne" in German, "80.0 GB
+       * में से 37.6 GB" in Hindi — and at 1280 the five-column grid gives each
+       * card about 190px. Every locale overflowed there, English included, by
+       * 19px to 56px.
+       *
+       * The five cards are equal width, so a container query flips all of them
+       * on the same tick. A plain `flex-wrap` would not: only the card whose
+       * content is longest would wrap, and its bar and helper line would then
+       * sit a row lower than the four beside it — the exact drift the comments
+       * below spent two fixes removing.
+       */}
+      <CardContent className="@container/stat px-4 py-3.5">
         {/*
          * The label gets the whole row. The badge used to share it, and five
          * cards across a 1184px content column leaves about 82px for the label
@@ -137,7 +153,7 @@ export function StatCard({
                 the hint's line-height made cards that have one sit 2px lower,
                 and the helper lines underneath then failed to line up across
                 the row. */}
-            <div className="mt-4 flex min-h-5 items-baseline justify-between gap-2">
+            <div className="mt-4 flex min-h-5 items-baseline justify-between gap-2 @max-[212px]/stat:flex-col @max-[212px]/stat:items-start @max-[212px]/stat:gap-y-1">
               <p className="text-xl font-semibold leading-none tracking-tight tabular-nums">
                 {value}
               </p>
@@ -145,7 +161,7 @@ export function StatCard({
                   hint's half-leading pushed its baseline down and made cards
                   that have a hint 2px taller than those that don't, so the
                   helper lines underneath drifted out of line across the row. */}
-              <span className="shrink-0 text-sm leading-none tabular-nums text-muted-foreground">
+              <span className="shrink-0 text-sm leading-none tabular-nums text-muted-foreground @max-[212px]/stat:shrink">
                 {hint}
               </span>
             </div>

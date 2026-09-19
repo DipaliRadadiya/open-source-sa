@@ -124,3 +124,29 @@ test("a component may still quote an old size in its own comment", () => {
   const guard = read("scripts/check-type-floor.mjs");
   assert.match(guard, /const mask =/);
 });
+
+test("a stat card's value and its hint stack before they can overflow", () => {
+  /*
+   * Reported as a Russian problem; it was not. Measured across all eight
+   * locales, EVERY one overflowed at 1280 — English by 26px, Hindi by 56 and
+   * still 24 at 1440. `xl:grid-cols-5` jumps straight from two columns to five
+   * at 1280, which leaves each card about 182px of content while the value and
+   * its hint want up to 209px side by side ("Wird gemessen… + 4 Kerne",
+   * "80.0 GB में से 37.6 GB").
+   *
+   * A container query, not `flex-wrap`: the five cards are equal width so the
+   * query flips all of them on the same tick, where wrapping would break only
+   * the longest card's row and drop its bar and helper line below its
+   * neighbours' — the drift the comments in this component already fixed twice.
+   *
+   * The threshold is in px and measures the CONTENT box, because
+   * `container-type: inline-size` queries the content box rather than the
+   * border box. Reading it as the border box put the number 32px out and the
+   * cards stacked at every width, including 1920.
+   */
+  const card = read("components/ui/stat-card.jsx");
+  assert.match(card, /@container\/stat/, "the card has to be a container");
+  assert.match(card, /@max-\[212px\]\/stat:flex-col/, "the value row has to stack");
+  // rem would re-open the same off-by-a-root-font-size question.
+  assert.doesNotMatch(card, /@max-\[[\d.]+rem\]\/stat/);
+});
