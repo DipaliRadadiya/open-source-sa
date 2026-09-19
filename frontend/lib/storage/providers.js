@@ -63,7 +63,14 @@ export const PRESETS = [
   // The same service reached as the user rather than as a service account,
   // which is the only way a free Gmail account can use Drive at all.
   { value: "google_drive_oauth", provider: "google_drive_oauth" },
-  { value: "pcloud", provider: "webdav" },
+  // Plain WebDAV — Nextcloud, ownCloud, or anything else that speaks it.
+  //
+  // This was a `pcloud` preset until pCloud was withdrawn as an option. It is
+  // renamed rather than deleted: `presetForProvider` falls back to "other",
+  // which is an *S3* preset, so removing the only `webdav` entry would have
+  // rendered the S3 form when editing an existing WebDAV destination. Exactly
+  // the trap the legacy Drive row above documents.
+  { value: "webdav", provider: "webdav" },
 ];
 
 /**
@@ -104,9 +111,8 @@ export function providerForPreset(value) {
  *
  * Used when editing: the destination knows it is `ftp`, and the form needs a
  * preset to render from. Unambiguous for every provider that has exactly one
- * preset — which `webdav` now does, so editing a pCloud destination shows the
- * pCloud form and its caveat rather than whichever preset happened to be first
- * in the list. For `s3` this deliberately resolves to the generic
+ * preset — which `webdav` does, so editing a WebDAV destination shows the
+ * WebDAV form rather than whichever preset happened to be first in the list. For `s3` this deliberately resolves to the generic
  * option rather than trying to work out *which* S3 service it is — that
  * inference is what this refactor deleted, and a rename should not start
  * claiming a destination is Backblaze because its endpoint looks like it.
@@ -190,13 +196,15 @@ export const FIELDS = {
  * renderer. A second provider needing the same treatment is the moment a
  * special case should become a lookup — otherwise the third one gets forgotten.
  *
- * Both entries exist because a destination that *cannot work* is not the same
- * as one that will not work *well*, and neither is discoverable by trying:
- * Drive refuses a personal folder outright, and pCloud's own documentation
- * says its WebDAV is for small files and may be interrupted.
+ * Empty at present, and kept rather than deleted because the shape is the
+ * point: a destination that *cannot work* is not the same as one that will not
+ * work *well*, and neither is discoverable by trying. Both previous entries
+ * went when the things they warned about did — the Drive one because OAuth
+ * removed the wall it signposted, the pCloud one because pCloud is no longer
+ * offered.
  */
 const WARNINGS = {
-  presets: { pcloud: "help.pcloud_warning" },
+  presets: {},
   // The Drive warning is gone with the preset it belonged to. It told free
   // Gmail users to go elsewhere; OAuth means they no longer have to, so the
   // sign comes down because the wall did.

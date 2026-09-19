@@ -69,7 +69,6 @@ return [
         'drive_shared_only' => 'Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide.',
         'drive_share_with' => 'Partagez le dossier du Drive partagé avec l’adresse du compte de service avant de tester.',
         'base_uri' => 'L’URL WebDAV complète, dossier compris — par exemple https://cloud.exemple.fr/remote.php/dav/files/vous/',
-        'pcloud_warning' => 'pCloud indique que son WebDAV est prévu pour de petits fichiers et peut être interrompu, et il cesse de fonctionner dès que l’authentification à deux facteurs est activée. Les deux comptent pour des sauvegardes : testez la destination et gardez-en une seconde ailleurs.',
     ],
 
     'status' => [
@@ -98,7 +97,7 @@ return [
         'drive_quota' => 'Google a refusé l’envoi faute de quota de stockage, ce qui est le cas sur un Drive personnel.',
         'drive_incomplete' => 'Ajoutez la clé du compte de service et l’identifiant du dossier avant de tester.',
         'dav_full' => 'Le serveur a refusé l’envoi faute d’espace.',
-        'dav_reset' => 'Le serveur a fermé la connexion sans répondre. S’il s’agit de pCloud, l’authentification à deux facteurs produit exactement cela.',
+        'dav_reset' => 'Le serveur a fermé la connexion sans répondre.',
     ],
 
     'delete' => [

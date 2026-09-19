@@ -5306,7 +5306,7 @@
       "failedDriveQuota": "Le dernier test a échoué {when} — Google a refusé l’envoi faute de quota.",
       "failedDriveIncomplete": "Le dernier test a échoué {when} — la clé ou l’identifiant du dossier manque.",
       "failedDavFull": "Le dernier test a échoué {when} — le serveur n’a plus d’espace.",
-      "failedDavReset": "Le dernier test a échoué {when} — le serveur a fermé la connexion sans répondre. Sur pCloud, l’authentification à deux facteurs produit cela.",
+      "failedDavReset": "Le dernier test a échoué {when} — le serveur a fermé la connexion sans répondre.",
       "needsConnect": "Pas encore connecté : autorisez l’accès à votre compte Google."
     },
     "form": {
@@ -5322,7 +5322,7 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (compte de service, ancien)",
-        "pcloud": "pCloud",
+        "webdav": "WebDAV",
         "google_drive_oauth": "Google Drive"
       },
       "name": "Nom",
@@ -5367,8 +5367,7 @@
         "service_account_json": "Collez le fichier de clé JSON complet du compte de service.",
         "folder_id": "La partie de l’URL du dossier après /folders/, pas le lien entier.",
         "drive_shared_only": "Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide. Partagez le dossier avec l’adresse du compte de service, puis collez sa clé ci-dessous. Vous utilisez un compte Gmail personnel ? Choisissez plutôt Backblaze B2 ou Cloudflare R2 — tous deux proposent une offre gratuite et gèrent mieux les archives volumineuses.",
-        "base_uri": "Utilisez https://webdav.pcloud.com/ pour un compte US ou https://ewebdav.pcloud.com/ pour un compte UE. Ajoutez un dossier à la fin pour regrouper les sauvegardes.",
-        "pcloud_warning": "pCloud indique que son WebDAV est prévu pour de petits fichiers et peut être interrompu, et il cesse de fonctionner dès que l’authentification à deux facteurs est activée. Les deux comptent pour des sauvegardes : testez la destination et gardez-en une seconde ailleurs.",
+        "base_uri": "L’URL WebDAV complète de votre serveur, dossier compris — par exemple https://cloud.example.com/remote.php/dav/files/you/backups/",
         "bucket": "Le nom du bucket dans lequel stocker les sauvegardes. Il doit déjà exister — nous ne le créerons pas pour vous.",
         "region": "La région dans laquelle se trouve le bucket. Elle doit correspondre, sinon la connexion sera refusée.",
         "access_key": "La partie publique des identifiants pour ce compte de stockage.",
@@ -5383,7 +5382,7 @@
         "region": "eu-west-1",
         "host": "backup.exemple.fr",
         "root": "backups/",
-        "base_uri": "https://webdav.pcloud.com/backups/"
+        "base_uri": "https://cloud.example.com/remote.php/dav/files/you/backups/"
       }
     },
     "connect": {

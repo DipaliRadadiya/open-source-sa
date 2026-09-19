@@ -5306,7 +5306,7 @@
       "failedDriveQuota": "पिछली जाँच {when} विफल रही — कोटा न होने से Google ने अपलोड अस्वीकार किया।",
       "failedDriveIncomplete": "पिछली जाँच {when} विफल रही — कुंजी या फ़ोल्डर ID अनुपस्थित है।",
       "failedDavFull": "पिछली जाँच {when} विफल रही — सर्वर पर जगह नहीं है।",
-      "failedDavReset": "पिछली जाँच {when} विफल रही — सर्वर ने बिना उत्तर दिए कनेक्शन बंद कर दिया। pCloud पर दो-चरणीय प्रमाणीकरण यही करता है।",
+      "failedDavReset": "पिछली जाँच {when} विफल रही — सर्वर ने बिना उत्तर दिए कनेक्शन बंद कर दिया।",
       "needsConnect": "अभी कनेक्ट नहीं है — अपने Google खाते तक पहुँच की अनुमति दें।"
     },
     "form": {
@@ -5322,7 +5322,7 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (सेवा खाता, पुराना)",
-        "pcloud": "pCloud",
+        "webdav": "WebDAV",
         "google_drive_oauth": "Google Drive"
       },
       "name": "नाम",
@@ -5367,8 +5367,7 @@
         "service_account_json": "सेवा खाते की पूरी JSON कुंजी फ़ाइल चिपकाएँ।",
         "folder_id": "फ़ोल्डर URL का /folders/ के बाद वाला भाग — पूरा लिंक नहीं।",
         "drive_shared_only": "केवल Google Workspace साझा ड्राइव काम करती है। सेवा खाते का अपना संग्रहण नहीं होता, इसलिए व्यक्तिगत ड्राइव पर अपलोड खाली खाते में भी अस्वीकार होते हैं। फ़ोल्डर को सेवा खाता पते के साथ साझा करें, फिर नीचे उसकी कुंजी चिपकाएँ। व्यक्तिगत Gmail खाते का उपयोग कर रहे हैं? इसके बजाय Backblaze B2 या Cloudflare R2 चुनें — दोनों में मुफ़्त सीमा है और वे बड़े संग्रह बेहतर संभालते हैं।",
-        "base_uri": "US खाते के लिए https://webdav.pcloud.com/ और EU खाते के लिए https://ewebdav.pcloud.com/ उपयोग करें। बैकअप एक साथ रखने के लिए अंत में फ़ोल्डर जोड़ें।",
-        "pcloud_warning": "pCloud बताता है कि उसका WebDAV छोटी फ़ाइलों के लिए है और बाधित हो सकता है, और खाते पर दो-चरणीय प्रमाणीकरण चालू होने पर यह पूरी तरह काम करना बंद कर देता है। बैकअप के लिए दोनों मायने रखते हैं: गंतव्य जाँचें और दूसरा कहीं और रखें।",
+        "base_uri": "आपके सर्वर का पूरा WebDAV URL, फ़ोल्डर सहित — उदाहरण के लिए https://cloud.example.com/remote.php/dav/files/you/backups/",
         "bucket": "बैकअप रखने के लिए bucket का नाम। यह पहले से मौजूद होना चाहिए — हम इसे आपके लिए नहीं बनाते।",
         "region": "जिस region में bucket रखा है। यह मेल खाना चाहिए, वरना कनेक्शन अस्वीकार कर दिया जाता है।",
         "access_key": "इस स्टोरेज खाते के लिए क्रेडेंशियल का सार्वजनिक भाग।",
@@ -5383,7 +5382,7 @@
         "region": "eu-west-1",
         "host": "backup.example.com",
         "root": "backups/",
-        "base_uri": "https://webdav.pcloud.com/backups/"
+        "base_uri": "https://cloud.example.com/remote.php/dav/files/you/backups/"
       }
     },
     "connect": {

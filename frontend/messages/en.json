@@ -5306,7 +5306,7 @@
       "failedDriveQuota": "The last test failed {when} — Google refused the upload for lack of storage quota.",
       "failedDriveIncomplete": "The last test failed {when} — the key or the folder ID is missing.",
       "failedDavFull": "The last test failed {when} — the server is out of space.",
-      "failedDavReset": "The last test failed {when} — the server closed the connection without answering. On pCloud, two-factor authentication does this.",
+      "failedDavReset": "The last test failed {when} — the server closed the connection without answering.",
       "needsConnect": "Not connected yet — approve access to your Google account."
     },
     "form": {
@@ -5322,7 +5322,7 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (service account, legacy)",
-        "pcloud": "pCloud",
+        "webdav": "WebDAV",
         "google_drive_oauth": "Google Drive"
       },
       "name": "Name",
@@ -5367,8 +5367,7 @@
         "service_account_json": "Paste the whole JSON key file for the service account.",
         "folder_id": "The part of the folder URL after /folders/ — not the whole link.",
         "drive_shared_only": "Only a Google Workspace Shared Drive works. A service account has no storage of its own, so uploads to a personal Drive are refused even when the account is empty. Share the Shared Drive folder with the service account address, then paste its key below. Using a personal Gmail account? Choose Backblaze B2 or Cloudflare R2 instead — both have a free tier and handle large archives better.",
-        "base_uri": "Use https://webdav.pcloud.com/ for a US account or https://ewebdav.pcloud.com/ for an EU one. Add a folder on the end to keep backups together.",
-        "pcloud_warning": "pCloud states that its WebDAV is intended for small files and may be interrupted, and it stops working entirely when two-factor authentication is enabled on the account. Both matter for backups: test the destination, and keep a second one elsewhere.",
+        "base_uri": "The full WebDAV URL of your server, including any folder — for example https://cloud.example.com/remote.php/dav/files/you/backups/",
         "bucket": "The name of the bucket to store backups in. It must already exist — we do not create it for you.",
         "region": "The region the bucket lives in. It has to match, or the connection is refused.",
         "access_key": "The public half of the credentials for this storage account.",
@@ -5383,7 +5382,7 @@
         "region": "eu-west-1",
         "host": "backup.example.com",
         "root": "backups/",
-        "base_uri": "https://webdav.pcloud.com/backups/"
+        "base_uri": "https://cloud.example.com/remote.php/dav/files/you/backups/"
       }
     },
     "connect": {

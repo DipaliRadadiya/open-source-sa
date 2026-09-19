@@ -129,32 +129,41 @@ test("the legacy Drive preset is no longer offered for new destinations", () => 
   assert.match(form, /PRESETS\.filter\(\(p\) => !p\.legacy\)/);
 });
 
-test("the pCloud preset carries the vendor's own small-files caveat", () => {
-  // pCloud's documentation says its WebDAV is for small files with stability
-  // that "may have interruptions", and it stops working entirely with 2FA on.
-  // A site archive is not a small file, so offering pCloud without saying so
-  // would have the panel implying something the vendor does not.
+test("pCloud is not offered anywhere", () => {
+  // Withdrawn as a destination (operator, 2026-09-19). The vendor's own
+  // documentation said its WebDAV was for small files and stopped working with
+  // 2FA on, which made it a poor home for site archives; rather than keep
+  // shipping it behind a caveat, it is gone.
+  //
+  // The name must not survive in the picker, the form copy, or the caveat that
+  // used to accompany it — a provider nobody can choose should not still be
+  // explaining itself.
   const providers = readFileSync("lib/storage/providers.js", "utf8");
-  assert.match(providers, /pcloud:\s*"help\.pcloud_warning"/);
+  const code = providers.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
 
-  const en = JSON.parse(readFileSync("messages/en.json", "utf8"));
-  const warning = en.storage.form.help.pcloud_warning;
+  assert.doesNotMatch(code, /pcloud/i);
 
-  assert.match(warning, /small files/i);
-  assert.match(warning, /two-factor/i);
+  for (const locale of readdirSync("messages")) {
+    const messages = JSON.parse(readFileSync(`messages/${locale}`, "utf8"));
+    assert.doesNotMatch(
+      JSON.stringify(messages.storage),
+      /pcloud/i,
+      `${locale} still mentions pCloud`,
+    );
+  }
 });
 
-test("pCloud is the only WebDAV preset offered", () => {
-  // Nextcloud/ownCloud and a generic WebDAV option were removed from the
-  // picker (operator, 2026-09-14). The webdav PROVIDER stays — it is what
-  // pCloud runs on — but the panel offers exactly one way to reach it.
-  //
-  // Being the only one also makes `presetForProvider("webdav")` unambiguous,
-  // so editing a pCloud destination shows the pCloud form and its caveat
-  // instead of whichever preset happened to come first.
+test("WebDAV survives pCloud, and keeps its own form", () => {
+  // The provider stays: Nextcloud, ownCloud and anything else speaking WebDAV
+  // still work. Deleting the last webdav PRESET would have been the damaging
+  // move — `presetForProvider` falls back to "other", which is an S3 preset,
+  // so editing an existing WebDAV destination would have rendered the S3 form
+  // with the wrong fields entirely.
   const providers = readFileSync("lib/storage/providers.js", "utf8");
 
-  assert.match(providers, /value:\s*"pcloud",\s*provider:\s*"webdav"/);
+  assert.match(providers, /value:\s*"webdav",\s*provider:\s*"webdav"/);
   assert.doesNotMatch(providers, /value:\s*"nextcloud"/);
-  assert.doesNotMatch(providers, /value:\s*"webdav",\s*provider:\s*"webdav"/);
+
+  const en = JSON.parse(readFileSync("messages/en.json", "utf8"));
+  assert.equal(en.storage.form.providers.webdav, "WebDAV");
 });
