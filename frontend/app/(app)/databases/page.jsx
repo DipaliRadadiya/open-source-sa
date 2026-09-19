@@ -94,16 +94,30 @@ export default async function DatabasesPage({ searchParams }) {
     if (!current || at > current.at) lastBackup[row.database_id] = { ...row, at };
   }
 
-  // "4 databases · 212 MB" beside the engine, rather than two stat tiles for
-  // numbers nobody makes a decision from.
+  /*
+   * "4 databases · 212 MB" beside the engine, rather than two stat tiles for
+   * numbers nobody makes a decision from.
+   *
+   * The count is `meta.total` — the server's answer. It was `databases.length`,
+   * which is the PAGE, and the list pages at ten: a server with forty
+   * databases read "10 databases", and a search or engine filter turned it
+   * into the filtered count with nothing saying so. Wrong with no failure
+   * involved, which is why it survived.
+   *
+   * The size cannot be fixed the same way — there is no server-side total, and
+   * summing this page is a real sum of the wrong set. So it is shown only when
+   * the page IS every database. A partial sum printed as a total is the same
+   * bug wearing different units.
+   */
   const totalBytes = databases.reduce(
     (sum, db) => sum + (Number(db.size_bytes) || 0),
     0,
   );
+  const wholeList = databases.length === (dbMeta?.total ?? databases.length);
   const summary = databases.length
     ? [
-        t("summary.count", { count: databases.length }),
-        formatBytes(totalBytes, format),
+        t("summary.count", { count: dbMeta?.total ?? databases.length }),
+        wholeList ? formatBytes(totalBytes, format) : null,
       ]
         .filter(Boolean)
         .join(" · ")

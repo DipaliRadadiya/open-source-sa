@@ -280,6 +280,7 @@
       "title": "Recent activity",
       "today": "{count, plural, one {# today} other {# today}}",
       "empty": "Nothing has happened yet.",
+      "failed": "The activity log could not be loaded.",
       "viewAll": "View the full log",
       "system": "System",
       "sentenceRepeated": "{who} {what} {count} times",
@@ -772,6 +773,7 @@
       "cpuModel": "Processor",
       "runtimes": "Runtimes",
       "noRuntimes": "None detected",
+      "enginesUnknown": "Database versions could not be read",
       "copyIp": "Copy IP address",
       "servicesOk": "{count, plural, one {# service running} other {All # services running}}",
       "servicesDown": "{count, plural, one {Not running: {names}} other {Not running: {names}}}",
@@ -3404,7 +3406,8 @@
         "domains": "Domains",
         "ssl": "SSL",
         "secured": "Secured over HTTPS",
-        "notSecured": "Not secured"
+        "notSecured": "Not secured",
+        "sslUnknown": "Certificate status unknown"
       },
       "emptyTitle": "No domains yet",
       "emptyBody": "Add a domain to point it at this site. You can add more names and aliases at any time.",
@@ -5825,6 +5828,7 @@
       "showing": "Showing {shown} of {total}",
       "viewAll": "All backups",
       "noRuns": "No backups have run for this site yet.",
+      "historyFailed": "This site's backup history could not be loaded.",
       "safetyBadge": "Safety copy",
       "summary": {
         "what": "What is backed up",

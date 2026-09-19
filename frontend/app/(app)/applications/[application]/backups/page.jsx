@@ -58,7 +58,14 @@ export default async function ApplicationBackupsPage({ params }) {
   // at — offering the form would be offering a save that cannot work.
   // `meta.total` is the whole history, not the five rows below it: the list is
   // capped, and a cap the reader cannot see reads as the complete list.
-  const [{ target }, { destinations }, { backups, meta }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes] = await Promise.all([
+  /*
+   * `backupsFailed` is the difference between "nothing has ever run" and "we
+   * could not ask" — on the one screen whose whole job is answering "am I
+   * protected", the wrong one of those is the reassuring one. The destructure
+   * dropped `failed` entirely, so an unanswered request rendered as
+   * "No backups have run for this site yet."
+   */
+  const [{ target }, { destinations }, { backups, meta, failed: backupsFailed }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes] = await Promise.all([
     settled ? getBackupTarget(id) : Promise.resolve({ target: null }),
     getStorageDestinations(),
     settled
@@ -71,7 +78,12 @@ export default async function ApplicationBackupsPage({ params }) {
     // anything. A failure here leaves it unknown, and unknown says nothing.
     settled ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),
     // For the "this site has no database" notice and its Attach action.
-    settled && canManageDatabases ? getApplicationDatabases(id) : Promise.resolve({ databases: [] }),
+    // `failed` rides through: accusing a site of having no database on the
+    // strength of a request that did not come back is the same mistake the
+    // application page already guards against.
+    settled && canManageDatabases
+      ? getApplicationDatabases(id)
+      : Promise.resolve({ databases: [], failed: false }),
     settled && canManageDatabases ? getUnattachedDatabases() : Promise.resolve({ databases: [] }),
     settled && canManageDatabases ? getEngines() : Promise.resolve({ engines: [] }),
     settled && canManageDatabases
@@ -101,6 +113,8 @@ export default async function ApplicationBackupsPage({ params }) {
           destinations={destinations}
           backups={backups}
           total={meta.total}
+          backupsFailed={backupsFailed}
+          siteDatabasesKnown={!siteDbs.failed}
           databaseCounts={databases.counts}
           databasesKnown={databases.known}
           activeRestore={activeRestore}

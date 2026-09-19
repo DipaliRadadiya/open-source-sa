@@ -178,7 +178,12 @@ test("the fetcher still wraps its list — the assumption this pins", () => {
     new URL("../lib/databases/get-databases.js", import.meta.url),
     "utf8",
   );
-  assert.match(fetcher, /return \{ engines: data\?\.engines \?\? \[\], failed \}/);
+  // Matched on the wrapping, not on the exact field list: this pins that the
+  // fetcher returns an OBJECT rather than a bare array, and `status`/`failure`
+  // were added to it later so the monitor page could say which failure it hit.
+  // Pinning the whole line made an addition look like the shape change this
+  // test exists to catch.
+  assert.match(fetcher, /return \{ engines: data\?\.engines \?\? \[\],/);
 
   // And the page must go through the helper, not dig into the shape inline.
   const page = readFileSync(

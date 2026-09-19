@@ -125,6 +125,11 @@ export default async function DashboardPage() {
             health={health}
             siteAttention={attention}
             engines={engineResult?.engines ?? []}
+            /* Not the same as "this server has no databases". Without it the
+               chips simply vanish and the dashboard disagrees with the
+               databases page — which is the bug this whole card was just
+               fixed for. */
+            enginesFailed={Boolean(engineResult?.failed)}
           />
           <LiveMetricsSection
             timeZone={facts?.timezone}

@@ -34,20 +34,30 @@ export async function PeopleCard({ users, roles, impersonation }) {
           : t("impersonationNever"),
       };
 
+  /*
+   * A dash, not a zero, when the stats read did not come back.
+   *
+   * `?? 0` turned a failed `GET /admin/dashboard` — including the 403 its own
+   * fetcher anticipates — into "0 of 0 users" and "0 roles configured" on a
+   * panel full of both. The impersonation row above already refuses to speak
+   * without an answer; two of this card's three rows did not.
+   */
   const rows = [
     {
       key: "admins",
       icon: Users,
       href: "/admin/users",
       label: t("admins"),
-      value: t("adminsOf", { admins: num(users?.admins), total: num(users?.total) }),
+      value: users
+        ? t("adminsOf", { admins: num(users.admins), total: num(users.total) })
+        : "—",
     },
     {
       key: "roles",
       icon: ShieldCheck,
       href: "/admin/roles",
       label: t("roles"),
-      value: t("rolesConfigured", { count: roles?.total ?? 0 }),
+      value: roles ? t("rolesConfigured", { count: roles.total ?? 0 }) : "—",
     },
     impersonationRow,
   ].filter(Boolean);

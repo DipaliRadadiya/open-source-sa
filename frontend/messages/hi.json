@@ -296,6 +296,7 @@
       "title": "हाल की गतिविधि",
       "today": "{count, plural, one {आज #} other {आज #}}",
       "empty": "अभी तक कुछ नहीं हुआ।",
+      "failed": "गतिविधि लॉग लोड नहीं हो सका।",
       "viewAll": "पूरा लॉग देखें",
       "system": "सिस्टम",
       "sentenceRepeated": "{who} ने {count} बार {what}",
@@ -772,6 +773,7 @@
       "cpuModel": "प्रोसेसर",
       "runtimes": "रनटाइम",
       "noRuntimes": "कोई नहीं मिला",
+      "enginesUnknown": "डेटाबेस संस्करण पढ़े नहीं जा सके",
       "copyIp": "IP पता कॉपी करें",
       "servicesOk": "{count, plural, one {# सेवा चल रही है} other {सभी # सेवाएँ चल रही हैं}}",
       "servicesDown": "{count, plural, one {नहीं चल रही: {names}} other {नहीं चल रहीं: {names}}}",
@@ -3404,7 +3406,8 @@
         "domains": "डोमेन",
         "ssl": "SSL",
         "secured": "HTTPS से सुरक्षित",
-        "notSecured": "असुरक्षित"
+        "notSecured": "असुरक्षित",
+        "sslUnknown": "प्रमाणपत्र की स्थिति अज्ञात"
       },
       "emptyTitle": "अभी तक कोई डोमेन नहीं",
       "emptyBody": "इस साइट पर इंगित करने के लिए एक डोमेन जोड़ें। आप किसी भी समय और नाम और उपनाम जोड़ सकते हैं।",
@@ -5825,6 +5828,7 @@
       "showing": "{total} में से {shown} दिख रही हैं",
       "viewAll": "सभी बैकअप",
       "noRuns": "इस साइट का अभी तक कोई बैकअप नहीं बना।",
+      "historyFailed": "इस साइट का बैकअप इतिहास लोड नहीं हो सका।",
       "safetyBadge": "सुरक्षा प्रति",
       "summary": {
         "what": "किसका बैकअप",

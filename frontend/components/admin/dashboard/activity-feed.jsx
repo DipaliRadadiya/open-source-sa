@@ -24,7 +24,7 @@ import { lowerFirst } from "@/lib/activity-log/lower-first";
  */
 const SHOWN = 6;
 
-export async function ActivityFeed({ entries = [], todayCount = 0 }) {
+export async function ActivityFeed({ entries = [], todayCount = 0, failed = false, todayKnown = true }) {
   const t = await getTranslations("admin.feed");
   // Collapse first, then choose: runs of logins are capped so whatever else
   // happened still gets a row, in the order it happened.
@@ -42,7 +42,11 @@ export async function ActivityFeed({ entries = [], todayCount = 0 }) {
         <h2 className="font-heading text-base leading-snug font-semibold tracking-tight">
           {t("title")}
         </h2>
-        <p className="text-sm text-muted-foreground">{t("today", { count: todayCount })}</p>
+        {/* "0 today" on a failed stats read is the same lie as the empty list
+            below, in a smaller font. */}
+        <p className="text-sm text-muted-foreground">
+          {todayKnown ? t("today", { count: todayCount }) : "—"}
+        </p>
       </div>
 
       {rows.length ? (
@@ -86,7 +90,12 @@ export async function ActivityFeed({ entries = [], todayCount = 0 }) {
           })}
         </ul>
       ) : (
-        <p className="px-5 py-8 text-center text-sm text-muted-foreground">{t("empty")}</p>
+        /* The fetcher's own docblock says it: "an unreachable API rendered as
+           'nothing has happened here'. On an audit log that reading is worse
+           than useless." It was fixed there and not here. */
+        <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+          {failed ? t("failed") : t("empty")}
+        </p>
       )}
 
       <div className="mt-auto border-t bg-muted/20 px-5 py-2.5">

@@ -63,7 +63,18 @@ export default async function ApplicationDomainsPage({ params }) {
   const serverIp = capabilities?.serverIp ?? null;
 
   const cert = certificate.certificate;
-  const sslStatus = !cert
+  /*
+   * A failed certificate read is not "this site has no certificate".
+   *
+   * `!cert` covered both, so a 500 on `GET /applications/{id}/certificate`
+   * rendered "Not secured — this site is served over plain HTTP" with an
+   * Enable HTTPS button, on a site holding a live certificate. The fetcher's
+   * own comment says these two answers must stay apart; this page read only
+   * `domainList.failed` and never `certificate.failed`.
+   */
+  const sslStatus = certificate.failed
+    ? "unknown"
+    : !cert
     ? "none"
     : cert.status === "active"
       ? "active"
@@ -106,14 +117,21 @@ export default async function ApplicationDomainsPage({ params }) {
             />
           }
           ssl={
-            <SslSection
-              appId={id}
-              initialCertificate={certificate.certificate}
-              certifiable={certifiable}
-              availableTypes={availableTypes}
-              canManage={canManage}
-              webServer={capabilities?.webServer ?? null}
-            />
+            certificate.failed ? (
+              <LoadFailed
+                status={certificate.status}
+                failure={certificate.failure}
+              />
+            ) : (
+              <SslSection
+                appId={id}
+                initialCertificate={certificate.certificate}
+                certifiable={certifiable}
+                availableTypes={availableTypes}
+                canManage={canManage}
+                webServer={capabilities?.webServer ?? null}
+              />
+            )
           }
         />
       )}

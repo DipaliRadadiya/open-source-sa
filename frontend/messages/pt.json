@@ -280,6 +280,7 @@
       "title": "Atividade recente",
       "today": "{count, plural, one {# hoje} other {# hoje}}",
       "empty": "Nada aconteceu ainda.",
+      "failed": "Não foi possível carregar o registo de atividade.",
       "viewAll": "Ver o log completo",
       "system": "Sistema",
       "sentenceRepeated": "{who} {what} {count} vezes",
@@ -772,6 +773,7 @@
       "cpuModel": "Processador",
       "runtimes": "Runtimes",
       "noRuntimes": "Nenhum detectado",
+      "enginesUnknown": "Não foi possível ler as versões das bases de dados",
       "copyIp": "Copiar endereço IP",
       "servicesOk": "{count, plural, one {# serviço em execução} other {Todos os # serviços em execução}}",
       "servicesDown": "{count, plural, one {Não está em execução: {names}} other {Não estão em execução: {names}}}",
@@ -3404,7 +3406,8 @@
         "domains": "Domínios",
         "ssl": "SSL",
         "secured": "Protegido por HTTPS",
-        "notSecured": "Não protegido"
+        "notSecured": "Não protegido",
+        "sslUnknown": "Estado do certificado desconhecido"
       },
       "emptyTitle": "Ainda sem domínios",
       "emptyBody": "Adicione um domínio para apontá-lo a este site. Você pode adicionar mais nomes e aliases a qualquer momento.",
@@ -5825,6 +5828,7 @@
       "showing": "Exibindo {shown} de {total}",
       "viewAll": "Todos os backups",
       "noRuns": "Nenhum backup foi executado para este site ainda.",
+      "historyFailed": "Não foi possível carregar o histórico de backups deste site.",
       "safetyBadge": "Cópia de segurança",
       "summary": {
         "what": "O que é copiado",

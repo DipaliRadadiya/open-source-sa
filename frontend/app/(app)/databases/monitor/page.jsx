@@ -16,6 +16,7 @@ import { EngineStatusCards } from "@/components/databases/engine-status-cards";
 import { QueryChart } from "@/components/databases/query-chart";
 import { ProcessList } from "@/components/databases/process-list";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { LoadFailed } from "@/components/data-table/load-failed";
 import { Activity } from "lucide-react";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { PageHeader } from "@/components/ui/page-header";
@@ -34,7 +35,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
     getTranslations("databases.monitor"),
     getEngines(),
   ]);
-  const { engines } = live;
+  const { engines, failed: enginesFailed, status: enginesStatus, failure: enginesFailure } = live;
 
   if (!can(permissions, "database", "view")) redirect("/dashboard");
   const canManage = can(permissions, "database", "manage");
@@ -50,11 +51,22 @@ export default async function DatabaseMonitorPage({ searchParams }) {
       <div className="space-y-6">
         <PageCrumb>{t("crumb")}</PageCrumb>
         <Header t={t} />
-        <EmptyState
-          icon={Activity}
-          title={t("noEngine.title")}
-          description={t("noEngine.description")}
-        />
+        {/*
+          "No database engine is running" is a claim about the server, and an
+          unanswered request is not evidence for it — this screen was telling
+          people their database was down when it had failed to ask. The
+          databases page destructures `failed` from this same call and has
+          always done this correctly; this one dropped it.
+        */}
+        {enginesFailed ? (
+          <LoadFailed status={enginesStatus} failure={enginesFailure} />
+        ) : (
+          <EmptyState
+            icon={Activity}
+            title={t("noEngine.title")}
+            description={t("noEngine.description")}
+          />
+        )}
       </div>
     );
   }

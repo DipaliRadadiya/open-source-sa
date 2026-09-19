@@ -139,7 +139,9 @@ export default async function AdminDashboardPage() {
         <div className="lg:col-span-2">
           <ActivityFeed
             entries={activity.activity_log}
+            failed={activity.failed}
             todayCount={stats?.activity.today ?? 0}
+            todayKnown={Boolean(stats)}
           />
         </div>
         <PeopleCard users={stats?.users} roles={stats?.roles} impersonation={impersonation} />

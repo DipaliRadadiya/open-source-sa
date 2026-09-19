@@ -280,6 +280,7 @@
       "title": "Activité récente",
       "today": "{count, plural, one {# aujourd'hui} other {# aujourd'hui}}",
       "empty": "Rien ne s'est encore passé.",
+      "failed": "Le journal d'activité n'a pas pu être chargé.",
       "viewAll": "Voir le journal complet",
       "system": "Système",
       "sentenceRepeated": "{who} {what} {count} fois",
@@ -772,6 +773,7 @@
       "cpuModel": "Processeur",
       "runtimes": "Environnements",
       "noRuntimes": "Aucun détecté",
+      "enginesUnknown": "Impossible de lire les versions des bases de données",
       "copyIp": "Copier l'adresse IP",
       "servicesOk": "{count, plural, one {# service en cours} other {# services en cours}}",
       "servicesDown": "{count, plural, one {Arrêté : {names}} other {Arrêtés : {names}}}",
@@ -3404,7 +3406,8 @@
         "domains": "Domaines",
         "ssl": "SSL",
         "secured": "Sécurisé en HTTPS",
-        "notSecured": "Non sécurisé"
+        "notSecured": "Non sécurisé",
+        "sslUnknown": "État du certificat inconnu"
       },
       "emptyTitle": "Aucun domaine pour l'instant",
       "emptyBody": "Ajoutez un domaine pour le pointer vers ce site. Vous pouvez ajouter d'autres noms et alias à tout moment.",
@@ -5825,6 +5828,7 @@
       "showing": "{shown} sur {total} affichés",
       "viewAll": "Toutes les sauvegardes",
       "noRuns": "Aucune sauvegarde n'a encore été exécutée pour ce site.",
+      "historyFailed": "L'historique des sauvegardes de ce site n'a pas pu être chargé.",
       "safetyBadge": "Copie de sécurité",
       "summary": {
         "what": "Ce qui est sauvegardé",

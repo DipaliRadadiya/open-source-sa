@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Globe2, Lock, ShieldAlert, ShieldOff, Loader2 } from "lucide-react";
+import { Globe2, Lock, ShieldAlert, ShieldOff, ShieldQuestion, Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 
@@ -14,6 +14,10 @@ const TRIGGER = "!h-auto gap-2 px-4 py-2";
 // The SSL tab's own icon carries the security posture, so "is my site secured?"
 // is answerable without opening the tab.
 function SslIcon({ status, label }) {
+  // The certificate read failed. A padlock-with-a-slash here is the tab
+  // asserting the site is not secured, on no evidence at all.
+  if (status === "unknown")
+    return <ShieldQuestion className="size-4 text-muted-foreground" aria-label={label} />;
   if (status === "active") return <Lock className="size-4 text-success" aria-label={label} />;
   if (status === "issuing")
     return <Loader2 className="size-4 animate-spin text-primary" aria-label={label} />;
@@ -45,7 +49,12 @@ export function DomainsSslTabs({ domains, ssl, sslStatus = "none" }) {
     window.history.replaceState(null, "", `?${params.toString()}`);
   }, []);
 
-  const sslLabel = sslStatus === "active" ? t("tabs.secured") : t("tabs.notSecured");
+  const sslLabel =
+    sslStatus === "unknown"
+      ? t("tabs.sslUnknown")
+      : sslStatus === "active"
+        ? t("tabs.secured")
+        : t("tabs.notSecured");
 
   return (
     <Tabs value={tab} onValueChange={onChange} className="gap-4">

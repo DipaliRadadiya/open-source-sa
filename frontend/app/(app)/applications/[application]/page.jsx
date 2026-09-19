@@ -198,10 +198,20 @@ export default async function ApplicationDetailPage({ params }) {
   ].filter(Boolean);
 
 
-  // Link over https only when a certificate is actually serving — otherwise
-  // https lands on a browser security warning; the site is still on http.
+  /*
+   * `application.url` is the server's own answer to "what address opens this
+   * site" — http:// until a certificate is actually serving. The list and the
+   * ⋯ menu both use it.
+   *
+   * This page was deciding the scheme itself from the certificate read, so a
+   * failed `GET /applications/{id}/certificate` silently downgraded the link
+   * to http:// on an https-only site. Assembling it by hand is also how the
+   * whole `url` field came to be: every reader guessed, and the guesses
+   * disagreed. The fallback stays for an API that predates the field.
+   */
   const secured = certificate.certificate?.status === "active";
-  const siteUrl = `${secured ? "https" : "http"}://${application.domain}`;
+  const siteUrl =
+    application.url ?? `${secured ? "https" : "http"}://${application.domain}`;
 
   /*
    * The three risks worth interrupting for, in the order a site is usually

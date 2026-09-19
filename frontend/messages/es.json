@@ -296,6 +296,7 @@
       "title": "Actividad reciente",
       "today": "{count, plural, one {# hoy} other {# hoy}}",
       "empty": "Todavía no ha pasado nada.",
+      "failed": "No se pudo cargar el registro de actividad.",
       "viewAll": "Ver el registro completo",
       "system": "Sistema",
       "sentenceRepeated": "{who} {what} {count} veces",
@@ -772,6 +773,7 @@
       "cpuModel": "Procesador",
       "runtimes": "Entornos",
       "noRuntimes": "Ninguno detectado",
+      "enginesUnknown": "No se pudieron leer las versiones de las bases de datos",
       "copyIp": "Copiar la dirección IP",
       "servicesOk": "{count, plural, one {# servicio en ejecución} other {Los # servicios están en ejecución}}",
       "servicesDown": "{count, plural, one {No está en ejecución: {names}} other {No están en ejecución: {names}}}",
@@ -3404,7 +3406,8 @@
         "domains": "Dominios",
         "ssl": "SSL",
         "secured": "Protegido con HTTPS",
-        "notSecured": "Sin proteger"
+        "notSecured": "Sin proteger",
+        "sslUnknown": "Estado del certificado desconocido"
       },
       "emptyTitle": "Aún no hay dominios",
       "emptyBody": "Agrega un dominio para apuntarlo a este sitio. Puedes añadir más nombres y alias en cualquier momento.",
@@ -5825,6 +5828,7 @@
       "showing": "Mostrando {shown} de {total}",
       "viewAll": "Todas las copias",
       "noRuns": "Todavía no se ha hecho ninguna copia de este sitio.",
+      "historyFailed": "No se pudo cargar el historial de copias de este sitio.",
       "safetyBadge": "Copia de seguridad previa",
       "summary": {
         "what": "Qué se copia",

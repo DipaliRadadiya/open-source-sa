@@ -64,7 +64,13 @@ function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
  * page they fit on one line and the band costs a third of the height, which is
  * what lets the four charts below sit in an even 2×2 grid.
  */
-export async function ServerInfoCard({ facts, health, siteAttention = [], engines = [] }) {
+export async function ServerInfoCard({
+  facts,
+  health,
+  siteAttention = [],
+  engines = [],
+  enginesFailed = false,
+}) {
   const t = await getTranslations("serverDashboard");
   const tDatabases = await getTranslations("databases");
   /*
@@ -221,7 +227,7 @@ export async function ServerInfoCard({ facts, health, siteAttention = [], engine
           <span className="mr-1 text-xs uppercase tracking-wide text-muted-foreground">
             {t("info.runtimes")}
           </span>
-          {runtimes.length || installedEngines.length ? (
+          {runtimes.length || installedEngines.length || enginesFailed ? (
             <>
               {runtimes.map(([name, version]) => (
                 <Badge key={name} variant="outline" className="gap-1.5 bg-card py-1 font-normal">
@@ -262,6 +268,20 @@ export async function ServerInfoCard({ facts, health, siteAttention = [], engine
                   </Badge>
                 );
               })}
+
+              {/* Said, not omitted. A row that quietly drops its database
+                  chips is the dashboard disagreeing with the databases page
+                  again — the failure this card was rebuilt to stop. Muted,
+                  because nothing is broken on the server. */}
+              {enginesFailed ? (
+                <Badge
+                  variant="outline"
+                  className="gap-1.5 border-dashed bg-card py-1 font-normal text-muted-foreground"
+                >
+                  <CircleAlert className="size-3.5 shrink-0" aria-hidden />
+                  {t("info.enginesUnknown")}
+                </Badge>
+              ) : null}
             </>
           ) : (
             <span className="text-sm text-muted-foreground">{t("info.noRuntimes")}</span>

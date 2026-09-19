@@ -15,8 +15,14 @@ import { countByApplication } from "@/lib/backups/database-availability";
  */
 
 export const getEngines = cache(async function getEngines() {
-  const { data, failed } = await read("/databases/engines", enginesResponseSchema);
-  return { engines: data?.engines ?? [], failed };
+  // `status` and `failure` ride along so a caller can say WHICH failure it hit
+  // rather than "something went wrong" — the monitor page told people their
+  // database was down when the read was a 403.
+  const { data, failed, status, failure } = await read(
+    "/databases/engines",
+    enginesResponseSchema,
+  );
+  return { engines: data?.engines ?? [], failed, status, failure };
 });
 
 /**

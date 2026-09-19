@@ -280,6 +280,7 @@
       "title": "最近のアクティビティ",
       "today": "{count, plural, other {本日 # 件}}",
       "empty": "まだ何も発生していません。",
+      "failed": "アクティビティログを読み込めませんでした。",
       "viewAll": "完全なログを表示",
       "system": "システム",
       "sentenceRepeated": "{who} が {what} を {count} 回実行",
@@ -772,6 +773,7 @@
       "cpuModel": "プロセッサー",
       "runtimes": "ランタイム",
       "noRuntimes": "検出されませんでした",
+      "enginesUnknown": "データベースのバージョンを読み込めませんでした",
       "copyIp": "IPアドレスをコピー",
       "servicesOk": "{count, plural, one {# 個のサービスが実行中} other {すべての # 個のサービスが実行中}}",
       "servicesDown": "{count, plural, one {停止中: {names}} other {停止中: {names}}}",
@@ -3404,7 +3406,8 @@
         "domains": "ドメイン",
         "ssl": "SSL",
         "secured": "HTTPS で保護中",
-        "notSecured": "保護なし"
+        "notSecured": "保護なし",
+        "sslUnknown": "証明書の状態が不明です"
       },
       "emptyTitle": "ドメインがまだありません",
       "emptyBody": "このサイトに向けてドメインを追加してください。後から名前や別名を追加することもできます。",
@@ -5825,6 +5828,7 @@
       "showing": "{total} 件中 {shown} 件を表示",
       "viewAll": "すべてのバックアップ",
       "noRuns": "このサイトではまだバックアップが実行されていません。",
+      "historyFailed": "このサイトのバックアップ履歴を読み込めませんでした。",
       "safetyBadge": "セーフティコピー",
       "summary": {
         "what": "バックアップ対象",

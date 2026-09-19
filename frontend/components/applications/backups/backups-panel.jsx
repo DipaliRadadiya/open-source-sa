@@ -60,10 +60,16 @@ export function BackupsPanel({
   // The site's own databases, and what could be attached to it. Only supplied
   // when the reader can manage databases at all.
   siteDatabases = [],
+  // False when the site's database read failed. An empty list then means "we
+  // could not ask", and the warning below must not fire on it.
+  siteDatabasesKnown = true,
   unattachedDatabases = [],
   engines = [],
   needsDatabase = false,
   canManageDatabases = false,
+  // The history request came back empty because it failed, not because the
+  // site has never been backed up.
+  backupsFailed = false,
 }) {
   const t = useTranslations("backups.application");
   const router = useRouter();
@@ -200,7 +206,7 @@ export function BackupsPanel({
           say what you are about to save — but an action there would open a
           second dialog over a half-filled one and refresh the page underneath
           it. Here there is nothing to lose. */}
-      {canManageDatabases && needsDatabase && siteDatabases.length === 0 ? (
+      {canManageDatabases && needsDatabase && siteDatabasesKnown && siteDatabases.length === 0 ? (
         <div className="flex flex-col gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex items-start gap-2.5">
             <Database className="mt-0.5 size-4 shrink-0 text-warning" />
@@ -231,6 +237,10 @@ export function BackupsPanel({
         // The newest run, for the one thing the target cannot answer: what
         // actually happened. `last_run_at` is unset when a run crashes.
         lastBackup={backups[0] ?? null}
+        // Without this, a target that has never written `last_run_at` plus a
+        // failed history read renders as "No backup has run yet" — the
+        // reassuring answer, produced by not knowing.
+        lastBackupUnknown={backupsFailed}
         canManage={canManage}
         // A spinner only for a run this page is actually waiting on — our POST,
         // or the queue window after it. A run that is merely *listed* as in
@@ -247,6 +257,7 @@ export function BackupsPanel({
       <RecentBackups
         backups={backups}
         total={total}
+        failed={backupsFailed}
         applicationId={application.id}
         canRestore={canRestore}
         canManage={canManage}
@@ -339,7 +350,7 @@ function stateOf(target) {
  * facts, and the two actions. No form — the answer to "am I covered?" should
  * not require reading a set of inputs.
  */
-function ProtectionCard({ target, lastBackup, canManage, running, blockedReason, onBackUpNow, onEdit }) {
+function ProtectionCard({ target, lastBackup, lastBackupUnknown = false, canManage, running, blockedReason, onBackUpNow, onEdit }) {
   const t = useTranslations("backups.application");
   const state = stateOf(target);
   const { icon: Icon, tone, ring } = STATE[state];
@@ -414,7 +425,12 @@ function ProtectionCard({ target, lastBackup, canManage, running, blockedReason,
           // Falls back to the run itself: a crashed run never writes
           // last_run_at, and "No backup has run yet" over a failure from ten
           // minutes ago is the opposite of the truth.
-          value: target.last_run_at_human ?? lastBackup?.created_at_human ?? t("neverRun"),
+          // "—" rather than "Never" when the history read failed: the crashed-run
+          // fallback below cannot be checked, so neither answer is known.
+          value:
+            target.last_run_at_human ??
+            lastBackup?.created_at_human ??
+            (lastBackupUnknown ? "—" : t("neverRun")),
         },
         {
           label: t("summary.nextBackup"),
@@ -542,9 +558,14 @@ function RecentBackups({
   queued = false,
   stalled = false,
   retryBlockedReason = null,
+  failed = false,
 }) {
   const t = useTranslations("backups.application");
   const router = useRouter();
+
+  // "No backups have run for this site yet" is a claim about this site's
+  // history, and a request that did not come back is not evidence for it.
+  const emptyMessage = failed ? t("historyFailed") : t("noRuns");
 
   const listProps = {
     backups,
@@ -617,13 +638,13 @@ function RecentBackups({
       <CardContent className="p-0">
         <div className="lg:hidden p-4">
           {backups.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">{t("noRuns")}</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>
           ) : (
             <BackupsCards {...listProps} />
           )}
         </div>
         <div className="hidden lg:block">
-          <BackupsHistoryTable {...listProps} emptyMessage={t("noRuns")} bare />
+          <BackupsHistoryTable {...listProps} emptyMessage={emptyMessage} bare />
         </div>
       </CardContent>
     </Card>

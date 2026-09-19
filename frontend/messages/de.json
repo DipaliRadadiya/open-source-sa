@@ -280,6 +280,7 @@
       "title": "Letzte Aktivität",
       "today": "{count, plural, one {# heute} other {# heute}}",
       "empty": "Bisher ist nichts passiert.",
+      "failed": "Das Aktivitätsprotokoll konnte nicht geladen werden.",
       "viewAll": "Vollständiges Protokoll ansehen",
       "system": "System",
       "sentenceRepeated": "{who} {what} {count}-mal",
@@ -772,6 +773,7 @@
       "cpuModel": "Prozessor",
       "runtimes": "Laufzeitumgebungen",
       "noRuntimes": "Keine erkannt",
+      "enginesUnknown": "Datenbankversionen konnten nicht gelesen werden",
       "copyIp": "IP-Adresse kopieren",
       "servicesOk": "{count, plural, one {# Dienst läuft} other {Alle # Dienste laufen}}",
       "servicesDown": "{count, plural, one {Nicht aktiv: {names}} other {Nicht aktiv: {names}}}",
@@ -3404,7 +3406,8 @@
         "domains": "Domains",
         "ssl": "SSL",
         "secured": "Über HTTPS gesichert",
-        "notSecured": "Nicht gesichert"
+        "notSecured": "Nicht gesichert",
+        "sslUnknown": "Zertifikatsstatus unbekannt"
       },
       "emptyTitle": "Noch keine Domains",
       "emptyBody": "Fügen Sie eine Domain hinzu, um sie auf diese Website zu richten. Weitere Namen und Aliase können Sie jederzeit ergänzen.",
@@ -5825,6 +5828,7 @@
       "showing": "{shown} von {total} werden gezeigt",
       "viewAll": "Alle Backups",
       "noRuns": "Für diese Website ist noch kein Backup gelaufen.",
+      "historyFailed": "Der Backup-Verlauf dieser Website konnte nicht geladen werden.",
       "safetyBadge": "Sicherheitskopie",
       "summary": {
         "what": "Was gesichert wird",
