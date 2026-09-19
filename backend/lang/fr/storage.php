@@ -121,5 +121,7 @@ return [
         'start_failed' => 'Impossible de démarrer la connexion Google. Réessayez dans un instant.',
         'poll_failed' => 'Impossible de terminer la connexion Google. Réessayez dans un instant.',
         'no_refresh_token' => 'Google a autorisé l’accès mais n’a pas envoyé de jeton durable, ce qui arrive lorsque ce compte a déjà autorisé cette application. Retirez-la sur myaccount.google.com, section Accès tiers, puis reconnectez-vous.',
+        'folder_failed' => 'Connecté, mais le dossier de sauvegarde n’a pas pu être créé dans votre Drive. Vérifiez l’espace disponible et reconnectez-vous.',
+        'wrong_provider' => 'Cette destination n’utilise pas la connexion Google.',
     ],
 ];

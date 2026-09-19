@@ -121,5 +121,7 @@ return [
         'start_failed' => 'Die Google-Anmeldung konnte nicht gestartet werden. Versuchen Sie es gleich erneut.',
         'poll_failed' => 'Die Google-Anmeldung konnte nicht abgeschlossen werden. Versuchen Sie es gleich erneut.',
         'no_refresh_token' => 'Google hat den Zugriff erlaubt, aber kein dauerhaftes Token gesendet — das passiert, wenn dieses Konto der App bereits Zugriff gewährt hat. Entfernen Sie ihn unter myaccount.google.com bei „Drittanbieter-Zugriff“ und verbinden Sie erneut.',
+        'folder_failed' => 'Verbunden, aber der Backup-Ordner konnte in Ihrem Drive nicht angelegt werden. Prüfen Sie den freien Speicher und verbinden Sie erneut.',
+        'wrong_provider' => 'Dieses Ziel verwendet keine Google-Anmeldung.',
     ],
 ];

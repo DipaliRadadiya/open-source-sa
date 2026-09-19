@@ -163,6 +163,7 @@ it('has copy for every OAuth outcome in every locale', function () {
     $keys = [
         'not_connected', 'revoked', 'user_quota', 'folder_missing', 'denied',
         'code_expired', 'bad_client', 'start_failed', 'poll_failed', 'no_refresh_token',
+        'folder_failed', 'wrong_provider',
     ];
 
     foreach (config('app.available_locales') as $locale) {

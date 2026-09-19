@@ -121,5 +121,7 @@ return [
         'start_failed' => 'Não foi possível iniciar o login do Google. Tente de novo em instantes.',
         'poll_failed' => 'Não foi possível concluir o login do Google. Tente de novo em instantes.',
         'no_refresh_token' => 'O Google autorizou o acesso mas não enviou um token duradouro, o que acontece quando esta conta já havia autorizado o aplicativo. Remova-o em myaccount.google.com, em Acesso de terceiros, e conecte novamente.',
+        'folder_failed' => 'Conectado, mas não foi possível criar a pasta de backups no seu Drive. Verifique o espaço e conecte novamente.',
+        'wrong_provider' => 'Este destino não usa login do Google.',
     ],
 ];

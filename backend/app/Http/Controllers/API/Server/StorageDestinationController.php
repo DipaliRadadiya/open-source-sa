@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Actions\Server\StorageDestination\ConnectGoogleDrive;
 use App\Actions\Server\StorageDestination\CreateStorageDestination;
 use App\Actions\Server\StorageDestination\DeleteStorageDestination;
 use App\Actions\Server\StorageDestination\UpdateStorageDestination;
@@ -16,6 +17,40 @@ use Illuminate\Http\JsonResponse;
 
 class StorageDestinationController extends Controller
 {
+    /**
+     * Ask Google for a user code, so the operator can approve on another
+     * device. No redirect URL is involved anywhere in this flow — see
+     * `GoogleDeviceFlow`.
+     */
+    public function oauthStart(StorageDestination $storageDestination, ConnectGoogleDrive $action): JsonResponse
+    {
+        return response()->json(['oauth' => $action->start($storageDestination)]);
+    }
+
+    /**
+     * Ask once whether the operator has approved yet.
+     *
+     * One question per request, deliberately. Looping here would hold a worker
+     * for the half hour a human might take; the browser polls instead and can
+     * show progress while it does.
+     */
+    public function oauthPoll(StorageDestination $storageDestination, ConnectGoogleDrive $action): JsonResponse
+    {
+        $result = $action->poll($storageDestination);
+
+        return response()->json([
+            'oauth' => [
+                'status' => $result['status'],
+                // A finished sentence in the *viewer's* locale, built on read.
+                // The action stores and returns a code, never prose.
+                'message' => $result['reason'] ? __($result['reason']) : null,
+            ],
+            'storage_destination' => StorageDestinationResource::make(
+                $storageDestination->fresh()
+            )->resolve(),
+        ]);
+    }
+
     public function index(): JsonResponse
     {
         $destinations = ListSort::caseInsensitive(StorageDestination::query(), 'name')->get();

@@ -121,5 +121,7 @@ return [
         'start_failed' => 'No se pudo iniciar el acceso con Google. Inténtelo de nuevo en un momento.',
         'poll_failed' => 'No se pudo completar el acceso con Google. Inténtelo de nuevo en un momento.',
         'no_refresh_token' => 'Google autorizó el acceso pero no envió un token duradero, lo que ocurre cuando esta cuenta ya había autorizado la aplicación. Retírela en myaccount.google.com, en Acceso de terceros, y vuelva a conectar.',
+        'folder_failed' => 'Conectado, pero no se pudo crear la carpeta de copias en su Drive. Compruebe el espacio y vuelva a conectar.',
+        'wrong_provider' => 'Este destino no usa el acceso con Google.',
     ],
 ];

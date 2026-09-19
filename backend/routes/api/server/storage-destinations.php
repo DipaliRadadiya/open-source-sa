@@ -29,3 +29,16 @@ Route::delete('/integrations/storage/destinations/{storageDestination}', [Storag
 
 Route::post('/integrations/storage/destinations/{storageDestination}/test', [StorageDestinationController::class, 'test'])
     ->middleware(['permission:storage,manage', 'throttle:20,1']);
+
+// The device-flow connection for a user-owned Drive. `manage` rather than
+// `view`: approving this writes a credential that can create files in
+// somebody's personal Google account.
+//
+// Polling is rate-limited generously because the browser genuinely does poll —
+// Google's own interval is about five seconds and a code lives half an hour,
+// so a patient operator makes a few hundred legitimate requests.
+Route::post('/integrations/storage/destinations/{storageDestination}/oauth/start', [StorageDestinationController::class, 'oauthStart'])
+    ->middleware(['permission:storage,manage', 'throttle:20,1']);
+
+Route::post('/integrations/storage/destinations/{storageDestination}/oauth/poll', [StorageDestinationController::class, 'oauthPoll'])
+    ->middleware(['permission:storage,manage', 'throttle:600,10']);

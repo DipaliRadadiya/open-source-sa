@@ -128,5 +128,7 @@ return [
         'start_failed' => 'Could not start the Google sign-in. Try again in a moment.',
         'poll_failed' => 'Could not complete the Google sign-in. Try again in a moment.',
         'no_refresh_token' => 'Google approved access but sent no lasting token, which happens when this account already granted this app. Remove it at myaccount.google.com under Third-party access, then connect again.',
+        'folder_failed' => 'Connected, but the backup folder could not be created in your Drive. Check you have space, then connect again.',
+        'wrong_provider' => 'This destination does not use Google sign-in.',
     ],
 ];
