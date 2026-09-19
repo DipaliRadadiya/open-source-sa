@@ -66,6 +66,13 @@ class SwapSettings implements SettingGroup
             'system_total' => $total,
             'system_total_human' => Bytes::human($total),
             'unmanaged' => $total > 0 && ! $managed,
+
+            // The floor, and the number behind it. Sent so the screen can say
+            // why before somebody submits a value it will refuse — a rejection
+            // arriving only on save is a worse way to learn a rule than being
+            // told it up front.
+            'minimum_mb' => $this->minimumMb(),
+            'build_requirement_mb' => $this->buildRequirementMb(),
         ];
     }
 
@@ -82,19 +89,43 @@ class SwapSettings implements SettingGroup
     private function createOrResize(int $sizeMb): void
     {
         $file = $this->path();
+        $staging = $file.'.new';
 
-        // Take an existing managed swap file offline before resizing it.
+        // **Built before anything is taken away.**
         //
-        // A failure here used to be ignored. It cannot be: `swapoff` reads
-        // every swapped-out page back into RAM first, and refuses when there
-        // is not enough free memory to hold them — which is exactly the state
-        // a server is in when someone decides to change its swap. Carrying on
-        // meant running `mkswap` over a file the kernel was still swapping to,
-        // rewriting the header underneath it.
+        // The old order was swapoff → fallocate → mkswap → swapon, which left
+        // the machine with *no swap at all* for the whole allocation. On a
+        // near-full disk that is minutes, and it is precisely the box that
+        // needed swap in the first place — so the operation most likely to
+        // OOM-kill something was the one meant to give it more headroom.
+        //
+        // The previous comment here said "the replacement exists before the
+        // original stops", and that was true of the *file* and not of the
+        // *swap*. Now it is true of both: allocation happens while the old
+        // swap is still carrying the machine, and the window without any is a
+        // rename and a swapon.
+        //
+        // Resizing still cannot be done in place — `fallocate` only ever
+        // allocates, so 2 GB down to 1.5 GB succeeded and changed nothing, and
+        // the screen showed the old number back.
+        $this->run(['rm', '-f', $staging]);
+        $this->run(['fallocate', '-l', "{$sizeMb}M", $staging]);
+        $this->run(['chmod', '600', $staging]);
+        $this->run(['mkswap', $staging]);
+
+        // Take the existing managed file offline only now.
+        //
+        // A failure here cannot be ignored: `swapoff` reads every swapped-out
+        // page back into RAM first, and refuses when there is not enough free
+        // memory to hold them — which is exactly the state a server is in when
+        // someone decides to change its swap. Carrying on meant running
+        // `mkswap` over a file the kernel was still swapping to, rewriting the
+        // header underneath it.
         //
         // 422 with a reason of its own, not the generic "settings change
         // failed": this one is not a fault, it is the server saying it needs
-        // that swap right now, and the answer is to free memory first.
+        // that swap right now, and the answer is to free memory first. The
+        // staging file is cleaned up so a refusal leaves nothing behind.
         if ($this->isActive()) {
             $off = $this->serverOps->run(
                 ['swapoff', $file],
@@ -104,31 +135,18 @@ class SwapSettings implements SettingGroup
                 timeout: 300,
             );
 
-            abort_if($off->failed(), 422, __('errors/setting.swap_in_use'));
+            if ($off->failed()) {
+                $this->serverOps->run(
+                    ['rm', '-f', $staging],
+                    ['feature' => 'setting', 'group' => 'swap', 'op' => 'cleanup'],
+                );
+
+                abort(422, __('errors/setting.swap_in_use'));
+            }
         }
 
-        // Built beside the old one and moved into place, never over it.
-        //
-        // Resizing cannot be done in place — `fallocate` only ever allocates,
-        // so asking 2 GB down to 1.5 GB succeeded and changed nothing, and the
-        // screen showed the old number back. Growing worked, which is why this
-        // only ever looked broken in one direction.
-        //
-        // But removing first meant that when the allocation then failed the
-        // server was left with no swap at all, and an /etc/fstab line pointing
-        // at a file that no longer exists. The likely reason for that failure
-        // is a full disk — which is the state that has someone resizing swap in
-        // the first place. Same ordering rule the firewall and cron writers
-        // follow: the replacement exists before the original stops.
-        $staging = $file.'.new';
-
-        $this->run(['rm', '-f', $staging]);
-        $this->run(['fallocate', '-l', "{$sizeMb}M", $staging]);
-        $this->run(['chmod', '600', $staging]);
-        $this->run(['mkswap', $staging]);
-
-        // Only now is the old file expendable. `mv` within a directory is a
-        // rename, so there is no moment where neither file is there.
+        // `mv` within a directory is a rename, so there is no moment where
+        // neither file is there.
         $this->run(['rm', '-f', $file]);
         $this->run(['mv', $staging, $file]);
 
@@ -160,6 +178,113 @@ class SwapSettings implements SettingGroup
         if (is_file($file)) {
             $this->files->delete($file, ['feature' => 'setting', 'group' => 'swap']);
         }
+    }
+
+    /**
+     * The smallest swap this machine may be left with, in MB.
+     *
+     * **Why a floor exists at all.** The panel updates itself by building its
+     * own frontend, and that build is OOM-killed below
+     * `panel_update.preflight.min_free_memory_mb`. On a small VPS the only
+     * thing clearing that number is the swapfile install.sh made — which is
+     * this exact file. So `size_mb: 0` was a supported way to remove the
+     * panel's ability to update itself, and the preflight that should have
+     * caught it is **advisory**: `UpdatePreflight` rejects advisory checks from
+     * the blocking set, so the update proceeds and the build is killed.
+     *
+     * v7 made this impossible by construction: two files, `/saswapfile` and
+     * `/saswapfile_1`, with the user-facing control touching only the second.
+     * Asked for less than the base it replied *"Swap size will not be
+     * reduced"*. Collapsing to one file lost that, so the floor is explicit
+     * here instead.
+     *
+     * **The arithmetic is install.sh's `configure_swap()`, deliberately** — the
+     * installer sizes this file and this method must not contradict it:
+     *
+     *   wanted = max(build requirement − RAM, minimum)
+     *   floor  = max(0, wanted − swap we do not manage)
+     *
+     * Discounting unmanaged swap is what keeps this honest rather than
+     * dogmatic. A box with its own 4 GB swap partition needs nothing from the
+     * panel and may switch ours off entirely; the installer discounts it the
+     * same way, for the same reason.
+     */
+    public function minimumMb(): int
+    {
+        if (! config('server.swap_enforce_minimum', true)) {
+            return 0;
+        }
+
+        $required = (int) config('panel_update.preflight.min_free_memory_mb', 2560);
+        $minimum = (int) config('server.swap_minimum_mb', 1024);
+
+        $wanted = max($required - $this->totalRamMb(), $minimum);
+
+        // Swap that is not ours already counts towards the requirement, so it
+        // reduces what ours has to carry — exactly as install.sh computes
+        // `add_mb = wanted_mb - (swap_mb - ours_mb)`.
+        [$total] = $this->swapTotals();
+        $unmanagedMb = (int) max(0, ($total - $this->managedSizeBytes()) / 1048576);
+
+        return max(0, $wanted - $unmanagedMb);
+    }
+
+    /**
+     * What this machine's build actually needs, for the screen to explain the
+     * floor rather than merely enforce it.
+     */
+    public function buildRequirementMb(): int
+    {
+        return (int) config('panel_update.preflight.min_free_memory_mb', 2560);
+    }
+
+    private function totalRamMb(): int
+    {
+        return (int) ($this->meminfoKb('MemTotal') / 1024);
+    }
+
+    /**
+     * The size of *our* swap file, read from `/proc/swaps`.
+     *
+     * Per-file, not inferred: `/proc/meminfo` only has a system total, and
+     * attributing all of it to ourselves would over-count on a box that also
+     * has a swap partition — telling its owner to keep a file they do not need.
+     * install.sh reads the same file for the same reason
+     * (`awk '$1 == f {print $3}' /proc/swaps`).
+     *
+     * A file listed as `(deleted)` does not match, which is correct: it is gone
+     * and is not coming back.
+     */
+    private function managedSizeBytes(): int
+    {
+        $path = rtrim((string) config('server.proc_dir', '/proc'), '/').'/swaps';
+        $contents = is_file($path) ? (string) @file_get_contents($path) : '';
+        $file = $this->path();
+
+        foreach (preg_split('/\r?\n/', trim($contents)) ?: [] as $line) {
+            $fields = preg_split('/\s+/', trim($line)) ?: [];
+
+            // Column 3 is size in KB. Compared exactly, for the same reason
+            // `isActive()` does: `/mnt/data/swapfile` contains `/swapfile`.
+            if (($fields[0] ?? '') === $file) {
+                return (int) ($fields[2] ?? 0) * 1024;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * One field out of `/proc/meminfo`, in KB.
+     */
+    private function meminfoKb(string $field): int
+    {
+        $path = rtrim((string) config('server.proc_dir', '/proc'), '/').'/meminfo';
+        $contents = is_file($path) ? (string) @file_get_contents($path) : '';
+
+        return preg_match('/^'.preg_quote($field, '/').':\s+(\d+)/m', $contents, $m)
+            ? (int) $m[1]
+            : 0;
     }
 
     private function path(): string

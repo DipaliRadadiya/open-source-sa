@@ -9,4 +9,5 @@ return [
     'redis_credential_unusable' => 'The panel cannot reach Redis with the password it has stored, so it cannot change it. Redis is running but rejecting the panel\'s credential — correct REDIS_PASSWORD in the panel\'s .env to the password Redis actually requires, then try again.',
     'env_not_writable' => 'The panel cannot write its own .env file, so a new Redis password could not be recorded. Fix the file permissions first — otherwise the panel would lose access to Redis.',
     'swap_in_use' => 'Swap is in use and could not be turned off. The server does not have enough free memory to take back what is currently swapped out — free some memory, then try again.',
+    'swap_below_minimum' => 'Swap cannot go below :minimum MB on this server. The panel builds its own frontend when it updates, and that needs :required MB of memory and swap together — below this figure the update is killed part-way. Add RAM, or set SERVER_SWAP_ENFORCE_MINIMUM=false if you manage this server\'s swap yourself.',
 ];

@@ -151,6 +151,12 @@ it('creates a swap file, activates it and adds an fstab entry', function () {
 });
 
 it('disables swap and strips only its fstab line', function () {
+    // This one is about the *mechanics* of disabling — which file goes and
+    // which fstab line survives. The floor that decides whether disabling is
+    // allowed at all is a separate question, tested in `SwapFloorTest`, and
+    // switched off here so the two do not have to be set up together.
+    config(['server.swap_enforce_minimum' => false]);
+
     fakeSettings();
     File::put($this->fstab, "UUID=abc / ext4 defaults 0 1\n{$this->swapFile} none swap sw 0 0\n");
     File::put($this->swapFile, 'x');
@@ -890,4 +896,44 @@ describe('the Redis password in the settings response', function () {
             ->assertJsonPath('settings.redis.has_password', false)
             ->assertJsonPath('settings.redis.password', null);
     });
+});
+
+/*
+ * The floor is only real if the request layer enforces it.
+ *
+ * `SwapFloorTest` proves the arithmetic; this proves something asks for it
+ * before writing to the disk. Deleting the `min:` rule leaves that suite
+ * entirely green — cf. the heal() wiring, where six tests passed with the only
+ * call site removed.
+ */
+it('refuses to leave the server with less swap than the panel update needs', function () {
+    fakeSettings();
+
+    // A 1 GB box with no swap of its own: 2560 - 1024 = 1536 MB required.
+    File::put($this->dir.'/meminfo', "MemTotal:        1048576 kB\nSwapTotal:             0 kB\nSwapFree:              0 kB\n");
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/swap', ['size_mb' => 0])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('size_mb');
+
+    // Nothing was touched on the way to refusing.
+    Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'swapoff');
+});
+
+// And the refusal says what breaks, not "must be at least 1536".
+it('explains why the floor exists rather than quoting a number', function () {
+    fakeSettings();
+    File::put($this->dir.'/meminfo', "MemTotal:        1048576 kB\nSwapTotal:             0 kB\nSwapFree:              0 kB\n");
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/swap', ['size_mb' => 0])
+        ->assertStatus(422);
+
+    $message = $response->json('errors.size_mb.0');
+
+    expect($message)->toContain('1536')
+        ->and($message)->toContain('2560')
+        // The escape hatch, named where somebody refused is standing.
+        ->and($message)->toContain('SERVER_SWAP_ENFORCE_MINIMUM');
 });

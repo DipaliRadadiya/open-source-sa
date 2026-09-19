@@ -1727,6 +1727,7 @@
         "none": "This server has no swap file.",
         "size": "How much",
         "sizeHint": "1–2 GB is enough for most servers. Off removes it.",
+        "floorReason": "At least {minimum} MB on this server — the panel needs {required} MB of memory and swap together to build its own update.",
         "saved": "Swap updated.",
         "confirmTitle": "Turn off swap?",
         "confirmDescription": "{used} is in use right now. That has to fit in RAM instead, and if it doesn't the kernel starts killing processes.",

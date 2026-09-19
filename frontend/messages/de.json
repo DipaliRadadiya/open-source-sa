@@ -1727,6 +1727,7 @@
         "none": "Dieser Server hat keine Swap-Datei.",
         "size": "Wie viel",
         "sizeHint": "1–2 GB reichen für die meisten Server. Aus deaktiviert ihn.",
+        "floorReason": "Mindestens {minimum} MB auf diesem Server — das Panel braucht {required} MB aus Arbeitsspeicher und Swap zusammen, um sein eigenes Update zu bauen.",
         "saved": "Swap aktualisiert.",
         "confirmTitle": "Swap deaktivieren?",
         "confirmDescription": "{used} wird gerade genutzt. Das muss dann in den RAM passen – reicht er nicht aus, beendet der Kernel Prozesse.",
