@@ -10,6 +10,7 @@ import { getServerProcesses } from "@/lib/server/get-server-processes";
 import { getServiceHealth } from "@/lib/server/get-service-health";
 import { getSetup } from "@/lib/setup/get-setup";
 import { getAllApplications } from "@/lib/applications/get-applications";
+import { getEngines } from "@/lib/databases/get-databases";
 import { attentionFindings } from "@/lib/dashboard/attention";
 import { SetupBanner } from "@/components/setup/setup-banner";
 import { ApplicationEmptyState } from "@/components/applications/application-empty-state";
@@ -48,10 +49,22 @@ export default async function DashboardPage() {
   // fifty sites or none. Asking how many there are is what lets it lead with
   // the thing they came for instead of an idle machine's vital signs.
   const canViewApplications = can(permissions, "application", "view");
+  /*
+   * The database engines come from the databases API, not from `/server/facts`.
+   *
+   * `facts.runtimes` answers "which databases" by running `mysql --version`,
+   * which on a MariaDB box prints "mysql Ver 15.1 Distrib 10.11.14-MariaDB" —
+   * so the dashboard labelled the engine `mysql` and gave it 15.1, the version
+   * of the client tool. MongoDB and PostgreSQL were never asked about at all.
+   * Reported as the dashboard disagreeing with the databases page, which it
+   * did: that page reads `/databases/engines`, and so does this now. The bad
+   * `mysql` key is filed for the backend to drop.
+   */
+  const canViewDatabases = can(permissions, "database", "view");
   // Load and resource usage are the last 24 hours, from the five-minute
   // `server:sample-metrics` collector. Fetched here, once per render — polling
   // a table that gains a row every five minutes would be pointless.
-  const [facts, processResult, health, history, appResult] = allowed
+  const [facts, processResult, health, history, appResult, engineResult] = allowed
     ? await Promise.all([
         getServerFacts(),
         getServerProcesses(),
@@ -69,8 +82,13 @@ export default async function DashboardPage() {
         // here; the honest fix at that point is a server-wide issues endpoint
         // rather than a bigger number.
         canViewApplications ? getAllApplications() : Promise.resolve(null),
+        // A reader who cannot open the databases page is not told what runs on
+        // it either. The chips simply do not appear — the rest of the row is
+        // unaffected, the same way a missing services read leaves the health
+        // badge off rather than inventing a verdict.
+        canViewDatabases ? getEngines() : Promise.resolve({ engines: [] }),
       ])
-    : [null, { data: [], failed: false }, null, [], null];
+    : [null, { data: [], failed: false }, null, [], null, { engines: [] }];
 
   // Both of these are claims about the server, and a failed read is not
   // evidence for either. "You have no sites" told to somebody with fifty, or
@@ -102,7 +120,12 @@ export default async function DashboardPage() {
           {/* Identity first — "which machine am I on" is read once, on
               arrival — then the live numbers, then four even charts: the last
               day for load and usage, then the live throughput pair. */}
-          <ServerInfoCard facts={facts} health={health} siteAttention={attention} />
+          <ServerInfoCard
+            facts={facts}
+            health={health}
+            siteAttention={attention}
+            engines={engineResult?.engines ?? []}
+          />
           <LiveMetricsSection
             timeZone={facts?.timezone}
             history={historySeries(history)}

@@ -8,6 +8,9 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { SiteAttention } from "@/components/dashboard/site-attention";
+import { EngineLogo } from "@/components/databases/engine-logo";
+import { engineLogo } from "@/lib/databases/engine-logo";
+import { shortVersion } from "@/lib/databases/short-version";
 
 function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
   return (
@@ -61,9 +64,26 @@ function Field({ icon: Icon, label, value, mono, copyLabel, className }) {
  * page they fit on one line and the band costs a third of the height, which is
  * what lets the four charts below sit in an even 2×2 grid.
  */
-export async function ServerInfoCard({ facts, health, siteAttention = [] }) {
+export async function ServerInfoCard({ facts, health, siteAttention = [], engines = [] }) {
   const t = await getTranslations("serverDashboard");
-  const runtimes = Object.entries(facts?.runtimes ?? {}).filter(([, v]) => v);
+  const tDatabases = await getTranslations("databases");
+  /*
+   * `mysql` is dropped, not renamed.
+   *
+   * `/server/facts` builds that entry by running `mysql --version`, which on a
+   * MariaDB box prints "mysql  Ver 15.1 Distrib 10.11.14-MariaDB" — so the row
+   * showed the CLIENT tool's version under the wrong engine's name, and never
+   * mentioned MongoDB or PostgreSQL because nothing asked about them. The
+   * engines below answer the same question from the databases API, which knows
+   * the real answer. Filed for the backend to remove the key; until it does,
+   * reading it would put two contradicting versions in one row.
+   */
+  const runtimes = Object.entries(facts?.runtimes ?? {}).filter(
+    ([name, version]) => version && name !== "mysql",
+  );
+  // Installed, not running: this row says what is on the machine. Whether it is
+  // up is the services badge's question, three chips to the right.
+  const installedEngines = engines.filter((engine) => engine.installed);
   const down = health?.down ?? [];
 
   if (!facts) {
@@ -181,9 +201,18 @@ export async function ServerInfoCard({ facts, health, siteAttention = [] }) {
        * the badges read as a line someone forgot to finish. A footer is a
        * region: it keeps its shape whatever is in it.
        */}
-      {/* gap-y-2, not 3: when the row wraps the services badge should land
-          directly under the runtimes it belongs with, not float a line below. */}
-      <CardFooter className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+      {/*
+       * gap-y-4 between the two groups, gap-2 inside each.
+       *
+       * This was gap-y-2, chosen when the status badges only dropped below on a
+       * narrow screen and the point was to keep them attached to the runtimes.
+       * With the database engines in the row it wraps at every width, so that
+       * 8px is now what separates two different kinds of thing — versions above,
+       * verdicts below — using the same gap that separates chips from their own
+       * neighbours. Reported as the badges looking stuck to the row above, and
+       * they were: nothing in the spacing said the line had changed subject.
+       */}
+      <CardFooter className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {/* mr-1 and a full gap-2 between chips: at gap-1.5 the label sat as
               close to the first badge as the badges sat to each other, so
@@ -192,13 +221,48 @@ export async function ServerInfoCard({ facts, health, siteAttention = [] }) {
           <span className="mr-1 text-xs uppercase tracking-wide text-muted-foreground">
             {t("info.runtimes")}
           </span>
-          {runtimes.length ? (
-            runtimes.map(([name, version]) => (
-              <Badge key={name} variant="outline" className="gap-1.5 bg-card py-1 font-normal">
-                <span className="font-medium">{name}</span>
-                <span className="font-mono text-xs text-muted-foreground">{version}</span>
-              </Badge>
-            ))
+          {runtimes.length || installedEngines.length ? (
+            <>
+              {runtimes.map(([name, version]) => (
+                <Badge key={name} variant="outline" className="gap-1.5 bg-card py-1 font-normal">
+                  <span className="font-medium">{name}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{version}</span>
+                </Badge>
+              ))}
+
+              {/* Wearing the logos, so the engines read as one group inside the
+                  row rather than three more words in a list of runtime names —
+                  and as the same objects the databases page shows, which is
+                  where someone goes next after reading them. */}
+              {installedEngines.map((engine) => {
+                const name = tDatabases(`engines.${engine.engine}`);
+                return (
+                  <Badge
+                    key={`engine-${engine.engine}`}
+                    variant="outline"
+                    // The packaged string, for anyone who needs the build:
+                    // "10.11.14-MariaDB-0ubuntu0.24.04.1".
+                    title={engine.version ?? undefined}
+                    className="gap-1.5 bg-card py-1 font-normal"
+                  >
+                    <EngineLogo engine={engine.engine} className="!h-4 w-auto max-w-16" />
+                    {/* The images are aria-hidden, so a wordmark chip has no
+                        name at all without this — and printing it beside a logo
+                        that already says it read "PostgreSQL PostgreSQL". */}
+                    {engineLogo(engine.engine)?.wordmark ? (
+                      <span className="sr-only">{name}</span>
+                    ) : (
+                      <span className="font-medium">{name}</span>
+                    )}
+                    {shortVersion(engine.version) ? (
+                      <span className="font-mono text-xs whitespace-nowrap text-muted-foreground">
+                        {shortVersion(engine.version)}
+                      </span>
+                    ) : null}
+                  </Badge>
+                );
+              })}
+            </>
           ) : (
             <span className="text-sm text-muted-foreground">{t("info.noRuntimes")}</span>
           )}

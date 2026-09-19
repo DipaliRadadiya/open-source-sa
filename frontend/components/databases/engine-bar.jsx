@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { EngineLogo } from "@/components/databases/engine-logo";
 import { engineLogo } from "@/lib/databases/engine-logo";
+import { shortVersion } from "@/lib/databases/short-version";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { InstallConfirm } from "@/components/databases/install-confirm";
@@ -28,24 +29,6 @@ import {
  * it owns the complete lifecycle for an additional engine. Closing the install
  * confirmation must not close the only evidence that work was queued.
  */
-/**
- * The version, without the packaging.
- *
- * Every engine buries the number in a different kind of noise:
- *   PostgreSQL  "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)"  — the number twice
- *   MariaDB     "10.11.14-MariaDB-0ubuntu0.24.04.1"      — no space at all
- *   MongoDB     "8.0.31"                                  — already clean
- *
- * Splitting on a space fixed only PostgreSQL, which is what shipping the first
- * attempt showed: MariaDB stayed three times wider than the tile it sat in.
- * So this takes the leading dotted number, which is the answer to "which
- * version", and leaves the full string on the tile's title.
- */
-function shortVersion(version) {
-  if (typeof version !== "string") return null;
-  return version.match(/^\d+(?:\.\d+)*/)?.[0] ?? version.split(" ")[0] ?? null;
-}
-
 /**
  * A logo, plus the name when the logo does not contain one.
  *
