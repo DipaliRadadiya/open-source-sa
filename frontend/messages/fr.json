@@ -2920,7 +2920,6 @@
       "optional": "facultatif",
       "createToken": "Créer un jeton sur {provider}",
       "looksLikeUrl": "Cela ressemble à une adresse web plutôt qu'à un token.",
-      "back": "Retour",
       "change": "Modifier",
       "cancel": "Annuler",
       "submit": "Connecter",

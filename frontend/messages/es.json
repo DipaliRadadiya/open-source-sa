@@ -2920,7 +2920,6 @@
       "optional": "opcional",
       "createToken": "Crear un token en {provider}",
       "looksLikeUrl": "Eso parece una dirección web, no un token.",
-      "back": "Atrás",
       "change": "Cambiar",
       "cancel": "Cancelar",
       "submit": "Conectar",

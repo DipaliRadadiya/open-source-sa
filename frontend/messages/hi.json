@@ -2920,7 +2920,6 @@
       "optional": "वैकल्पिक",
       "createToken": "{provider} पर टोकन बनाएँ",
       "looksLikeUrl": "यह टोकन नहीं, वेब पता लग रहा है।",
-      "back": "पीछे",
       "change": "बदलें",
       "cancel": "रद्द करें",
       "submit": "जोड़ें",

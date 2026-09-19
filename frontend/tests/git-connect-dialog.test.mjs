@@ -75,7 +75,7 @@ test("the three blocks it replaced are gone from every locale", () => {
   // everybody keeps translating.
   for (const locale of LOCALES) {
     const ns = messages[locale].git.connect;
-    for (const key of ["bitbucketScope", "bitbucketToken", "gitlabLegacy"]) {
+    for (const key of ["bitbucketScope", "bitbucketToken", "gitlabLegacy", "back"]) {
       assert.equal(ns[key], undefined, `${locale} still has ${key}`);
     }
   }

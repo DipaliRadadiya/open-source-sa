@@ -2920,7 +2920,6 @@
       "optional": "任意",
       "createToken": "{provider} でトークンを作成",
       "looksLikeUrl": "トークンではなく Web アドレスのように見えます。",
-      "back": "戻る",
       "change": "変更",
       "cancel": "キャンセル",
       "submit": "接続",
