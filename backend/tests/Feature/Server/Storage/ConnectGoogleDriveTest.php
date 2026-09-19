@@ -406,3 +406,35 @@ it('names the folder after the panel, not the framework', function () {
         ->toContain('My Drive')
         ->not->toContain('Laravel');
 });
+
+/*
+ * A stale failure is about a destination that no longer exists.
+ *
+ * Connecting replaces both the grant and the folder, so a verdict recorded
+ * against the old pair is not merely out of date — it describes something else.
+ * The row went on saying "the panel cannot reach the backup folder" after a
+ * reconnection that had just created one, which made the advice in that very
+ * message (connect again) look like it had not worked.
+ */
+it('clears a failed test verdict when the destination is reconnected', function () {
+    tokenGranted();
+
+    $this->destination->forceFill([
+        'last_tested_at' => now()->subHour(),
+        'last_test_success' => false,
+        'last_test_error' => 'storage.oauth.folder_missing',
+    ])->save();
+
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => issuedState()])
+        ->assertJsonPath('oauth.status', 'connected');
+
+    $fresh = $this->destination->fresh();
+
+    expect($fresh->last_test_error)->toBeNull()
+        ->and($fresh->last_test_success)->toBeNull()
+        // Not asserted as a pass: connecting proves the grant and the folder,
+        // but the probe also writes and reads back a sentinel, and this did
+        // not. "Not yet tested" is true; "passed" would not be.
+        ->and($fresh->last_tested_at)->toBeNull();
+});

@@ -139,6 +139,26 @@ class ConnectGoogleDrive
             'folder_id' => $prepared['folder_id'],
             'account_email' => $prepared['account_email'],
         ]);
+
+        // The stored verdict is about the destination that just stopped
+        // existing. Connecting replaces the grant and the folder, so a failure
+        // recorded against the old pair is not merely stale — it is about
+        // something else entirely, and the row went on showing "the panel
+        // cannot reach the backup folder" after a reconnection that had
+        // recreated it. A successful repair that still reads as broken is
+        // indistinguishable from one that failed, which is how the advice in
+        // that very message — connect again — looked like it did not work.
+        //
+        // Cleared rather than set to success: connecting proves the grant and
+        // the folder, but the probe also writes, reads back and deletes a
+        // sentinel object, and this has not done that. "Not yet tested" is
+        // true; "passed" would be a claim about a check nobody ran.
+        $destination->forceFill([
+            'last_tested_at' => null,
+            'last_test_success' => null,
+            'last_test_error' => null,
+        ]);
+
         $destination->save();
 
         $this->activityLogger->log('storage_destination.connected', $destination, [
