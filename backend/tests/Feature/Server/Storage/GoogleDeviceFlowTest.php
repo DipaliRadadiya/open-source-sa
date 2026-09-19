@@ -183,37 +183,3 @@ it('keeps polling when the network fails rather than abandoning the code', funct
 
     expect(flow()->poll('c', 's', 'd')['status'])->toBe('pending');
 });
-
-// ---------------------------------------------------------------------------
-// Refreshing
-// ---------------------------------------------------------------------------
-
-it('exchanges a refresh token for an access token', function () {
-    Http::fake([TOKEN_URL => Http::response(['access_token' => 'fresh', 'expires_in' => 3599])]);
-
-    expect(flow()->accessToken('c', 's', 'rt'))
-        ->ok->toBeTrue()
-        ->access_token->toBe('fresh');
-});
-
-/*
- * `invalid_grant` is the single most likely production failure: the operator
- * revoked access, or left the OAuth app in "Testing", where Google expires
- * refresh tokens after about a week. Both need a human, so it must not read as
- * "bad credentials" and send them to re-check a client id that is fine.
- */
-it('names a revoked or expired grant as its own cause', function () {
-    Http::fake([TOKEN_URL => Http::response(['error' => 'invalid_grant'], 400)]);
-
-    expect(flow()->accessToken('c', 's', 'dead'))
-        ->ok->toBeFalse()
-        ->reason->toBe('storage.oauth.revoked');
-});
-
-it('sends the refresh grant type, not the device one', function () {
-    Http::fake([TOKEN_URL => Http::response(['access_token' => 'a'])]);
-
-    flow()->accessToken('c', 's', 'rt');
-
-    Http::assertSent(fn (Request $r) => $r['grant_type'] === 'refresh_token');
-});

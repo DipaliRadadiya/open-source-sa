@@ -38,7 +38,7 @@ class GoogleDriveWorkspace
                 $client = new Client;
                 $client->setClientId($clientId);
                 $client->setClientSecret($clientSecret);
-                $client->setScopes([GoogleDeviceFlow::SCOPE]);
+                $client->setScopes([GoogleOauthTokens::SCOPE]);
                 $client->fetchAccessTokenWithRefreshToken($refreshToken);
 
                 return new Drive($client);

@@ -5,7 +5,7 @@ namespace App\Services\Server\Backups\Storage\Drivers;
 use App\Contracts\StorageDriver;
 use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
-use App\Services\Server\Backups\Storage\GoogleDeviceFlow;
+use App\Services\Server\Backups\Storage\GoogleOauthTokens;
 use Throwable;
 
 /**
@@ -39,7 +39,7 @@ class GoogleDriveOauthDriver implements StorageDriver
 {
     use ClassifiesFailures;
 
-    public function __construct(private GoogleDeviceFlow $flow) {}
+    public function __construct(private GoogleOauthTokens $tokens) {}
 
     public function provider(): StorageProvider
     {
@@ -67,7 +67,7 @@ class GoogleDriveOauthDriver implements StorageDriver
             return 'storage.oauth.not_connected';
         }
 
-        $result = $this->flow->accessToken($clientId, $clientSecret, $refreshToken);
+        $result = $this->tokens->accessToken($clientId, $clientSecret, $refreshToken);
 
         return $result['ok'] ? null : $result['reason'];
     }

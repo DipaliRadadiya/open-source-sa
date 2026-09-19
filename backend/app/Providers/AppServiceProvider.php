@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\ProvisionProgress;
-use App\Services\Server\Backups\Storage\GoogleDeviceFlow;
+use App\Services\Server\Backups\Storage\GoogleOauthTokens;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Firewall\UfwFirewall;
 use App\Services\Server\Php\PhpStackManager;
@@ -193,7 +193,7 @@ class AppServiceProvider extends ServiceProvider
             // The same constant the consent request uses. Asking for one scope
             // and being granted another is a failure that surfaces only on the
             // first real upload, so the two cannot be allowed to drift.
-            $client->setScopes([GoogleDeviceFlow::SCOPE]);
+            $client->setScopes([GoogleOauthTokens::SCOPE]);
 
             // The library refreshes on demand and caches for the request, so
             // a long restore does not re-auth per object. A dead grant throws

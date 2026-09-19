@@ -36,10 +36,10 @@ class GoogleDeviceFlow
     /** Where the code is requested. Documented, stable, not configurable. */
     private const DEVICE_ENDPOINT = 'https://oauth2.googleapis.com/device/code';
 
-    private const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
+    private const TOKEN_ENDPOINT = GoogleOauthTokens::TOKEN_ENDPOINT;
 
     /** The only Drive scope this flow allows that can write a backup. */
-    public const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+    private const SCOPE = GoogleOauthTokens::SCOPE;
 
     private const GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code';
 
@@ -154,50 +154,6 @@ class GoogleDeviceFlow
             'expired_token' => $this->pollResult('expired', reason: 'storage.oauth.code_expired'),
             default => $this->pollResult('failed', reason: 'storage.oauth.poll_failed'),
         };
-    }
-
-    /**
-     * Trade the stored refresh token for an access token.
-     *
-     * Used by the driver on every operation and by preflight to prove the
-     * grant is still alive before a backup is scheduled against it.
-     *
-     * @return array{ok: bool, access_token: string|null, reason: string|null}
-     */
-    public function accessToken(string $clientId, string $clientSecret, string $refreshToken): array
-    {
-        try {
-            $response = Http::asForm()
-                ->timeout($this->timeout())
-                ->connectTimeout(5)
-                ->post(self::TOKEN_ENDPOINT, [
-                    'client_id' => $clientId,
-                    'client_secret' => $clientSecret,
-                    'refresh_token' => $refreshToken,
-                    'grant_type' => 'refresh_token',
-                ]);
-        } catch (ConnectionException) {
-            return ['ok' => false, 'access_token' => null, 'reason' => 'storage.test.unreachable'];
-        } catch (Throwable) {
-            return ['ok' => false, 'access_token' => null, 'reason' => 'storage.oauth.poll_failed'];
-        }
-
-        if ($response->successful() && (string) $response->json('access_token') !== '') {
-            return ['ok' => true, 'access_token' => (string) $response->json('access_token'), 'reason' => null];
-        }
-
-        // `invalid_grant` is the one that matters operationally: the operator
-        // revoked access, or left the OAuth app in "Testing", where Google
-        // expires refresh tokens after about a week. Both need a human, and
-        // both read identically from here — so the message names the likely
-        // cause rather than the error code.
-        return [
-            'ok' => false,
-            'access_token' => null,
-            'reason' => (string) $response->json('error') === 'invalid_grant'
-                ? 'storage.oauth.revoked'
-                : 'storage.test.invalid_credentials',
-        ];
     }
 
     /**
