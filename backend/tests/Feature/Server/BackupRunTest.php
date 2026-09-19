@@ -227,6 +227,45 @@ describe('retention', function () {
 });
 
 describe('the archive name', function () {
+    /*
+     * A Drive destination writes into somebody's *personal* Google Drive, so
+     * this path is not an implementation detail — it is what they find next to
+     * their photos. One folder per application, archives directly inside it.
+     */
+    it('puts the archive in a folder named after the application', function () {
+        fakeTar();
+
+        $backup = app(BackupRunner::class)->run(backupTarget());
+        $key = $backup->manifest['key'];
+
+        expect($key)->toStartWith('backed-up.example.com/')
+            // No hardcoded `backups/` wrapper: the destination has its own key
+            // prefix field for that, and this segment doubled it.
+            ->and($key)->not->toStartWith('backups/')
+            // The date belongs in the name, where it sorts — not in a folder
+            // of its own holding a single file.
+            ->and(substr_count($key, '/'))->toBe(1);
+    });
+
+    /*
+     * `75599625-9245-4cf9-…tar.gz` told its owner nothing. A folder named after
+     * a raw Drive id was reported as a suspected compromise for the same
+     * reason; a backup should say what it is without being opened.
+     */
+    it('names the archive so a human can read it', function () {
+        fakeTar();
+
+        $backup = app(BackupRunner::class)->run(backupTarget());
+        $name = basename($backup->manifest['key']);
+
+        expect($name)->toStartWith($backup->created_at->format('Y-m-d-Hi'))
+            // The uid still ends it. That is what stops two panels sharing one
+            // destination from overwriting each other, and it survives a panel
+            // reinstall in a way an autoincrement id does not.
+            ->and($name)->toContain($backup->uid)
+            ->and($name)->toEndWith('.tar.gz');
+    });
+
     it('does not reuse a key when the id counter starts again', function () {
         // The regression. The key used to be
         // `backups/{domain}/{date}/{backup_id}.tar.gz`, and an id only means

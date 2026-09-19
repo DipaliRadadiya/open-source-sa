@@ -61,12 +61,22 @@ class UploadArtifact implements BackupStep
     }
 
     /**
-     * Application, then date, then id. Grouped so a human can find one
-     * application's backups in a bucket shared by several, and the id keeps
-     * two runs in the same second from colliding.
-     */
-    /**
      * Where this archive lives on the destination.
+     *
+     * **One folder per application, archives directly inside it.** A Google
+     * Drive destination writes into somebody's *personal* Drive, so the shape
+     * of this path is not an implementation detail — it is what they see next
+     * to their photos. Three things were wrong with the previous one:
+     *
+     * - A hardcoded `backups/` segment, inside a destination folder already
+     *   named "… Backups …". Worse for anyone who fills in the destination's
+     *   own **Key prefix** field, which exists for exactly this purpose: they
+     *   got `backups/backups/`.
+     * - A folder per day, which for most schedules holds exactly one file. The
+     *   date belongs in the name, where it also sorts.
+     * - A filename that was a bare uuid. `75599625-9245-4cf9-…` is the same
+     *   unreadable-hash problem that made a folder named after a Drive id read
+     *   as a compromise; a backup should say what it is without being opened.
      *
      * Named by the backup's `uid`, never its `id`. An id is an autoincrement
      * that only means anything inside one panel's database: reinstall the
@@ -74,18 +84,24 @@ class UploadArtifact implements BackupStep
      * starts again — the next backup then writes to the key an existing
      * archive already holds, and `writeStream` is a PUT, so the old one is
      * gone with no error anywhere. Two panels sharing a destination and a
-     * prefix collide the same way.
+     * prefix collide the same way. The timestamp reads first because that is
+     * what a human sorts by; the uid stays on the end because that is what
+     * makes it unique.
      *
      * Nothing recomputes this: the key is stored on the row and every reader
-     * (delete, prune, download, restore) reads it back from there. So archives
-     * written under the old scheme keep resolving without a branch anywhere.
+     * (delete, prune, download, restore, the artefacts listing) reads it back
+     * from there, and nothing walks the destination's directory tree. So
+     * archives written under the old scheme keep resolving with no branch
+     * anywhere and no migration.
      */
     private function objectKey(BackupContext $context): string
     {
+        $createdAt = $context->backup->created_at ?? now();
+
         return sprintf(
-            'backups/%s/%s/%s.tar.gz',
+            '%s/%s-%s.tar.gz',
             $context->application()->domain ?: 'application-'.$context->application()->id,
-            $context->backup->created_at?->format('Y-m-d') ?? date('Y-m-d'),
+            $createdAt->format('Y-m-d-Hi'),
             $context->backup->uid,
         );
     }
