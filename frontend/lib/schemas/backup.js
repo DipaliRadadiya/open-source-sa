@@ -261,7 +261,17 @@ export const backupTargetResponseSchema = z.object({
 export const restoreSchema = z
   .object({
     id: z.number(),
-    backup_id: z.number(),
+    /*
+     * Null once the backup this restore came from is deleted.
+     *
+     * `restores.backup_id` is `nullable()->nullOnDelete()`, so deleting one
+     * backup sets it to null on every restore that used it — and `z.number()`
+     * then rejected the WHOLE response, taking the entire Restores tab down
+     * with "The panel could not read this". One deleted backup, no history at
+     * all. Reported by Krishna; the box only named it because it had just
+     * learned to name failures.
+     */
+    backup_id: z.number().nullish(),
     application_id: z.number().nullish(),
     // Carried on the row now, so the table names the site without a second
     // request. Null when the site has since been deleted.

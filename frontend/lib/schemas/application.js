@@ -114,7 +114,10 @@ export const applicationIssuesResponseSchema = z.object({
 export const applicationSchema = z.object({
   id: z.number(),
   name: z.string(),
-  domain: z.string(),
+  // `applications.domain` is nullable — it became so when domains moved to
+  // their own table — and `ApplicationResource` passes it straight through.
+  // One site without one would have rejected the entire applications list.
+  domain: z.string().nullish(),
   /*
    * The address to actually open, decided by the server — `http://` until the
    * site has a servable certificate, which every site lacks for the first few

@@ -71,7 +71,9 @@ const systemUserRef = z.object({ id: z.number(), username: z.string() });
 export const cronjobSchema = z.object({
   id: z.number(),
   name: z.string(),
-  slug: z.string(),
+  // Nullable in the table and raw in the resource: a job adopted by the sync
+  // before it had a slug would have taken the whole cron list down.
+  slug: z.string().nullish(),
   username: z.string(),
   system_user: systemUserRef.nullable().optional(),
   command: z.string(),
