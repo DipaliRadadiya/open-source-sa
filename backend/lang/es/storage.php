@@ -118,6 +118,7 @@ return [
         'denied' => 'Se rechazó el acceso en la pantalla de Google. No se ha cambiado nada.',
         'code_expired' => 'El código caducó antes de aprobarse. Pulse Conectar para obtener otro.',
         'bad_client' => 'Google no reconoce ese ID de cliente. Compruebe que se copió entero, incluida la terminación .apps.googleusercontent.com.',
+        'wrong_client_type' => 'Ese cliente es de tipo incorrecto. En Google Cloud Console cree un cliente OAuth del tipo «TVs and Limited Input devices» —un cliente de aplicación web no sirve aquí— y pegue su ID y secreto.',
         'start_failed' => 'No se pudo iniciar el acceso con Google. Inténtelo de nuevo en un momento.',
         'poll_failed' => 'No se pudo completar el acceso con Google. Inténtelo de nuevo en un momento.',
         'no_refresh_token' => 'Google autorizó el acceso pero no envió un token duradero, lo que ocurre cuando esta cuenta ya había autorizado la aplicación. Retírela en myaccount.google.com, en Acceso de terceros, y vuelva a conectar.',

@@ -118,6 +118,7 @@ return [
         'denied' => 'L’accès a été refusé sur l’écran Google. Rien n’a été modifié.',
         'code_expired' => 'Le code a expiré avant d’être approuvé. Cliquez sur Connecter pour en obtenir un autre.',
         'bad_client' => 'Google ne reconnaît pas cet identifiant client. Vérifiez qu’il a été copié en entier, terminaison .apps.googleusercontent.com comprise.',
+        'wrong_client_type' => 'Ce client est du mauvais type. Dans Google Cloud Console, créez un client OAuth de type « TVs and Limited Input devices » — un client application web ne convient pas ici — puis collez son identifiant et son secret.',
         'start_failed' => 'Impossible de démarrer la connexion Google. Réessayez dans un instant.',
         'poll_failed' => 'Impossible de terminer la connexion Google. Réessayez dans un instant.',
         'no_refresh_token' => 'Google a autorisé l’accès mais n’a pas envoyé de jeton durable, ce qui arrive lorsque ce compte a déjà autorisé cette application. Retirez-la sur myaccount.google.com, section Accès tiers, puis reconnectez-vous.',

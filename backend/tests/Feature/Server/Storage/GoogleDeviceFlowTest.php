@@ -71,6 +71,41 @@ it('names a bad client id rather than reporting a generic failure', function () 
         ->and($result['reason'])->toBe('storage.oauth.bad_client');
 });
 
+/*
+ * The exact body Google returned on a real box, captured rather than invented.
+ *
+ * This is the failure a first-time operator actually hits, because "TVs and
+ * Limited Input devices" is an absurd-looking choice for a server control
+ * panel and everyone reaches for "Web application" instead. It arrives as
+ * `invalid_client` — the same code as an unknown client id — so the previous
+ * message sent them to re-check a client id that was perfectly correct.
+ *
+ * The suite could not catch it: the fake carried the code with no description,
+ * which is a response Google never actually sends.
+ */
+it('names a wrong client type instead of blaming the client id', function () {
+    Http::fake([DEVICE_URL => Http::response([
+        'error' => 'invalid_client',
+        'error_description' => "Only clients of type \u0026#39;TVs and Limited Input devices\u0026#39; can use the OAuth 2.0 flow for TV and Limited-Input Device Applications. Please create and use an appropriate client.",
+        'error_uri' => 'https://developers.google.com/identity/protocols/oauth2/limited-input-device#creatingcred',
+    ], 401)]);
+
+    expect(flow()->start('web-app-client.apps.googleusercontent.com'))
+        ->ok->toBeFalse()
+        ->reason->toBe('storage.oauth.wrong_client_type');
+});
+
+// An unknown client id still reports as one — the new branch must not swallow
+// the case it was carved out of.
+it('still names an unrecognised client id', function () {
+    Http::fake([DEVICE_URL => Http::response([
+        'error' => 'invalid_client',
+        'error_description' => 'The OAuth client was not found.',
+    ], 401)]);
+
+    expect(flow()->start('nope')['reason'])->toBe('storage.oauth.bad_client');
+});
+
 it('treats a success with no codes in it as a failure', function () {
     Http::fake([DEVICE_URL => Http::response(['expires_in' => 1800])]);
 

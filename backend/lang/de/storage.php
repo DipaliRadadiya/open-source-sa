@@ -118,6 +118,7 @@ return [
         'denied' => 'Der Zugriff wurde im Google-Fenster abgelehnt. Es wurde nichts geändert.',
         'code_expired' => 'Der Code ist abgelaufen, bevor er bestätigt wurde. Klicken Sie auf Verbinden für einen neuen.',
         'bad_client' => 'Google kennt diese Client-ID nicht. Prüfen Sie, ob sie vollständig kopiert wurde, samt der Endung .apps.googleusercontent.com.',
+        'wrong_client_type' => 'Dieser Client hat den falschen Typ. Erstellen Sie in der Google Cloud Console einen OAuth-Client vom Typ „TVs and Limited Input devices“ — ein Web-Application-Client funktioniert hier nicht — und fügen Sie dessen ID und Secret ein.',
         'start_failed' => 'Die Google-Anmeldung konnte nicht gestartet werden. Versuchen Sie es gleich erneut.',
         'poll_failed' => 'Die Google-Anmeldung konnte nicht abgeschlossen werden. Versuchen Sie es gleich erneut.',
         'no_refresh_token' => 'Google hat den Zugriff erlaubt, aber kein dauerhaftes Token gesendet — das passiert, wenn dieses Konto der App bereits Zugriff gewährt hat. Entfernen Sie ihn unter myaccount.google.com bei „Drittanbieter-Zugriff“ und verbinden Sie erneut.',

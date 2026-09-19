@@ -125,6 +125,7 @@ return [
         'denied' => 'Access was refused on the Google screen. Nothing was changed.',
         'code_expired' => 'The code expired before it was approved. Press Connect for a new one.',
         'bad_client' => 'Google does not recognise that client ID. Check it was copied whole, including the .apps.googleusercontent.com ending.',
+        'wrong_client_type' => 'That client is the wrong type. In Google Cloud Console create an OAuth client of type "TVs and Limited Input devices" — a Web application client cannot be used here — then paste its ID and secret.',
         'start_failed' => 'Could not start the Google sign-in. Try again in a moment.',
         'poll_failed' => 'Could not complete the Google sign-in. Try again in a moment.',
         'no_refresh_token' => 'Google approved access but sent no lasting token, which happens when this account already granted this app. Remove it at myaccount.google.com under Third-party access, then connect again.',

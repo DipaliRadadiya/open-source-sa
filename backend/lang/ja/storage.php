@@ -118,6 +118,7 @@ return [
         'denied' => 'Google の画面でアクセスが拒否されました。変更はありません。',
         'code_expired' => '承認される前にコードの有効期限が切れました。「接続」を押して新しいコードを取得してください。',
         'bad_client' => 'そのクライアント ID は認識されません。末尾の .apps.googleusercontent.com を含めて全体がコピーされているか確認してください。',
+        'wrong_client_type' => 'そのクライアントは種類が違います。Google Cloud Console で「TVs and Limited Input devices」型の OAuth クライアントを作成してください（ウェブ アプリケーション型はここでは使えません）。その ID とシークレットを貼り付けてください。',
         'start_failed' => 'Google ログインを開始できませんでした。しばらくしてからお試しください。',
         'poll_failed' => 'Google ログインを完了できませんでした。しばらくしてからお試しください。',
         'no_refresh_token' => 'Google はアクセスを承認しましたが、継続利用のためのトークンが返されませんでした。このアカウントが既にこのアプリを許可している場合に起こります。myaccount.google.com の「サードパーティ アクセス」から削除して、もう一度接続してください。',

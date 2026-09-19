@@ -71,11 +71,7 @@ class GoogleDeviceFlow
             // A wrong client id fails here rather than at approval time, which
             // is the good case: the operator is still looking at the form they
             // pasted it into.
-            return $this->startFailure(
-                $this->isClientError((string) $response->json('error'))
-                    ? 'storage.oauth.bad_client'
-                    : 'storage.oauth.start_failed'
-            );
+            return $this->startFailure($this->classifyStart($response->json()));
         }
 
         $deviceCode = (string) $response->json('device_code');
@@ -202,6 +198,39 @@ class GoogleDeviceFlow
                 ? 'storage.oauth.revoked'
                 : 'storage.test.invalid_credentials',
         ];
+    }
+
+    /**
+     * Why Google refused to issue a code.
+     *
+     * The two causes both arrive as `invalid_client` and need completely
+     * different actions, so the error code alone is not enough to say anything
+     * useful. Found on a real box: a correctly-copied client id of the wrong
+     * *type* was reported as "check it was copied whole", sending the operator
+     * to re-verify a value that was perfectly fine. The faked `invalid_client`
+     * in the test suite carried no description, so nothing could catch it.
+     *
+     * Google's own words for that case:
+     *
+     *   "Only clients of type 'TVs and Limited Input devices' can use the
+     *    OAuth 2.0 flow for TV and Limited-Input Device Applications."
+     *
+     * Matched on "limited input" rather than the full sentence: the quotes come
+     * back HTML-escaped, and the wording around them is Google's to change.
+     *
+     * @param  array<string, mixed>|null  $body
+     */
+    private function classifyStart(?array $body): string
+    {
+        $description = strtolower((string) ($body['error_description'] ?? ''));
+
+        if (str_contains($description, 'limited input') || str_contains($description, 'limited-input')) {
+            return 'storage.oauth.wrong_client_type';
+        }
+
+        return $this->isClientError((string) ($body['error'] ?? ''))
+            ? 'storage.oauth.bad_client'
+            : 'storage.oauth.start_failed';
     }
 
     private function isClientError(string $error): bool
