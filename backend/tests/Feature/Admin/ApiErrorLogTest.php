@@ -340,3 +340,69 @@ it('does not truncate a stderr that already fits', function () {
         ->assertOk()
         ->assertJsonPath('error_logs.0.error', 'short and complete');
 });
+
+/*
+ * A real restore failure, logged the ordinary way.
+ *
+ * Monolog puts the message at the top level of the record; only ServerOps also
+ * writes one inside `context`. So this resource read `context.message`, missed,
+ * and fell through to "Server operation failed." — while `context.detail` held
+ * the entire cause and was never read at all.
+ *
+ * What that looked like on screen: a card with a reference id and every other
+ * field null, for a failure that knew exactly what was wrong. The operator's
+ * only route to the answer was opening server-ops.log on the box.
+ */
+it('shows what a failed restore actually said', function () {
+    File::put($this->logDir.'/server-ops.log', json_encode([
+        'message' => 'restore failed',
+        'context' => [
+            'feature' => 'backup',
+            'op' => 'restore',
+            'restore' => 1,
+            'application' => 1,
+            'step' => 'download_artifact',
+            'reference' => '638a9d2c-75c7-4222-bc7b-fe32b374cd1c',
+            'detail' => 'the artefact backups/site/2026-09-19/a.tar.gz is not on the destination',
+        ],
+        'level_name' => 'ERROR',
+        'datetime' => '2026-09-19T10:20:51+00:00',
+    ]).PHP_EOL);
+
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/error-logs')
+        ->assertOk()
+        ->assertJsonPath('error_logs.0.message', 'restore failed')
+        ->assertJsonPath('error_logs.0.feature', 'backup')
+        ->assertJsonPath('error_logs.0.operation', 'restore')
+        ->assertJsonPath(
+            'error_logs.0.error',
+            'the artefact backups/site/2026-09-19/a.tar.gz is not on the destination',
+        );
+});
+
+// Command output still wins where there is any: `detail` is the explanation for
+// things that are not shell commands, not a replacement for what one printed.
+it('prefers what the command printed over a summary of it', function () {
+    File::put($this->logDir.'/server-ops.log', json_encode([
+        'message' => 'server operation',
+        'context' => [
+            'reference' => 'b1',
+            'stderr' => 'gyp ERR! stack Error: not found: make',
+            'detail' => 'a less specific summary',
+        ],
+        'level_name' => 'ERROR',
+        'datetime' => '2026-09-19T10:20:51+00:00',
+    ]).PHP_EOL);
+
+    $admin = User::factory()->admin()->create();
+    $token = $admin->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/admin/error-logs')
+        ->assertOk()
+        ->assertJsonPath('error_logs.0.error', 'gyp ERR! stack Error: not found: make');
+});

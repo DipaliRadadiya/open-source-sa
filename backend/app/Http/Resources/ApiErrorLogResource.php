@@ -15,7 +15,7 @@ class ApiErrorLogResource extends JsonResource
             'method' => $this['context']['method'] ?? null,
             'route' => $this['context']['route'] ?? null,
             'exception' => $this['context']['exception'] ?? null,
-            'message' => $this['context']['message'] ?? 'Server operation failed.',
+            'message' => $this->summaryMessage(),
             // Where it was thrown and the first frames inside the application.
             // Absent on older entries, which recorded neither.
             'file' => $this['context']['file'] ?? null,
@@ -39,12 +39,71 @@ class ApiErrorLogResource extends JsonResource
         ];
     }
 
+    /**
+     * Channel labels, not descriptions of anything.
+     *
+     * ServerOps writes every entry under the literal message "server
+     * operation", and the API handler under "api.error" — both say which pipe
+     * the record came down, and neither says what happened. The thing worth
+     * reading is in `context`.
+     */
+    private const CHANNEL_LABELS = ['server operation', 'api.error'];
+
+    /**
+     * What to put at the top of the card.
+     *
+     * `context.message` first, because that is the deliberate one. Then the
+     * record's own message — Monolog's top-level field, which is where
+     * everything *except* ServerOps says what went wrong. A restore logs
+     * "restore failed" there, matched neither branch before this, and fell
+     * through to "Server operation failed." on a card whose every other field
+     * was also null: a reference id and nothing else, for a failure that knew
+     * exactly what was wrong.
+     *
+     * The labels are filtered rather than the top-level field ignored, because
+     * falling back to "server operation" would be a worse headline than the
+     * generic sentence, not a better one.
+     */
+    private function summaryMessage(): string
+    {
+        $contextMessage = trim((string) ($this['context']['message'] ?? ''));
+
+        if ($contextMessage !== '') {
+            return $contextMessage;
+        }
+
+        $message = trim((string) ($this['message'] ?? ''));
+
+        if ($message !== '' && ! in_array($message, self::CHANNEL_LABELS, true)) {
+            return $message;
+        }
+
+        return 'Server operation failed.';
+    }
+
     private function errorSummary(): ?string
     {
         $context = $this['context'] ?? [];
         $stderr = trim((string) ($context['stderr'] ?? ''));
         $stdout = trim((string) ($context['stdout'] ?? ''));
-        $error = $stderr !== '' ? $stderr : $stdout;
+
+        // `detail` is where anything that is not a shell command explains
+        // itself — a restore step, a storage driver, a queued job. Only
+        // consulted when there is no command output, so a failing command
+        // still shows what it actually printed.
+        //
+        // Without this, a restore that knew exactly what was wrong ("the
+        // artefact backups/…/x.tar.gz is not on the destination") reported it
+        // to the server-ops log and showed the operator an empty card. The
+        // cause existed, in writing, one file away from the screen asking for
+        // it.
+        $detail = trim((string) ($context['detail'] ?? ''));
+
+        $error = match (true) {
+            $stderr !== '' => $stderr,
+            $stdout !== '' => $stdout,
+            default => $detail,
+        };
 
         return $error !== '' ? $this->redactedSummary($error) : null;
     }
