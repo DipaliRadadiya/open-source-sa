@@ -16,6 +16,7 @@ return [
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
+        'google_drive_oauth' => 'Google Drive (your own account)',
         'webdav' => 'WebDAV',
     ],
 
@@ -114,5 +115,18 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'Provide either a password or a private key.',
+    ],
+
+    'oauth' => [
+        'not_connected' => 'Not connected yet. Use Connect to approve access to your Google account.',
+        'revoked' => 'Google has revoked this access. That usually means the OAuth app was left in "Testing" — Google expires those after about a week — or access was removed at myaccount.google.com. Connect again to restore it.',
+        'user_quota' => 'Your Google Drive is full. Free up space, or back up somewhere else.',
+        'folder_missing' => 'The backup folder is gone from your Drive. Connect again and the panel will make a new one.',
+        'denied' => 'Access was refused on the Google screen. Nothing was changed.',
+        'code_expired' => 'The code expired before it was approved. Press Connect for a new one.',
+        'bad_client' => 'Google does not recognise that client ID. Check it was copied whole, including the .apps.googleusercontent.com ending.',
+        'start_failed' => 'Could not start the Google sign-in. Try again in a moment.',
+        'poll_failed' => 'Could not complete the Google sign-in. Try again in a moment.',
+        'no_refresh_token' => 'Google approved access but sent no lasting token, which happens when this account already granted this app. Remove it at myaccount.google.com under Third-party access, then connect again.',
     ],
 ];

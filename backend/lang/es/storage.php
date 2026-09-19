@@ -12,6 +12,7 @@ return [
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
+        'google_drive_oauth' => 'Google Drive (tu propia cuenta)',
         'webdav' => 'WebDAV',
     ],
 
@@ -107,5 +108,18 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'Indica una contraseña o una clave privada.',
+    ],
+
+    'oauth' => [
+        'not_connected' => 'Aún no está conectado. Pulse Conectar para autorizar el acceso a su cuenta de Google.',
+        'revoked' => 'Google ha revocado este acceso. Suele deberse a que la aplicación OAuth se dejó en «Testing» —Google caduca esos tokens en una semana aproximadamente— o a que se retiró el acceso en myaccount.google.com. Vuelva a conectar.',
+        'user_quota' => 'Su Google Drive está lleno. Libere espacio o haga la copia en otro destino.',
+        'folder_missing' => 'La carpeta de copias ya no está en su Drive. Vuelva a conectar y el panel creará una nueva.',
+        'denied' => 'Se rechazó el acceso en la pantalla de Google. No se ha cambiado nada.',
+        'code_expired' => 'El código caducó antes de aprobarse. Pulse Conectar para obtener otro.',
+        'bad_client' => 'Google no reconoce ese ID de cliente. Compruebe que se copió entero, incluida la terminación .apps.googleusercontent.com.',
+        'start_failed' => 'No se pudo iniciar el acceso con Google. Inténtelo de nuevo en un momento.',
+        'poll_failed' => 'No se pudo completar el acceso con Google. Inténtelo de nuevo en un momento.',
+        'no_refresh_token' => 'Google autorizó el acceso pero no envió un token duradero, lo que ocurre cuando esta cuenta ya había autorizado la aplicación. Retírela en myaccount.google.com, en Acceso de terceros, y vuelva a conectar.',
     ],
 ];

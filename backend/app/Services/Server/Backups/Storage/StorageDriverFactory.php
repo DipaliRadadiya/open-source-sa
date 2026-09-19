@@ -7,6 +7,7 @@ use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
 use App\Services\Server\Backups\Storage\Drivers\FtpDriver;
 use App\Services\Server\Backups\Storage\Drivers\GoogleDriveDriver;
+use App\Services\Server\Backups\Storage\Drivers\GoogleDriveOauthDriver;
 use App\Services\Server\Backups\Storage\Drivers\S3Driver;
 use App\Services\Server\Backups\Storage\Drivers\SftpDriver;
 use App\Services\Server\Backups\Storage\Drivers\WebDavDriver;
@@ -27,6 +28,7 @@ class StorageDriverFactory
         StorageProvider::Ftp->value => FtpDriver::class,
         StorageProvider::Sftp->value => SftpDriver::class,
         StorageProvider::GoogleDrive->value => GoogleDriveDriver::class,
+        StorageProvider::GoogleDriveOauth->value => GoogleDriveOauthDriver::class,
         StorageProvider::WebDav->value => WebDavDriver::class,
     ];
 

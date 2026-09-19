@@ -1,0 +1,197 @@
+<?php
+
+namespace App\Services\Server\Backups\Storage\Drivers;
+
+use App\Contracts\StorageDriver;
+use App\Enums\StorageProvider;
+use App\Models\StorageDestination;
+use App\Services\Server\Backups\Storage\GoogleDeviceFlow;
+use Throwable;
+
+/**
+ * Google Drive as the *user*, not as a service account.
+ *
+ * The sibling driver, {@see GoogleDriveDriver}, authenticates with a
+ * service-account key. A service account has no Drive storage quota of its own
+ * and quota is charged to a file's owner, so everything it uploads is
+ * unstorable unless a Workspace Shared Drive owns the files instead. Shared
+ * Drives need Google Workspace, and Business Starter does not include them —
+ * which means a free Gmail account cannot use that destination at all. Not
+ * degraded: impossible.
+ *
+ * Here the operator grants access to their own account, so their own 15 GB
+ * pays for the backups. Three things fall out of that:
+ *
+ * - **No folder id.** `drive.file` scopes access to files this app created, so
+ *   the panel makes its own folder and keeps the id. Nothing to find, paste or
+ *   get wrong — the question that started this whole feature.
+ * - **No Shared Drive check.** `GoogleDriveFolder` exists solely to prove a
+ *   folder lives in a Shared Drive, which is a service-account problem. There
+ *   is nothing here for it to assert.
+ * - **A token that can die.** A service-account key works until deleted; a
+ *   refresh token can be revoked by the user, and Google expires it after about
+ *   a week if the OAuth app was left in "Testing". `preflight()` therefore
+ *   proves the grant is *alive*, not merely present.
+ *
+ * See `google-drive-oauth-design.md`.
+ */
+class GoogleDriveOauthDriver implements StorageDriver
+{
+    use ClassifiesFailures;
+
+    public function __construct(private GoogleDeviceFlow $flow) {}
+
+    public function provider(): StorageProvider
+    {
+        return StorageProvider::GoogleDriveOauth;
+    }
+
+    /**
+     * Prove the grant still works before a backup is ever scheduled on it.
+     *
+     * A stored refresh token is not evidence of anything — it is a string that
+     * was valid once. The single most likely production failure here is an
+     * OAuth app left in "Testing", where Google expires refresh tokens after
+     * roughly seven days: the destination works all week, then every backup
+     * fails, and nothing in the panel changed. Asking Google for an access
+     * token is the only way to tell the difference, and it costs one request.
+     */
+    public function preflight(StorageDestination $destination): ?string
+    {
+        $clientId = (string) $destination->configValue('client_id', '');
+        $clientSecret = (string) $destination->configValue('client_secret', '');
+        $refreshToken = (string) $destination->configValue('refresh_token', '');
+
+        if ($clientId === '' || $clientSecret === '' || $refreshToken === '') {
+            // Not connected yet. Its own answer, and not a failure of Google's.
+            return 'storage.oauth.not_connected';
+        }
+
+        $result = $this->flow->accessToken($clientId, $clientSecret, $refreshToken);
+
+        return $result['ok'] ? null : $result['reason'];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function config(StorageDestination $destination): array
+    {
+        return [
+            // Resolved by the `google_oauth` disk registered in
+            // AppServiceProvider. Separate from `google` because the client is
+            // authenticated differently; everything below the client — the
+            // adapter, path translation, streaming — is identical.
+            'driver' => 'google_oauth',
+            'client_id' => $destination->configValue('client_id'),
+            'client_secret' => $destination->configValue('client_secret'),
+            'refresh_token' => $destination->configValue('refresh_token'),
+
+            // The folder this panel created for itself, recorded at connect
+            // time. Empty means "make one" — under `drive.file` we cannot see
+            // anything we did not create, so there is nothing else it could
+            // mean.
+            'folder_id' => $destination->configValue('folder_id'),
+            'root' => trim((string) $destination->prefix, '/'),
+
+            // Same reason as every other driver: without it a failed write
+            // returns false, and a backup that never happened is
+            // indistinguishable from one that did.
+            'throw' => true,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function rules(bool $requireSecrets = true): array
+    {
+        $secret = $requireSecrets ? ['required'] : ['sometimes', 'required'];
+
+        return [
+            // Google client ids are long and end in a fixed suffix. Matching it
+            // rejects a pasted *project id* or a truncated copy at the form
+            // rather than at approval time, when the operator has already
+            // walked to their phone.
+            'config.client_id' => ['required', 'string', 'max:255', 'regex:/\.apps\.googleusercontent\.com$/'],
+            'config.client_secret' => [...$secret, 'string', 'max:255'],
+
+            // Written by the connect flow, never typed. `sometimes` because the
+            // destination is created *before* anyone has approved anything —
+            // requiring it here would make connecting impossible.
+            'config.refresh_token' => ['sometimes', 'string', 'max:2048'],
+            'config.folder_id' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9_-]+$/'],
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function secretKeys(): array
+    {
+        // The refresh token is a credential in the fullest sense: it mints
+        // access tokens on demand, for as long as the grant lives. It belongs
+        // with the client secret, not beside the folder id.
+        return ['client_secret', 'refresh_token'];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function publicConfig(StorageDestination $destination): array
+    {
+        return [
+            // An identifier, not a secret — it is visible in every consent URL
+            // the operator has already opened. Showing it back is what lets
+            // someone confirm which Google project a destination belongs to.
+            'client_id' => $destination->configValue('client_id'),
+
+            // Which account approved this. The one thing an operator most
+            // needs to see on a row: "backups are going into *whose* Drive".
+            'account_email' => $destination->configValue('account_email'),
+
+            // Whether anyone has approved yet, without ever shipping the token
+            // that proves it. The form needs this to decide between showing a
+            // Connect button and showing the connected account.
+            'connected' => filled($destination->configValue('refresh_token')),
+        ];
+    }
+
+    protected function categoryForType(Throwable $e): ?string
+    {
+        return null;
+    }
+
+    protected function categoryForMessage(string $message): ?string
+    {
+        // The one that will actually happen in the field. Revoked at
+        // myaccount.google.com, or an app left in "Testing" past its week.
+        // Reporting it as bad credentials would send the operator to re-check
+        // a client id that is perfectly correct.
+        if (str_contains($message, 'invalid_grant')) {
+            return 'storage.oauth.revoked';
+        }
+
+        if (str_contains($message, 'invalid_client')
+            || str_contains($message, 'unauthorized_client')) {
+            return 'storage.test.invalid_credentials';
+        }
+
+        // The user's own Drive is full. Unlike the service-account driver, this
+        // is a real quota belonging to a real person who can go and clear it.
+        if (str_contains($message, 'storagequotaexceeded')
+            || str_contains($message, 'quota exceeded')) {
+            return 'storage.oauth.user_quota';
+        }
+
+        // Under `drive.file` a file we did not create is indistinguishable from
+        // one that does not exist. Saying "not found" is honest; saying
+        // "forbidden" would imply a permission the operator could go and grant.
+        if (str_contains($message, 'notfound')
+            || str_contains($message, 'file not found')) {
+            return 'storage.oauth.folder_missing';
+        }
+
+        return null;
+    }
+}

@@ -19,6 +19,25 @@ enum StorageProvider: string
     case Ftp = 'ftp';
     case Sftp = 'sftp';
     case GoogleDrive = 'google_drive';
+
+    /**
+     * The same service, a different principal — and that is why it is its own
+     * provider rather than a flag on the one above.
+     *
+     * `google_drive` authenticates as a *service account*, which has no Drive
+     * quota of its own and can therefore only write into a Workspace Shared
+     * Drive. This one authenticates as the *user*, so the files are theirs and
+     * their own storage pays for them. That is the only way a free Gmail
+     * account can use Drive at all.
+     *
+     * Nothing is shared between the two but the word "Drive": different
+     * credentials, different scope, different client construction, and this one
+     * creates its own folder instead of being given an id. A boolean on the
+     * existing provider would have meant every field below it changing meaning
+     * depending on the flag.
+     */
+    case GoogleDriveOauth = 'google_drive_oauth';
+
     case WebDav = 'webdav';
 
     /**

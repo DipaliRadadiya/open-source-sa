@@ -12,6 +12,7 @@ return [
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
         'google_drive' => 'Google ドライブ',
+        'google_drive_oauth' => 'Google ドライブ（ご自身のアカウント）',
         'webdav' => 'WebDAV',
     ],
 
@@ -107,5 +108,18 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'パスワードか秘密鍵のいずれかを指定してください。',
+    ],
+
+    'oauth' => [
+        'not_connected' => 'まだ接続されていません。「接続」を押して Google アカウントへのアクセスを承認してください。',
+        'revoked' => 'Google がこのアクセスを取り消しました。多くは OAuth アプリが「Testing」のままだった場合（約 1 週間で失効します）か、myaccount.google.com でアクセスを削除した場合です。もう一度接続してください。',
+        'user_quota' => 'Google ドライブの空き容量がありません。整理するか、別の保存先をお使いください。',
+        'folder_missing' => 'バックアップ用フォルダがドライブから削除されています。再接続すると新しく作成されます。',
+        'denied' => 'Google の画面でアクセスが拒否されました。変更はありません。',
+        'code_expired' => '承認される前にコードの有効期限が切れました。「接続」を押して新しいコードを取得してください。',
+        'bad_client' => 'そのクライアント ID は認識されません。末尾の .apps.googleusercontent.com を含めて全体がコピーされているか確認してください。',
+        'start_failed' => 'Google ログインを開始できませんでした。しばらくしてからお試しください。',
+        'poll_failed' => 'Google ログインを完了できませんでした。しばらくしてからお試しください。',
+        'no_refresh_token' => 'Google はアクセスを承認しましたが、継続利用のためのトークンが返されませんでした。このアカウントが既にこのアプリを許可している場合に起こります。myaccount.google.com の「サードパーティ アクセス」から削除して、もう一度接続してください。',
     ],
 ];

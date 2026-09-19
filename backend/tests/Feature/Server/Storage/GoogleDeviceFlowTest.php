@@ -3,6 +3,7 @@
 namespace Tests\Feature\Server\Storage;
 
 use App\Services\Server\Backups\Storage\GoogleDeviceFlow;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -143,7 +144,7 @@ it('refuses an approval that carries no refresh token', function () {
 // A blinking network is not a denied authorization. The code is still valid
 // and the operator may already have approved it, so the caller keeps polling.
 it('keeps polling when the network fails rather than abandoning the code', function () {
-    Http::fake(fn () => throw new \Illuminate\Http\Client\ConnectionException('timeout'));
+    Http::fake(fn () => throw new ConnectionException('timeout'));
 
     expect(flow()->poll('c', 's', 'd')['status'])->toBe('pending');
 });

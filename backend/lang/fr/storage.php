@@ -12,6 +12,7 @@ return [
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
+        'google_drive_oauth' => 'Google Drive (votre propre compte)',
         'webdav' => 'WebDAV',
     ],
 
@@ -107,5 +108,18 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'Indiquez soit un mot de passe, soit une clé privée.',
+    ],
+
+    'oauth' => [
+        'not_connected' => 'Pas encore connecté. Cliquez sur Connecter pour autoriser l’accès à votre compte Google.',
+        'revoked' => 'Google a révoqué cet accès. Le plus souvent, l’application OAuth est restée en « Testing » — Google expire ces jetons au bout d’une semaine environ — ou l’accès a été retiré sur myaccount.google.com. Reconnectez-vous.',
+        'user_quota' => 'Votre Google Drive est plein. Libérez de l’espace ou sauvegardez ailleurs.',
+        'folder_missing' => 'Le dossier de sauvegarde a disparu de votre Drive. Reconnectez-vous : le panneau en créera un nouveau.',
+        'denied' => 'L’accès a été refusé sur l’écran Google. Rien n’a été modifié.',
+        'code_expired' => 'Le code a expiré avant d’être approuvé. Cliquez sur Connecter pour en obtenir un autre.',
+        'bad_client' => 'Google ne reconnaît pas cet identifiant client. Vérifiez qu’il a été copié en entier, terminaison .apps.googleusercontent.com comprise.',
+        'start_failed' => 'Impossible de démarrer la connexion Google. Réessayez dans un instant.',
+        'poll_failed' => 'Impossible de terminer la connexion Google. Réessayez dans un instant.',
+        'no_refresh_token' => 'Google a autorisé l’accès mais n’a pas envoyé de jeton durable, ce qui arrive lorsque ce compte a déjà autorisé cette application. Retirez-la sur myaccount.google.com, section Accès tiers, puis reconnectez-vous.',
     ],
 ];

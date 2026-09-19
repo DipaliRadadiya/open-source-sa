@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\ProvisionProgress;
+use App\Services\Server\Backups\Storage\GoogleDeviceFlow;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Firewall\UfwFirewall;
 use App\Services\Server\Php\PhpStackManager;
@@ -160,6 +161,59 @@ class AppServiceProvider extends ServiceProvider
                         'supportsAllDrives' => true,
                         'includeItemsFromAllDrives' => true,
                     ],
+                ],
+            );
+
+            return new FilesystemAdapter(
+                new Flysystem($adapter, $config),
+                $adapter,
+                $config,
+            );
+        });
+
+        /*
+         * The same Drive, authenticated as the user rather than as a service
+         * account.
+         *
+         * Everything below the client is identical to `google` above — same
+         * adapter, same path translation, same streaming. Only the two lines
+         * that authenticate differ, which is the whole reason this is a
+         * separate disk rather than a branch inside that closure: the client
+         * is built from a refresh token, and the scope is `drive.file`.
+         *
+         * `supportsAllDrives` is deliberately absent. It exists up there
+         * because a service account can only write where a Shared Drive owns
+         * the files; here the user owns them, in their own My Drive, and
+         * asking to see Shared Drives would widen reach for no purpose.
+         */
+        Storage::extend('google_oauth', function ($app, array $config): FilesystemAdapter {
+            $client = new GoogleClient;
+            $client->setClientId((string) ($config['client_id'] ?? ''));
+            $client->setClientSecret((string) ($config['client_secret'] ?? ''));
+            // The same constant the consent request uses. Asking for one scope
+            // and being granted another is a failure that surfaces only on the
+            // first real upload, so the two cannot be allowed to drift.
+            $client->setScopes([GoogleDeviceFlow::SCOPE]);
+
+            // The library refreshes on demand and caches for the request, so
+            // a long restore does not re-auth per object. A dead grant throws
+            // here and `GoogleDriveOauthDriver::classify()` names it — revoked,
+            // or an app left in "Testing" past Google's ~7-day token life.
+            $client->fetchAccessTokenWithRefreshToken((string) ($config['refresh_token'] ?? ''));
+
+            $adapter = new GoogleDriveAdapter(
+                new GoogleDrive($client),
+                // Empty means the account's root. Under `drive.file` we can
+                // only see what we created, so there is nothing else to
+                // address and nothing to paste — the panel's own folder is
+                // reached through `root` below.
+                (string) ($config['folder_id'] ?? ''),
+                [
+                    // Same reason as the service-account disk: Drive allows two
+                    // files with one display name in a folder, and without path
+                    // translation `site/2026-09-19/x.tar.gz` is a name that can
+                    // silently collide rather than one file.
+                    'useDisplayPaths' => true,
                 ],
             );
 

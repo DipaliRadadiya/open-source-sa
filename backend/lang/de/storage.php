@@ -12,6 +12,7 @@ return [
         'ftp' => 'FTP',
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
+        'google_drive_oauth' => 'Google Drive (eigenes Konto)',
         'webdav' => 'WebDAV',
     ],
 
@@ -107,5 +108,18 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'Geben Sie entweder ein Passwort oder einen privaten Schlüssel an.',
+    ],
+
+    'oauth' => [
+        'not_connected' => 'Noch nicht verbunden. Klicken Sie auf Verbinden, um den Zugriff auf Ihr Google-Konto zu erlauben.',
+        'revoked' => 'Google hat diesen Zugriff widerrufen. Meist wurde die OAuth-App auf „Testing“ belassen — solche Tokens laufen nach etwa einer Woche ab — oder der Zugriff wurde unter myaccount.google.com entfernt. Verbinden Sie erneut.',
+        'user_quota' => 'Ihr Google Drive ist voll. Geben Sie Speicher frei oder sichern Sie woanders.',
+        'folder_missing' => 'Der Backup-Ordner ist aus Ihrem Drive verschwunden. Verbinden Sie erneut; das Panel legt einen neuen an.',
+        'denied' => 'Der Zugriff wurde im Google-Fenster abgelehnt. Es wurde nichts geändert.',
+        'code_expired' => 'Der Code ist abgelaufen, bevor er bestätigt wurde. Klicken Sie auf Verbinden für einen neuen.',
+        'bad_client' => 'Google kennt diese Client-ID nicht. Prüfen Sie, ob sie vollständig kopiert wurde, samt der Endung .apps.googleusercontent.com.',
+        'start_failed' => 'Die Google-Anmeldung konnte nicht gestartet werden. Versuchen Sie es gleich erneut.',
+        'poll_failed' => 'Die Google-Anmeldung konnte nicht abgeschlossen werden. Versuchen Sie es gleich erneut.',
+        'no_refresh_token' => 'Google hat den Zugriff erlaubt, aber kein dauerhaftes Token gesendet — das passiert, wenn dieses Konto der App bereits Zugriff gewährt hat. Entfernen Sie ihn unter myaccount.google.com bei „Drittanbieter-Zugriff“ und verbinden Sie erneut.',
     ],
 ];

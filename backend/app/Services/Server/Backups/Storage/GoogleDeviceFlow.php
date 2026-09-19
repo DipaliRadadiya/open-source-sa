@@ -47,9 +47,9 @@ class GoogleDeviceFlow
      * Ask Google for a user code.
      *
      * @return array{ok: bool, reason: string|null, device_code: string|null, user_code: string|null, verification_url: string|null, interval: int, expires_in: int}
-     *                                                                                                                                                             `reason` is an i18n key, never Google's own text — the same rule the
-     *                                                                                                                                                             rest of this subsystem follows, because those strings carry URLs and
-     *                                                                                                                                                             occasionally identifiers, and they are not translated.
+     *                                                                                                                                                               `reason` is an i18n key, never Google's own text — the same rule the
+     *                                                                                                                                                               rest of this subsystem follows, because those strings carry URLs and
+     *                                                                                                                                                               occasionally identifiers, and they are not translated.
      */
     public function start(string $clientId): array
     {
