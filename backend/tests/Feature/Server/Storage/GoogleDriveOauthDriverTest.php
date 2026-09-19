@@ -4,6 +4,7 @@ namespace Tests\Feature\Server\Storage;
 
 use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
+use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\Storage\Drivers\GoogleDriveOauthDriver;
 use App\Services\Server\Backups\Storage\GoogleDriveWorkspace;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
@@ -11,6 +12,7 @@ use Google\Client;
 use Google\Service\Drive;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Masbug\Flysystem\GoogleDriveAdapter;
 
 const OAUTH_TOKEN_URL = 'oauth2.googleapis.com/token';
@@ -437,4 +439,191 @@ it('answers an empty folder id without asking Drive', function () {
     expect(driveReturning(false)->folderExists('c', 's', 'rt', ''))
         ->ok->toBeFalse()
         ->reason->toBe('storage.oauth.not_connected');
+});
+
+// ---------------------------------------------------------------------------
+// heal — the panel makes another folder rather than demanding re-consent
+// ---------------------------------------------------------------------------
+
+/**
+ * A workspace that reports the folder gone and records what gets created.
+ */
+function healingWorkspace(object $seen, bool $canCreate = true): GoogleDriveWorkspace
+{
+    return new class($seen, $canCreate) extends GoogleDriveWorkspace
+    {
+        public function __construct(private object $seen, private bool $canCreate)
+        {
+            $this->seen->name = null;
+            $this->seen->created = false;
+        }
+
+        public function folderExists(string $c, string $s, string $r, string $folderId): array
+        {
+            return ['ok' => false, 'reason' => 'storage.oauth.folder_missing'];
+        }
+
+        public function prepare(string $c, string $s, string $r, string $name): array
+        {
+            $this->seen->name = $name;
+            $this->seen->created = $this->canCreate;
+
+            return $this->canCreate
+                ? ['ok' => true, 'folder_id' => 'FOLDER-NEW', 'account_email' => 'me@gmail.com', 'reason' => null]
+                : ['ok' => false, 'folder_id' => null, 'account_email' => null, 'reason' => 'storage.oauth.user_quota'];
+        }
+    };
+}
+
+function persistedOauthDestination(array $config = []): StorageDestination
+{
+    return StorageDestination::create([
+        'name' => 'Drive',
+        'provider' => StorageProvider::GoogleDriveOauth,
+        'prefix' => '',
+        'config' => array_merge([
+            'client_id' => '123-abc.apps.googleusercontent.com',
+            'client_secret' => 'secret',
+            'refresh_token' => 'rt',
+            'folder_id' => 'FOLDER-GONE',
+        ], $config),
+    ]);
+}
+
+/*
+ * The panel created that folder and still holds a working refresh token, so it
+ * can create another. Requiring a browser round trip to replace it left the
+ * destination stuck — and a backup at 3am cannot complete a consent screen.
+ */
+it('makes a new folder when the old one is gone', function () {
+    $seen = new \stdClass;
+    app()->bind(GoogleDriveWorkspace::class, fn () => healingWorkspace($seen));
+
+    $destination = persistedOauthDestination();
+    oauthDriver()->heal($destination);
+
+    expect($destination->fresh()->configValue('folder_id'))->toBe('FOLDER-NEW')
+        ->and($seen->name)->toContain('Backups');
+});
+
+// The stored verdict was about a folder that no longer exists.
+it('clears the failure that was about the folder it just replaced', function () {
+    $seen = new \stdClass;
+    app()->bind(GoogleDriveWorkspace::class, fn () => healingWorkspace($seen));
+
+    $destination = persistedOauthDestination();
+    $destination->forceFill([
+        'last_test_success' => false,
+        'last_test_error' => 'storage.oauth.folder_missing',
+    ])->save();
+
+    oauthDriver()->heal($destination);
+
+    expect($destination->fresh()->last_test_error)->toBeNull();
+});
+
+// Nothing to heal with. Creating a folder needs a grant, and inventing one is
+// not on the table — "not connected" stays the honest answer.
+it('does not try to heal a destination nobody has connected', function () {
+    $seen = new \stdClass;
+    app()->bind(GoogleDriveWorkspace::class, fn () => healingWorkspace($seen));
+
+    oauthDriver()->heal(persistedOauthDestination(['refresh_token' => '']));
+
+    expect($seen->created)->toBeFalse();
+});
+
+/*
+ * A full Drive, a revoked grant, the API switched off. The destination is left
+ * exactly as it was so the operation that triggered this reports the real
+ * failure — a half-healed row would claim a folder that was never made.
+ */
+it('leaves the destination alone when it cannot make a folder either', function () {
+    $seen = new \stdClass;
+    app()->bind(GoogleDriveWorkspace::class, fn () => healingWorkspace($seen, canCreate: false));
+
+    $destination = persistedOauthDestination();
+    oauthDriver()->heal($destination);
+
+    expect($destination->fresh()->configValue('folder_id'))->toBe('FOLDER-GONE');
+});
+
+// The common case must stay cheap: one metadata call that answers "yes".
+it('does not create anything when the folder is still there', function () {
+    $seen = new \stdClass;
+    $seen->created = false;
+
+    app()->bind(GoogleDriveWorkspace::class, fn () => new class($seen) extends GoogleDriveWorkspace
+    {
+        public function __construct(private object $seen) {}
+
+        public function folderExists(string $c, string $s, string $r, string $f): array
+        {
+            return ['ok' => true, 'reason' => null];
+        }
+
+        public function prepare(string $c, string $s, string $r, string $n): array
+        {
+            $this->seen->created = true;
+
+            return ['ok' => true, 'folder_id' => 'SHOULD-NOT-HAPPEN', 'account_email' => null, 'reason' => null];
+        }
+    });
+
+    $destination = persistedOauthDestination();
+    oauthDriver()->heal($destination);
+
+    expect($seen->created)->toBeFalse()
+        ->and($destination->fresh()->configValue('folder_id'))->toBe('FOLDER-GONE');
+});
+
+/*
+ * The wiring, not just the method.
+ *
+ * `heal()` is only useful if something calls it, and the whole point is that it
+ * runs on an unattended 3am backup — not merely when somebody presses Test.
+ * `DestinationDisk::for()` is the seam every path goes through, so that single
+ * line is the feature. Deleting it broke no test until this one existed.
+ */
+it('repairs the folder when a disk is built for the destination', function () {
+    $seen = new \stdClass;
+    app()->bind(GoogleDriveWorkspace::class, fn () => healingWorkspace($seen));
+
+    $destination = persistedOauthDestination();
+
+    $disk = new DestinationDisk(
+        app(StorageDriverFactory::class),
+        // The disk itself is irrelevant here; what is under test is that
+        // building one repaired the destination first.
+        fn (array $config) => Storage::fake('heal-test'),
+    );
+
+    $disk->for($destination);
+
+    expect($destination->fresh()->configValue('folder_id'))->toBe('FOLDER-NEW');
+});
+
+/*
+ * And it must be repaired *before* the config is read, or the very operation
+ * that triggered the repair would still be handed the dead folder id.
+ */
+it('builds the disk on the new folder, not the one that was gone', function () {
+    $seen = new \stdClass;
+    app()->bind(GoogleDriveWorkspace::class, fn () => healingWorkspace($seen));
+
+    $captured = new \stdClass;
+    $captured->folderId = null;
+
+    $disk = new DestinationDisk(
+        app(StorageDriverFactory::class),
+        function (array $config) use ($captured) {
+            $captured->folderId = $config['folder_id'] ?? null;
+
+            return Storage::fake('heal-order');
+        },
+    );
+
+    $disk->for(persistedOauthDestination());
+
+    expect($captured->folderId)->toBe('FOLDER-NEW');
 });

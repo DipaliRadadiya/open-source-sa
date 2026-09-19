@@ -104,4 +104,25 @@ interface StorageDriver
      * give.
      */
     public function preflight(StorageDestination $destination): ?string;
+
+    /**
+     * Put right anything about this destination the panel can fix on its own.
+     *
+     * Called before a destination is used, so it runs on a scheduled backup at
+     * 3am as well as on a button press. Most providers have nothing to do: a
+     * bucket is not something the panel created, and its absence is a decision
+     * somebody made elsewhere.
+     *
+     * Google Drive is different. The panel creates its own folder there, the
+     * folder lives in somebody's *personal* Drive where they are entitled to
+     * delete it, and the panel still holds a working refresh token afterwards —
+     * so it can simply make another. Demanding a full re-consent to replace a
+     * folder we can create with the credential we already have is friction for
+     * its own sake.
+     *
+     * Must be safe to call often and must not throw: a repair that cannot
+     * happen leaves the destination exactly as it was, and the ordinary failure
+     * path reports it.
+     */
+    public function heal(StorageDestination $destination): void;
 }

@@ -97,4 +97,10 @@ abstract class RemoteHostDriver implements StorageDriver
             'config.root' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9._/-]*$#', 'not_regex:#(^|/)\.\.(/|$)#'],
         ];
     }
+
+    /**
+     * Nothing to repair: this destination's location is not something the panel
+     * created, so its absence is somebody else's decision to undo.
+     */
+    public function heal(StorageDestination $destination): void {}
 }

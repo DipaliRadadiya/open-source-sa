@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Backups\Storage;
 
+use App\Models\StorageDestination;
 use Closure;
 use Google\Client;
 use Google\Service\Drive;
@@ -88,6 +89,35 @@ class GoogleDriveWorkspace
             'account_email' => $this->accountEmail($drive),
             'reason' => null,
         ];
+    }
+
+    /**
+     * What to call the folder, in one place.
+     *
+     * Both the connect flow and the self-heal create this folder, and two
+     * copies of the naming would drift the first time one of them learned
+     * something — which is exactly how the name came to say "Laravel".
+     *
+     * **`branding.name`, not `app.name`.** `app.name` is the Laravel framework
+     * setting and ships as the literal string "Laravel", which is what a real
+     * install put on a folder in somebody's personal Google Drive.
+     *
+     * The panel's host goes in it too: one Drive can hold backups from several
+     * panels, and a folder sitting next to someone's photos has to say which
+     * machine it belongs to without being opened.
+     */
+    public function folderName(StorageDestination $destination): string
+    {
+        $brand = trim((string) config('branding.name')) ?: 'ServerAvatar';
+        $host = trim((string) parse_url((string) config('server.storage.panel_url', ''), PHP_URL_HOST));
+
+        $name = $brand.' Backups';
+
+        if ($host !== '') {
+            $name .= ' ('.$host.')';
+        }
+
+        return $name.' — '.$destination->name;
     }
 
     /**

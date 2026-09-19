@@ -200,4 +200,10 @@ class GoogleDriveDriver implements StorageDriver
 
         return null;
     }
+
+    /**
+     * Nothing to repair: this destination's location is not something the panel
+     * created, so its absence is somebody else's decision to undo.
+     */
+    public function heal(StorageDestination $destination): void {}
 }

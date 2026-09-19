@@ -42,9 +42,30 @@ class DestinationDisk
             : static fn (array $config): Filesystem => Storage::build($config);
     }
 
+    /**
+     * The seam, and therefore the one place a destination can repair itself.
+     *
+     * Every path reaches a destination through here — the uploader, the
+     * verifier, prune, delete, restore's download and the connection prober —
+     * so a repair placed here runs on a scheduled backup at 3am as readily as
+     * on a button press. That matters: `preflight()` is only called by the
+     * prober, so anything hung off it would fix the destination for whoever was
+     * looking at the screen and leave the unattended run broken.
+     *
+     * For every provider but Google Drive this costs nothing — a bucket is not
+     * something the panel created, so there is nothing it may recreate. See
+     * {@see StorageDriver::heal()}.
+     */
     public function for(StorageDestination $destination): Filesystem
     {
-        return ($this->builder)($this->config($destination));
+        $driver = $this->drivers->for($destination);
+
+        $driver->heal($destination);
+
+        // Config is read *after* healing, deliberately: a repair that replaced
+        // the folder id has to be the one this disk is built on, or the very
+        // operation that triggered the repair would still use the dead id.
+        return ($this->builder)($driver->config($destination));
     }
 
     /**

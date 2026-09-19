@@ -7,6 +7,7 @@ use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
 use App\Services\Server\Backups\Storage\GoogleDriveWorkspace;
 use App\Services\Server\Backups\Storage\GoogleOauthTokens;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -97,6 +98,82 @@ class GoogleDriveOauthDriver implements StorageDriver
             $refreshToken,
             (string) $destination->configValue('folder_id', ''),
         )['reason'];
+    }
+
+    /**
+     * Make a new backup folder when the old one is gone.
+     *
+     * The panel created that folder and still holds a working refresh token, so
+     * it can create another — requiring a full Google re-consent to replace it
+     * was friction for its own sake, and it left the destination stuck: the
+     * failure said "connect again", and connecting again is a browser round
+     * trip somebody has to notice and complete. A backup at 3am cannot do that.
+     *
+     * **What this deliberately does not do is pretend nothing happened.** The
+     * archives that were in the deleted folder are gone, and a new empty folder
+     * does not bring them back — their backup rows stay, and restoring one
+     * still fails, correctly, because the archive really is missing. Healing
+     * restores the destination's ability to take *new* backups; it makes no
+     * claim about old ones, and it writes an activity row so the replacement is
+     * a visible event rather than a silent one.
+     */
+    public function heal(StorageDestination $destination): void
+    {
+        $clientId = (string) $destination->configValue('client_id', '');
+        $clientSecret = (string) $destination->configValue('client_secret', '');
+        $refreshToken = (string) $destination->configValue('refresh_token', '');
+
+        // Never connected. There is no grant to build a folder with, and
+        // "not connected" is already the honest answer everywhere else.
+        if ($clientId === '' || $clientSecret === '' || $refreshToken === '') {
+            return;
+        }
+
+        $folderId = (string) $destination->configValue('folder_id', '');
+
+        // The overwhelmingly common case, and the reason this is cheap: one
+        // metadata call that answers "yes" and stops.
+        if ($folderId !== '' && $this->workspace->folderExists($clientId, $clientSecret, $refreshToken, $folderId)['ok']) {
+            return;
+        }
+
+        $prepared = $this->workspace->prepare(
+            $clientId,
+            $clientSecret,
+            $refreshToken,
+            $this->workspace->folderName($destination),
+        );
+
+        // Could not make one either — a revoked grant, a full Drive, the API
+        // switched off. Leave the destination untouched and let the operation
+        // that called this report the real failure; `prepare()` has already
+        // logged Google's own words.
+        if (! $prepared['ok']) {
+            return;
+        }
+
+        $destination->config = array_merge($destination->config ?? [], [
+            'folder_id' => $prepared['folder_id'],
+            'account_email' => $prepared['account_email'] ?? $destination->configValue('account_email'),
+        ]);
+
+        // The stored verdict was about a folder that no longer exists.
+        $destination->forceFill([
+            'last_tested_at' => null,
+            'last_test_success' => null,
+            'last_test_error' => null,
+        ]);
+
+        $destination->save();
+
+        Log::channel('server-ops')->info('Recreated a missing Google Drive backup folder.', [
+            'feature' => 'storage',
+            'destination_id' => $destination->getKey(),
+            'destination_name' => $destination->name,
+            // The id, never the token. Enough to match it against what is in
+            // the Drive, and nothing that could be used to reach it.
+            'folder_id' => $prepared['folder_id'],
+        ]);
     }
 
     /**

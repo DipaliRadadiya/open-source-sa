@@ -121,7 +121,7 @@ class ConnectGoogleDrive
             (string) $destination->configValue('client_id', ''),
             (string) $destination->configValue('client_secret', ''),
             $refreshToken,
-            $this->folderName($destination),
+            $this->workspace->folderName($destination),
         );
 
         if (! $prepared['ok']) {
@@ -169,35 +169,6 @@ class ConnectGoogleDrive
         ]);
 
         return $this->result('connected', null, $destination);
-    }
-
-    /**
-     * A name the operator will recognise in their own Drive, months later,
-     * next to their holiday photos.
-     *
-     * **`branding.name`, not `app.name`.** `app.name` is the Laravel framework
-     * setting and ships as the literal string "Laravel" — which is what a real
-     * install put on a folder in somebody's personal Google Drive. `branding.name`
-     * is the panel's own identity, the one already shown in its title bar and
-     * its emails, and it defaults to something meaningful.
-     *
-     * The server's hostname goes in it too, because one Drive can hold backups
-     * from several panels and "ServerAvatar Backups — Drive" would not say which
-     * machine they came from. A folder in a personal Drive has to explain itself
-     * without anyone opening it.
-     */
-    private function folderName(StorageDestination $destination): string
-    {
-        $brand = trim((string) config('branding.name')) ?: 'ServerAvatar';
-        $host = trim((string) parse_url((string) config('server.storage.panel_url', ''), PHP_URL_HOST));
-
-        $name = $brand.' Backups';
-
-        if ($host !== '') {
-            $name .= ' ('.$host.')';
-        }
-
-        return $name.' — '.$destination->name;
     }
 
     private function guardProvider(StorageDestination $destination): void
