@@ -5304,7 +5304,7 @@
         "other": "Autre",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google Drive",
+        "google_drive": "Google Drive (Drive partagé Workspace)",
         "pcloud": "pCloud"
       },
       "name": "Nom",
@@ -5346,7 +5346,7 @@
         "passphrase": "Uniquement si la clé privée est elle-même chiffrée.",
         "service_account_json": "Collez le fichier de clé JSON complet du compte de service.",
         "folder_id": "La partie de l’URL du dossier après /folders/, pas le lien entier.",
-        "drive_shared_only": "Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide. Partagez le dossier avec l’adresse du compte de service, puis collez sa clé ci-dessous.",
+        "drive_shared_only": "Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide. Partagez le dossier avec l’adresse du compte de service, puis collez sa clé ci-dessous. Vous utilisez un compte Gmail personnel ? Choisissez plutôt Backblaze B2 ou Cloudflare R2 — tous deux proposent une offre gratuite et gèrent mieux les archives volumineuses.",
         "base_uri": "Utilisez https://webdav.pcloud.com/ pour un compte US ou https://ewebdav.pcloud.com/ pour un compte UE. Ajoutez un dossier à la fin pour regrouper les sauvegardes.",
         "pcloud_warning": "pCloud indique que son WebDAV est prévu pour de petits fichiers et peut être interrompu, et il cesse de fonctionner dès que l’authentification à deux facteurs est activée. Les deux comptent pour des sauvegardes : testez la destination et gardez-en une seconde ailleurs.",
         "bucket": "Le nom du bucket dans lequel stocker les sauvegardes. Il doit déjà exister — nous ne le créerons pas pour vous.",
