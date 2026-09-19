@@ -5305,8 +5305,6 @@
       "failedDriveBadKey": "前回のテストは{when}に失敗しました — サービスアカウントキーを読み取れませんでした。",
       "failedDriveQuota": "前回のテストは{when}に失敗しました — 保存容量の不足により Google がアップロードを拒否しました。",
       "failedDriveIncomplete": "前回のテストは{when}に失敗しました — キーまたはフォルダー ID がありません。",
-      "failedDavFull": "前回のテストは{when}に失敗しました — サーバーの空き容量がありません。",
-      "failedDavReset": "前回のテストは{when}に失敗しました。サーバーが応答せずに接続を閉じました。",
       "needsConnect": "まだ接続されていません。Google アカウントへのアクセスを承認してください。"
     },
     "form": {
@@ -5322,7 +5320,6 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google ドライブ（サービス アカウント・旧方式）",
-        "webdav": "WebDAV",
         "google_drive_oauth": "Google ドライブ"
       },
       "name": "名前",
@@ -5352,7 +5349,6 @@
         "passphrase": "鍵のパスフレーズ",
         "service_account_json": "サービスアカウントキー (JSON)",
         "folder_id": "共有ドライブのフォルダー ID",
-        "base_uri": "サーバー URL",
         "client_id": "クライアント ID",
         "client_secret": "クライアント シークレット"
       },
@@ -5367,7 +5363,6 @@
         "service_account_json": "サービスアカウントの JSON キーファイル全体を貼り付けてください。",
         "folder_id": "フォルダー URL の /folders/ 以降の部分です。リンク全体ではありません。",
         "drive_shared_only": "Google Workspace の共有ドライブのみ利用できます。サービスアカウントには自身の保存容量がないため、個人のドライブへのアップロードは空のアカウントでも拒否されます。共有ドライブのフォルダーをサービスアカウントのアドレスと共有してから、下にキーを貼り付けてください。 個人の Gmail アカウントをお使いですか？代わりに Backblaze B2 または Cloudflare R2 をお選びください。どちらも無料枠があり、大容量のアーカイブに適しています。",
-        "base_uri": "サーバーの完全な WebDAV URL（フォルダーを含む）。例: https://cloud.example.com/remote.php/dav/files/you/backups/",
         "bucket": "バックアップを保存するバケットの名前です。バケットはすでに存在している必要があります。こちらでは作成しません。",
         "region": "バケットが存在するリージョンです。一致していないと接続は拒否されます。",
         "access_key": "このストレージアカウントの認証情報の公開側の半分です。",
@@ -5381,8 +5376,7 @@
         "bucket": "my-backups",
         "region": "eu-west-1",
         "host": "backup.example.com",
-        "root": "backups/",
-        "base_uri": "https://cloud.example.com/remote.php/dav/files/you/backups/"
+        "root": "backups/"
       }
     },
     "connect": {

@@ -13,7 +13,6 @@ return [
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
         'google_drive_oauth' => 'Google Drive (sua própria conta)',
-        'webdav' => 'WebDAV',
     ],
 
     'fields' => [
@@ -38,7 +37,6 @@ return [
         'folder_id' => 'ID da pasta do Drive compartilhado',
         'drive_name' => 'Drive compartilhado',
         'client_email' => 'Endereço da conta de serviço',
-        'base_uri' => 'URL do servidor',
     ],
 
     'placeholders' => [
@@ -68,7 +66,6 @@ return [
         'folder_id' => 'A parte da URL da pasta depois de /folders/ — não o link inteiro.',
         'drive_shared_only' => 'Só funciona um Drive compartilhado do Google Workspace. Uma conta de serviço não tem armazenamento próprio, então envios para um Drive pessoal são recusados mesmo com a conta vazia.',
         'drive_share_with' => 'Compartilhe a pasta do Drive compartilhado com o endereço da conta de serviço antes de testar.',
-        'base_uri' => 'A URL WebDAV completa, incluindo a pasta — por exemplo https://cloud.exemplo.com/remote.php/dav/files/voce/',
     ],
 
     'status' => [
@@ -96,8 +93,6 @@ return [
         'drive_bad_key' => 'Não foi possível ler a chave da conta de serviço. Cole o arquivo JSON inteiro.',
         'drive_quota' => 'O Google recusou o envio por falta de cota de armazenamento, que é o que acontece em um Drive pessoal.',
         'drive_incomplete' => 'Adicione a chave da conta de serviço e o ID da pasta antes de testar.',
-        'dav_full' => 'O servidor recusou o envio por falta de espaço.',
-        'dav_reset' => 'O servidor fechou a conexão sem responder.',
     ],
 
     'delete' => [

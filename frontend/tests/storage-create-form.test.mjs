@@ -19,7 +19,6 @@ const FILLED = {
   s3: { bucket: "backups", region: "us-east-1", endpoint: "", access_key: "AKIA", secret_key: "s3cret" },
   ftp: { host: "ftp.example.com", username: "u", password: "p" },
   sftp: { host: "sftp.example.com", username: "u", password: "p" },
-  webdav: { base_uri: "https://webdav.pcloud.com", username: "u", password: "p" },
   google_drive: { service_account_json: '{"type":"service_account"}', folder_id: "abc123" },
   // No folder id and no key file: the panel creates its own folder, and the
   // refresh token is written by the connect flow rather than typed. Two fields

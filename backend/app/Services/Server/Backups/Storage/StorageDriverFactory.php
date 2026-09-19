@@ -10,7 +10,6 @@ use App\Services\Server\Backups\Storage\Drivers\GoogleDriveDriver;
 use App\Services\Server\Backups\Storage\Drivers\GoogleDriveOauthDriver;
 use App\Services\Server\Backups\Storage\Drivers\S3Driver;
 use App\Services\Server\Backups\Storage\Drivers\SftpDriver;
-use App\Services\Server\Backups\Storage\Drivers\WebDavDriver;
 
 /**
  * Resolves the one driver that knows how to talk to a given destination.
@@ -29,7 +28,6 @@ class StorageDriverFactory
         StorageProvider::Sftp->value => SftpDriver::class,
         StorageProvider::GoogleDrive->value => GoogleDriveDriver::class,
         StorageProvider::GoogleDriveOauth->value => GoogleDriveOauthDriver::class,
-        StorageProvider::WebDav->value => WebDavDriver::class,
     ];
 
     public function for(StorageDestination $destination): StorageDriver

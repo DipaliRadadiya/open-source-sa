@@ -69,7 +69,7 @@ class StorageConnectionProber
         // provider create that directory, and deleting the object afterwards
         // does not remove it — so every Test connection left a `.probe` folder
         // behind for good. On S3 a prefix is not a real object and nobody
-        // noticed; on Google Drive, FTP, SFTP and WebDAV it is a real
+        // noticed; on Google Drive, FTP and SFTP it is a real
         // directory, and on Drive it sits in somebody's *personal* account
         // beside their photos, where a dot does not even make it hidden.
         //

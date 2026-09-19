@@ -63,14 +63,6 @@ export const PRESETS = [
   // The same service reached as the user rather than as a service account,
   // which is the only way a free Gmail account can use Drive at all.
   { value: "google_drive_oauth", provider: "google_drive_oauth" },
-  // Plain WebDAV — Nextcloud, ownCloud, or anything else that speaks it.
-  //
-  // This was a `pcloud` preset until pCloud was withdrawn as an option. It is
-  // renamed rather than deleted: `presetForProvider` falls back to "other",
-  // which is an *S3* preset, so removing the only `webdav` entry would have
-  // rendered the S3 form when editing an existing WebDAV destination. Exactly
-  // the trap the legacy Drive row above documents.
-  { value: "webdav", provider: "webdav" },
 ];
 
 /**
@@ -113,8 +105,8 @@ export function providerForPreset(value) {
  *
  * Used when editing: the destination knows it is `ftp`, and the form needs a
  * preset to render from. Unambiguous for every provider that has exactly one
- * preset — which `webdav` does, so editing a WebDAV destination shows the
- * WebDAV form rather than whichever preset happened to be first in the list. For `s3` this deliberately resolves to the generic
+ * preset — true of every provider here except `s3`, which has several and is
+ * resolved explicitly below. For `s3` this deliberately resolves to the generic
  * option rather than trying to work out *which* S3 service it is — that
  * inference is what this refactor deleted, and a rename should not start
  * claiming a destination is Backblaze because its endpoint looks like it.
@@ -153,11 +145,6 @@ export const FIELDS = {
     // clear, so the renderer shows a warning beside it when it is off.
     { name: "ssl", kind: TOGGLE, default: true, warnWhenOff: "plainFtpWarning" },
     { name: "passive", kind: TOGGLE, default: true },
-  ],
-  webdav: [
-    { name: "base_uri", kind: TEXT, required: true, mono: true },
-    { name: "username", kind: TEXT, required: true, mono: true },
-    { name: "password", kind: SECRET, required: true },
   ],
   google_drive_oauth: [
     // Two fields and no folder id. The panel creates its own folder, because
@@ -253,13 +240,6 @@ export function isRequired(field, preset) {
 export function describeDestination(destination) {
   const config = destination?.config ?? {};
   const prefix = destination?.prefix ?? "";
-
-  if (destination?.provider === "webdav") {
-    return {
-      location: prefix || null,
-      address: config.base_uri || null,
-    };
-  }
 
   if (destination?.provider === "google_drive_oauth") {
     // Whose Drive, not which folder. The folder is ours and was never chosen

@@ -13,7 +13,6 @@ return [
         'sftp' => 'SFTP',
         'google_drive' => 'Google ドライブ',
         'google_drive_oauth' => 'Google ドライブ（ご自身のアカウント）',
-        'webdav' => 'WebDAV',
     ],
 
     'fields' => [
@@ -38,7 +37,6 @@ return [
         'folder_id' => '共有ドライブのフォルダー ID',
         'drive_name' => '共有ドライブ',
         'client_email' => 'サービスアカウントのアドレス',
-        'base_uri' => 'サーバー URL',
     ],
 
     'placeholders' => [
@@ -68,7 +66,6 @@ return [
         'folder_id' => 'フォルダー URL の /folders/ 以降の部分です。リンク全体ではありません。',
         'drive_shared_only' => 'Google Workspace の共有ドライブのみ利用できます。サービスアカウントには自身の保存容量がないため、個人のドライブへのアップロードは空のアカウントでも拒否されます。',
         'drive_share_with' => 'テストの前に、共有ドライブのフォルダーをサービスアカウントのアドレスと共有してください。',
-        'base_uri' => 'フォルダーを含む完全な WebDAV URL。例: https://cloud.example.com/remote.php/dav/files/you/',
     ],
 
     'status' => [
@@ -96,8 +93,6 @@ return [
         'drive_bad_key' => 'サービスアカウントキーを読み取れませんでした。JSON ファイル全体を貼り付けてください。',
         'drive_quota' => '保存容量の不足により Google がアップロードを拒否しました。個人のドライブで起きる現象です。',
         'drive_incomplete' => 'テストの前にサービスアカウントキーとフォルダー ID を入力してください。',
-        'dav_full' => '空き容量がないため、サーバーがアップロードを拒否しました。',
-        'dav_reset' => 'サーバーが応答せずに接続を閉じました。',
     ],
 
     'delete' => [

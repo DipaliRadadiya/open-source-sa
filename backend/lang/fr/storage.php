@@ -13,7 +13,6 @@ return [
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
         'google_drive_oauth' => 'Google Drive (votre propre compte)',
-        'webdav' => 'WebDAV',
     ],
 
     'fields' => [
@@ -38,7 +37,6 @@ return [
         'folder_id' => 'ID du dossier Drive partagé',
         'drive_name' => 'Drive partagé',
         'client_email' => 'Adresse du compte de service',
-        'base_uri' => 'URL du serveur',
     ],
 
     'placeholders' => [
@@ -68,7 +66,6 @@ return [
         'folder_id' => 'La partie de l’URL du dossier après /folders/, pas le lien entier.',
         'drive_shared_only' => 'Seul un Drive partagé Google Workspace fonctionne. Un compte de service n’a pas de stockage propre : les envois vers un Drive personnel sont refusés même si le compte est vide.',
         'drive_share_with' => 'Partagez le dossier du Drive partagé avec l’adresse du compte de service avant de tester.',
-        'base_uri' => 'L’URL WebDAV complète, dossier compris — par exemple https://cloud.exemple.fr/remote.php/dav/files/vous/',
     ],
 
     'status' => [
@@ -96,8 +93,6 @@ return [
         'drive_bad_key' => 'La clé du compte de service n’a pas pu être lue. Collez le fichier JSON entier.',
         'drive_quota' => 'Google a refusé l’envoi faute de quota de stockage, ce qui est le cas sur un Drive personnel.',
         'drive_incomplete' => 'Ajoutez la clé du compte de service et l’identifiant du dossier avant de tester.',
-        'dav_full' => 'Le serveur a refusé l’envoi faute d’espace.',
-        'dav_reset' => 'Le serveur a fermé la connexion sans répondre.',
     ],
 
     'delete' => [

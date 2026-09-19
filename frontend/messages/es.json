@@ -5305,8 +5305,6 @@
       "failedDriveBadKey": "La última prueba falló {when}: no se pudo leer la clave de la cuenta de servicio.",
       "failedDriveQuota": "La última prueba falló {when}: Google rechazó la subida por falta de cuota.",
       "failedDriveIncomplete": "La última prueba falló {when}: falta la clave o el ID de la carpeta.",
-      "failedDavFull": "La última prueba falló {when}: el servidor no tiene espacio.",
-      "failedDavReset": "La última prueba falló {when}: el servidor cerró la conexión sin responder.",
       "needsConnect": "Todavía sin conectar: aprueba el acceso a tu cuenta de Google."
     },
     "form": {
@@ -5322,7 +5320,6 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (cuenta de servicio, heredado)",
-        "webdav": "WebDAV",
         "google_drive_oauth": "Google Drive"
       },
       "name": "Nombre",
@@ -5352,7 +5349,6 @@
         "passphrase": "Frase de la clave",
         "service_account_json": "Clave de cuenta de servicio (JSON)",
         "folder_id": "ID de carpeta de la unidad compartida",
-        "base_uri": "URL del servidor",
         "client_id": "ID de cliente",
         "client_secret": "Secreto de cliente"
       },
@@ -5367,7 +5363,6 @@
         "service_account_json": "Pega el archivo JSON completo de la cuenta de servicio.",
         "folder_id": "La parte de la URL de la carpeta después de /folders/, no el enlace completo.",
         "drive_shared_only": "Solo funciona una unidad compartida de Google Workspace. Una cuenta de servicio no tiene almacenamiento propio, así que las subidas a un Drive personal se rechazan aunque la cuenta esté vacía. Comparte la carpeta con la dirección de la cuenta de servicio y luego pega su clave abajo. ¿Usa una cuenta personal de Gmail? Elija Backblaze B2 o Cloudflare R2 en su lugar: ambos tienen un plan gratuito y gestionan mejor los archivos grandes.",
-        "base_uri": "La URL WebDAV completa de su servidor, incluida la carpeta — por ejemplo https://cloud.example.com/remote.php/dav/files/you/backups/",
         "bucket": "El nombre del bucket donde se almacenan las copias de seguridad. Ya debe existir; no lo creamos por usted.",
         "region": "La región en la que se encuentra el bucket. Debe coincidir, de lo contrario se rechaza la conexión.",
         "access_key": "La parte pública de las credenciales para esta cuenta de almacenamiento.",
@@ -5381,8 +5376,7 @@
         "bucket": "mis-copias",
         "region": "eu-west-1",
         "host": "backup.ejemplo.com",
-        "root": "backups/",
-        "base_uri": "https://cloud.example.com/remote.php/dav/files/you/backups/"
+        "root": "backups/"
       }
     },
     "connect": {

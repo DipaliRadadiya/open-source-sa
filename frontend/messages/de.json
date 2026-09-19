@@ -5305,8 +5305,6 @@
       "failedDriveBadKey": "Der letzte Test ist {when} fehlgeschlagen — der Dienstkonto-Schlüssel konnte nicht gelesen werden.",
       "failedDriveQuota": "Der letzte Test ist {when} fehlgeschlagen — Google lehnte den Upload mangels Speicherkontingent ab.",
       "failedDriveIncomplete": "Der letzte Test ist {when} fehlgeschlagen — Schlüssel oder Ordner-ID fehlt.",
-      "failedDavFull": "Der letzte Test ist {when} fehlgeschlagen — auf dem Server ist kein Speicher mehr frei.",
-      "failedDavReset": "Der letzte Test ist {when} fehlgeschlagen — der Server hat die Verbindung ohne Antwort geschlossen.",
       "needsConnect": "Noch nicht verbunden — geben Sie den Zugriff auf Ihr Google-Konto frei."
     },
     "form": {
@@ -5322,7 +5320,6 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (Dienstkonto, veraltet)",
-        "webdav": "WebDAV",
         "google_drive_oauth": "Google Drive"
       },
       "name": "Name",
@@ -5352,7 +5349,6 @@
         "passphrase": "Schlüssel-Passphrase",
         "service_account_json": "Dienstkonto-Schlüssel (JSON)",
         "folder_id": "Ordner-ID der geteilten Ablage",
-        "base_uri": "Server-URL",
         "client_id": "Client-ID",
         "client_secret": "Client-Secret"
       },
@@ -5367,7 +5363,6 @@
         "service_account_json": "Die vollständige JSON-Schlüsseldatei des Dienstkontos einfügen.",
         "folder_id": "Der Teil der Ordner-URL nach /folders/ — nicht der ganze Link.",
         "drive_shared_only": "Nur eine geteilte Ablage in Google Workspace funktioniert. Ein Dienstkonto hat keinen eigenen Speicher, daher werden Uploads in ein persönliches Drive auch bei leerem Konto abgelehnt. Geben Sie den Ordner für die Adresse des Dienstkontos frei und fügen Sie dann dessen Schlüssel unten ein. Sie nutzen ein privates Gmail-Konto? Wählen Sie stattdessen Backblaze B2 oder Cloudflare R2 — beide haben ein kostenloses Kontingent und eignen sich besser für große Archive.",
-        "base_uri": "Die vollständige WebDAV-URL Ihres Servers, samt Ordner — zum Beispiel https://cloud.example.com/remote.php/dav/files/you/backups/",
         "bucket": "Der Name des Buckets, in dem Sicherungen gespeichert werden. Er muss bereits existieren — wir erstellen ihn nicht für Sie.",
         "region": "Die Region, in der sich der Bucket befindet. Sie muss übereinstimmen, sonst wird die Verbindung abgewiesen.",
         "access_key": "Die öffentliche Hälfte der Anmeldedaten für dieses Speicherkonto.",
@@ -5381,8 +5376,7 @@
         "bucket": "meine-backups",
         "region": "eu-west-1",
         "host": "backup.beispiel.de",
-        "root": "backups/",
-        "base_uri": "https://cloud.example.com/remote.php/dav/files/you/backups/"
+        "root": "backups/"
       }
     },
     "connect": {

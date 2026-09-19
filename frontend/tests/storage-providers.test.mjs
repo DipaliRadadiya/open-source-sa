@@ -115,7 +115,7 @@ test("every field a provider renders starts with a value", () => {
    * "this is required" refinement could run. What the user saw for it was
    * Zod's own English sentence.
    */
-  for (const provider of ["s3", "ftp", "sftp", "webdav", "google_drive"]) {
+  for (const provider of ["s3", "ftp", "sftp", "google_drive"]) {
     const defaults = defaultConfig(provider);
     assert.deepEqual(
       Object.keys(defaults).sort(),

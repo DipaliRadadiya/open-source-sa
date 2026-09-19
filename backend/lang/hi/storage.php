@@ -13,7 +13,6 @@ return [
         'sftp' => 'SFTP',
         'google_drive' => 'Google Drive',
         'google_drive_oauth' => 'Google Drive (आपका अपना खाता)',
-        'webdav' => 'WebDAV',
     ],
 
     'fields' => [
@@ -38,7 +37,6 @@ return [
         'folder_id' => 'साझा ड्राइव फ़ोल्डर ID',
         'drive_name' => 'साझा ड्राइव',
         'client_email' => 'सेवा खाता पता',
-        'base_uri' => 'सर्वर URL',
     ],
 
     'placeholders' => [
@@ -68,7 +66,6 @@ return [
         'folder_id' => 'फ़ोल्डर URL का /folders/ के बाद वाला भाग — पूरा लिंक नहीं।',
         'drive_shared_only' => 'केवल Google Workspace साझा ड्राइव काम करती है। सेवा खाते का अपना संग्रहण नहीं होता, इसलिए व्यक्तिगत ड्राइव पर अपलोड खाली खाते में भी अस्वीकार होते हैं।',
         'drive_share_with' => 'परीक्षण से पहले साझा ड्राइव फ़ोल्डर को सेवा खाता पते के साथ साझा करें।',
-        'base_uri' => 'फ़ोल्डर सहित पूरा WebDAV URL — उदाहरण https://cloud.example.com/remote.php/dav/files/you/',
     ],
 
     'status' => [
@@ -96,8 +93,6 @@ return [
         'drive_bad_key' => 'सेवा खाता कुंजी पढ़ी नहीं जा सकी। पूरी JSON फ़ाइल चिपकाएँ।',
         'drive_quota' => 'संग्रहण कोटा न होने से Google ने अपलोड अस्वीकार किया — व्यक्तिगत ड्राइव पर यही होता है।',
         'drive_incomplete' => 'परीक्षण से पहले सेवा खाता कुंजी और फ़ोल्डर ID जोड़ें।',
-        'dav_full' => 'जगह न होने के कारण सर्वर ने अपलोड अस्वीकार किया।',
-        'dav_reset' => 'सर्वर ने बिना उत्तर दिए कनेक्शन बंद कर दिया।',
     ],
 
     'delete' => [

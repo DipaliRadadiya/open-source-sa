@@ -10,7 +10,7 @@ namespace App\Enums;
  * hostname — a guess that is wrong for any self-hosted S3 service and
  * meaningless for an FTP host. The column replaces the guess.
  *
- * Phase 1 ships `s3`, `ftp` and `sftp`. Google Drive and WebDAV/pCloud land on
+ * Phase 1 ships `s3`, `ftp` and `sftp`. Google Drive lands on
  * the same seam later; see `storage-providers-design.md`.
  */
 enum StorageProvider: string
@@ -37,8 +37,6 @@ enum StorageProvider: string
      * depending on the flag.
      */
     case GoogleDriveOauth = 'google_drive_oauth';
-
-    case WebDav = 'webdav';
 
     /**
      * The translated display name. Kept here rather than on the driver so a

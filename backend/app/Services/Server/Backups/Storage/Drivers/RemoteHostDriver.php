@@ -9,7 +9,7 @@ use App\Rules\SingleLine;
 
 /**
  * Shared behaviour for the providers that address a host and land in a real
- * directory tree (FTP, SFTP — and WebDAV when it arrives).
+ * directory tree (FTP and SFTP).
  *
  * These differ from S3 in one way that is easy to get wrong: **they have two
  * notions of "where"**. The connection itself lands somewhere (`root`), and

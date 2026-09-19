@@ -34,8 +34,6 @@ const CATEGORIES = [
   "drive_quota",
   "drive_incomplete",
   // WebDAV.
-  "dav_full",
-  "dav_reset",
 ];
 
 const row = readFileSync("components/integrations/storage/destination-row.jsx", "utf8");
@@ -72,8 +70,6 @@ test("every failure message exists in every locale", () => {
     "failedDriveBadKey",
     "failedDriveQuota",
     "failedDriveIncomplete",
-    "failedDavFull",
-    "failedDavReset",
   ];
 
   const locales = readdirSync("messages").filter((f) => f.endsWith(".json"));
@@ -130,10 +126,9 @@ test("the legacy Drive preset is no longer offered for new destinations", () => 
 });
 
 test("pCloud is not offered anywhere", () => {
-  // Withdrawn as a destination (operator, 2026-09-19). The vendor's own
-  // documentation said its WebDAV was for small files and stopped working with
-  // 2FA on, which made it a poor home for site archives; rather than keep
-  // shipping it behind a caveat, it is gone.
+  // Withdrawn as a destination (operator, 2026-09-19), and WebDAV with it —
+  // pCloud was the only reason the protocol was supported at all. Neither the
+  // vendor nor the protocol should be nameable anywhere in the UI.
   //
   // The name must not survive in the picker, the form copy, or the caveat that
   // used to accompany it — a provider nobody can choose should not still be
@@ -153,17 +148,3 @@ test("pCloud is not offered anywhere", () => {
   }
 });
 
-test("WebDAV survives pCloud, and keeps its own form", () => {
-  // The provider stays: Nextcloud, ownCloud and anything else speaking WebDAV
-  // still work. Deleting the last webdav PRESET would have been the damaging
-  // move — `presetForProvider` falls back to "other", which is an S3 preset,
-  // so editing an existing WebDAV destination would have rendered the S3 form
-  // with the wrong fields entirely.
-  const providers = readFileSync("lib/storage/providers.js", "utf8");
-
-  assert.match(providers, /value:\s*"webdav",\s*provider:\s*"webdav"/);
-  assert.doesNotMatch(providers, /value:\s*"nextcloud"/);
-
-  const en = JSON.parse(readFileSync("messages/en.json", "utf8"));
-  assert.equal(en.storage.form.providers.webdav, "WebDAV");
-});
