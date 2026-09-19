@@ -1,110 +1,60 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, ExternalLink, Loader2, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { startDriveConnect, pollDriveConnect } from "@/lib/api/storage";
+import { CopyButton } from "@/components/ui/copy-button";
+import { startDriveConnect } from "@/lib/api/storage";
 import { apiMessage } from "@/lib/api/error-message";
 
 /**
  * The approval step for a user-owned Google Drive.
  *
- * Shows a short code and a link; the operator opens the link on whatever
- * device is to hand, types the code, approves. No redirect URL is involved
- * anywhere — which is the only reason this works on a default install, where
- * the panel lives at a nip.io hostname Google would refuse as a redirect
- * target, behind a self-signed certificate.
+ * One button. It asks the panel for a consent URL and sends the browser there;
+ * Google sends it back to the callback page, which finishes the job. Nothing is
+ * polled and nothing is typed — the previous device flow made the operator read
+ * a code off one screen and type it into another, which existed only to avoid a
+ * redirect URI.
  *
- * Polling happens here rather than on the server: one request asks one
- * question, so no worker is held open for the half hour a human might take.
+ * The redirect URI is shown here rather than described, because it is the one
+ * string an operator has to paste into Google Cloud Console and Google compares
+ * it byte for byte. A URI someone retyped with a trailing slash fails at the
+ * very end of the flow, after consent, which is the worst possible place to
+ * discover a typo.
  */
-export function GoogleDriveConnect({ destination, onConnected }) {
+export function GoogleDriveConnect({ destination }) {
   const t = useTranslations("storage.oauth");
   const [state, setState] = useState("idle");
-  const [code, setCode] = useState(null);
   const [error, setError] = useState(null);
-
-  // Held in a ref rather than state: the polling loop reads them every tick,
-  // and putting them in state would restart the interval on every answer.
-  const timer = useRef(null);
-  const deadline = useRef(0);
-
-  const stop = useCallback(() => {
-    if (timer.current) {
-      clearInterval(timer.current);
-      timer.current = null;
-    }
-  }, []);
-
-  // Clearing on unmount matters more than usual here: the dialog is closable
-  // mid-approval, and a survivor would keep polling a destination nobody is
-  // looking at until the code expired half an hour later.
-  useEffect(() => stop, [stop]);
+  const [redirectUri, setRedirectUri] = useState(null);
 
   const connected = destination?.config?.connected;
   const account = destination?.config?.account_email;
 
-  const poll = useCallback(async () => {
-    // The code outlived its window while the tab sat open. Say so rather than
-    // polling a code Google has already forgotten.
-    if (Date.now() > deadline.current) {
-      stop();
-      setState("idle");
-      setError(t("code_expired"));
-      return;
-    }
-
-    try {
-      const { data } = await pollDriveConnect(destination.id);
-
-      if (data.oauth.status === "approved") {
-        stop();
-        setState("connected");
-        onConnected?.(data.storage_destination);
-        return;
-      }
-
-      // `pending` and `slow_down` both mean keep waiting. Everything else is
-      // over, and carries a finished sentence from the API.
-      if (!["pending", "slow_down"].includes(data.oauth.status)) {
-        stop();
-        setState("idle");
-        setError(data.oauth.message ?? null);
-      }
-    } catch (e) {
-      // A blinking network is not a refusal. The code is still valid and the
-      // operator may be mid-approval, so the loop keeps going.
-      setError(apiMessage(e, t("start_failed")));
-    }
-  }, [destination, onConnected, stop, t]);
-
-  /*
-   * Both handlers are memoized, not merely defined in the body. React Compiler
-   * refuses `Date.now()` in an unmemoized function here — it cannot prove the
-   * call does not happen during render, and an impure read during render is
-   * how you get two components disagreeing about what time it is.
-   */
   const start = useCallback(async () => {
     setError(null);
     setState("starting");
 
     try {
       const { data } = await startDriveConnect(destination.id);
-      setCode(data.oauth);
-      setState("waiting");
-      deadline.current = Date.now() + data.oauth.expires_in * 1000;
-      // Google's own interval, not one we invented. Polling faster than it
-      // earns `slow_down` and slows the whole thing down.
-      timer.current = setInterval(poll, Math.max(2, data.oauth.interval) * 1000);
+
+      // Shown before navigating, so a `redirect_uri_mismatch` on the way back
+      // lands on a page already displaying the value that had to match.
+      setRedirectUri(data.oauth.redirect_uri);
+
+      // A full navigation, not a popup: a popup here is blocked often enough
+      // that the button would appear to do nothing, and Google's consent screen
+      // is not something to render in 400 pixels.
+      window.location.assign(data.oauth.authorize_url);
     } catch (e) {
       setError(apiMessage(e, t("start_failed")));
       setState("idle");
     }
-  }, [destination, poll, t]);
+  }, [destination, t]);
 
-  if (connected && state !== "waiting") {
+  if (connected) {
     return (
       <div className="rounded-lg border border-success/30 bg-success/5 p-3">
         <p className="flex items-center gap-2 text-sm font-medium">
@@ -112,7 +62,15 @@ export function GoogleDriveConnect({ destination, onConnected }) {
           {account ? t("connectedAs", { account }) : t("connected")}
         </p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("scopeNote")}</p>
-        <Button type="button" variant="outline" size="sm" className="mt-3" onClick={start}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-3"
+          onClick={start}
+          disabled={state === "starting"}
+        >
+          {state === "starting" ? <Loader2 className="size-4 animate-spin" /> : null}
           {t("reconnect")}
         </Button>
       </div>
@@ -121,44 +79,31 @@ export function GoogleDriveConnect({ destination, onConnected }) {
 
   return (
     <div className="rounded-lg border p-3">
-      {state === "waiting" && code ? (
-        <div className="space-y-3">
-          <p className="text-sm">{t("step1")}</p>
-          <a
-            href={code.verification_url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="inline-flex items-center gap-1.5 text-sm font-medium underline underline-offset-4"
-          >
-            {code.verification_url}
-            <ExternalLink className="size-3.5" />
-          </a>
-          <p className="text-sm">{t("step2")}</p>
-          {/* Big and monospaced because it is read off one screen and typed
-              into another, by hand, and an l/1 mix-up costs the whole attempt. */}
-          <p className="select-all rounded-md border bg-muted/40 px-3 py-2 text-center font-mono text-xl tracking-[0.3em]">
-            {code.user_code}
-          </p>
-          <p className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="size-3.5 animate-spin" />
-            {t("waiting")}
-          </p>
+      <p className="text-sm">{t("intro")}</p>
+
+      <Button
+        type="button"
+        size="sm"
+        className="mt-3"
+        onClick={start}
+        disabled={state === "starting"}
+      >
+        {state === "starting" ? <Loader2 className="size-4 animate-spin" /> : null}
+        {t("connect")}
+      </Button>
+
+      {redirectUri ? (
+        <div className="mt-3 space-y-1.5">
+          <p className="text-xs text-muted-foreground">{t("redirectUriLabel")}</p>
+          <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-2 py-1.5">
+            {/* `break-all` rather than truncation: this is copied by hand as
+                often as by button, and a URI with an ellipsis in the middle is
+                worse than one that wraps. */}
+            <code className="min-w-0 flex-1 break-all font-mono text-xs">{redirectUri}</code>
+            <CopyButton value={redirectUri} label={t("copyRedirectUri")} />
+          </div>
         </div>
-      ) : (
-        <>
-          <p className="text-sm">{t("intro")}</p>
-          <Button
-            type="button"
-            size="sm"
-            className="mt-3"
-            onClick={start}
-            disabled={state === "starting"}
-          >
-            {state === "starting" ? <Loader2 className="size-4 animate-spin" /> : null}
-            {t("connect")}
-          </Button>
-        </>
-      )}
+      ) : null}
 
       {/* Same shape as the provider warning above it, so a failure here reads
           as part of this panel rather than as a new kind of thing. */}

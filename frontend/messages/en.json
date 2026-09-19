@@ -5414,17 +5414,24 @@
       "failed": "That couldn't be deleted."
     },
     "oauth": {
-      "intro": "Approve access to your Google account. Your own Drive storage is used, so a free Gmail account works.",
+      "intro": "You'll be sent to Google to approve access. Your own Drive storage is used, so a free Gmail account works.",
       "connect": "Connect",
       "reconnect": "Reconnect",
       "connected": "Connected to Google Drive",
       "connectedAs": "Connected as {account}",
-      "waiting": "Waiting for approval…",
-      "step1": "1. Open this link on any device:",
-      "step2": "2. Enter this code and approve:",
       "scopeNote": "The panel can only see files it created — not the rest of your Drive.",
-      "code_expired": "The code expired before it was approved. Press Connect for a new one.",
-      "start_failed": "Could not start the Google sign-in. Try again in a moment."
+      "redirectUriLabel": "Add this to your Google client, under “Authorized redirect URIs”:",
+      "copyRedirectUri": "Copy redirect URI",
+      "callbackTitle": "Connecting Google Drive",
+      "callbackSubtitle": "Finishing the approval you just gave Google.",
+      "finishing": "Finishing the connection…",
+      "callbackFailed": "The connection did not complete",
+      "backToStorage": "Back to storage destinations",
+      "denied": "Access was refused on the Google screen. Nothing was changed.",
+      "code_expired": "That approval has already been used, or it expired. Press Connect to start again.",
+      "state_invalid": "That sign-in did not come from this panel. Press Connect and approve again.",
+      "start_failed": "Could not start the Google sign-in. Try again in a moment.",
+      "token_failed": "Could not complete the Google sign-in. Try again in a moment."
     }
   },
   "backups": {

@@ -5414,17 +5414,24 @@
       "failed": "No se pudo eliminar."
     },
     "oauth": {
-      "intro": "Autorice el acceso a su cuenta de Google. Se usa su propio espacio de Drive, así que basta con una cuenta de Gmail gratuita.",
+      "intro": "Se le enviará a Google para aprobar el acceso. Se usa su propio almacenamiento de Drive, así que una cuenta de Gmail gratuita sirve.",
       "connect": "Conectar",
       "reconnect": "Reconectar",
       "connected": "Conectado a Google Drive",
       "connectedAs": "Conectado como {account}",
-      "waiting": "Esperando la aprobación…",
-      "step1": "1. Abra este enlace en cualquier dispositivo:",
-      "step2": "2. Introduzca este código y apruebe:",
       "scopeNote": "El panel solo ve los archivos que él creó, no el resto de su Drive.",
-      "code_expired": "El código caducó antes de aprobarse. Pulse Conectar para obtener otro.",
-      "start_failed": "No se pudo iniciar el acceso con Google. Inténtelo de nuevo en un momento."
+      "redirectUriLabel": "Añada esto a su cliente de Google, en «Authorized redirect URIs»:",
+      "copyRedirectUri": "Copiar URI de redirección",
+      "callbackTitle": "Conectando Google Drive",
+      "callbackSubtitle": "Terminando la aprobación que acaba de dar a Google.",
+      "finishing": "Terminando la conexión…",
+      "callbackFailed": "La conexión no se completó",
+      "backToStorage": "Volver a los destinos de almacenamiento",
+      "denied": "Se rechazó el acceso en la pantalla de Google. No se cambió nada.",
+      "code_expired": "Esa aprobación ya se usó, o caducó. Pulse Conectar para empezar de nuevo.",
+      "state_invalid": "Ese acceso no proviene de este panel. Pulse Conectar y apruebe de nuevo.",
+      "start_failed": "No se pudo iniciar el acceso con Google. Inténtelo de nuevo en un momento.",
+      "token_failed": "No se pudo completar el acceso con Google. Inténtelo de nuevo en un momento."
     }
   },
   "backups": {

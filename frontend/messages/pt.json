@@ -5414,17 +5414,24 @@
       "failed": "Não foi possível excluir."
     },
     "oauth": {
-      "intro": "Autorize o acesso à sua conta Google. É o seu próprio espaço do Drive que é usado, então uma conta Gmail gratuita funciona.",
+      "intro": "Você será enviado ao Google para aprovar o acesso. É usado o seu próprio armazenamento do Drive, então uma conta gratuita do Gmail serve.",
       "connect": "Conectar",
       "reconnect": "Reconectar",
       "connected": "Conectado ao Google Drive",
       "connectedAs": "Conectado como {account}",
-      "waiting": "Aguardando aprovação…",
-      "step1": "1. Abra este link em qualquer dispositivo:",
-      "step2": "2. Digite este código e aprove:",
       "scopeNote": "O painel só enxerga os arquivos que ele criou — não o resto do seu Drive.",
-      "code_expired": "O código expirou antes de ser aprovado. Clique em Conectar para obter outro.",
-      "start_failed": "Não foi possível iniciar o login do Google. Tente de novo em instantes."
+      "redirectUriLabel": "Adicione isto ao seu cliente do Google, em “Authorized redirect URIs”:",
+      "copyRedirectUri": "Copiar URI de redirecionamento",
+      "callbackTitle": "Conectando o Google Drive",
+      "callbackSubtitle": "Concluindo a aprovação que você acabou de dar ao Google.",
+      "finishing": "Concluindo a conexão…",
+      "callbackFailed": "A conexão não foi concluída",
+      "backToStorage": "Voltar aos destinos de armazenamento",
+      "denied": "O acesso foi recusado na tela do Google. Nada foi alterado.",
+      "code_expired": "Essa aprovação já foi usada, ou expirou. Clique em Conectar para começar de novo.",
+      "state_invalid": "Esse login não veio deste painel. Clique em Conectar e aprove de novo.",
+      "start_failed": "Não foi possível iniciar o login do Google. Tente de novo em instantes.",
+      "token_failed": "Não foi possível concluir o login do Google. Tente de novo em instantes."
     }
   },
   "backups": {

@@ -119,11 +119,15 @@ export function EditDestinationDialog({ destination, open, onOpenChange }) {
           existing
         />
         {/* Approval lives here rather than in the create dialog because the
-            device flow needs a destination that already exists — the code is
-            issued against its id, and the refresh token is written onto its
-            row. So: save the client id and secret first, then connect. */}
+            connection needs a destination that already exists — the sealed
+            `state` is issued against its id, and the refresh token is written
+            onto its row. So: save the client id and secret first, then connect.
+
+            No completion handler: Connect navigates the whole browser to
+            Google, so this dialog is gone by the time anything is approved.
+            The operator comes back to the callback page, not to here. */}
         {provider === "google_drive_oauth" ? (
-          <GoogleDriveConnect destination={destination} onConnected={() => onOpenChange(false)} />
+          <GoogleDriveConnect destination={destination} />
         ) : null}
         <p className="text-xs text-muted-foreground">{t("credentialsUntouched")}</p>
         {/* Why there is no provider control, rather than leaving its absence

@@ -5414,17 +5414,24 @@
       "failed": "削除できませんでした。"
     },
     "oauth": {
-      "intro": "Google アカウントへのアクセスを承認してください。ご自身のドライブ容量を使うため、無料の Gmail アカウントでも利用できます。",
+      "intro": "アクセスを承認するため Google に移動します。ご自身の Drive 容量を使うので、無料の Gmail アカウントでも利用できます。",
       "connect": "接続",
       "reconnect": "再接続",
       "connected": "Google ドライブに接続済み",
       "connectedAs": "{account} として接続済み",
-      "waiting": "承認を待っています…",
-      "step1": "1. 任意の端末でこのリンクを開きます:",
-      "step2": "2. このコードを入力して承認します:",
       "scopeNote": "パネルが見られるのは自身が作成したファイルだけで、ドライブの他の内容は見えません。",
-      "code_expired": "承認される前にコードの有効期限が切れました。「接続」を押して新しいコードを取得してください。",
-      "start_failed": "Google ログインを開始できませんでした。しばらくしてからお試しください。"
+      "redirectUriLabel": "これを Google クライアントの「Authorized redirect URIs」に追加してください:",
+      "copyRedirectUri": "リダイレクト URI をコピー",
+      "callbackTitle": "Google Drive を接続しています",
+      "callbackSubtitle": "先ほど Google に与えた承認を完了しています。",
+      "finishing": "接続を完了しています…",
+      "callbackFailed": "接続を完了できませんでした",
+      "backToStorage": "保存先一覧に戻る",
+      "denied": "Google の画面でアクセスが拒否されました。何も変更されていません。",
+      "code_expired": "その承認はすでに使用されたか、有効期限が切れています。「接続」を押して最初からやり直してください。",
+      "state_invalid": "そのログインはこのパネルからのものではありません。「接続」を押してもう一度承認してください。",
+      "start_failed": "Google ログインを開始できませんでした。しばらくしてからお試しください。",
+      "token_failed": "Google ログインを完了できませんでした。しばらくしてからお試しください。"
     }
   },
   "backups": {

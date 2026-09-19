@@ -5414,17 +5414,24 @@
       "failed": "Das konnte nicht gelöscht werden."
     },
     "oauth": {
-      "intro": "Erlauben Sie den Zugriff auf Ihr Google-Konto. Es wird Ihr eigener Drive-Speicher genutzt, daher genügt ein kostenloses Gmail-Konto.",
+      "intro": "Sie werden zu Google weitergeleitet, um den Zugriff zu erlauben. Es wird Ihr eigener Drive-Speicher genutzt, ein kostenloses Gmail-Konto genügt.",
       "connect": "Verbinden",
       "reconnect": "Neu verbinden",
       "connected": "Mit Google Drive verbunden",
       "connectedAs": "Verbunden als {account}",
-      "waiting": "Warte auf Bestätigung…",
-      "step1": "1. Öffnen Sie diesen Link auf einem beliebigen Gerät:",
-      "step2": "2. Geben Sie diesen Code ein und bestätigen Sie:",
       "scopeNote": "Das Panel sieht nur die von ihm erstellten Dateien — nicht Ihren übrigen Drive.",
-      "code_expired": "Der Code ist abgelaufen, bevor er bestätigt wurde. Klicken Sie auf Verbinden für einen neuen.",
-      "start_failed": "Die Google-Anmeldung konnte nicht gestartet werden. Versuchen Sie es gleich erneut."
+      "redirectUriLabel": "Fügen Sie dies in Ihrem Google-Client unter „Authorized redirect URIs“ hinzu:",
+      "copyRedirectUri": "Weiterleitungs-URI kopieren",
+      "callbackTitle": "Google Drive wird verbunden",
+      "callbackSubtitle": "Die soeben bei Google erteilte Zustimmung wird abgeschlossen.",
+      "finishing": "Verbindung wird abgeschlossen…",
+      "callbackFailed": "Die Verbindung wurde nicht abgeschlossen",
+      "backToStorage": "Zurück zu den Speicherzielen",
+      "denied": "Der Zugriff wurde im Google-Fenster abgelehnt. Es wurde nichts geändert.",
+      "code_expired": "Diese Bestätigung wurde bereits verwendet oder ist abgelaufen. Klicken Sie auf Verbinden, um neu zu beginnen.",
+      "state_invalid": "Diese Anmeldung stammt nicht von diesem Panel. Klicken Sie auf Verbinden und bestätigen Sie erneut.",
+      "start_failed": "Die Google-Anmeldung konnte nicht gestartet werden. Versuchen Sie es gleich erneut.",
+      "token_failed": "Die Google-Anmeldung konnte nicht abgeschlossen werden. Versuchen Sie es gleich erneut."
     }
   },
   "backups": {
