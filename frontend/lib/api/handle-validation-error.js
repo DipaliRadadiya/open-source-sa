@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { apiMessage } from "@/lib/api/error-message";
 import { errorTarget } from "@/lib/api/error-target";
+import { genericErrorMessage } from "@/lib/api/generic-error";
 
 /**
  * Show a 422 where the user can act on it.
@@ -64,6 +65,7 @@ export function handleValidationError(error, form, { formError = false, unrender
     return;
   }
 
-  const message = apiMessage(error, "Something went wrong");
+  // Translated, handed over by the shell — see lib/api/generic-error.js.
+  const message = apiMessage(error, genericErrorMessage());
   toast.error(message);
 }

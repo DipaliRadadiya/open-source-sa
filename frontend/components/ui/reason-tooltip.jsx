@@ -70,7 +70,16 @@ export function ReasonTooltip({ reason, children, className = "inline-flex" }) {
       </PopoverContent>
     </Popover>
   ) : (
-    <Tooltip>
+    /*
+     * Immediate, against the shell's 300ms.
+     *
+     * The delay exists so that sweeping the pointer across a toolbar does not
+     * flash a tooltip off every icon. This one is not a label — it is the
+     * answer to "why can't I press this", and the reader is already pointing at
+     * the control because it did not work. Making them hold still for it is
+     * charging for the explanation.
+     */
+    <Tooltip delayDuration={0}>
       <TooltipTrigger asChild>
         <span tabIndex={0} className={className}>
           {children}
