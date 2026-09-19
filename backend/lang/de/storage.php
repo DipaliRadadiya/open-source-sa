@@ -114,7 +114,7 @@ return [
         'not_connected' => 'Noch nicht verbunden. Klicken Sie auf Verbinden, um den Zugriff auf Ihr Google-Konto zu erlauben.',
         'revoked' => 'Google hat diesen Zugriff widerrufen. Meist wurde die OAuth-App auf „Testing“ belassen — solche Tokens laufen nach etwa einer Woche ab — oder der Zugriff wurde unter myaccount.google.com entfernt. Verbinden Sie erneut.',
         'user_quota' => 'Ihr Google Drive ist voll. Geben Sie Speicher frei oder sichern Sie woanders.',
-        'folder_missing' => 'Der Backup-Ordner ist aus Ihrem Drive verschwunden. Verbinden Sie erneut; das Panel legt einen neuen an.',
+        'folder_missing' => 'Das Panel erreicht den Backup-Ordner nicht. Er wurde möglicherweise gelöscht, oder er gehört zu einem anderen Google-Konto oder OAuth-Client als dem jetzt verbundenen — das Panel sieht nur Ordner, die es selbst angelegt hat. Verbinden Sie erneut, dann wird ein neuer angelegt.',
         'denied' => 'Der Zugriff wurde im Google-Fenster abgelehnt. Es wurde nichts geändert.',
         'code_expired' => 'Diese Bestätigung wurde bereits verwendet oder ist abgelaufen. Klicken Sie auf Verbinden, um neu zu beginnen.',
         'bad_client' => 'Google kennt diese Client-ID nicht. Prüfen Sie, ob sie vollständig kopiert wurde, samt der Endung .apps.googleusercontent.com.',

@@ -114,7 +114,7 @@ return [
         'not_connected' => 'Aún no está conectado. Pulse Conectar para autorizar el acceso a su cuenta de Google.',
         'revoked' => 'Google ha revocado este acceso. Suele deberse a que la aplicación OAuth se dejó en «Testing» —Google caduca esos tokens en una semana aproximadamente— o a que se retiró el acceso en myaccount.google.com. Vuelva a conectar.',
         'user_quota' => 'Su Google Drive está lleno. Libere espacio o haga la copia en otro destino.',
-        'folder_missing' => 'La carpeta de copias ya no está en su Drive. Vuelva a conectar y el panel creará una nueva.',
+        'folder_missing' => 'El panel no puede acceder a la carpeta de copias. Puede que se haya eliminado, o que pertenezca a una cuenta de Google o un cliente OAuth distintos del conectado ahora: el panel solo ve las carpetas que él mismo creó. Conecte de nuevo y creará una nueva.',
         'denied' => 'Se rechazó el acceso en la pantalla de Google. No se ha cambiado nada.',
         'code_expired' => 'Esa aprobación ya se usó, o caducó. Pulse Conectar para empezar de nuevo.',
         'bad_client' => 'Google no reconoce ese ID de cliente. Compruebe que se copió entero, incluida la terminación .apps.googleusercontent.com.',

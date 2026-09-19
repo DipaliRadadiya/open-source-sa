@@ -114,7 +114,7 @@ return [
         'not_connected' => 'Ainda não conectado. Clique em Conectar para autorizar o acesso à sua conta Google.',
         'revoked' => 'O Google revogou este acesso. Normalmente o aplicativo OAuth ficou em "Testing" — o Google expira esses tokens em cerca de uma semana — ou o acesso foi removido em myaccount.google.com. Conecte novamente.',
         'user_quota' => 'Seu Google Drive está cheio. Libere espaço ou faça backup em outro destino.',
-        'folder_missing' => 'A pasta de backups sumiu do seu Drive. Conecte novamente e o painel criará outra.',
+        'folder_missing' => 'O painel não consegue acessar a pasta de backups. Ela pode ter sido excluída, ou pode pertencer a uma conta do Google ou a um cliente OAuth diferente do conectado agora — o painel só enxerga as pastas que ele mesmo criou. Conecte de novo e ele criará uma nova.',
         'denied' => 'O acesso foi recusado na tela do Google. Nada foi alterado.',
         'code_expired' => 'Essa aprovação já foi usada, ou expirou. Clique em Conectar para começar de novo.',
         'bad_client' => 'O Google não reconhece esse ID de cliente. Verifique se foi copiado inteiro, incluindo o final .apps.googleusercontent.com.',

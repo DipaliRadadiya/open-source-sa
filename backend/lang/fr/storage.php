@@ -114,7 +114,7 @@ return [
         'not_connected' => 'Pas encore connecté. Cliquez sur Connecter pour autoriser l’accès à votre compte Google.',
         'revoked' => 'Google a révoqué cet accès. Le plus souvent, l’application OAuth est restée en « Testing » — Google expire ces jetons au bout d’une semaine environ — ou l’accès a été retiré sur myaccount.google.com. Reconnectez-vous.',
         'user_quota' => 'Votre Google Drive est plein. Libérez de l’espace ou sauvegardez ailleurs.',
-        'folder_missing' => 'Le dossier de sauvegarde a disparu de votre Drive. Reconnectez-vous : le panneau en créera un nouveau.',
+        'folder_missing' => 'Le panneau n’atteint pas le dossier de sauvegarde. Il a peut-être été supprimé, ou il appartient à un compte Google ou à un client OAuth différent de celui connecté actuellement — le panneau ne voit que les dossiers qu’il a créés lui-même. Reconnectez-vous et il en créera un nouveau.',
         'denied' => 'L’accès a été refusé sur l’écran Google. Rien n’a été modifié.',
         'code_expired' => 'Cette approbation a déjà été utilisée, ou elle a expiré. Cliquez sur Connecter pour recommencer.',
         'bad_client' => 'Google ne reconnaît pas cet identifiant client. Vérifiez qu’il a été copié en entier, terminaison .apps.googleusercontent.com comprise.',
