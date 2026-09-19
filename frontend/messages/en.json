@@ -5302,7 +5302,8 @@
       "failedDriveQuota": "The last test failed {when} — Google refused the upload for lack of storage quota.",
       "failedDriveIncomplete": "The last test failed {when} — the key or the folder ID is missing.",
       "failedDavFull": "The last test failed {when} — the server is out of space.",
-      "failedDavReset": "The last test failed {when} — the server closed the connection without answering. On pCloud, two-factor authentication does this."
+      "failedDavReset": "The last test failed {when} — the server closed the connection without answering. On pCloud, two-factor authentication does this.",
+      "needsConnect": "Not connected yet — approve access to your Google account."
     },
     "form": {
       "provider": "Provider",
@@ -5393,7 +5394,8 @@
       "testFailed": "Saved, but the connection test failed. Check the keys and bucket.",
       "permissionsNote": "The key needs permission to upload, download and delete objects in this bucket. Delete matters too — backups remove old archives once they pass the retention limit you set.",
       "keyDocs": "Where do I find these keys?",
-      "permissionsNoteRemote": "The account needs to create, read and delete files in that directory — backups remove old archives when they pass the retention limit, so read-only access cannot work."
+      "permissionsNoteRemote": "The account needs to create, read and delete files in that directory — backups remove old archives when they pass the retention limit, so read-only access cannot work.",
+      "addedNeedsConnect": "Destination added. Approve access to your Google account to finish — use Connect on the row below."
     },
     "edit": {
       "title": "Edit destination",
@@ -5623,7 +5625,8 @@
       "automaticHint": "Runs the backup on a schedule instead of only when you press the button.",
       "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not.",
       "databaseExcludesHint": "Databases to leave out of the backup, one per line. Useful for caches and anything you can rebuild.",
-      "scheduleTimeZone": "Runs in project time ({timezone})"
+      "scheduleTimeZone": "Runs in project time ({timezone})",
+      "destinationNotConnected": "{name} has not been connected to your Google account yet, so backups sent there will fail."
     },
     "history": {
       "allApplications": "All sites",

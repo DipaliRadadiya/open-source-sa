@@ -64,12 +64,34 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
 
   const hasFirewall = typesPresent.includes(FIREWALL_RESOURCE_TYPE);
 
-  const plan = useMemo(
-    () => adoptionPlan({ items, ignoredKeys, selectedTypes: selected, includeFirewall }),
-    [items, ignoredKeys, selected, includeFirewall],
+  /*
+   * The types this adopt will actually run, computed ONCE.
+   *
+   * Firewall rules have no tick-box of their own — they are gated by the
+   * warning checkbox instead — so `selected` never contains them. This was
+   * added to the `only` list sent to the API but NOT to the list the summary
+   * counts, and the two quietly disagreed: ticking the box adopted firewall
+   * rules while the dialog said "Nothing will be added across 0 types" and
+   * disabled the button that would have done it.
+   *
+   * One value for both, so a future third reader cannot pick the wrong one.
+   */
+  const adopting = useMemo(
+    () => (includeFirewall ? [...selected, FIREWALL_RESOURCE_TYPE] : selected),
+    [selected, includeFirewall],
   );
 
-  const unmet = useMemo(() => unmetDependencies(selected), [selected]);
+  const plan = useMemo(
+    () => adoptionPlan({ items, ignoredKeys, selectedTypes: adopting, includeFirewall }),
+    [items, ignoredKeys, adopting, includeFirewall],
+  );
+
+  // `adopting`, not `selected` — the same list the count and the request use.
+  // Firewall rules have no dependency today so this changes nothing yet, which
+  // is exactly why it is worth fixing now: the last time two of these three
+  // read different lists, ticking a box adopted rules the dialog said it would
+  // not.
+  const unmet = useMemo(() => unmetDependencies(adopting), [adopting]);
 
   function toggleType(type, checked) {
     setPicked((current) => {
@@ -94,7 +116,7 @@ export function AdoptDialog({ open, onOpenChange, items, ignoredKeys, typesPrese
       pending={pending}
       onConfirm={() =>
         onConfirm({
-          only: includeFirewall ? [...selected, FIREWALL_RESOURCE_TYPE] : selected,
+          only: adopting,
           includeFirewall,
         })
       }

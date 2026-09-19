@@ -5302,7 +5302,8 @@
       "failedDriveQuota": "La última prueba falló {when}: Google rechazó la subida por falta de cuota.",
       "failedDriveIncomplete": "La última prueba falló {when}: falta la clave o el ID de la carpeta.",
       "failedDavFull": "La última prueba falló {when}: el servidor no tiene espacio.",
-      "failedDavReset": "La última prueba falló {when}: el servidor cerró la conexión sin responder. En pCloud, la verificación en dos pasos provoca esto."
+      "failedDavReset": "La última prueba falló {when}: el servidor cerró la conexión sin responder. En pCloud, la verificación en dos pasos provoca esto.",
+      "needsConnect": "Todavía sin conectar: aprueba el acceso a tu cuenta de Google."
     },
     "form": {
       "provider": "Proveedor",
@@ -5393,7 +5394,8 @@
       "testFailed": "Guardado, pero la prueba de conexión falló. Revisa las claves y el bucket.",
       "permissionsNote": "La clave necesita permiso para subir, descargar y eliminar objetos en este bucket. Eliminar también importa: las copias antiguas se borran cuando superan el límite de retención que definas.",
       "keyDocs": "¿Dónde encuentro estas claves?",
-      "permissionsNoteRemote": "La cuenta necesita crear, leer y eliminar archivos en ese directorio: las copias eliminan archivos antiguos al superar el límite de retención, así que el acceso de solo lectura no funciona."
+      "permissionsNoteRemote": "La cuenta necesita crear, leer y eliminar archivos en ese directorio: las copias eliminan archivos antiguos al superar el límite de retención, así que el acceso de solo lectura no funciona.",
+      "addedNeedsConnect": "Destino añadido. Aprueba el acceso a tu cuenta de Google para terminar: usa Conectar en la fila de abajo."
     },
     "edit": {
       "title": "Editar destino",
@@ -5623,7 +5625,8 @@
       "automaticHint": "Ejecuta la copia de seguridad de forma programada en lugar de solo cuando presiona el botón.",
       "fileExcludesHint": "Rutas a excluir de la copia de seguridad, una por línea. Vale la pena excluir cachés y registros; los archivos subidos, no.",
       "databaseExcludesHint": "Bases de datos que se excluirán de la copia de seguridad, una por línea. Útil para cachés y cualquier cosa que pueda reconstruir.",
-      "scheduleTimeZone": "Se ejecuta en hora del proyecto ({timezone})"
+      "scheduleTimeZone": "Se ejecuta en hora del proyecto ({timezone})",
+      "destinationNotConnected": "{name} aún no está conectado a tu cuenta de Google, así que las copias enviadas allí fallarán."
     },
     "history": {
       "allApplications": "Todos los sitios",

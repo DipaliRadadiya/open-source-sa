@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
+import { GoogleDriveConnect } from "@/components/integrations/storage/google-drive-connect";
 import {
   CheckCircle2,
   CircleHelp,
@@ -92,6 +93,24 @@ export function DestinationRow({
 
   // Written once, placed twice — inside the content column on a phone, in its
   // own column on a wide screen. Two copies of this markup is how they drift.
+  /*
+   * A Drive destination exists before anyone has approved it.
+   *
+   * The panel told people "Not connected yet. Use Connect to approve access"
+   * and then offered no Connect: the row's only recovery button was Replace
+   * credentials, gated on a different failure, and the real button lived at the
+   * bottom of the Edit dialog where nobody would look for it.
+   *
+   * Read from `config.connected` — the flag the API publishes for exactly this
+   * decision — rather than from the failed-test category. That category is
+   * currently wrong for this case anyway: the backend derives it with
+   * `Str::after($key, 'storage.test.')` and this driver's key is
+   * `storage.oauth.not_connected`, so the whole key comes through instead of
+   * the word. Reported separately; the UI does not need it to be right.
+   */
+  const needsConnect =
+    destination.provider === "google_drive_oauth" && destination.config?.connected === false;
+
   const facts = (
     <>
       <p className="text-foreground">
@@ -165,6 +184,18 @@ export function DestinationRow({
                 <Loader2 className="size-3 animate-spin" />
                 {t("row.testing")}
               </p>
+            ) : needsConnect ? (
+              /* Said once, where the action is. Not the red failed-test line
+                 as well — "the test failed" and "you have not connected yet"
+                 are the same fact told twice, and the second telling is the
+                 one with a button. */
+              <div className="space-y-1.5 pt-0.5">
+                <p className="flex items-start gap-1.5 text-xs text-warning">
+                  <TriangleAlert className="mt-0.5 size-3 shrink-0" />
+                  {t("row.needsConnect")}
+                </p>
+                {canManage ? <GoogleDriveConnect destination={destination} compact /> : null}
+              </div>
             ) : result ? (
               <div className="space-y-1.5 pt-0.5">
                 <p

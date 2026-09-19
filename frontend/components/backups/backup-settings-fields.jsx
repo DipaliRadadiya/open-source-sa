@@ -129,8 +129,26 @@ export function BackupSettingsFields({
   // the install where the one bucket being broken matters most.
   const chosenDestination =
     onlyDestination ?? destinations.find((d) => String(d.id) === String(destinationId)) ?? null;
+  /*
+   * Two ways a destination is not going to work, and both have to warn.
+   *
+   * A failed test is the obvious one. The second was opened by the Drive
+   * connect fix: adding a Drive destination no longer probes it, because
+   * approving access needs the destination to exist first and the probe could
+   * only ever fail. So a brand-new unconnected Drive has `last_test_success:
+   * null` — never asked — and the failed-test branch alone would have let it
+   * be chosen as a backup target in silence, to be discovered at 3 a.m.
+   *
+   * `config.connected` is the same flag the storage row reads, so the two
+   * screens cannot disagree about whether a destination is ready.
+   */
+  const notConnected =
+    chosenDestination?.provider === "google_drive_oauth" &&
+    chosenDestination?.config?.connected === false;
   const failingDestination =
-    chosenDestination && chosenDestination.last_test_success === false ? chosenDestination : null;
+    chosenDestination && (chosenDestination.last_test_success === false || notConnected)
+      ? chosenDestination
+      : null;
 
   // Narrowing what gets copied is silent data loss on a delay: every future
   // run drops something, and nobody finds out until a restore comes up short.
@@ -467,7 +485,9 @@ export function BackupSettingsFields({
                   <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs">
                     <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warning" />
                     <span>
-                      {t("destinationFailing", { name: failingDestination.name })}{" "}
+                      {notConnected
+                        ? t("destinationNotConnected", { name: failingDestination.name })
+                        : t("destinationFailing", { name: failingDestination.name })}{" "}
                       <Link
                         href="/integrations/storage"
                         target="_blank" rel="noreferrer" prefetch={false}

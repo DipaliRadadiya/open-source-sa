@@ -5302,7 +5302,8 @@
       "failedDriveQuota": "O último teste falhou {when} — o Google recusou o envio por falta de cota.",
       "failedDriveIncomplete": "O último teste falhou {when} — falta a chave ou o ID da pasta.",
       "failedDavFull": "O último teste falhou {when} — o servidor está sem espaço.",
-      "failedDavReset": "O último teste falhou {when} — o servidor fechou a conexão sem responder. No pCloud, a verificação em duas etapas causa isso."
+      "failedDavReset": "O último teste falhou {when} — o servidor fechou a conexão sem responder. No pCloud, a verificação em duas etapas causa isso.",
+      "needsConnect": "Ainda não conectado — aprove o acesso à sua conta Google."
     },
     "form": {
       "provider": "Provedor",
@@ -5393,7 +5394,8 @@
       "testFailed": "Salvo, mas o teste de conexão falhou. Verifique as chaves e o bucket.",
       "permissionsNote": "A chave precisa de permissão para enviar, baixar e excluir objetos neste bucket. Excluir também é importante — os backups removem arquivos antigos ao ultrapassarem o limite de retenção que você definir.",
       "keyDocs": "Onde encontro essas chaves?",
-      "permissionsNoteRemote": "A conta precisa criar, ler e excluir arquivos nesse diretório — os backups removem arquivos antigos ao passar do limite de retenção, então acesso somente leitura não funciona."
+      "permissionsNoteRemote": "A conta precisa criar, ler e excluir arquivos nesse diretório — os backups removem arquivos antigos ao passar do limite de retenção, então acesso somente leitura não funciona.",
+      "addedNeedsConnect": "Destino adicionado. Aprove o acesso à sua conta Google para concluir — use Conectar na linha abaixo."
     },
     "edit": {
       "title": "Editar destino",
@@ -5623,7 +5625,8 @@
       "automaticHint": "Executa a cópia de segurança de forma agendada em vez de apenas quando você aperta o botão.",
       "fileExcludesHint": "Caminhos a serem deixados fora da cópia de segurança, um por linha. Caches e logs valem a pena excluir; uploads, não.",
       "databaseExcludesHint": "Bancos de dados a serem excluídos da cópia de segurança, um por linha. Útil para caches e qualquer coisa que você possa reconstruir.",
-      "scheduleTimeZone": "Executa no horário do projeto ({timezone})"
+      "scheduleTimeZone": "Executa no horário do projeto ({timezone})",
+      "destinationNotConnected": "{name} ainda não foi conectado à sua conta Google, então os backups enviados para lá vão falhar."
     },
     "history": {
       "allApplications": "Todos os sites",

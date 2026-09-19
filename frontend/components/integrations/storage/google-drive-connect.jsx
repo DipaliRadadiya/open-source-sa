@@ -22,7 +22,15 @@ import { apiMessage } from "@/lib/api/error-message";
  * client is created, which is before there is a client ID to type into this
  * form and before this component is reachable at all.
  */
-export function GoogleDriveConnect({ destination }) {
+/**
+ * `compact` renders the button and nothing else, for the destination row.
+ *
+ * The row is where someone actually meets this problem — the panel tells them
+ * "use Connect" there — so the button has to be there. It is the same start()
+ * either way: one implementation of "ask for a consent URL and leave", because
+ * two would drift the moment one of them learned something.
+ */
+export function GoogleDriveConnect({ destination, compact = false }) {
   const t = useTranslations("storage.oauth");
   const [state, setState] = useState("idle");
   const [error, setError] = useState(null);
@@ -72,6 +80,25 @@ export function GoogleDriveConnect({ destination }) {
           {state === "starting" ? <Loader2 className="size-4 animate-spin" /> : null}
           {t("reconnect")}
         </Button>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="space-y-1.5">
+        <Button type="button" size="sm" className="h-7" onClick={start} disabled={state === "starting"}>
+          {state === "starting" ? <Loader2 className="size-3 animate-spin" /> : null}
+          {t("connect")}
+        </Button>
+        {/* Errors still surface here. A button that silently does nothing is
+            how the row would end up as confusing as the state it replaced. */}
+        {error ? (
+          <p className="flex items-start gap-1.5 text-xs text-destructive">
+            <TriangleAlert className="mt-0.5 size-3 shrink-0" />
+            {error}
+          </p>
+        ) : null}
       </div>
     );
   }

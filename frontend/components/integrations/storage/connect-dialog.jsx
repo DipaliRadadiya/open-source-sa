@@ -66,6 +66,23 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
       reset(DEFAULT_PRESET);
       router.refresh();
 
+      /*
+       * A Drive destination cannot pass this check on the way in.
+       *
+       * Approving access needs the destination to exist first — that is what
+       * the consent redirect is keyed to — so a brand-new one is never
+       * connected, and probing it always fails. The reader had just filled in
+       * a form correctly and got a red error toast for it, with no way to act
+       * on it from where they were standing.
+       *
+       * So say what actually happened and what comes next. The Connect button
+       * is on the row behind this dialog.
+       */
+      if (created && provider === "google_drive_oauth") {
+        toast.info(t("addedNeedsConnect"), { duration: 8000 });
+        return;
+      }
+
       // Saved is not the same as working. The check runs after the dialog
       // closes so it never blocks the save, and its verdict is what the user
       // is actually told.

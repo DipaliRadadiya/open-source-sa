@@ -5302,7 +5302,8 @@
       "failedDriveQuota": "Der letzte Test ist {when} fehlgeschlagen — Google lehnte den Upload mangels Speicherkontingent ab.",
       "failedDriveIncomplete": "Der letzte Test ist {when} fehlgeschlagen — Schlüssel oder Ordner-ID fehlt.",
       "failedDavFull": "Der letzte Test ist {when} fehlgeschlagen — auf dem Server ist kein Speicher mehr frei.",
-      "failedDavReset": "Der letzte Test ist {when} fehlgeschlagen — der Server hat die Verbindung ohne Antwort geschlossen. Bei pCloud verursacht die Zwei-Faktor-Authentifizierung das."
+      "failedDavReset": "Der letzte Test ist {when} fehlgeschlagen — der Server hat die Verbindung ohne Antwort geschlossen. Bei pCloud verursacht die Zwei-Faktor-Authentifizierung das.",
+      "needsConnect": "Noch nicht verbunden — geben Sie den Zugriff auf Ihr Google-Konto frei."
     },
     "form": {
       "provider": "Anbieter",
@@ -5393,7 +5394,8 @@
       "testFailed": "Gespeichert, aber der Verbindungstest ist fehlgeschlagen. Prüfen Sie Schlüssel und Bucket.",
       "permissionsNote": "Der Schlüssel braucht die Berechtigung, in diesem Bucket Objekte hochzuladen, herunterzuladen und zu löschen. Löschen zählt auch — Backups entfernen alte Archive, sobald sie die Aufbewahrungsgrenze überschreiten, die Sie gesetzt haben.",
       "keyDocs": "Wo finde ich diese Schlüssel?",
-      "permissionsNoteRemote": "Das Konto muss in diesem Verzeichnis Dateien anlegen, lesen und löschen können — Sicherungen entfernen alte Archive beim Überschreiten des Aufbewahrungslimits, reiner Lesezugriff funktioniert also nicht."
+      "permissionsNoteRemote": "Das Konto muss in diesem Verzeichnis Dateien anlegen, lesen und löschen können — Sicherungen entfernen alte Archive beim Überschreiten des Aufbewahrungslimits, reiner Lesezugriff funktioniert also nicht.",
+      "addedNeedsConnect": "Ziel hinzugefügt. Geben Sie zum Abschluss den Zugriff auf Ihr Google-Konto frei — über Verbinden in der Zeile unten."
     },
     "edit": {
       "title": "Ziel bearbeiten",
@@ -5623,7 +5625,8 @@
       "automaticHint": "Führt die Sicherung nach einem Zeitplan aus, statt nur auf Knopfdruck.",
       "fileExcludesHint": "Pfade, die von der Sicherung ausgeschlossen werden, einer pro Zeile. Caches und Protokolle lohnen sich auszuschließen; Uploads nicht.",
       "databaseExcludesHint": "Datenbanken, die von der Sicherung ausgeschlossen werden, eine pro Zeile. Nützlich für Caches und alles, was sich neu aufbauen lässt.",
-      "scheduleTimeZone": "Läuft in Projektzeit ({timezone})"
+      "scheduleTimeZone": "Läuft in Projektzeit ({timezone})",
+      "destinationNotConnected": "{name} ist noch nicht mit Ihrem Google-Konto verbunden — dorthin gesendete Sicherungen schlagen fehl."
     },
     "history": {
       "allApplications": "Alle Websites",

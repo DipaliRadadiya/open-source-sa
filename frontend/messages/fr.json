@@ -5302,7 +5302,8 @@
       "failedDriveQuota": "Le dernier test a échoué {when} — Google a refusé l’envoi faute de quota.",
       "failedDriveIncomplete": "Le dernier test a échoué {when} — la clé ou l’identifiant du dossier manque.",
       "failedDavFull": "Le dernier test a échoué {when} — le serveur n’a plus d’espace.",
-      "failedDavReset": "Le dernier test a échoué {when} — le serveur a fermé la connexion sans répondre. Sur pCloud, l’authentification à deux facteurs produit cela."
+      "failedDavReset": "Le dernier test a échoué {when} — le serveur a fermé la connexion sans répondre. Sur pCloud, l’authentification à deux facteurs produit cela.",
+      "needsConnect": "Pas encore connecté : autorisez l’accès à votre compte Google."
     },
     "form": {
       "provider": "Fournisseur",
@@ -5393,7 +5394,8 @@
       "testFailed": "Enregistré, mais le test de connexion a échoué. Vérifiez les clés et le bucket.",
       "permissionsNote": "La clé doit avoir les permissions pour téléverser, télécharger et supprimer des objets dans ce bucket. La suppression est importante — les sauvegardes effacent les anciennes archives une fois la limite de rétention dépassée.",
       "keyDocs": "Où trouver ces clés ?",
-      "permissionsNoteRemote": "Le compte doit pouvoir créer, lire et supprimer des fichiers dans ce répertoire — les sauvegardes suppriment les anciennes archives au-delà de la limite de rétention, un accès en lecture seule ne peut donc pas fonctionner."
+      "permissionsNoteRemote": "Le compte doit pouvoir créer, lire et supprimer des fichiers dans ce répertoire — les sauvegardes suppriment les anciennes archives au-delà de la limite de rétention, un accès en lecture seule ne peut donc pas fonctionner.",
+      "addedNeedsConnect": "Destination ajoutée. Autorisez l’accès à votre compte Google pour terminer : utilisez Connecter dans la ligne ci-dessous."
     },
     "edit": {
       "title": "Modifier la destination",
@@ -5623,7 +5625,8 @@
       "automaticHint": "Lance la sauvegarde selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
       "fileExcludesHint": "Chemins à exclure de la sauvegarde, un par ligne. Les caches et les logs méritent de l’être ; les téléversements, non.",
       "databaseExcludesHint": "Bases de données à exclure de la sauvegarde, une par ligne. Utile pour les caches et tout ce que vous pouvez reconstruire.",
-      "scheduleTimeZone": "S’exécute à l’heure du projet ({timezone})"
+      "scheduleTimeZone": "S’exécute à l’heure du projet ({timezone})",
+      "destinationNotConnected": "{name} n’est pas encore connecté à votre compte Google : les sauvegardes envoyées là échoueront."
     },
     "history": {
       "allApplications": "Tous les sites",
