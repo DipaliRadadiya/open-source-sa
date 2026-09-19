@@ -142,3 +142,47 @@ test("the pasted-a-URL warning survives", () => {
   assert.match(code, /LOOKS_LIKE_URL\.test/);
   assert.match(code, /t\("looksLikeUrl"\)/);
 });
+
+test("the provider marks are the brands' own colours", () => {
+  /*
+   * Krishna: "why you not use actual logo of git providers? why using black
+   * logo only?"
+   *
+   * They were drawn inline in `currentColor`, so all three rendered flat
+   * black. The original reasoning — a theme-following mark cannot clash with a
+   * dark page — is true and still cost the one property that makes a logo
+   * scannable: GitLab is orange, Bitbucket is blue, and people find those
+   * before they read a word.
+   *
+   * Files in `public/`, because that is already how this panel carries brand
+   * marks (`db-engines/`, `site-types/`). Git providers were the only set
+   * still hand-drawn.
+   */
+  const logo = read("components/integrations/git/provider-logo.jsx");
+  assert.match(logo, /github: \{ light: "github\.svg", dark: "github-white\.svg" \}/);
+  for (const file of ["github.svg", "github-white.svg", "gitlab.svg", "bitbucket.svg"]) {
+    assert.ok(fs.existsSync(`public/git-providers/${file}`), `missing ${file}`);
+  }
+  // The documented brand hexes, not an eyeballed approximation.
+  assert.match(fs.readFileSync("public/git-providers/gitlab.svg", "utf8"), /#FC6D26/);
+  assert.match(fs.readFileSync("public/git-providers/bitbucket.svg", "utf8"), /#0052CC/);
+  // GitHub's mark is near-black by brand, so the dark theme needs the cut.
+  assert.match(fs.readFileSync("public/git-providers/github-white.svg", "utf8"), /#FFFFFF/);
+});
+
+test("the applications table keeps its quiet marks", () => {
+  /*
+   * `site-type-logo` had already decided this on purpose: the provider sits
+   * beside the site-type logo in a column that is ALREADY a row of full-colour
+   * brand marks, and three more would make the column louder than the names.
+   * Colouring every mark unconditionally would have undone that silently, so
+   * the flat paths stayed behind a `mono` prop.
+   */
+  const logo = read("components/integrations/git/provider-logo.jsx");
+  assert.match(logo, /mono = false/);
+  assert.match(logo, /fill="currentColor"/);
+  assert.match(
+    read("components/applications/site-type-logo.jsx"),
+    /<ProviderLogo provider=\{provider\} className="size-5" mono \/>/,
+  );
+});

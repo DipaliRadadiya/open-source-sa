@@ -77,12 +77,12 @@ export function SiteTypeLogo({ name, provider, className, size = "h-7 w-12", lab
           one of them is "From Git repo" with the same mark otherwise, and which
           service it is is the one thing that distinguishes them. GitHub's own
           logo is a black cat-octopus and GitLab's an orange fox — these are
-          drawn in `currentColor` instead, because they sit in a list of
+          drawn in `currentColor` instead — `mono` — because they sit in a list of
           full-colour brand marks and three more would make the column louder
           than the names beside it. Unknown provider falls through to the
           generic git mark, which is what every git row used to show. */}
       {provider ? (
-        <ProviderLogo provider={provider} className="size-5" />
+        <ProviderLogo provider={provider} className="size-5" mono />
       ) : logo ? (
         // A local file a few KB in size, usually SVG — next/image cannot
         // optimise those without `dangerouslyAllowSVG`, and there is nothing
