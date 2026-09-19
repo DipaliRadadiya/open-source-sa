@@ -5304,9 +5304,9 @@
         "other": "Other",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google Drive (Workspace Shared Drive)",
+        "google_drive": "Google Drive (service account, legacy)",
         "pcloud": "pCloud",
-        "google_drive_oauth": "Google Drive (your own account)"
+        "google_drive_oauth": "Google Drive"
       },
       "name": "Name",
       "namePlaceholder": "e.g. Offsite backups",

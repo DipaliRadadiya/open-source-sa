@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createStorageDestinationSchema } from "../lib/schemas/storage.js";
-import { PRESETS, defaultConfig, providerForPreset } from "../lib/storage/providers.js";
+import { PRESETS, defaultConfig, providerForPreset, presetForProvider } from "../lib/storage/providers.js";
 
 const DIALOG = fs.readFileSync("components/integrations/storage/connect-dialog.jsx", "utf8");
 
@@ -124,4 +124,21 @@ test("a blank field is told it is blank, not that its format is wrong", () => {
     ["bucketFormat", "endpointFormat"],
     "a typed value still answers with the field's own rule",
   );
+});
+
+/*
+ * Google Drive is OAuth-only for new destinations. The service-account preset
+ * stays in the table but hidden, and deleting it would have been the worse bug:
+ * `presetForProvider` falls back to "other", which is an *S3* preset, so an
+ * existing service-account destination would open the S3 form on edit.
+ */
+test("the legacy Drive preset is hidden from the picker but still resolves", () => {
+  const offered = PRESETS.filter((p) => !p.legacy).map((p) => p.value);
+
+  assert.equal(offered.includes("google_drive"), false, "legacy Drive is still offered for new destinations");
+  assert.equal(offered.includes("google_drive_oauth"), true, "OAuth Drive is not offered");
+
+  // The thing that actually breaks a user's screen if this regresses.
+  assert.equal(presetForProvider("google_drive"), "google_drive");
+  assert.equal(presetForProvider("google_drive_oauth"), "google_drive_oauth");
 });

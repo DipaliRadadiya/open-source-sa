@@ -5304,9 +5304,9 @@
         "other": "その他",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google ドライブ（Workspace 共有ドライブ）",
+        "google_drive": "Google ドライブ（サービス アカウント・旧方式）",
         "pcloud": "pCloud",
-        "google_drive_oauth": "Google ドライブ（ご自身のアカウント）"
+        "google_drive_oauth": "Google ドライブ"
       },
       "name": "名前",
       "namePlaceholder": "例: オフサイトバックアップ",

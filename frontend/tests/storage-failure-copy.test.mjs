@@ -106,27 +106,27 @@ test("the host-key message says the connection was stopped, not that the host wa
   assert.doesNotMatch(en.storage.row.failedHostKey, /could not be reached/i);
 });
 
-test("the Drive form states the Shared-Drive constraint before the key is pasted", () => {
-  // A service account has no quota on a personal Drive, so such a destination
-  // can never work. Finding that out after filling the form in — or worse, at
-  // the first backup — is the failure this copy exists to prevent.
-  const en = JSON.parse(readFileSync("messages/en.json", "utf8"));
-  const warning = en.storage.form.help.drive_shared_only;
-
-  assert.match(warning, /shared drive/i);
-  assert.match(warning, /no storage of its own/i);
-
-  // The warning used to be a hardcoded Drive branch in the renderer; it is a
-  // lookup now, so the assertion follows it rather than pinning the old shape.
+test("the legacy Drive preset is no longer offered for new destinations", () => {
+  /*
+   * This test used to assert the opposite: that the form warned about the
+   * Shared-Drive constraint before anyone pasted a key. That warning existed
+   * because a service account has no quota on a personal Drive, so free Gmail
+   * users could not use Drive at all and were pointed at B2/R2 instead.
+   *
+   * OAuth removed the wall, so the sign came down with it. What is asserted now
+   * is the thing that would actually hurt somebody: the legacy preset must stay
+   * *resolvable* even though it is hidden, because `presetForProvider` falls
+   * back to "other" — an S3 preset — and an existing service-account
+   * destination would otherwise open the S3 form on edit.
+   */
   const providers = readFileSync("lib/storage/providers.js", "utf8");
-  assert.match(providers, /google_drive:\s*"help\.drive_shared_only"/);
 
+  assert.match(providers, /value:\s*"google_drive",\s*provider:\s*"google_drive",\s*legacy:\s*true/);
+  assert.doesNotMatch(providers, /providers:\s*\{\s*google_drive:/);
+
+  // The picker filters legacy entries; without this the old preset comes back.
   const form = readFileSync("components/integrations/storage/destination-form-fields.jsx", "utf8");
-
-  // Rendered as prose in the form, not hidden behind a tooltip or a title
-  // attribute where it would only be found by someone already looking.
-  assert.match(form, /warningFor\(preset\)/);
-  assert.match(form, /\{t\(warning\)\}/);
+  assert.match(form, /PRESETS\.filter\(\(p\) => !p\.legacy\)/);
 });
 
 test("the pCloud preset carries the vendor's own small-files caveat", () => {

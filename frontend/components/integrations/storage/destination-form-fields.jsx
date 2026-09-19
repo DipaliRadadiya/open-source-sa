@@ -75,7 +75,9 @@ export function DestinationFormFields({
               </SelectTrigger>
             </FormControl>
             <SelectContent>
-              {PRESETS.map((p) => (
+              {/* Legacy providers stay resolvable for destinations that already
+                  use them, but are not offered for new ones. */}
+              {PRESETS.filter((p) => !p.legacy).map((p) => (
                 <SelectItem key={p.value} value={p.value}>
                   {t(`providers.${p.value}`)}
                 </SelectItem>

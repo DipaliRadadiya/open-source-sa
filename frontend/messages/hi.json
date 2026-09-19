@@ -5304,9 +5304,9 @@
         "other": "अन्य",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google Drive (Workspace साझा ड्राइव)",
+        "google_drive": "Google Drive (सेवा खाता, पुराना)",
         "pcloud": "pCloud",
-        "google_drive_oauth": "Google Drive (आपका अपना खाता)"
+        "google_drive_oauth": "Google Drive"
       },
       "name": "नाम",
       "namePlaceholder": "जैसे बाहरी बैकअप",

@@ -46,7 +46,20 @@ export const PRESETS = [
   { value: "other", provider: "s3", endpointHint: "" },
   { value: "ftp", provider: "ftp" },
   { value: "sftp", provider: "sftp" },
-  { value: "google_drive", provider: "google_drive" },
+  /*
+   * Legacy: not offered for new destinations, but kept resolvable.
+   *
+   * OAuth replaced it — a service account has no quota of its own and could
+   * only ever write to a Workspace Shared Drive, which excluded every free
+   * Gmail account. Two entries both called Google Drive was the confusion this
+   * removes.
+   *
+   * Deleting the row outright would have been worse than the confusion:
+   * `presetForProvider` falls back to "other", which is an *S3* preset, so
+   * editing an existing service-account destination would have rendered the S3
+   * form. It stays here, hidden from the picker by `legacy`.
+   */
+  { value: "google_drive", provider: "google_drive", legacy: true },
   // The same service reached as the user rather than as a service account,
   // which is the only way a free Gmail account can use Drive at all.
   { value: "google_drive_oauth", provider: "google_drive_oauth" },
@@ -184,7 +197,10 @@ export const FIELDS = {
  */
 const WARNINGS = {
   presets: { pcloud: "help.pcloud_warning" },
-  providers: { google_drive: "help.drive_shared_only" },
+  // The Drive warning is gone with the preset it belonged to. It told free
+  // Gmail users to go elsewhere; OAuth means they no longer have to, so the
+  // sign comes down because the wall did.
+  providers: {},
 };
 
 export function warningFor(preset) {

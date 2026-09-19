@@ -5304,9 +5304,9 @@
         "other": "Другое",
         "ftp": "FTP",
         "sftp": "SFTP",
-        "google_drive": "Google Диск (общий диск Workspace)",
+        "google_drive": "Google Диск (сервисный аккаунт, устарело)",
         "pcloud": "pCloud",
-        "google_drive_oauth": "Google Диск (ваш аккаунт)"
+        "google_drive_oauth": "Google Диск"
       },
       "name": "Название",
       "namePlaceholder": "напр. «Резервные копии offsite»",
