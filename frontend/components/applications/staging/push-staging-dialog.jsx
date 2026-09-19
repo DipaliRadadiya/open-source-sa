@@ -3,9 +3,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ArrowUpFromLine, Loader2 } from "lucide-react";
+import {
+  ArrowUpFromLine,
+  Clock,
+  Database,
+  FileText,
+  Layers,
+  Loader2,
+  PowerOff,
+  Undo2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PUSH_MODES } from "@/lib/schemas/application-staging";
+
+const MODE_ICONS = { files: FileText, database: Database, full: Layers };
 import { pushApplicationStaging } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
 import { ChoiceField } from "@/components/ui/choice-field";
@@ -85,23 +96,55 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
         </AlertDialogHeader>
 
         <div className="space-y-4">
-          {/* Said before the choice, because it is true of both options and is
-              the part people do not expect: the site is down while this runs. */}
-          <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
-            {t("downtime")}
-          </p>
-
-          {/* Repeated here, not just on the card behind the dialog. The age of
-              the copy is the fact that decides whether this is routine or a
-              mistake, and it has to be readable at the moment of committing. */}
-          {staging?.created_at_human ? (
-            <p className="text-sm text-muted-foreground">
-              {t("copyAge", { age: staging.created_at_human })}
+          {/*
+           * The two costs, together, in one block and above the choice —
+           * they are true of every mode, and they are the parts people do not
+           * expect. They were a tinted paragraph and a line of grey body text
+           * either side of the options: the single most important sentence in
+           * the dialog, "there is no way back from this", was the smallest
+           * thing on screen and sat BELOW the decision it should inform.
+           *
+           * One block with two rows rather than two banners. Two full-width
+           * warnings shout equally and the second stops being read.
+           */}
+          <div className="space-y-2.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3.5 text-sm">
+            <p className="flex items-start gap-2.5">
+              <PowerOff className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+              <span>{t("downtime")}</span>
             </p>
-          ) : null}
+            <p className="flex items-start gap-2.5">
+              <Undo2 className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+              <span>
+                {t.rich("backupFirst", {
+                  link: (chunks) => (
+                    <Link
+                      href={`/applications/${appId}/backups`}
+                      className="font-medium underline underline-offset-4"
+                    >
+                      {chunks}
+                    </Link>
+                  ),
+                })}
+              </span>
+            </p>
+          </div>
 
-          <div className="space-y-1.5">
-            <Label hint={t("whatToPushHint")}>{t("whatToPush")}</Label>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label hint={t("whatToPushHint")}>{t("whatToPush")}</Label>
+              {/*
+               * The age of the copy decides whether this push is routine or a
+               * mistake, so it belongs beside the choice it informs. As a bare
+               * grey line floating between a red panel and a heading it
+               * belonged to neither of them.
+               */}
+              {staging?.created_at_human ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
+                  <Clock className="size-3.5 shrink-0" aria-hidden />
+                  {t("copyAge", { age: staging.created_at_human })}
+                </span>
+              ) : null}
+            </div>
             <ChoiceField
               value={mode}
               onChange={setMode}
@@ -114,26 +157,19 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
                 value,
                 label: t(`modes.${value}.label`),
                 hint: t(`modes.${value}.description`),
+                // Files, a database, or both: three different kinds of thing,
+                // which is the case an icon actually helps with.
+                icon: MODE_ICONS[value],
               }))}
             />
           </div>
 
-          {/* Offered here rather than left as advice: a push cannot be undone,
-              and the panel can take a backup in one click. */}
-          <p className="text-sm text-muted-foreground">
-            {t.rich("backupFirst", {
-              link: (chunks) => (
-                <Link
-                  href={`/applications/${appId}/backups`}
-                  className="font-medium text-foreground underline underline-offset-4"
-                >
-                  {chunks}
-                </Link>
-              ),
-            })}
-          </p>
-
-          <div className="space-y-1.5">
+          {/*
+           * The gate, in a surface of its own. As a loose label and input at
+           * the bottom of a long dialog it read as one more field; it is the
+           * last thing between a click and an irreversible action.
+           */}
+          <div className="space-y-1.5 rounded-lg border bg-muted/30 p-3.5">
             {/* The most dangerous action in the panel, and the domain is the
                 only thing standing in front of it — no reason to make it a
                 transcription test as well as a decision. */}
@@ -149,7 +185,10 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
               autoComplete="off"
               spellCheck={false}
               placeholder={domain}
-              className={cn("font-mono", matches && "border-success focus-visible:border-success")}
+              className={cn(
+                "bg-background font-mono",
+                matches && "border-success focus-visible:border-success",
+              )}
             />
           </div>
         </div>

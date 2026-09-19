@@ -49,12 +49,20 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
+          // max-h + overflow-y-auto, because nothing here bounded the height.
+          // Measured on the staging push dialog: 717px of content in a 700px
+          // window, clipped 8px at the top and 9px at the bottom with no way
+          // to scroll to either — on a shorter laptop the confirm button
+          // itself goes. A dialog that cannot be fully read is worse than an
+          // ugly one, and it was the SHARED component that had no bound, so
+          // every alert dialog in the panel could do this.
+          //
           // w-[calc(100%-2rem)], not w-full: max-w-xs is 320px, which IS the
           // viewport on a 320px phone, so the dialog sat edge to edge with no
           // gutter. Width and max-width are separate properties — the calc
           // keeps a 16px margin on small screens while the max-w caps it on
           // large ones. DialogContent already did this; this one had drifted.
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl bg-popover p-4 text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props} />

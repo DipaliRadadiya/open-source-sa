@@ -11,11 +11,15 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
  * dropdown option called "Key only" makes them translate jargon before they can
  * choose. Here the option IS the sentence, and its effect sits underneath it.
  *
- * `options`: [{ value, label, hint, tone, disabledReason }] — `tone: "warning"`
+ * `options`: [{ value, label, hint, icon, tone, disabledReason }] — `tone: "warning"`
  * tints the option that weakens the server, so it reads as a cost rather than a
  * choice with no downside. `disabledReason` blocks one option and says why, in
  * place of its hint: the alternative is letting the user pick it, confirm a
  * frightening dialog, and only then be told the API will not allow it.
+ *
+ * `icon` is optional and only earns its place where the options are things of
+ * different KINDS — files versus a database versus both. On a list of degrees
+ * of one thing it is decoration.
  */
 /**
  * `variant="card"` gives each option a border and tints the chosen one.
@@ -80,6 +84,16 @@ export function ChoiceField({ value, onChange, options, disabled, name, classNam
               disabled={disabled || blocked}
               className="mt-0.5"
             />
+            {option.icon ? (
+              <span
+                className={cn(
+                  "mt-px flex size-7 shrink-0 items-center justify-center rounded-md transition-colors",
+                  checked ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+                )}
+              >
+                <option.icon className="size-4" aria-hidden />
+              </span>
+            ) : null}
             <span className="space-y-0.5">
               {/* Weight is what marks the current choice in text — it survives
                   greyscale and colour-blindness, which a tint does not. */}
