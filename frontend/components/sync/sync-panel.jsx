@@ -129,7 +129,29 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
   async function begin(mode, options = {}) {
     setStarting(true);
     try {
-      const { data } = await startSync({ mode, ...options });
+      const { data } = await startSync({
+        /*
+         * A scan always looks at the firewall; only ADOPTING it is opt-in.
+         *
+         * Without this the feature was unreachable. The scan did not ask for
+         * firewall rules, so `FirewallRuleDiscoverer` returned nothing, so no
+         * firewall items were in the results — and the checkbox that opts into
+         * adopting them only renders when firewall items are in the results.
+         * A loop with no way in: the rules could never be adopted through the
+         * panel at all.
+         *
+         * Scanning is read-only — it runs `ufw status numbered` and records
+         * what it sees. The risk the opt-in exists for is a half-imported rule
+         * list becoming the screen you later edit the firewall from, and that
+         * happens at adopt time, where the checkbox stays, unticked.
+         *
+         * `apply` passes its own value from that checkbox, and the spread
+         * below is what lets it win.
+         */
+        includeFirewall: mode === "preview",
+        mode,
+        ...options,
+      });
       const parsed = syncRunResponseSchema.safeParse(data);
       if (!parsed.success || !parsed.data.sync) throw new Error("shape");
 
