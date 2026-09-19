@@ -2910,16 +2910,18 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "{provider} verbinden",
-      "subtitle": "Fügen Sie ein Token ein, damit das Panel Ihre Repositories lesen kann.",
+      "subtitle": "Token einfügen. {brand} liest nur Ihre Repositories und Branches — es pusht nie.",
+      "scopeHint_github": "Den Geltungsbereich <scope>repo</scope> ankreuzen. Mehr wird nicht benötigt.",
+      "scopeHint_gitlab": "<scope>read_repository</scope> und <scope>read_api</scope> ankreuzen und <option>Legacy-Token</option> wählen — der neuere feingranulare Typ bietet sie nicht.",
+      "scopeHint_bitbucket": "Nur <scope>read:repository:bitbucket</scope> ankreuzen. Ein auf ein Repository beschränktes Token listet nur dieses auf.",
       "nameLabel": "Name",
       "namePlaceholder": "{provider} Arbeit",
       "nameHelp": "Ein Name für Sie. So erscheint dieses Konto beim Anlegen einer Anwendung.",
       "optional": "optional",
       "createToken": "Token bei {provider} erstellen",
       "looksLikeUrl": "Das sieht nach einer Webadresse aus, nicht nach einem Token.",
-      "bitbucketToken": "Setzen Sie im Schritt zu den Scopes nur <scope>read:repository:bitbucket</scope> — „View your repositories“. Mehr wird nicht gebraucht.",
-      "bitbucketScope": "Ein Token für nur ein Repository verbindet sich und zeigt dann auch nur dieses Repository. Das ist der Zugriff, den Sie erteilt haben, kein Fehler.",
       "back": "Zurück",
+      "change": "Ändern",
       "cancel": "Abbrechen",
       "submit": "Verbinden",
       "verifying": "Wird mit {provider} geprüft…",
@@ -2935,8 +2937,7 @@
       "fieldHelp": {
         "gitlab_host": "Nur für ein selbst gehostetes GitLab. Für gitlab.com leer lassen. Nutzen Sie die Adresse, unter der Sie sich anmelden, etwa https://gitlab.example.com — nicht die Adresse eines Projekts.",
         "bitbucket_workspace": "Die Workspace-ID aus Ihrer Bitbucket-Adresse: bitbucket.org/workspace-id/repository."
-      },
-      "gitlabLegacy": "Wählen Sie auf der Token-Seite <option>Legacy token</option>. Der neuere Fine-grained-Typ bietet die Scopes oben nicht."
+      }
     },
     "edit": {
       "title": "Konto bearbeiten",

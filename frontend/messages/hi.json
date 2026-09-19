@@ -2910,16 +2910,18 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "{provider} जोड़ें",
-      "subtitle": "टोकन पेस्ट करें ताकि पैनल आपकी रिपॉज़िटरी पढ़ सके।",
+      "subtitle": "टोकन पेस्ट करें। {brand} केवल आपके रिपॉज़िटरी और ब्रांच पढ़ता है — यह कभी पुश नहीं करता।",
+      "scopeHint_github": "<scope>repo</scope> स्कोप चुनें। और कुछ ज़रूरी नहीं है।",
+      "scopeHint_gitlab": "<scope>read_repository</scope> और <scope>read_api</scope> चुनें, और <option>लेगेसी टोकन</option> चुनें — नया फ़ाइन-ग्रेन्ड प्रकार ये नहीं देता।",
+      "scopeHint_bitbucket": "केवल <scope>read:repository:bitbucket</scope> चुनें। एक ही रिपॉज़िटरी तक सीमित टोकन केवल वही दिखाएगा।",
       "nameLabel": "नाम",
       "namePlaceholder": "काम वाला {provider}",
       "nameHelp": "आपकी सुविधा के लिए एक नाम। ऐप्लिकेशन बनाते समय यह खाता इसी नाम से दिखेगा।",
       "optional": "वैकल्पिक",
       "createToken": "{provider} पर टोकन बनाएँ",
       "looksLikeUrl": "यह टोकन नहीं, वेब पता लग रहा है।",
-      "bitbucketToken": "स्कोप्स वाले चरण में सिर्फ़ <scope>read:repository:bitbucket</scope> — \"View your repositories\" चुनें। और कुछ ज़रूरी नहीं है।",
-      "bitbucketScope": "किसी एक रिपॉज़िटरी तक सीमित टोकन जुड़ जाएगा और केवल वही रिपॉज़िटरी दिखाएगा। यह आपकी दी हुई पहुँच है, कोई गड़बड़ी नहीं।",
       "back": "पीछे",
+      "change": "बदलें",
       "cancel": "रद्द करें",
       "submit": "जोड़ें",
       "verifying": "{provider} से जाँच हो रही है…",
@@ -2935,8 +2937,7 @@
       "fieldHelp": {
         "gitlab_host": "केवल सेल्फ-होस्टेड GitLab के लिए। gitlab.com के लिए इसे खाली छोड़ें। वही पता डालें जिससे आप साइन इन करते हैं, जैसे https://gitlab.example.com — किसी प्रोजेक्ट का पता नहीं।",
         "bitbucket_workspace": "आपके Bitbucket पते से वर्कस्पेस आईडी: bitbucket.org/workspace-id/repository।"
-      },
-      "gitlabLegacy": "टोकन पेज पर <option>Legacy token</option> चुनें। नया fine-grained प्रकार ऊपर बताए गए scopes नहीं देता।"
+      }
     },
     "edit": {
       "title": "खाता संपादित करें",

@@ -2910,16 +2910,18 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Connecter {provider}",
-      "subtitle": "Collez un token pour que le panneau puisse lire vos dépôts.",
+      "subtitle": "Collez un jeton. {brand} lit uniquement vos dépôts et vos branches — il n'envoie jamais rien.",
+      "scopeHint_github": "Cochez la portée <scope>repo</scope>. Rien d'autre n'est nécessaire.",
+      "scopeHint_gitlab": "Cochez <scope>read_repository</scope> et <scope>read_api</scope>, et choisissez <option>Jeton hérité</option> — le nouveau type granulaire ne les propose pas.",
+      "scopeHint_bitbucket": "Cochez uniquement <scope>read:repository:bitbucket</scope>. Un jeton limité à un dépôt n'affichera que celui-ci.",
       "nameLabel": "Nom",
       "namePlaceholder": "Compte {provider}",
       "nameHelp": "Un nom pour vous. C'est ainsi qu'apparaît ce compte quand vous créez une application.",
       "optional": "facultatif",
       "createToken": "Créer un jeton sur {provider}",
       "looksLikeUrl": "Cela ressemble à une adresse web plutôt qu'à un token.",
-      "bitbucketToken": "À l'étape des portées, cochez uniquement <scope>read:repository:bitbucket</scope> — « View your repositories ». Rien d'autre n'est nécessaire.",
-      "bitbucketScope": "Un token limité à un seul dépôt se connectera et n'affichera que ce dépôt. C'est l'accès que vous avez accordé, pas une erreur.",
       "back": "Retour",
+      "change": "Modifier",
       "cancel": "Annuler",
       "submit": "Connecter",
       "verifying": "Vérification auprès de {provider}…",
@@ -2935,8 +2937,7 @@
       "fieldHelp": {
         "gitlab_host": "Uniquement pour un GitLab auto-hébergé. Laissez vide pour gitlab.com. Utilisez l'adresse à laquelle vous vous connectez, comme https://gitlab.example.com — pas l'adresse d'un projet.",
         "bitbucket_workspace": "L'identifiant d'espace de travail depuis votre adresse Bitbucket : bitbucket.org/identifiant-espace/depot."
-      },
-      "gitlabLegacy": "Sur la page du token, choisissez <option>Legacy token</option>. Le nouveau type à granularité fine ne propose pas les portées ci-dessus."
+      }
     },
     "edit": {
       "title": "Modifier le compte",

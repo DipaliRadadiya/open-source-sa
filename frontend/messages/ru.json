@@ -2910,16 +2910,18 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Подключить {provider}",
-      "subtitle": "Вставьте токен, чтобы панель могла читать ваши репозитории.",
+      "subtitle": "Вставьте токен. {brand} только читает ваши репозитории и ветки — он никогда ничего не отправляет.",
+      "scopeHint_github": "Отметьте область <scope>repo</scope>. Больше ничего не нужно.",
+      "scopeHint_gitlab": "Отметьте <scope>read_repository</scope> и <scope>read_api</scope> и выберите <option>Устаревший токен</option> — новый детальный тип их не предлагает.",
+      "scopeHint_bitbucket": "Отметьте только <scope>read:repository:bitbucket</scope>. Токен, ограниченный одним репозиторием, покажет только его.",
       "nameLabel": "Название",
       "namePlaceholder": "Рабочий {provider}",
       "nameHelp": "Название для вас. Так этот аккаунт будет отображаться при создании приложения.",
       "optional": "необязательно",
       "createToken": "Создайте токен в {provider}",
       "looksLikeUrl": "Похоже на веб-адрес, а не на токен.",
-      "bitbucketToken": "На шаге с областями отметьте только <scope>read:repository:bitbucket</scope> — «Просмотр ваших репозиториев». Больше ничего не требуется.",
-      "bitbucketScope": "Токен с областью для одного репозитория подключится, но покажет только этот репозиторий. Это предоставленный вами доступ, а не ошибка.",
       "back": "Назад",
+      "change": "Изменить",
       "cancel": "Отмена",
       "submit": "Подключить",
       "verifying": "Проверка в {provider}…",
@@ -2935,8 +2937,7 @@
       "fieldHelp": {
         "gitlab_host": "Только для собственного GitLab. Для gitlab.com оставьте поле пустым. Укажите адрес, по которому вы входите, например https://gitlab.example.com — не адрес проекта.",
         "bitbucket_workspace": "ID рабочей области из вашего адреса Bitbucket: bitbucket.org/workspace-id/repository."
-      },
-      "gitlabLegacy": "На странице токена выберите <option>Legacy token</option>. У нового тонко настроенного типа нет указанных выше областей."
+      }
     },
     "edit": {
       "title": "Изменить аккаунт",

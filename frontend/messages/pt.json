@@ -2910,16 +2910,18 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Conectar {provider}",
-      "subtitle": "Cole um token para que o painel possa ler seus repositórios.",
+      "subtitle": "Cole um token. O {brand} apenas lê os seus repositórios e ramos — nunca envia alterações.",
+      "scopeHint_github": "Marque o âmbito <scope>repo</scope>. Não é preciso mais nada.",
+      "scopeHint_gitlab": "Marque <scope>read_repository</scope> e <scope>read_api</scope>, e escolha <option>Token antigo</option> — o novo tipo granular não os oferece.",
+      "scopeHint_bitbucket": "Marque apenas <scope>read:repository:bitbucket</scope>. Um token limitado a um repositório mostrará só esse.",
       "nameLabel": "Nome",
       "namePlaceholder": "Trabalho {provider}",
       "nameHelp": "Um nome para você. É assim que esta conta aparece ao criar uma aplicação.",
       "optional": "opcional",
       "createToken": "Crie um token no {provider}",
       "looksLikeUrl": "Isso parece um endereço web em vez de um token.",
-      "bitbucketToken": "Na etapa de escopos, marque apenas <scope>read:repository:bitbucket</scope> — \"View your repositories\". Nada além disso é necessário.",
-      "bitbucketScope": "Um token com escopo para um único repositório será conectado e mostrará apenas esse repositório. Esse é o acesso que você concedeu, não um erro.",
       "back": "Voltar",
+      "change": "Alterar",
       "cancel": "Cancelar",
       "submit": "Conectar",
       "verifying": "Verificando com {provider}…",
@@ -2935,8 +2937,7 @@
       "fieldHelp": {
         "gitlab_host": "Apenas para um GitLab auto-hospedado. Deixe em branco para gitlab.com. Use o endereço em que você faz login, como https://gitlab.example.com — não o endereço de um projeto.",
         "bitbucket_workspace": "O ID do workspace do seu endereço Bitbucket: bitbucket.org/workspace-id/repository."
-      },
-      "gitlabLegacy": "Na página do token, escolha <option>Legacy token</option>. O novo tipo de permissões granulares não oferece os escopos acima."
+      }
     },
     "edit": {
       "title": "Editar conta",

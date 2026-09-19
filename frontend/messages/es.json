@@ -2910,16 +2910,18 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Conectar {provider}",
-      "subtitle": "Pega un token para que el panel pueda leer tus repositorios.",
+      "subtitle": "Pega un token. {brand} solo lee tus repositorios y ramas: nunca envía cambios.",
+      "scopeHint_github": "Marca el permiso <scope>repo</scope>. No hace falta nada más.",
+      "scopeHint_gitlab": "Marca <scope>read_repository</scope> y <scope>read_api</scope>, y elige <option>Token heredado</option>: el nuevo tipo granular no los ofrece.",
+      "scopeHint_bitbucket": "Marca solo <scope>read:repository:bitbucket</scope>. Un token limitado a un repositorio solo mostrará ese.",
       "nameLabel": "Nombre",
       "namePlaceholder": "{provider} del trabajo",
       "nameHelp": "Un nombre para ti. Así aparecerá esta cuenta al crear una aplicación.",
       "optional": "opcional",
       "createToken": "Crear un token en {provider}",
       "looksLikeUrl": "Eso parece una dirección web, no un token.",
-      "bitbucketToken": "En el paso de permisos, marca solo <scope>read:repository:bitbucket</scope> — \"View your repositories\". No hace falta nada más.",
-      "bitbucketScope": "Un token limitado a un repositorio se conectará y mostrará solo ese repositorio. Ese es el acceso que concediste, no un error.",
       "back": "Atrás",
+      "change": "Cambiar",
       "cancel": "Cancelar",
       "submit": "Conectar",
       "verifying": "Comprobando con {provider}…",
@@ -2935,8 +2937,7 @@
       "fieldHelp": {
         "gitlab_host": "Solo para un GitLab autoalojado. Déjalo vacío para gitlab.com. Usa la dirección con la que inicias sesión, como https://gitlab.example.com, no la de un proyecto.",
         "bitbucket_workspace": "El ID del espacio de trabajo de tu dirección de Bitbucket: bitbucket.org/id-del-espacio/repositorio."
-      },
-      "gitlabLegacy": "En la página del token, elige <option>Token heredado</option>. El nuevo tipo granular no ofrece los permisos indicados arriba."
+      }
     },
     "edit": {
       "title": "Editar cuenta",

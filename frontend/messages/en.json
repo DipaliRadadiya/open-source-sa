@@ -2910,16 +2910,18 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Connect {provider}",
-      "subtitle": "Paste a token so the panel can read your repositories.",
+      "subtitle": "Paste a token. {brand} only reads your repositories and branches — it never pushes.",
+      "scopeHint_github": "Tick the <scope>repo</scope> scope. Nothing else is needed.",
+      "scopeHint_gitlab": "Tick <scope>read_repository</scope> and <scope>read_api</scope>, and choose <option>Legacy token</option> — the newer fine-grained type does not offer them.",
+      "scopeHint_bitbucket": "Tick <scope>read:repository:bitbucket</scope> only. A token scoped to one repository will list just that one.",
       "nameLabel": "Name",
       "namePlaceholder": "Work {provider}",
       "nameHelp": "A name for you. It is how this account appears when you create an application.",
       "optional": "optional",
       "createToken": "Create a token on {provider}",
       "looksLikeUrl": "That looks like a web address rather than a token.",
-      "bitbucketToken": "On the scopes step, tick only <scope>read:repository:bitbucket</scope> — \"View your repositories\". Nothing else is needed.",
-      "bitbucketScope": "A token scoped to one repository will connect and then show only that repository. That is the access you granted, not an error.",
       "back": "Back",
+      "change": "Change",
       "cancel": "Cancel",
       "submit": "Connect",
       "verifying": "Checking with {provider}…",
@@ -2935,8 +2937,7 @@
       "fieldHelp": {
         "gitlab_host": "Only for a self-hosted GitLab. Leave this empty for gitlab.com. Use the address you sign in at, like https://gitlab.example.com — not the address of a project.",
         "bitbucket_workspace": "The workspace ID from your Bitbucket address: bitbucket.org/workspace-id/repository."
-      },
-      "gitlabLegacy": "On the token page, choose <option>Legacy token</option>. The newer fine-grained type does not offer the scopes above."
+      }
     },
     "edit": {
       "title": "Edit account",
