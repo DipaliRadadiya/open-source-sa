@@ -21,6 +21,10 @@ const FILLED = {
   sftp: { host: "sftp.example.com", username: "u", password: "p" },
   webdav: { base_uri: "https://webdav.pcloud.com", username: "u", password: "p" },
   google_drive: { service_account_json: '{"type":"service_account"}', folder_id: "abc123" },
+  // No folder id and no key file: the panel creates its own folder, and the
+  // refresh token is written by the connect flow rather than typed. Two fields
+  // is the whole form.
+  google_drive_oauth: { client_id: "123-abc.apps.googleusercontent.com", client_secret: "shh" },
 };
 
 test("the schema validates the shape the form actually submits", () => {

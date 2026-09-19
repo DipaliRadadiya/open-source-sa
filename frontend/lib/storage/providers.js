@@ -47,6 +47,9 @@ export const PRESETS = [
   { value: "ftp", provider: "ftp" },
   { value: "sftp", provider: "sftp" },
   { value: "google_drive", provider: "google_drive" },
+  // The same service reached as the user rather than as a service account,
+  // which is the only way a free Gmail account can use Drive at all.
+  { value: "google_drive_oauth", provider: "google_drive_oauth" },
   { value: "pcloud", provider: "webdav" },
 ];
 
@@ -65,6 +68,10 @@ const KEY_DOCS = {
   b2: "https://www.backblaze.com/docs/cloud-storage-application-keys",
   wasabi: "https://docs.wasabi.com/v1/docs/create-a-user-and-access-key",
   spaces: "https://docs.digitalocean.com/products/spaces/how-to/manage-access/",
+  // Not a key to copy but a client to create. The setup is six steps in
+  // Google Cloud Console, and the one nobody guesses is choosing the "TVs and
+  // Limited Input devices" client type.
+  google_drive_oauth: "https://console.cloud.google.com/apis/credentials",
 };
 
 export function keyDocsUrl(preset) {
@@ -130,6 +137,16 @@ export const FIELDS = {
     { name: "base_uri", kind: TEXT, required: true, mono: true },
     { name: "username", kind: TEXT, required: true, mono: true },
     { name: "password", kind: SECRET, required: true },
+  ],
+  google_drive_oauth: [
+    // Two fields and no folder id. The panel creates its own folder, because
+    // the `drive.file` scope can only see files this app made — so there is
+    // nothing to browse for and nothing to paste.
+    //
+    // The refresh token is never a field: it is written by the connect flow
+    // and never shown, so it appears nowhere in this list.
+    { name: "client_id", kind: TEXT, required: true, mono: true },
+    { name: "client_secret", kind: SECRET, required: true, mono: true },
   ],
   google_drive: [
     // One paste and one id. No OAuth means no client id, no secret, no refresh
@@ -215,6 +232,16 @@ export function describeDestination(destination) {
     return {
       location: prefix || null,
       address: config.base_uri || null,
+    };
+  }
+
+  if (destination?.provider === "google_drive_oauth") {
+    // Whose Drive, not which folder. The folder is ours and was never chosen
+    // by anyone, so naming it would answer a question nobody asked; the
+    // account is the thing an operator needs to recognise months later.
+    return {
+      location: prefix || null,
+      address: config.account_email || null,
     };
   }
 

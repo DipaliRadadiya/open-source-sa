@@ -5305,7 +5305,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (Drive compartilhado do Workspace)",
-        "pcloud": "pCloud"
+        "pcloud": "pCloud",
+        "google_drive_oauth": "Google Drive (sua própria conta)"
       },
       "name": "Nome",
       "namePlaceholder": "ex.: Backups offsite",
@@ -5334,7 +5335,9 @@
         "passphrase": "Frase da chave",
         "service_account_json": "Chave da conta de serviço (JSON)",
         "folder_id": "ID da pasta do Drive compartilhado",
-        "base_uri": "URL do servidor"
+        "base_uri": "URL do servidor",
+        "client_id": "ID do cliente",
+        "client_secret": "Segredo do cliente"
       },
       "help": {
         "host": "Nome do host ou endereço IP do servidor que guardará os backups.",
@@ -5352,7 +5355,9 @@
         "bucket": "O nome do bucket onde armazenar as cópias de segurança. Ele já deve existir — nós não o criamos para você.",
         "region": "A região em que o bucket está. Ela precisa corresponder, caso contrário a conexão será recusada.",
         "access_key": "A parte pública das credenciais desta conta de armazenamento.",
-        "secret_key": "A parte secreta das credenciais. Trate-a como uma senha — quem a tiver poderá ler suas cópias de segurança."
+        "secret_key": "A parte secreta das credenciais. Trate-a como uma senha — quem a tiver poderá ler suas cópias de segurança.",
+        "client_id": "No Google Cloud Console → Credenciais. Termina em .apps.googleusercontent.com.",
+        "client_secret": "Aparece ao lado do ID do cliente quando você o cria. Trate como uma senha."
       },
       "plainFtpWarning": "O TLS está desligado. A senha e todos os backups serão enviados sem criptografia.",
       "prefixHintRemote": "Pasta opcional dentro do diretório remoto, para que um servidor possa guardar vários sites.",
@@ -5407,6 +5412,19 @@
       "confirm": "Excluir destino",
       "removed": "Destino excluído.",
       "failed": "Não foi possível excluir."
+    },
+    "oauth": {
+      "intro": "Autorize o acesso à sua conta Google. É o seu próprio espaço do Drive que é usado, então uma conta Gmail gratuita funciona.",
+      "connect": "Conectar",
+      "reconnect": "Reconectar",
+      "connected": "Conectado ao Google Drive",
+      "connectedAs": "Conectado como {account}",
+      "waiting": "Aguardando aprovação…",
+      "step1": "1. Abra este link em qualquer dispositivo:",
+      "step2": "2. Digite este código e aprove:",
+      "scopeNote": "O painel só enxerga os arquivos que ele criou — não o resto do seu Drive.",
+      "code_expired": "O código expirou antes de ser aprovado. Clique em Conectar para obter outro.",
+      "start_failed": "Não foi possível iniciar o login do Google. Tente de novo em instantes."
     }
   },
   "backups": {

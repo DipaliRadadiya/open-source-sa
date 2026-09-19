@@ -5305,7 +5305,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google ドライブ（Workspace 共有ドライブ）",
-        "pcloud": "pCloud"
+        "pcloud": "pCloud",
+        "google_drive_oauth": "Google ドライブ（ご自身のアカウント）"
       },
       "name": "名前",
       "namePlaceholder": "例: オフサイトバックアップ",
@@ -5334,7 +5335,9 @@
         "passphrase": "鍵のパスフレーズ",
         "service_account_json": "サービスアカウントキー (JSON)",
         "folder_id": "共有ドライブのフォルダー ID",
-        "base_uri": "サーバー URL"
+        "base_uri": "サーバー URL",
+        "client_id": "クライアント ID",
+        "client_secret": "クライアント シークレット"
       },
       "help": {
         "host": "バックアップを保存するサーバーのホスト名または IP アドレス。",
@@ -5352,7 +5355,9 @@
         "bucket": "バックアップを保存するバケットの名前です。バケットはすでに存在している必要があります。こちらでは作成しません。",
         "region": "バケットが存在するリージョンです。一致していないと接続は拒否されます。",
         "access_key": "このストレージアカウントの認証情報の公開側の半分です。",
-        "secret_key": "認証情報の秘密側の半分です。パスワードと同様に扱い、漏れた人は誰でもバックアップを読み取れます。"
+        "secret_key": "認証情報の秘密側の半分です。パスワードと同様に扱い、漏れた人は誰でもバックアップを読み取れます。",
+        "client_id": "Google Cloud Console →「認証情報」から。末尾は .apps.googleusercontent.com です。",
+        "client_secret": "クライアント ID の作成時に併せて表示されます。パスワードと同様に扱ってください。"
       },
       "plainFtpWarning": "TLS が無効です。パスワードとすべてのバックアップが暗号化されずに送信されます。",
       "prefixHintRemote": "リモートディレクトリ内の任意のフォルダー。1 台のサーバーで複数サイトを保存できます。",
@@ -5407,6 +5412,19 @@
       "confirm": "送信先を削除",
       "removed": "送信先を削除しました。",
       "failed": "削除できませんでした。"
+    },
+    "oauth": {
+      "intro": "Google アカウントへのアクセスを承認してください。ご自身のドライブ容量を使うため、無料の Gmail アカウントでも利用できます。",
+      "connect": "接続",
+      "reconnect": "再接続",
+      "connected": "Google ドライブに接続済み",
+      "connectedAs": "{account} として接続済み",
+      "waiting": "承認を待っています…",
+      "step1": "1. 任意の端末でこのリンクを開きます:",
+      "step2": "2. このコードを入力して承認します:",
+      "scopeNote": "パネルが見られるのは自身が作成したファイルだけで、ドライブの他の内容は見えません。",
+      "code_expired": "承認される前にコードの有効期限が切れました。「接続」を押して新しいコードを取得してください。",
+      "start_failed": "Google ログインを開始できませんでした。しばらくしてからお試しください。"
     }
   },
   "backups": {

@@ -5305,7 +5305,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (Unidad compartida de Workspace)",
-        "pcloud": "pCloud"
+        "pcloud": "pCloud",
+        "google_drive_oauth": "Google Drive (tu propia cuenta)"
       },
       "name": "Nombre",
       "namePlaceholder": "p. ej. Copias externas",
@@ -5334,7 +5335,9 @@
         "passphrase": "Frase de la clave",
         "service_account_json": "Clave de cuenta de servicio (JSON)",
         "folder_id": "ID de carpeta de la unidad compartida",
-        "base_uri": "URL del servidor"
+        "base_uri": "URL del servidor",
+        "client_id": "ID de cliente",
+        "client_secret": "Secreto de cliente"
       },
       "help": {
         "host": "Nombre de host o dirección IP del servidor que guardará las copias.",
@@ -5352,7 +5355,9 @@
         "bucket": "El nombre del bucket donde se almacenan las copias de seguridad. Ya debe existir; no lo creamos por usted.",
         "region": "La región en la que se encuentra el bucket. Debe coincidir, de lo contrario se rechaza la conexión.",
         "access_key": "La parte pública de las credenciales para esta cuenta de almacenamiento.",
-        "secret_key": "La parte secreta de las credenciales. Trátela como una contraseña: cualquiera que la tenga puede leer sus copias de seguridad."
+        "secret_key": "La parte secreta de las credenciales. Trátela como una contraseña: cualquiera que la tenga puede leer sus copias de seguridad.",
+        "client_id": "Desde Google Cloud Console → Credenciales. Termina en .apps.googleusercontent.com.",
+        "client_secret": "Se muestra junto al ID de cliente al crearlo. Trátelo como una contraseña."
       },
       "plainFtpWarning": "TLS está desactivado. La contraseña y todas las copias se enviarán sin cifrar.",
       "prefixHintRemote": "Carpeta opcional dentro del directorio remoto, para que un servidor pueda alojar varios sitios.",
@@ -5407,6 +5412,19 @@
       "confirm": "Eliminar destino",
       "removed": "Destino eliminado.",
       "failed": "No se pudo eliminar."
+    },
+    "oauth": {
+      "intro": "Autorice el acceso a su cuenta de Google. Se usa su propio espacio de Drive, así que basta con una cuenta de Gmail gratuita.",
+      "connect": "Conectar",
+      "reconnect": "Reconectar",
+      "connected": "Conectado a Google Drive",
+      "connectedAs": "Conectado como {account}",
+      "waiting": "Esperando la aprobación…",
+      "step1": "1. Abra este enlace en cualquier dispositivo:",
+      "step2": "2. Introduzca este código y apruebe:",
+      "scopeNote": "El panel solo ve los archivos que él creó, no el resto de su Drive.",
+      "code_expired": "El código caducó antes de aprobarse. Pulse Conectar para obtener otro.",
+      "start_failed": "No se pudo iniciar el acceso con Google. Inténtelo de nuevo en un momento."
     }
   },
   "backups": {

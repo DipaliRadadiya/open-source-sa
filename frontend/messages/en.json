@@ -5305,7 +5305,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (Workspace Shared Drive)",
-        "pcloud": "pCloud"
+        "pcloud": "pCloud",
+        "google_drive_oauth": "Google Drive (your own account)"
       },
       "name": "Name",
       "namePlaceholder": "e.g. Offsite backups",
@@ -5334,7 +5335,9 @@
         "passphrase": "Key passphrase",
         "service_account_json": "Service account key (JSON)",
         "folder_id": "Shared Drive folder ID",
-        "base_uri": "Server URL"
+        "base_uri": "Server URL",
+        "client_id": "Client ID",
+        "client_secret": "Client secret"
       },
       "help": {
         "host": "Hostname or IP address of the server that will hold the backups.",
@@ -5352,7 +5355,9 @@
         "bucket": "The name of the bucket to store backups in. It must already exist — we do not create it for you.",
         "region": "The region the bucket lives in. It has to match, or the connection is refused.",
         "access_key": "The public half of the credentials for this storage account.",
-        "secret_key": "The secret half of the credentials. Treat it like a password — anyone holding it can read your backups."
+        "secret_key": "The secret half of the credentials. Treat it like a password — anyone holding it can read your backups.",
+        "client_id": "From Google Cloud Console → Credentials. Ends in .apps.googleusercontent.com.",
+        "client_secret": "Shown beside the client ID when you create it. Treat it like a password."
       },
       "plainFtpWarning": "TLS is off. The password and every backup will be sent unencrypted.",
       "prefixHintRemote": "Optional folder inside the remote directory, so one server can hold several sites.",
@@ -5407,6 +5412,19 @@
       "confirm": "Delete destination",
       "removed": "Destination deleted.",
       "failed": "That couldn't be deleted."
+    },
+    "oauth": {
+      "intro": "Approve access to your Google account. Your own Drive storage is used, so a free Gmail account works.",
+      "connect": "Connect",
+      "reconnect": "Reconnect",
+      "connected": "Connected to Google Drive",
+      "connectedAs": "Connected as {account}",
+      "waiting": "Waiting for approval…",
+      "step1": "1. Open this link on any device:",
+      "step2": "2. Enter this code and approve:",
+      "scopeNote": "The panel can only see files it created — not the rest of your Drive.",
+      "code_expired": "The code expired before it was approved. Press Connect for a new one.",
+      "start_failed": "Could not start the Google sign-in. Try again in a moment."
     }
   },
   "backups": {

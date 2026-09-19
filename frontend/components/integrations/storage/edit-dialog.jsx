@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { Form } from "@/components/ui/form";
 import { DestinationFormFields } from "@/components/integrations/storage/destination-form-fields";
+import { GoogleDriveConnect } from "@/components/integrations/storage/google-drive-connect";
 
 /**
  * Editing where a destination points — deliberately without the credentials,
@@ -117,6 +118,13 @@ export function EditDestinationDialog({ destination, open, onOpenChange }) {
           hideSecrets
           existing
         />
+        {/* Approval lives here rather than in the create dialog because the
+            device flow needs a destination that already exists — the code is
+            issued against its id, and the refresh token is written onto its
+            row. So: save the client id and secret first, then connect. */}
+        {provider === "google_drive_oauth" ? (
+          <GoogleDriveConnect destination={destination} onConnected={() => onOpenChange(false)} />
+        ) : null}
         <p className="text-xs text-muted-foreground">{t("credentialsUntouched")}</p>
         {/* Why there is no provider control, rather than leaving its absence
             to be discovered. */}

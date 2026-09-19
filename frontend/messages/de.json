@@ -5305,7 +5305,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (Geteilte Ablage in Workspace)",
-        "pcloud": "pCloud"
+        "pcloud": "pCloud",
+        "google_drive_oauth": "Google Drive (eigenes Konto)"
       },
       "name": "Name",
       "namePlaceholder": "z. B. Externe Backups",
@@ -5334,7 +5335,9 @@
         "passphrase": "Schlüssel-Passphrase",
         "service_account_json": "Dienstkonto-Schlüssel (JSON)",
         "folder_id": "Ordner-ID der geteilten Ablage",
-        "base_uri": "Server-URL"
+        "base_uri": "Server-URL",
+        "client_id": "Client-ID",
+        "client_secret": "Client-Secret"
       },
       "help": {
         "host": "Hostname oder IP-Adresse des Servers, der die Sicherungen aufnimmt.",
@@ -5352,7 +5355,9 @@
         "bucket": "Der Name des Buckets, in dem Sicherungen gespeichert werden. Er muss bereits existieren — wir erstellen ihn nicht für Sie.",
         "region": "Die Region, in der sich der Bucket befindet. Sie muss übereinstimmen, sonst wird die Verbindung abgewiesen.",
         "access_key": "Die öffentliche Hälfte der Anmeldedaten für dieses Speicherkonto.",
-        "secret_key": "Die geheime Hälfte der Anmeldedaten. Behandeln Sie sie wie ein Passwort — jeder, der sie besitzt, kann Ihre Sicherungen lesen."
+        "secret_key": "Die geheime Hälfte der Anmeldedaten. Behandeln Sie sie wie ein Passwort — jeder, der sie besitzt, kann Ihre Sicherungen lesen.",
+        "client_id": "Aus der Google Cloud Console → Anmeldedaten. Endet auf .apps.googleusercontent.com.",
+        "client_secret": "Wird beim Erstellen neben der Client-ID angezeigt. Wie ein Passwort behandeln."
       },
       "plainFtpWarning": "TLS ist aus. Passwort und jede Sicherung werden unverschlüsselt gesendet.",
       "prefixHintRemote": "Optionaler Ordner im entfernten Verzeichnis, damit ein Server mehrere Sites aufnehmen kann.",
@@ -5407,6 +5412,19 @@
       "confirm": "Ziel löschen",
       "removed": "Ziel gelöscht.",
       "failed": "Das konnte nicht gelöscht werden."
+    },
+    "oauth": {
+      "intro": "Erlauben Sie den Zugriff auf Ihr Google-Konto. Es wird Ihr eigener Drive-Speicher genutzt, daher genügt ein kostenloses Gmail-Konto.",
+      "connect": "Verbinden",
+      "reconnect": "Neu verbinden",
+      "connected": "Mit Google Drive verbunden",
+      "connectedAs": "Verbunden als {account}",
+      "waiting": "Warte auf Bestätigung…",
+      "step1": "1. Öffnen Sie diesen Link auf einem beliebigen Gerät:",
+      "step2": "2. Geben Sie diesen Code ein und bestätigen Sie:",
+      "scopeNote": "Das Panel sieht nur die von ihm erstellten Dateien — nicht Ihren übrigen Drive.",
+      "code_expired": "Der Code ist abgelaufen, bevor er bestätigt wurde. Klicken Sie auf Verbinden für einen neuen.",
+      "start_failed": "Die Google-Anmeldung konnte nicht gestartet werden. Versuchen Sie es gleich erneut."
     }
   },
   "backups": {

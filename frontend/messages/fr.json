@@ -5305,7 +5305,8 @@
         "ftp": "FTP",
         "sftp": "SFTP",
         "google_drive": "Google Drive (Drive partagé Workspace)",
-        "pcloud": "pCloud"
+        "pcloud": "pCloud",
+        "google_drive_oauth": "Google Drive (votre propre compte)"
       },
       "name": "Nom",
       "namePlaceholder": "ex. Sauvegardes externes",
@@ -5334,7 +5335,9 @@
         "passphrase": "Phrase secrète de la clé",
         "service_account_json": "Clé de compte de service (JSON)",
         "folder_id": "ID du dossier Drive partagé",
-        "base_uri": "URL du serveur"
+        "base_uri": "URL du serveur",
+        "client_id": "ID client",
+        "client_secret": "Secret client"
       },
       "help": {
         "host": "Nom d’hôte ou adresse IP du serveur qui conservera les sauvegardes.",
@@ -5352,7 +5355,9 @@
         "bucket": "Le nom du bucket dans lequel stocker les sauvegardes. Il doit déjà exister — nous ne le créerons pas pour vous.",
         "region": "La région dans laquelle se trouve le bucket. Elle doit correspondre, sinon la connexion sera refusée.",
         "access_key": "La partie publique des identifiants pour ce compte de stockage.",
-        "secret_key": "La partie secrète des identifiants. Traitez-la comme un mot de passe — toute personne qui la détient peut lire vos sauvegardes."
+        "secret_key": "La partie secrète des identifiants. Traitez-la comme un mot de passe — toute personne qui la détient peut lire vos sauvegardes.",
+        "client_id": "Depuis Google Cloud Console → Identifiants. Se termine par .apps.googleusercontent.com.",
+        "client_secret": "Affiché à côté de l’ID client lors de sa création. À traiter comme un mot de passe."
       },
       "plainFtpWarning": "TLS est désactivé. Le mot de passe et chaque sauvegarde seront envoyés en clair.",
       "prefixHintRemote": "Dossier facultatif dans le répertoire distant, pour qu’un serveur puisse héberger plusieurs sites.",
@@ -5407,6 +5412,19 @@
       "confirm": "Supprimer la destination",
       "removed": "Destination supprimée.",
       "failed": "La suppression a échoué."
+    },
+    "oauth": {
+      "intro": "Autorisez l’accès à votre compte Google. C’est votre propre espace Drive qui est utilisé : un compte Gmail gratuit suffit.",
+      "connect": "Connecter",
+      "reconnect": "Reconnecter",
+      "connected": "Connecté à Google Drive",
+      "connectedAs": "Connecté en tant que {account}",
+      "waiting": "En attente de l’approbation…",
+      "step1": "1. Ouvrez ce lien sur n’importe quel appareil :",
+      "step2": "2. Saisissez ce code et approuvez :",
+      "scopeNote": "Le panneau ne voit que les fichiers qu’il a créés, pas le reste de votre Drive.",
+      "code_expired": "Le code a expiré avant d’être approuvé. Cliquez sur Connecter pour en obtenir un autre.",
+      "start_failed": "Impossible de démarrer la connexion Google. Réessayez dans un instant."
     }
   },
   "backups": {

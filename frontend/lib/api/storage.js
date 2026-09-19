@@ -48,3 +48,25 @@ export function testDestination(id) {
 export function deleteDestination(id) {
   return api.delete(`${BASE}/${id}`);
 }
+
+/**
+ * Asks Google for a user code so the operator can approve on another device.
+ *
+ * There is no redirect anywhere in this flow: the panel is reached at a
+ * nip.io hostname on a default install, which Google will not accept as a
+ * redirect target, so the approval happens entirely between the operator's
+ * browser and Google.
+ */
+export function startDriveConnect(id) {
+  return api.post(`${BASE}/${id}/oauth/start`);
+}
+
+/**
+ * Asks once whether the code has been approved yet.
+ *
+ * One question per call on purpose — the backend holds no worker open waiting
+ * on a human, so the caller is the thing that waits.
+ */
+export function pollDriveConnect(id) {
+  return api.post(`${BASE}/${id}/oauth/poll`);
+}
