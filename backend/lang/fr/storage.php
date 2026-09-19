@@ -128,7 +128,9 @@ return [
         'poll_failed' => 'Impossible de terminer la connexion Google. Réessayez dans un instant.',
         'token_failed' => 'Impossible de terminer la connexion Google. Réessayez dans un instant.',
         'no_refresh_token' => 'Google a autorisé l’accès mais n’a pas envoyé de jeton durable, ce qui arrive lorsque ce compte a déjà autorisé cette application. Retirez-la sur myaccount.google.com, section Accès tiers, puis reconnectez-vous.',
-        'folder_failed' => 'Connecté, mais le dossier de sauvegarde n’a pas pu être créé dans votre Drive. Vérifiez l’espace disponible et reconnectez-vous.',
+        'api_disabled' => 'L’API Google Drive n’est pas activée dans votre projet Google Cloud. Ouvrez API et services → Bibliothèque, cherchez « Google Drive API » et cliquez sur Activer. La connexion fonctionne sans elle, d’où l’apparition tardive de ce message.',
+        'insufficient_scope' => 'La connexion a été approuvée mais n’autorise pas la création de fichiers. Vérifiez que l’écran de consentement OAuth comporte la portée Google Drive drive.file, puis reconnectez-vous.',
+        'folder_failed' => 'Connecté, mais le dossier de sauvegarde n’a pas pu être créé dans votre Drive. La raison figure dans les journaux du panneau, sous « storage ». Reconnectez-vous une fois le problème résolu.',
         'wrong_provider' => 'Cette destination n’utilise pas la connexion Google.',
     ],
 ];

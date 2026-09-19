@@ -128,7 +128,9 @@ return [
         'poll_failed' => 'Die Google-Anmeldung konnte nicht abgeschlossen werden. Versuchen Sie es gleich erneut.',
         'token_failed' => 'Die Google-Anmeldung konnte nicht abgeschlossen werden. Versuchen Sie es gleich erneut.',
         'no_refresh_token' => 'Google hat den Zugriff erlaubt, aber kein dauerhaftes Token gesendet — das passiert, wenn dieses Konto der App bereits Zugriff gewährt hat. Entfernen Sie ihn unter myaccount.google.com bei „Drittanbieter-Zugriff“ und verbinden Sie erneut.',
-        'folder_failed' => 'Verbunden, aber der Backup-Ordner konnte in Ihrem Drive nicht angelegt werden. Prüfen Sie den freien Speicher und verbinden Sie erneut.',
+        'api_disabled' => 'Die Google-Drive-API ist in Ihrem Google-Cloud-Projekt nicht aktiviert. Öffnen Sie APIs & Dienste → Bibliothek, suchen Sie „Google Drive API“ und klicken Sie auf Aktivieren. Die Anmeldung funktioniert auch ohne sie — deshalb fällt es erst jetzt auf.',
+        'insufficient_scope' => 'Die Verbindung wurde bestätigt, erlaubt aber kein Anlegen von Dateien. Prüfen Sie, ob der OAuth-Zustimmungsbildschirm den Google-Drive-Bereich drive.file enthält, und verbinden Sie erneut.',
+        'folder_failed' => 'Verbunden, aber der Backup-Ordner konnte in Ihrem Drive nicht angelegt werden. Der Grund steht in den Panel-Logs unter „storage“. Verbinden Sie erneut, sobald er behoben ist.',
         'wrong_provider' => 'Dieses Ziel verwendet keine Google-Anmeldung.',
     ],
 ];

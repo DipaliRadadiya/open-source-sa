@@ -128,7 +128,9 @@ return [
         'poll_failed' => 'No se pudo completar el acceso con Google. Inténtelo de nuevo en un momento.',
         'token_failed' => 'No se pudo completar el acceso con Google. Inténtelo de nuevo en un momento.',
         'no_refresh_token' => 'Google autorizó el acceso pero no envió un token duradero, lo que ocurre cuando esta cuenta ya había autorizado la aplicación. Retírela en myaccount.google.com, en Acceso de terceros, y vuelva a conectar.',
-        'folder_failed' => 'Conectado, pero no se pudo crear la carpeta de copias en su Drive. Compruebe el espacio y vuelva a conectar.',
+        'api_disabled' => 'La API de Google Drive no está habilitada en su proyecto de Google Cloud. Abra APIs y servicios → Biblioteca, busque «Google Drive API» y pulse Habilitar. El acceso funciona sin ella, por eso esto aparece solo ahora.',
+        'insufficient_scope' => 'La conexión se aprobó pero no permite crear archivos. Compruebe que la pantalla de consentimiento OAuth incluya el ámbito de Google Drive drive.file y conecte de nuevo.',
+        'folder_failed' => 'Conectado, pero no se pudo crear la carpeta de copias en su Drive. El motivo está en los registros del panel, en «storage». Conecte de nuevo cuando se resuelva.',
         'wrong_provider' => 'Este destino no usa el acceso con Google.',
     ],
 ];

@@ -135,7 +135,9 @@ return [
         'poll_failed' => 'Could not complete the Google sign-in. Try again in a moment.',
         'token_failed' => 'Could not complete the Google sign-in. Try again in a moment.',
         'no_refresh_token' => 'Google approved access but sent no lasting token, which happens when this account already granted this app. Remove it at myaccount.google.com under Third-party access, then connect again.',
-        'folder_failed' => 'Connected, but the backup folder could not be created in your Drive. Check you have space, then connect again.',
+        'api_disabled' => 'The Google Drive API is not enabled in your Google Cloud project. Open APIs & Services → Library, search for "Google Drive API", and click Enable. Sign-in works without it, which is why this only appears now.',
+        'insufficient_scope' => 'The connection was approved but does not allow creating files. Check the OAuth consent screen lists the Google Drive scope drive.file, then connect again.',
+        'folder_failed' => 'Connected, but the backup folder could not be created in your Drive. The reason is in the panel logs under storage. Connect again once it is resolved.',
         'wrong_provider' => 'This destination does not use Google sign-in.',
     ],
 ];

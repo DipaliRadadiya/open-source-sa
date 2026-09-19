@@ -6,6 +6,7 @@ use Closure;
 use Google\Client;
 use Google\Service\Drive;
 use Google\Service\Drive\DriveFile;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -67,11 +68,7 @@ class GoogleDriveWorkspace
                 ['fields' => 'id'],
             );
         } catch (Throwable $e) {
-            return $this->failure(
-                str_contains(strtolower($e->getMessage()), 'storagequotaexceeded')
-                    ? 'storage.oauth.user_quota'
-                    : 'storage.oauth.folder_failed'
-            );
+            return $this->failure($this->classify($e), $e);
         }
 
         $folderId = method_exists($folder, 'getId') ? (string) $folder->getId() : '';
@@ -115,10 +112,68 @@ class GoogleDriveWorkspace
     }
 
     /**
+     * Why Drive refused to make the folder.
+     *
+     * Previously this was one substring test for a full Drive and a catch-all
+     * that said "check you have space" — advice which is simply wrong for every
+     * cause but that one, and which sent the first real user to look at a Drive
+     * that had plenty of room.
+     *
+     * The cause that actually happens is the **Drive API not being enabled** in
+     * the Cloud project. It is invisible until this exact moment, because OAuth
+     * is a different service: consent succeeds, a refresh token is issued, and
+     * then the first Drive call 403s. The setup guide already calls it "the most
+     * common mistake" — so it deserves its own sentence rather than a shrug.
+     */
+    private function classify(Throwable $e): string
+    {
+        $message = strtolower($e->getMessage());
+
+        // The user's own Drive is full. A real quota belonging to a real person
+        // who can go and clear it.
+        if (str_contains($message, 'storagequotaexceeded')
+            || str_contains($message, 'quota exceeded')) {
+            return 'storage.oauth.user_quota';
+        }
+
+        // Google words this several ways across surfaces; match the stable
+        // parts rather than a sentence it is free to rewrite.
+        if (str_contains($message, 'accessnotconfigured')
+            || str_contains($message, 'service_disabled')
+            || str_contains($message, 'has not been used in project')
+            || str_contains($message, 'is disabled')) {
+            return 'storage.oauth.api_disabled';
+        }
+
+        // The grant exists but does not carry `drive.file` — an OAuth client
+        // whose consent screen was configured with different scopes.
+        if (str_contains($message, 'insufficient')
+            && (str_contains($message, 'scope') || str_contains($message, 'permission'))) {
+            return 'storage.oauth.insufficient_scope';
+        }
+
+        return 'storage.oauth.folder_failed';
+    }
+
+    /**
      * @return array{ok: bool, folder_id: null, account_email: null, reason: string}
      */
-    private function failure(string $reason): array
+    private function failure(string $reason, ?Throwable $e = null): array
     {
+        if ($e !== null) {
+            // The panel's sentence is for the operator; Google's is for whoever
+            // has to work out why. Losing the second is what made the first real
+            // failure of this feature a guess — the classifier above can only
+            // name causes somebody thought of, and this is how the next one gets
+            // added. Logged as its own field so a redactor can target it.
+            Log::warning('Google Drive workspace preparation failed.', [
+                'feature' => 'storage',
+                'provider' => 'google_drive_oauth',
+                'error_class' => $reason,
+                'detail' => $e->getMessage(),
+            ]);
+        }
+
         return ['ok' => false, 'folder_id' => null, 'account_email' => null, 'reason' => $reason];
     }
 }

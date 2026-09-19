@@ -128,7 +128,9 @@ return [
         'poll_failed' => 'Não foi possível concluir o login do Google. Tente de novo em instantes.',
         'token_failed' => 'Não foi possível concluir o login do Google. Tente de novo em instantes.',
         'no_refresh_token' => 'O Google autorizou o acesso mas não enviou um token duradouro, o que acontece quando esta conta já havia autorizado o aplicativo. Remova-o em myaccount.google.com, em Acesso de terceiros, e conecte novamente.',
-        'folder_failed' => 'Conectado, mas não foi possível criar a pasta de backups no seu Drive. Verifique o espaço e conecte novamente.',
+        'api_disabled' => 'A API do Google Drive não está ativada no seu projeto do Google Cloud. Abra APIs e serviços → Biblioteca, procure "Google Drive API" e clique em Ativar. O login funciona sem ela, por isso isto só aparece agora.',
+        'insufficient_scope' => 'A conexão foi aprovada, mas não permite criar arquivos. Verifique se a tela de consentimento OAuth inclui o escopo do Google Drive drive.file e conecte de novo.',
+        'folder_failed' => 'Conectado, mas não foi possível criar a pasta de backups no seu Drive. O motivo está nos logs do painel, em "storage". Conecte de novo assim que resolver.',
         'wrong_provider' => 'Este destino não usa login do Google.',
     ],
 ];
