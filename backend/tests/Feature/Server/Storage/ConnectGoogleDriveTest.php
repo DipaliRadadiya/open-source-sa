@@ -363,3 +363,46 @@ it('offers the callback URL before any destination has been made', function () {
             'https://panel.example.test/integrations/storage/oauth/callback',
         );
 });
+
+/*
+ * This folder lands in somebody's *personal* Google Drive, beside their photos
+ * and documents. It has to explain itself without being opened.
+ *
+ * The first real connection named it "Laravel backups — Drive", because the
+ * name was built from `app.name` — the framework's own setting, which ships as
+ * the literal string "Laravel". Together with a sibling folder named after a
+ * raw Drive id, the result was reported as a suspected compromise, which is the
+ * correct reaction to unexplained objects appearing in your Drive.
+ */
+it('names the folder after the panel, not the framework', function () {
+    config(['branding.name' => 'ServerAvatar']);
+    tokenGranted();
+
+    // An object, because a promoted property cannot be by-reference — the
+    // first version of this captured nothing and asserted against null.
+    $seen = new \stdClass;
+    $seen->name = null;
+
+    app()->bind(GoogleDriveWorkspace::class, fn () => new class($seen) extends GoogleDriveWorkspace
+    {
+        public function __construct(private object $seen) {}
+
+        public function prepare(string $c, string $s, string $r, string $name): array
+        {
+            $this->seen->name = $name;
+
+            return ['ok' => true, 'folder_id' => 'F', 'account_email' => null, 'reason' => null];
+        }
+    });
+
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => issuedState()])
+        ->assertJsonPath('oauth.status', 'connected');
+
+    expect($seen->name)
+        ->toContain('ServerAvatar')
+        // Which machine's backups these are. One Drive can hold several panels'.
+        ->toContain('panel.example.test')
+        ->toContain('My Drive')
+        ->not->toContain('Laravel');
+});

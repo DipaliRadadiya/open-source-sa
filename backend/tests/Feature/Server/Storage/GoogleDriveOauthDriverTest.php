@@ -7,9 +7,11 @@ use App\Models\StorageDestination;
 use App\Services\Server\Backups\Storage\Drivers\GoogleDriveOauthDriver;
 use App\Services\Server\Backups\Storage\GoogleDriveWorkspace;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
+use Google\Client;
 use Google\Service\Drive;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Masbug\Flysystem\GoogleDriveAdapter;
 
 const OAUTH_TOKEN_URL = 'oauth2.googleapis.com/token';
 
@@ -263,4 +265,49 @@ it('logs what Google said, not only what the panel decided', function () {
     Log::shouldHaveReceived('warning')
         ->withArgs(fn (string $m, array $c) => $c['detail'] === 'Some future error nobody has classified'
             && $c['error_class'] === 'storage.oauth.folder_failed');
+});
+
+/*
+ * A folder id is not a folder name.
+ *
+ * With `useDisplayPaths` on, the adapter treats its root argument as a display
+ * name and creates a directory with that literal text when it cannot find one.
+ * Passing `folder_id` there therefore made a folder actually called
+ * `1f5v8y369-o8pIvZse_VXpIbgbdY3POXu` in a personal Drive, next to the properly
+ * named one the panel had already created — reported, reasonably, as a
+ * suspected compromise.
+ *
+ * Asserted on the adapter's resolved root rather than on a mock's arguments,
+ * because the thing that matters is where writes land, not which parameter we
+ * happened to pass.
+ */
+it('roots the disk at the folder id without inventing a folder named after it', function () {
+    $adapter = new GoogleDriveAdapter(
+        new Drive(new Client),
+        null,
+        [
+            'sharedFolderId' => '1f5v8y369-o8pIvZse_VXpIbgbdY3POXu',
+            'useDisplayPaths' => true,
+        ],
+    );
+
+    $root = (new \ReflectionProperty($adapter, 'root'));
+    $root->setAccessible(true);
+
+    expect($root->getValue($adapter))->toBe('1f5v8y369-o8pIvZse_VXpIbgbdY3POXu');
+});
+
+/*
+ * The shape that caused it, pinned so it cannot come back: an id in the
+ * positional root makes the adapter go looking for a folder *named* that, which
+ * is the lookup that creates one.
+ */
+it('never passes the folder id as the adapter root', function () {
+    $provider = file_get_contents(app_path('Providers/AppServiceProvider.php'));
+
+    $oauthDisk = substr($provider, (int) strpos($provider, "Storage::extend('google_oauth'"));
+    $oauthDisk = substr($oauthDisk, 0, (int) strpos($oauthDisk, 'return new FilesystemAdapter'));
+
+    expect($oauthDisk)->toContain('sharedFolderId')
+        ->and($oauthDisk)->not->toContain("(string) (\$config['folder_id'] ?? ''),");
 });

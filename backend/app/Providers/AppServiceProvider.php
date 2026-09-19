@@ -201,14 +201,31 @@ class AppServiceProvider extends ServiceProvider
             // or an app left in "Testing" past Google's ~7-day token life.
             $client->fetchAccessTokenWithRefreshToken((string) ($config['refresh_token'] ?? ''));
 
+            $folderId = trim((string) ($config['folder_id'] ?? ''));
+
             $adapter = new GoogleDriveAdapter(
                 new GoogleDrive($client),
-                // Empty means the account's root. Under `drive.file` we can
-                // only see what we created, so there is nothing else to
-                // address and nothing to paste — the panel's own folder is
-                // reached through `root` below.
-                (string) ($config['folder_id'] ?? ''),
+                // **Null, never the folder id.** With `useDisplayPaths` on, the
+                // adapter reads this argument as a *display name* and — because
+                // it passes `createDirsIfNeeded: true` — makes a folder with
+                // that literal text when it cannot find one
+                // (`GoogleDriveAdapter::__construct`, the `toSingleVirtualPath`
+                // call). Handing it an id therefore created a folder actually
+                // named `1f5v8y369-o8pIvZse_VXpIbgbdY3POXu` in somebody's
+                // personal Drive, beside the properly named one the panel had
+                // already made. A hash appearing in your own Drive reads as a
+                // compromise, and it was reported as one.
+                null,
                 [
+                    // The id belongs here instead: this branch assigns it as the
+                    // root verbatim and skips the name lookup entirely, which is
+                    // the only way to address a folder by id while display paths
+                    // are on. Omitted when empty — an unconnected destination has
+                    // no folder yet, and `sharedFolderId => ''` would root the
+                    // disk at nothing rather than falling back to the account
+                    // root.
+                    ...($folderId !== '' ? ['sharedFolderId' => $folderId] : []),
+
                     // Same reason as the service-account disk: Drive allows two
                     // files with one display name in a folder, and without path
                     // translation `site/2026-09-19/x.tar.gz` is a name that can
