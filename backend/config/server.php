@@ -294,6 +294,35 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Storage destinations
+    |--------------------------------------------------------------------------
+    |
+    | `panel_url` is the panel's own public origin, and Google OAuth is why it
+    | has to be configuration rather than something derived from the incoming
+    | request. The redirect URI registered with Google must match the one sent
+    | in the token exchange byte for byte, and a request-derived origin varies
+    | with proxies, Host headers and whoever is calling — so it would match
+    | right up until it silently did not. `install.sh:1226` already writes
+    | FRONTEND_URL as `{scheme}://{PANEL_HOST}`, which is exactly this value.
+    |
+    */
+
+    'storage' => [
+        'panel_url' => env('FRONTEND_URL', env('APP_URL', '')),
+
+        // Google is not slow, but a hung socket during a connect attempt holds
+        // an HTTP worker while somebody watches a spinner.
+        'oauth_timeout_seconds' => (int) env('STORAGE_OAUTH_TIMEOUT_SECONDS', 15),
+
+        // How long an operator has to finish approving at Google before the
+        // callback is refused. Long enough to read a consent screen and pick an
+        // account, short enough that an abandoned attempt cannot be resumed by
+        // someone else later.
+        'oauth_state_ttl_seconds' => (int) env('STORAGE_OAUTH_STATE_TTL_SECONDS', 900),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Self-check (doctor)
     |--------------------------------------------------------------------------
     |

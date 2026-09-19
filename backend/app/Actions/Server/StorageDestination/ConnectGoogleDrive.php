@@ -5,39 +5,53 @@ namespace App\Actions\Server\StorageDestination;
 use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
 use App\Services\ActivityLogger;
-use App\Services\Server\Backups\Storage\GoogleDeviceFlow;
 use App\Services\Server\Backups\Storage\GoogleDriveWorkspace;
-use Illuminate\Support\Facades\Cache;
+use App\Services\Server\Backups\Storage\GoogleOauthRedirect;
+use App\Services\Server\Backups\Storage\GoogleOauthState;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Drives the two halves of a device-flow connection: ask for a code, then ask
- * repeatedly whether it has been approved.
+ * Drives the two halves of a redirect connection: send the operator to Google,
+ * then turn the code they come back with into a stored refresh token.
  *
- * **The device code lives in the cache, not in a column.** It is valid for
- * about half an hour, it is worthless afterwards, and a destination that
- * already has a working refresh token must not be altered by somebody merely
- * *starting* a reconnection. A column would also have to be cleaned up on
- * every abandoned attempt, and abandoned attempts are the common case — people
- * close the tab.
+ * **The destination is read from `state`, never from the request.** Google
+ * redirects a browser to a frontend page, which forwards `code` and `state` as
+ * an authenticated call — and a page cannot be trusted to say which destination
+ * the attempt was for, because that is a query parameter anyone can write. The
+ * sealed, single-use `state` is the only thing here that carries identity; see
+ * {@see GoogleOauthState}.
  *
- * Polling is the caller's job. One request asks one question, so an HTTP
- * worker is never held for the half hour a human might take.
+ * Nothing about the attempt is written to the destination row until Google has
+ * answered. A destination with a working refresh token must not be disturbed by
+ * somebody merely *starting* a reconnection, and abandoned attempts are the
+ * common case — people close the tab.
  */
 class ConnectGoogleDrive
 {
     public function __construct(
-        private GoogleDeviceFlow $flow,
+        private GoogleOauthRedirect $redirect,
+        private GoogleOauthState $state,
         private GoogleDriveWorkspace $workspace,
         private ActivityLogger $activityLogger,
     ) {}
 
     /**
-     * @return array{user_code: string, verification_url: string, interval: int, expires_in: int}
+     * Where to send the operator, and the URI their Google client must have
+     * registered for the round trip to work.
+     *
+     * @return array{authorize_url: string, redirect_uri: string}
      */
     public function start(StorageDestination $destination): array
     {
         $this->guardProvider($destination);
+
+        // Checked before Google is, because an unset panel origin produces a
+        // relative redirect URI that Google rejects as a generic
+        // `invalid_request` — which reads exactly like a bad client id and
+        // sends the operator to re-check a value that is perfectly fine.
+        if (! $this->redirect->configured()) {
+            $this->fail('storage.oauth.panel_url_missing');
+        }
 
         $clientId = (string) $destination->configValue('client_id', '');
 
@@ -45,67 +59,57 @@ class ConnectGoogleDrive
             $this->fail('storage.oauth.bad_client');
         }
 
-        $result = $this->flow->start($clientId);
-
-        if (! $result['ok']) {
-            $this->fail((string) $result['reason']);
-        }
-
-        Cache::put(
-            $this->cacheKey($destination),
-            $result['device_code'],
-            // Google's own lifetime, so a stale code cannot outlive the one
-            // the operator is looking at.
-            now()->addSeconds($result['expires_in']),
-        );
+        // Any attempt already in flight is dropped. Pressing Connect twice
+        // should mean the second link works and the first is dead, not that two
+        // callbacks race to write the same row.
+        $this->state->forget($destination);
 
         return [
-            'user_code' => (string) $result['user_code'],
-            'verification_url' => (string) $result['verification_url'],
-            'interval' => $result['interval'],
-            'expires_in' => $result['expires_in'],
+            'authorize_url' => $this->redirect->authorizeUrl($clientId, $this->state->issue($destination)),
+            'redirect_uri' => $this->redirect->redirectUri(),
         ];
     }
 
     /**
-     * Ask once whether the operator has approved.
+     * Finish the round trip.
      *
-     * @return array{status: string, reason: string|null}
+     * @return array{status: string, reason: string|null, destination: StorageDestination|null}
      */
-    public function poll(StorageDestination $destination): array
+    public function complete(string $code, string $state): array
     {
-        $this->guardProvider($destination);
+        $consumed = $this->state->consume($state);
 
-        $deviceCode = Cache::get($this->cacheKey($destination));
-
-        if (! is_string($deviceCode) || $deviceCode === '') {
-            // Nothing in flight. Either nobody started, or the code outlived
-            // its half hour — both mean "press Connect again", and neither is
-            // a failure of Google's.
-            return ['status' => 'expired', 'reason' => 'storage.oauth.code_expired'];
+        if (! $consumed['ok']) {
+            return $this->result('failed', (string) $consumed['reason']);
         }
 
-        $result = $this->flow->poll(
+        $destination = StorageDestination::find($consumed['destination_id']);
+
+        // Deleted between approving and returning. Rare, but the alternative is
+        // a 500 on a page the operator reached by doing everything right.
+        if ($destination === null) {
+            return $this->result('failed', 'storage.oauth.destination_missing');
+        }
+
+        if ($destination->provider !== StorageProvider::GoogleDriveOauth) {
+            return $this->result('failed', 'storage.oauth.wrong_provider');
+        }
+
+        $exchanged = $this->redirect->exchangeCode(
             (string) $destination->configValue('client_id', ''),
             (string) $destination->configValue('client_secret', ''),
-            $deviceCode,
+            $code,
         );
 
-        if ($result['status'] !== 'approved') {
-            // A dead code is cleared so the next poll says "press Connect"
-            // rather than re-asking Google about something it has forgotten.
-            if (in_array($result['status'], ['denied', 'expired', 'failed'], true)) {
-                Cache::forget($this->cacheKey($destination));
-            }
-
-            return ['status' => $result['status'], 'reason' => $result['reason']];
+        if (! $exchanged['ok']) {
+            return $this->result('failed', (string) $exchanged['reason'], $destination);
         }
 
-        return $this->store($destination, (string) $result['refresh_token']);
+        return $this->store($destination, (string) $exchanged['refresh_token']);
     }
 
     /**
-     * @return array{status: string, reason: string|null}
+     * @return array{status: string, reason: string|null, destination: StorageDestination|null}
      */
     private function store(StorageDestination $destination, string $refreshToken): array
     {
@@ -120,9 +124,7 @@ class ConnectGoogleDrive
             // The grant is real but we could not make a folder in it — a full
             // Drive, most likely. Storing the token anyway would leave a
             // destination that looks connected and fails every backup.
-            Cache::forget($this->cacheKey($destination));
-
-            return ['status' => 'failed', 'reason' => (string) $prepared['reason']];
+            return $this->result('failed', (string) $prepared['reason'], $destination);
         }
 
         // Written as one update: `config` is an encrypted document, so two
@@ -135,8 +137,6 @@ class ConnectGoogleDrive
         ]);
         $destination->save();
 
-        Cache::forget($this->cacheKey($destination));
-
         $this->activityLogger->log('storage_destination.connected', $destination, [
             'name' => $destination->name,
             // The address, never the token. This row is readable by anyone who
@@ -144,7 +144,7 @@ class ConnectGoogleDrive
             'account_email' => $prepared['account_email'],
         ]);
 
-        return ['status' => 'approved', 'reason' => null];
+        return $this->result('connected', null, $destination);
     }
 
     /**
@@ -156,16 +156,19 @@ class ConnectGoogleDrive
         return trim((string) config('app.name', 'Panel')).' backups — '.$destination->name;
     }
 
-    private function cacheKey(StorageDestination $destination): string
-    {
-        return "storage:oauth:device:{$destination->id}";
-    }
-
     private function guardProvider(StorageDestination $destination): void
     {
         if ($destination->provider !== StorageProvider::GoogleDriveOauth) {
             $this->fail('storage.oauth.wrong_provider');
         }
+    }
+
+    /**
+     * @return array{status: string, reason: string|null, destination: StorageDestination|null}
+     */
+    private function result(string $status, ?string $reason, ?StorageDestination $destination = null): array
+    {
+        return ['status' => $status, 'reason' => $reason, 'destination' => $destination];
     }
 
     private function fail(string $key): never

@@ -6,18 +6,23 @@ use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
 use App\Models\User;
 use App\Services\Server\Backups\Storage\GoogleDriveWorkspace;
+use App\Services\Server\Backups\Storage\GoogleOauthState;
 use Database\Seeders\PermissionSeeder;
 use Google\Service\Drive;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 
-const CONNECT_DEVICE_URL = 'oauth2.googleapis.com/device/code';
 const CONNECT_TOKEN_URL = 'oauth2.googleapis.com/token';
+
+const CALLBACK_URL = '/api/integrations/storage/oauth/callback';
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
     $this->admin = User::factory()->admin()->create();
     $this->token = $this->admin->createToken('t')->plainTextToken;
+
+    config(['server.storage.panel_url' => 'https://panel.example.test']);
 
     $this->destination = StorageDestination::create([
         'name' => 'My Drive',
@@ -30,7 +35,7 @@ beforeEach(function () {
     ]);
 
     // The workspace is the only part that would touch Drive itself. Swapped
-    // for a recorder so the suite never opens a socket, while the device flow
+    // for a recorder so the suite never opens a socket, while the exchange
     // above it still runs for real against faked HTTP.
     $this->app->bind(GoogleDriveWorkspace::class, fn () => new GoogleDriveWorkspace(
         fn (string $id, string $secret, string $refresh) => new class extends Drive
@@ -63,55 +68,70 @@ function startUrl(): string
     return '/api/integrations/storage/destinations/'.test()->destination->id.'/oauth/start';
 }
 
-function pollUrl(): string
+/** A `state` this panel would really have issued, for the given destination. */
+function issuedState(?StorageDestination $destination = null): string
 {
-    return '/api/integrations/storage/destinations/'.test()->destination->id.'/oauth/poll';
+    return app(GoogleOauthState::class)->issue($destination ?? test()->destination);
 }
 
-it('hands back a code and the URL to approve it at', function () {
-    Http::fake([CONNECT_DEVICE_URL => Http::response([
-        'device_code' => 'DEV-1', 'user_code' => 'HXTR-9F2K',
-        'verification_url' => 'https://www.google.com/device', 'interval' => 5, 'expires_in' => 1800,
-    ])]);
+function tokenGranted(): void
+{
+    Http::fake([CONNECT_TOKEN_URL => Http::response(['access_token' => 'at', 'refresh_token' => 'rt-live'])]);
+    fakeWorkspace(['ok' => true, 'folder_id' => 'FOLDER-1', 'account_email' => 'me@gmail.com', 'reason' => null]);
+}
 
-    $this->withHeaders(authHeader())->postJson(startUrl())
-        ->assertOk()
-        ->assertJsonPath('oauth.user_code', 'HXTR-9F2K')
-        ->assertJsonPath('oauth.verification_url', 'https://www.google.com/device');
+it('hands back a consent URL carrying the scope and an offline grant', function () {
+    $response = $this->withHeaders(authHeader())->postJson(startUrl())->assertOk();
+
+    $url = $response->json('oauth.authorize_url');
+
+    expect($url)->toStartWith('https://accounts.google.com/o/oauth2/v2/auth?')
+        ->and($url)->toContain(urlencode('https://www.googleapis.com/auth/drive.file'))
+        // Both are load-bearing: without `offline` Google issues no refresh
+        // token at all, and without `consent` it withholds one on every
+        // approval after the first.
+        ->and($url)->toContain('access_type=offline')
+        ->and($url)->toContain('prompt=consent');
 });
 
 /*
- * The code belongs in the cache, not in a column. It is worthless after half an
- * hour, most attempts are abandoned (people close the tab), and a destination
- * with a working token must not be altered by somebody merely *starting* a
- * reconnection.
+ * The redirect URI is the exact text an operator pastes into Cloud Console, and
+ * Google compares it byte for byte at both ends of the flow. The panel shows it
+ * rather than describing it, so it has to come back with the start call.
  */
-it('keeps the device code out of the destination row', function () {
-    Http::fake([CONNECT_DEVICE_URL => Http::response(['device_code' => 'DEV-1', 'user_code' => 'U'])]);
-
-    $this->withHeaders(authHeader())->postJson(startUrl())->assertOk();
-
-    expect($this->destination->fresh()->config)->not->toHaveKey('device_code')
-        ->and(Cache::get("storage:oauth:device:{$this->destination->id}"))->toBe('DEV-1');
+it('tells the operator which redirect URI to register', function () {
+    $this->withHeaders(authHeader())->postJson(startUrl())
+        ->assertOk()
+        ->assertJsonPath('oauth.redirect_uri', 'https://panel.example.test/integrations/storage/oauth/callback');
 });
 
-it('reports pending while nobody has approved', function () {
-    Cache::put("storage:oauth:device:{$this->destination->id}", 'DEV-1', now()->addMinutes(30));
-    Http::fake([CONNECT_TOKEN_URL => Http::response(['error' => 'authorization_pending'], 428)]);
+/*
+ * A relative redirect URI comes back from Google as a generic `invalid_request`,
+ * which reads exactly like a bad client id — and sends the operator off to
+ * re-check a value that was perfectly correct. Refuse before asking Google.
+ */
+it('refuses to start when the panel does not know its own address', function () {
+    config(['server.storage.panel_url' => '']);
 
-    $this->withHeaders(authHeader())->postJson(pollUrl())
-        ->assertOk()
-        ->assertJsonPath('oauth.status', 'pending');
+    $this->withHeaders(authHeader())->postJson(startUrl())->assertStatus(422);
+
+    Http::assertNothingSent();
+});
+
+it('keeps the attempt out of the destination row', function () {
+    $this->withHeaders(authHeader())->postJson(startUrl())->assertOk();
+
+    expect($this->destination->fresh()->config)->not->toHaveKey('refresh_token')
+        ->and(Cache::get("storage:oauth:state:{$this->destination->id}"))->not->toBeNull();
 });
 
 it('stores the refresh token and the folder once approved', function () {
-    Cache::put("storage:oauth:device:{$this->destination->id}", 'DEV-1', now()->addMinutes(30));
-    Http::fake([CONNECT_TOKEN_URL => Http::response(['access_token' => 'at', 'refresh_token' => 'rt-live'])]);
-    fakeWorkspace(['ok' => true, 'folder_id' => 'FOLDER-1', 'account_email' => 'me@gmail.com', 'reason' => null]);
+    tokenGranted();
 
-    $this->withHeaders(authHeader())->postJson(pollUrl())
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => issuedState()])
         ->assertOk()
-        ->assertJsonPath('oauth.status', 'approved');
+        ->assertJsonPath('oauth.status', 'connected');
 
     $config = $this->destination->fresh()->config;
 
@@ -122,16 +142,146 @@ it('stores the refresh token and the folder once approved', function () {
         ->and($config['account_email'])->toBe('me@gmail.com');
 });
 
-// The code is single-use. Leaving it behind would have the next poll re-ask
-// Google about something it has already answered.
-it('clears the device code after a successful connection', function () {
-    Cache::put("storage:oauth:device:{$this->destination->id}", 'DEV-1', now()->addMinutes(30));
-    Http::fake([CONNECT_TOKEN_URL => Http::response(['access_token' => 'at', 'refresh_token' => 'rt'])]);
-    fakeWorkspace(['ok' => true, 'folder_id' => 'F', 'account_email' => null, 'reason' => null]);
+/*
+ * `stateless()` removes the session that normally ties a callback to the request
+ * that began it, so the seal is the only binding left. These four tests are that
+ * binding.
+ */
+it('refuses a state this panel did not issue', function () {
+    tokenGranted();
 
-    $this->withHeaders(authHeader())->postJson(pollUrl())->assertOk();
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => 'not-a-real-state'])
+        ->assertOk()
+        ->assertJsonPath('oauth.status', 'failed');
 
-    expect(Cache::get("storage:oauth:device:{$this->destination->id}"))->toBeNull();
+    // Never got as far as spending the code.
+    Http::assertNothingSent();
+    expect($this->destination->fresh()->config)->not->toHaveKey('refresh_token');
+});
+
+// Sealing alone is not enough. A `state` lifted from browser history or a
+// referrer header decrypts perfectly — what stops it is that the nonce behind
+// it was burned the first time.
+it('refuses a state that has already been used', function () {
+    tokenGranted();
+    $state = issuedState();
+
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => $state])
+        ->assertJsonPath('oauth.status', 'connected');
+
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => $state])
+        ->assertOk()
+        ->assertJsonPath('oauth.status', 'failed');
+});
+
+/*
+ * The attack the seal exists for: approve on an account you control, then post
+ * the callback naming somebody else's destination. The id must come from the
+ * seal, never from the request.
+ */
+it('connects the destination named in the state, not one named in the request', function () {
+    tokenGranted();
+
+    $other = StorageDestination::create([
+        'name' => 'Someone elses Drive',
+        'provider' => StorageProvider::GoogleDriveOauth,
+        'prefix' => '',
+        'config' => ['client_id' => 'x-999.apps.googleusercontent.com', 'client_secret' => 'nope'],
+    ]);
+
+    $this->withHeaders(authHeader())->postJson(CALLBACK_URL, [
+        'code' => 'CODE-1',
+        'state' => issuedState($this->destination),
+        // Ignored — there is no route parameter and no accepted field for it.
+        'storage_destination_id' => $other->id,
+    ])->assertOk();
+
+    expect($this->destination->fresh()->config)->toHaveKey('refresh_token')
+        ->and($other->fresh()->config)->not->toHaveKey('refresh_token');
+});
+
+/*
+ * Separates the two halves of the seal. This payload is sealed with *this*
+ * panel's key, so it decrypts perfectly — only the nonce is wrong. Without the
+ * server-side comparison, anyone who could get the app key to encrypt for them
+ * (a debug endpoint, a log, a second feature reusing Crypt) could name any
+ * destination they liked.
+ */
+it('refuses a sealed state whose nonce was never issued', function () {
+    tokenGranted();
+    issuedState();
+
+    $forged = Crypt::encryptString((string) json_encode([
+        'did' => $this->destination->id,
+        'nonce' => 'nonce-we-never-issued',
+        'exp' => now()->addMinutes(10)->getTimestamp(),
+    ]));
+
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => $forged])
+        ->assertOk()
+        ->assertJsonPath('oauth.status', 'failed');
+
+    Http::assertNothingSent();
+    expect($this->destination->fresh()->config)->not->toHaveKey('refresh_token');
+});
+
+it('refuses a state whose window has closed', function () {
+    tokenGranted();
+    $state = issuedState();
+
+    // The seal outlives nothing: the nonce it points at is gone.
+    Cache::forget("storage:oauth:state:{$this->destination->id}");
+
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => $state])
+        ->assertOk()
+        ->assertJsonPath('oauth.status', 'failed');
+});
+
+/*
+ * Google reuses `invalid_grant` for a spent code and an aged one, and both mean
+ * "press Connect again" — not "your credentials are wrong".
+ */
+it('names a spent code as something to retry, not a bad credential', function () {
+    Http::fake([CONNECT_TOKEN_URL => Http::response(['error' => 'invalid_grant'], 400)]);
+
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => issuedState()])
+        ->assertOk()
+        ->assertJsonPath('oauth.status', 'failed')
+        ->assertJsonPath('oauth.message', __('storage.oauth.code_expired'));
+});
+
+/*
+ * The most likely setup fault by far, and the one where naming it exactly saves
+ * a support round trip: the URI in Cloud Console does not match what we sent.
+ */
+it('names a redirect URI mismatch instead of blaming the client id', function () {
+    Http::fake([CONNECT_TOKEN_URL => Http::response([
+        'error' => 'invalid_grant',
+        'error_description' => 'redirect_uri_mismatch',
+    ], 400)]);
+
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => issuedState()])
+        ->assertJsonPath('oauth.message', __('storage.oauth.redirect_mismatch'));
+});
+
+// Google omits the refresh token when an account has already granted this
+// client. Storing the rest would leave a credential that dies within the hour.
+it('refuses an approval that carries no lasting token', function () {
+    Http::fake([CONNECT_TOKEN_URL => Http::response(['access_token' => 'at'])]);
+
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => issuedState()])
+        ->assertJsonPath('oauth.status', 'failed')
+        ->assertJsonPath('oauth.message', __('storage.oauth.no_refresh_token'));
+
+    expect($this->destination->fresh()->config)->not->toHaveKey('refresh_token');
 });
 
 /*
@@ -140,41 +290,30 @@ it('clears the device code after a successful connection', function () {
  * shape of failure this subsystem exists to refuse.
  */
 it('refuses to store a token when the folder cannot be created', function () {
-    Cache::put("storage:oauth:device:{$this->destination->id}", 'DEV-1', now()->addMinutes(30));
     Http::fake([CONNECT_TOKEN_URL => Http::response(['access_token' => 'at', 'refresh_token' => 'rt'])]);
     fakeWorkspace(['ok' => false, 'folder_id' => null, 'account_email' => null, 'reason' => 'storage.oauth.user_quota']);
 
-    $this->withHeaders(authHeader())->postJson(pollUrl())
+    $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => issuedState()])
         ->assertOk()
         ->assertJsonPath('oauth.status', 'failed');
 
     expect($this->destination->fresh()->config)->not->toHaveKey('refresh_token');
 });
 
-// Polling with nothing in flight is "press Connect again", not a Google
-// failure — and it must not send a request asking about a code we do not have.
-it('says the code expired when nothing is in flight', function () {
-    Http::fake([CONNECT_TOKEN_URL => Http::response(['access_token' => 'x'])]);
-
-    $this->withHeaders(authHeader())->postJson(pollUrl())
-        ->assertOk()
-        ->assertJsonPath('oauth.status', 'expired');
-
-    Http::assertNothingSent();
-});
-
 it('never returns the refresh token to the browser', function () {
-    Cache::put("storage:oauth:device:{$this->destination->id}", 'DEV-1', now()->addMinutes(30));
     Http::fake([CONNECT_TOKEN_URL => Http::response(['access_token' => 'at', 'refresh_token' => 'rt-secret'])]);
     fakeWorkspace(['ok' => true, 'folder_id' => 'F', 'account_email' => 'me@gmail.com', 'reason' => null]);
 
-    $response = $this->withHeaders(authHeader())->postJson(pollUrl())->assertOk();
+    $response = $this->withHeaders(authHeader())
+        ->postJson(CALLBACK_URL, ['code' => 'CODE-1', 'state' => issuedState()])
+        ->assertOk();
 
     expect($response->getContent())->not->toContain('rt-secret')
         ->and($response->getContent())->not->toContain('shh');
 });
 
-// Approving this writes a credential that can create files in somebody's
+// Completing this writes a credential that can create files in somebody's
 // personal Google account. `view` is not enough.
 it('refuses a viewer without manage permission', function () {
     $viewer = User::factory()->create();
@@ -182,6 +321,15 @@ it('refuses a viewer without manage permission', function () {
 
     $this->withHeaders(['Authorization' => 'Bearer '.$token])
         ->postJson(startUrl())
+        ->assertForbidden();
+});
+
+it('refuses the callback to a viewer without manage permission', function () {
+    $viewer = User::factory()->create();
+    $token = $viewer->createToken('t')->plainTextToken;
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$token])
+        ->postJson(CALLBACK_URL, ['code' => 'C', 'state' => issuedState()])
         ->assertForbidden();
 });
 

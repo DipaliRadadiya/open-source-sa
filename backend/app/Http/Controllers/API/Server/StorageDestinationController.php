@@ -7,6 +7,7 @@ use App\Actions\Server\StorageDestination\CreateStorageDestination;
 use App\Actions\Server\StorageDestination\DeleteStorageDestination;
 use App\Actions\Server\StorageDestination\UpdateStorageDestination;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\StorageDestination\OauthCallbackRequest;
 use App\Http\Requests\Server\StorageDestination\StoreStorageDestinationRequest;
 use App\Http\Requests\Server\StorageDestination\UpdateStorageDestinationRequest;
 use App\Http\Resources\StorageDestinationResource;
@@ -18,9 +19,12 @@ use Illuminate\Http\JsonResponse;
 class StorageDestinationController extends Controller
 {
     /**
-     * Ask Google for a user code, so the operator can approve on another
-     * device. No redirect URL is involved anywhere in this flow — see
-     * `GoogleDeviceFlow`.
+     * Hand back the Google consent URL to send the operator to.
+     *
+     * The panel does not redirect here — it returns the URL and the browser
+     * navigates. An API that answered with a 302 would be followed by the
+     * frontend's fetch layer, which would then try to parse Google's sign-in
+     * page as JSON.
      */
     public function oauthStart(StorageDestination $storageDestination, ConnectGoogleDrive $action): JsonResponse
     {
@@ -28,15 +32,19 @@ class StorageDestinationController extends Controller
     }
 
     /**
-     * Ask once whether the operator has approved yet.
+     * Finish the round trip Google sent back to the callback page.
      *
-     * One question per request, deliberately. Looping here would hold a worker
-     * for the half hour a human might take; the browser polls instead and can
-     * show progress while it does.
+     * Takes no destination in the route: which destination this was for is
+     * sealed inside `state` and read from there, because the page forwarding
+     * this holds query parameters anybody could have written. See
+     * `GoogleOauthState`.
      */
-    public function oauthPoll(StorageDestination $storageDestination, ConnectGoogleDrive $action): JsonResponse
+    public function oauthCallback(OauthCallbackRequest $request, ConnectGoogleDrive $action): JsonResponse
     {
-        $result = $action->poll($storageDestination);
+        $result = $action->complete(
+            (string) $request->validated('code'),
+            (string) $request->validated('state'),
+        );
 
         return response()->json([
             'oauth' => [
@@ -45,9 +53,12 @@ class StorageDestinationController extends Controller
                 // The action stores and returns a code, never prose.
                 'message' => $result['reason'] ? __($result['reason']) : null,
             ],
-            'storage_destination' => StorageDestinationResource::make(
-                $storageDestination->fresh()
-            )->resolve(),
+            // Null when `state` never resolved to a destination — there is
+            // genuinely nothing to show, and inventing an empty resource would
+            // make the page render a connected-looking row for no row.
+            'storage_destination' => $result['destination']
+                ? StorageDestinationResource::make($result['destination']->fresh())->resolve()
+                : null,
         ]);
     }
 
