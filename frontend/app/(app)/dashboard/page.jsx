@@ -16,6 +16,7 @@ import { ApplicationEmptyState } from "@/components/applications/application-emp
 import { LiveMetricsSection } from "@/components/dashboard/live-metrics-section";
 import { ServerInfoCard } from "@/components/dashboard/server-info-card";
 import { ProcessesCard } from "@/components/dashboard/processes-card";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -82,10 +83,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <SetupBanner remaining={setupRemaining} />
 

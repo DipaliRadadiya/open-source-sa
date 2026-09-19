@@ -6,6 +6,7 @@ import { getLatestSyncRun, getSyncIgnores, getSyncRunItems } from "@/lib/server/
 import { SyncPanel } from "@/components/sync/sync-panel";
 import { serverSnapshot } from "@/lib/sync/server-snapshot";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -66,9 +67,6 @@ export default async function SyncPage() {
 
 function Header({ t }) {
   return (
-    <div className="space-y-1">
-      <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-      <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-    </div>
+    <PageHeader title={t("title")} subtitle={t("subtitle")} />
   );
 }

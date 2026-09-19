@@ -6,6 +6,7 @@ import { CheckRow } from "@/components/admin/doctor/check-row";
 import { RecheckButton } from "@/components/admin/doctor/recheck-button";
 import { CopyReportButton } from "@/components/admin/doctor/copy-report-button";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -52,10 +53,7 @@ export default async function AdminDoctorPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-        </div>
+        <PageHeader title={t("title")} subtitle={t("subtitle")} />
         {doctor ? (
           // flex-wrap, not shrink-0: both labels are verbs and grow in other
           // locales ("रिपोर्ट कॉपी करें" / "फिर से जाँचें"), and a group that

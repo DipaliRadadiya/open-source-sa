@@ -10,6 +10,7 @@ import { FOLLOW_COOKIE } from "@/lib/logs/follow-preference";
 import { LogsPanel } from "@/components/logs/logs-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -54,14 +55,14 @@ export default async function LogsPage({ searchParams }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {lockedCount > 0
+      <PageHeader
+        title={t("title")}
+        subtitle={
+          lockedCount > 0
             ? t("subtitleWithLocked", { count: lockedCount, total: sources.length })
-            : t("subtitle")}
-        </p>
-      </div>
+            : t("subtitle")
+        }
+      />
 
       {/* "We couldn't ask" before "there are none": an unanswered request must
           never render as a claim about what's on the server. */}

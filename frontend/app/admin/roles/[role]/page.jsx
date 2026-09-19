@@ -4,6 +4,7 @@ import { getRoles } from "@/lib/roles/get-roles";
 import { getPermissionCatalog } from "@/lib/permissions/get-permission-catalog";
 import { RoleForm } from "@/components/admin/roles/role-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +29,7 @@ export default async function EditRolePage({ params }) {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("form.editTitle")}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t("form.editSubtitle")}</p>
-      </div>
+      <PageHeader title={t("form.editTitle")} subtitle={t("form.editSubtitle")} />
       <RoleForm mode="edit" role={role} catalog={catalog} />
     </div>
   );

@@ -18,6 +18,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RuntimeStatusNotice } from "@/components/runtime/version-status";
 import { anyInFlight, RUNTIME_POLL_MS, RUNTIME_POLL_STOP_MS } from "@/lib/runtime/in-flight";
 import { FileCode2 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -85,10 +86,7 @@ export default async function PhpPage({ searchParams }) {
         <AutoRefresh intervalMs={RUNTIME_POLL_MS} stopAfterMs={RUNTIME_POLL_STOP_MS} />
       ) : null}
 
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* No PHP at all is a normal state on a fresh server, not an error. */}
       {versions.length === 0 ? (

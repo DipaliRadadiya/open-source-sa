@@ -1,9 +1,11 @@
 import { LocaleSwitcher } from "@/components/sections/locale-switcher";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ErrorCopy } from "@/components/sections/error-copy";
 
 export default function AuthLayout({ children }) {
   return (
-    <TooltipProvider delayDuration={0}>
+    <TooltipProvider delayDuration={300}>
+      <ErrorCopy />
       <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-gradient-to-b from-muted/30 via-background to-muted/50 p-4">
         {/* Soft radial glow behind the card for subtle depth */}
         <div

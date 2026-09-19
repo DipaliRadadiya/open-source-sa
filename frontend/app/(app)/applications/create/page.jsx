@@ -14,6 +14,7 @@ import { withAvailability } from "@/lib/applications/blockers";
 import { NoDatabaseEngineNotice } from "@/components/applications/no-database-engine-notice";
 import { CreateApplicationForm } from "@/components/applications/create-application-form";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -115,10 +116,7 @@ export default async function CreateApplicationPage({ searchParams }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("createTitle")}</h1>
-        <p className="text-sm text-muted-foreground">{t("createSubtitle")}</p>
-      </div>
+      <PageHeader title={t("createTitle")} subtitle={t("createSubtitle")} />
       {/* A precondition of the server, not a field of the form, so it sits
           above it rather than in the readiness checklist — that list focuses
           the input it names, and there is no input for this. */}

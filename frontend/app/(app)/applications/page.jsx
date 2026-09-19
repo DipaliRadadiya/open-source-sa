@@ -11,6 +11,7 @@ import { sitesMissingDatabase } from "@/lib/backups/database-availability";
 import { ApplicationsTable } from "@/components/applications/applications-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -80,10 +81,7 @@ export default async function ApplicationsPage({ searchParams }) {
   redirectOutOfRange("/applications", sp, result.meta, result.failed);
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
       {/* Opening a site that no longer exists lands here, because the list is
           the only place left to go. Saying so on arrival is what separates a
           redirect from being silently teleported somewhere you did not ask for. */}

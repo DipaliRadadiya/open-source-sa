@@ -20,6 +20,7 @@ import { UnlinkedBanner } from "@/components/databases/unlinked-banner";
 import { DatabasesTable } from "@/components/databases/databases-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -114,10 +115,7 @@ export default async function DatabasesPage({ searchParams }) {
   redirectOutOfRange("/databases", sp, dbMeta, dbFailed);
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {usable ? (
         <div className="space-y-4">

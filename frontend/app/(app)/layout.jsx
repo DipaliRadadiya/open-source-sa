@@ -21,6 +21,7 @@ import { UnsavedProvider } from "@/components/ui/unsaved-guard";
 import { ServerRestartProvider } from "@/components/sections/server-restart-overlay";
 import { AppChromeHeight } from "@/components/sections/app-chrome-height";
 import { PanelFocus } from "@/components/sections/panel-focus";
+import { ErrorCopy } from "@/components/sections/error-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +58,8 @@ export default async function AppLayout({ children }) {
 
   return (
     <AuthProvider user={user}>
-      <TooltipProvider delayDuration={0}>
+      <TooltipProvider delayDuration={300}>
+      <ErrorCopy />
         {/* Panel-wide, not settings-only. Any screen with its own Save can
             lose an edit to a sidebar click, and every one of them did. */}
         <UnsavedProvider>

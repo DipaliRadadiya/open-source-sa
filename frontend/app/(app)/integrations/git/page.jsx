@@ -5,6 +5,7 @@ import { can } from "@/lib/permissions/can";
 import { getGitAccounts, getGitProviders } from "@/lib/git/get-git";
 import { AccountsCard } from "@/components/integrations/git/accounts-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,7 @@ export default async function GitIntegrationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <div className="max-w-4xl">
         <AccountsCard

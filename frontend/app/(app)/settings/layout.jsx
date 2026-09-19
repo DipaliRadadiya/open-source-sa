@@ -4,6 +4,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getSettings } from "@/lib/settings/get-settings";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +35,7 @@ export default async function SettingsLayout({ children }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-0.5">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* One width for the tabs AND every section: the strip only frames the
           cards if it ends where they end. Set here so nothing shifts as you

@@ -8,6 +8,7 @@ import { UsersTable } from "@/components/admin/users/users-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +46,7 @@ export default async function AdminUsersPage({ searchParams }) {
   redirectOutOfRange("/admin/users", sp, meta, failed);
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <UsersView roles={roleOptions} rolesFailed={rolesFailed}>
         <UsersToolbar />

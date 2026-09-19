@@ -12,6 +12,7 @@ import { CleanupPanel } from "@/components/disk-cleaner/cleanup-panel";
 import { ScheduleCard } from "@/components/disk-cleaner/schedule-card";
 import { RunsCard } from "@/components/disk-cleaner/runs-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -46,10 +47,7 @@ export default async function DiskCleanerPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* Status across the top, the thing you act on underneath.
           A side column held only two short cards against a long list, so the

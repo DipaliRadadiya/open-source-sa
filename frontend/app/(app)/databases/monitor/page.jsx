@@ -18,6 +18,7 @@ import { ProcessList } from "@/components/databases/process-list";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { Activity } from "lucide-react";
 import { PageCrumb } from "@/components/sections/page-crumb";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -121,9 +122,6 @@ export default async function DatabaseMonitorPage({ searchParams }) {
  */
 function Header({ t }) {
   return (
-    <div className="space-y-1">
-      <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-      <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-    </div>
+    <PageHeader title={t("title")} subtitle={t("subtitle")} />
   );
 }

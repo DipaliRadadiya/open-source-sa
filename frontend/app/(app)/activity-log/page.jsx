@@ -11,6 +11,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -41,12 +42,9 @@ export default async function ActivityLogPage({ searchParams }) {
   redirectOutOfRange("/activity-log", sp, meta, failed);
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("mine.title")}</h1>
-        {/* Said out loud, because the missing "who" column is the only other
-            clue that this is your history and not the server's. */}
-        <p className="text-sm text-muted-foreground">{t("mine.subtitle")}</p>
-      </div>
+      {/* Said out loud, because the missing "who" column is the only other
+      clue that this is your history and not the server's. */}
+      <PageHeader title={t("mine.title")} subtitle={t("mine.subtitle")} />
 
       {failed ? (
         <LoadFailed description={t("mine.loadFailed")} />

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { getCentralStatus } from "@/lib/admin/get-central";
 import { CentralPanel } from "@/components/admin/central/central-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +19,7 @@ export default async function AdminCentralPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("pageSubtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("pageSubtitle")} />
 
       {failed ? (
         <LoadFailed status={status} failure={failure} />

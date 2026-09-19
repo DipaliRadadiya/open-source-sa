@@ -10,6 +10,7 @@ import { groupErrorLogs } from "@/lib/admin/group-error-logs";
 import { ErrorLogPanel } from "@/components/admin/error-logs/error-log-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -46,10 +47,7 @@ export default async function AdminErrorLogsPage({ searchParams }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {failed ? (
         <LoadFailed status={status} failure={failure} />

@@ -12,6 +12,7 @@ import { UnsavedProvider } from "@/components/ui/unsaved-guard";
 import { PanelFocus } from "@/components/sections/panel-focus";
 import { RateLimited } from "@/components/sections/rate-limited";
 import { isRateLimited } from "@/lib/api/rate-limited";
+import { ErrorCopy } from "@/components/sections/error-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,8 @@ export default async function AdminLayout({ children }) {
 
   return (
     <AuthProvider user={user}>
-      <TooltipProvider delayDuration={0}>
+      <TooltipProvider delayDuration={300}>
+      <ErrorCopy />
         <UnsavedProvider>
         <PanelFocus />
         <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>

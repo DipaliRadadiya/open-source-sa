@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { getPermissionCatalog } from "@/lib/permissions/get-permission-catalog";
 import { RoleForm } from "@/components/admin/roles/role-form";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +13,7 @@ export default async function NewRolePage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t("form.createTitle")}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t("form.createSubtitle")}</p>
-      </div>
+      <PageHeader title={t("form.createTitle")} subtitle={t("form.createSubtitle")} />
       <RoleForm mode="create" catalog={catalog} />
     </div>
   );

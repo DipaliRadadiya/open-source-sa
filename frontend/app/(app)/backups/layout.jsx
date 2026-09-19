@@ -6,6 +6,7 @@ import { getRestores } from "@/lib/backups/get-backups";
 import { RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { BackupsTabs } from "@/components/backups/backups-tabs";
 import { RestoreWatch } from "@/components/backups/restore-watch";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,7 @@ export default async function BackupsLayout({ children }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* Wraps the tabs and the pages so a restore started on any of them can
           raise the banner here without waiting for the server to notice. */}

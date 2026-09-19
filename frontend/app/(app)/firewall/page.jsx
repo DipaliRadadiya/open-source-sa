@@ -11,6 +11,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -48,10 +49,7 @@ export default async function FirewallPage({ searchParams }) {
   redirectOutOfRange("/firewall", sp, meta, rulesFailed);
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* "We couldn't ask" must never be drawn as "nothing is protecting this
           server" — the same rule as fail2ban. */}

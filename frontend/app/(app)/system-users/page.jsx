@@ -7,6 +7,7 @@ import { getShells } from "@/lib/system-users/get-shells";
 import { SystemUsersTable } from "@/components/system-users/system-users-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -55,10 +56,7 @@ export default async function SystemUsersPage({ searchParams }) {
   redirectOutOfRange("/system-users", sp, usersPage.meta, usersPage.failed);
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
       {/* `failed` was never read, so a 500 or a rejected shape rendered the
           empty state: "No system users yet" over a server that has accounts,
           with an Add button inviting you to create one that already exists.

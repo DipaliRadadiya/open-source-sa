@@ -15,6 +15,7 @@ import { CronjobsPanel } from "@/components/cron-jobs/cronjobs-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -66,13 +67,10 @@ export default async function CronjobsPage({ searchParams }) {
   redirectOutOfRange("/cron-jobs", sp, meta, failed);
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        {/* The zone moved to the "Next run" column header, beside the
-            timestamps it applies to. Saying it here as well would state the
-            same fact twice, and the copy that mattered was never this one. */}
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      {/* The zone moved to the "Next run" column header, beside the
+          timestamps it applies to. Saying it here as well would state the
+          same fact twice, and the copy that mattered was never this one. */}
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* The list failed, so we can't say what jobs exist — but the heading and
           the shell are still true. Only the list says it's broken. */}

@@ -5,6 +5,7 @@ import { getMyActivityFilters } from "@/lib/activity-log/get-activity-filters";
 import { AccountTabs } from "@/components/account/account-tabs";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,7 @@ export default async function AccountPage({ searchParams }) {
     <div className="space-y-6">
       {/* Reached from the user menu, not the sidebar, so it names its own trail. */}
       <PageCrumb root>{t("title")}</PageCrumb>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
-      </div>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <AccountTabs
         user={user}

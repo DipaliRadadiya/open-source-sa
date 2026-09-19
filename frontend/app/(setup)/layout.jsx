@@ -7,6 +7,7 @@ import { Logo } from "@/components/logo";
 import { LocaleSwitcher } from "@/components/sections/locale-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ErrorCopy } from "@/components/sections/error-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,8 @@ export default async function SetupLayout({ children }) {
   if (!can(permissions, "setting", "view")) redirect("/dashboard");
 
   return (
-    <TooltipProvider delayDuration={0}>
+    <TooltipProvider delayDuration={300}>
+      <ErrorCopy />
       <div className="flex min-h-svh flex-col bg-gradient-to-b from-muted/30 via-background to-muted/50">
         <header className="flex items-center justify-between px-4 py-4 sm:px-6">
           <Logo className="h-8 w-auto" />
