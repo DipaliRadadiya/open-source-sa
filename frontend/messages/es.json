@@ -4778,15 +4778,22 @@
         "modes": {
           "files": {
             "label": "Solo archivos",
-            "description": "Copia los archivos del sitio y elimina cualquier archivo que solo exista en producción. No se hace ninguna copia de seguridad previa."
+            "replaces": "Los archivos del sitio",
+            "deletes": "Los archivos que solo existen en producción",
+            "undo": "Ninguno: no se copia nada antes"
           },
           "database": {
             "label": "Solo base de datos",
-            "description": "Reemplaza la base de datos de producción con la de staging y deja los archivos intactos. Todo lo escrito desde que se hizo la copia — pedidos, comentarios, entradas nuevas — se pierde. Antes se guarda una copia de la base de datos anterior. Comprueba que producción tenga los mismos plugins y temas que staging: la base de datos los esperará, y si falta alguno el sitio puede quedarse en blanco."
+            "replaces": "La base de datos",
+            "deletes": "Todo lo escrito desde que se hizo la copia: pedidos, comentarios, entradas",
+            "undo": "La base de datos anterior se guarda antes",
+            "note": "Producción necesita los mismos plugins y temas que staging. La base de datos los espera, y si falta alguno el sitio puede quedarse en blanco."
           },
           "full": {
             "label": "Archivos y base de datos",
-            "description": "También reemplaza la base de datos, así que todo lo escrito desde que se hizo la copia — pedidos, comentarios, entradas nuevas — se pierde. Antes se guarda una copia de la base de datos anterior."
+            "replaces": "Los archivos del sitio y la base de datos",
+            "deletes": "Los archivos que solo están en producción y todo lo escrito desde la copia",
+            "undo": "La base de datos anterior se guarda antes; los archivos no"
           }
         },
         "backupFirst": "No hay vuelta atrás. <link>Haz antes una copia de seguridad</link> si aún no la tienes.",
@@ -4800,7 +4807,12 @@
         "failed": "La publicación no terminó.",
         "copyAge": "Copia hecha {age}",
         "copyDomain": "Copiar dominio",
-        "whatToPushHint": "Archivos copia el código y los archivos subidos. Base de datos copia el contenido. Ambos copia todo."
+        "whatToPushHint": "Archivos copia el código y los archivos subidos. Base de datos copia el contenido. Ambos copia todo.",
+        "facts": {
+          "replaces": "Reemplaza",
+          "deletes": "Elimina",
+          "undo": "Deshacer"
+        }
       },
       "isCopy": {
         "title": "Este sitio es una copia de pruebas",

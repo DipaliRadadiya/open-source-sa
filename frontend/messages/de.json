@@ -4778,15 +4778,22 @@
         "modes": {
           "files": {
             "label": "Nur Dateien",
-            "description": "Kopiert die Dateien der Website und löscht jede Datei, die nur in der Produktion existiert. Es wird vorher nichts gesichert."
+            "replaces": "Die Dateien der Website",
+            "deletes": "Dateien, die es nur auf Produktion gibt",
+            "undo": "Keiner – vorher wird nichts kopiert"
           },
           "database": {
             "label": "Nur Datenbank",
-            "description": "Ersetzt die Datenbank der Produktion durch die des Stagings und lässt die Dateien unberührt. Alles, was seit der Kopie geschrieben wurde — Bestellungen, Kommentare, neue Beiträge — ist weg. Eine Kopie der alten Datenbank wird vorher gesichert. Prüfen Sie, ob die Produktion dieselben Plugins und Themes hat wie das Staging: Die Datenbank erwartet sie, und ein fehlendes kann die Website leer zurücklassen."
+            "replaces": "Die Datenbank",
+            "deletes": "Alles seit der Kopie Geschriebene: Bestellungen, Kommentare, Beiträge",
+            "undo": "Die alte Datenbank wird vorher gesichert",
+            "note": "Produktion braucht dieselben Plugins und Themes wie Staging. Die Datenbank erwartet sie, und fehlt eines, kann die Website leer bleiben."
           },
           "full": {
             "label": "Dateien und Datenbank",
-            "description": "Ersetzt auch die Datenbank, alles seit der Kopie Geschriebene — Bestellungen, Kommentare, neue Beiträge — ist also weg. Eine Kopie der alten Datenbank wird vorher gesichert."
+            "replaces": "Die Dateien der Website und die Datenbank",
+            "deletes": "Dateien, die es nur auf Produktion gibt, und alles seit der Kopie Geschriebene",
+            "undo": "Die alte Datenbank wird vorher gesichert, die Dateien nicht"
           }
         },
         "backupFirst": "Von hier gibt es kein Zurück. <link>Machen Sie zuerst ein Backup</link>, falls noch nicht geschehen.",
@@ -4800,7 +4807,12 @@
         "failed": "Die Übertragung wurde nicht abgeschlossen.",
         "copyAge": "Kopie erstellt {age}",
         "copyDomain": "Domain kopieren",
-        "whatToPushHint": "Dateien kopiert Code und Uploads. Datenbank kopiert Inhalte. Beides kopiert alles."
+        "whatToPushHint": "Dateien kopiert Code und Uploads. Datenbank kopiert Inhalte. Beides kopiert alles.",
+        "facts": {
+          "replaces": "Ersetzt",
+          "deletes": "Löscht",
+          "undo": "Rückweg"
+        }
       },
       "isCopy": {
         "title": "Diese Website ist eine Staging-Kopie",

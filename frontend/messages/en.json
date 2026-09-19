@@ -4778,15 +4778,22 @@
         "modes": {
           "files": {
             "label": "Files only",
-            "description": "Copies the site's files and deletes any file that exists only on production. Nothing is backed up first."
+            "replaces": "The site's files",
+            "deletes": "Files that exist only on production",
+            "undo": "None — nothing is copied first"
           },
           "database": {
             "label": "Database only",
-            "description": "Replaces production's database with staging's and leaves the files alone. Anything written since the copy was made — orders, comments, new posts — is gone. A copy of the old database is saved first. Check that production has the same plugins and themes as staging: the database will expect them, and a missing one can leave the site blank."
+            "replaces": "The database",
+            "deletes": "Everything written since the copy — orders, comments, posts",
+            "undo": "The old database is saved first",
+            "note": "Production needs the same plugins and themes as staging. The database expects them, and a missing one can leave the site blank."
           },
           "full": {
             "label": "Files and database",
-            "description": "Also replaces the database, so anything written since the copy was made — orders, comments, new posts — is gone. A copy of the old database is saved first."
+            "replaces": "The site's files and the database",
+            "deletes": "Files only on production, and everything written since the copy",
+            "undo": "The old database is saved first; the files are not"
           }
         },
         "backupFirst": "There is no way back from this. <link>Take a backup first</link> if you have not.",
@@ -4800,7 +4807,12 @@
         "failed": "The push did not finish.",
         "copyAge": "Copy made {age}",
         "copyDomain": "Copy domain",
-        "whatToPushHint": "Files copies code and uploads. Database copies content. Both copies everything."
+        "whatToPushHint": "Files copies code and uploads. Database copies content. Both copies everything.",
+        "facts": {
+          "replaces": "Replaces",
+          "deletes": "Deletes",
+          "undo": "Undo"
+        }
       },
       "isCopy": {
         "title": "This site is a staging copy",

@@ -4778,15 +4778,22 @@
         "modes": {
           "files": {
             "label": "Fichiers uniquement",
-            "description": "Copie les fichiers du site et supprime tout fichier présent uniquement en production. Aucune sauvegarde n'est faite au préalable."
+            "replaces": "Les fichiers du site",
+            "deletes": "Les fichiers présents uniquement en production",
+            "undo": "Aucun : rien n'est copié au préalable"
           },
           "database": {
             "label": "Base de données uniquement",
-            "description": "Remplace la base de production par celle de préproduction et laisse les fichiers intacts. Tout ce qui a été écrit depuis la copie — commandes, commentaires, nouveaux articles — disparaît. Une copie de l'ancienne base est sauvegardée au préalable. Vérifiez que la production a les mêmes extensions et thèmes que la préproduction : la base s'attendra à les trouver, et un élément manquant peut laisser le site vide."
+            "replaces": "La base de données",
+            "deletes": "Tout ce qui a été écrit depuis la copie : commandes, commentaires, articles",
+            "undo": "L'ancienne base de données est sauvegardée avant",
+            "note": "La production a besoin des mêmes extensions et thèmes que la préproduction. La base de données les attend, et s'il en manque un le site peut rester blanc."
           },
           "full": {
             "label": "Fichiers et base de données",
-            "description": "Remplace aussi la base, donc tout ce qui a été écrit depuis la copie — commandes, commentaires, nouveaux articles — disparaît. Une copie de l'ancienne base est sauvegardée au préalable."
+            "replaces": "Les fichiers du site et la base de données",
+            "deletes": "Les fichiers présents uniquement en production, et tout ce qui a été écrit depuis la copie",
+            "undo": "L'ancienne base de données est sauvegardée avant, les fichiers non"
           }
         },
         "backupFirst": "C'est irréversible. <link>Faites d'abord une sauvegarde</link> si ce n'est pas fait.",
@@ -4800,7 +4807,12 @@
         "failed": "L'envoi ne s'est pas terminé.",
         "copyAge": "Copie effectuée {age}",
         "copyDomain": "Copier le domaine",
-        "whatToPushHint": "Fichiers copie le code et les téléversements. Base de données copie le contenu. Les deux copient tout."
+        "whatToPushHint": "Fichiers copie le code et les téléversements. Base de données copie le contenu. Les deux copient tout.",
+        "facts": {
+          "replaces": "Remplace",
+          "deletes": "Supprime",
+          "undo": "Retour"
+        }
       },
       "isCopy": {
         "title": "Ce site est une copie de préproduction",

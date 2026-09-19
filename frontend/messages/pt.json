@@ -4778,15 +4778,22 @@
         "modes": {
           "files": {
             "label": "Apenas arquivos",
-            "description": "Copia os arquivos do site e exclui qualquer arquivo que exista só na produção. Nada é salvo antes."
+            "replaces": "Os arquivos do site",
+            "deletes": "Os arquivos que só existem em produção",
+            "undo": "Nenhuma — nada é copiado antes"
           },
           "database": {
             "label": "Apenas banco de dados",
-            "description": "Substitui o banco de dados da produção pelo do staging e deixa os arquivos intactos. Tudo escrito desde que a cópia foi feita — pedidos, comentários, novos posts — é perdido. Uma cópia do banco antigo é salva antes. Verifique se a produção tem os mesmos plugins e temas do staging: o banco de dados espera eles, e um ausente pode deixar o site em branco."
+            "replaces": "O banco de dados",
+            "deletes": "Tudo que foi escrito desde a cópia: pedidos, comentários, posts",
+            "undo": "O banco de dados antigo é salvo antes",
+            "note": "A produção precisa dos mesmos plugins e temas do staging. O banco de dados conta com eles, e se faltar algum o site pode ficar em branco."
           },
           "full": {
             "label": "Arquivos e banco de dados",
-            "description": "Também substitui o banco de dados, então tudo escrito desde que a cópia foi feita — pedidos, comentários, novos posts — é perdido. Uma cópia do banco antigo é salva antes."
+            "replaces": "Os arquivos do site e o banco de dados",
+            "deletes": "Os arquivos que só existem em produção e tudo que foi escrito desde a cópia",
+            "undo": "O banco de dados antigo é salvo antes; os arquivos não"
           }
         },
         "backupFirst": "Não tem volta. <link>Faça um backup antes</link> se ainda não fez.",
@@ -4800,7 +4807,12 @@
         "failed": "O envio não foi concluído.",
         "copyAge": "Cópia feita {age}",
         "copyDomain": "Copiar domínio",
-        "whatToPushHint": "Arquivos copia código e uploads. Banco de dados copia conteúdo. Ambos copiam tudo."
+        "whatToPushHint": "Arquivos copia código e uploads. Banco de dados copia conteúdo. Ambos copiam tudo.",
+        "facts": {
+          "replaces": "Substitui",
+          "deletes": "Apaga",
+          "undo": "Volta"
+        }
       },
       "isCopy": {
         "title": "Este site é uma cópia de staging",

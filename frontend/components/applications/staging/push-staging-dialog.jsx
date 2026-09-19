@@ -10,6 +10,7 @@ import {
   FileText,
   Layers,
   Loader2,
+  TriangleAlert,
   PowerOff,
   Undo2,
 } from "lucide-react";
@@ -156,7 +157,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
               options={PUSH_MODES.map((value) => ({
                 value,
                 label: t(`modes.${value}.label`),
-                hint: t(`modes.${value}.description`),
+                hint: <ModeFacts t={t} mode={value} />,
                 // Files, a database, or both: three different kinds of thing,
                 // which is the case an icon actually helps with.
                 icon: MODE_ICONS[value],
@@ -214,5 +215,48 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+/**
+ * What one push mode does, as the same three answers every time.
+ *
+ * These were three paragraphs — 25, 58 and 34 words — all answering the same
+ * three questions in a different order and a different shape: what gets
+ * replaced, what gets destroyed, and whether there is any way back. Choosing
+ * between them meant extracting that from prose three times, on the most
+ * destructive screen in the panel.
+ *
+ * Same three rows, same order, every mode. What differs between the options is
+ * then the only thing on screen that differs.
+ *
+ * `undo` carries the weight because it is the row that decides it: "None —
+ * nothing is copied first" is the most important fact about Files only, and as
+ * the last clause of a 25-word sentence it read like a footnote.
+ */
+function ModeFacts({ t, mode }) {
+  const note = mode === "database" ? t("modes.database.note") : null;
+
+  return (
+    <span className="mt-1.5 block space-y-1">
+      {["replaces", "deletes", "undo"].map((key) => (
+        <span key={key} className="flex gap-2">
+          {/* A fixed column, so the three answers line up down the card and can
+              be compared across the options without being read in full. */}
+          <span className="w-20 shrink-0 text-muted-foreground">{t(`facts.${key}`)}</span>
+          <span className={cn("min-w-0", key === "undo" && "font-medium text-foreground")}>
+            {t(`modes.${mode}.${key}`)}
+          </span>
+        </span>
+      ))}
+      {/* Only this mode has it: the database will expect plugins and themes
+          that the files it is NOT replacing may not have. */}
+      {note ? (
+        <span className="flex gap-2 pt-0.5 text-warning">
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <span className="min-w-0">{note}</span>
+        </span>
+      ) : null}
+    </span>
   );
 }

@@ -29,16 +29,35 @@ test("the modes offered are exactly the modes the API accepts", () => {
   assert.deepEqual([...PUSH_MODES].sort(), [...accepted].sort());
 });
 
-test("every mode has a label and a description in every locale", () => {
-  for (const locale of ["en", "es", "hi"]) {
+test("every mode answers the same three questions in every locale", () => {
+  /*
+   * They were three paragraphs of 25, 58 and 34 words, each answering the same
+   * three questions in a different order: what is replaced, what is destroyed,
+   * whether there is any way back. Comparing three options meant extracting
+   * that from prose three times.
+   *
+   * All eight locales, because a mode that loses one of the three rows in one
+   * language is a card with a hole in it — and this is the screen where the
+   * missing row would be "Undo: none".
+   */
+  for (const locale of locales) {
     const messages = JSON.parse(
       fs.readFileSync(path.join(root, `messages/${locale}.json`), "utf8"),
     );
-    const modes = messages.applications.staging.pushDialog.modes;
+    const dialog = messages.applications.staging.pushDialog;
+
+    for (const key of ["replaces", "deletes", "undo"]) {
+      assert.ok(dialog.facts?.[key], `missing facts.${key} in ${locale}`);
+    }
 
     for (const mode of PUSH_MODES) {
-      assert.ok(modes[mode]?.label, `missing modes.${mode}.label in ${locale}`);
-      assert.ok(modes[mode]?.description, `missing modes.${mode}.description in ${locale}`);
+      assert.ok(dialog.modes[mode]?.label, `missing modes.${mode}.label in ${locale}`);
+      for (const key of ["replaces", "deletes", "undo"]) {
+        assert.ok(dialog.modes[mode]?.[key], `missing modes.${mode}.${key} in ${locale}`);
+      }
+      // The prose these replaced, so a half-migrated locale cannot sit here
+      // rendering one option as a paragraph and the next as three rows.
+      assert.equal(dialog.modes[mode].description, undefined, `${locale} ${mode} kept its prose`);
     }
   }
 });
@@ -61,10 +80,20 @@ test("database-only names the risk that makes it not the safe middle option", ()
   const messages = JSON.parse(
     fs.readFileSync(path.join(root, "messages/en.json"), "utf8"),
   );
-  const description = messages.applications.staging.pushDialog.modes.database.description;
+  // It moved out of the prose into its own warning row, which is the only row
+  // any mode has that the other two do not — so it must not quietly vanish in
+  // the move.
+  const note = messages.applications.staging.pushDialog.modes.database.note;
 
-  assert.match(description, /plugin/i);
-  assert.match(description, /theme/i);
+  assert.ok(note, "database-only lost its blank-site warning");
+  assert.match(note, /plugin/i);
+  assert.match(note, /theme/i);
+
+  const dialog = fsSrc.readFileSync(
+    path.join(root, "components/applications/staging/push-staging-dialog.jsx"),
+    "utf8",
+  );
+  assert.match(dialog, /mode === "database" \? t\("modes\.database\.note"\) : null/);
 });
 
 /* -------------------------------------------------------------------------
@@ -77,6 +106,8 @@ test("database-only names the risk that makes it not the safe middle option", ()
  * ---------------------------------------------------------------------- */
 
 import fsp from "node:fs";
+import fsSrc from "node:fs";
+const { locales } = await import("../i18n/routing.js");
 
 const readSrc = (p) => fsp.readFileSync(p, "utf8");
 const stripped = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
