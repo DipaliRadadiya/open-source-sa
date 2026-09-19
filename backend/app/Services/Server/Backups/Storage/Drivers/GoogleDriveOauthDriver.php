@@ -5,6 +5,7 @@ namespace App\Services\Server\Backups\Storage\Drivers;
 use App\Contracts\StorageDriver;
 use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
+use App\Services\Server\Backups\Storage\GoogleDriveWorkspace;
 use App\Services\Server\Backups\Storage\GoogleOauthTokens;
 use Throwable;
 
@@ -39,7 +40,10 @@ class GoogleDriveOauthDriver implements StorageDriver
 {
     use ClassifiesFailures;
 
-    public function __construct(private GoogleOauthTokens $tokens) {}
+    public function __construct(
+        private GoogleOauthTokens $tokens,
+        private GoogleDriveWorkspace $workspace,
+    ) {}
 
     public function provider(): StorageProvider
     {
@@ -55,6 +59,14 @@ class GoogleDriveOauthDriver implements StorageDriver
      * roughly seven days: the destination works all week, then every backup
      * fails, and nothing in the panel changed. Asking Google for an access
      * token is the only way to tell the difference, and it costs one request.
+     *
+     * **Two questions, not one.** A stored folder id is the same kind of
+     * evidence as a stored token: it resolved once. The folder lives in
+     * somebody's *personal* Drive and they are entitled to delete it without
+     * telling the panel — after which the token still refreshes perfectly and
+     * every upload fails. Checking only the token therefore put a green tick on
+     * precisely the destination whose next run breaks, which is the outcome
+     * this method exists to prevent.
      */
     public function preflight(StorageDestination $destination): ?string
     {
@@ -69,7 +81,22 @@ class GoogleDriveOauthDriver implements StorageDriver
 
         $result = $this->tokens->accessToken($clientId, $clientSecret, $refreshToken);
 
-        return $result['ok'] ? null : $result['reason'];
+        if (! $result['ok']) {
+            return $result['reason'];
+        }
+
+        // A live grant is not a working destination. The folder sits in
+        // somebody's personal Drive and they may delete it without telling the
+        // panel — at which point the token still refreshes perfectly and every
+        // upload fails. Checking the token alone put a green tick on exactly
+        // the destination whose next real run breaks, which is the failure this
+        // method exists to prevent.
+        return $this->workspace->folderExists(
+            $clientId,
+            $clientSecret,
+            $refreshToken,
+            (string) $destination->configValue('folder_id', ''),
+        )['reason'];
     }
 
     /**

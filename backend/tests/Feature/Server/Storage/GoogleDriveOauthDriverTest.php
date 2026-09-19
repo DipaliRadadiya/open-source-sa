@@ -35,9 +35,36 @@ function oauthDestination(array $config = []): StorageDestination
         'client_id' => '123-abc.apps.googleusercontent.com',
         'client_secret' => 'secret',
         'refresh_token' => 'rt',
+        // A connected destination always has one; preflight now asks whether
+        // it is still there.
+        'folder_id' => 'FOLDER-1',
     ], $config);
 
     return $destination;
+}
+
+/**
+ * The folder half of preflight, answered without touching Drive.
+ *
+ * Bound before the driver is resolved, because the driver takes the workspace
+ * as a constructor dependency.
+ */
+function fakeFolderCheck(array $result): void
+{
+    app()->bind(GoogleDriveWorkspace::class, fn () => new class($result) extends GoogleDriveWorkspace
+    {
+        public function __construct(private array $result) {}
+
+        public function folderExists(string $c, string $s, string $r, string $folderId): array
+        {
+            return $this->result;
+        }
+    });
+}
+
+function folderPresent(): void
+{
+    fakeFolderCheck(['ok' => true, 'reason' => null]);
 }
 
 it('is resolvable through the factory like every other provider', function () {
@@ -64,8 +91,46 @@ it('refuses a destination whose grant has been revoked', function () {
 
 it('passes a destination whose grant still works', function () {
     Http::fake([OAUTH_TOKEN_URL => Http::response(['access_token' => 'fresh', 'expires_in' => 3599])]);
+    folderPresent();
 
     expect(oauthDriver()->preflight(oauthDestination()))->toBeNull();
+});
+
+/*
+ * The folder is in somebody's *personal* Drive and they may delete it without
+ * telling the panel. The token still refreshes perfectly afterwards, so a
+ * token-only preflight put a green tick on exactly the destination whose next
+ * run fails — and the first thing to notice would have been a scheduled backup
+ * at 3am.
+ */
+it('refuses a destination whose folder was deleted from the Drive', function () {
+    Http::fake([OAUTH_TOKEN_URL => Http::response(['access_token' => 'fresh'])]);
+    fakeFolderCheck(['ok' => false, 'reason' => 'storage.oauth.folder_missing']);
+
+    expect(oauthDriver()->preflight(oauthDestination()))->toBe('storage.oauth.folder_missing');
+});
+
+/*
+ * Trashed is the case worth paying an API call for. Drive still resolves a
+ * trashed folder by id, so uploads would keep succeeding into the Trash and be
+ * purged about thirty days later — a destination reporting success while its
+ * archives quietly expire, which nobody discovers until the day they are
+ * needed.
+ */
+it('treats a trashed folder as gone', function () {
+    Http::fake([OAUTH_TOKEN_URL => Http::response(['access_token' => 'fresh'])]);
+    fakeFolderCheck(['ok' => false, 'reason' => 'storage.oauth.folder_missing']);
+
+    expect(oauthDriver()->preflight(oauthDestination()))->not->toBeNull();
+});
+
+// Connected, but the folder was never recorded — a connect that half-finished.
+// Its own answer, not a Drive failure.
+it('says "not connected" when no folder was ever stored', function () {
+    Http::fake([OAUTH_TOKEN_URL => Http::response(['access_token' => 'fresh'])]);
+
+    expect(oauthDriver()->preflight(oauthDestination(['folder_id' => ''])))
+        ->toBe('storage.oauth.not_connected');
 });
 
 // Not connected is its own answer. Reporting Google's failure for a request we
@@ -310,4 +375,66 @@ it('never passes the folder id as the adapter root', function () {
 
     expect($oauthDisk)->toContain('sharedFolderId')
         ->and($oauthDisk)->not->toContain("(string) (\$config['folder_id'] ?? ''),");
+});
+
+/*
+ * `folderExists` itself, against a fake Drive — the tests above stub it, so
+ * without these the trashed case would be asserted only against my own stub.
+ */
+function driveReturning(?bool $trashed, ?string $throws = null): GoogleDriveWorkspace
+{
+    return new GoogleDriveWorkspace(fn () => new class($trashed, $throws) extends Drive
+    {
+        public function __construct(?bool $trashed, ?string $throws)
+        {
+            $this->files = new class($trashed, $throws)
+            {
+                public function __construct(private ?bool $trashed, private ?string $throws) {}
+
+                public function get($id, $opts = [])
+                {
+                    if ($this->throws !== null) {
+                        throw new \RuntimeException($this->throws);
+                    }
+
+                    return new class($this->trashed)
+                    {
+                        public function __construct(private ?bool $trashed) {}
+
+                        public function getTrashed(): ?bool
+                        {
+                            return $this->trashed;
+                        }
+                    };
+                }
+            };
+        }
+    });
+}
+
+it('accepts a folder that is present and not in the trash', function () {
+    expect(driveReturning(false)->folderExists('c', 's', 'rt', 'FOLDER-1'))
+        ->ok->toBeTrue();
+});
+
+// Drive resolves a trashed folder by id perfectly well. Without this the panel
+// would upload into the Trash and lose it on Google's thirty-day purge.
+it('calls a trashed folder missing', function () {
+    expect(driveReturning(true)->folderExists('c', 's', 'rt', 'FOLDER-1'))
+        ->ok->toBeFalse()
+        ->reason->toBe('storage.oauth.folder_missing');
+});
+
+it('calls a deleted folder missing', function () {
+    expect(driveReturning(null, 'File not found: FOLDER-1')->folderExists('c', 's', 'rt', 'FOLDER-1'))
+        ->ok->toBeFalse()
+        ->reason->toBe('storage.oauth.folder_missing');
+});
+
+// No folder recorded is a half-finished connect, not a Drive failure — and it
+// must not cost a request to say so.
+it('answers an empty folder id without asking Drive', function () {
+    expect(driveReturning(false)->folderExists('c', 's', 'rt', ''))
+        ->ok->toBeFalse()
+        ->reason->toBe('storage.oauth.not_connected');
 });

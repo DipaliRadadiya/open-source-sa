@@ -91,6 +91,48 @@ class GoogleDriveWorkspace
     }
 
     /**
+     * Is the folder this destination points at still there?
+     *
+     * Asked at preflight, before a backup is scheduled, because the folder is
+     * in somebody's *personal* Drive and they are entitled to delete it without
+     * telling the panel. A stored id is not evidence the folder exists — it is
+     * an id that resolved once.
+     *
+     * **Trashed counts as gone, and that is the case worth paying an API call
+     * for.** Drive still resolves a trashed folder by id, so without this check
+     * uploads keep succeeding into the Trash and are purged about thirty days
+     * later. A destination reporting success while its archives quietly expire
+     * is worse than one that fails, because nothing ever asks for them until
+     * the day they are needed.
+     *
+     * @return array{ok: bool, reason: string|null}
+     */
+    public function folderExists(string $clientId, string $clientSecret, string $refreshToken, string $folderId): array
+    {
+        if (trim($folderId) === '') {
+            return ['ok' => false, 'reason' => 'storage.oauth.not_connected'];
+        }
+
+        try {
+            $drive = ($this->factory)($clientId, $clientSecret, $refreshToken);
+        } catch (Throwable) {
+            return ['ok' => false, 'reason' => 'storage.oauth.revoked'];
+        }
+
+        try {
+            $folder = $drive->files->get($folderId, ['fields' => 'id,trashed']);
+        } catch (Throwable $e) {
+            return ['ok' => false, 'reason' => $this->classify($e)];
+        }
+
+        if (method_exists($folder, 'getTrashed') && $folder->getTrashed()) {
+            return ['ok' => false, 'reason' => 'storage.oauth.folder_missing'];
+        }
+
+        return ['ok' => true, 'reason' => null];
+    }
+
+    /**
      * Whose Drive this is.
      *
      * Read through the Drive API's own `about` resource rather than the
@@ -150,6 +192,16 @@ class GoogleDriveWorkspace
         if (str_contains($message, 'insufficient')
             && (str_contains($message, 'scope') || str_contains($message, 'permission'))) {
             return 'storage.oauth.insufficient_scope';
+        }
+
+        // Deleted from the Drive itself. Under `drive.file` a file we did not
+        // create is indistinguishable from one that does not exist, so this is
+        // also what a folder created by a *different* install looks like —
+        // "reconnect and the panel will make a new one" is right for both.
+        if (str_contains($message, 'notfound')
+            || str_contains($message, 'not found')
+            || str_contains($message, 'file not found')) {
+            return 'storage.oauth.folder_missing';
         }
 
         return 'storage.oauth.folder_failed';
