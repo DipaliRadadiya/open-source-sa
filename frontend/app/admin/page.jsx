@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 const ERROR_WINDOW = 100;
 
 export default async function AdminDashboardPage() {
-  const [t, stats, doctor, panelUpdate, central, errors, activity, impersonation] =
+  const [t, stats, doctorResult, updateResult, central, errors, activity, impersonation] =
     await Promise.all([
       getTranslations("admin"),
       getDashboardStats(),
@@ -36,6 +36,9 @@ export default async function AdminDashboardPage() {
       getActivityLog({ per_page: 100 }),
       getImpersonation(),
     ]);
+
+  const doctor = doctorResult.doctor;
+  const panelUpdate = updateResult.state;
 
   // Every tile has a "we could not ask" state. A dashboard that renders a
   // healthy-looking tile over a failed read is worse than one that says so.

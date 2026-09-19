@@ -24,7 +24,16 @@ const TABS = ["profile", "security", "activity"];
 const TRIGGER =
   "!h-auto flex-none gap-2 px-4 py-2 hover:bg-background/60 data-active:shadow-sm";
 
-export function AccountTabs({ user, entries, meta, filters, isFiltered, activityFailed }) {
+export function AccountTabs({
+  user,
+  entries,
+  meta,
+  filters,
+  isFiltered,
+  activityFailed,
+  activityStatus = null,
+  activityFailure = null,
+}) {
   const t = useTranslations("account");
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
@@ -102,7 +111,7 @@ export function AccountTabs({ user, entries, meta, filters, isFiltered, activity
                 would otherwise read as "no matches", which is a wrong answer
                 rather than an error. */}
             {activityFailed ? (
-              <LoadFailed />
+              <LoadFailed status={activityStatus} failure={activityFailure} />
             ) : entries.length ? (
               <>
                 <AccountActivity data={entries} />

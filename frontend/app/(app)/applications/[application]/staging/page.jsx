@@ -62,7 +62,7 @@ export default async function ApplicationStagingPage({ params }) {
           {t("unsupported", { type: application.site_type_title ?? application.site_type })}
         </div>
       ) : staging.failed ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed description={t("loadFailed")} status={staging.status} failure={staging.failure} />
       ) : (
         <StagingPanel
           appId={id}

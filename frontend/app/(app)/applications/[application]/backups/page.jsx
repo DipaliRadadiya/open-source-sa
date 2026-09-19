@@ -36,7 +36,7 @@ export default async function ApplicationBackupsPage({ params }) {
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
-    return <LoadFailed description={t("loadFailed")} />;
+    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
 
   // Granted per site type, the same contract as the other application screens:
   // no grant here means this screen should not exist for this site.

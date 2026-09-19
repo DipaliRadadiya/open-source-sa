@@ -57,7 +57,7 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
   // rendered at all rather than shown empty, which would misreport "no bots".
   const canSeeTraffic = can(appPermissions, "app_log", "view", "application");
 
-  const [{ policies, failed: policiesFailed }, traffic] = settled
+  const [{ policies, failed: policiesFailed, status: policiesStatus, failure: policiesFailure }, traffic] = settled
     ? await Promise.all([
         getAiBotPolicies(),
         canSeeTraffic ? getBotTraffic(id, days) : Promise.resolve(null),
@@ -76,7 +76,7 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
           {t("provisioning")}
         </div>
       ) : policiesFailed || !policies ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed description={t("loadFailed")} status={policiesStatus} failure={policiesFailure} />
       ) : (
         <>
           <BotBlockerSection

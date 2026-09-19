@@ -102,6 +102,8 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
           totalSize={trashResult.totalSize}
           retentionDays={trashResult.retentionDays}
           failed={trashResult.failed}
+          status={trashResult.status}
+          failure={trashResult.failure}
           canManage={canManage}
           backHref={`/applications/${id}/files`}
         />
@@ -128,7 +130,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
           }
         />
       ) : filesResult.failed ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed description={t("loadFailed")} status={filesResult.status} failure={filesResult.failure} />
       ) : (
         // No rail. The breakdown was a 340px column beside the listing, held
         // back to 2xl because below that the listing's seven columns were

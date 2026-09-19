@@ -54,7 +54,7 @@ export default async function ApplicationFirewallPage({ params }) {
   // nothing truthful to render, so a failure there is a load failure. The web
   // server is a separate, non-fatal question — if it can't be determined, the
   // screen just doesn't claim anything about OpenLiteSpeed.
-  const [{ categories, modes, failed: optionsFailed }, { webServer }] = settled
+  const [{ categories, modes, failed: optionsFailed, status: optionsStatus, failure: optionsFailure }, { webServer }] = settled
     ? await Promise.all([getWafOptions(), getServerCapabilities()])
     : [{ categories: [], modes: [], failed: false }, { webServer: null }];
 
@@ -100,7 +100,7 @@ export default async function ApplicationFirewallPage({ params }) {
           {t("provisioning")}
         </div>
       ) : optionsFailed || categories.length === 0 || modes.length === 0 ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed description={t("loadFailed")} status={optionsStatus} failure={optionsFailure} />
       ) : (
         <>
           {/* Stated rather than hidden: on OpenLiteSpeed the settings still

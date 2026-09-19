@@ -59,6 +59,10 @@ export async function getFirewallRules(searchParams = {}) {
     rules: result.data?.rules ?? [],
     meta: result.data?.meta ?? { current_page: 1, per_page: 10, total: 0, last_page: 1 },
     failed: result.failed,
+    // Carried so the rules card can say WHICH failure — a 403 is a permission
+    // problem the reader can act on, a 500 is ours.
+    status: result.status,
+    failure: result.failure,
   };
 }
 

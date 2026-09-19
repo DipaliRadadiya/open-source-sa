@@ -36,7 +36,7 @@ export default async function ApplicationDeploymentPage({ params }) {
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
-    return <LoadFailed description={t("loadFailed")} />;
+    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
 
   const application = result.application;
   // Deployment is its own grant, separate from the server-level `application`.

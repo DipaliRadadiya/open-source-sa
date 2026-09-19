@@ -20,7 +20,8 @@ export async function generateMetadata() {
 const RANK = { fail: 0, warn: 1, pass: 2 };
 
 export default async function AdminDoctorPage() {
-  const [t, doctor] = await Promise.all([getTranslations("doctor"), getDoctor()]);
+  const [t, result] = await Promise.all([getTranslations("doctor"), getDoctor()]);
+  const doctor = result.doctor;
 
   const statusLabels = { pass: t("statusPass"), warn: t("statusWarn"), fail: t("statusFail") };
 
@@ -66,7 +67,11 @@ export default async function AdminDoctorPage() {
       </div>
 
       {!doctor ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed
+          description={t("loadFailed")}
+          status={result.status}
+          failure={result.failure}
+        />
       ) : (
         <>
           {/* Summary: a NEUTRAL overview surface so it reads as the header of

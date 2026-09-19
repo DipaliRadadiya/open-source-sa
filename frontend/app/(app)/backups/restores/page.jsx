@@ -18,13 +18,13 @@ export const dynamic = "force-dynamic";
  */
 export default async function RestoresPage({ searchParams }) {
   const sp = await searchParams;
-  const [{ restores, meta, failed }, { applications }, t] = await Promise.all([
+  const [{ restores, meta, failed, status, failure }, { applications }, t] = await Promise.all([
     getRestores(sp),
     getAllApplications(),
     getTranslations("backups"),
   ]);
 
-  if (failed) return <LoadFailed description={t("loadFailed")} />;
+  if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
 
   // Which empty state to show: "nothing has ever been restored" and "nothing
   // matches these filters" are different facts, and only one of them is

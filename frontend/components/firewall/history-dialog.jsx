@@ -29,18 +29,28 @@ export function HistoryDialog({ isAdmin }) {
   const paginationT = useTranslations("pagination");
   const [open, setOpen] = useState(false);
   const [perPage, setPerPage] = useState(10);
-  const [state, setState] = useState({ loading: false, failed: false, entries: [], meta: null });
+  const [state, setState] = useState({
+    loading: false,
+    failed: false,
+    entries: [],
+    meta: null,
+    // Kept so the box can name the failure rather than shrug at it — this
+    // dialog is reached from a security screen, where "could not load" and
+    // "you may not see this" are very different answers.
+    status: null,
+  });
 
   async function load(page = 1, requestedPerPage = perPage) {
-    setState({ loading: true, failed: false, entries: [], meta: null });
+    setState({ loading: true, failed: false, entries: [], meta: null, status: null });
     try {
-      const { data } = await getMyActivityByType("firewall", {
+      const response = await getMyActivityByType("firewall", {
         page,
         perPage: requestedPerPage,
       });
-      const parsed = myActivityResponseSchema.safeParse(data);
+      const parsed = myActivityResponseSchema.safeParse(response.data);
       if (!parsed.success) {
-        setState({ loading: false, failed: true, entries: [], meta: null });
+        // The request worked; the payload is not what this screen expects.
+        setState({ loading: false, failed: true, entries: [], meta: null, status: null, failure: "shape" });
         return;
       }
       setState({
@@ -48,9 +58,16 @@ export function HistoryDialog({ isAdmin }) {
         failed: false,
         entries: parsed.data.activity_log,
         meta: parsed.data.meta,
+        status: null,
       });
-    } catch {
-      setState({ loading: false, failed: true, entries: [], meta: null });
+    } catch (error) {
+      setState({
+        loading: false,
+        failed: true,
+        entries: [],
+        meta: null,
+        status: error?.response?.status ?? null,
+      });
     }
   }
 
@@ -98,7 +115,11 @@ export function HistoryDialog({ isAdmin }) {
             {t("history.loading")}
           </p>
         ) : state.failed ? (
-          <LoadFailed description={t("history.failed")} />
+          <LoadFailed
+            description={t("history.failed")}
+            status={state.status}
+            failure={state.failure ?? null}
+          />
         ) : state.entries.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
             {t("history.empty")}

@@ -84,7 +84,7 @@ export default async function ApplicationPhpPage({ params }) {
           {t("provisioning")}
         </div>
       ) : phpResult.failed || !phpResult.php ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed description={t("loadFailed")} status={phpResult.status} failure={phpResult.failure} />
       ) : (
         <PhpPanel
           appId={id}

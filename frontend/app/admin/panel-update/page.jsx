@@ -13,12 +13,13 @@ export async function generateMetadata() {
 }
 
 export default async function AdminPanelUpdatePage() {
-  const [t, state, branding] = await Promise.all([
+  const [t, update, branding] = await Promise.all([
     getTranslations("panelUpdate"),
     getPanelUpdate(),
     getBranding(),
   ]);
 
+  const state = update.state;
   const subtitle = t("subtitle", { brand: branding.name });
 
   // The heading travels with the panel because "Check again" sits beside it and
@@ -28,7 +29,11 @@ export default async function AdminPanelUpdatePage() {
     return (
       <div className="max-w-3xl space-y-6">
         <PageHeader title={t("title")} subtitle={subtitle} />
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed
+          description={t("loadFailed")}
+          status={update.status}
+          failure={update.failure}
+        />
       </div>
     );
   }

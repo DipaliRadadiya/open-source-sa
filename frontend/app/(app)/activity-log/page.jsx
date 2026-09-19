@@ -29,7 +29,7 @@ export default async function ActivityLogPage({ searchParams }) {
 
   if (!can(permissions, "activity_log", "view")) redirect("/dashboard");
 
-  const [{ activity_log: entries, meta, failed }, filters] = await Promise.all([
+  const [{ activity_log: entries, meta, failed, status, failure }, filters] = await Promise.all([
     getMyActivity(sp, "server"),
     getMyActivityFilters(),
   ]);
@@ -47,7 +47,7 @@ export default async function ActivityLogPage({ searchParams }) {
       <PageHeader title={t("mine.title")} subtitle={t("mine.subtitle")} />
 
       {failed ? (
-        <LoadFailed description={t("mine.loadFailed")} />
+        <LoadFailed description={t("mine.loadFailed")} status={status} failure={failure} />
       ) : (
         <NavTransitionProvider>
           <ActivityToolbar

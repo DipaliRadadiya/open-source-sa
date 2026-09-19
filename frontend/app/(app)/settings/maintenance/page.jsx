@@ -11,7 +11,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsMaintenancePage() {
-  const [permissions, t, { data, lastChanged, failed }, presets, pending] = await Promise.all([
+  const [permissions, t, { data, lastChanged, failed, status, failure }, presets, pending] = await Promise.all([
     getPermissions(),
     getTranslations("settings"),
     getSettings(),
@@ -23,7 +23,7 @@ export default async function SettingsMaintenancePage() {
 
   const canManage = can(permissions, "setting", "manage");
 
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} />;
+  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
 
   // One card, three sections. Split across three cards these were three mostly
   // empty boxes with three save bars, for six settings that are one decision.

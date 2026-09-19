@@ -49,7 +49,11 @@ export default async function SetupPage() {
           mount, so switching language must re-mount it to adopt the newly
           localized payload (the frontend strings update via context anyway). */}
       {result.failed || !result.setup ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed
+          description={t("loadFailed")}
+          status={result.status}
+          failure={result.failure}
+        />
       ) : (
         <SetupChecklist key={locale} initialSetup={result.setup} versions={versions} />
       )}

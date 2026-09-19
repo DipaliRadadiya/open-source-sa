@@ -96,7 +96,7 @@ export default async function ApplicationDomainsPage({ params }) {
           {t("provisioning")}
         </div>
       ) : domainList.failed ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed description={t("loadFailed")} status={domainList.status} failure={domainList.failure} />
       ) : (
         <DomainsSslTabs
           sslStatus={sslStatus}

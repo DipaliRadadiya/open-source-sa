@@ -37,7 +37,11 @@ export default async function FirewallPage({ searchParams }) {
   const user = await getCurrentUser();
   const isAdmin = Boolean(user?.is_admin);
 
-  const [{ data, failed }, presets, { rules, meta, failed: rulesFailed }] = await Promise.all([
+  const [
+    { data, failed, status, failure },
+    presets,
+    { rules, meta, failed: rulesFailed, status: rulesStatus, failure: rulesFailure },
+  ] = await Promise.all([
     getFirewall(),
     canManage ? getFirewallPresets() : Promise.resolve([]),
     getFirewallRules(sp),
@@ -54,7 +58,7 @@ export default async function FirewallPage({ searchParams }) {
       {/* "We couldn't ask" must never be drawn as "nothing is protecting this
           server" — the same rule as fail2ban. */}
       {failed || !data ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed description={t("loadFailed")} status={status} failure={failure} />
       ) : (
         <NavTransitionProvider>
           <div className="space-y-4">
@@ -82,7 +86,11 @@ export default async function FirewallPage({ searchParams }) {
             ) : null}
 
             {rulesFailed ? (
-              <LoadFailed description={t("rules.loadFailed")} />
+              <LoadFailed
+                description={t("rules.loadFailed")}
+                status={rulesStatus}
+                failure={rulesFailure}
+              />
             ) : (
               <RulesCard
                 rules={rules}

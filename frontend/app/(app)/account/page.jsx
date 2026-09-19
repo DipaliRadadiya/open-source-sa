@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AccountPage({ searchParams }) {
   const sp = await searchParams;
-  const [user, { activity_log: entries, meta, failed }, filters, t] = await Promise.all([
+  const [user, { activity_log: entries, meta, failed, status, failure }, filters, t] = await Promise.all([
     getCurrentUser(),
     getMyActivity(sp, "account"),
     getMyActivityFilters(),
@@ -34,6 +34,8 @@ export default async function AccountPage({ searchParams }) {
         meta={meta}
         // Only the history failed — the profile half of this page is fine.
         activityFailed={failed}
+        activityStatus={status}
+        activityFailure={failure}
         filters={filters}
         isFiltered={Boolean(sp.search || sp.type || sp.action)}
       />

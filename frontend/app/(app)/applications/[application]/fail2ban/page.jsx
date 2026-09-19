@@ -56,7 +56,7 @@ export default async function ApplicationFail2banPage({ params }) {
         </div>
       ) : status.failed ? (
         // "We could not ask" must never render as "nothing is protecting you".
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed description={t("loadFailed")} status={status.status} failure={status.failure} />
       ) : (
         <Fail2banPanel
           appId={id}

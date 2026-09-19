@@ -10,7 +10,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsServerPage() {
-  const [permissions, t, { data, lastChanged, failed }, timezones] = await Promise.all([
+  const [permissions, t, { data, lastChanged, failed, status, failure }, timezones] = await Promise.all([
     getPermissions(),
     getTranslations("settings"),
     getSettings(),
@@ -20,7 +20,7 @@ export default async function SettingsServerPage() {
   const canManage = can(permissions, "setting", "manage");
 
   if (failed || !data?.general)
-    return <LoadFailed description={t("loadFailed")} />;
+    return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
 
   return (
     <GeneralForm

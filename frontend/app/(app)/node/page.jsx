@@ -24,7 +24,7 @@ export async function generateMetadata() {
 
 export default async function NodePage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, { data, failed }] = await Promise.all([
+  const [permissions, t, { data, failed, status, failure }] = await Promise.all([
     getPermissions(),
     getTranslations("node"),
     getNode(),
@@ -33,7 +33,7 @@ export default async function NodePage({ searchParams }) {
   if (!can(permissions, "node", "view")) redirect("/dashboard");
   const canManage = can(permissions, "node", "manage");
 
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} />;
+  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
 
   const node = data;
   const versions = node?.versions ?? [];

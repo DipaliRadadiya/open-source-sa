@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 // No GET-single-role endpoint exists, so fetch the (small) full list and match.
 export default async function EditRolePage({ params }) {
   const { role: roleId } = await params;
-  const [{ roles, failed }, catalog, t] = await Promise.all([
+  const [{ roles, failed, status, failure }, catalog, t] = await Promise.all([
     getRoles(),
     getPermissionCatalog(),
     getTranslations("roles"),
@@ -20,7 +20,7 @@ export default async function EditRolePage({ params }) {
   // A failed fetch is not a missing role. Matching an id against an empty list
   // and calling notFound() states, with a 404, that something exists nowhere —
   // on the evidence of one request that did not come back.
-  if (failed) return <LoadFailed description={t("loadFailed")} />;
+  if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
 
   const role = roles.find((r) => String(r.id) === String(roleId));
   if (!role) notFound();

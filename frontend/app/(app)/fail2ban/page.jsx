@@ -37,7 +37,7 @@ export default async function Fail2banPage() {
   // permission: a link that lands on a redirect is worse than no link.
   const logHref = can(permissions, "logs", "view") ? "/logs?source=fail2ban" : null;
 
-  const { data, failed } = await getFail2ban();
+  const { data, failed, status, failure } = await getFail2ban();
 
   return (
     <div className="space-y-6">
@@ -45,7 +45,7 @@ export default async function Fail2banPage() {
 
       {/* "We couldn't ask" must never render as "you have no protection". */}
       {failed || !data ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed description={t("loadFailed")} status={status} failure={failure} />
       ) : !data.installed ? (
         <>
           {/* Only while the server says an install is running. apt gets ten

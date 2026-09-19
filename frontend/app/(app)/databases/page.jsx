@@ -41,12 +41,12 @@ export default async function DatabasesPage({ searchParams }) {
     getFormatter(),
     getEngines(),
   ]);
-  const { engines, failed } = live;
+  const { engines, failed, status, failure } = live;
 
   if (!can(permissions, "database", "view")) redirect("/dashboard");
   const canManage = can(permissions, "database", "manage");
 
-  if (failed) return <LoadFailed description={t("loadFailed")} />;
+  if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
 
   // Only a REACHABLE engine can hold databases. An install that is queued or
   // failed has none, so asking for a list would spend a request to render a

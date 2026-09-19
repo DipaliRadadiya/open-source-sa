@@ -34,7 +34,7 @@ export default async function CronjobsPage({ searchParams }) {
   if (!can(permissions, "cronjob", "view")) redirect("/dashboard");
 
   const canManage = can(permissions, "cronjob", "manage");
-  const [{ cronjobs, meta, failed }, runAs, schedulePresets, commandPresets, facts, sites] =
+  const [{ cronjobs, meta, failed, status, failure }, runAs, schedulePresets, commandPresets, facts, sites] =
     await Promise.all([
       getCronjobs(sp),
       // Not gated on `canManage`: the "Runs as" FILTER is part of the toolbar,
@@ -75,7 +75,7 @@ export default async function CronjobsPage({ searchParams }) {
       {/* The list failed, so we can't say what jobs exist — but the heading and
           the shell are still true. Only the list says it's broken. */}
       {failed ? (
-        <LoadFailed description={t("loadFailed")} />
+        <LoadFailed description={t("loadFailed")} status={status} failure={failure} />
       ) : (
         <NavTransitionProvider>
           <CronjobsPanel
