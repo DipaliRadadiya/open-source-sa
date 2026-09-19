@@ -65,7 +65,7 @@ export function ApplicationEmptyState({ canManage = false, compact = false }) {
               const Icon = STEP_ICONS[index];
               return (
                 <li key={step} className="flex gap-2.5">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full border bg-muted text-[11px] font-semibold text-muted-foreground">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-semibold text-muted-foreground">
                     {index + 1}
                   </span>
                   <div className="min-w-0">

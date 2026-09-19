@@ -41,7 +41,7 @@ export function RuleName({ rule, muted, labels }) {
         {rule.description || labels.nameFor?.(rule) || labels.unnamed}
       </span>
       {off ? (
-        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {labels.off}
         </span>
       ) : null}

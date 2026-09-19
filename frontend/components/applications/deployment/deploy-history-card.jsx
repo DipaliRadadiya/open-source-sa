@@ -206,7 +206,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
 
           <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-console-border bg-console">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
-              <span className="font-mono text-[11px] text-console-muted">{t("output")}</span>
+              <span className="font-mono text-xs text-console-muted">{t("output")}</span>
               {open?.output ? (
                 <CopyButton
                   value={open.output}

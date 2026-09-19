@@ -196,14 +196,14 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
         ) : (
           <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-console-border bg-console">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
-              <span className="truncate font-mono text-[11px] text-console-muted">{file?.path}</span>
+              <span className="truncate font-mono text-xs text-console-muted">{file?.path}</span>
               <div className="flex shrink-0 items-center gap-1">
                 {canEdit && loaded?.backups?.length ? (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setRestoreOpen(true)}
-                    className="h-7 gap-1.5 px-2 text-[11px] text-console-muted hover:bg-console-foreground/10 hover:text-console-foreground"
+                    className="h-7 gap-1.5 px-2 text-xs text-console-muted hover:bg-console-foreground/10 hover:text-console-foreground"
                   >
                     <History className="size-3.5" />
                     {t("restore.action")}

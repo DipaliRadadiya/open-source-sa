@@ -341,19 +341,19 @@ function TokenList({ label, tokens, values, onInsert }) {
                   type="button"
                   onClick={() => onInsert(token)}
                   title={token}
-                  className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] ring-1 ring-inset ring-border transition-colors hover:bg-primary/10 hover:text-primary hover:ring-primary/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  className="rounded bg-background px-1.5 py-0.5 font-mono text-xs ring-1 ring-inset ring-border transition-colors hover:bg-primary/10 hover:text-primary hover:ring-primary/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                   {token}
                 </button>
               ) : (
-                <code className="rounded bg-background px-1.5 py-0.5 font-mono text-[11px] ring-1 ring-inset ring-border">
+                <code className="rounded bg-background px-1.5 py-0.5 font-mono text-xs ring-1 ring-inset ring-border">
                   {token}
                 </code>
               )}
             </dt>
             {/* break-all: a document root is long and unbroken, and letting it
                 push the card wide is worse than letting it wrap. */}
-            <dd className="min-w-0 self-center font-mono text-[11px] break-all text-muted-foreground">
+            <dd className="min-w-0 self-center font-mono text-xs break-all text-muted-foreground">
               {values[token] ?? ""}
             </dd>
           </Fragment>

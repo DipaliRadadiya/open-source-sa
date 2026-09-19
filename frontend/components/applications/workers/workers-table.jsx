@@ -71,7 +71,7 @@ function CommandCell({ row }) {
           <TooltipTrigger asChild>
             <span
               tabIndex={0}
-              className="mt-1 flex max-w-xs items-center gap-1 truncate text-[11px] text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="mt-1 flex max-w-xs items-center gap-1 truncate text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <FolderOpen className="size-3 shrink-0" />
               <span className="truncate font-mono">{worker.directory}</span>
@@ -92,7 +92,7 @@ function CommandCell({ row }) {
           <TooltipTrigger asChild>
             <span
               tabIndex={0}
-              className="mt-1 flex max-w-xs items-center gap-1 truncate text-[11px] text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="mt-1 flex max-w-xs items-center gap-1 truncate text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <UserRound className="size-3 shrink-0" />
               <span className="truncate font-mono">{worker.effective_user}</span>

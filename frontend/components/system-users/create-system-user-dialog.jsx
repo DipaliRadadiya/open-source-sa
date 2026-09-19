@@ -287,7 +287,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
                           <SelectItem key={shell.value} value={shell.value} className="text-xs">
                             <span className="flex flex-col">
                               <span>{shell.title}</span>
-                              <span className="font-mono text-[11px] text-muted-foreground">
+                              <span className="font-mono text-xs text-muted-foreground">
                                 {shell.value}
                               </span>
                             </span>

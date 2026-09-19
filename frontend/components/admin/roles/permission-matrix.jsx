@@ -154,7 +154,7 @@ export function PermissionMatrix({ groups = [], value, onChange }) {
                 {group.sub_level_title || t("generalGroup")}
               </span>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-medium text-muted-foreground">
+                <span className="text-xs font-medium text-muted-foreground">
                   {t("setAll")}
                 </span>
                 <AccessToggles

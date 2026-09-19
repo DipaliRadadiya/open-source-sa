@@ -147,7 +147,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
               being trusted with. */}
           <div className="flex min-h-48 flex-1 flex-col overflow-hidden rounded-lg border border-console-border bg-console">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
-              <span className="truncate font-mono text-[11px] text-console-muted">
+              <span className="truncate font-mono text-xs text-console-muted">
                 {file?.path ?? t("phpIni.pathUnknown")}
               </span>
               <CopyButton
@@ -180,7 +180,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
               nothing was applied and the old file is already back. */}
           {phpError ? (
             <div className="shrink-0 overflow-hidden rounded-lg border border-console-border bg-console">
-              <div className="border-b border-console-border px-3 py-1.5 text-[11px] uppercase tracking-wide text-console-muted">
+              <div className="border-b border-console-border px-3 py-1.5 text-xs uppercase tracking-wide text-console-muted">
                 {t("phpIni.rejectedTitle")}
               </div>
               <pre className="console-scroll max-h-40 overflow-auto p-3 font-mono text-xs leading-6">

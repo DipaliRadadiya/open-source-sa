@@ -78,7 +78,7 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
     <div className="flex min-w-0 items-center gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5">
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
         <p
           className={`truncate text-sm font-medium ${mono ? "font-mono text-[13px] tabular-nums" : ""}`}
         >
@@ -89,7 +89,7 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
             its whole grid row — accepted, because the alternative is a finding
             nobody sees. NOT truncated: a filename or a refusal is the content,
             and clipping it would leave the note saying less than nothing. */}
-        {note ? <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{note}</p> : null}
+        {note ? <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{note}</p> : null}
       </div>
       {copy ? <CopyButton value={String(value)} /> : null}
       {/* A menu, when the tile has more than one thing you could do to it —

@@ -348,11 +348,11 @@ function Tile({
           <span className="flex items-center gap-1.5">
             <span className="min-w-0 truncate text-sm font-medium">{title}</span>
             {done ? (
-              <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-success">
+              <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-success">
                 {doneLabel}
               </span>
             ) : off ? (
-              <span className="shrink-0 rounded bg-muted-foreground/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="shrink-0 rounded bg-muted-foreground/15 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {offLabel}
               </span>
             ) : risky ? (

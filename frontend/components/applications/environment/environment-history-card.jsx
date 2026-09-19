@@ -193,7 +193,7 @@ function HistoryRow({ appId, entry, canManage, onRestore }) {
               <Badge
                 key={key}
                 variant="outline"
-                className="font-mono text-[11px] font-normal"
+                className="font-mono text-xs font-normal"
               >
                 {key}
               </Badge>

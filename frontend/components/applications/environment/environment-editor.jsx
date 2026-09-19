@@ -228,7 +228,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
         <div className="overflow-hidden rounded-lg border border-console-border bg-console">
           <div className="flex items-center justify-between gap-2 border-b border-console-border px-3 py-1.5">
             <span className="flex min-w-0 items-center gap-2">
-              <span className="truncate font-mono text-[11px] text-console-muted">
+              <span className="truncate font-mono text-xs text-console-muted">
                 {env.path ?? t("pathUnknown")}
               </span>
               {env.framework_title ? (
@@ -246,7 +246,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
                   variant="ghost"
                   size="sm"
                   onClick={() => setRestoreOpen(true)}
-                  className="h-7 gap-1.5 px-2 text-[11px] text-console-muted hover:bg-console-foreground/10 hover:text-console-foreground"
+                  className="h-7 gap-1.5 px-2 text-xs text-console-muted hover:bg-console-foreground/10 hover:text-console-foreground"
                 >
                   <History className="size-3.5" />
                   {t("restore.action")}
@@ -277,7 +277,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
         {/* The site's config was NOT changed — say so in the backend's words. */}
         {syntaxError ? (
           <div className="overflow-hidden rounded-lg border border-destructive/30 bg-destructive/5">
-            <div className="border-b border-destructive/20 px-3 py-1.5 text-[11px] uppercase tracking-wide text-destructive">
+            <div className="border-b border-destructive/20 px-3 py-1.5 text-xs uppercase tracking-wide text-destructive">
               {t("syntaxTitle")}
             </div>
             <pre className="console-scroll max-h-40 overflow-auto p-3 font-mono text-xs leading-6 text-destructive">

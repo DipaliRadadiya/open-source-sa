@@ -196,7 +196,7 @@ export async function ServerInfoCard({ facts, health, siteAttention = [] }) {
             runtimes.map(([name, version]) => (
               <Badge key={name} variant="outline" className="gap-1.5 bg-card py-1 font-normal">
                 <span className="font-medium">{name}</span>
-                <span className="font-mono text-[11px] text-muted-foreground">{version}</span>
+                <span className="font-mono text-xs text-muted-foreground">{version}</span>
               </Badge>
             ))
           ) : (

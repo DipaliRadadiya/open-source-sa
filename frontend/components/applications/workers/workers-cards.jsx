@@ -57,7 +57,7 @@ export function WorkersCards({ data, appId, presets = [], canManage, busy, setRo
             <CopyButton value={worker.command} label={t("form.command")} className="size-6" />
           </div>
           {worker.directory ? (
-            <p className="mt-1.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground">
+            <p className="mt-1.5 flex items-center gap-1 truncate text-xs text-muted-foreground">
               <FolderOpen className="size-3 shrink-0" />
               <span className="truncate font-mono">{worker.directory}</span>
             </p>

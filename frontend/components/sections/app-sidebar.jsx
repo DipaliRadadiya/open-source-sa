@@ -58,7 +58,7 @@ function MobileNavLink({ item, built, active, children, className }) {
       >
         <span aria-disabled="true">
           {children}
-          <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
+          <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
             {t("soon")}
           </span>
         </span>
@@ -197,7 +197,7 @@ export function AppSidebar({ items }) {
                       the longest string on the card, and sharing the name's
                       column truncated it mid-host. The box is what stops a
                       second grey line reading as more of the same. */}
-                  <span className="mt-2.5 block w-full truncate rounded-md bg-background/80 px-2 py-1 font-mono text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
+                  <span className="mt-2.5 block w-full truncate rounded-md bg-background/80 px-2 py-1 font-mono text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
                     {application.domain}
                   </span>
                 </Link>

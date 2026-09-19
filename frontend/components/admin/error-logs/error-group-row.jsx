@@ -43,7 +43,7 @@ function RawEntry({ entry }) {
             scroll area nested inside one is a trap — the wheel fights over
             which box it belongs to. Lines wrap, so there is no sideways
             overflow to catch either. */}
-        <pre className="whitespace-pre-wrap break-words rounded-md border bg-zinc-950 p-3 font-mono text-[11px] leading-4 text-zinc-100">
+        <pre className="whitespace-pre-wrap break-words rounded-md border bg-zinc-950 p-3 font-mono text-xs leading-4 text-zinc-100">
           {json}
         </pre>
       </CollapsibleContent>
@@ -147,7 +147,7 @@ export function ErrorGroupRow({ group, now }) {
           {/* Full class name, kept but demoted — the namespace is the same on
               nearly every row and would crowd out the part that differs. */}
           {group.exception && group.exception !== group.exceptionShort ? (
-            <p className="break-all font-mono text-[11px] leading-4 text-muted-foreground/70">
+            <p className="break-all font-mono text-xs leading-4 text-muted-foreground/70">
               {group.exception}
             </p>
           ) : null}
@@ -211,7 +211,7 @@ export function ErrorGroupRow({ group, now }) {
                 {/* The command line that failed. For an operation this is the
                     answer — "log / exists / exit 1" says nothing on its own. */}
                 {entry.command ? (
-                  <pre className="overflow-x-auto rounded-md border bg-zinc-950 p-2 font-mono text-[11px] leading-4 text-zinc-100">
+                  <pre className="overflow-x-auto rounded-md border bg-zinc-950 p-2 font-mono text-xs leading-4 text-zinc-100">
                     {entry.command}
                   </pre>
                 ) : null}
@@ -223,7 +223,7 @@ export function ErrorGroupRow({ group, now }) {
                     reflowing it destroys the alignment that makes it
                     readable. */}
                 {entry.error ? (
-                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/60 p-2 font-mono text-[11px] leading-4 text-muted-foreground">
+                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/60 p-2 font-mono text-xs leading-4 text-muted-foreground">
                     {entry.error}
                   </pre>
                 ) : null}
@@ -235,13 +235,13 @@ export function ErrorGroupRow({ group, now }) {
                 {/* Where it threw, then the frames. Vendor frames are already
                     dropped by the backend, so every line here is our code. */}
                 {entry.file ? (
-                  <p className="font-mono text-[11px] break-all text-muted-foreground">
+                  <p className="font-mono text-xs break-all text-muted-foreground">
                     {entry.file}
                   </p>
                 ) : null}
 
                 {entry.trace?.length ? (
-                  <ul className="space-y-0.5 border-s ps-2 font-mono text-[11px] text-muted-foreground/80">
+                  <ul className="space-y-0.5 border-s ps-2 font-mono text-xs text-muted-foreground/80">
                     {entry.trace.map((frame, i) => (
                       <li key={`${frame}-${i}`} className="break-all">
                         {frame}
@@ -253,7 +253,7 @@ export function ErrorGroupRow({ group, now }) {
                 {/* Three attempts over twelve seconds is a lock; one failure in
                     40ms is not. The timestamps cannot tell those apart. */}
                 {entry.attempts != null || entry.duration_ms != null ? (
-                  <p className="text-[11px] tabular-nums text-muted-foreground/70">
+                  <p className="text-xs tabular-nums text-muted-foreground/70">
                     {[
                       entry.attempts != null ? t("attempts", { count: entry.attempts }) : null,
                       entry.duration_ms != null ? t("duration", { ms: entry.duration_ms }) : null,
@@ -264,7 +264,7 @@ export function ErrorGroupRow({ group, now }) {
                 ) : null}
 
                 {isOperation && entry.reference ? (
-                  <p className="font-mono text-[11px] text-muted-foreground/70">
+                  <p className="font-mono text-xs text-muted-foreground/70">
                     {t("reference", { reference: entry.reference })}
                   </p>
                 ) : null}

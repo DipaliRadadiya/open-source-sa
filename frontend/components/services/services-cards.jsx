@@ -138,7 +138,7 @@ export function ServicesCards({ data, phpVersions = [], canManage, busy, setRowB
 function Figure({ label, value, emptyLabel }) {
   return (
     <div className="flex items-baseline gap-1.5">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </span>
       {value == null || value === "" ? (

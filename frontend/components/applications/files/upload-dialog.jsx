@@ -285,7 +285,7 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
                 style={{ width: `${overallPercent}%` }}
               />
             </div>
-            <p className="text-[11px] text-muted-foreground tabular-nums">
+            <p className="text-xs text-muted-foreground tabular-nums">
               {formatBytes(sentBytes, format)} / {formatBytes(totalBytes, format)}
             </p>
           </div>
@@ -331,7 +331,7 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
                         large enough to need chunking, a bar that has barely
                         moved for a minute is indistinguishable from a stall
                         unless the number behind it is visible. */}
-                    <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-muted-foreground tabular-nums">
+                    <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground tabular-nums">
                       <span>
                         {formatBytes(item.file.size * (item.progress || 0), format)} /{" "}
                         {formatBytes(item.file.size, format)}
@@ -340,7 +340,7 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
                     </div>
                   </>
                 ) : (
-                  <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">
+                  <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                     {formatBytes(item.file.size, format)}
                   </p>
                 )}

@@ -54,7 +54,7 @@ export function LogLine({ index, text, group, term, wrap, onCopy, copyLabel }) {
         {level ? (
           <span
             className={cn(
-              "mr-1.5 rounded px-1 py-px text-[11px] font-medium uppercase",
+              "mr-1.5 rounded px-1 py-px text-xs font-medium uppercase",
               LEVEL_PILL[severity] ?? LEVEL_PILL.notice,
             )}
           >

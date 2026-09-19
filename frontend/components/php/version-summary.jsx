@@ -287,7 +287,7 @@ export function VersionSummary({
             to read the output is the moment it went wrong. */}
         {installState && version.output ? (
           <pre
-            className="mt-2 max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-[11px] leading-relaxed text-muted-foreground"
+            className="mt-2 max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs leading-relaxed text-muted-foreground"
             // Announced politely: this updates every poll while an install
             // runs, and an assertive region would interrupt a screen reader
             // several times a minute for output nobody asked to hear.

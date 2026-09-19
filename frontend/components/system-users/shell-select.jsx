@@ -92,7 +92,7 @@ export function ShellSelect({ user, shells = [], canManage = true, className }) 
               <SelectItem value={shell.value} disabled={blocked} className="text-xs">
                 <span className="flex flex-col">
                   <span>{shell.title}</span>
-                  <span className="font-mono text-[11px] text-muted-foreground">
+                  <span className="font-mono text-xs text-muted-foreground">
                     {shell.value}
                   </span>
                 </span>

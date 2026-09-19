@@ -78,7 +78,7 @@ export function PermissionModeField({ mode, onChange, invalid = false }) {
           "Everyone else" one word per line. The gap is what separates the three
           header words at that width; without it "Escribir" and "Ejecutar" touch. */}
       <div className={invalid ? "overflow-hidden rounded-lg border border-destructive" : "overflow-hidden rounded-lg border"}>
-        <div className="grid grid-cols-[1fr_repeat(3,2.75rem)] items-center gap-x-1.5 gap-y-1 px-3 py-2 text-[11px] font-medium text-muted-foreground sm:grid-cols-[1fr_repeat(3,4.5rem)]">
+        <div className="grid grid-cols-[1fr_repeat(3,2.75rem)] items-center gap-x-1.5 gap-y-1 px-3 py-2 text-xs font-medium text-muted-foreground sm:grid-cols-[1fr_repeat(3,4.5rem)]">
           <span />
           <span className="text-center">{t("permissionsDialog.read")}</span>
           <span className="text-center">{t("permissionsDialog.write")}</span>

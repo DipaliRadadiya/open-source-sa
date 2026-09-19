@@ -104,7 +104,7 @@ export function ConfigTestDialog({ service, result, onDismiss }) {
                   output: on the dark canvas it was invisible, and it sat on top
                   of the first line — which is the line that names the problem. */}
               <div className="flex items-center justify-between border-b border-console-border px-3 py-1.5">
-                <span className="font-mono text-[11px] uppercase tracking-wide text-console-muted">
+                <span className="font-mono text-xs uppercase tracking-wide text-console-muted">
                   {service.unit}
                 </span>
                 <CopyButton

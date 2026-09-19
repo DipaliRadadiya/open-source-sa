@@ -160,7 +160,7 @@ export function InstallVersionButton({
                         Greying it out alone would read as "unavailable", which
                         is the opposite of the truth — you have it. */}
                     {option.installed ? (
-                      <span className="rounded bg-muted-foreground/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      <span className="rounded bg-muted-foreground/15 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t("install.installedTag")}
                       </span>
                     ) : (
