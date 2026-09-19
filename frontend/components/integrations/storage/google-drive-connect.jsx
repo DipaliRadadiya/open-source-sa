@@ -21,14 +21,12 @@ import { apiMessage } from "@/lib/api/error-message";
  * which sits above the credential fields. It is needed when the Google OAuth
  * client is created, which is before there is a client ID to type into this
  * form and before this component is reachable at all.
- */
-/**
- * `compact` renders the button and nothing else, for the destination row.
  *
- * The row is where someone actually meets this problem — the panel tells them
- * "use Connect" there — so the button has to be there. It is the same start()
- * either way: one implementation of "ask for a consent URL and leave", because
- * two would drift the moment one of them learned something.
+ * `compact` renders the button and nothing else, for the destination row. The
+ * row is where someone actually meets this problem — the panel tells them "use
+ * Connect" there — so the button has to be there. It is the same start() either
+ * way: one implementation of "ask for a consent URL and leave", because two
+ * would drift the moment one of them learned something.
  */
 export function GoogleDriveConnect({ destination, compact = false }) {
   const t = useTranslations("storage.oauth");
