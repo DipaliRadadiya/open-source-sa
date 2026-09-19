@@ -95,14 +95,15 @@ it('hands back a consent URL carrying the scope and an offline grant', function 
 });
 
 /*
- * The redirect URI is the exact text an operator pastes into Cloud Console, and
- * Google compares it byte for byte at both ends of the flow. The panel shows it
- * rather than describing it, so it has to come back with the start call.
+ * One source for the redirect URI, not two. It is served with the destinations
+ * list, because it is needed before this endpoint can be reached at all — and a
+ * second copy here is exactly the pair that drifts apart on a string Google
+ * compares byte for byte.
  */
-it('tells the operator which redirect URI to register', function () {
+it('does not repeat the redirect URI on the start call', function () {
     $this->withHeaders(authHeader())->postJson(startUrl())
         ->assertOk()
-        ->assertJsonPath('oauth.redirect_uri', 'https://panel.example.test/integrations/storage/oauth/callback');
+        ->assertJsonMissingPath('oauth.redirect_uri');
 });
 
 /*
@@ -342,4 +343,23 @@ it('refuses a destination that does not use Google sign-in', function () {
     $this->withHeaders(authHeader())
         ->postJson("/api/integrations/storage/destinations/{$s3->id}/oauth/start")
         ->assertStatus(422);
+});
+
+/*
+ * The setup order this whole feature lives or dies by: the callback URL goes
+ * into the Google OAuth client when it is *created*, which is before there is a
+ * client id to paste into the panel and before any destination exists. So it
+ * rides on the list, not on a destination.
+ */
+it('offers the callback URL before any destination has been made', function () {
+    StorageDestination::query()->delete();
+
+    $this->withHeaders(authHeader())
+        ->getJson('/api/integrations/storage/destinations')
+        ->assertOk()
+        ->assertJsonPath('storage_destinations', [])
+        ->assertJsonPath(
+            'google_oauth_redirect_uri',
+            'https://panel.example.test/integrations/storage/oauth/callback',
+        );
 });

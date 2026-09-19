@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { Form } from "@/components/ui/form";
 import { DestinationFormFields } from "@/components/integrations/storage/destination-form-fields";
+import { GoogleDriveRedirectUri } from "@/components/integrations/storage/google-drive-redirect-uri";
 
 const DEFAULT_PRESET = "aws";
 
@@ -27,7 +28,7 @@ const DEFAULT_PRESET = "aws";
  * mistyped secret key looks like success here and only surfaces as a failed
  * backup at 3am, which is the worst possible moment to learn it.
  */
-export function ConnectDestinationDialog({ open, onOpenChange }) {
+export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri }) {
   const t = useTranslations("storage.connect");
   const router = useRouter();
 
@@ -151,6 +152,15 @@ export function ConnectDestinationDialog({ open, onOpenChange }) {
           onPresetChange={handlePresetChange}
           disabled={submitting}
         />
+
+        {/* Above the client ID and secret, because it is needed before either
+            of them exists: the operator is sent to Google Cloud Console to make
+            an OAuth client, and this is the URL that client has to register.
+            Showing it after they come back with credentials would be one step
+            too late. */}
+        {provider === "google_drive_oauth" ? (
+          <GoogleDriveRedirectUri uri={oauthRedirectUri} />
+        ) : null}
 
         {/* Said BEFORE the credentials are created, not after the test fails.
             The probe writes an object, reads it back and deletes it, and

@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { CopyButton } from "@/components/ui/copy-button";
 import { startDriveConnect } from "@/lib/api/storage";
 import { apiMessage } from "@/lib/api/error-message";
 
@@ -18,17 +17,15 @@ import { apiMessage } from "@/lib/api/error-message";
  * a code off one screen and type it into another, which existed only to avoid a
  * redirect URI.
  *
- * The redirect URI is shown here rather than described, because it is the one
- * string an operator has to paste into Google Cloud Console and Google compares
- * it byte for byte. A URI someone retyped with a trailing slash fails at the
- * very end of the flow, after consent, which is the worst possible place to
- * discover a typo.
+ * The redirect URI is *not* shown here — see {@link GoogleDriveRedirectUri},
+ * which sits above the credential fields. It is needed when the Google OAuth
+ * client is created, which is before there is a client ID to type into this
+ * form and before this component is reachable at all.
  */
 export function GoogleDriveConnect({ destination }) {
   const t = useTranslations("storage.oauth");
   const [state, setState] = useState("idle");
   const [error, setError] = useState(null);
-  const [redirectUri, setRedirectUri] = useState(null);
 
   const connected = destination?.config?.connected;
   const account = destination?.config?.account_email;
@@ -40,13 +37,15 @@ export function GoogleDriveConnect({ destination }) {
     try {
       const { data } = await startDriveConnect(destination.id);
 
-      // Shown before navigating, so a `redirect_uri_mismatch` on the way back
-      // lands on a page already displaying the value that had to match.
-      setRedirectUri(data.oauth.redirect_uri);
-
       // A full navigation, not a popup: a popup here is blocked often enough
       // that the button would appear to do nothing, and Google's consent screen
       // is not something to render in 400 pixels.
+      //
+      // Nothing is rendered between here and leaving the page. An earlier
+      // version set the redirect URI into state on this line to display it —
+      // dead code, because the browser navigates away before React commits.
+      // The URI belongs above the form anyway, where it is needed *before* the
+      // OAuth client exists; see `GoogleDriveRedirectUri`.
       window.location.assign(data.oauth.authorize_url);
     } catch (e) {
       setError(apiMessage(e, t("start_failed")));
@@ -92,18 +91,6 @@ export function GoogleDriveConnect({ destination }) {
         {t("connect")}
       </Button>
 
-      {redirectUri ? (
-        <div className="mt-3 space-y-1.5">
-          <p className="text-xs text-muted-foreground">{t("redirectUriLabel")}</p>
-          <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-2 py-1.5">
-            {/* `break-all` rather than truncation: this is copied by hand as
-                often as by button, and a URI with an ellipsis in the middle is
-                worse than one that wraps. */}
-            <code className="min-w-0 flex-1 break-all font-mono text-xs">{redirectUri}</code>
-            <CopyButton value={redirectUri} label={t("copyRedirectUri")} />
-          </div>
-        </div>
-      ) : null}
 
       {/* Same shape as the provider warning above it, so a failure here reads
           as part of this panel rather than as a new kind of thing. */}

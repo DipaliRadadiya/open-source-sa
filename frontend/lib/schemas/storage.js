@@ -46,6 +46,12 @@ export const storageDestinationSchema = z
 
 export const storageDestinationsResponseSchema = z.object({
   storage_destinations: z.array(storageDestinationSchema).default([]),
+
+  // The callback URL an operator registers with Google. Panel-wide, so it
+  // rides along with the list rather than needing a destination to exist —
+  // it is needed before the first one is created. Optional so an older API
+  // does not fail the whole read over a string the Drive form alone uses.
+  google_oauth_redirect_uri: z.string().optional().nullable(),
 });
 
 /**

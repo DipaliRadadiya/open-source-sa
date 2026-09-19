@@ -29,7 +29,7 @@ const EMPTY_STATE_PROVIDERS = ["aws", "r2", "b2", "wasabi", "spaces"];
  * has forty of these, and sorting or paginating three buckets is chrome for
  * its own sake.
  */
-export function DestinationsCard({ destinations = [], canManage }) {
+export function DestinationsCard({ destinations = [], canManage, oauthRedirectUri = null }) {
   const t = useTranslations("storage");
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);
@@ -176,9 +176,14 @@ export function DestinationsCard({ destinations = [], canManage }) {
         )}
       </CardContent>
 
-      <ConnectDestinationDialog open={connecting} onOpenChange={setConnecting} />
+      <ConnectDestinationDialog
+        open={connecting}
+        onOpenChange={setConnecting}
+        oauthRedirectUri={oauthRedirectUri}
+      />
       {editing ? (
         <EditDestinationDialog
+          oauthRedirectUri={oauthRedirectUri}
           destination={editing}
           open={Boolean(editing)}
           onOpenChange={(open) => !open && setEditing(null)}

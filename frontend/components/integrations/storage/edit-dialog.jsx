@@ -15,6 +15,7 @@ import { FormModal } from "@/components/ui/form-modal";
 import { Form } from "@/components/ui/form";
 import { DestinationFormFields } from "@/components/integrations/storage/destination-form-fields";
 import { GoogleDriveConnect } from "@/components/integrations/storage/google-drive-connect";
+import { GoogleDriveRedirectUri } from "@/components/integrations/storage/google-drive-redirect-uri";
 
 /**
  * Editing where a destination points — deliberately without the credentials,
@@ -31,7 +32,7 @@ import { GoogleDriveConnect } from "@/components/integrations/storage/google-dri
  * only possible outcome is a 422 is not a control; the copy says to delete and
  * recreate instead.
  */
-export function EditDestinationDialog({ destination, open, onOpenChange }) {
+export function EditDestinationDialog({ destination, open, onOpenChange, oauthRedirectUri }) {
   const t = useTranslations("storage.edit");
   const router = useRouter();
 
@@ -127,7 +128,13 @@ export function EditDestinationDialog({ destination, open, onOpenChange }) {
             Google, so this dialog is gone by the time anything is approved.
             The operator comes back to the callback page, not to here. */}
         {provider === "google_drive_oauth" ? (
-          <GoogleDriveConnect destination={destination} />
+          <>
+            {/* Repeated here, not only in the create dialog. Reconnecting is
+                also when somebody discovers their OAuth client was registered
+                with the wrong URL, and this is the value it needed. */}
+            <GoogleDriveRedirectUri uri={oauthRedirectUri} />
+            <GoogleDriveConnect destination={destination} />
+          </>
         ) : null}
         <p className="text-xs text-muted-foreground">{t("credentialsUntouched")}</p>
         {/* Why there is no provider control, rather than leaving its absence

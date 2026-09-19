@@ -36,10 +36,15 @@ class ConnectGoogleDrive
     ) {}
 
     /**
-     * Where to send the operator, and the URI their Google client must have
-     * registered for the round trip to work.
+     * Where to send the operator.
      *
-     * @return array{authorize_url: string, redirect_uri: string}
+     * Deliberately does *not* return the redirect URI. It is panel-wide, it is
+     * needed long before this endpoint is reachable — when the Google OAuth
+     * client is created, before there is a client id to save — and it is served
+     * with the destinations list instead. Returning it here as well would be a
+     * second source for one string that Google compares byte for byte.
+     *
+     * @return array{authorize_url: string}
      */
     public function start(StorageDestination $destination): array
     {
@@ -66,7 +71,6 @@ class ConnectGoogleDrive
 
         return [
             'authorize_url' => $this->redirect->authorizeUrl($clientId, $this->state->issue($destination)),
-            'redirect_uri' => $this->redirect->redirectUri(),
         ];
     }
 

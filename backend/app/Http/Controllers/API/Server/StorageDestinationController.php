@@ -12,6 +12,7 @@ use App\Http\Requests\Server\StorageDestination\StoreStorageDestinationRequest;
 use App\Http\Requests\Server\StorageDestination\UpdateStorageDestinationRequest;
 use App\Http\Resources\StorageDestinationResource;
 use App\Models\StorageDestination;
+use App\Services\Server\Backups\Storage\GoogleOauthRedirect;
 use App\Services\Server\Backups\Storage\StorageConnectionProber;
 use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
@@ -62,12 +63,20 @@ class StorageDestinationController extends Controller
         ]);
     }
 
-    public function index(): JsonResponse
+    public function index(GoogleOauthRedirect $redirect): JsonResponse
     {
         $destinations = ListSort::caseInsensitive(StorageDestination::query(), 'name')->get();
 
         return response()->json([
             'storage_destinations' => StorageDestinationResource::collection($destinations)->resolve(),
+
+            // Panel-wide, and deliberately not hung off a destination. An
+            // operator needs this string *before* any destination exists: it
+            // goes into the Google OAuth client at creation time, which is
+            // before they have a client id to paste into the form here. A
+            // per-destination endpoint would only hand it over after the setup
+            // step that needs it.
+            'google_oauth_redirect_uri' => $redirect->redirectUri(),
         ]);
     }
 

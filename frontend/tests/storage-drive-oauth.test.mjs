@@ -14,6 +14,9 @@ const CALLBACK_PAGE = "app/(app)/integrations/storage/oauth/callback/page.jsx";
 const CALLBACK_COMPONENT = "components/integrations/storage/google-drive-callback.jsx";
 const CONNECT = "components/integrations/storage/google-drive-connect.jsx";
 const API = "lib/api/storage.js";
+const REDIRECT_URI = "components/integrations/storage/google-drive-redirect-uri.jsx";
+const CONNECT_DIALOG = "components/integrations/storage/connect-dialog.jsx";
+const GET_STORAGE = "lib/storage/get-storage.js";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -87,12 +90,40 @@ test("nothing polls for approval any more", () => {
 
 /*
  * Google compares the redirect URI byte for byte, so the operator must be able
- * to copy it rather than retype it. A hand-typed URI with a trailing slash
+ * to copy it rather than retype it. A hand-typed URL with a trailing slash
  * fails after consent — the most expensive place in the flow to find a typo.
  */
 test("the redirect URI is shown to be copied, not described", () => {
-  const source = read(CONNECT);
+  const source = read(REDIRECT_URI);
 
   assert.match(source, /CopyButton/, "the redirect URI has no copy control");
-  assert.match(source, /redirect_uri/, "the redirect URI from the API is never displayed");
+  assert.match(source, /break-all/, "a wrapped URL is required; truncation hides characters");
+});
+
+/*
+ * The ordering property, and the one that actually matters to a first-time
+ * user: this URL goes into the Google OAuth client at *creation* time, so it
+ * has to be readable before there is a client ID to paste into the panel and
+ * before any destination exists.
+ *
+ * An earlier version displayed it only after pressing Connect, from the start
+ * response — which was both too late and literally dead code, since the browser
+ * navigates to Google on the same line. Hence the assertions that the create
+ * dialog shows it and that the connect button no longer tries to.
+ */
+test("the callback URL is available before any destination exists", () => {
+  const createDialog = read(CONNECT_DIALOG);
+
+  assert.match(
+    createDialog,
+    /GoogleDriveRedirectUri/,
+    "the create form does not show the callback URL, so it is unreachable before setup",
+  );
+
+  // Panel-wide on the list response, not hung off a destination id.
+  assert.match(read(GET_STORAGE), /google_oauth_redirect_uri/,
+    "the redirect URI is not loaded with the destinations list");
+
+  assert.doesNotMatch(read(CONNECT), /redirect_uri/,
+    "the connect button still tries to render the URI it navigates away from");
 });

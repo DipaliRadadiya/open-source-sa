@@ -30,7 +30,11 @@ export default async function StorageIntegrationsPage() {
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <div className="max-w-4xl">
-        <DestinationsCard destinations={list.destinations} canManage={canManage} />
+        <DestinationsCard
+          destinations={list.destinations}
+          canManage={canManage}
+          oauthRedirectUri={list.oauthRedirectUri}
+        />
       </div>
     </div>
   );
