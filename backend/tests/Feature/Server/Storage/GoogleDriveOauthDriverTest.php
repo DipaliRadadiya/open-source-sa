@@ -627,3 +627,22 @@ it('builds the disk on the new folder, not the one that was gone', function () {
 
     expect($captured->folderId)->toBe('FOLDER-NEW');
 });
+
+/*
+ * Test connection must leave nothing behind.
+ *
+ * The sentinel key used to be `.probe/<uuid>.bin`. A key with a directory in it
+ * makes the provider create that directory, and deleting the object does not
+ * remove it — so every test left a `.probe` folder for good. On S3 a prefix is
+ * not a real object and nobody noticed; on Drive it is a real folder, in
+ * somebody's personal account, where a leading dot does not even make it
+ * hidden.
+ */
+it('probes with a flat key so no folder is created', function () {
+    $source = file_get_contents(
+        app_path('Services/Server/Backups/Storage/StorageConnectionProber.php')
+    );
+
+    expect($source)->toContain("'.probe-'")
+        ->and($source)->not->toContain("'.probe/'");
+});

@@ -65,7 +65,17 @@ class StorageConnectionProber
     {
         $start = microtime(true);
         $payload = Str::random(64);
-        $key = '.probe/'.Str::uuid()->toString().'.bin';
+        // Flat, not `.probe/<uuid>.bin`. A key with a directory in it makes the
+        // provider create that directory, and deleting the object afterwards
+        // does not remove it — so every Test connection left a `.probe` folder
+        // behind for good. On S3 a prefix is not a real object and nobody
+        // noticed; on Google Drive, FTP, SFTP and WebDAV it is a real
+        // directory, and on Drive it sits in somebody's *personal* account
+        // beside their photos, where a dot does not even make it hidden.
+        //
+        // One object, created and removed. Nothing to clean up because nothing
+        // else is made.
+        $key = '.probe-'.Str::uuid()->toString().'.bin';
 
         $driver = $this->drivers->for($destination);
 
@@ -98,6 +108,17 @@ class StorageConnectionProber
             $disk->put($key, $payload);
             $read = $disk->get($key);
             $disk->delete($key);
+
+            // Sweep up the folder older versions left behind. Best-effort and
+            // swallowed: it is litter, not a credential check, and a provider
+            // that refuses must not turn a working destination's test red.
+            // Only ever held sentinels, so there is nothing of anyone's in it.
+            try {
+                $disk->deleteDirectory('.probe');
+            } catch (Throwable) {
+                // Nothing to report — the probe's verdict is about the
+                // round-trip above, not about tidying.
+            }
 
             // A round-trip with a wrong read can mean a CDN cache, a
             // transparent proxy, or a real corruption — all of which
