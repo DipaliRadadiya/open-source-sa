@@ -227,7 +227,12 @@ function EngineCard({
         : installing && slow
           ? t("install.takingLonger")
           : !engine.installable
-            ? t("install.notInstallable")
+            ? /* The API's own sentence when it has one. It knows WHY — the
+                 vendor has published nothing for this Ubuntu release — where
+                 ours only knows that apt came back empty, and says "install it
+                 manually", which for this case is advice that cannot be
+                 followed. */
+              (engine.unavailable?.reason ?? t("install.notInstallable"))
             : conflicted
               ? t("install.sqlConflict", {
                   other: t(`engines.${sqlPresent.engine}`),

@@ -113,6 +113,23 @@ export const engineSchema = z.object({
    * using the hardcoded fallback while looking like it read the server.
    */
   system_schemas: z.array(z.string()).nullish(),
+  /*
+   * Why this engine cannot be installed here, or null when it can.
+   *
+   * `{ code, reason }` — a stable code to branch on and a sentence the API has
+   * already translated for the viewer, the same shape a blocked site-type card
+   * carries so both render the same way.
+   *
+   * Declared, or Zod strips it — which is exactly what happened. The reason
+   * arrived on every response and vanished, so a MongoDB card on Ubuntu 26.04
+   * fell back to the generic "has to be installed manually — it isn't in the
+   * server's package list". That is not true and sends somebody off to install
+   * it by hand: MongoDB has published no server build for that release at all.
+   */
+  unavailable: z
+    .object({ code: z.string(), reason: z.string() })
+    .nullable()
+    .optional(),
   // Reachable with the configured connection — NOT the same as installed.
   running: z.boolean().nullable().optional().default(false),
   // Present on the server, whether or not it is up. The field that separates
