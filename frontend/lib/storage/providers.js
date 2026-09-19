@@ -88,9 +88,11 @@ const KEY_DOCS = {
   b2: "https://www.backblaze.com/docs/cloud-storage-application-keys",
   wasabi: "https://docs.wasabi.com/v1/docs/create-a-user-and-access-key",
   spaces: "https://docs.digitalocean.com/products/spaces/how-to/manage-access/",
-  // Not a key to copy but a client to create. The setup is six steps in
-  // Google Cloud Console, and the one nobody guesses is choosing the "TVs and
-  // Limited Input devices" client type.
+  // Not a key to copy but a client to create. The form does not use this —
+  // `GoogleDriveSetup` walks the five steps and links each Console page from
+  // the step that needs it, which is more use than one link to the front of
+  // the credentials screen. Kept so the entry exists if that guide is ever
+  // replaced by something terser.
   google_drive_oauth: "https://console.cloud.google.com/apis/credentials",
 };
 

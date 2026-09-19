@@ -5449,7 +5449,37 @@
       "code_expired": "Esa aprobación ya se usó, o caducó. Pulse Conectar para empezar de nuevo.",
       "state_invalid": "Ese acceso no proviene de este panel. Pulse Conectar y apruebe de nuevo.",
       "start_failed": "No se pudo iniciar el acceso con Google. Inténtelo de nuevo en un momento.",
-      "token_failed": "No se pudo completar el acceso con Google. Inténtelo de nuevo en un momento."
+      "token_failed": "No se pudo completar el acceso con Google. Inténtelo de nuevo en un momento.",
+      "setup": {
+        "title": "Cómo obtener un ID de cliente y un secreto",
+        "intro": "Basta con una cuenta de Google gratuita: no necesita Workspace ni un dominio para su panel. Cinco pasos, una sola vez.",
+        "step1": {
+          "title": "Cree un proyecto en Google Cloud",
+          "body": "Inicie sesión y cree un proyecto. Llámelo como quiera. Es gratis y no pide tarjeta.",
+          "link": "Abrir creación de proyecto"
+        },
+        "step2": {
+          "title": "Habilite la API de Google Drive",
+          "body": "Busque la API de Google Drive en la biblioteca y habilítela. Es el olvido más común: el acceso sigue funcionando y después falla cada subida.",
+          "link": "Abrir la página de la API de Drive"
+        },
+        "step3": {
+          "title": "Configure la pantalla de consentimiento",
+          "body": "Elija «External» y rellene un nombre de aplicación y su propio correo.",
+          "publish": "Publique la aplicación. Si la deja en «Testing», Google caduca el acceso a los siete días y sus copias se detienen: funcionarán toda la semana y fallarán la siguiente, sin que nada cambie en el panel. No hace falta que Google la verifique; una pantalla de aviso para su propia aplicación es normal.",
+          "link": "Abrir la pantalla de consentimiento"
+        },
+        "step4": {
+          "title": "Cree el cliente OAuth",
+          "body": "Cree credenciales, elija «OAuth client ID» y el tipo «Web application». Añada la dirección de abajo en «Authorized redirect URIs»: Google la compara exactamente, así que cópiela.",
+          "link": "Abrir credenciales"
+        },
+        "step5": {
+          "title": "Péguelos abajo y conecte",
+          "body": "Copie el ID de cliente y el secreto en los campos de abajo y guarde. Después pulse Conectar en el destino para aprobar el acceso: el panel crea su propia carpeta en su Drive, no hay ningún ID de carpeta que buscar."
+        },
+        "scope": "El panel solo ve los archivos que él creó. No puede leer el resto de su Drive ni ver copias subidas por otro panel."
+      }
     }
   },
   "backups": {

@@ -5449,7 +5449,37 @@
       "code_expired": "That approval has already been used, or it expired. Press Connect to start again.",
       "state_invalid": "That sign-in did not come from this panel. Press Connect and approve again.",
       "start_failed": "Could not start the Google sign-in. Try again in a moment.",
-      "token_failed": "Could not complete the Google sign-in. Try again in a moment."
+      "token_failed": "Could not complete the Google sign-in. Try again in a moment.",
+      "setup": {
+        "title": "How to get a client ID and secret",
+        "intro": "A free Google account is enough — you do not need Workspace, and you do not need a domain for your panel. Five steps, once.",
+        "step1": {
+          "title": "Create a Google Cloud project",
+          "body": "Sign in and create a project. Call it anything. It is free and needs no card.",
+          "link": "Open project creation"
+        },
+        "step2": {
+          "title": "Enable the Google Drive API",
+          "body": "Search for the Google Drive API in the library and enable it. Skipping this is the most common mistake: sign-in still works, and every upload fails afterwards.",
+          "link": "Open the Drive API page"
+        },
+        "step3": {
+          "title": "Set up the consent screen",
+          "body": "Choose External, then fill in an app name and your own email address.",
+          "publish": "Publish the app. If you leave it in Testing, Google expires access after about seven days and your backups stop — they will work all week and fail the next, with nothing in the panel having changed. You do not need Google to verify it; one warning screen for your own app is expected.",
+          "link": "Open the consent screen"
+        },
+        "step4": {
+          "title": "Create the OAuth client",
+          "body": "Create credentials, choose OAuth client ID, and pick application type Web application. Add the address below under Authorized redirect URIs — Google compares it exactly, so copy it.",
+          "link": "Open credentials"
+        },
+        "step5": {
+          "title": "Paste them below and connect",
+          "body": "Copy the client ID and client secret into the fields below and save. Then press Connect on the destination to approve access — the panel creates its own folder in your Drive, so there is no folder ID to find."
+        },
+        "scope": "The panel can only see files it created. It cannot read the rest of your Drive, and it cannot see backups uploaded by a different panel."
+      }
     }
   },
   "backups": {

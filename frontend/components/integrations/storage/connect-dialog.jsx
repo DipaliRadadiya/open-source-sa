@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { Form } from "@/components/ui/form";
 import { DestinationFormFields } from "@/components/integrations/storage/destination-form-fields";
-import { GoogleDriveRedirectUri } from "@/components/integrations/storage/google-drive-redirect-uri";
+import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive-setup";
 
 const DEFAULT_PRESET = "aws";
 
@@ -97,7 +97,10 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
   }
 
   const submitting = form.formState.isSubmitting;
-  const keyDocs = keyDocsUrl(preset);
+  // Suppressed for Drive: the setup guide links each Console page from the
+  // step that needs it, and a lone link to the credentials page underneath
+  // five numbered steps is the vaguer of the two.
+  const keyDocs = provider === "google_drive_oauth" ? null : keyDocsUrl(preset);
 
   function reset(nextPreset) {
     setPreset(nextPreset);
@@ -170,23 +173,29 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
           disabled={submitting}
         />
 
-        {/* Above the client ID and secret, because it is needed before either
-            of them exists: the operator is sent to Google Cloud Console to make
-            an OAuth client, and this is the URL that client has to register.
-            Showing it after they come back with credentials would be one step
-            too late. */}
+        {/* Above the client ID and secret, because all of it is needed before
+            either of them exists: the reader is about to go to Google Cloud
+            Console and make an OAuth client, and this is where they find out
+            how. Open by default here — somebody adding a destination has done
+            none of it yet. */}
         {provider === "google_drive_oauth" ? (
-          <GoogleDriveRedirectUri uri={oauthRedirectUri} />
+          <GoogleDriveSetup redirectUri={oauthRedirectUri} defaultOpen />
         ) : null}
 
         {/* Said BEFORE the credentials are created, not after the test fails.
             The probe writes an object, reads it back and deletes it, and
             backups prune old archives when they pass the retention limit — so
             a read-only credential cannot work, and that is the single most
-            common reason one of these never starts working. */}
-        <div className="rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
-          {provider === "s3" ? t("permissionsNote") : t("permissionsNoteRemote")}
-        </div>
+            common reason one of these never starts working.
+
+            Not for Drive: there is no permission to get wrong there. The scope
+            is fixed by the panel and the guide above already says what it
+            grants, so a second box would be noise beside the steps. */}
+        {provider === "google_drive_oauth" ? null : (
+          <div className="rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
+            {provider === "s3" ? t("permissionsNote") : t("permissionsNoteRemote")}
+          </div>
+        )}
 
         {/* Where these come from, for the service actually chosen. Every one
             calls them something else — an API token at Cloudflare, an

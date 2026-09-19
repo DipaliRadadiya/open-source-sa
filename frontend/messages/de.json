@@ -5449,7 +5449,37 @@
       "code_expired": "Diese Bestätigung wurde bereits verwendet oder ist abgelaufen. Klicken Sie auf Verbinden, um neu zu beginnen.",
       "state_invalid": "Diese Anmeldung stammt nicht von diesem Panel. Klicken Sie auf Verbinden und bestätigen Sie erneut.",
       "start_failed": "Die Google-Anmeldung konnte nicht gestartet werden. Versuchen Sie es gleich erneut.",
-      "token_failed": "Die Google-Anmeldung konnte nicht abgeschlossen werden. Versuchen Sie es gleich erneut."
+      "token_failed": "Die Google-Anmeldung konnte nicht abgeschlossen werden. Versuchen Sie es gleich erneut.",
+      "setup": {
+        "title": "So erhalten Sie Client-ID und Secret",
+        "intro": "Ein kostenloses Google-Konto genügt — Sie brauchen kein Workspace und keine Domain für Ihr Panel. Fünf Schritte, einmalig.",
+        "step1": {
+          "title": "Google-Cloud-Projekt anlegen",
+          "body": "Melden Sie sich an und legen Sie ein Projekt an. Der Name ist beliebig. Kostenlos und ohne Kreditkarte.",
+          "link": "Projekterstellung öffnen"
+        },
+        "step2": {
+          "title": "Google-Drive-API aktivieren",
+          "body": "Suchen Sie die Google Drive API in der Bibliothek und aktivieren Sie sie. Das wird am häufigsten übersehen: Die Anmeldung funktioniert weiterhin, aber danach schlägt jeder Upload fehl.",
+          "link": "Drive-API-Seite öffnen"
+        },
+        "step3": {
+          "title": "Zustimmungsbildschirm einrichten",
+          "body": "Wählen Sie „External“ und tragen Sie einen App-Namen sowie Ihre eigene E-Mail-Adresse ein.",
+          "publish": "Veröffentlichen Sie die App. Bleibt sie auf „Testing“, entzieht Google den Zugriff nach etwa sieben Tagen und Ihre Sicherungen stoppen — eine Woche läuft alles, die nächste nicht mehr, ohne dass sich im Panel etwas geändert hätte. Eine Google-Überprüfung ist nicht nötig; ein Warnhinweis für Ihre eigene App ist normal.",
+          "link": "Zustimmungsbildschirm öffnen"
+        },
+        "step4": {
+          "title": "OAuth-Client erstellen",
+          "body": "Erstellen Sie Anmeldedaten, wählen Sie „OAuth client ID“ und als Typ „Web application“. Tragen Sie die Adresse unten unter „Authorized redirect URIs“ ein — Google vergleicht sie exakt, kopieren Sie sie daher.",
+          "link": "Anmeldedaten öffnen"
+        },
+        "step5": {
+          "title": "Unten einfügen und verbinden",
+          "body": "Kopieren Sie Client-ID und Secret in die Felder unten und speichern Sie. Klicken Sie dann beim Ziel auf „Verbinden“, um den Zugriff zu erlauben — das Panel legt seinen eigenen Ordner in Ihrem Drive an, eine Ordner-ID ist nicht nötig."
+        },
+        "scope": "Das Panel sieht nur Dateien, die es selbst erstellt hat. Es kann weder Ihren übrigen Drive lesen noch Sicherungen eines anderen Panels sehen."
+      }
     }
   },
   "backups": {

@@ -1,7 +1,6 @@
-"use client";
-
 import { useTranslations } from "next-intl";
 
+import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/ui/copy-button";
 
 /**
@@ -19,13 +18,13 @@ import { CopyButton } from "@/components/ui/copy-button";
  * byte: a retyped URL with a trailing slash, or `http` for `https`, fails in a
  * way that says nothing about which character is wrong.
  */
-export function GoogleDriveRedirectUri({ uri }) {
+export function GoogleDriveRedirectUri({ uri, className }) {
   const t = useTranslations("storage.oauth");
 
   if (!uri) return null;
 
   return (
-    <div className="space-y-1.5 rounded-lg border bg-muted/30 p-3">
+    <div className={cn("space-y-1.5 rounded-lg border bg-muted/30 p-3", className)}>
       <p className="text-xs font-medium">{t("redirectUriLabel")}</p>
       <div className="flex items-center gap-2 rounded-md border bg-background px-2 py-1.5">
         {/* `break-all` rather than truncation: this is copied by hand as often

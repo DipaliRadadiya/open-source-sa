@@ -5449,7 +5449,37 @@
       "code_expired": "Cette approbation a déjà été utilisée, ou elle a expiré. Cliquez sur Connecter pour recommencer.",
       "state_invalid": "Cette connexion ne vient pas de ce panneau. Cliquez sur Connecter et approuvez à nouveau.",
       "start_failed": "Impossible de démarrer la connexion Google. Réessayez dans un instant.",
-      "token_failed": "Impossible de terminer la connexion Google. Réessayez dans un instant."
+      "token_failed": "Impossible de terminer la connexion Google. Réessayez dans un instant.",
+      "setup": {
+        "title": "Obtenir un identifiant et un secret client",
+        "intro": "Un compte Google gratuit suffit : ni Workspace ni nom de domaine pour votre panneau. Cinq étapes, une seule fois.",
+        "step1": {
+          "title": "Créez un projet Google Cloud",
+          "body": "Connectez-vous et créez un projet. Donnez-lui le nom que vous voulez. C’est gratuit et sans carte bancaire.",
+          "link": "Ouvrir la création de projet"
+        },
+        "step2": {
+          "title": "Activez l’API Google Drive",
+          "body": "Cherchez l’API Google Drive dans la bibliothèque et activez-la. C’est l’oubli le plus fréquent : la connexion fonctionne toujours, puis chaque envoi échoue.",
+          "link": "Ouvrir la page de l’API Drive"
+        },
+        "step3": {
+          "title": "Configurez l’écran de consentement",
+          "body": "Choisissez « External », puis indiquez un nom d’application et votre propre adresse e-mail.",
+          "publish": "Publiez l’application. Si vous la laissez en « Testing », Google révoque l’accès au bout d’environ sept jours et vos sauvegardes s’arrêtent : tout fonctionne une semaine puis échoue la suivante, sans que rien n’ait changé dans le panneau. Aucune validation par Google n’est nécessaire ; un écran d’avertissement pour votre propre application est normal.",
+          "link": "Ouvrir l’écran de consentement"
+        },
+        "step4": {
+          "title": "Créez le client OAuth",
+          "body": "Créez des identifiants, choisissez « OAuth client ID » puis le type « Web application ». Ajoutez l’adresse ci-dessous sous « Authorized redirect URIs » — Google la compare à l’identique, copiez-la.",
+          "link": "Ouvrir les identifiants"
+        },
+        "step5": {
+          "title": "Collez-les ci-dessous et connectez",
+          "body": "Copiez l’identifiant et le secret dans les champs ci-dessous, puis enregistrez. Cliquez ensuite sur Connecter sur la destination pour autoriser l’accès — le panneau crée son propre dossier dans votre Drive, aucun identifiant de dossier à chercher."
+        },
+        "scope": "Le panneau ne voit que les fichiers qu’il a créés. Il ne peut pas lire le reste de votre Drive, ni voir les sauvegardes d’un autre panneau."
+      }
     }
   },
   "backups": {

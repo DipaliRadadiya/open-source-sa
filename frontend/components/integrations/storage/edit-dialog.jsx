@@ -15,7 +15,7 @@ import { FormModal } from "@/components/ui/form-modal";
 import { Form } from "@/components/ui/form";
 import { DestinationFormFields } from "@/components/integrations/storage/destination-form-fields";
 import { GoogleDriveConnect } from "@/components/integrations/storage/google-drive-connect";
-import { GoogleDriveRedirectUri } from "@/components/integrations/storage/google-drive-redirect-uri";
+import { GoogleDriveSetup } from "@/components/integrations/storage/google-drive-setup";
 
 /**
  * Editing where a destination points — deliberately without the credentials,
@@ -129,10 +129,11 @@ export function EditDestinationDialog({ destination, open, onOpenChange, oauthRe
             The operator comes back to the callback page, not to here. */}
         {provider === "google_drive_oauth" ? (
           <>
-            {/* Repeated here, not only in the create dialog. Reconnecting is
-                also when somebody discovers their OAuth client was registered
-                with the wrong URL, and this is the value it needed. */}
-            <GoogleDriveRedirectUri uri={oauthRedirectUri} />
+            {/* Collapsed here: this reader already has a client and wants the
+                Connect button. It stays available because reconnecting is also
+                when somebody discovers their client was registered with the
+                wrong redirect URL, and that is the value they need. */}
+            <GoogleDriveSetup redirectUri={oauthRedirectUri} />
             <GoogleDriveConnect destination={destination} />
           </>
         ) : null}

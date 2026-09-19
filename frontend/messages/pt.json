@@ -5449,7 +5449,37 @@
       "code_expired": "Essa aprovação já foi usada, ou expirou. Clique em Conectar para começar de novo.",
       "state_invalid": "Esse login não veio deste painel. Clique em Conectar e aprove de novo.",
       "start_failed": "Não foi possível iniciar o login do Google. Tente de novo em instantes.",
-      "token_failed": "Não foi possível concluir o login do Google. Tente de novo em instantes."
+      "token_failed": "Não foi possível concluir o login do Google. Tente de novo em instantes.",
+      "setup": {
+        "title": "Como obter um ID de cliente e um segredo",
+        "intro": "Uma conta gratuita do Google basta — não precisa de Workspace nem de um domínio para o painel. Cinco passos, uma única vez.",
+        "step1": {
+          "title": "Crie um projeto no Google Cloud",
+          "body": "Entre e crie um projeto. Dê o nome que quiser. É gratuito e não pede cartão.",
+          "link": "Abrir criação de projeto"
+        },
+        "step2": {
+          "title": "Ative a API do Google Drive",
+          "body": "Procure a API do Google Drive na biblioteca e ative-a. É o esquecimento mais comum: o login continua funcionando e todo upload falha depois.",
+          "link": "Abrir a página da API do Drive"
+        },
+        "step3": {
+          "title": "Configure a tela de consentimento",
+          "body": "Escolha \"External\" e preencha um nome de aplicativo e o seu próprio e-mail.",
+          "publish": "Publique o aplicativo. Se deixar em \"Testing\", o Google expira o acesso após cerca de sete dias e seus backups param — funcionam a semana toda e falham na seguinte, sem nada ter mudado no painel. Não é preciso verificação do Google; uma tela de aviso para o seu próprio aplicativo é normal.",
+          "link": "Abrir a tela de consentimento"
+        },
+        "step4": {
+          "title": "Crie o cliente OAuth",
+          "body": "Crie credenciais, escolha \"OAuth client ID\" e o tipo \"Web application\". Adicione o endereço abaixo em \"Authorized redirect URIs\" — o Google compara exatamente, então copie.",
+          "link": "Abrir credenciais"
+        },
+        "step5": {
+          "title": "Cole abaixo e conecte",
+          "body": "Copie o ID de cliente e o segredo nos campos abaixo e salve. Depois clique em Conectar no destino para aprovar o acesso — o painel cria a própria pasta no seu Drive, não há ID de pasta para procurar."
+        },
+        "scope": "O painel só enxerga os arquivos que ele criou. Não consegue ler o resto do seu Drive nem ver backups enviados por outro painel."
+      }
     }
   },
   "backups": {
