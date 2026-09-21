@@ -85,7 +85,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
       <CardContent className="flex flex-col gap-4 px-5 py-4 @2xl:flex-row @2xl:items-start @2xl:justify-between">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
               <ShieldCheck className="size-4" />
             </span>
             <span className="font-medium">{t("title")}</span>

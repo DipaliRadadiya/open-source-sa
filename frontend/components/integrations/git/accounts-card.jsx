@@ -128,7 +128,7 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
       <Card className="gap-0 overflow-hidden py-0">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
           <div className="flex items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
               <GitBranch className="size-3.5" />
             </span>
             <div>

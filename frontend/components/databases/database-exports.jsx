@@ -207,7 +207,7 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
             instead. */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
           <div className="flex min-w-40 flex-1 items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
               <HardDriveDownload className="size-3.5" />
             </span>
             <div>

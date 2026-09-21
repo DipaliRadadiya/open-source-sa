@@ -49,7 +49,16 @@ export function SortHeader({ col, children, descFirst = false, className }) {
       aria-label={t("sortBy")}
       data-state={asc ? "asc" : desc ? "desc" : "none"}
       className={cn(
-        "-mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        /*
+         * `text-transform:inherit` because Tailwind's Preflight resets
+         * `button { text-transform: none }` — a real reset, for an old
+         * Edge/Firefox inheritance bug. So when `TableHead` became uppercase,
+         * only the NON-sortable headers followed: the list read
+         * "Application / SYSTEM USER / Size" in one row. Inherit rather than
+         * hard-coding `uppercase`, so a table that opts out of it later takes
+         * its sortable headers with it.
+         */
+        "-mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 [text-transform:inherit] hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         (asc || desc) && "text-foreground",
         className,
       )}

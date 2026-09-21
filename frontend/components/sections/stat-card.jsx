@@ -13,7 +13,7 @@ export function StatCard({ icon: Icon, title, value, hint, className }) {
           {title}
         </CardTitle>
         {Icon ? (
-          <span className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <span className="flex shrink-0 items-center justify-center text-muted-foreground">
             <Icon className="size-4" />
           </span>
         ) : null}

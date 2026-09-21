@@ -90,7 +90,7 @@ export function EngineState({ engines = [], connections = [], canManage }) {
           */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-48 flex-1 items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
               <Database className="size-3.5" />
             </span>
             <div>

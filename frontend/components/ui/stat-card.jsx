@@ -85,7 +85,8 @@ export function StatCard({
   hasSub,
   status = null,
 }) {
-  const styles = TONE_STYLES[percent != null ? usageTone(percent) : "primary"];
+  const tone = percent != null ? usageTone(percent) : "primary";
+  const styles = TONE_STYLES[tone];
 
   return (
     // py-0 cancels Card's own vertical padding so CardContent controls it.
@@ -122,10 +123,24 @@ export function StatCard({
          * the helper line was not using and lines up across all five cards.
          */}
         <div className="flex min-h-8 items-center gap-2.5">
+          {/*
+           * The tile appears only when the status is NOT normal.
+           *
+           * Its colour was always meaningful — it turns amber then red as a
+           * resource fills — but at rest all five cards wore an identical blue
+           * square, so the one card that had gone amber had to out-shout four
+           * decorations to be noticed. Healthy is the common case and should
+           * be the quiet one: a plain icon at rest, the tinted chip only when
+           * there is something to look at.
+           *
+           * `min-h-8` on the row keeps the five cards aligned either way.
+           */}
           <span
             className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset",
-              styles.chip,
+              "flex size-8 shrink-0 items-center justify-center rounded-lg",
+              tone === "primary"
+                ? "text-muted-foreground"
+                : cn("ring-1 ring-inset", styles.chip),
             )}
           >
             <Icon className="size-4" />

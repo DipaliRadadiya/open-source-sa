@@ -218,7 +218,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
             icon beside the text here and a tinted square everywhere else, which
             is the "three of five styled differently" tell. */}
         <CardTitle className="flex items-center gap-2.5">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
+          <span className="flex shrink-0 items-center justify-center text-muted-foreground">
             <Webhook className="size-4" />
           </span>
           {t("webhook.title")}

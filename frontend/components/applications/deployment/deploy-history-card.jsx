@@ -115,7 +115,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
 
       <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
+          <span className="flex shrink-0 items-center justify-center text-muted-foreground">
             <History className="size-4" />
           </span>
         <div className="space-y-1">

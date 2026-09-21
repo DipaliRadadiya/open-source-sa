@@ -82,7 +82,7 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
           action and two of them is the same offer twice. */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/20 px-5 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <span className="flex shrink-0 items-center justify-center text-muted-foreground">
             <HardDrive className="size-3.5" />
           </span>
           <div>

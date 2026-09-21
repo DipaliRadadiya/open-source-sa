@@ -36,7 +36,7 @@ export function StagingPanel({ appId, production, staging, canManage }) {
       <div className="max-w-4xl">
         <Card className="gap-0 overflow-hidden py-0 shadow-sm">
           <CardContent className="flex flex-wrap items-center gap-3 px-5 py-4">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <span className="flex shrink-0 items-center justify-center text-muted-foreground">
               <FlaskConical className="size-4.5 text-primary" />
             </span>
             <div className="min-w-0 flex-1 space-y-1">
@@ -94,7 +94,7 @@ export function StagingPanel({ appId, production, staging, canManage }) {
     <div className="max-w-4xl space-y-4">
       <Card className="gap-0 overflow-hidden py-0 shadow-sm">
         <CardContent className="flex flex-wrap items-center gap-3 px-5 py-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <span className="flex shrink-0 items-center justify-center text-muted-foreground">
             <FlaskConical className="size-4.5 text-primary" />
           </span>
           <div className="min-w-0 flex-1 space-y-1">
