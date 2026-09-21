@@ -28,7 +28,17 @@ test("a single Git account is preselected, in both places that ask", () => {
 
   const form = read("components/applications/create-application-form.jsx");
   assert.match(form, /const soleGitAccountId = gitAccounts\.length === 1 \? String\(gitAccounts\[0\]\.id\) : ""/);
-  assert.match(form, /git_account_id: soleGitAccountId/);
+  /*
+   * The default is `startingGitAccountId` now, not `soleGitAccountId` — the
+   * Git page can send you here naming the account it just connected, and that
+   * has to win or arriving from its prompt with two accounts opens empty.
+   *
+   * Asserted as "the sole-account value still reaches the default" rather than
+   * by pinning the name: the behaviour this test protects is the preselection,
+   * and it is intact — `soleGitAccountId` is the fallback.
+   */
+  assert.match(form, /const startingGitAccountId = initialGitAccountId \|\| soleGitAccountId/);
+  assert.match(form, /git_account_id: startingGitAccountId/);
 });
 
 test("the relink dialog's resets do not undo its own preselection", () => {

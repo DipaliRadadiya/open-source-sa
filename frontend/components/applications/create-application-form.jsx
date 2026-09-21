@@ -709,6 +709,7 @@ export function CreateApplicationForm({
   siteTypes = [],
   initialType = "",
   initialName = "",
+  initialGitAccountId = "",
   systemUsers = [],
   systemUsersFailed = false,
   canCreateSystemUser = false,
@@ -778,6 +779,15 @@ export function CreateApplicationForm({
    * Still a picker. The moment a second account exists the choice is real.
    */
   const soleGitAccountId = gitAccounts.length === 1 ? String(gitAccounts[0].id) : "";
+  /*
+   * An account named in the URL wins over the sole-account shortcut.
+   *
+   * The Git page sends you here straight after connecting one, and with two or
+   * more accounts the picker would otherwise open empty — asking you to find
+   * the account you made ten seconds ago. Already validated against the real
+   * list by the page, so an unknown id arrives as "".
+   */
+  const startingGitAccountId = initialGitAccountId || soleGitAccountId;
   const form = useForm({
     resolver: zodResolver(createApplicationSchema),
     mode: "onBlur",
@@ -795,7 +805,7 @@ export function CreateApplicationForm({
       // a form that defaults to a refusal is a form that is wrong on open.
       generate_system_user: canCreateSystemUser,
       system_user_id: "",
-      git_account_id: soleGitAccountId,
+      git_account_id: startingGitAccountId,
       repository: "",
       branch: "",
     },

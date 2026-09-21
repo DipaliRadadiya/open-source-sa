@@ -39,9 +39,19 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
   // read as two requests.
   const [rechecking, setRechecking] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  // Only appears in the immediate first-connect flow; a refresh or navigation
-  // clears it so it never becomes permanent dashboard chrome.
-  const [showCreateNudge, setShowCreateNudge] = useState(false);
+  /*
+   * The account just connected, or null.
+   *
+   * Only ever set by a connect that happened in this tab, and cleared by a
+   * refresh or a navigation — a next-step prompt belongs to the action that
+   * earned it. Made permanent it would be an advert on a page you visit to
+   * manage accounts, not to make sites.
+   *
+   * The account rather than a boolean, because the prompt names it and the
+   * link carries its id. With two accounts connected, "your Git account is
+   * connected" does not say which.
+   */
+  const [justConnected, setJustConnected] = useState(null);
   const [editing, setEditing] = useState(null);
   const [replacing, setReplacing] = useState(null);
   const [disconnecting, setDisconnecting] = useState(null);
@@ -204,14 +214,24 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
             </div>
           ) : (
             <>
-              {showCreateNudge ? (
+              {justConnected ? (
                 <div className="border-b py-4">
                   <div className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">{t("onboarding.title")}</p>
-                      <p className="text-xs leading-5 text-muted-foreground">
-                        {t("onboarding.description")}
-                      </p>
+                    <div className="flex min-w-0 items-start gap-3">
+                      {/* Which account, in its own colours — the same mark the
+                          row below it carries, so the prompt reads as being
+                          about the thing that just appeared in the list. */}
+                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-card ring-1 ring-foreground/10">
+                        <ProviderLogo provider={justConnected.provider} className="size-4" />
+                      </span>
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-sm font-medium">
+                          {t("onboarding.title", { label: justConnected.label })}
+                        </p>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          {t("onboarding.description")}
+                        </p>
+                      </div>
                     </div>
                     {/* Straight to the Git type rather than the empty picker:
                         this button only exists because an account was just
@@ -219,7 +239,17 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
                         an unrecognised `type` on the floor, so a renamed site
                         type degrades to the plain form rather than breaking. */}
                     <Button size="sm" asChild className="shrink-0">
-                      <Link href="/applications/create?type=git">
+                      {/* The account travels with the link, so the form opens
+                          with it chosen rather than making you find in a picker
+                          the thing you just made. The create page validates the
+                          id against the real list before trusting it. */}
+                      <Link
+                        href={
+                          justConnected.id
+                            ? `/applications/create?type=git&git_account=${justConnected.id}`
+                            : "/applications/create?type=git"
+                        }
+                      >
                         {t("onboarding.action")}
                         <ArrowRight className="size-3.5" />
                       </Link>
@@ -253,8 +283,7 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
           <ConnectDialog
             providers={providers}
             open={connecting}
-            showNextStep={accounts.length === 0}
-            onFirstAccountConnected={() => setShowCreateNudge(true)}
+            onAccountConnected={setJustConnected}
             onOpenChange={setConnecting}
           />
           {/* Keyed and mounted only while open: a dialog that keeps its state

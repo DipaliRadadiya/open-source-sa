@@ -18,8 +18,7 @@ import { ConnectForm } from "@/components/integrations/git/connect-form";
 export function ConnectDialog({
   providers,
   open,
-  showNextStep,
-  onFirstAccountConnected,
+  onAccountConnected,
   onOpenChange,
 }) {
   const t = useTranslations("git.connect");
@@ -39,8 +38,7 @@ export function ConnectDialog({
         key={chosen.name}
         provider={chosen}
         open={open}
-        showNextStep={showNextStep}
-        onFirstAccountConnected={onFirstAccountConnected}
+        onAccountConnected={onAccountConnected}
         onBack={() => setChosen(null)}
         onOpenChange={handleOpenChange}
       />

@@ -125,8 +125,7 @@ function fieldPlaceholder(t, providerName, fieldName) {
 export function ConnectForm({
   provider,
   open,
-  showNextStep,
-  onFirstAccountConnected,
+  onAccountConnected,
   onBack,
   onOpenChange,
 }) {
@@ -158,12 +157,27 @@ export function ConnectForm({
     }
 
     try {
-      await connectAccount(payload);
+      const { data } = await connectAccount(payload);
       toast.success(t("connected", { label: values.label }));
       router.refresh();
-      // The next action belongs on the refreshed account list, where it remains
-      // readable and actionable, rather than in a modal that closes on a timer.
-      if (showNextStep) onFirstAccountConnected?.();
+      /*
+       * The next action belongs on the refreshed account list, where it stays
+       * readable and actionable, rather than in a modal that closes on a timer.
+       *
+       * Reported for EVERY connect, not only the first. It used to be gated on
+       * the list being empty, so somebody adding a second account — the case
+       * where naming which one matters most — got nothing at all.
+       *
+       * The account itself is handed over, not a boolean: the prompt names it,
+       * and the link carries its id so the create form opens with it chosen.
+       * `id` comes from the response rather than the form, because only the
+       * server knows it.
+       */
+      onAccountConnected?.({
+        id: data?.git_account?.id ?? null,
+        label: values.label,
+        provider: provider.name,
+      });
       onOpenChange?.(false);
     } catch (error) {
       if (error.response?.data?.errors) {

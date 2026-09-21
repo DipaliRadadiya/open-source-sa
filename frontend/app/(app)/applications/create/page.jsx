@@ -114,6 +114,20 @@ export default async function CreateApplicationPage({ searchParams }) {
     ? sp.type
     : "";
 
+  /*
+   * The account the Git page just connected, checked against the real list.
+   *
+   * Same discipline as `type` directly above: a query parameter is somebody
+   * else's input. An id that does not exist would seed the picker with an
+   * account nobody can select and a form that cannot submit — so an unknown
+   * one is dropped and the form opens exactly as it does from any other door.
+   */
+  const prefillGitAccount = (accounts.accounts ?? []).some(
+    (account) => String(account.id) === String(sp?.git_account),
+  )
+    ? String(sp.git_account)
+    : "";
+
   return (
     <div className="space-y-6">
       <PageHeader title={t("createTitle")} subtitle={t("createSubtitle")} />
@@ -137,6 +151,7 @@ export default async function CreateApplicationPage({ searchParams }) {
         systemUsers={systemUsers.users}
         systemUsersFailed={systemUsers.failed}
         canCreateSystemUser={can(permissions, "system_user", "manage")}
+        initialGitAccountId={prefillGitAccount}
         gitAccounts={accounts.accounts}
         gitAccountsFailed={accounts.failed}
         phpVersions={phpVersions}
