@@ -53,9 +53,22 @@ class CentralUser
         return $user;
     }
 
+    /**
+     * What the activity log calls this account.
+     *
+     * Derived from the one branding value rather than read from a second
+     * config key. `BRANDING_CENTRAL_NAME` existed so a control plane could be
+     * named differently from the panel it manages; nothing ever set it — not
+     * `.env`, not `.env.example`, not install.sh — and an unset knob is a
+     * second source of truth waiting to disagree with the first.
+     *
+     * The branding name and nothing else — no suffix, no decoration. What
+     * distinguishes this account from a person is the `central` username and
+     * its `is_system` flag, not a word glued onto its display name.
+     */
     private function name(): string
     {
-        return (string) config('branding.central_name', config('branding.name'));
+        return trim((string) config('branding.name'));
     }
 
     private function availableUsername(): string

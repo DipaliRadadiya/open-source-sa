@@ -108,27 +108,26 @@ class GoogleDriveWorkspace
      */
     public function folderName(StorageDestination $destination): string
     {
-        $brand = trim((string) config('branding.name'));
+        // The branding value, used directly and with no fallback of any kind.
+        //
+        // There is nothing to fall back *to*: `config/branding.php` resolves
+        // this once and is guaranteed to return a non-empty name, including
+        // when `BRANDING_NAME=` is set blank. Branding is fixed at deploy time
+        // and never changes at runtime, so a second opinion here could only
+        // ever disagree with the first.
+        //
+        // That disagreement is not hypothetical — it is what broke this. A
+        // `?:` fallback here put the vendor's product name inside `app/`,
+        // where WhiteLabelTest forbids it, and this string does not stay in
+        // the source: it becomes the name of a folder created in somebody's
+        // **personal** Google Drive. A reseller's customer would find the
+        // vendor's name sitting next to their photos.
+        //
+        // No literal in this comment either — the same test greps comments as
+        // readily as code, which is why the leak survived every functional
+        // test before it.
+        $name = trim((string) config('branding.name')).' Backups';
         $host = trim((string) parse_url((string) config('server.storage.panel_url', ''), PHP_URL_HOST));
-
-        // No literal product name here as a second fallback, and the omission
-        // is the point — including in this comment, which WhiteLabelTest greps
-        // as readily as the code.
-        //
-        // `config/branding.php` already carries the default. That file exists
-        // so a deployment can name itself, and WhiteLabelTest exempts it for
-        // exactly that reason. Repeating the vendor's name here put it back
-        // inside `app/`, where the same test forbids it — and this is not a
-        // string that stays in the source: it becomes the name of a folder
-        // created in somebody's **personal** Google Drive. A reseller's
-        // customer would find the vendor's product name sitting next to their
-        // photos.
-        //
-        // A blank value is therefore honoured rather than papered over: an
-        // operator who clears the name is saying "put no product name on it",
-        // and the folder still identifies itself by host, which is the part
-        // that tells one panel's backups from another's.
-        $name = $brand === '' ? 'Backups' : $brand.' Backups';
 
         if ($host !== '') {
             $name .= ' ('.$host.')';

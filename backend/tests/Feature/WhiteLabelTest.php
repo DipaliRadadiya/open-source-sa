@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Central\CentralUser;
 use Illuminate\Support\Facades\File;
 
 /**
@@ -76,11 +77,15 @@ it('resolves a blank branding name to the default, not to nothing', function () 
     expect($resolved)->not->toBe('', 'branding.name must never resolve empty');
 });
 
-it('never builds the central name from an empty brand', function () {
-    // `'' . " Central"` is " Central", with a leading space and no product in
-    // it — the same class of bug one field along.
-    $central = trim((string) config('branding.central_name'));
+it('names the central account from the one branding value', function () {
+    // `BRANDING_CENTRAL_NAME` was a second config key nothing ever set, so
+    // this reads the one branding value — with no suffix and no decoration.
+    // What marks the account as the integration is its `central` username and
+    // `is_system` flag, not a word glued onto the name.
+    config(['branding.name' => 'Reseller One']);
 
-    expect($central)->not->toBe('')
-        ->and($central)->not->toStartWith('Central');
+    $name = (new ReflectionClass(CentralUser::class))->getMethod('name');
+    $name->setAccessible(true);
+
+    expect($name->invoke(app(CentralUser::class)))->toBe('Reseller One');
 });

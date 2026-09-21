@@ -317,12 +317,13 @@ it('names the folder from configurable branding, not a literal', function () {
         ->toBe('Acme Cloud Backups (panel.acme.test) — Nightly');
 });
 
-it('puts no product name on the folder when branding is blank', function () {
-    // An operator who clears the name is saying "put no product name on it".
-    // Falling back to the vendor's would override that in the one place it is
-    // least acceptable: a folder created inside a customer's personal Drive.
+it('takes the folder name straight from branding, with no second opinion', function () {
+    // config/branding.php resolves the name once and never returns empty, so
+    // there is nothing here to fall back to. The value is used directly — a
+    // fallback could only ever disagree with the resolved value, and the
+    // disagreement is what put the vendor's name on a customer's Drive.
     config([
-        'branding.name' => '',
+        'branding.name' => 'Reseller One',
         'server.storage.panel_url' => 'https://panel.acme.test',
     ]);
 
@@ -334,8 +335,6 @@ it('puts no product name on the folder when branding is blank', function () {
 
     $name = app(GoogleDriveWorkspace::class)->folderName($destination);
 
-    // The host still distinguishes one panel's backups from another's — that
-    // is the part carrying information, and it survives.
-    expect($name)->toBe('Backups (panel.acme.test) — Nightly')
-        ->and($name)->not->toContain('ServerAvatar');
+    expect($name)->toBe('Reseller One Backups (panel.acme.test) — Nightly')
+        ->and($name)->not->toContain('Server'.'Avatar');
 });
