@@ -1994,7 +1994,11 @@
       "removingBody": "इसमें कुछ मिनट लगते हैं। पेज अपने आप अपडेट होता है।",
       "removingSince": "{when} शुरू हुआ। पेज अपने आप अपडेट होता है।",
       "retry": "फिर से कोशिश करें",
-      "retrying": "PHP {version} फिर से इंस्टॉल हो रहा है…"
+      "retrying": "PHP {version} फिर से इंस्टॉल हो रहा है…",
+      "incomplete": "अधूरा",
+      "incompleteDetail": "{packages} मौजूद नहीं हैं — इसे पैनल ने नहीं, किसी दूसरे पैकेज ने इंस्टॉल किया था।",
+      "completeInstall": "इंस्टॉलेशन पूरा करें",
+      "completing": "PHP {version} पूरा किया जा रहा है…"
     },
     "extensions": {
       "title": "एक्सटेंशन",
@@ -3381,7 +3385,8 @@
       "aDatabase": "डेटाबेस",
       "submitNeedsServices": "{count, plural, one {पहले वह सेवा इंस्टॉल करें जो इस ऐप्लिकेशन को चाहिए} other {पहले वे सेवाएँ इंस्टॉल करें जो इस ऐप्लिकेशन को चाहिए}}",
       "typeNoResultsInCategory": "{category} में “{query}” से मेल खाने वाला कोई ऐप्लिकेशन नहीं — अन्य श्रेणियों में {count, plural, one {# मेल है} other {# मेल हैं}}।",
-      "typeSearchAllCategories": "सभी श्रेणियों में खोजें"
+      "typeSearchAllCategories": "सभी श्रेणियों में खोजें",
+      "runtimeIncomplete": "{runtime} {version} में {packages} मौजूद नहीं हैं। जिन ऐप्लिकेशन को इनकी ज़रूरत है वे विफल होंगे। पहले {runtime} पेज पर इंस्टॉलेशन पूरा करें।"
     },
     "actions": {
       "label": "क्रियाएँ",

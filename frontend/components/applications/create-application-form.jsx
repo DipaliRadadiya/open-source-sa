@@ -370,6 +370,28 @@ function ConfigField({
         ? nodeRange
         : null;
   const runtimeRequirement = isRuntime ? rangeLabel(runtimeRange) : "";
+  /*
+   * The version they have actually chosen, and whether it is a real install.
+   *
+   * This is where the damage happens. An interpreter that arrived as another
+   * package's dependency — `openlitespeed` pulls in `lsphp83` — has no curl,
+   * sqlite3, redis, intl or pgsql, and the picker offered it indistinguishably
+   * from the version the panel set up. The application is created, and the
+   * missing extension surfaces days later inside somebody's site.
+   *
+   * Read off the SELECTED value rather than marking every option: a dropdown
+   * that is closed most of the time cannot warn anyone, and the moment worth
+   * interrupting is the one where the choice is already made.
+   */
+  const chosenVersion = useWatch({ control: form.control, name: config.name });
+  const chosenIncomplete = useMemo(() => {
+    if (!isRuntime || !chosenVersion) return null;
+    const chosen = runtimeVersions.find(
+      (item) => String(item?.version) === String(chosenVersion),
+    );
+    const missing = chosen?.missing_packages ?? [];
+    return missing.length ? missing : null;
+  }, [isRuntime, chosenVersion, runtimeVersions]);
   const isTimezone =
     config.source === "timezones" ||
     config.name === "timezone" ||
@@ -687,6 +709,17 @@ function ConfigField({
             <FormDescription className="flex items-start gap-1.5 text-warning">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               {t("form.databaseEnginePermanent")}
+            </FormDescription>
+          ) : chosenIncomplete ? (
+            /* Outranks the range hint: the range says what this application
+               needs, and this says the version in the box cannot deliver it. */
+            <FormDescription className="flex items-start gap-1.5 text-warning">
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+              {t("form.runtimeIncomplete", {
+                runtime: config.source === "php_versions" ? "PHP" : "Node.js",
+                version: String(chosenVersion),
+                packages: chosenIncomplete.join(", "),
+              })}
             </FormDescription>
           ) : runtimeRequirement ? (
             <FormDescription>

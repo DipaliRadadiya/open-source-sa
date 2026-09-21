@@ -1994,7 +1994,11 @@
       "removingBody": "Dies dauert einige Minuten. Die Seite aktualisiert sich von selbst.",
       "removingSince": "Gestartet {when}. Die Seite aktualisiert sich von selbst.",
       "retry": "Erneut versuchen",
-      "retrying": "PHP {version} wird erneut installiert…"
+      "retrying": "PHP {version} wird erneut installiert…",
+      "incomplete": "Unvollständig",
+      "incompleteDetail": "Es fehlen {packages} – installiert wurde sie von einem anderen Paket, nicht vom Panel.",
+      "completeInstall": "Installation vervollständigen",
+      "completing": "PHP {version} wird vervollständigt …"
     },
     "extensions": {
       "title": "Erweiterungen",
@@ -3381,7 +3385,8 @@
       "aDatabase": "eine Datenbank",
       "submitNeedsServices": "{count, plural, one {Installieren Sie zuerst den Dienst, den diese Anwendung braucht} other {Installieren Sie zuerst die Dienste, die diese Anwendung braucht}}",
       "typeNoResultsInCategory": "Keine Anwendungstypen passen zu „{query}“ in {category} — {count, plural, one {# Treffer liegt} other {# Treffer liegen}} in anderen Kategorien.",
-      "typeSearchAllCategories": "Alle Kategorien durchsuchen"
+      "typeSearchAllCategories": "Alle Kategorien durchsuchen",
+      "runtimeIncomplete": "{runtime} {version} fehlen {packages}. Anwendungen, die sie benötigen, schlagen fehl. Vervollständigen Sie die Installation zuerst auf der {runtime}-Seite."
     },
     "actions": {
       "label": "Aktionen",

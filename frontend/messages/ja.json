@@ -1994,7 +1994,11 @@
       "removingBody": "完了まで数分かかります。ページは自動的に更新されます。",
       "removingSince": "{when} に開始しました。ページは自動的に更新されます。",
       "retry": "再試行",
-      "retrying": "PHP {version} を再度インストールしています…"
+      "retrying": "PHP {version} を再度インストールしています…",
+      "incomplete": "不完全",
+      "incompleteDetail": "{packages} がありません。パネルではなく別のパッケージによってインストールされたためです。",
+      "completeInstall": "インストールを完了する",
+      "completing": "PHP {version} を完了しています…"
     },
     "extensions": {
       "title": "拡張機能",
@@ -3381,7 +3385,8 @@
       "aDatabase": "データベース",
       "submitNeedsServices": "{count, plural, other {このアプリケーションに必要なサービスを先にインストールしてください}}",
       "typeNoResultsInCategory": "{category} に「{query}」に一致するアプリケーションはありません。{count, plural, other {他のカテゴリに # 件あります}}。",
-      "typeSearchAllCategories": "すべてのカテゴリを検索"
+      "typeSearchAllCategories": "すべてのカテゴリを検索",
+      "runtimeIncomplete": "{runtime} {version} には {packages} がありません。これらを必要とするアプリケーションは失敗します。先に {runtime} のページでインストールを完了してください。"
     },
     "actions": {
       "label": "操作",

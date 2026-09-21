@@ -1994,7 +1994,11 @@
       "removingBody": "This takes a few minutes. The page updates on its own.",
       "removingSince": "Started {when}. The page updates on its own.",
       "retry": "Try again",
-      "retrying": "Installing PHP {version} again…"
+      "retrying": "Installing PHP {version} again…",
+      "incomplete": "Incomplete",
+      "incompleteDetail": "Missing {packages} — it was installed by another package, not by the panel.",
+      "completeInstall": "Complete install",
+      "completing": "Completing PHP {version}…"
     },
     "extensions": {
       "title": "Extensions",
@@ -3381,7 +3385,8 @@
       "aDatabase": "a database",
       "submitNeedsServices": "{count, plural, one {Install the service this application needs first} other {Install the services this application needs first}}",
       "typeNoResultsInCategory": "No application types match “{query}” in {category} — {count, plural, one {# match is} other {# matches are}} in other categories.",
-      "typeSearchAllCategories": "Search all categories"
+      "typeSearchAllCategories": "Search all categories",
+      "runtimeIncomplete": "{runtime} {version} is missing {packages}. Applications that need them will fail. Complete the install on the {runtime} page first."
     },
     "actions": {
       "label": "Actions",

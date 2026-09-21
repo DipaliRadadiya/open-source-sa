@@ -1994,7 +1994,11 @@
       "removingBody": "Это займёт несколько минут. Страница обновится автоматически.",
       "removingSince": "Запущено {when}. Страница обновится автоматически.",
       "retry": "Повторить",
-      "retrying": "Повторная установка PHP {version}…"
+      "retrying": "Повторная установка PHP {version}…",
+      "incomplete": "Неполная",
+      "incompleteDetail": "Отсутствуют {packages} — её установил другой пакет, а не панель.",
+      "completeInstall": "Завершить установку",
+      "completing": "Завершается установка PHP {version}…"
     },
     "extensions": {
       "title": "Расширения",
@@ -3381,7 +3385,8 @@
       "aDatabase": "база данных",
       "submitNeedsServices": "{count, plural, one {Сначала установите службу, нужную этому приложению} other {Сначала установите службы, нужные этому приложению}}",
       "typeNoResultsInCategory": "В категории {category} нет приложений по запросу «{query}» — {count, plural, one {# совпадение находится} few {# совпадения находятся} many {# совпадений находятся} other {# совпадения находятся}} в других категориях.",
-      "typeSearchAllCategories": "Искать во всех категориях"
+      "typeSearchAllCategories": "Искать во всех категориях",
+      "runtimeIncomplete": "В {runtime} {version} отсутствуют {packages}. Приложения, которым они нужны, не запустятся. Сначала завершите установку на странице {runtime}."
     },
     "actions": {
       "label": "Действия",

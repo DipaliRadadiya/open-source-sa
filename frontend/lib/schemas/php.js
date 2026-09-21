@@ -55,6 +55,27 @@ export const phpVersionSchema = z.object({
   // job there as for nginx, and not the same thing as managing PHP.
   service: z.string().nullable().optional(),
   ini_path: z.string().nullable().optional(),
+  /*
+   * Base packages this version should have and does not.
+   *
+   * Empty for anything the panel installed. Non-empty means the interpreter
+   * arrived some other way — on this server `openlitespeed` pulls in `lsphp83`
+   * as its own dependency — and is a bare one: no curl, no sqlite3, no redis,
+   * no intl, no pgsql. The version still runs; it just cannot do most of what
+   * an application will ask of it, and the failure lands weeks later inside
+   * somebody's site.
+   *
+   * The API has published this all along and Zod dropped it, so an incomplete
+   * version rendered identically to a healthy one and the panel went on
+   * offering it for new applications.
+   *
+   * Already filtered server-side to packages apt actually knows about
+   * (`PhpRuntime::missingBasePackages` ends with `&& $this->packageExists`),
+   * so mbstring, xml, zip, gd, bcmath and soap never appear here on
+   * OpenLiteSpeed even though they have no packages — LiteSpeed compiles them
+   * in. Nothing to special-case at this end.
+   */
+  missing_packages: z.array(z.string()).nullable().optional().default([]),
 });
 
 export const phpGroupSchema = z.object({

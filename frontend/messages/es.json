@@ -1994,7 +1994,11 @@
       "removingBody": "Esto tarda unos minutos. La página se actualiza sola.",
       "removingSince": "Empezó {when}. La página se actualiza sola.",
       "retry": "Reintentar",
-      "retrying": "Instalando PHP {version} de nuevo…"
+      "retrying": "Instalando PHP {version} de nuevo…",
+      "incomplete": "Incompleta",
+      "incompleteDetail": "Faltan {packages}: la instaló otro paquete, no el panel.",
+      "completeInstall": "Completar la instalación",
+      "completing": "Completando PHP {version}…"
     },
     "extensions": {
       "title": "Extensiones",
@@ -3381,7 +3385,8 @@
       "aDatabase": "una base de datos",
       "submitNeedsServices": "{count, plural, one {Primero instala el servicio que necesita esta aplicación} other {Primero instala los servicios que necesita esta aplicación}}",
       "typeNoResultsInCategory": "Ningún tipo de aplicación coincide con “{query}” en {category}: {count, plural, one {hay # coincidencia} other {hay # coincidencias}} en otras categorías.",
-      "typeSearchAllCategories": "Buscar en todas las categorías"
+      "typeSearchAllCategories": "Buscar en todas las categorías",
+      "runtimeIncomplete": "A {runtime} {version} le faltan {packages}. Las aplicaciones que los necesiten fallarán. Completa la instalación primero en la página de {runtime}."
     },
     "actions": {
       "label": "Acciones",

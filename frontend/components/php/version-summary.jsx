@@ -53,6 +53,21 @@ export function VersionSummary({
   // The API omits `status` on older responses; absent means ready.
   const installState = version.status && version.status !== "ready" ? version.status : null;
 
+  /*
+   * Present, but not a version this panel set up.
+   *
+   * `openlitespeed` pulls in `lsphp83` as its own dependency, so the list
+   * carries an interpreter with none of the base extensions — no curl,
+   * sqlite3, redis, intl or pgsql. It ran, it was offered for new
+   * applications, and it read exactly like the healthy 8.4 beside it. The API
+   * has reported this all along; the schema was dropping the field.
+   *
+   * Only while nothing else is happening: mid-install the list is legitimately
+   * incomplete, and saying so there would be describing the install.
+   */
+  const missingPackages = version.missing_packages ?? [];
+  const incomplete = missingPackages.length > 0 && !installState;
+
   // Nothing is on disk, so anything that reads or writes this install fails.
   // Removing is the exception — clearing up a failed install is exactly what
   // you would want to do next.
@@ -116,6 +131,19 @@ export function VersionSummary({
     }
   }
 
+  async function complete() {
+    setRunning("complete");
+    try {
+      await installPhpVersion(version.version);
+      toast.success(t("versions.completing", { version: version.version }));
+      router.refresh();
+    } catch (error) {
+      toast.error(apiMessage(error, t("versions.installFailedShort")));
+    } finally {
+      setRunning(null);
+    }
+  }
+
   async function remove() {
     setRunning("remove");
     try {
@@ -161,6 +189,14 @@ export function VersionSummary({
           {version.is_default ? (
             <Badge variant="secondary" className="font-normal">
               {t("versions.default")}
+            </Badge>
+          ) : null}
+          {/* Not folded into the status chain below: a version can be both
+              incomplete AND end-of-life, and those are two different things to
+              know before picking it. */}
+          {incomplete ? (
+            <Badge variant="warning" className="font-normal">
+              {t("versions.incomplete")}
             </Badge>
           ) : null}
           {/* Said out loud. A version whose install failed used to look exactly
@@ -225,6 +261,31 @@ export function VersionSummary({
               </ReasonTooltip>
             )}
 
+            {/* The repair.
+             *
+             * `installPhpVersion` IS the repair — `PhpController::store` only
+             * short-circuits when the version is installed AND complete, so
+             * for this one it falls through to apt, which is idempotent.
+             *
+             * It has to live here rather than in the install dialog: that
+             * picker greys out anything already installed
+             * (`disabled={option.installed}`), which is every version that can
+             * be in this state. Wiring it there would produce a control that
+             * cannot be clicked. */}
+            {!incomplete ? null : (
+              <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!canManage || pending}
+                  onClick={complete}
+                >
+                  {running === "complete" ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {t("versions.completeInstall")}
+                </Button>
+              </ReasonTooltip>
+            )}
+
             {!nothingToRemove ? null : (
               <ReasonTooltip reason={canManage ? null : t("noPermission")}>
                 <Button
@@ -263,6 +324,14 @@ export function VersionSummary({
             became a grey paragraph nobody reads, and the count was buried at
             the end of it. */}
         <CardDescription>
+          {/* Named, not counted. "5 packages missing" tells nobody whether
+              their application will run; "curl, sqlite3, redis" tells them
+              immediately. */}
+          {incomplete ? (
+            <span className="block text-warning">
+              {t("versions.incompleteDetail", { packages: missingPackages.join(", ") })}
+            </span>
+          ) : null}
           {usedBy > 0 ? t("versions.usedByCount", { count: usedBy }) : t("versions.usedByNone")}
           {/* Only when the date is news. On a supported version the green badge
               already says what you need, and a 2028 date is trivia. */}
