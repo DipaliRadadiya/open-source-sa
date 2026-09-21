@@ -4,7 +4,7 @@
     "nothingToRevert": "Nothing to undo — no changes yet.",
     "enterAValue": "Enter a value first.",
     "chooseAnOption": "Choose an option first.",
-    "needsBackupTarget": "Set up backups for this site first.",
+    "needsBackupTarget": "Set up backups for this application first.",
     "nothingToSave": "Nothing to save — make a change first.",
     "mongoRenameNeedsPassword": "Renaming a MongoDB user recreates it, so a password is required.",
     "passwordRules": {
@@ -61,7 +61,7 @@
   },
   "systemUsers": {
     "title": "System Users",
-    "subtitle": "Linux OS accounts that own and run your sites.",
+    "subtitle": "The Linux accounts that own and run your applications.",
     "searchPlaceholder": "Search users…",
     "clearSearch": "Clear search",
     "columns": {
@@ -70,12 +70,12 @@
       "home": "Home",
       "shell": "Shell",
       "access": "Access",
-      "applications": "Apps",
+      "applications": "Applications",
       "created": "Created"
     },
     "sudo": "Sudo",
     "ssh": "SSH",
-    "appsCount": "{count, plural, =0 {No apps} one {# app} other {# apps}}",
+    "appsCount": "{count, plural, =0 {No applications} one {# application} other {# applications}}",
     "empty": {
       "title": "No system users yet",
       "desc": "System users are the Linux accounts that own and run your applications.",
@@ -114,7 +114,7 @@
     },
     "create": {
       "title": "Add system user",
-      "subtitle": "Creates a Linux account on the server (runs useradd).",
+      "subtitle": "Creates a system user on the server (runs useradd).",
       "username": "Username",
       "usernamePlaceholder": "e.g. deploy",
       "publicKey": "Initial SSH public key",
@@ -472,7 +472,7 @@
       },
       "permDesc": {
         "dashboard": "Server overview, stats and health.",
-        "application": "Sites and apps hosted on the server.",
+        "application": "Applications hosted on the server.",
         "database": "Databases and database users.",
         "system_user": "Linux system users and their access.",
         "firewall": "Open or close ports and manage rules.",
@@ -486,23 +486,23 @@
         "backup": "Server backups and where they are stored.",
         "php": "PHP versions and extensions on the server.",
         "node": "Node.js versions on the server.",
-        "sync": "Adopt sites and settings already on the machine.",
-        "git": "Connected Git accounts used to deploy sites.",
+        "sync": "Adopt applications and settings already on the machine.",
+        "git": "Connected Git accounts used to deploy applications.",
         "storage": "Remote storage used to hold backups.",
-        "app_domain": "Domains pointed at this site, and their SSL.",
-        "app_deployment": "Deploy this site and see past deploys.",
-        "app_environment": "This site's .env file.",
+        "app_domain": "Domains pointed at this application, and their SSL.",
+        "app_deployment": "Deploy this application and see past deploys.",
+        "app_environment": "This application's .env file.",
         "app_worker": "Background processes that keep running.",
-        "app_file": "Browse, edit and upload this site's files.",
-        "app_log": "This site's access and error logs.",
-        "app_backup": "Backups of this one site.",
-        "app_php": "PHP version and limits for this site.",
-        "app_security": "Put a username and password in front of the site.",
-        "app_firewall": "Blocks common attacks before they reach the site.",
-        "app_bot_blocker": "Stops AI crawlers reading the site.",
+        "app_file": "Browse, edit and upload this application's files.",
+        "app_log": "This application's access and error logs.",
+        "app_backup": "Backups of this one application.",
+        "app_php": "PHP version and limits for this application.",
+        "app_security": "Put a username and password in front of the application.",
+        "app_firewall": "Blocks common attacks before they reach the application.",
+        "app_bot_blocker": "Stops AI crawlers reading the application.",
         "app_fail2ban": "Bans addresses that keep failing to log in here.",
-        "app_staging": "A copy of the site to try changes on.",
-        "app_clone": "Make a copy of this site somewhere else."
+        "app_staging": "A copy of the application to try changes on.",
+        "app_clone": "Make a copy of this application somewhere else."
       },
       "unsavedTitle": "Discard unsaved changes?",
       "unsavedDescription": "You've made changes to this role that haven't been saved. If you leave now, they'll be lost.",
@@ -736,10 +736,10 @@
     "endpointFormat": "Must be a full https:// address",
     "endpointInsecure": "Use https://, not http:// — your keys would be sent unencrypted.",
     "endpointPlaceholder": "Replace the part in <angle brackets> with your own value",
-    "required_application": "Choose a site",
+    "required_application": "Choose an application",
     "required_destination": "Choose where to store the backups",
     "retentionRange": "Keep between 1 and 365 backups",
-    "required_confirm": "Type the site's domain to confirm",
+    "required_confirm": "Type the application's domain to confirm",
     "cloneDomainRequired": "Enter the domain for the copy.",
     "cloneDomainInvalid": "Enter a full domain, like copy.example.com",
     "scheduleTime": "Use a time like 02:00",
@@ -873,7 +873,7 @@
     "liveLabel": "Right now",
     "attention": {
       "title": "Needs attention",
-      "count": "{count, plural, one {# site needs attention} other {# sites need attention}}",
+      "count": "{count, plural, one {# application needs attention} other {# applications need attention}}",
       "insecure": {
         "chip": "{site} has no SSL certificate",
         "detail": "Visitors reach it over plain HTTP, so browsers show them a \"Not secure\" warning.",
@@ -881,7 +881,7 @@
       },
       "failed": {
         "chip": "{site} did not finish setting up",
-        "detail": "Setting this site up stopped partway, so it is not serving yet.",
+        "detail": "Setting this application up stopped partway, so it is not serving yet.",
         "action": "See what failed"
       },
       "git": {
@@ -931,7 +931,7 @@
     },
     "create": {
       "title": "Add cron job",
-      "subtitle": "Schedule a command to run automatically as an OS user.",
+      "subtitle": "Schedule a command to run automatically as a system user.",
       "submit": "Create job"
     },
     "edit": {
@@ -951,14 +951,14 @@
       "runAs": "Runs as",
       "runAsPlaceholder": "Select a user",
       "runAsLocked": "The run-as user cannot be changed. Delete the job and create a new one instead.",
-      "otherUser": "Other OS user…",
-      "username": "OS username",
+      "otherUser": "Other system user…",
+      "username": "System user",
       "usernameHint": "Must already exist on the server, e.g. root or www-data.",
       "path": "Application path",
-      "pathPickerPlaceholder": "Choose a site",
+      "pathPickerPlaceholder": "Choose an application",
       "pathCustom": "Enter a path myself",
-      "pathSitesGroup": "Your sites",
-      "pathHint": "The absolute directory of the site, used to complete the command.",
+      "pathSitesGroup": "Your applications",
+      "pathHint": "The absolute directory of the application, used to complete the command.",
       "command": "Command",
       "schedule": "Schedule",
       "expression": "Cron expression",
@@ -976,8 +976,8 @@
       "commandHintPath": "cron runs with a minimal PATH — use absolute paths, e.g. /usr/bin/php.",
       "commandHintLog": "Append >> /path/to/log 2>&1 to keep the output.",
       "serverTimeNote": "Runs in server time ({timezone})",
-      "runAsUnavailable": "The account list could not be loaded. Choose \"Other OS user…\" and type the username.",
-      "runAsHint": "The Linux account the command runs under. It decides which files the job can read and write, and it cannot be changed afterwards.",
+      "runAsUnavailable": "The account list could not be loaded. Choose \"Other system user…\" and type the username.",
+      "runAsHint": "The system user the command runs under. It decides which files the job can read and write, and it cannot be changed afterwards.",
       "scheduleHint": "How often to run it. Pick one of the common timings, or choose Custom to write the schedule yourself."
     },
     "toast": {
@@ -1217,7 +1217,7 @@
     "phpIni": {
       "title": "php.ini — PHP {version}",
       "description": "The whole file, as PHP reads it. On save it is backed up, written, tested with php-fpm -t, and reloaded. If PHP rejects it the previous file is put back and nothing is reloaded.",
-      "acknowledge": "I understand a bad php.ini can stop PHP {version} FPM from starting, which would take every site on that version offline.",
+      "acknowledge": "I understand a bad php.ini can stop PHP {version} FPM from starting, which would take every application on that version offline.",
       "rejectedTitle": "PHP rejected this file — nothing was changed",
       "save": "Save and reload",
       "cancel": "Cancel",
@@ -1485,7 +1485,7 @@
       "emptyTitle": "No rules yet",
       "emptyBody": "Add a rule to let something through — a website on 443, or SSH from your office only.",
       "protectedHint": "Added automatically so you cannot be locked out of this server.",
-      "protectedReason": "This one keeps you connected — switching it off can lock you out of the server or take your sites offline.",
+      "protectedReason": "This one keeps you connected — switching it off can lock you out of the server or take your applications offline.",
       "confirmTitle": "Delete this rule?",
       "confirmBodyOn": "{rule} — this takes effect straight away. Whatever it was letting through will be blocked.",
       "confirmBodyOff": "{rule} — the firewall is off, so nothing changes today, but the rule will not come back when you turn it on.",
@@ -1837,14 +1837,14 @@
       },
       "reboot": {
         "title": "Manual restart",
-        "description": "All hosted sites are unreachable until it returns, typically under a minute.",
+        "description": "All hosted applications are unreachable until it returns, typically under a minute.",
         "when": "Start",
         "now": "Right now",
         "inMinutes": "In {minutes} minutes",
         "action": "Restart server",
         "confirmTitle": "Restart this server?",
-        "confirmNow": "Every site, database and service on this machine stops now and comes back once it has booted. The panel is unreachable while that happens.",
-        "confirmDelayed": "The server restarts in {minutes} minutes. Every site, database and service on it stops until it is back.",
+        "confirmNow": "Every application, database and service on this machine stops now and comes back once it has booted. The panel is unreachable while that happens.",
+        "confirmDelayed": "The server restarts in {minutes} minutes. Every application, database and service on it stops until it is back.",
         "confirmCancel": "Cancel",
         "confirmSubmit": "Restart",
         "scheduled": "Restart scheduled in {minutes} minutes.",
@@ -1867,7 +1867,7 @@
         "description": "Restart on a fixed interval, independent of updates.",
         "save": "Save schedule",
         "enable": "Restart on a schedule",
-        "enableHint": "Every site is offline for approximately one minute each time.",
+        "enableHint": "Every application is offline for approximately one minute each time.",
         "frequency": "Interval",
         "dayOfWeek": "Day of the week",
         "dayOfMonth": "Day of the month",
@@ -1895,12 +1895,12 @@
   },
   "php": {
     "title": "PHP",
-    "subtitle": "PHP on this server, and the extensions your sites can use.",
+    "subtitle": "PHP on this server, and the extensions your applications can use.",
     "loadFailed": "We couldn't read this server's PHP setup.",
     "noPermission": "Your role does not include PHP with Manage access. Ask an administrator to grant it.",
     "empty": {
       "title": "No PHP installed",
-      "description": "Install a version to run PHP sites on this server."
+      "description": "Install a version to run PHP applications on this server."
     },
     "versions": {
       "pickerLabel": "PHP versions",
@@ -1908,12 +1908,12 @@
       "default": "Default",
       "panelRuns": "The panel itself runs on this version.",
       "isDefault": "This is the default version.",
-      "usedBy": "{count, plural, one {# site uses this version} other {# sites use this version}}.",
-      "usedByCount": "{count, plural, one {Used by # site} other {Used by # sites}}.",
-      "usedByNone": "No sites use this version yet.",
+      "usedBy": "{count, plural, one {# application uses this version} other {# applications use this version}}.",
+      "usedByCount": "{count, plural, one {Used by # application} other {Used by # applications}}.",
+      "usedByNone": "No applications use this version yet.",
       "makeDefault": "Make default",
       "remove": "Remove",
-      "defaultHint": "Your sites keep their own version — this only changes the php command.",
+      "defaultHint": "Your applications keep their own version — this only changes the php command.",
       "defaultSet": "PHP {version} is now the default.",
       "defaultFailed": "That version could not be made the default.",
       "removed": "PHP {version} removed.",
@@ -1959,7 +1959,7 @@
       "installing": "Installing {name} — this takes a few minutes.",
       "installingShort": "Starting",
       "failed": "That extension could not be changed.",
-      "summary": "{on} of {total} turned on. Turn on what your sites need.",
+      "summary": "{on} of {total} turned on. Turn on what your applications need.",
       "filterAll": "All",
       "filterOn": "On",
       "filterOff": "Off",
@@ -1985,7 +1985,7 @@
       "started": "Installing PHP {version} — this takes a few minutes.",
       "already": "PHP {version} was already installed.",
       "failed": "That version could not be installed.",
-      "eolWarning": "PHP {version} no longer gets security fixes. Install it only if a site needs it.",
+      "eolWarning": "PHP {version} no longer gets security fixes. Install it only if an application needs it.",
       "noneAvailable": "No new versions are available to install right now.",
       "installedTag": "Installed",
       "allInstalled": "Every version this server offers is already installed."
@@ -2061,7 +2061,7 @@
       "unsupported": "ionCube publishes no loader for PHP {version}. Use another version for software that needs it.",
       "loadFailed": "The ionCube Loader status could not be read.",
       "removeConfirmTitle": "Remove the ionCube Loader?",
-      "removeConfirmBody": "Any site on PHP {version} running encrypted software will stop working until it is installed again.",
+      "removeConfirmBody": "Any application on PHP {version} running encrypted software will stop working until it is installed again.",
       "hint": "A closed-source file from ionCube, not an apt package — that is why it has its own tab rather than a row in Extensions.",
       "onShort": "On",
       "offShort": "Off",
@@ -2082,7 +2082,7 @@
     "noPermission": "Your role does not include Node.js with Manage access. Ask an administrator to grant it.",
     "empty": {
       "title": "No Node.js installed",
-      "description": "Install a version to run Node.js apps on this server.",
+      "description": "Install a version to run Node.js applications on this server.",
       "noneInstallable": "This server can't add Node.js versions through the panel yet."
     },
     "system": {
@@ -2103,12 +2103,12 @@
       "name": "Node.js {version}",
       "default": "Default",
       "isDefault": "This is the default version.",
-      "usedBy": "{count, plural, one {# app uses this version} other {# apps use this version}}.",
-      "usedByCount": "{count, plural, one {Used by # app} other {Used by # apps}}.",
-      "usedByNone": "No apps use this version yet.",
+      "usedBy": "{count, plural, one {# application uses this version} other {# applications use this version}}.",
+      "usedByCount": "{count, plural, one {Used by # application} other {Used by # applications}}.",
+      "usedByNone": "No applications use this version yet.",
       "makeDefault": "Make default",
       "remove": "Remove",
-      "defaultHint": "Your apps keep their own version — this only changes the node command.",
+      "defaultHint": "Your applications keep their own version — this only changes the node command.",
       "defaultSet": "Node.js {version} is now the default.",
       "defaultFailed": "That version could not be made the default.",
       "removed": "Node.js {version} removed.",
@@ -2151,7 +2151,7 @@
       "started": "Installing Node.js {version} — this takes a few minutes.",
       "already": "Node.js {version} was already installed.",
       "failed": "That version could not be installed.",
-      "eolWarning": "Node.js {version} no longer gets security fixes. Install it only if an app needs it.",
+      "eolWarning": "Node.js {version} no longer gets security fixes. Install it only if an application needs it.",
       "noneAvailable": "No new versions are available to install right now.",
       "installedTag": "Installed",
       "allInstalled": "Every version this server offers is already installed."
@@ -2273,7 +2273,7 @@
     "message": "This server needs a restart to finish applying an installed update.",
     "action": "Restart now",
     "confirmTitle": "Restart this server now?",
-    "confirmDescription": "All hosted sites are unreachable until it returns, typically under a minute.",
+    "confirmDescription": "All hosted applications are unreachable until it returns, typically under a minute.",
     "confirmCancel": "Cancel",
     "confirmSubmit": "Restart server",
     "failed": "Could not start the restart.",
@@ -2282,7 +2282,7 @@
   "serverRestart": {
     "goingDown": {
       "title": "Restarting the server",
-      "body": "Your sites are offline until it comes back. This usually takes under a minute."
+      "body": "Your applications are offline until it comes back. This usually takes under a minute."
     },
     "offline": {
       "title": "Waiting for the server",
@@ -2366,7 +2366,7 @@
       "oneSqlOnly": "You can have MySQL or MariaDB, but not both — they use the same port, and installing the second one removes the first along with the server its databases live on. Choose carefully.",
       "takesTime": "The install runs in the background. You can leave this page.",
       "hint": {
-        "mysql": "Widely used. A good choice if your app's documentation says MySQL.",
+        "mysql": "Widely used. A good choice if your application's documentation says MySQL.",
         "mariadb": "A drop-in replacement for MySQL, and the usual choice on Linux servers. Recommended.",
         "mongodb": "Stores documents instead of tables. Only for apps built for it."
       },
@@ -2391,14 +2391,14 @@
       "noUsers": "No users",
       "lastExport": "Last export",
       "neverExported": "Never",
-      "application": "Site",
+      "application": "Application",
       "notLinked": "Not linked",
-      "applicationUnknown": "Another site",
-      "attachFor": "Choose which site uses {name}"
+      "applicationUnknown": "Another application",
+      "attachFor": "Choose which application uses {name}"
     },
     "empty": {
       "title": "No databases yet",
-      "description": "A database is where your app keeps its data. Create one to get started.",
+      "description": "A database is where your application keeps its data. Create one to get started.",
       "filteredTitle": "No matches",
       "filteredDesc": "No database matches that search.",
       "clearSearch": "Clear search"
@@ -2427,11 +2427,11 @@
       "noEngine": "Install a database engine first.",
       "usernamePlaceholder": "my_app_user",
       "application": "Used by",
-      "applicationNone": "Not linked to a site",
-      "applicationSearch": "Search sites…",
+      "applicationNone": "Not linked to an application",
+      "applicationSearch": "Search applications…",
       "applicationTaken": "Already has a database",
-      "applicationHint": "Decides which site backs this database up. It does not connect your site to it — the site keeps using whatever its own configuration says.",
-      "applicationEngine": "This site runs on {engines}.",
+      "applicationHint": "Decides which application backs this database up. It does not connect your application to it — the application keeps using whatever its own configuration says.",
+      "applicationEngine": "This application runs on {engines}.",
       "sqlWords": {
         "charset": "Character set",
         "collation": "Collation",
@@ -2448,13 +2448,13 @@
         "charsetHint": "Which characters the database can store. UTF8 handles every language and emoji — pick it unless something needs otherwise.",
         "collationHint": "The language rules used to sort and compare text. It follows from the encoding."
       },
-      "accessHint": "Which machines this user may connect from. Only this server is the safest answer, and the right one for a site hosted here. Avoid anywhere unless you genuinely need remote access.",
+      "accessHint": "Which machines this user may connect from. Only this server is the safest answer, and the right one for an application hosted here. Avoid anywhere unless you genuinely need remote access.",
       "engineHint": "Which database software this runs on. It cannot be changed afterwards — moving a database to another engine means creating it again."
     },
     "access": {
       "localhost": {
         "label": "This server only",
-        "hint": "Apps running on this server can connect. The safest option, and right for most apps."
+        "hint": "Applications running on this server can connect. The safest option, and right for most applications."
       },
       "remote": {
         "label": "From one address",
@@ -2509,7 +2509,7 @@
       "clearAll": "Clear",
       "submit": "Adopt",
       "adopting": "Adopting…",
-      "done": "{count, plural, one {# database adopted. It is not linked to a site yet, so no backup includes it.} other {# databases adopted. They are not linked to a site yet, so no backup includes them.}}",
+      "done": "{count, plural, one {# database adopted. It is not linked to an application yet, so no backup includes it.} other {# databases adopted. They are not linked to an application yet, so no backup includes them.}}",
       "failed": "They couldn't be adopted."
     },
     "engineList": {
@@ -2801,35 +2801,35 @@
     },
     "usedBy": {
       "title": "Used by",
-      "included": "Included in this site's backups.",
-      "noneWarning": "Not linked to a site, so no backup includes it.",
-      "unknownSite": "Linked to a site you cannot see.",
-      "attach": "Attach to a site",
+      "included": "Included in this application's backups.",
+      "noneWarning": "Not linked to an application, so no backup includes it.",
+      "unknownSite": "Linked to an application you cannot see.",
+      "attach": "Attach to an application",
       "change": "Change",
       "noPermission": "You do not have permission to change this."
     },
     "attach": {
-      "title": "Which site uses this database?",
-      "subtitle": "Choose the site {name} belongs to.",
+      "title": "Which application uses this database?",
+      "subtitle": "Choose the application {name} belongs to.",
       "label": "Used by",
-      "none": "Not linked to a site",
-      "search": "Search sites…",
+      "none": "Not linked to an application",
+      "search": "Search applications…",
       "taken": "Already has a database",
-      "hint": "Decides which site backs this database up. It does not connect your site to it — the site keeps using whatever its own configuration says.",
+      "hint": "Decides which application backs this database up. It does not connect your application to it — the application keeps using whatever its own configuration says.",
       "submit": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "attached": "Database linked to the site.",
-      "detached": "Database is no longer linked to a site.",
-      "failed": "Could not change which site uses this database.",
-      "unchanged": "Pick a different site first.",
-      "engineNotAccepted": "This site runs on {engines}."
+      "attached": "Database linked to the application.",
+      "detached": "Database is no longer linked to an application.",
+      "failed": "Could not change which application uses this database.",
+      "unchanged": "Pick a different application first.",
+      "engineNotAccepted": "This application runs on {engines}."
     },
     "unlinked": {
-      "title": "{count, plural, one {# database is not linked to a site} other {# databases are not linked to a site}}",
-      "description": "Backups only include databases linked to a site, so these are in no backup.",
+      "title": "{count, plural, one {# database is not linked to an application} other {# databases are not linked to an application}}",
+      "description": "Backups only include databases linked to an application, so these are in no backup.",
       "action": "Show them",
-      "filtered": "Showing only databases not linked to a site",
+      "filtered": "Showing only databases not linked to an application",
       "showAll": "Show all"
     }
   },
@@ -2844,7 +2844,7 @@
       "recheck": "Check all accounts again"
     },
     "onboarding": {
-      "title": "Your Git account is connected",
+      "title": "{label} is connected",
       "description": "Choose it as the source when you create an application.",
       "action": "Create application"
     },
@@ -2982,17 +2982,17 @@
   "applications": {
     "logs": {
       "pageTitle": "Logs",
-      "pageSubtitle": "Read this site's access, error and application logs.",
-      "provisioning": "Logs become available once the site finishes provisioning.",
+      "pageSubtitle": "Read this application's access, error and output logs.",
+      "provisioning": "Logs become available once the application finishes provisioning.",
       "loadFailed": "We couldn't load the logs.",
       "sourcesLabel": "Log source",
-      "proxyHint": "These are the reverse proxy's logs — your app's own output is under \"Application output\".",
+      "proxyHint": "These are the reverse proxy's logs — your application's own output is under \"Application output\".",
       "empty": {
         "badge": "empty"
       },
       "noSources": {
-        "title": "No logs for this site",
-        "body": "This site has no readable log sources yet."
+        "title": "No logs for this application",
+        "body": "This application has no readable log sources yet."
       },
       "clear": {
         "title": "Clear the {label}?",
@@ -3005,11 +3005,11 @@
     },
     "environment": {
       "pageTitle": "Environment",
-      "pageSubtitle": "Edit this site's .env file.",
-      "provisioning": "Environment becomes available once the site finishes provisioning.",
+      "pageSubtitle": "Edit this application's .env file.",
+      "provisioning": "Environment becomes available once the application finishes provisioning.",
       "loadFailed": "We couldn't load the environment.",
       "sectionTitle": "Environment",
-      "sectionSubtitle": "The site's .env, edited as one file.",
+      "sectionSubtitle": "The application's .env, edited as one file.",
       "pathUnknown": ".env",
       "copy": "Copy",
       "emptyPlaceholder": "# No .env yet — add variables and save to create the file",
@@ -3022,8 +3022,8 @@
       "saveFailed": "We couldn't save the environment.",
       "revert": "Revert",
       "unsaved": "Unsaved changes",
-      "restartHint": "This app reads the file at startup — Save & restart to apply changes.",
-      "applyHint": "This app caches its config — Save & apply clears the cache for you.",
+      "restartHint": "This application reads the file at startup — Save & restart to apply changes.",
+      "applyHint": "This application caches its config — Save & apply clears the cache for you.",
       "readOnly": "You have read-only access to this file.",
       "syntaxTitle": "Not saved — syntax error",
       "fixSet": "Set {key}={value}",
@@ -3032,10 +3032,10 @@
         "action": "Restore",
         "title": "Restore a backup",
         "subtitle": "Pick a saved copy. The current file is backed up first, so this is reversible.",
-        "restart": "Restart the app after restoring",
+        "restart": "Restart the application after restoring",
         "done": "Environment restored.",
         "failed": "We couldn't restore the backup.",
-        "restartHint": "Restart the site so the restored settings take effect now. Without this they apply at the next restart."
+        "restartHint": "Restart the application so the restored settings take effect now. Without this they apply at the next restart."
       },
       "history": {
         "title": "Change history",
@@ -3068,7 +3068,7 @@
       }
     },
     "title": "Applications",
-    "subtitle": "Sites and services running on this server.",
+    "subtitle": "Applications and services running on this server.",
     "loadFailed": "We could not load applications.",
     "noPermission": "Your role does not include Application with Manage access. Ask an administrator to grant it.",
     "create": "Create application",
@@ -3084,16 +3084,16 @@
     "configuration": "Configuration",
     "advanced": "Advanced settings",
     "source": {
-      "accountMissing": "The Git account this site used has been disconnected. Deploys will fail until it is linked to another account.",
+      "accountMissing": "The Git account this application used has been disconnected. Deploys will fail until it is linked to another account.",
       "relink": {
         "action": "Reconnect",
-        "title": "Reconnect this site to a Git account",
+        "title": "Reconnect this application to a Git account",
         "description": "The repository and branch stay as they are — {repository}. The account chosen here is checked against it before anything is saved.",
         "choose": "Choose an account",
         "cancel": "Cancel",
         "submit": "Reconnect",
-        "done": "Site reconnected.",
-        "failed": "Could not reconnect the site."
+        "done": "Application reconnected.",
+        "failed": "Could not reconnect the application."
       },
       "title": "Source and deployment",
       "repository": "Repository",
@@ -3133,14 +3133,14 @@
       "type": "Type",
       "domain": "Domain",
       "status": "Status",
-      "owner": "Owner",
+      "owner": "System user",
       "size": "Size",
       "created": "Created",
       "php": "PHP"
     },
     "empty": {
       "title": "Your server is ready for its first application",
-      "description": "Create a site or service in a guided flow. {brand} will provision it, then show its live status here.",
+      "description": "Create an application or service in a guided flow. {brand} will provision it, then show its live status here.",
       "filteredTitle": "No matching applications",
       "filteredDescription": "No applications match your search.",
       "clearSearch": "Clear search",
@@ -3163,11 +3163,11 @@
     "searchPlaceholder": "Search applications…",
     "details": {
       "title": "Application",
-      "settingUp": "Setting up your site",
+      "settingUp": "Setting up your application",
       "failedTitle": "Setup failed",
       "pending": "Queued — this starts in a moment.",
       "keepWaiting": "This continues on the server. You can safely leave this page.",
-      "takesMinutes": "Most sites are ready within a few minutes. A one-click installer takes longer.",
+      "takesMinutes": "Most applications are ready within a few minutes. A one-click installer takes longer.",
       "starting": "Starting…",
       "working": "Working…",
       "failedAt": "Stopped at: {step}",
@@ -3177,10 +3177,10 @@
       "copyReference": "Copy support reference",
       "unknownStep": "Completed a step",
       "steps": {
-        "create_directory": "Creating the site folder",
+        "create_directory": "Creating the application folder",
         "placeholder": "Adding a placeholder page",
         "set_ownership": "Setting file permissions",
-        "create_php_pool": "Setting up PHP for this site",
+        "create_php_pool": "Setting up PHP for this application",
         "harden_php": "Locking down PHP functions",
         "create_database": "Creating the database",
         "write_config": "Writing the web server configuration",
@@ -3193,7 +3193,7 @@
         "fetch": "Downloading the latest code",
         "checkout": "Updating the files",
         "seed_env": "Writing the environment file",
-        "verify": "Checking the site responds",
+        "verify": "Checking the application responds",
         "download": "Downloading files",
         "extract": "Unpacking files",
         "configure": "Applying configuration",
@@ -3208,7 +3208,7 @@
       "stalledTitle": "This is taking longer than expected",
       "stalledBody": "Setup has not reported progress for a while. It may still be running — check again, or contact support if it stays like this.",
       "checkAgain": "Check again",
-      "startedAgo": "Started {ago}. Most sites are ready within a few minutes; a one-click installer takes longer."
+      "startedAgo": "Started {ago}. Most applications are ready within a few minutes; a one-click installer takes longer."
     },
     "port": {
       "label": "Application port",
@@ -3225,7 +3225,7 @@
       "typeHint": "Pick the starting point for your project. You can adjust advanced configuration later.",
       "configureHint": "Only the fields required by this application are shown.",
       "reviewTitle": "Ready to provision",
-      "reviewHint": "{brand} will create the site configuration and show progress on the next screen.",
+      "reviewHint": "{brand} will create the application configuration and show progress on the next screen.",
       "selected": "Selected",
       "change": "Change"
     },
@@ -3255,9 +3255,9 @@
       "noSystemUserCreatePermission": "You need permission to manage system users. Ask an administrator to create one.",
       "createSystemUser": "Create system user",
       "generateSystemUser": "Generate a new system user",
-      "generateSystemUserHint": "A dedicated Linux account named after this site.",
+      "generateSystemUserHint": "A dedicated system user named after this application.",
       "pickSystemUser": "Use an existing system user",
-      "pickSystemUserHint": "Share an account with your other sites.",
+      "pickSystemUserHint": "Share an account with your other applications.",
       "systemUserWillBeCreated": "A new user will be created",
       "repositoriesLoading": "Loading repositories…",
       "repositoriesEmpty": "No repositories are available for this account.",
@@ -3290,13 +3290,13 @@
       "submitMissing": "{count, plural, one {Complete # required item to continue.} other {Complete # required items to continue.}}",
       "repositoryNeedsAccount": "Choose a Git account first.",
       "branchNeedsRepository": "Choose a repository first.",
-      "noOptions": "This site type offered no choices for this field, so there is nothing to pick.",
+      "noOptions": "This application type offered no choices for this field, so there is nothing to pick.",
       "runtimeRequirement": "This application needs {runtime} {range}.",
       "typePlaceholder": "Search and select an application type…",
       "domainMode": {
         "own": "My domain",
         "temporary": "Temporary",
-        "label": "Where this site will live"
+        "label": "Where this application will live"
       },
       "temporaryDomainHint": "Works right away. Use a real domain before launch.",
       "nameHint": "Only used in the panel — visitors never see it.",
@@ -3306,7 +3306,7 @@
       "needsGitAccount": "No Git account is connected. Use “Connect Git” below, then Refresh.",
       "installPhpVersion": "Install a PHP version",
       "installNodeVersion": "Install a Node version",
-      "databaseEnginePermanent": "This cannot be changed later — moving a site to another engine means creating it again.",
+      "databaseEnginePermanent": "This cannot be changed later — moving an application to another engine means creating it again.",
       "refreshVersions": "Refresh",
       "refreshVersionsHint": "Refresh the {runtime} versions installed on this server",
       "versionsAdded": "{runtime} {versions} {count, plural, one {is} other {are}} now available.",
@@ -3337,8 +3337,8 @@
     "actions": {
       "label": "Actions",
       "open": "Open dashboard",
-      "visit": "Visit site",
-      "visitHint": "The site is served once provisioning finishes.",
+      "visit": "Visit application",
+      "visitHint": "The application is served once provisioning finishes.",
       "delete": "Delete application",
       "go": {
         "files": "Open files",
@@ -3349,10 +3349,10 @@
     },
     "delete": {
       "title": "Delete {name}?",
-      "description": "The site configuration is removed and {domain} stops being served. This cannot be undone.",
-      "removeFiles": "Also delete the site’s files and backups",
-      "removeFilesOn": "The site’s directory, and every backup it has — including the archives in your storage — are deleted.",
-      "removeFilesOff": "The files stay on the server. The site’s backups leave the panel with it, but their archives stay in your storage — delete them there if you no longer want them.",
+      "description": "The application configuration is removed and {domain} stops being served. This cannot be undone.",
+      "removeFiles": "Also delete the application’s files and backups",
+      "removeFilesOn": "The application’s directory, and every backup it has — including the archives in your storage — are deleted.",
+      "removeFilesOff": "The files stay on the server. The application’s backups leave the panel with it, but their archives stay in your storage — delete them there if you no longer want them.",
       "confirmLabel": "Type <code>{domain}</code> to confirm",
       "submit": "Delete application",
       "deleting": "Deleting…",
@@ -3360,20 +3360,20 @@
       "failed": "We could not delete this application.",
       "cancel": "Cancel",
       "copyDomain": "Copy domain",
-      "removeDatabases": "{count, plural, one {Also delete this site's database} other {Also delete this site's # databases}}",
+      "removeDatabases": "{count, plural, one {Also delete this application's database} other {Also delete this application's # databases}}",
       "removeDatabasesOn": "{count, plural, one {{databases} will be dropped from the server, with the users that connect to it.} other {{databases} will be dropped from the server, with the users that connect to them.}}",
-      "removeDatabasesOff": "{count, plural, one {{databases} stays on the server, no longer linked to any site. Remove it from Databases if you no longer need it.} other {{databases} stay on the server, no longer linked to any site. Remove them from Databases if you no longer need them.}}",
-      "databasesFailed": "The site was deleted, but {databases} could not be removed.",
+      "removeDatabasesOff": "{count, plural, one {{databases} stays on the server, no longer linked to any application. Remove it from Databases if you no longer need it.} other {{databases} stay on the server, no longer linked to any application. Remove them from Databases if you no longer need them.}}",
+      "databasesFailed": "The application was deleted, but {databases} could not be removed.",
       "goToDatabases": "Open Databases",
-      "removeFilesHint": "Off, the site is removed from the panel but its files stay on the server. On, the files and its backups are deleted and cannot be recovered."
+      "removeFilesHint": "Off, the application is removed from the panel but its files stay on the server. On, the files and its backups are deleted and cannot be recovered."
     },
     "facts": {
       "title": "Application",
       "webRoot": "Web root",
       "php": "PHP version",
       "node": "Node version",
-      "port": "Port",
-      "description": "Type, owner and where this site lives."
+      "port": "Application port",
+      "description": "Type, system user and where this application lives."
     },
     "process": {
       "title": "Process",
@@ -3388,7 +3388,7 @@
       "stopped": "The process was stopped.",
       "restarted": "The process was restarted.",
       "failed": "We could not change the process.",
-      "deployToStart": "This site starts after its first successful deployment."
+      "deployToStart": "This application starts after its first successful deployment."
     },
     "domains": {
       "title": "Domains and SSL",
@@ -3398,10 +3398,10 @@
       "manage": "Manage domains",
       "loadFailed": "We could not load the domains for this application.",
       "pageTitle": "Domains & SSL",
-      "pageSubtitle": "Manage the names this site answers to and its HTTPS certificate.",
-      "provisioning": "Domains and SSL become available once the site finishes provisioning.",
+      "pageSubtitle": "Manage the names this application answers to and its HTTPS certificate.",
+      "provisioning": "Domains and SSL become available once the application finishes provisioning.",
       "sectionTitle": "Domains",
-      "sectionSubtitle": "Every name this site answers to.",
+      "sectionSubtitle": "Every name this application answers to.",
       "tabs": {
         "domains": "Domains",
         "ssl": "SSL",
@@ -3410,7 +3410,7 @@
         "sslUnknown": "Certificate status unknown"
       },
       "emptyTitle": "No domains yet",
-      "emptyBody": "Add a domain to point it at this site. You can add more names and aliases at any time.",
+      "emptyBody": "Add a domain to point it at this application. You can add more names and aliases at any time.",
       "testDomain": "Test domain",
       "rowActions": "Actions",
       "makePrimary": "Make primary",
@@ -3419,10 +3419,10 @@
       "add": {
         "action": "Add domain",
         "title": "Add a domain",
-        "subtitle": "Point another name at this site.",
+        "subtitle": "Point another name at this application.",
         "domain": "Domain",
         "type": "Type",
-        "aliasHint": "An alias serves the same site under a second name. Note: search engines may index both and split the ranking.",
+        "aliasHint": "An alias serves the same application under a second name. Note: search engines may index both and split the ranking.",
         "redirectHint": "A redirect serves nothing — it sends visitors to another address.",
         "redirectTo": "Redirect to",
         "redirectStatus": "Status",
@@ -3431,8 +3431,8 @@
         "dnsNoteIp": "After adding, point an A record for this name to your server:",
         "dnsNote": "After adding, point an A record for this name to your server so HTTPS can be issued.",
         "dnsNoteSecured": "After adding, point an A record for this name to your server.",
-        "certNotice": "This site's {current} certificate won't cover the new name until you reissue it. Until then, visitors to that name get a certificate warning instead of your site.",
-        "certUploadedNotice": "This site uses an uploaded certificate, which this panel can't reissue. Until you upload one that covers the new name — or switch to Let's Encrypt — visitors to it get a certificate warning instead of your site.",
+        "certNotice": "This application's {current} certificate won't cover the new name until you reissue it. Until then, visitors to that name get a certificate warning instead of your application.",
+        "certUploadedNotice": "This application uses an uploaded certificate, which this panel can't reissue. Until you upload one that covers the new name — or switch to Let's Encrypt — visitors to it get a certificate warning instead of your application.",
         "certNoticeForceHttps": "Force HTTPS is on, so visitors are sent straight to that warning with no way past it.",
         "redirectStatusOption": {
           "301": "301 — Permanent",
@@ -3440,18 +3440,18 @@
           "307": "307 — Temporary, keeps the method",
           "308": "308 — Permanent, keeps the method"
         },
-        "redirectToHint": "The address visitors are sent to instead. Use this when a domain should point at another one rather than serve its own site.",
-        "typeHint": "Primary is the site's main address. Alias serves the same site at a second address. Redirect sends visitors somewhere else instead.",
+        "redirectToHint": "The address visitors are sent to instead. Use this when a domain should point at another one rather than serve its own application.",
+        "typeHint": "Primary is the application's main address. Alias serves the same application at a second address. Redirect sends visitors somewhere else instead.",
         "redirectStatusHint": "301 says the move is permanent, so search engines update their records and visitors' browsers remember it. 302 says it is temporary."
       },
       "type": {
-        "alias": "Alias (same site, second name)",
+        "alias": "Alias (same application, second name)",
         "redirect": "Redirect (send to another address)",
         "primaryHint": "The canonical name. Aliases and redirects point to it.",
-        "aliasHint": "Serves the same site under another name.",
+        "aliasHint": "Serves the same application under another name.",
         "redirectHint": "Sends visitors to another address."
       },
-      "openSite": "Open site",
+      "openSite": "Open application",
       "copyDomain": "Copy domain",
       "dns": {
         "verified": "DNS verified",
@@ -3463,16 +3463,16 @@
       },
       "promote": {
         "title": "Make {domain} the primary domain?",
-        "body": "This becomes the site's canonical address.",
+        "body": "This becomes the application's canonical address.",
         "nowLabel": "Now",
         "afterLabel": "After",
-        "keepsServing": "{domain} stays attached as an alias and keeps serving this site.",
-        "renamesFiles": "The site's config and log files are renamed.",
-        "cmsWarning": "WordPress still has the old address saved, so visitors may be redirected back until you change it in the site."
+        "keepsServing": "{domain} stays attached as an alias and keeps serving this application.",
+        "renamesFiles": "The application's config and log files are renamed.",
+        "cmsWarning": "WordPress still has the old address saved, so visitors may be redirected back until you change it in the application."
       },
       "removeConfirm": {
         "title": "Remove {domain}?",
-        "body": "The site will stop answering on this name. This cannot be undone."
+        "body": "The application will stop answering on this name. This cannot be undone."
       },
       "toast": {
         "added": "Domain added.",
@@ -3488,8 +3488,8 @@
       },
       "ssl": {
         "sectionTitle": "SSL certificate",
-        "sectionSubtitle": "One certificate secures this site over HTTPS.",
-        "none": "This site is served over plain HTTP.",
+        "sectionSubtitle": "One certificate secures this application over HTTPS.",
+        "none": "This application is served over plain HTTP.",
         "noneBody": "Click Enable HTTPS — we'll check each domain and tell you exactly what to fix if a name isn't ready.",
         "notCertifiable": "SSL isn't available for test domains (like *.nip.io). Add a real domain first.",
         "enable": "Enable HTTPS",
@@ -3509,13 +3509,13 @@
         "forceHttps": "Force HTTPS",
         "forceHttpsHint": "Redirect every visitor from HTTP to HTTPS.",
         "forceHttpsEnabled": "Visitors are now redirected to HTTPS.",
-        "forceHttpsDisabled": "HTTPS redirect turned off. The site answers on HTTP too.",
+        "forceHttpsDisabled": "HTTPS redirect turned off. The application answers on HTTP too.",
         "forceHttpsFailed": "Couldn't change the HTTPS redirect.",
         "deleteFailed": "Couldn't remove the certificate.",
         "removeTitle": "Remove the certificate?",
-        "removeBody": "The site will fall back to plain HTTP and automatic renewal stops. This cannot be undone.",
-        "issueTitle": "Issue a certificate",
-        "issueSubtitle": "Secure this site over HTTPS.",
+        "removeBody": "The application will fall back to plain HTTP and automatic renewal stops. This cannot be undone.",
+        "issueTitle": "Set up SSL",
+        "issueSubtitle": "Secure this application over HTTPS.",
         "method": "Method",
         "method_letsencrypt": "Let's Encrypt (free, automatic)",
         "method_self_signed": "Self-signed",
@@ -3527,17 +3527,17 @@
         "dryRunHint": "Rehearse the whole thing first — we check every domain, then ask Let's Encrypt's staging server to validate. Nothing is issued and no attempt is spent.",
         "dryRunStage_reachability": "Checking that every domain serves the validation file…",
         "dryRunStage_acme": "Asking Let's Encrypt's staging server to validate. This can take a minute.",
-        "dryRunPassed": "Dry run passed — this site is ready for a certificate.",
+        "dryRunPassed": "Dry run passed — this application is ready for a certificate.",
         "dryRunFailed": "Dry run failed — issuing now would not work.",
         "dryRunStartFailed": "Couldn't start the dry run.",
         "certificate": "Certificate (PEM)",
         "privateKey": "Private key (PEM)",
         "chain": "Chain / intermediates",
         "optional": "optional",
-        "refusedTitle": "The site isn't reachable for validation yet",
+        "refusedTitle": "The application isn't reachable for validation yet",
         "forceHint": "If this server can't reach its own public address (e.g. behind NAT), you can skip the reachability check.",
-        "forceIssue": "Issue anyway",
-        "issue": "Issue certificate",
+        "forceIssue": "Set up anyway",
+        "issue": "Set up SSL",
         "issueFailed": "Couldn't issue the certificate.",
         "reissueTitle": "Reissue the certificate",
         "reissueSubtitle": "Replace the current certificate — usually to cover a name it is missing.",
@@ -3545,16 +3545,16 @@
         "certificateHint": "The certificate your provider issued for this domain. Paste the whole block, including the BEGIN and END lines.",
         "privateKeyHint": "The secret key that goes with the certificate. It was created when you requested it — never share it with anyone.",
         "chainHint": "The extra certificates linking yours back to a trusted authority. Without them some browsers and phones show a warning. Your provider supplies these.",
-        "servingStale": "This site is still handing visitors an older certificate. Browsers will show a security warning until the web server is reloaded.",
+        "servingStale": "This application is still handing visitors an older certificate. Browsers will show a security warning until the web server is reloaded.",
         "servingStaleDetail": "Being served: expires {served} · On disk: expires {onDisk}",
         "reloadWebServer": "Reload {service}",
         "reloaded": "The web server was reloaded.",
         "reloadFailed": "The web server could not be reloaded.",
-        "staleDomains": "{domains} is on this certificate but no longer on this site. Renewal fails for the whole certificate until it is reissued.",
+        "staleDomains": "{domains} is on this certificate but no longer on this application. Renewal fails for the whole certificate until it is reissued.",
         "uploadNeedsBoth": "Paste both the certificate and its private key."
       },
-      "issueCertificate": "Issue SSL certificate",
-      "description": "Names that reach this site, and its certificate.",
+      "issueCertificate": "Set up SSL",
+      "description": "Names that reach this application, and its certificate.",
       "more": "+{count} more",
       "types": {
         "primary": "Primary",
@@ -3569,8 +3569,8 @@
       "subtitle": "Choose an administrator to sign in as. No password needed.",
       "signIn": "Log in",
       "cancel": "Cancel",
-      "none": "This site has no administrator accounts.",
-      "listFailed": "Couldn't read this site's administrators.",
+      "none": "This application has no administrator accounts.",
+      "listFailed": "Couldn't read this application's administrators.",
       "failed": "Couldn't create the login link.",
       "popupBlocked": "Your browser blocked the new tab. Allow pop-ups for this panel and try again.",
       "redirecting": "Signing you in…",
@@ -3586,17 +3586,17 @@
       "pageTitle": "Deployment",
       "pageSubtitle": "Deploy your code and set up automatic deploys on push.",
       "loadFailed": "This deployment could not be loaded.",
-      "provisioning": "This site is still being set up. Deployment will be available once it's running.",
+      "provisioning": "This application is still being set up. Deployment will be available once it's running.",
       "deploy": {
         "title": "Deploy",
-        "subtitle": "Pull the latest code from your repository and rebuild the site.",
+        "subtitle": "Pull the latest code from your repository and rebuild the application.",
         "repository": "Repository",
         "branch": "Branch",
         "lastDeploy": "Last deployed",
         "never": "Never deployed",
         "commit": "Deployed commit",
         "action": "Deploy now",
-        "redeploy": "Redeploy",
+        "redeploy": "Deploy again",
         "deploying": "Deploying…",
         "inProgress": "Deploying — pulling code and rebuilding…",
         "keepsRunning": "This keeps running on the server. You can safely leave this page.",
@@ -3608,8 +3608,8 @@
         "failed": "Couldn't start the deployment.",
         "failedAt": "Last deploy failed at “{step}”. The previous version is still live.",
         "reference": "Reference: {reference}",
-        "notDeployedYet": "This site has no code yet — deploy to pull your repository from {branch} and go live.",
-        "resetNote": "Deploying resets the site to the {branch} branch; changes made directly on the server are discarded.",
+        "notDeployedYet": "This application has no code yet — deploy to pull your repository from {branch} and go live.",
+        "resetNote": "Deploying resets the application to the {branch} branch; changes made directly on the server are discarded.",
         "viewCommit": "View commit on your Git provider"
       },
       "webhook": {
@@ -3654,11 +3654,11 @@
       },
       "cancel": "Cancel",
       "runtime": {
-        "title": "How this site runs",
+        "title": "How this application runs",
         "subtitle": "The command that starts the process, and the port it listens on.",
         "startCommand": "Start command",
         "startCommandHint": "The entry file, for example \"node index.js\". Not \"npm start\" — a package manager forks the real process, so shutdown signals never reach it.",
-        "appPort": "App port",
+        "appPort": "Application port",
         "appPortPlaceholder": "Chosen for you",
         "appPortHint": "Blank picks a free one.",
         "appliesOnDeploy": "Saved now, applied on the next deploy — that is when the service file is rewritten.",
@@ -3672,7 +3672,7 @@
         "branch": "Branch",
         "branchHint": "The branch each deploy checks out.",
         "script": "Deploy script",
-        "scriptHint": "Runs after the code is fetched, as your site user.",
+        "scriptHint": "Runs after the code is fetched, as your application user.",
         "scriptFallbackHint": "Nothing custom is set, so this is the build command that runs today. Edit it to make it your own.",
         "placeholders": "You can use:",
         "resetScript": "Reset to default",
@@ -3680,7 +3680,7 @@
         "saveNote": "Applies to the next deploy, not the one running now.",
         "saved": "Deploy settings saved.",
         "saveFailed": "Those settings could not be saved.",
-        "noPermission": "Your role does not include Deployment for this site with Manage access. Ask an administrator to grant it.",
+        "noPermission": "Your role does not include Deployment for this application with Manage access. Ask an administrator to grant it.",
         "nothingToSave": "Nothing to save",
         "branchPlaceholder": "main",
         "branchSearch": "Search branches…",
@@ -3688,10 +3688,10 @@
           "loading": "Loading branches from the repository…",
           "empty": "The repository reported no branches — type the name instead.",
           "error": "Couldn't load branches from the repository. Type the name instead.",
-          "unlinked": "This site has no working Git account, so branches can't be listed. Reconnect it on the application page."
+          "unlinked": "This application has no working Git account, so branches can't be listed. Reconnect it on the application page."
         },
         "title": "What a deploy runs",
-        "subtitle": "The branch to check out, and the commands that build the site afterwards."
+        "subtitle": "The branch to check out, and the commands that build the application afterwards."
       },
       "history": {
         "empty": {
@@ -3700,15 +3700,15 @@
         },
         "noMessage": "No commit message",
         "system": "System",
-        "redeploy": "Re-run",
-        "redeployStarted": "Re-running that deploy.",
-        "redeployFailed": "That deploy could not be re-run.",
+        "redeploy": "Deploy again",
+        "redeployStarted": "Deploying the latest code on this branch.",
+        "redeployFailed": "That deployment could not be started.",
         "output": "Build log",
         "copy": "Copy log",
         "loadingLog": "Loading the build log…",
         "noOutput": "This deploy produced no output.",
         "logFailed": "The build log could not be loaded.",
-        "noPermission": "Your role does not include Deployment for this site with Manage access. Ask an administrator to grant it.",
+        "noPermission": "Your role does not include Deployment for this application with Manage access. Ask an administrator to grant it.",
         "title": "Deploy history",
         "subtitle": "Every deploy, newest first. Open one to read its build log."
       },
@@ -3720,14 +3720,14 @@
     },
     "files": {
       "pageTitle": "Files",
-      "pageSubtitle": "Browse, view and edit this site's files.",
+      "pageSubtitle": "Browse, view and edit this application's files.",
       "loadFailed": "Files could not be loaded.",
-      "provisioning": "This site is still being set up. Files will be available once it's running.",
-      "noPermission": "Your role does not include Files for this site with Manage access. Ask an administrator to grant it.",
+      "provisioning": "This application is still being set up. Files will be available once it's running.",
+      "noPermission": "Your role does not include Files for this application with Manage access. Ask an administrator to grant it.",
       "cancel": "Cancel",
       "saving": "Saving…",
       "breadcrumbLabel": "Folder path",
-      "root": "Site root",
+      "root": "Application folder",
       "symlinkHint": "Symbolic links aren't supported by this feature.",
       "symlinkBrokenHint": "This link points to something that no longer exists.",
       "notProvisioned": {
@@ -3772,9 +3772,9 @@
       "itemCount": "{count, plural, =0 {No items} one {# item} other {# items}}",
       "itemCountFiltered": "{shown} of {total} items",
       "siteSearch": {
-        "action": "Search entire site for \"{query}\"",
-        "noResults": "Nothing on this site matches \"{query}\".",
-        "failed": "Site search failed.",
+        "action": "Search entire application for \"{query}\"",
+        "noResults": "Nothing on this application matches \"{query}\".",
+        "failed": "Application search failed.",
         "inFolder": "in {folder}"
       },
       "imagePreview": {
@@ -3840,8 +3840,8 @@
       },
       "targetDialog": {
         "pathLabel": "Path",
-        "rootPlaceholder": "Site root",
-        "pathLabelHint": "Where to put it, counted from the top of the site's folder.",
+        "rootPlaceholder": "Application folder",
+        "pathLabelHint": "Where to put it, counted from the top of the application's folder.",
         "destination": "Extracts into",
         "copyDestination": "Copy this path"
       },
@@ -3921,7 +3921,7 @@
       },
       "fixPermissions": {
         "action": "Fix permissions",
-        "title": "Reset this site's file permissions?",
+        "title": "Reset this application's file permissions?",
         "description": "Resets every file and folder's owner and permissions back to the standard defaults.",
         "foldersLabel": "Folders",
         "filesLabel": "Files",
@@ -3948,11 +3948,11 @@
         "archiveName": "Archive name",
         "moveTitle": "Move {count, plural, one {# item} other {# items}}",
         "moveDescription": "They keep their names. Anything already there is left alone, not overwritten.",
-        "moveHint": "Path from the site root, e.g. wp-content/keep",
+        "moveHint": "Path from the application folder, e.g. wp-content/keep",
         "moveDone": "{count, plural, one {# item moved.} other {# items moved.}}",
         "copyTitle": "Copy {count, plural, one {# item} other {# items}}",
         "copyDescription": "They keep their names. Anything already there is left alone, not overwritten.",
-        "copyHint": "Path from the site root, e.g. wp-content/keep",
+        "copyHint": "Path from the application folder, e.g. wp-content/keep",
         "copyDone": "{count, plural, one {# item copied.} other {# items copied.}}",
         "compressTitle": "Compress {count, plural, one {# item} other {# items}}",
         "compressDescription": "One archive, holding the names as they are now.",
@@ -3979,7 +3979,7 @@
         "deleteSubmitForever": "Delete forever",
         "deleteDoneForever": "{count, plural, one {# item deleted for good.} other {# items deleted for good.}}",
         "targetFolderPlaceholder": "wp-content/keep",
-        "archiveNamePlaceholder": "site-backup",
+        "archiveNamePlaceholder": "application-backup",
         "permissionsDescriptionCurrent": "Currently {mode} ({symbolic}). The same mode is applied to everything selected.",
         "permissionsDescriptionMixed": "The selected items do not all have the same permissions. Saving applies one mode to every one of them.",
         "permissionsChooseMode": "Choose the permissions to apply."
@@ -4017,7 +4017,7 @@
         "batchEmptied": "Deleted for good.",
         "emptyFailed": "Couldn't empty the trash.",
         "itemCount": "{count, plural, one {# item} other {# items}}",
-        "noPermission": "Your role does not include Files for this site with Manage access. Ask an administrator to grant it.",
+        "noPermission": "Your role does not include Files for this application with Manage access. Ask an administrator to grant it.",
         "loadFailed": "Couldn't load the trash.",
         "cancel": "Cancel",
         "confirmSubmit": "Delete forever",
@@ -4034,7 +4034,7 @@
           "description": "These are destroyed on the server. This can't be undone."
         },
         "deletedAt": "Deleted",
-        "siteRoot": "Site root",
+        "siteRoot": "Application folder",
         "holding": "Using {size} of disk",
         "retention": "{days, plural, one {Removed automatically after # day} other {Removed automatically after # days}}"
       },
@@ -4070,11 +4070,11 @@
     },
     "workers": {
       "pageTitle": "Workers",
-      "pageSubtitle": "Keep long-running processes — queue workers, Horizon, or your own command — running for this site.",
+      "pageSubtitle": "Keep long-running processes — queue workers, Horizon, or your own command — running for this application.",
       "loadFailed": "Workers could not be loaded.",
-      "provisioning": "This site is still being set up. Workers will be available once it's running.",
+      "provisioning": "This application is still being set up. Workers will be available once it's running.",
       "addWorker": "Add worker",
-      "noPermission": "Your role does not include Workers for this site with Manage access. Ask an administrator to grant it.",
+      "noPermission": "Your role does not include Workers for this application with Manage access. Ask an administrator to grant it.",
       "cancel": "Cancel",
       "saving": "Saving…",
       "empty": {
@@ -4098,7 +4098,7 @@
       "noRestartOnDeployTag": "Won't restart after deploy",
       "noAutoRestartTag": "Won't restart if it stops",
       "addedAgo": "Added {time}",
-      "customDirectoryTooltip": "Runs from {path} instead of the site's document root.",
+      "customDirectoryTooltip": "Runs from {path} instead of the application's web root.",
       "busy": {
         "start": "Starting…",
         "stop": "Stopping…",
@@ -4162,7 +4162,7 @@
         "nameHint": "A short label to identify this worker.",
         "useTemplate": "Use template",
         "command": "Command",
-        "commandHint": "Runs as this site's own user. supervisord runs the command directly, not through a shell.",
+        "commandHint": "Runs as this application's own user. supervisord runs the command directly, not through a shell.",
         "processes": "Processes",
         "processesHint": "How many copies to run at once, for handling more jobs in parallel.",
         "restartOnDeploy": "Restart after deploy",
@@ -4173,8 +4173,8 @@
         "enabledHint": "Turn off to keep the worker configured but not running.",
         "advanced": "Advanced settings",
         "directory": "Working directory",
-        "directoryPlaceholder": "Defaults to the site's code folder",
-        "directoryHint": "Where the command runs from. Leave empty to use the site's code folder — for most frameworks that is the folder containing the site's code, not the one the web server serves.",
+        "directoryPlaceholder": "Defaults to the application folder",
+        "directoryHint": "Where the command runs from. Leave empty to use the application folder — for most frameworks that is the folder holding your code, not the web root the server serves.",
         "stopWaitSeconds": "Stop timeout (seconds)",
         "stopWaitSecondsHint": "How long to let it finish what it's doing before forcing it to stop.",
         "conflict": {
@@ -4183,7 +4183,7 @@
         },
         "user": "Run as user",
         "userPlaceholder": "deploy",
-        "userHint": "Leave empty to run as this site's own user, which is almost always right.",
+        "userHint": "Leave empty to run as this application's own user, which is almost always right.",
         "logFile": "Log file",
         "logFilePlaceholder": "/var/log/my-worker.log",
         "logFileHint": "Absolute path, and it can't contain .. — leave empty and supervisord chooses one.",
@@ -4212,7 +4212,7 @@
           "custom": "Custom"
         }
       },
-      "runsAsTooltip": "Runs as {user}, not this site's own user.",
+      "runsAsTooltip": "Runs as {user}, not this application's own user.",
       "supervisor": {
         "missing": "Supervisor is not installed on this server. Workers run under it, so none can start until it is.",
         "install": "Install Supervisor",
@@ -4222,18 +4222,18 @@
     },
     "security": {
       "pageTitle": "Password Protection",
-      "pageSubtitle": "Require a username and password before anyone can view this site.",
+      "pageSubtitle": "Require a username and password before anyone can view this application.",
       "loadFailed": "This couldn't be loaded.",
-      "provisioning": "This site is still being set up. Password protection will be available once it's running.",
+      "provisioning": "This application is still being set up. Password protection will be available once it's running.",
       "statusProtected": "Protected",
       "statusNotProtected": "Not protected",
       "enable": "Require a password",
-      "enableHint": "Visitors must sign in with the credentials below before they can view the site.",
+      "enableHint": "Visitors must sign in with the credentials below before they can view the application.",
       "whenToUseTitle": "When to use this",
-      "whenToUseBody": "Good for a staging site, a work-in-progress redesign, or a client preview you don't want found before launch. Turn it off once the site is ready for the public.",
-      "warning": "This protects the whole site, not just an admin area — search engines, uptime monitors and any integration hitting this domain will also be blocked until they're given the credentials. You can turn this off here at any time if that causes a problem.",
-      "credentialsNote": "This creates a new login just for this site — separate from your {brand} account. Visitors will see their browser's own plain sign-in prompt, not a styled page.",
-      "disabledHint": "The site is publicly reachable — anyone can view it.",
+      "whenToUseBody": "Good for a staging application, a work-in-progress redesign, or a client preview you don't want found before launch. Turn it off once the application is ready for the public.",
+      "warning": "This protects the whole application, not just an admin area — search engines, uptime monitors and any integration hitting this domain will also be blocked until they're given the credentials. You can turn this off here at any time if that causes a problem.",
+      "credentialsNote": "This creates a new login just for this application — separate from your {brand} account. Visitors will see their browser's own plain sign-in prompt, not a styled page.",
+      "disabledHint": "The application is publicly reachable — anyone can view it.",
       "unsupportedForType": "This application signs in with the Authorization header, which HTTP allows only once per request. Password protection would consume it and make the application unreachable. It already requires its own credentials.",
       "username": "Username",
       "usernamePlaceholder": "e.g. admin",
@@ -4245,20 +4245,20 @@
       "saving": "Saving…",
       "savingNote": "This can take a few seconds — the web server is being reloaded.",
       "discard": "Discard",
-      "noPermission": "Your role does not include Password Protection for this site with Manage access. Ask an administrator to grant it.",
+      "noPermission": "Your role does not include Password Protection for this application with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing to save",
       "enabledToast": "Password protection is on.",
-      "disabledToast": "Password protection is off — the site is public again.",
+      "disabledToast": "Password protection is off — the application is public again.",
       "savedCredentials": "Save these now — they won't be shown again:",
-      "openSite": "Open site",
+      "openSite": "Open application",
       "showPassword": "Show password",
       "hidePassword": "Hide password"
     },
     "botBlocker": {
       "pageTitle": "AI Bot Blocker",
-      "pageSubtitle": "Choose which AI bots are allowed to read this site.",
+      "pageSubtitle": "Choose which AI bots are allowed to read this application.",
       "loadFailed": "This couldn't be loaded.",
-      "provisioning": "This site is still being set up. The AI bot blocker will be available once it's running.",
+      "provisioning": "This application is still being set up. The AI bot blocker will be available once it's running.",
       "explainer": "AI bots are automated visitors from AI companies. Some only copy your content; others can send you real visitors.",
       "activeNow": "Active now",
       "chooseLabel": "Choose what to allow",
@@ -4268,13 +4268,13 @@
       "showBots": "See the {count} bots this blocks",
       "hideBots": "Hide the list",
       "traffic": {
-        "title": "AI bots that visited this site",
-        "subtitle": "Read from this site’s access log.",
+        "title": "AI bots that visited this application",
+        "subtitle": "Read from this application’s access log.",
         "range": "{days} days",
-        "unavailable": "This site’s access log couldn’t be read, so there’s nothing to show yet. This isn’t the same as no bots visiting.",
+        "unavailable": "This application’s access log couldn’t be read, so there’s nothing to show yet. This isn’t the same as no bots visiting.",
         "empty": "No AI bots have visited in the last {days} days.",
         "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# request} other {# requests}} · {blocked, plural, other {# blocked}}",
-        "partial": "Only the most recent part of the log was scanned, so busy sites may have had more.",
+        "partial": "Only the most recent part of the log was scanned, so busy applications may have had more.",
         "blocked": "Blocked",
         "allowed": "Getting through",
         "columns": {
@@ -4316,11 +4316,11 @@
         "errors": {
           "invalid": "Use the bot's user-agent name — letters, digits, dots and dashes only.",
           "tooBroad": "That would match ordinary crawlers too, including Google's. Use the bot's full name.",
-          "searchEngine": "That's a search engine, not an AI crawler — blocking it would take the site out of search results.",
+          "searchEngine": "That's a search engine, not an AI crawler — blocking it would take the application out of search results.",
           "duplicate": "That bot is already on this list.",
           "limit": "That's the most bots this list can hold."
         },
-        "noPermission": "Your role does not include AI Bot Blocker for this site with Manage access. Ask an administrator to grant it."
+        "noPermission": "Your role does not include AI Bot Blocker for this application with Manage access. Ask an administrator to grant it."
       },
       "howItWorks": "Your robots.txt isn't changed, and Google and real visitors aren't affected.",
       "save": "Save",
@@ -4329,17 +4329,17 @@
       "discard": "Discard",
       "saved": "AI bot settings saved.",
       "saveFailed": "That couldn't be saved.",
-      "noPermission": "Your role does not include AI Bot Blocker for this site with Manage access. Ask an administrator to grant it.",
+      "noPermission": "Your role does not include AI Bot Blocker for this application with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing to save"
     },
     "firewall": {
       "pageTitle": "Web Firewall",
-      "pageSubtitle": "Turn away common attacks before they reach this site.",
+      "pageSubtitle": "Turn away common attacks before they reach this application.",
       "loadFailed": "This couldn't be loaded.",
-      "provisioning": "This site is still being set up. The firewall will be available once it's running.",
-      "explainer": "The firewall inspects every request for patterns used in attacks, and can turn them away before your site runs any code.",
+      "provisioning": "This application is still being set up. The firewall will be available once it's running.",
+      "explainer": "The firewall inspects every request for patterns used in attacks, and can turn them away before your application runs any code.",
       "openlitespeed": "This server runs OpenLiteSpeed, where these rules aren't applied yet. Your settings are saved, but nothing is checked until support for it ships.",
-      "enable": "Protect this site",
+      "enable": "Protect this application",
       "statusOff": "Off",
       "statusWatching": "Watching only",
       "statusBlocking": "Blocking",
@@ -4347,24 +4347,24 @@
       "watchingHint": "Suspicious requests are recorded, but still allowed through.",
       "blockingHint": "Suspicious requests are refused.",
       "whenToUseTitle": "When to use this",
-      "whenToUseBody": "Worth turning on for any public site. Start by watching for a few days — that way you can see whether it would have stopped anything real before it starts blocking.",
+      "whenToUseBody": "Worth turning on for any public application. Start by watching for a few days — that way you can see whether it would have stopped anything real before it starts blocking.",
       "modeLabel": "What should happen to a suspicious request?",
       "modeDetectHint": "Nothing is blocked. Matches are written to a log so you can check for mistakes first.",
       "modeEnforceHint": "Matching requests are refused immediately. Switch to this once watching looks clean.",
       "categoriesLabel": "What it checks",
-      "categoriesHint": "Turn one off if it's getting in the way of something legitimate on your site.",
+      "categoriesHint": "Turn one off if it's getting in the way of something legitimate on your application.",
       "categoryHints": {
         "query_string": "Attack code hidden in the part of a link after the ? sign.",
         "request_uri": "Requests for files and paths that only attackers go looking for.",
         "user_agent": "Visitors identifying themselves as known scanners and attack tools.",
-        "referrer": "Traffic claiming to arrive from spam and malware sites.",
-        "cookie": "Tampered cookies used to slip code past your site.",
+        "referrer": "Traffic claiming to arrive from spam and malware websites.",
+        "cookie": "Tampered cookies used to slip code past your application.",
         "method": "Ways of sending a request that a normal browser never uses."
       },
       "lastCategory": "At least one check has to stay on. To stop checking altogether, turn the firewall off.",
       "advanced": "Fine-tuning",
       "exceptionsTitle": "Let these through",
-      "exceptionsHint": "A request containing any of these words skips every check — matched against the web address, the part after the ?, and the browser name. Keep them specific: a short or common word switches the firewall off across much of your site.",
+      "exceptionsHint": "A request containing any of these words skips every check — matched against the web address, the part after the ?, and the browser name. Keep them specific: a short or common word switches the firewall off across much of your application.",
       "exceptionsPlaceholder": "e.g. my-plugin-name",
       "exceptionsEmpty": "Nothing is being let through.",
       "blocksTitle": "Always block these",
@@ -4384,7 +4384,7 @@
       "discard": "Discard",
       "saved": "Firewall settings saved.",
       "saveFailed": "That couldn't be saved.",
-      "noPermission": "Your role does not include Web Firewall for this site with Manage access. Ask an administrator to grant it.",
+      "noPermission": "Your role does not include Web Firewall for this application with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing to save",
       "detectCaught": "{count, plural, one {# request would have been blocked so far} other {# requests would have been blocked so far}}.",
       "detectNothingYet": "Nothing has been caught yet.",
@@ -4397,9 +4397,9 @@
       }
     },
     "clone": {
-      "pageTitle": "Site Clone",
+      "pageTitle": "Application Clone",
       "pageSubtitle": "Make an independent copy of {name} at a new domain.",
-      "loadFailed": "This site could not be loaded.",
+      "loadFailed": "This application could not be loaded.",
       "failed": "The clone could not be started.",
       "what": {
         "title": "What gets copied",
@@ -4425,11 +4425,11 @@
       "form": {
         "domain": "Domain for the copy",
         "domainPlaceholder": "copy.example.com",
-        "submit": "Create site copy",
-        "noPermission": "Your role does not include Site Clone for this site with Manage access. Ask an administrator to grant it.",
+        "submit": "Create application copy",
+        "noPermission": "Your role does not include Application Clone for this application with Manage access. Ask an administrator to grant it.",
         "defaultName": "{name} (Clone)",
         "name": "Copy name",
-        "domainTaken": "A site on this server already uses that domain."
+        "domainTaken": "An application on this server already uses that domain."
       },
       "create": {
         "title": "Create the copy",
@@ -4441,16 +4441,16 @@
       },
       "blocked": {
         "provisioning": {
-          "title": "This site is still being set up",
+          "title": "This application is still being set up",
           "body": "There is nothing to copy yet. Once it finishes, this page will let you clone it."
         },
         "noRecipe": {
-          "title": "This site type cannot be cloned yet",
+          "title": "This application type cannot be cloned yet",
           "body": "{type} stores its address inside its own database, and the recipe for rewriting that safely has not been built yet. Only WordPress can be copied with its database today."
         },
         "sourceFailed": {
-          "title": "This site did not finish setting up",
-          "body": "There is nothing complete to copy. Fix the original first — a copy of a half-built site would inherit the same problem."
+          "title": "This application did not finish setting up",
+          "body": "There is nothing complete to copy. Fix the original first — a copy of a half-built application would inherit the same problem."
         }
       },
       "result": {
@@ -4459,7 +4459,7 @@
           "subtitle": "Four things the copy does not inherit.",
           "items": {
             "ssl": {
-              "title": "Issue an SSL certificate",
+              "title": "Set up SSL",
               "body": "The copy is served over plain HTTP until you do."
             },
             "backups": {
@@ -4485,7 +4485,7 @@
         }
       },
       "copies": {
-        "title": "{count, plural, one {One copy made from this site} other {# copies made from this site}}",
+        "title": "{count, plural, one {One copy made from this application} other {# copies made from this application}}",
         "made": "made {when}"
       },
       "progress": {
@@ -4499,10 +4499,10 @@
         "stalledBody": "It has reported no progress for 20 minutes. It may still be running, or the job may have stopped. Check again, or ask whoever manages this server to look.",
         "checkAgain": "Check again",
         "doneTitle": "The copy is ready",
-        "doneBody": "It is a fully independent site now.",
+        "doneBody": "It is a fully independent application now.",
         "completedBadge": "Completed",
-        "source": "Source site",
-        "destination": "New site",
+        "source": "Source application",
+        "destination": "New application",
         "duration": "Finished in {duration}",
         "finished": "Completed {when}",
         "name": "Name",
@@ -4517,7 +4517,7 @@
         "tryAgain": "Try again",
         "target": "Copying to {domain}",
         "steps": {
-          "provisioning": "Creating the site",
+          "provisioning": "Creating the application",
           "copying_files": "Copying files",
           "cloning_database": "Cloning the database",
           "starting_process": "Starting the application"
@@ -4526,32 +4526,32 @@
       "warnings": {
         "dns": "Point the new domain at this server before issuing a certificate — until DNS resolves, the copy is served over plain HTTP.",
         "password": "Password protection is not copied. The copy is public until you turn it on.",
-        "time": "A large site takes a few minutes to copy."
+        "time": "A large application takes a few minutes to copy."
       },
       "confirm": {
         "title": "Create copy of {name}?",
-        "body": "The original site will not change.",
+        "body": "The original application will not change.",
         "source": "Copy of",
         "domain": "New domain",
         "name": "Name",
         "cancel": "Cancel"
       },
-      "noPermission": "Your role does not include Site Clone for this site with Manage access. Ask an administrator to grant it."
+      "noPermission": "Your role does not include Application Clone for this application with Manage access. Ask an administrator to grant it."
     },
     "php": {
       "pageTitle": "PHP Settings",
-      "pageSubtitle": "The PHP version and limits this site runs with.",
+      "pageSubtitle": "The PHP version and limits this application runs with.",
       "loadFailed": "These settings could not be loaded.",
-      "provisioning": "This site is still being set up. Its PHP settings will appear once it finishes.",
+      "provisioning": "This application is still being set up. Its PHP settings will appear once it finishes.",
       "saved": "PHP settings saved.",
       "saveFailed": "The settings could not be saved.",
       "savingNote": "Applying and reloading PHP…",
-      "noPermission": "Your role does not include PHP Settings for this site with Manage access. Ask an administrator to grant it.",
+      "noPermission": "Your role does not include PHP Settings for this application with Manage access. Ask an administrator to grant it.",
       "nothingToSave": "Nothing has changed",
       "versionLabel": "PHP {version}",
       "presetsLabel": "Worker presets",
       "useSuggested": "Use the recommended list",
-      "unmanaged": "This site's PHP pool file has been edited by hand. Saving here replaces it with the panel's own version, and those edits will be lost.",
+      "unmanaged": "This application's PHP pool file has been edited by hand. Saving here replaces it with the panel's own version, and those edits will be lost.",
       "fields": {
         "version": "PHP version",
         "upload": "Biggest file someone can upload",
@@ -4561,7 +4561,7 @@
         "memory": "Memory each request may use",
         "children": "PHP worker processes",
         "inputVars": "Fields a form may contain",
-        "openBasedir": "Keep PHP inside this site's folder",
+        "openBasedir": "Keep PHP inside this application's folder",
         "allowUrlFopen": "Let PHP open remote URLs",
         "disableFunctions": "Blocked PHP functions",
         "pmType": "How workers start",
@@ -4581,17 +4581,17 @@
         "maxRequests": "Guards against slow memory leaks. 0 never restarts.",
         "sessionLifetime": "Seconds a session file is kept before it can be cleaned up.",
         "timezone": "Only affects dates PHP produces, not the server clock.",
-        "autoPrepend": "A path inside this site. Leave empty unless you were told otherwise.",
+        "autoPrepend": "A path inside this application. Leave empty unless you were told otherwise.",
         "directives": "One per line, like a php.ini file. Anything here wins over the fields above.",
-        "openBasedir": "Stops PHP reading or writing files outside this site's folder.",
+        "openBasedir": "Stops PHP reading or writing files outside this application's folder.",
         "allowUrlFopen": "Lets PHP fetch remote URLs. Turning it off blocks a common way malware phones home.",
-        "upload": "Also raises the web server's own limit, which refuses large uploads before PHP sees them. A site set up earlier picks this up the first time you save.",
-        "version": "The version of PHP this site runs on. Newer is faster and better supported, but a very old site may not work on it. Change it, then check the site still loads.",
+        "upload": "Also raises the web server's own limit, which refuses large uploads before PHP sees them. An application set up earlier picks this up the first time you save.",
+        "version": "The version of PHP this application runs on. Newer is faster and better supported, but a very old application may not work on it. Change it, then check the application still loads.",
         "memory": "How much memory one page load may use before PHP gives up. Raise it if you see “allowed memory size exhausted”.",
         "executionTime": "How many seconds PHP will let a page run before stopping it. Raise it for imports and backups; leave it low for ordinary pages.",
         "inputVars": "How many separate boxes one form may submit. Large settings pages and page builders can go past the default.",
-        "disableFunctions": "PHP commands this site is not allowed to run. The defaults block the ones most often used in attacks — remove one only if the site genuinely needs it.",
-        "children": "How many requests this site can answer at the same time. Too few and visitors wait in a queue; too many and the server runs out of memory."
+        "disableFunctions": "PHP commands this application is not allowed to run. The defaults block the ones most often used in attacks — remove one only if the application genuinely needs it.",
+        "children": "How many requests this application can answer at the same time. Too few and visitors wait in a queue; too many and the server runs out of memory."
       },
       "pmTypes": {
         "ondemand": "On demand",
@@ -4599,22 +4599,22 @@
         "static": "Always running"
       },
       "isolation": {
-        "offTitle": "This site has no PHP pool of its own",
-        "offBody": "It runs as the web server's account, shared with every other site, so per-site limits cannot be applied.",
+        "offTitle": "This application has no PHP pool of its own",
+        "offBody": "It runs as the web server's account, shared with every other application, so per-application limits cannot be applied.",
         "runsAs": "runs as {user}",
         "sharedBadge": "Shared PHP · runs as {user}",
-        "isolateAction": "Give this site dedicated PHP",
-        "isolateHelper": "Creates a PHP-FPM pool for this site and moves it onto its own user. Site files and database are not changed.",
-        "required": "Give this site its own PHP first",
-        "isolated": "This site now has its own PHP.",
+        "isolateAction": "Give this application dedicated PHP",
+        "isolateHelper": "Creates a PHP-FPM pool for this application and moves it onto its own user. Application files and database are not changed.",
+        "required": "Give this application its own PHP first",
+        "isolated": "This application now has its own PHP.",
         "failed": "That could not be done.",
         "unsupportedTitle": "Not available on this web server",
-        "unsupportedBody": "OpenLiteSpeed starts PHP itself and has no per-site pools, so these settings cannot be applied here."
+        "unsupportedBody": "OpenLiteSpeed starts PHP itself and has no per-application pools, so these settings cannot be applied here."
       },
       "budget": {
         "available": "{value} of {total} still free",
         "over": "More than this server's {total}",
-        "legend": "{sites, plural, =0 {No other sites are using memory} one {One other site has claimed {value}} other {# other sites have claimed {value}}}",
+        "legend": "{sites, plural, =0 {No other applications are using memory} one {One other application has claimed {value}} other {# other applications have claimed {value}}}",
         "equation": "{limit} × {workers} workers = {total} at full load",
         "overDetail": "{required} required, but this server has {total}. Lower the memory limit or the number of workers."
       },
@@ -4642,19 +4642,19 @@
           "security": "Lock down PHP security",
           "directives": "Tune advanced PHP directives"
         },
-        "versionHint": "The PHP version lives in the site's web-server config, so it can be changed without a pool."
+        "versionHint": "The PHP version lives in the application's web-server config, so it can be changed without a pool."
       },
       "blocked": {
-        "description": "PHP refuses to run these. Most sites never need them — they are what an attacker reaches for first.",
+        "description": "PHP refuses to run these. Most applications never need them — they are what an attacker reaches for first.",
         "count": "{count, plural, =0 {Nothing is blocked} one {# function blocked} other {# functions blocked}}",
         "addPlaceholder": "Add a function, e.g. eval",
         "add": "Add",
         "remove": "Remove {name}",
-        "empty": "Nothing is blocked. Every PHP function this site has installed can run.",
+        "empty": "Nothing is blocked. Every PHP function this application has installed can run.",
         "presetsLabel": "Start from",
         "presetsCustom": "Your own list."
       },
-      "saveNote": "Saving rewrites this site's PHP pool and reloads it. Requests already running finish first.",
+      "saveNote": "Saving rewrites this application's PHP pool and reloads it. Requests already running finish first.",
       "tabs": {
         "basic": "Basic settings",
         "security": "Security",
@@ -4665,21 +4665,21 @@
         "runtime": "Runtime",
         "limits": "Request limits"
       },
-      "advancedNote": "These change how PHP-FPM runs this site. The defaults suit almost every site — change them only if you know why.",
+      "advancedNote": "These change how PHP-FPM runs this application. The defaults suit almost every application — change them only if you know why.",
       "presetsCustom": "Custom — not one of the presets above.",
       "reset": "Reset",
       "resetDone": "Back to the default.",
       "resetFailed": "Could not reset this setting.",
       "basedir": {
-        "offHint": "PHP can open any file this site's Linux user can reach.",
+        "offHint": "PHP can open any file this application's system user can reach.",
         "previewTrigger": "What turning this on would allow",
         "previewLabel": "PHP would be limited to these folders",
         "alwaysLabel": "Always included",
-        "alwaysHint": "Added on every save. Without these the site cannot run.",
+        "alwaysHint": "Added on every save. Without these the application cannot run.",
         "extraLabel": "Extra folders",
         "extraPlaceholder": "/var/www/shared-uploads",
         "extraHint": "One per line. Full paths only, starting with /.",
-        "unknown": "This site has no PHP pool file yet, so the current value cannot be read.",
+        "unknown": "This application has no PHP pool file yet, so the current value cannot be read.",
         "disagrees": "The server is enforcing something different from what is saved here.",
         "disagreesWhy": "Either the pool file was edited by hand, or an open_basedir line in Additional directives is overriding this one.",
         "liveLabel": "What the server is enforcing now"
@@ -4694,24 +4694,24 @@
       "sessionGcMaxlifetimePlaceholder": "1440",
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
-      "versionUnsupported": "{type} supports PHP {range}. Moving this site to another version is likely to break it.",
-      "presetsLabelHint": "Ready-made settings sized for small, medium and large sites. A starting point — you can still change any value afterwards."
+      "versionUnsupported": "{type} supports PHP {range}. Moving this application to another version is likely to break it.",
+      "presetsLabelHint": "Ready-made settings sized for small, medium and large applications. A starting point — you can still change any value afterwards."
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
-      "pageSubtitle": "Bans addresses that keep attacking this site.",
-      "loadFailed": "We could not check this site's protection.",
-      "provisioning": "This site is still being set up. Protection can be added once it finishes.",
+      "pageSubtitle": "Bans addresses that keep attacking this application.",
+      "loadFailed": "We could not check this application's protection.",
+      "provisioning": "This application is still being set up. Protection can be added once it finishes.",
       "empty": {
         "title": "Fail2ban is not set up",
-        "body": "Nothing is watching this site's access log, so an address can keep guessing passwords as long as it likes. Setting it up gives you a starting configuration you can edit.",
+        "body": "Nothing is watching this application's access log, so an address can keep guessing passwords as long as it likes. Setting it up gives you a starting configuration you can edit.",
         "action": "Set up Fail2ban"
       },
       "state": {
         "on": "Fail2ban is on",
-        "onBody": "fail2ban is watching this site's access log and banning addresses that match the filter below.",
+        "onBody": "fail2ban is watching this application's access log and banning addresses that match the filter below.",
         "setup": "Setting up Fail2ban",
-        "setupBody": "Both files below start from the panel's defaults. Nothing is watching this site until you save them."
+        "setupBody": "Both files below start from the panel's defaults. Nothing is watching this application until you save them."
       },
       "files": {
         "jail": "Jail",
@@ -4727,61 +4727,61 @@
       "savingNote": "Testing and reloading fail2ban…",
       "nothingToSave": "Nothing has changed",
       "bothRequired": "Both files need contents",
-      "noPermission": "Your role does not include Fail2ban for this site with Manage access. Ask an administrator to grant it.",
+      "noPermission": "Your role does not include Fail2ban for this application with Manage access. Ask an administrator to grant it.",
       "saved": "Fail2ban saved and reloaded.",
       "saveFailed": "That could not be saved.",
       "testFailed": "fail2ban rejected this configuration.",
       "removeAction": "Remove protection",
       "removeTitle": "Remove Fail2ban?",
-      "removeBody": "The jail and filter files are deleted and fail2ban stops watching this site. Anyone already banned is released.",
+      "removeBody": "The jail and filter files are deleted and fail2ban stops watching this application. Anyone already banned is released.",
       "removeConfirm": "Remove it",
       "removed": "Fail2ban removed.",
       "removeFailed": "That could not be removed.",
       "createAction": "Turn on Fail2ban",
-      "removeBodyDirty": "The jail and filter files are deleted and fail2ban stops watching this site. Anyone already banned is released — and {count, plural, one {the file you have edited but not saved goes with them} other {the # files you have edited but not saved go with them}}.",
+      "removeBodyDirty": "The jail and filter files are deleted and fail2ban stops watching this application. Anyone already banned is released — and {count, plural, one {the file you have edited but not saved goes with them} other {the # files you have edited but not saved go with them}}.",
       "tooLong": "That config is too long. Each file has to stay under 65,535 characters.",
       "invalidConfig": "That config cannot be saved. Check both files are filled in."
     },
     "staging": {
       "pageTitle": "Staging Area",
-      "pageSubtitle": "A copy of this site you can break without anyone noticing.",
-      "loadFailed": "We could not check this site's staging area.",
-      "provisioning": "This site is still being set up. A staging copy can be made once it finishes.",
-      "unsupported": "Staging is only available for WordPress sites. This one is a {type} site.",
-      "manageAction": "Open staging site",
+      "pageSubtitle": "A copy of this application you can break without anyone noticing.",
+      "loadFailed": "We could not check this application's staging area.",
+      "provisioning": "This application is still being set up. A staging copy can be made once it finishes.",
+      "unsupported": "Staging is only available for WordPress applications. This one is a {type} application.",
+      "manageAction": "Open staging application",
       "empty": {
         "title": "No staging copy yet",
-        "body": "A staging site is a full copy of this one on its own domain — somewhere to try a plugin, a theme or an update before your visitors see it.",
-        "action": "Create staging site"
+        "body": "A staging application is a full copy of this one on its own domain — somewhere to try a plugin, a theme or an update before your visitors see it.",
+        "action": "Create staging application"
       },
       "push": {
         "title": "Copy staging over production",
-        "body": "Replaces {domain} with what is on the staging site. There is no undo.",
+        "body": "Replaces {domain} with what is on the staging application. There is no undo.",
         "action": "Push to production"
       },
       "createDialog": {
-        "title": "Create staging site",
+        "title": "Create staging application",
         "description": "A copy of {domain}, on a domain of its own.",
         "domainLabel": "Domain for the copy",
         "domainPlaceholder": "staging.example.com",
         "domainHint": "Point this domain at this server first, or the copy will be unreachable.",
-        "slow": "This copies the whole site and can take several minutes. Keep this window open — there is no progress to come back to.",
+        "slow": "This copies the whole application and can take several minutes. Keep this window open — there is no progress to come back to.",
         "cancel": "Cancel",
-        "submit": "Create staging site",
+        "submit": "Create staging application",
         "creating": "Creating…",
-        "done": "Staging site created at {domain}.",
-        "failed": "The staging site could not be created.",
-        "domainLabelHint": "The address for the staging copy. Use something obviously not your live site."
+        "done": "Staging application created at {domain}.",
+        "failed": "The staging application could not be created.",
+        "domainLabelHint": "The address for the staging copy. Use something obviously not your live application."
       },
       "pushDialog": {
         "title": "Push staging over {domain}?",
         "description": "Everything on {staging} is copied over {production}. This cannot be undone.",
-        "downtime": "Your site is taken offline while this runs, and visitors see a maintenance page until it finishes.",
+        "downtime": "Your application is taken offline while this runs, and visitors see a maintenance page until it finishes.",
         "whatToPush": "What should be copied",
         "modes": {
           "files": {
             "label": "Files only",
-            "replaces": "The site's files",
+            "replaces": "The application's files",
             "deletes": "Files that exist only on production",
             "undo": "None — nothing is copied first"
           },
@@ -4790,11 +4790,11 @@
             "replaces": "The database",
             "deletes": "Everything written since the copy — orders, comments, posts",
             "undo": "The old database is saved first",
-            "note": "Production needs the same plugins and themes as staging. The database expects them, and a missing one can leave the site blank."
+            "note": "Production needs the same plugins and themes as staging. The database expects them, and a missing one can leave the application blank."
           },
           "full": {
             "label": "Files and database",
-            "replaces": "The site's files and the database",
+            "replaces": "The application's files and the database",
             "deletes": "Files only on production, and everything written since the copy",
             "undo": "The old database is saved first; the files are not"
           }
@@ -4818,9 +4818,9 @@
         }
       },
       "isCopy": {
-        "title": "This site is a staging copy",
-        "body": "It was made as a copy of another site, so it does not get a staging area of its own. Push it back from the site it belongs to.",
-        "action": "Go to the original site"
+        "title": "This application is a staging copy",
+        "body": "It was made as a copy of another application, so it does not get a staging area of its own. Push it back from the application it belongs to.",
+        "action": "Go to the original application"
       },
       "copyAge": "Copy made {age}"
     },
@@ -4828,24 +4828,24 @@
     "paused": "Paused",
     "webRoot": {
       "title": "Change web root",
-      "description": "The directory the web server serves for this site.",
+      "description": "The directory the web server serves for this application.",
       "label": "Web root",
-      "hint": "Relative to the site folder, e.g. /public. Leave empty to serve the site folder itself.",
+      "hint": "Relative to the application folder, e.g. /public. Leave empty to serve the application folder itself.",
       "submit": "Change web root",
       "cancel": "Cancel",
       "saved": "Web root changed.",
       "failed": "The web root could not be changed."
     },
     "missing": {
-      "title": "This site is no longer here",
+      "title": "This application is no longer here",
       "description": "It may have been deleted, or its setup was rolled back. Nothing else on your server has changed.",
-      "action": "Back to sites"
+      "action": "Back to applications"
     },
     "size": {
       "notMeasured": "Not measured",
       "measuring": "Measuring…",
       "measureFailed": "The size could not be measured.",
-      "measureHint": "Measure this site on disk now"
+      "measureHint": "Measure this application on disk now"
     },
     "status": {
       "pending": "Pending",
@@ -4862,7 +4862,7 @@
       "bots": "AI bots",
       "on": "On",
       "off": "Off",
-      "description": "Protection settings for this site."
+      "description": "Protection settings for this application."
     },
     "backups": {
       "title": "Backups",
@@ -4883,27 +4883,27 @@
       "manage": "Manage backups",
       "setUp": "Set up backups",
       "loadFailed": "The backup settings could not be loaded.",
-      "unprotectedRisk": "Nothing is being backed up. If this site is lost, there is nothing to restore.",
+      "unprotectedRisk": "Nothing is being backed up. If this application is lost, there is nothing to restore.",
       "pausedRisk": "Backups are set up but not running, so the newest copy keeps getting older.",
-      "description": "Whether this site could be restored.",
-      "runningNote": "A backup of this site is running now. This card updates on its own.",
+      "description": "Whether this application could be restored.",
+      "runningNote": "A backup of this application is running now. This card updates on its own.",
       "queuedNote": "Backup queued. It starts as soon as the server picks it up.",
       "queuedStalled": "This backup has not started yet. If it stays this way, the background worker may not be running.",
-      "alreadyRunning": "A backup of this site is already running."
+      "alreadyRunning": "A backup of this application is already running."
     },
     "attention": {
       "title": "Needs attention",
-      "allClear": "Nothing needs attention on this site.",
+      "allClear": "Nothing needs attention on this application.",
       "noBackups": "Backups not configured",
       "setUpBackups": "Set up backups",
-      "noCertificate": "SSL not installed",
-      "issueCertificate": "Issue SSL",
+      "noCertificate": "SSL not set up",
+      "issueCertificate": "Set up SSL",
       "reviewSecurity": "Review security",
       "protectionsOff": "{count, plural, one {# protection off} other {# protections off}}",
-      "noDatabase": "This site has no database, so its backups will not contain one",
+      "noDatabase": "This application has no database, so its backups will not contain one",
       "attachDatabase": "Attach a database",
       "issueAction": {
-        "certificate": "Review SSL",
+        "certificate": "Check SSL",
         "dns": "Check domains",
         "worker": "View workers",
         "php_eol": "Change PHP version",
@@ -4917,19 +4917,19 @@
     },
     "noDatabase": {
       "title": "No database engine is installed",
-      "body": "Site types that need a database — WordPress, Joomla and others — can't be installed until one is. Types that don't need one are unaffected.",
+      "body": "Application types that need a database — WordPress, Joomla and others — can't be installed until one is. Types that don't need one are unaffected.",
       "action": "Install a database",
       "installingTitle": "A database engine is installing",
-      "installingBody": "Wait for it to finish before creating a site that needs a database. Progress is on the Databases page."
+      "installingBody": "Wait for it to finish before creating an application that needs a database. Progress is on the Databases page."
     },
     "databaseCard": {
       "title": "Database",
-      "description": "What this site's backups will contain. Attaching does not change how your site connects.",
+      "description": "What this application's backups will contain. Attaching does not change how your application connects.",
       "count": "{count, plural, one {# database} other {# databases}}",
       "notBackedUp": "Not backed up",
-      "missingWarning": "No database is attached, so backups of this site will not contain one.",
-      "missingFine": "This site has no database attached.",
-      "loadFailed": "Could not check this site's databases.",
+      "missingWarning": "No database is attached, so backups of this application will not contain one.",
+      "missingFine": "This application has no database attached.",
+      "loadFailed": "Could not check this application's databases.",
       "attach": "Attach a database",
       "manage": "Manage",
       "create": "Create a database"
@@ -4945,9 +4945,9 @@
       "submit": "Attach",
       "saving": "Attaching…",
       "cancel": "Cancel",
-      "done": "{name} is now used by this site.",
+      "done": "{name} is now used by this application.",
       "failed": "Could not attach that database.",
-      "hint": "Decides what this site's backups contain. It does not change how your site connects — the site keeps using whatever its own configuration says."
+      "hint": "Decides what this application's backups contain. It does not change how your application connects — the application keeps using whatever its own configuration says."
     },
     "unavailableDatabase": {
       "missing": "Needs {engines}. Not installed on this server.",
@@ -4955,53 +4955,53 @@
       "installing": "Needs {engines}. The installation is still running."
     },
     "pause": {
-      "action": "Pause site",
-      "resume": "Resume site",
+      "action": "Pause application",
+      "resume": "Resume application",
       "resuming": "Resuming…",
       "pausing": "Pausing…",
-      "confirm": "Pause site",
+      "confirm": "Pause application",
       "cancel": "Cancel",
       "title": "Pause {name}?",
-      "description": "Visitors will see a short page saying the site is temporarily unavailable, until you resume it.",
+      "description": "Visitors will see a short page saying the application is temporarily unavailable, until you resume it.",
       "keeps": "Nothing is deleted. Files, database, backups, cron jobs and certificates all stay exactly as they are.",
       "reversible": "You can resume it at any time from this same menu.",
-      "seo": "Search engines see an ordinary page rather than a \"try again later\" response, so a site left paused for a long time can lose ranking. Fine for an hour, worth knowing for a month.",
+      "seo": "Search engines see an ordinary page rather than a \"try again later\" response, so an application left paused for a long time can lose ranking. Fine for an hour, worth knowing for a month.",
       "paused": "{name} is paused.",
       "resumed": "{name} is back online.",
-      "failed": "We couldn't pause the site.",
-      "resumeFailed": "We couldn't resume the site."
+      "failed": "We couldn't pause the application.",
+      "resumeFailed": "We couldn't resume the application."
     },
     "unavailableRuntime": {
       "php": {
-        "install": "This site needs PHP {range}, and this server has {installed}. Install PHP {suggest} to create it.",
-        "none": "This site needs PHP {range}, and this server has {installed}. None of the PHP versions offered for install fit that range."
+        "install": "This application needs PHP {range}, and this server has {installed}. Install PHP {suggest} to create it.",
+        "none": "This application needs PHP {range}, and this server has {installed}. None of the PHP versions offered for install fit that range."
       },
       "node": {
-        "install": "This site needs Node {range}, and this server has {installed}. Install Node {suggest} to create it.",
-        "none": "This site needs Node {range}, and this server has {installed}. None of the Node versions offered for install fit that range."
+        "install": "This application needs Node {range}, and this server has {installed}. Install Node {suggest} to create it.",
+        "none": "This application needs Node {range}, and this server has {installed}. None of the Node versions offered for install fit that range."
       }
     },
     "gitAccountHint": "A connected Git account, used to read your private repositories. Add one under Integrations if this list is empty.",
-    "systemUserHint": "The Linux account that owns this site's files. Giving each site its own account stops one site from reading another's data.",
+    "systemUserHint": "The system user that owns this application's files. Giving each application its own user stops one application from reading another's data.",
     "fieldHints": {
-      "web_root": "The folder inside your site that visitors actually see. Leave it as it is unless your framework serves from a sub-folder such as /public.",
-      "table_prefix": "Goes in front of every database table name, so two sites can share one database without clashing. The default is fine.",
+      "web_root": "The folder inside your application that visitors actually see. Leave it as it is unless your framework serves from a sub-folder such as /public.",
+      "table_prefix": "Goes in front of every database table name, so two applications can share one database without clashing. The default is fine.",
       "package_manager": "The tool used to install this project’s dependencies. Pick the one matching the lock file in your repository.",
       "rendering_type": "How pages are produced. Server-side renders each request on the server; static builds the pages once; client-side sends a bundle the browser renders.",
-      "build_command": "Run once after the code is fetched, to compile the site. Leave empty if the project needs no build step.",
-      "start_command": "The command that keeps the app running. It must stay in the foreground — a command that exits immediately looks like a crash.",
-      "deploy_script": "The commands run on every deploy, in order. This is where you pull code, install dependencies and restart the app.",
-      "app_port": "The port the app listens on inside the server. Visitors never see it — the web server forwards to it.",
-      "php_version": "The version of PHP this site runs on. Newer is faster and better supported, but a very old site may not work on it.",
-      "node_version": "The version of Node.js this site runs on. Match whatever the project was built against.",
+      "build_command": "Run once after the code is fetched, to compile the application. Leave empty if the project needs no build step.",
+      "start_command": "The command that keeps the application running. It must stay in the foreground — a command that exits immediately looks like a crash.",
+      "deploy_script": "The commands run on every deploy, in order. This is where you pull code, install dependencies and restart the application.",
+      "app_port": "The port the application listens on inside the server. Visitors never see it — the web server forwards to it.",
+      "php_version": "The version of PHP this application runs on. Newer is faster and better supported, but a very old application may not work on it.",
+      "node_version": "The version of Node.js this application runs on. Match whatever the project was built against.",
       "timezone": "The time zone this application uses when it shows or stores a date. It does not change the server’s own clock.",
-      "site_language": "The language the installed site is set up in. It does not change this panel’s language.",
-      "locale": "The language the installed site is set up in. It does not change this panel’s language.",
-      "language": "The language the installed site is set up in. It does not change this panel’s language.",
+      "site_language": "The language the installed application is set up in. It does not change this panel’s language.",
+      "locale": "The language the installed application is set up in. It does not change this panel’s language.",
+      "language": "The language the installed application is set up in. It does not change this panel’s language.",
       "short_name": "A short identifier used inside the application. Letters and numbers only, no spaces."
     },
-    "branchHint": "The branch we deploy from. Pushing to any other branch leaves this site as it is.",
-    "repositoryHint": "Where this site's code lives. Pick one from the connected account above.",
+    "branchHint": "The branch we deploy from. Pushing to any other branch leaves this application as it is.",
+    "repositoryHint": "Where this application's code lives. Pick one from the connected account above.",
     "requiredServices": {
       "heading": "{app} needs {count, plural, one {# more service} other {# more services}}",
       "headingReady": "{app} is ready to create",
@@ -5046,30 +5046,30 @@
     "siteTypeDetection": {
       "detectHint": "Check what is installed here",
       "reviewHint": "Review what was found",
-      "detectFailed": "Could not read the site directory.",
+      "detectFailed": "Could not read the application directory.",
       "looksLike": "Looks like {type}",
       "looksLikeBecause": "Looks like {type} — {file} found",
       "nothingFound": "Nothing recognisable found on the last check",
-      "confirmTitle": "Treat this site as {type}?",
-      "confirmFound": "{file} is present in this site’s directory.",
-      "confirmNarrow": "The panel will stop offering this site’s application-specific screens.",
+      "confirmTitle": "Treat this application as {type}?",
+      "confirmFound": "{file} is present in this application’s directory.",
+      "confirmNarrow": "The panel will stop offering this application’s type-specific screens.",
       "confirmAction": "Change type",
-      "applied": "This site is now treated as {type}.",
-      "failed": "Could not change the site type.",
+      "applied": "This application is now treated as {type}.",
+      "failed": "Could not change the application type.",
       "changesLabel": "What changes",
-      "changesBody": "The panel starts offering the screens it keeps for {type} sites.",
+      "changesBody": "The panel starts offering the screens it keeps for {type} applications.",
       "unchangedLabel": "What stays the same",
       "unchangedBody": "Your files, database and settings. Nothing is installed, downloaded or moved.",
       "reversible": "You can set it back to {from} at any time.",
       "reviewAction": "Review",
       "detectAction": "Check what is installed",
       "changeTo": "Change type to {type}",
-      "menuHint": "Site type options"
+      "menuHint": "Application type options"
     }
   },
   "panelUpdate": {
     "title": "Panel update",
-    "subtitle": "Update {brand} itself. Hosted sites stay online; only this panel restarts.",
+    "subtitle": "Update {brand} itself. Hosted applications stay online; only this panel restarts.",
     "loadFailed": "We couldn't load the update status. Try again in a moment.",
     "versionValue": "v{version}",
     "versionUnknown": "Unknown version",
@@ -5105,7 +5105,7 @@
     "couldNotCheck": "Couldn't check for updates",
     "couldNotCheckBody": "The release server was unreachable. Your panel is fine — try again in a bit.",
     "confirmTitle": "Update the panel?",
-    "confirmBody": "The panel goes offline for a few minutes while it updates, then restarts. Hosted sites are unaffected.",
+    "confirmBody": "The panel goes offline for a few minutes while it updates, then restarts. Hosted applications are unaffected.",
     "cancel": "Cancel",
     "working": "Working…",
     "stepCount": "Step {step} of {total}",
@@ -5192,7 +5192,7 @@
   },
   "setup": {
     "title": "Set up your server",
-    "subtitle": "Install what your sites will need. Nothing here is required — you can finish later.",
+    "subtitle": "Install what your applications will need. Nothing here is required — you can finish later.",
     "loadFailed": "We could not load the setup status.",
     "progressLabel": "Setup progress",
     "progressComplete": "All recommended components installed",
@@ -5243,9 +5243,9 @@
     "sectionOptional": "Also available",
     "summaryInstalled": "{count} installed",
     "percentComplete": "{pct}% complete",
-    "sectionAttentionHint": "Something did not finish. Worth sorting before you add a site.",
+    "sectionAttentionHint": "Something did not finish. Worth sorting before you add an application.",
     "sectionRecommendedHint": "Advised for most servers. You can add these at any time.",
-    "sectionOptionalHint": "Only needed by some sites.",
+    "sectionOptionalHint": "Only needed by some applications.",
     "alreadyInstalledHint": "Already on this server. Nothing to do here.",
     "chooseEngineFirst": "Pick a database engine first",
     "oneSqlOnly": "A server runs one SQL engine. Once this installs, switching to the other means rebuilding the server.",
@@ -5371,7 +5371,7 @@
         "client_secret": "Shown beside the client ID when you create it. Treat it like a password."
       },
       "plainFtpWarning": "TLS is off. The password and every backup will be sent unencrypted.",
-      "prefixHintRemote": "Optional folder inside the remote directory, so one server can hold several sites.",
+      "prefixHintRemote": "Optional folder inside the remote directory, so one server can hold several applications.",
       "placeholders": {
         "bucket": "my-backups",
         "region": "eu-west-1",
@@ -5478,7 +5478,7 @@
   },
   "backups": {
     "title": "Backups",
-    "subtitle": "Which sites are protected, and how to put one back.",
+    "subtitle": "Which applications are protected, and how to put one back.",
     "loadFailed": "Backups could not be loaded. Try again in a moment.",
     "tabs": {
       "label": "Backup sections",
@@ -5498,12 +5498,12 @@
       "started": "Backing up {name} now.",
       "startFailed": "That backup could not be started.",
       "staging": "Staging",
-      "unknownApplication": "Deleted site",
-      "allCovered": "Every site is backed up.",
-      "exposed": "{count, plural, one {# site is not backed up} other {# sites are not backed up}}",
-      "exposedHint": "If this server is lost, those sites cannot be brought back. Setting one up takes about a minute.",
+      "unknownApplication": "Deleted application",
+      "allCovered": "Every application is backed up.",
+      "exposed": "{count, plural, one {# application is not backed up} other {# applications are not backed up}}",
+      "exposedHint": "If this server is lost, those applications cannot be brought back. Setting one up takes about a minute.",
       "columns": {
-        "site": "Site",
+        "site": "Application",
         "status": "Backups",
         "schedule": "Schedule",
         "lastRun": "Last run",
@@ -5519,13 +5519,13 @@
         "unknown": "Unknown"
       },
       "neverRunShort": "Never",
-      "allCoveredHint": "Every site has a schedule and is running it.",
+      "allCoveredHint": "Every application has a schedule and is running it.",
       "keeps": "keeps {count}",
       "nextRun": "Next: {when}",
       "runBackup": "Run backup",
       "viewBackups": "View backups",
-      "searchPlaceholder": "Search sites",
-      "noMatches": "No sites match those filters.",
+      "searchPlaceholder": "Search applications",
+      "noMatches": "No applications match those filters.",
       "showing": "Showing {shown} of {total}",
       "filters": {
         "all": "All",
@@ -5546,13 +5546,13 @@
         "lastRun": "Never"
       },
       "runsShortly": "Runs shortly",
-      "notSetUpLine": "Not set up — nothing on this site is being backed up.",
+      "notSetUpLine": "Not set up — nothing on this application is being backed up.",
       "needsDestination": "No storage destination is set up yet. Add one under Integrations → Storage first.",
       "timesShownIn": "Times shown in {timezone}"
     },
     "setup": {
       "title": "Set up backups",
-      "subtitle": "Choose a site and how often it should be copied off this server.",
+      "subtitle": "Choose an application and how often it should be copied off this server.",
       "cancel": "Cancel",
       "submit": "Save backup settings",
       "saving": "Saving…",
@@ -5569,7 +5569,7 @@
       "keep": "keep {count}",
       "blocked": {
         "noStorage": "Connect storage first.",
-        "noSite": "Choose a site to continue.",
+        "noSite": "Choose an application to continue.",
         "noDestination": "Choose where to store backups.",
         "incomplete": "Fill in the schedule to continue.",
         "unchanged": "Nothing has changed."
@@ -5582,9 +5582,9 @@
       "refreshFailed": "The storage list could not be refreshed."
     },
     "form": {
-      "applicationPlaceholder": "Choose a site",
-      "applicationSearch": "Search sites",
-      "applicationEmpty": "No sites found",
+      "applicationPlaceholder": "Choose an application",
+      "applicationSearch": "Search applications",
+      "applicationEmpty": "No applications found",
       "noDestinations": "Backups need somewhere to go. Connect an S3-compatible storage destination first — it only takes a bucket and a key.",
       "addDestination": "Set up storage",
       "checkAgain": "Check again",
@@ -5630,7 +5630,7 @@
       "databaseExcludes": "Databases",
       "databaseExcludesPlaceholder": "analytics_cache",
       "groups": {
-        "site": "Which site",
+        "site": "Which application",
         "content": "What to back up",
         "schedule": "When it runs",
         "storage": "Where it is stored"
@@ -5646,8 +5646,8 @@
       },
       "destinationFailing": "The last connection test to {name} failed, so backups sent there will not be written until it is fixed.",
       "noDatabase": {
-        "blocked": "This site has no database",
-        "filesOnly": "This site has no database, so only its files will be backed up."
+        "blocked": "This application has no database",
+        "filesOnly": "This application has no database, so only its files will be backed up."
       },
       "automaticHint": "Runs the backup on a schedule instead of only when you press the button.",
       "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not.",
@@ -5656,7 +5656,7 @@
       "destinationNotConnected": "{name} has not been connected to your Google account yet, so backups sent there will fail."
     },
     "history": {
-      "allApplications": "All sites",
+      "allApplications": "All applications",
       "allStatuses": "Any status",
       "statuses": {
         "verified": "Complete",
@@ -5667,17 +5667,17 @@
       },
       "empty": {
         "title": "No backups have run yet",
-        "description": "Once a site is set up, every run appears here — and this is where you restore from."
+        "description": "Once an application is set up, every run appears here — and this is where you restore from."
       },
       "emptyFiltered": {
         "title": "No backups match those filters",
-        "description": "Try a different site or status."
+        "description": "Try a different application or status."
       },
       "restore": "Restore this backup…",
       "noPermission": "Your role does not include Backups with Manage access. Ask an administrator to grant it.",
       "safetyBadge": "Safety copy",
       "sizeUnknown": "Unknown",
-      "unknownApplication": "Deleted site",
+      "unknownApplication": "Deleted application",
       "unknownReason": "The reason was not recorded. Check the server logs for this run.",
       "restoreShort": "Restore",
       "counts": {
@@ -5687,7 +5687,7 @@
         "running": "Running"
       },
       "columns": {
-        "site": "Site",
+        "site": "Application",
         "status": "Status",
         "type": "Backup type",
         "destination": "Destination",
@@ -5720,7 +5720,7 @@
       "queuedNote": "Backup queued for {name}. It appears in this list as soon as the server starts writing it.",
       "queuedHidden": "Backup queued for {name}. The status filter you have set will hide it — clear the filter to watch it run.",
       "queuedStalled": "The backup queued for {name} has not started yet. If it stays this way, the background worker may not be running.",
-      "alreadyRunning": "A backup of this site is already running. You can start another once it finishes.",
+      "alreadyRunning": "A backup of this application is already running. You can start another once it finishes.",
       "delete": {
         "action": "Delete",
         "selectedCount": "{count} selected",
@@ -5750,7 +5750,7 @@
     },
     "restore": {
       "title": "Restore {name}",
-      "description": "Puts the site back to how it was {ago} ({when}). This replaces the site with that copy — anything changed since then is lost.",
+      "description": "Puts the application back to how it was {ago} ({when}). This replaces the application with that copy — anything changed since then is lost.",
       "whatToRestore": "What to put back",
       "types": {
         "full": {
@@ -5766,21 +5766,21 @@
           "hint": "Leaves the current files untouched."
         }
       },
-      "safetyPromise": "A copy of the site as it is right now is taken first, so this can be undone.",
+      "safetyPromise": "A copy of the application as it is right now is taken first, so this can be undone.",
       "confirmLabel": "Type {domain} to confirm",
       "cancel": "Cancel",
-      "submit": "Restore site",
+      "submit": "Restore application",
       "starting": "Starting…",
       "failed": "The restore could not be started.",
-      "typeToUnlock": "Type the site's domain to confirm.",
+      "typeToUnlock": "Type the application's domain to confirm.",
       "blocked": {
         "unverified": "Not verified",
-        "noApplication": "Site deleted",
+        "noApplication": "Application deleted",
         "alreadyRunning": "Restore in progress",
         "inFlight": "Still running",
         "failed": "This backup failed"
       },
-      "descriptionShort": "This replaces the site with the copy below. Anything changed since then is lost.",
+      "descriptionShort": "This replaces the application with the copy below. Anything changed since then is lost.",
       "facts": {
         "taken": "Taken",
         "type": "Contains",
@@ -5789,22 +5789,22 @@
       },
       "confirmLabelPlain": "Type this to confirm",
       "copyDomain": "Copy domain",
-      "whatToRestoreHint": "Put back the files, the database, or both. Restoring the database replaces all of the site's current content."
+      "whatToRestoreHint": "Put back the files, the database, or both. Restoring the database replaces all of the application's current content."
     },
     "progress": {
-      "running": "Restoring the site",
+      "running": "Restoring the application",
       "starting": "Getting ready…",
       "step": "Step {step} of {total}",
       "dontLeave": "This can take a few minutes. You can leave this page — it keeps running.",
-      "succeeded": "The site has been restored",
-      "succeededBody": "Finished {when}. Check the site, then dismiss this.",
-      "succeededBodyPlain": "Check the site, then dismiss this.",
+      "succeeded": "The application has been restored",
+      "succeededBody": "Finished {when}. Check the application, then dismiss this.",
+      "succeededBodyPlain": "Check the application, then dismiss this.",
       "undo": "Undo this restore",
-      "undoHint": "Puts back the safety copy taken just before this ran — the site as it was before you restored.",
+      "undoHint": "Puts back the safety copy taken just before this ran — the application as it was before you restored.",
       "undoFailed": "The safety copy could not be loaded.",
       "dismiss": "Dismiss",
       "failed": "The restore did not finish",
-      "failedSafe": "A safety copy was taken first, so the site can be put back as it was.",
+      "failedSafe": "A safety copy was taken first, so the application can be put back as it was.",
       "failedNoSafety": "The restore stopped before it changed anything.",
       "reference": "Reference: {reference}",
       "unknownReason": "The reason was not recorded.",
@@ -5813,20 +5813,20 @@
       "checkAgain": "Check again",
       "hide": "Hide",
       "queued": "Restore queued",
-      "queuedBody": "Waiting for the server to pick it up. Nothing on the site has been changed yet.",
+      "queuedBody": "Waiting for the server to pick it up. Nothing on the application has been changed yet.",
       "stalledQueued": "This restore has not started",
-      "stalledQueuedBody": "It has been waiting a couple of minutes for the server to pick it up. Nothing on the site has been changed. The job may not be running — check again, or ask whoever manages this server to look.",
+      "stalledQueuedBody": "It has been waiting a couple of minutes for the server to pick it up. Nothing on the application has been changed. The job may not be running — check again, or ask whoever manages this server to look.",
       "undone": "The restore has been undone",
-      "undoneBody": "The site is back as it was before you restored. Check the site, then dismiss this."
+      "undoneBody": "The application is back as it was before you restored. Check the application, then dismiss this."
     },
     "application": {
       "pageTitle": "Backups",
-      "pageSubtitle": "Copies of this site kept off the server, and when they are taken.",
-      "provisioning": "This site is still being set up. Backups can be configured once it is ready.",
-      "loadFailed": "This site's backup settings could not be loaded.",
+      "pageSubtitle": "Copies of this application kept off the server, and when they are taken.",
+      "provisioning": "This application is still being set up. Backups can be configured once it is ready.",
+      "loadFailed": "This application's backup settings could not be loaded.",
       "state": {
         "protected": {
-          "title": "This site is backed up",
+          "title": "This application is backed up",
           "body": "{schedule}, stored on {destination}."
         },
         "paused": {
@@ -5834,9 +5834,9 @@
           "body": "Nothing runs on a schedule. Backups only happen when you press Back up now."
         },
         "unprotected": {
-          "title": "This site is not backed up",
-          "body": "If the server is lost, so is this site. Set a schedule below.",
-          "bodyReadOnly": "If the server is lost, so is this site. Ask an administrator to set up backups."
+          "title": "This application is not backed up",
+          "body": "If the server is lost, so is this application. Set a schedule below.",
+          "bodyReadOnly": "If the server is lost, so is this application. Ask an administrator to set up backups."
         }
       },
       "lastRun": "Last run {when}",
@@ -5850,8 +5850,8 @@
       "recentTitle": "Recent backups",
       "showing": "Showing {shown} of {total}",
       "viewAll": "All backups",
-      "noRuns": "No backups have run for this site yet.",
-      "historyFailed": "This site's backup history could not be loaded.",
+      "noRuns": "No backups have run for this application yet.",
+      "historyFailed": "This application's backup history could not be loaded.",
       "safetyBadge": "Safety copy",
       "summary": {
         "what": "What is backed up",
@@ -5890,25 +5890,25 @@
       },
       "queuedNote": "Backup queued. It appears here as soon as the server starts writing it.",
       "queuedStalled": "This backup has not started yet. It is still queued — if it stays this way, the background worker may not be running.",
-      "alreadyRunning": "A backup of this site is already running. You can start another once it finishes.",
+      "alreadyRunning": "A backup of this application is already running. You can start another once it finishes.",
       "noDatabase": {
-        "title": "This site has no database",
-        "description": "Backups of this site will not contain one until you attach it."
+        "title": "This application has no database",
+        "description": "Backups of this application will not contain one until you attach it."
       }
     },
     "empty": {
       "title": "Nothing on this server is backed up yet",
-      "body": "A backup copies a site's files and database to storage you own, on a schedule. If the server is ever lost, that copy is what puts the site back.",
-      "reassurance": "Restoring always takes a safety copy of the current site first, so a restore can be undone.",
+      "body": "A backup copies an application's files and database to storage you own, on a schedule. If the server is ever lost, that copy is what puts the application back.",
+      "reassurance": "Restoring always takes a safety copy of the current application first, so a restore can be undone.",
       "covers": {
-        "files": "Site files",
+        "files": "Application files",
         "database": "Database",
         "schedule": "On a schedule",
         "offsite": "Stored off this server"
       },
       "stepsTitle": "How to get set up",
       "step1": "Connect a storage destination — the bucket your backups are written to.",
-      "step2": "Choose a site, what to copy, and how often.",
+      "step2": "Choose an application, what to copy, and how often.",
       "step3": "Restore from any verified backup, on the History tab.",
       "action": "Set up backups",
       "addStorage": "Set up storage first"
@@ -5934,7 +5934,7 @@
     },
     "restores": {
       "columns": {
-        "site": "Site",
+        "site": "Application",
         "status": "Status",
         "type": "What was put back",
         "when": "Started",
@@ -5946,11 +5946,11 @@
         "succeeded": "Restored",
         "failed": "Failed"
       },
-      "unknownApplication": "Deleted site",
+      "unknownApplication": "Deleted application",
       "unknownReason": "The reason was not recorded.",
       "noSafetyCopy": "None taken",
       "findSafetyCopy": "Find safety copy",
-      "allApplications": "All sites",
+      "allApplications": "All applications",
       "allStatuses": "Any status",
       "allTypes": "Any restore type",
       "anyTime": "Any time",
@@ -5962,11 +5962,11 @@
       },
       "empty": {
         "title": "No restores yet",
-        "description": "When a backup is put back over a site, it will be recorded here — what was restored, when, and whether it worked."
+        "description": "When a backup is put back over an application, it will be recorded here — what was restored, when, and whether it worked."
       },
       "emptyFiltered": {
         "title": "No restores match those filters",
-        "description": "Try a different site or status."
+        "description": "Try a different application or status."
       },
       "notStarted": "Not started"
     }
@@ -6065,7 +6065,7 @@
       "summaryIgnored": "{count, plural, one {# dismissed item will be left alone} other {# dismissed items will be left alone}}.",
       "summaryIrreversible": "There's no undo for this — added items must be removed one by one.",
       "confirm": "{count, plural, =0 {Add to the panel} one {Add # thing} other {Add # things}}",
-      "includeFirewallHint": "Also open the ports this site needs, so it is reachable straight away."
+      "includeFirewallHint": "Also open the ports this application needs, so it is reachable straight away."
     },
     "errors": {
       "startFailed": "Couldn't start the scan.",
@@ -6083,7 +6083,7 @@
     "cancel": "Cancel",
     "power": {
       "title": "This key has full administrator access",
-      "body": "Anyone holding it can create and delete sites, databases, system users and firewall rules on this server. The key cannot be limited or made read-only.",
+      "body": "Anyone holding it can create and delete applications, databases, system users and firewall rules on this server. The key cannot be limited or made read-only.",
       "attribution": "Anything done with it is recorded in the activity log under a separate account, so you can tell it apart from your own changes."
     },
     "actions": {

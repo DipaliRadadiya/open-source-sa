@@ -71,7 +71,7 @@ const translate = (key) => {
 
 test("a known step uses the wording we chose for it", () => {
   assert.equal(provisionStepLabel("set_ownership", translate), "Setting file permissions");
-  assert.equal(provisionStepLabel("verify", translate), "Checking the site responds");
+  assert.equal(provisionStepLabel("verify", translate), "Checking the application responds");
 });
 
 test("a step the backend adds later reads as prose, never as an identifier", () => {

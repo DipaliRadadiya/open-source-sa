@@ -300,7 +300,7 @@ function ApplicationsList({
       // that has stopped saying anything. Created is the one whose absence
       // costs least — it is not actionable, it never changes, and the detail
       // page carries it.
-      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[38%] xl:w-[33%]" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
+      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[32%] xl:w-[29%]" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
       /*
        * PHP stands where Type stood. The logo carries the type now — it is
        * labelled and hoverable — and a version is much shorter than "Craft
@@ -314,20 +314,43 @@ function ApplicationsList({
        *
        * Totals, because `fixedLayout` SILENTLY squeezes a column when they are
        * wrong rather than erroring:
-       *   lg  38 + 9 + 16 + 16 + 14 + 7          = 100
-       *   xl  33 + 8 + 14 + 13 + 11 + 14 + 7     = 100
+       *   lg  32 + 8 + 16 + 23 + 14 + 7          = 100
+       *   xl  29 + 7 + 14 + 19 + 11 + 14 + 6     = 100
+       *
+       * Status and Created keep the width they had. Measured against a build
+       * of HEAD, narrowing them to pay for System user clipped the
+       * "Provisioning" badge in de/fr/ru and the Created header in pt at
+       * widths where they used to fit — a rename is not a reason to break a
+       * column it never touched. Application pays instead: it truncates by
+       * design and 29% is still 329px against a 261px longest cell.
        */
-      { id: "php", header: t("columns.php"), meta: { className: "w-[9%] xl:w-[8%]" }, cell: PhpCell },
+      { id: "php", header: t("columns.php"), meta: { className: "w-[8%] xl:w-[7%]" }, cell: PhpCell },
       { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: "w-[16%] xl:w-[14%]" }, cell: StatusCell },
       // Not sortable, and deliberately so on the API's side: the owner lives on
       // a relation, so ordering by it would mean a join, and the list can
       // already be searched by username.
-      { id: "owner", header: t("columns.owner"), meta: { className: "w-[16%] xl:w-[13%]" }, cell: OwnerCell },
+      //
+      // 23/19, not the 16/13 that fitted "Owner": the header is "System user"
+      // now, and measured across all eight locales the widest — Russian's
+      // "Системный пользователь" at 213px — needs 19% of the 1134px table. At
+      // 13% it was clipped in six of the eight. The surplus comes from Created
+      // and PHP, both of which were carrying 60-80px more than their longest
+      // locale asks for.
+      //
+      // `whitespace-normal` on top, because 19% is only 213px from 1280px up.
+      // Below that the table has 960px or 704px to divide and the sum of every
+      // column's widest locale is 1064px, so no split exists that keeps this
+      // header on one line — measured, not guessed. A label that wraps to two
+      // lines still says what it says; `truncate` would turn it into
+      // "Системный польз…", and the cell under it is a username nobody can
+      // infer. `h-auto min-h-11` because TableHead fixes the height at 44px,
+      // which would clip the second line instead.
+      { id: "owner", header: t("columns.owner"), meta: { className: "w-[23%] xl:w-[19%] h-auto min-h-11 whitespace-normal" }, cell: OwnerCell },
       // descFirst on both: nobody opens a size column to find their smallest
-      // site, or a date column to find the oldest.
+      // application, or a date column to find the oldest.
       { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, meta: { className: "w-[14%] xl:w-[11%]" }, cell: SizeCell },
       { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, meta: { className: "hidden xl:table-cell xl:w-[14%]" }, cell: CreatedCell },
-      { id: "actions", header: "", meta: { className: "w-[7%]" }, cell: ActionsCell },
+      { id: "actions", header: "", meta: { className: "w-[7%] xl:w-[6%]" }, cell: ActionsCell },
     ],
     // `missingDatabase` belongs here: attaching a database refreshes the route,
     // and without it the columns keep the closure from the previous render and

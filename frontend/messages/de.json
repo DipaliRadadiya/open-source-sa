@@ -4,7 +4,7 @@
     "nothingToRevert": "Nichts rückgängig zu machen – noch keine Änderungen.",
     "enterAValue": "Zuerst einen Wert eingeben.",
     "chooseAnOption": "Zuerst eine Option wählen.",
-    "needsBackupTarget": "Zuerst Backups für diese Website einrichten.",
+    "needsBackupTarget": "Zuerst Backups für diese Anwendung einrichten.",
     "nothingToSave": "Nichts zu speichern – zuerst etwas ändern.",
     "mongoRenameNeedsPassword": "Das Umbenennen eines MongoDB-Benutzers erstellt ihn neu, daher ist ein Passwort erforderlich.",
     "passwordRules": {
@@ -61,7 +61,7 @@
   },
   "systemUsers": {
     "title": "Systembenutzer",
-    "subtitle": "Linux-Konten, die Ihre Websites besitzen und ausführen.",
+    "subtitle": "Linux-Konten, die Ihre Anwendungen besitzen und ausführen.",
     "searchPlaceholder": "Benutzer suchen…",
     "clearSearch": "Suche zurücksetzen",
     "columns": {
@@ -70,12 +70,12 @@
       "home": "Home",
       "shell": "Shell",
       "access": "Zugriff",
-      "applications": "Apps",
+      "applications": "Anwendungen",
       "created": "Erstellt"
     },
     "sudo": "Sudo",
     "ssh": "SSH",
-    "appsCount": "{count, plural, =0 {Keine Apps} one {# App} other {# Apps}}",
+    "appsCount": "{count, plural, =0 {Keine Anwendungen} one {# Anwendung} other {# Anwendungen}}",
     "empty": {
       "title": "Noch keine Systembenutzer",
       "desc": "Systembenutzer sind die Linux-Konten, die Ihre Anwendungen besitzen und ausführen.",
@@ -472,7 +472,7 @@
       },
       "permDesc": {
         "dashboard": "Serverübersicht, Statistiken und Zustand.",
-        "application": "Websites und Anwendungen auf dem Server.",
+        "application": "Anwendungen und Anwendungen auf dem Server.",
         "database": "Datenbanken und Datenbankbenutzer.",
         "system_user": "Linux-Systembenutzer und deren Zugriff.",
         "firewall": "Ports öffnen oder schließen und Regeln verwalten.",
@@ -486,23 +486,23 @@
         "backup": "Server-Backups und ihr Speicherort.",
         "php": "PHP-Versionen und -Erweiterungen auf dem Server.",
         "node": "Node.js-Versionen auf dem Server.",
-        "sync": "Bereits vorhandene Websites und Einstellungen übernehmen.",
-        "git": "Verbundene Git-Konten zum Deployen von Websites.",
+        "sync": "Bereits vorhandene Anwendungen und Einstellungen übernehmen.",
+        "git": "Verbundene Git-Konten zum Deployen von Anwendungen.",
         "storage": "Externer Speicher für Backups.",
-        "app_domain": "Auf diese Website zeigende Domains und deren SSL.",
-        "app_deployment": "Diese Website deployen und frühere Deployments ansehen.",
-        "app_environment": "Die .env-Datei dieser Website.",
+        "app_domain": "Auf diese Anwendung zeigende Domains und deren SSL.",
+        "app_deployment": "Diese Anwendung deployen und frühere Deployments ansehen.",
+        "app_environment": "Die .env-Datei dieser Anwendung.",
         "app_worker": "Dauerhaft laufende Hintergrundprozesse.",
-        "app_file": "Dateien dieser Website durchsuchen, bearbeiten und hochladen.",
-        "app_log": "Zugriffs- und Fehlerprotokolle dieser Website.",
-        "app_backup": "Backups dieser einen Website.",
-        "app_php": "PHP-Version und Limits dieser Website.",
-        "app_security": "Website mit Benutzername und Passwort schützen.",
-        "app_firewall": "Blockiert gängige Angriffe, bevor sie die Website erreichen.",
-        "app_bot_blocker": "Verhindert, dass KI-Crawler die Website auslesen.",
+        "app_file": "Dateien dieser Anwendung durchsuchen, bearbeiten und hochladen.",
+        "app_log": "Zugriffs- und Fehlerprotokolle dieser Anwendung.",
+        "app_backup": "Backups dieser einen Anwendung.",
+        "app_php": "PHP-Version und Limits dieser Anwendung.",
+        "app_security": "Anwendung mit Benutzername und Passwort schützen.",
+        "app_firewall": "Blockiert gängige Angriffe, bevor sie die Anwendung erreichen.",
+        "app_bot_blocker": "Verhindert, dass KI-Crawler die Anwendung auslesen.",
         "app_fail2ban": "Sperrt Adressen mit wiederholt fehlgeschlagenen Anmeldungen hier.",
-        "app_staging": "Eine Kopie der Website zum Testen von Änderungen.",
-        "app_clone": "Eine Kopie dieser Website an anderer Stelle erstellen."
+        "app_staging": "Eine Kopie der Anwendung zum Testen von Änderungen.",
+        "app_clone": "Eine Kopie dieser Anwendung an anderer Stelle erstellen."
       },
       "unsavedTitle": "Nicht gespeicherte Änderungen verwerfen?",
       "unsavedDescription": "Sie haben Änderungen an dieser Rolle vorgenommen, die nicht gespeichert wurden. Wenn Sie jetzt verlassen, gehen sie verloren.",
@@ -736,10 +736,10 @@
     "endpointFormat": "Muss eine vollständige https://-Adresse sein",
     "endpointInsecure": "Verwenden Sie https://, nicht http:// — Ihre Schlüssel würden unverschlüsselt gesendet.",
     "endpointPlaceholder": "Ersetzen Sie den Teil in <spitzen Klammern> durch Ihren eigenen Wert",
-    "required_application": "Website auswählen",
+    "required_application": "Anwendung auswählen",
     "required_destination": "Wählen Sie, wo die Backups gespeichert werden sollen",
     "retentionRange": "Zwischen 1 und 365 Backups aufbewahren",
-    "required_confirm": "Geben Sie die Domain der Website zur Bestätigung ein",
+    "required_confirm": "Geben Sie die Domain der Anwendung zur Bestätigung ein",
     "cloneDomainRequired": "Geben Sie die Domain für die Kopie ein.",
     "cloneDomainInvalid": "Geben Sie eine vollständige Domain ein, z. B. copy.example.com",
     "scheduleTime": "Verwenden Sie eine Uhrzeit wie 02:00",
@@ -873,15 +873,15 @@
     "liveLabel": "Aktuell",
     "attention": {
       "title": "Handlungsbedarf",
-      "count": "{count, plural, one {# Website erfordert Aufmerksamkeit} other {# Websites erfordern Aufmerksamkeit}}",
+      "count": "{count, plural, one {# Anwendung erfordert Aufmerksamkeit} other {# Anwendungen erfordern Aufmerksamkeit}}",
       "insecure": {
         "chip": "{site} hat kein SSL-Zertifikat",
-        "detail": "Besucher erreichen die Website über unverschlüsseltes HTTP, daher zeigen Browser ihnen eine Warnung „Nicht sicher“ an.",
+        "detail": "Besucher erreichen die Anwendung über unverschlüsseltes HTTP, daher zeigen Browser ihnen eine Warnung „Nicht sicher“ an.",
         "action": "SSL einrichten"
       },
       "failed": {
         "chip": "{site} wurde nicht fertig eingerichtet",
-        "detail": "Die Einrichtung dieser Website ist auf halbem Weg stehen geblieben, daher wird sie noch nicht ausgeliefert.",
+        "detail": "Die Einrichtung dieser Anwendung ist auf halbem Weg stehen geblieben, daher wird sie noch nicht ausgeliefert.",
         "action": "Fehler ansehen"
       },
       "git": {
@@ -952,13 +952,13 @@
       "runAsPlaceholder": "Benutzer auswählen",
       "runAsLocked": "Der ausführende Benutzer kann nicht geändert werden. Löschen Sie den Job und erstellen Sie stattdessen einen neuen.",
       "otherUser": "Anderer OS-Benutzer…",
-      "username": "OS-Benutzername",
+      "username": "Systembenutzer",
       "usernameHint": "Muss bereits auf dem Server vorhanden sein, z. B. root oder www-data.",
       "path": "Anwendungspfad",
-      "pathPickerPlaceholder": "Website auswählen",
+      "pathPickerPlaceholder": "Anwendung auswählen",
       "pathCustom": "Pfad selbst eingeben",
-      "pathSitesGroup": "Ihre Websites",
-      "pathHint": "Das absolute Verzeichnis der Website, das zur Vervollständigung des Befehls verwendet wird.",
+      "pathSitesGroup": "Ihre Anwendungen",
+      "pathHint": "Das absolute Verzeichnis der Anwendung, das zur Vervollständigung des Befehls verwendet wird.",
       "command": "Befehl",
       "schedule": "Zeitplan",
       "expression": "Cron-Ausdruck",
@@ -1217,7 +1217,7 @@
     "phpIni": {
       "title": "php.ini — PHP {version}",
       "description": "Die gesamte Datei, so wie PHP sie liest. Beim Speichern wird sie gesichert, geschrieben, mit php-fpm -t getestet und neu geladen. Lehnt PHP sie ab, wird die vorherige Datei zurückgelegt und nichts neu geladen.",
-      "acknowledge": "Mir ist klar, dass eine fehlerhafte php.ini den FPM von PHP {version} am Start hindern kann, wodurch alle Websites auf dieser Version offline gehen.",
+      "acknowledge": "Mir ist klar, dass eine fehlerhafte php.ini den FPM von PHP {version} am Start hindern kann, wodurch alle Anwendungen auf dieser Version offline gehen.",
       "rejectedTitle": "PHP hat diese Datei abgelehnt — nichts wurde geändert",
       "save": "Speichern und neu laden",
       "cancel": "Abbrechen",
@@ -1485,7 +1485,7 @@
       "emptyTitle": "Noch keine Regeln",
       "emptyBody": "Fügen Sie eine Regel hinzu, um etwas durchzulassen — eine Website auf 443 oder SSH nur aus Ihrem Büro.",
       "protectedHint": "Automatisch hinzugefügt, damit Sie nicht von diesem Server ausgesperrt werden können.",
-      "protectedReason": "Diese hält Ihre Verbindung offen — sie auszuschalten kann Sie vom Server aussperren oder Ihre Websites offline nehmen.",
+      "protectedReason": "Diese hält Ihre Verbindung offen — sie auszuschalten kann Sie vom Server aussperren oder Ihre Anwendungen offline nehmen.",
       "confirmTitle": "Diese Regel löschen?",
       "confirmBodyOn": "{rule} — das wirkt sofort. Was sie durchgelassen hat, wird blockiert.",
       "confirmBodyOff": "{rule} — die Firewall ist aus, heute ändert sich also nichts, aber die Regel kommt beim Einschalten nicht zurück.",
@@ -1837,14 +1837,14 @@
       },
       "reboot": {
         "title": "Manueller Neustart",
-        "description": "Alle gehosteten Websites sind nicht erreichbar, bis er zurück ist — meist unter einer Minute.",
+        "description": "Alle gehosteten Anwendungen sind nicht erreichbar, bis er zurück ist — meist unter einer Minute.",
         "when": "Start",
         "now": "Sofort",
         "inMinutes": "In {minutes} Minuten",
         "action": "Server neu starten",
         "confirmTitle": "Diesen Server neu starten?",
-        "confirmNow": "Jede Website, Datenbank und jeder Dienst auf diesem Server stoppt jetzt und kehrt nach dem Hochfahren zurück. Das Panel ist währenddessen nicht erreichbar.",
-        "confirmDelayed": "Der Server startet in {minutes} Minuten neu. Jede Website, Datenbank und jeder Dienst darauf stoppt, bis er wieder da ist.",
+        "confirmNow": "Jede Anwendung, Datenbank und jeder Dienst auf diesem Server stoppt jetzt und kehrt nach dem Hochfahren zurück. Das Panel ist währenddessen nicht erreichbar.",
+        "confirmDelayed": "Der Server startet in {minutes} Minuten neu. Jede Anwendung, Datenbank und jeder Dienst darauf stoppt, bis er wieder da ist.",
         "confirmCancel": "Abbrechen",
         "confirmSubmit": "Neu starten",
         "scheduled": "Neustart in {minutes} Minuten geplant.",
@@ -1867,7 +1867,7 @@
         "description": "Neustart in festen Intervallen, unabhängig von Updates.",
         "save": "Zeitplan speichern",
         "enable": "Nach Zeitplan neu starten",
-        "enableHint": "Jede Website ist dabei jeweils etwa eine Minute offline.",
+        "enableHint": "Jede Anwendung ist dabei jeweils etwa eine Minute offline.",
         "frequency": "Intervall",
         "dayOfWeek": "Wochentag",
         "dayOfMonth": "Tag des Monats",
@@ -1895,12 +1895,12 @@
   },
   "php": {
     "title": "PHP",
-    "subtitle": "PHP auf diesem Server und die Erweiterungen, die Ihre Websites nutzen können.",
+    "subtitle": "PHP auf diesem Server und die Erweiterungen, die Ihre Anwendungen nutzen können.",
     "loadFailed": "Die PHP-Einrichtung dieses Servers konnte nicht gelesen werden.",
     "noPermission": "Ihre Rolle enthält nicht „PHP“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "empty": {
       "title": "Kein PHP installiert",
-      "description": "Installieren Sie eine Version, um PHP-Websites auf diesem Server auszuführen."
+      "description": "Installieren Sie eine Version, um PHP-Anwendungen auf diesem Server auszuführen."
     },
     "versions": {
       "pickerLabel": "PHP-Versionen",
@@ -1908,12 +1908,12 @@
       "default": "Standard",
       "panelRuns": "Das Panel selbst läuft auf dieser Version.",
       "isDefault": "Dies ist die Standardversion.",
-      "usedBy": "{count, plural, one {# Website nutzt diese Version} other {# Websites nutzen diese Version}}.",
-      "usedByCount": "{count, plural, one {Genutzt von # Website} other {Genutzt von # Websites}}.",
-      "usedByNone": "Noch keine Website nutzt diese Version.",
+      "usedBy": "{count, plural, one {# Anwendung nutzt diese Version} other {# Anwendungen nutzen diese Version}}.",
+      "usedByCount": "{count, plural, one {Genutzt von # Anwendung} other {Genutzt von # Anwendungen}}.",
+      "usedByNone": "Noch keine Anwendung nutzt diese Version.",
       "makeDefault": "Als Standard festlegen",
       "remove": "Entfernen",
-      "defaultHint": "Ihre Websites behalten ihre eigene Version – dies ändert nur den php-Befehl.",
+      "defaultHint": "Ihre Anwendungen behalten ihre eigene Version – dies ändert nur den php-Befehl.",
       "defaultSet": "PHP {version} ist jetzt der Standard.",
       "defaultFailed": "Diese Version konnte nicht als Standard festgelegt werden.",
       "removed": "PHP {version} entfernt.",
@@ -1959,7 +1959,7 @@
       "installing": "{name} wird installiert – dies dauert einige Minuten.",
       "installingShort": "Wird gestartet",
       "failed": "Diese Erweiterung konnte nicht geändert werden.",
-      "summary": "{on} von {total} aktiviert. Aktivieren Sie, was Ihre Websites benötigen.",
+      "summary": "{on} von {total} aktiviert. Aktivieren Sie, was Ihre Anwendungen benötigen.",
       "filterAll": "Alle",
       "filterOn": "Aktiv",
       "filterOff": "Inaktiv",
@@ -1985,7 +1985,7 @@
       "started": "PHP {version} wird installiert – dies dauert einige Minuten.",
       "already": "PHP {version} war bereits installiert.",
       "failed": "Diese Version konnte nicht installiert werden.",
-      "eolWarning": "PHP {version} erhält keine Sicherheitsupdates mehr. Nur installieren, wenn eine Website es benötigt.",
+      "eolWarning": "PHP {version} erhält keine Sicherheitsupdates mehr. Nur installieren, wenn eine Anwendung es benötigt.",
       "noneAvailable": "Derzeit sind keine neuen Versionen zur Installation verfügbar.",
       "installedTag": "Installiert",
       "allInstalled": "Alle von diesem Server angebotenen Versionen sind bereits installiert."
@@ -2061,7 +2061,7 @@
       "unsupported": "ionCube veröffentlicht keinen Loader für PHP {version}. Verwenden Sie für Software, die ihn benötigt, eine andere Version.",
       "loadFailed": "Der Status des ionCube Loaders konnte nicht gelesen werden.",
       "removeConfirmTitle": "ionCube Loader entfernen?",
-      "removeConfirmBody": "Jede Website unter PHP {version}, die verschlüsselte Software ausführt, funktioniert erst wieder, sobald er erneut installiert ist.",
+      "removeConfirmBody": "Jede Anwendung unter PHP {version}, die verschlüsselte Software ausführt, funktioniert erst wieder, sobald er erneut installiert ist.",
       "hint": "Eine Closed-Source-Datei von ionCube, kein apt-Paket — deshalb hat sie einen eigenen Tab statt einer Zeile unter Erweiterungen.",
       "onShort": "An",
       "offShort": "Aus",
@@ -2082,7 +2082,7 @@
     "noPermission": "Ihre Rolle enthält nicht „Node.js“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "empty": {
       "title": "Kein Node.js installiert",
-      "description": "Installieren Sie eine Version, um Node.js-Apps auf diesem Server auszuführen.",
+      "description": "Installieren Sie eine Version, um Node.js-Anwendungen auf diesem Server auszuführen.",
       "noneInstallable": "Dieser Server kann noch keine Node.js-Versionen über das Panel hinzufügen."
     },
     "system": {
@@ -2103,12 +2103,12 @@
       "name": "Node.js {version}",
       "default": "Standard",
       "isDefault": "Dies ist die Standardversion.",
-      "usedBy": "{count, plural, one {# App nutzt diese Version} other {# Apps nutzen diese Version}}.",
-      "usedByCount": "{count, plural, one {Genutzt von # App} other {Genutzt von # Apps}}.",
-      "usedByNone": "Noch keine App nutzt diese Version.",
+      "usedBy": "{count, plural, one {# Anwendung nutzt diese Version} other {# Anwendungen nutzen diese Version}}.",
+      "usedByCount": "{count, plural, one {Genutzt von # Anwendung} other {Genutzt von # Anwendungen}}.",
+      "usedByNone": "Noch keine Anwendung nutzt diese Version.",
       "makeDefault": "Als Standard festlegen",
       "remove": "Entfernen",
-      "defaultHint": "Ihre Apps behalten ihre eigene Version – dies ändert nur den node-Befehl.",
+      "defaultHint": "Ihre Anwendungen behalten ihre eigene Version – dies ändert nur den node-Befehl.",
       "defaultSet": "Node.js {version} ist jetzt der Standard.",
       "defaultFailed": "Diese Version konnte nicht als Standard festgelegt werden.",
       "removed": "Node.js {version} entfernt.",
@@ -2151,7 +2151,7 @@
       "started": "Node.js {version} wird installiert – dies dauert einige Minuten.",
       "already": "Node.js {version} war bereits installiert.",
       "failed": "Diese Version konnte nicht installiert werden.",
-      "eolWarning": "Node.js {version} erhält keine Sicherheitsupdates mehr. Nur installieren, wenn eine App es benötigt.",
+      "eolWarning": "Node.js {version} erhält keine Sicherheitsupdates mehr. Nur installieren, wenn eine Anwendung es benötigt.",
       "noneAvailable": "Derzeit sind keine neuen Versionen zur Installation verfügbar.",
       "installedTag": "Installiert",
       "allInstalled": "Alle von diesem Server angebotenen Versionen sind bereits installiert."
@@ -2273,7 +2273,7 @@
     "message": "Dieser Server braucht einen Neustart, um ein installiertes Update fertig anzuwenden.",
     "action": "Jetzt neu starten",
     "confirmTitle": "Diesen Server jetzt neu starten?",
-    "confirmDescription": "Alle gehosteten Websites sind nicht erreichbar, bis er zurück ist — meist unter einer Minute.",
+    "confirmDescription": "Alle gehosteten Anwendungen sind nicht erreichbar, bis er zurück ist — meist unter einer Minute.",
     "confirmCancel": "Abbrechen",
     "confirmSubmit": "Server neu starten",
     "failed": "Der Neustart konnte nicht gestartet werden.",
@@ -2282,7 +2282,7 @@
   "serverRestart": {
     "goingDown": {
       "title": "Server wird neu gestartet",
-      "body": "Ihre Websites sind offline, bis er zurück ist. Das dauert meist unter einer Minute."
+      "body": "Ihre Anwendungen sind offline, bis er zurück ist. Das dauert meist unter einer Minute."
     },
     "offline": {
       "title": "Warten auf den Server",
@@ -2391,10 +2391,10 @@
       "noUsers": "Keine Benutzer",
       "lastExport": "Letzter Export",
       "neverExported": "Nie",
-      "application": "Website",
+      "application": "Anwendung",
       "notLinked": "Nicht verknüpft",
-      "applicationUnknown": "Andere Website",
-      "attachFor": "Wählen Sie, welche Website {name} nutzt"
+      "applicationUnknown": "Andere Anwendung",
+      "attachFor": "Wählen Sie, welche Anwendung {name} nutzt"
     },
     "empty": {
       "title": "Noch keine Datenbanken",
@@ -2427,11 +2427,11 @@
       "noEngine": "Installieren Sie zuerst eine Datenbank-Engine.",
       "usernamePlaceholder": "my_app_user",
       "application": "Genutzt von",
-      "applicationNone": "Nicht mit einer Website verknüpft",
-      "applicationSearch": "Websites suchen…",
+      "applicationNone": "Nicht mit einer Anwendung verknüpft",
+      "applicationSearch": "Anwendungen suchen…",
       "applicationTaken": "Hat schon eine Datenbank",
-      "applicationHint": "Bestimmt, welche Website diese Datenbank mitsichert. Es verbindet Ihre Website nicht damit — die nutzt weiter, was in ihrer eigenen Konfiguration steht.",
-      "applicationEngine": "Diese Website läuft auf {engines}.",
+      "applicationHint": "Bestimmt, welche Anwendung diese Datenbank mitsichert. Es verbindet Ihre Anwendung nicht damit — die nutzt weiter, was in ihrer eigenen Konfiguration steht.",
+      "applicationEngine": "Diese Anwendung läuft auf {engines}.",
       "sqlWords": {
         "charset": "Zeichensatz",
         "collation": "Sortierung",
@@ -2509,7 +2509,7 @@
       "clearAll": "Zurücksetzen",
       "submit": "Übernehmen",
       "adopting": "Wird übernommen…",
-      "done": "{count, plural, one {# Datenbank übernommen. Sie ist noch nicht mit einer Website verknüpft, also in keinem Backup enthalten.} other {# Datenbanken übernommen. Sie sind noch nicht mit einer Website verknüpft, also in keinem Backup enthalten.}}",
+      "done": "{count, plural, one {# Datenbank übernommen. Sie ist noch nicht mit einer Anwendung verknüpft, also in keinem Backup enthalten.} other {# Datenbanken übernommen. Sie sind noch nicht mit einer Anwendung verknüpft, also in keinem Backup enthalten.}}",
       "failed": "Sie konnten nicht übernommen werden."
     },
     "engineList": {
@@ -2801,35 +2801,35 @@
     },
     "usedBy": {
       "title": "Genutzt von",
-      "included": "In den Backups dieser Website enthalten.",
-      "noneWarning": "Nicht mit einer Website verknüpft, also in keinem Backup enthalten.",
-      "unknownSite": "Mit einer Website verknüpft, die Sie nicht sehen können.",
-      "attach": "Mit einer Website verknüpfen",
+      "included": "In den Backups dieser Anwendung enthalten.",
+      "noneWarning": "Nicht mit einer Anwendung verknüpft, also in keinem Backup enthalten.",
+      "unknownSite": "Mit einer Anwendung verknüpft, die Sie nicht sehen können.",
+      "attach": "Mit einer Anwendung verknüpfen",
       "change": "Ändern",
       "noPermission": "Sie haben keine Berechtigung, das zu ändern."
     },
     "attach": {
-      "title": "Welche Website nutzt diese Datenbank?",
-      "subtitle": "Wählen Sie die Website, zu der {name} gehört.",
+      "title": "Welche Anwendung nutzt diese Datenbank?",
+      "subtitle": "Wählen Sie die Anwendung, zu der {name} gehört.",
       "label": "Genutzt von",
-      "none": "Nicht mit einer Website verknüpft",
-      "search": "Websites suchen…",
+      "none": "Nicht mit einer Anwendung verknüpft",
+      "search": "Anwendungen suchen…",
       "taken": "Hat schon eine Datenbank",
-      "hint": "Bestimmt, welche Website diese Datenbank mitsichert. Es verbindet Ihre Website nicht damit — die nutzt weiter, was in ihrer eigenen Konfiguration steht.",
+      "hint": "Bestimmt, welche Anwendung diese Datenbank mitsichert. Es verbindet Ihre Anwendung nicht damit — die nutzt weiter, was in ihrer eigenen Konfiguration steht.",
       "submit": "Speichern",
       "saving": "Wird gespeichert…",
       "cancel": "Abbrechen",
-      "attached": "Datenbank mit der Website verknüpft.",
-      "detached": "Die Datenbank ist nicht mehr mit einer Website verknüpft.",
-      "failed": "Es konnte nicht geändert werden, welche Website diese Datenbank nutzt.",
-      "unchanged": "Wählen Sie zuerst eine andere Website.",
-      "engineNotAccepted": "Diese Website läuft auf {engines}."
+      "attached": "Datenbank mit der Anwendung verknüpft.",
+      "detached": "Die Datenbank ist nicht mehr mit einer Anwendung verknüpft.",
+      "failed": "Es konnte nicht geändert werden, welche Anwendung diese Datenbank nutzt.",
+      "unchanged": "Wählen Sie zuerst eine andere Anwendung.",
+      "engineNotAccepted": "Diese Anwendung läuft auf {engines}."
     },
     "unlinked": {
-      "title": "{count, plural, one {# Datenbank ist nicht mit einer Website verknüpft} other {# Datenbanken sind nicht mit einer Website verknüpft}}",
-      "description": "Backups enthalten nur Datenbanken, die mit einer Website verknüpft sind — diese sind also in keinem Backup.",
+      "title": "{count, plural, one {# Datenbank ist nicht mit einer Anwendung verknüpft} other {# Datenbanken sind nicht mit einer Anwendung verknüpft}}",
+      "description": "Backups enthalten nur Datenbanken, die mit einer Anwendung verknüpft sind — diese sind also in keinem Backup.",
       "action": "Anzeigen",
-      "filtered": "Es werden nur Datenbanken ohne Website-Verknüpfung angezeigt",
+      "filtered": "Es werden nur Datenbanken ohne Anwendungsverknüpfung angezeigt",
       "showAll": "Alle anzeigen"
     }
   },
@@ -2844,7 +2844,7 @@
       "recheck": "Alle Konten erneut prüfen"
     },
     "onboarding": {
-      "title": "Ihr Git-Konto ist verbunden",
+      "title": "{label} ist verbunden",
       "description": "Wählen Sie es als Quelle, wenn Sie eine Anwendung anlegen.",
       "action": "Anwendung erstellen"
     },
@@ -2982,8 +2982,8 @@
   "applications": {
     "logs": {
       "pageTitle": "Protokolle",
-      "pageSubtitle": "Lesen Sie die Zugriffs-, Fehler- und Anwendungsprotokolle dieser Website.",
-      "provisioning": "Protokolle stehen bereit, sobald die Einrichtung der Website abgeschlossen ist.",
+      "pageSubtitle": "Lesen Sie die Zugriffs-, Fehler- und Ausgabeprotokolle dieser Anwendung.",
+      "provisioning": "Protokolle stehen bereit, sobald die Einrichtung der Anwendung abgeschlossen ist.",
       "loadFailed": "Die Protokolle konnten nicht geladen werden.",
       "sourcesLabel": "Protokollquelle",
       "proxyHint": "Das sind die Protokolle des Reverse Proxy — die eigene Ausgabe Ihrer Anwendung steht unter „Anwendungsausgabe“.",
@@ -2991,8 +2991,8 @@
         "badge": "leer"
       },
       "noSources": {
-        "title": "Keine Protokolle für diese Website",
-        "body": "Diese Website hat noch keine lesbaren Protokollquellen."
+        "title": "Keine Protokolle für diese Anwendung",
+        "body": "Diese Anwendung hat noch keine lesbaren Protokollquellen."
       },
       "clear": {
         "title": "{label} leeren?",
@@ -3005,11 +3005,11 @@
     },
     "environment": {
       "pageTitle": "Umgebung",
-      "pageSubtitle": "Bearbeiten Sie die .env-Datei dieser Website.",
-      "provisioning": "Die Umgebung steht bereit, sobald die Einrichtung der Website abgeschlossen ist.",
+      "pageSubtitle": "Bearbeiten Sie die .env-Datei dieser Anwendung.",
+      "provisioning": "Die Umgebung steht bereit, sobald die Einrichtung der Anwendung abgeschlossen ist.",
       "loadFailed": "Die Umgebung konnte nicht geladen werden.",
       "sectionTitle": "Umgebung",
-      "sectionSubtitle": "Die .env der Website, als eine Datei bearbeitet.",
+      "sectionSubtitle": "Die .env der Anwendung, als eine Datei bearbeitet.",
       "pathUnknown": ".env",
       "copy": "Kopieren",
       "emptyPlaceholder": "# Noch keine .env — Variablen hinzufügen und speichern, um die Datei zu erstellen",
@@ -3068,7 +3068,7 @@
       }
     },
     "title": "Anwendungen",
-    "subtitle": "Websites und Dienste, die auf diesem Server laufen.",
+    "subtitle": "Anwendungen und Dienste, die auf diesem Server laufen.",
     "loadFailed": "Die Anwendungen konnten nicht geladen werden.",
     "noPermission": "Ihre Rolle enthält nicht „Anwendung“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "create": "Anwendung erstellen",
@@ -3084,16 +3084,16 @@
     "configuration": "Konfiguration",
     "advanced": "Erweiterte Einstellungen",
     "source": {
-      "accountMissing": "Das Git-Konto, das diese Website genutzt hat, wurde getrennt. Deploys scheitern, bis sie mit einem anderen Konto verknüpft ist.",
+      "accountMissing": "Das Git-Konto, das diese Anwendung genutzt hat, wurde getrennt. Deploys scheitern, bis sie mit einem anderen Konto verknüpft ist.",
       "relink": {
         "action": "Neu verbinden",
-        "title": "Diese Website neu mit einem Git-Konto verbinden",
+        "title": "Diese Anwendung neu mit einem Git-Konto verbinden",
         "description": "Repository und Branch bleiben, wie sie sind — {repository}. Das hier gewählte Konto wird dagegen geprüft, bevor etwas gespeichert wird.",
         "choose": "Konto wählen",
         "cancel": "Abbrechen",
         "submit": "Neu verbinden",
-        "done": "Website neu verbunden.",
-        "failed": "Die Website konnte nicht neu verbunden werden."
+        "done": "Anwendung neu verbunden.",
+        "failed": "Die Anwendung konnte nicht neu verbunden werden."
       },
       "title": "Quelle und Deployment",
       "repository": "Repository",
@@ -3133,14 +3133,14 @@
       "type": "Typ",
       "domain": "Domain",
       "status": "Status",
-      "owner": "Besitzer",
+      "owner": "Systembenutzer",
       "size": "Größe",
       "created": "Erstellt",
       "php": "PHP"
     },
     "empty": {
       "title": "Ihr Server ist bereit für die erste Anwendung",
-      "description": "Legen Sie eine Website oder einen Dienst in einem geführten Ablauf an. {brand} richtet alles ein und zeigt hier den aktuellen Status.",
+      "description": "Legen Sie eine Anwendung oder einen Dienst in einem geführten Ablauf an. {brand} richtet alles ein und zeigt hier den aktuellen Status.",
       "filteredTitle": "Keine passenden Anwendungen",
       "filteredDescription": "Keine Anwendung passt zu Ihrer Suche.",
       "clearSearch": "Suche zurücksetzen",
@@ -3163,11 +3163,11 @@
     "searchPlaceholder": "Anwendungen suchen…",
     "details": {
       "title": "Anwendung",
-      "settingUp": "Ihre Website wird eingerichtet",
+      "settingUp": "Ihre Anwendung wird eingerichtet",
       "failedTitle": "Einrichtung fehlgeschlagen",
       "pending": "Eingeplant — beginnt gleich.",
       "keepWaiting": "Das läuft auf dem Server weiter. Sie können diese Seite bedenkenlos verlassen.",
-      "takesMinutes": "Die meisten Websites sind in wenigen Minuten fertig. Ein Ein-Klick-Installer braucht länger.",
+      "takesMinutes": "Die meisten Anwendungen sind in wenigen Minuten fertig. Ein Ein-Klick-Installer braucht länger.",
       "starting": "Wird gestartet…",
       "working": "Läuft…",
       "failedAt": "Gestoppt bei: {step}",
@@ -3177,10 +3177,10 @@
       "copyReference": "Support-Referenz kopieren",
       "unknownStep": "Ein Schritt abgeschlossen",
       "steps": {
-        "create_directory": "Website-Ordner wird erstellt",
+        "create_directory": "Anwendungsordner wird erstellt",
         "placeholder": "Platzhalterseite wird hinzugefügt",
         "set_ownership": "Dateiberechtigungen werden gesetzt",
-        "create_php_pool": "PHP für diese Website wird eingerichtet",
+        "create_php_pool": "PHP für diese Anwendung wird eingerichtet",
         "harden_php": "PHP-Funktionen werden eingeschränkt",
         "create_database": "Datenbank wird angelegt",
         "write_config": "Webserver-Konfiguration wird geschrieben",
@@ -3193,7 +3193,7 @@
         "fetch": "Neuester Code wird geladen",
         "checkout": "Dateien werden aktualisiert",
         "seed_env": "Umgebungsdatei wird geschrieben",
-        "verify": "Es wird geprüft, ob die Website antwortet",
+        "verify": "Es wird geprüft, ob die Anwendung antwortet",
         "download": "Dateien werden geladen",
         "extract": "Dateien werden entpackt",
         "configure": "Konfiguration wird angewendet",
@@ -3208,7 +3208,7 @@
       "stalledTitle": "Das dauert länger als erwartet",
       "stalledBody": "Die Einrichtung hat seit einer Weile keinen Fortschritt gemeldet. Möglicherweise läuft sie noch — prüfen Sie erneut oder wenden Sie sich an den Support, wenn es so bleibt.",
       "checkAgain": "Erneut prüfen",
-      "startedAgo": "Gestartet {ago}. Die meisten Websites sind in wenigen Minuten fertig; ein Ein-Klick-Installer braucht länger."
+      "startedAgo": "Gestartet {ago}. Die meisten Anwendungen sind in wenigen Minuten fertig; ein Ein-Klick-Installer braucht länger."
     },
     "port": {
       "label": "Anwendungs-Port",
@@ -3225,7 +3225,7 @@
       "typeHint": "Wählen Sie den Ausgangspunkt für Ihr Projekt. Die erweiterte Konfiguration können Sie später anpassen.",
       "configureHint": "Es werden nur die Felder gezeigt, die diese Anwendung braucht.",
       "reviewTitle": "Bereit zur Einrichtung",
-      "reviewHint": "{brand} erstellt die Website-Konfiguration und zeigt den Fortschritt auf dem nächsten Bildschirm.",
+      "reviewHint": "{brand} erstellt die Anwendungskonfiguration und zeigt den Fortschritt auf dem nächsten Bildschirm.",
       "selected": "Ausgewählt",
       "change": "Ändern"
     },
@@ -3255,9 +3255,9 @@
       "noSystemUserCreatePermission": "Sie brauchen die Berechtigung, Systembenutzer zu verwalten. Bitten Sie eine Administratorin oder einen Administrator, einen anzulegen.",
       "createSystemUser": "Systembenutzer anlegen",
       "generateSystemUser": "Neuen Systembenutzer erzeugen",
-      "generateSystemUserHint": "Ein eigenes Linux-Konto, benannt nach dieser Website.",
+      "generateSystemUserHint": "Ein eigener Systembenutzer, benannt nach dieser Anwendung.",
       "pickSystemUser": "Vorhandenen Systembenutzer verwenden",
-      "pickSystemUserHint": "Ein Konto gemeinsam mit Ihren anderen Websites nutzen.",
+      "pickSystemUserHint": "Ein Konto gemeinsam mit Ihren anderen Anwendungen nutzen.",
       "systemUserWillBeCreated": "Ein neuer Benutzer wird angelegt",
       "repositoriesLoading": "Repositories werden geladen…",
       "repositoriesEmpty": "Für dieses Konto sind keine Repositories verfügbar.",
@@ -3290,13 +3290,13 @@
       "submitMissing": "{count, plural, one {Vervollständigen Sie # Pflichtangabe, um fortzufahren.} other {Vervollständigen Sie # Pflichtangaben, um fortzufahren.}}",
       "repositoryNeedsAccount": "Wählen Sie zuerst ein Git-Konto.",
       "branchNeedsRepository": "Wählen Sie zuerst ein Repository.",
-      "noOptions": "Dieser Website-Typ hat für dieses Feld keine Auswahl angeboten, es gibt also nichts zu wählen.",
+      "noOptions": "Dieser Anwendungstyp hat für dieses Feld keine Auswahl angeboten, es gibt also nichts zu wählen.",
       "runtimeRequirement": "Diese Anwendung benötigt {runtime} {range}.",
       "typePlaceholder": "Anwendungstyp suchen und auswählen…",
       "domainMode": {
         "own": "Meine Domain",
         "temporary": "Vorläufig",
-        "label": "Wo diese Website liegen wird"
+        "label": "Wo diese Anwendung liegen wird"
       },
       "temporaryDomainHint": "Funktioniert sofort. Nutzen Sie vor dem Start eine echte Domain.",
       "nameHint": "Wird nur im Panel verwendet — Besucher sehen ihn nie.",
@@ -3306,7 +3306,7 @@
       "needsGitAccount": "Es ist kein Git-Konto verbunden. Nutzen Sie unten „Git verbinden“ und dann „Aktualisieren“.",
       "installPhpVersion": "PHP-Version installieren",
       "installNodeVersion": "Node-Version installieren",
-      "databaseEnginePermanent": "Das lässt sich später nicht ändern — eine Website auf eine andere Engine zu bringen heißt, sie neu anzulegen.",
+      "databaseEnginePermanent": "Das lässt sich später nicht ändern — eine Anwendung auf eine andere Engine zu bringen heißt, sie neu anzulegen.",
       "refreshVersions": "Aktualisieren",
       "refreshVersionsHint": "Die auf diesem Server installierten {runtime}-Versionen aktualisieren",
       "versionsAdded": "{runtime} {versions} {count, plural, one {ist} other {sind}} jetzt verfügbar.",
@@ -3337,8 +3337,8 @@
     "actions": {
       "label": "Aktionen",
       "open": "Dashboard öffnen",
-      "visit": "Website aufrufen",
-      "visitHint": "Die Website wird ausgeliefert, sobald die Einrichtung fertig ist.",
+      "visit": "Anwendung aufrufen",
+      "visitHint": "Die Anwendung wird ausgeliefert, sobald die Einrichtung fertig ist.",
       "delete": "Anwendung löschen",
       "go": {
         "files": "Dateien öffnen",
@@ -3349,10 +3349,10 @@
     },
     "delete": {
       "title": "{name} löschen?",
-      "description": "Die Website-Konfiguration wird entfernt und {domain} wird nicht mehr ausgeliefert. Das lässt sich nicht zurücknehmen.",
-      "removeFiles": "Auch die Dateien und Backups der Website löschen",
-      "removeFilesOn": "Das Verzeichnis der Website und jedes ihrer Backups — samt der Archive in Ihrem Speicher — werden gelöscht.",
-      "removeFilesOff": "Die Dateien bleiben auf dem Server. Die Backups der Website verlassen das Panel mit ihr, ihre Archive bleiben aber in Ihrem Speicher — löschen Sie sie dort, wenn Sie sie nicht mehr wollen.",
+      "description": "Die Anwendungskonfiguration wird entfernt und {domain} wird nicht mehr ausgeliefert. Das lässt sich nicht zurücknehmen.",
+      "removeFiles": "Auch die Dateien und Backups der Anwendung löschen",
+      "removeFilesOn": "Das Verzeichnis der Anwendung und jedes ihrer Backups — samt der Archive in Ihrem Speicher — werden gelöscht.",
+      "removeFilesOff": "Die Dateien bleiben auf dem Server. Die Backups der Anwendung verlassen das Panel mit ihr, ihre Archive bleiben aber in Ihrem Speicher — löschen Sie sie dort, wenn Sie sie nicht mehr wollen.",
       "confirmLabel": "Tippen Sie <code>{domain}</code>, um zu bestätigen",
       "submit": "Anwendung löschen",
       "deleting": "Wird gelöscht…",
@@ -3360,10 +3360,10 @@
       "failed": "Diese Anwendung konnte nicht gelöscht werden.",
       "cancel": "Abbrechen",
       "copyDomain": "Domain kopieren",
-      "removeDatabases": "{count, plural, one {Auch die Datenbank dieser Website löschen} other {Auch die # Datenbanken dieser Website löschen}}",
+      "removeDatabases": "{count, plural, one {Auch die Datenbank dieser Anwendung löschen} other {Auch die # Datenbanken dieser Anwendung löschen}}",
       "removeDatabasesOn": "{count, plural, one {{databases} wird samt der Benutzer, die sich damit verbinden, vom Server entfernt.} other {{databases} werden samt der Benutzer, die sich damit verbinden, vom Server entfernt.}}",
-      "removeDatabasesOff": "{count, plural, one {{databases} bleibt auf dem Server, ohne Verknüpfung zu einer Website. Entfernen Sie sie unter „Datenbanken“, wenn Sie sie nicht mehr brauchen.} other {{databases} bleiben auf dem Server, ohne Verknüpfung zu einer Website. Entfernen Sie sie unter „Datenbanken“, wenn Sie sie nicht mehr brauchen.}}",
-      "databasesFailed": "Die Website wurde gelöscht, aber {databases} konnte nicht entfernt werden.",
+      "removeDatabasesOff": "{count, plural, one {{databases} bleibt auf dem Server, ohne Verknüpfung zu einer Anwendung. Entfernen Sie sie unter „Datenbanken“, wenn Sie sie nicht mehr brauchen.} other {{databases} bleiben auf dem Server, ohne Verknüpfung zu einer Anwendung. Entfernen Sie sie unter „Datenbanken“, wenn Sie sie nicht mehr brauchen.}}",
+      "databasesFailed": "Die Anwendung wurde gelöscht, aber {databases} konnte nicht entfernt werden.",
       "goToDatabases": "Datenbanken öffnen",
       "removeFilesHint": "Aus: Die Seite wird aus dem Panel entfernt, aber ihre Dateien bleiben auf dem Server. Ein: Die Dateien und die Sicherungen werden gelöscht und können nicht wiederhergestellt werden."
     },
@@ -3372,8 +3372,8 @@
       "webRoot": "Web-Root",
       "php": "PHP-Version",
       "node": "Node-Version",
-      "port": "Port",
-      "description": "Typ, Besitzer und wo diese Website liegt."
+      "port": "Anwendungs-Port",
+      "description": "Typ, Systembenutzer und wo diese Anwendung liegt."
     },
     "process": {
       "title": "Prozess",
@@ -3388,7 +3388,7 @@
       "stopped": "Der Prozess wurde gestoppt.",
       "restarted": "Der Prozess wurde neu gestartet.",
       "failed": "Der Prozess konnte nicht geändert werden.",
-      "deployToStart": "Diese Website startet nach ihrem ersten erfolgreichen Deployment."
+      "deployToStart": "Diese Anwendung startet nach ihrem ersten erfolgreichen Deployment."
     },
     "domains": {
       "title": "Domains und SSL",
@@ -3398,10 +3398,10 @@
       "manage": "Domains verwalten",
       "loadFailed": "Die Domains dieser Anwendung konnten nicht geladen werden.",
       "pageTitle": "Domains & SSL",
-      "pageSubtitle": "Verwalten Sie die Namen, unter denen diese Website antwortet, und ihr HTTPS-Zertifikat.",
-      "provisioning": "Domains und SSL stehen bereit, sobald die Einrichtung der Website abgeschlossen ist.",
+      "pageSubtitle": "Verwalten Sie die Namen, unter denen diese Anwendung antwortet, und ihr HTTPS-Zertifikat.",
+      "provisioning": "Domains und SSL stehen bereit, sobald die Einrichtung der Anwendung abgeschlossen ist.",
       "sectionTitle": "Domains",
-      "sectionSubtitle": "Jeder Name, unter dem diese Website antwortet.",
+      "sectionSubtitle": "Jeder Name, unter dem diese Anwendung antwortet.",
       "tabs": {
         "domains": "Domains",
         "ssl": "SSL",
@@ -3410,7 +3410,7 @@
         "sslUnknown": "Zertifikatsstatus unbekannt"
       },
       "emptyTitle": "Noch keine Domains",
-      "emptyBody": "Fügen Sie eine Domain hinzu, um sie auf diese Website zu richten. Weitere Namen und Aliase können Sie jederzeit ergänzen.",
+      "emptyBody": "Fügen Sie eine Domain hinzu, um sie auf diese Anwendung zu richten. Weitere Namen und Aliase können Sie jederzeit ergänzen.",
       "testDomain": "Testdomain",
       "rowActions": "Aktionen",
       "makePrimary": "Als primär setzen",
@@ -3419,10 +3419,10 @@
       "add": {
         "action": "Domain hinzufügen",
         "title": "Domain hinzufügen",
-        "subtitle": "Richten Sie einen weiteren Namen auf diese Website.",
+        "subtitle": "Richten Sie einen weiteren Namen auf diese Anwendung.",
         "domain": "Domain",
         "type": "Typ",
-        "aliasHint": "Ein Alias liefert dieselbe Website unter einem zweiten Namen. Hinweis: Suchmaschinen können beide indexieren und das Ranking aufteilen.",
+        "aliasHint": "Ein Alias liefert dieselbe Anwendung unter einem zweiten Namen. Hinweis: Suchmaschinen können beide indexieren und das Ranking aufteilen.",
         "redirectHint": "Eine Weiterleitung liefert nichts aus — sie schickt Besucher an eine andere Adresse.",
         "redirectTo": "Weiterleiten an",
         "redirectStatus": "Status",
@@ -3431,8 +3431,8 @@
         "dnsNoteIp": "Richten Sie danach einen A-Record für diesen Namen auf Ihren Server:",
         "dnsNote": "Richten Sie danach einen A-Record für diesen Namen auf Ihren Server, damit HTTPS ausgestellt werden kann.",
         "dnsNoteSecured": "Richten Sie nach dem Hinzufügen einen A-Eintrag für diesen Namen auf Ihren Server.",
-        "certNotice": "Das {current}-Zertifikat dieser Website deckt den neuen Namen erst ab, wenn Sie es neu ausstellen. Bis dahin erhalten Besucher dieses Namens eine Zertifikatswarnung statt Ihrer Website.",
-        "certUploadedNotice": "Diese Website nutzt ein hochgeladenes Zertifikat, das dieses Panel nicht neu ausstellen kann. Bis Sie eines hochladen, das den neuen Namen abdeckt – oder zu Let's Encrypt wechseln – erhalten Besucher eine Zertifikatswarnung statt Ihrer Website.",
+        "certNotice": "Das {current}-Zertifikat dieser Anwendung deckt den neuen Namen erst ab, wenn Sie es neu ausstellen. Bis dahin erhalten Besucher dieses Namens eine Zertifikatswarnung statt Ihrer Anwendung.",
+        "certUploadedNotice": "Diese Anwendung nutzt ein hochgeladenes Zertifikat, das dieses Panel nicht neu ausstellen kann. Bis Sie eines hochladen, das den neuen Namen abdeckt – oder zu Let's Encrypt wechseln – erhalten Besucher eine Zertifikatswarnung statt Ihrer Anwendung.",
         "certNoticeForceHttps": "HTTPS erzwingen ist aktiv, Besucher landen also direkt auf dieser Warnung, ohne Weg daran vorbei.",
         "redirectStatusOption": {
           "301": "301 — Dauerhaft",
@@ -3445,13 +3445,13 @@
         "redirectStatusHint": "301 kennzeichnet den Umzug als dauerhaft, sodass Suchmaschinen ihre Einträge aktualisieren und Browser der Besucher ihn sich merken. 302 kennzeichnet ihn als vorübergehend."
       },
       "type": {
-        "alias": "Alias (dieselbe Website, zweiter Name)",
+        "alias": "Alias (dieselbe Anwendung, zweiter Name)",
         "redirect": "Weiterleitung (an eine andere Adresse schicken)",
         "primaryHint": "Der kanonische Name. Aliase und Weiterleitungen zeigen darauf.",
-        "aliasHint": "Liefert dieselbe Website unter einem anderen Namen.",
+        "aliasHint": "Liefert dieselbe Anwendung unter einem anderen Namen.",
         "redirectHint": "Schickt Besucher an eine andere Adresse."
       },
-      "openSite": "Website öffnen",
+      "openSite": "Anwendung öffnen",
       "copyDomain": "Domain kopieren",
       "dns": {
         "verified": "DNS bestätigt",
@@ -3463,16 +3463,16 @@
       },
       "promote": {
         "title": "{domain} zur primären Domain machen?",
-        "body": "Das wird die kanonische Adresse der Website.",
+        "body": "Das wird die kanonische Adresse der Anwendung.",
         "nowLabel": "Jetzt",
         "afterLabel": "Danach",
-        "keepsServing": "{domain} bleibt als Alias verknüpft und liefert diese Website weiter aus.",
-        "renamesFiles": "Die Konfigurations- und Protokolldateien der Website werden umbenannt.",
-        "cmsWarning": "In WordPress ist die alte Adresse noch gespeichert, Besucher werden also möglicherweise zurückgeleitet, bis Sie sie in der Website ändern."
+        "keepsServing": "{domain} bleibt als Alias verknüpft und liefert diese Anwendung weiter aus.",
+        "renamesFiles": "Die Konfigurations- und Protokolldateien der Anwendung werden umbenannt.",
+        "cmsWarning": "In WordPress ist die alte Adresse noch gespeichert, Besucher werden also möglicherweise zurückgeleitet, bis Sie sie in der Anwendung ändern."
       },
       "removeConfirm": {
         "title": "{domain} entfernen?",
-        "body": "Die Website antwortet unter diesem Namen dann nicht mehr. Das lässt sich nicht zurücknehmen."
+        "body": "Die Anwendung antwortet unter diesem Namen dann nicht mehr. Das lässt sich nicht zurücknehmen."
       },
       "toast": {
         "added": "Domain hinzugefügt.",
@@ -3488,8 +3488,8 @@
       },
       "ssl": {
         "sectionTitle": "SSL-Zertifikat",
-        "sectionSubtitle": "Ein Zertifikat sichert diese Website über HTTPS.",
-        "none": "Diese Website wird über einfaches HTTP ausgeliefert.",
+        "sectionSubtitle": "Ein Zertifikat sichert diese Anwendung über HTTPS.",
+        "none": "Diese Anwendung wird über einfaches HTTP ausgeliefert.",
         "noneBody": "Klicken Sie auf „HTTPS aktivieren“ — wir prüfen jede Domain und sagen Ihnen genau, was zu tun ist, wenn ein Name noch nicht bereit ist.",
         "notCertifiable": "Für Testdomains (etwa *.nip.io) gibt es kein SSL. Fügen Sie zuerst eine echte Domain hinzu.",
         "enable": "HTTPS aktivieren",
@@ -3509,13 +3509,13 @@
         "forceHttps": "HTTPS erzwingen",
         "forceHttpsHint": "Leitet jeden Besucher von HTTP auf HTTPS um.",
         "forceHttpsEnabled": "Besucher werden jetzt auf HTTPS umgeleitet.",
-        "forceHttpsDisabled": "HTTPS-Umleitung ausgeschaltet. Die Website antwortet auch über HTTP.",
+        "forceHttpsDisabled": "HTTPS-Umleitung ausgeschaltet. Die Anwendung antwortet auch über HTTP.",
         "forceHttpsFailed": "Die HTTPS-Umleitung konnte nicht geändert werden.",
         "deleteFailed": "Das Zertifikat konnte nicht entfernt werden.",
         "removeTitle": "Zertifikat entfernen?",
-        "removeBody": "Die Website fällt auf einfaches HTTP zurück und die automatische Verlängerung endet. Das lässt sich nicht zurücknehmen.",
-        "issueTitle": "Zertifikat ausstellen",
-        "issueSubtitle": "Sichern Sie diese Website über HTTPS.",
+        "removeBody": "Die Anwendung fällt auf einfaches HTTP zurück und die automatische Verlängerung endet. Das lässt sich nicht zurücknehmen.",
+        "issueTitle": "SSL einrichten",
+        "issueSubtitle": "Sichern Sie diese Anwendung über HTTPS.",
         "method": "Verfahren",
         "method_letsencrypt": "Let's Encrypt (kostenlos, automatisch)",
         "method_self_signed": "Selbst signiert",
@@ -3527,17 +3527,17 @@
         "dryRunHint": "Proben Sie den gesamten Vorgang zuerst: Wir prüfen jede Domain und bitten dann den Testserver von Let's Encrypt um die Validierung. Es wird nichts ausgestellt und kein Versuch verbraucht.",
         "dryRunStage_reachability": "Prüfe, ob jede Domain die Validierungsdatei ausliefert…",
         "dryRunStage_acme": "Der Testserver von Let's Encrypt wird um Validierung gebeten. Das kann eine Minute dauern.",
-        "dryRunPassed": "Testlauf erfolgreich – diese Website ist bereit für ein Zertifikat.",
+        "dryRunPassed": "Testlauf erfolgreich – diese Anwendung ist bereit für ein Zertifikat.",
         "dryRunFailed": "Testlauf fehlgeschlagen – eine Ausstellung würde jetzt nicht funktionieren.",
         "dryRunStartFailed": "Der Testlauf konnte nicht gestartet werden.",
         "certificate": "Zertifikat (PEM)",
         "privateKey": "Privater Schlüssel (PEM)",
         "chain": "Kette / Zwischenzertifikate",
         "optional": "optional",
-        "refusedTitle": "Die Website ist für die Validierung noch nicht erreichbar",
+        "refusedTitle": "Die Anwendung ist für die Validierung noch nicht erreichbar",
         "forceHint": "Wenn dieser Server seine eigene öffentliche Adresse nicht erreichen kann (z. B. hinter NAT), können Sie die Erreichbarkeitsprüfung überspringen.",
-        "forceIssue": "Trotzdem ausstellen",
-        "issue": "Zertifikat ausstellen",
+        "forceIssue": "Trotzdem einrichten",
+        "issue": "SSL einrichten",
         "issueFailed": "Das Zertifikat konnte nicht ausgestellt werden.",
         "reissueTitle": "Zertifikat neu ausstellen",
         "reissueSubtitle": "Ersetzt das aktuelle Zertifikat — meist, um einen fehlenden Namen abzudecken.",
@@ -3545,16 +3545,16 @@
         "certificateHint": "Das Zertifikat, das Ihr Anbieter für diese Domain ausgestellt hat. Fügen Sie den gesamten Block ein, einschließlich der BEGIN- und END-Zeilen.",
         "privateKeyHint": "Der geheime Schlüssel, der zum Zertifikat gehört. Er wurde erstellt, als Sie es angefordert haben — geben Sie ihn niemals an andere weiter.",
         "chainHint": "Die zusätzlichen Zertifikate, die Ihres zurück zu einer vertrauenswürdigen Stelle verknüpfen. Ohne sie zeigen einige Browser und Telefone eine Warnung. Ihr Anbieter liefert diese.",
-        "servingStale": "Diese Website liefert Besuchern weiterhin ein älteres Zertifikat aus. Browser zeigen eine Sicherheitswarnung an, bis der Webserver neu geladen wird.",
+        "servingStale": "Diese Anwendung liefert Besuchern weiterhin ein älteres Zertifikat aus. Browser zeigen eine Sicherheitswarnung an, bis der Webserver neu geladen wird.",
         "servingStaleDetail": "Ausgeliefert: läuft ab {served} · Auf der Festplatte: läuft ab {onDisk}",
         "reloadWebServer": "{service} neu laden",
         "reloaded": "Der Webserver wurde neu geladen.",
         "reloadFailed": "Der Webserver konnte nicht neu geladen werden.",
-        "staleDomains": "{domains} steht auf diesem Zertifikat, gehört aber nicht mehr zu dieser Website. Die Verlängerung schlägt für das gesamte Zertifikat fehl, bis es neu ausgestellt wird.",
+        "staleDomains": "{domains} steht auf diesem Zertifikat, gehört aber nicht mehr zu dieser Anwendung. Die Verlängerung schlägt für das gesamte Zertifikat fehl, bis es neu ausgestellt wird.",
         "uploadNeedsBoth": "Fügen Sie sowohl das Zertifikat als auch den zugehörigen privaten Schlüssel ein."
       },
-      "issueCertificate": "SSL-Zertifikat ausstellen",
-      "description": "Namen, die diese Website erreichen, und ihr Zertifikat.",
+      "issueCertificate": "SSL einrichten",
+      "description": "Namen, die diese Anwendung erreichen, und ihr Zertifikat.",
       "more": "+{count} weitere",
       "types": {
         "primary": "Primär",
@@ -3569,8 +3569,8 @@
       "subtitle": "Wählen Sie, als welcher Administrator Sie sich anmelden möchten. Kein Passwort nötig.",
       "signIn": "Anmelden",
       "cancel": "Abbrechen",
-      "none": "Diese Website hat keine Administratorkonten.",
-      "listFailed": "Die Administratoren dieser Website konnten nicht gelesen werden.",
+      "none": "Diese Anwendung hat keine Administratorkonten.",
+      "listFailed": "Die Administratoren dieser Anwendung konnten nicht gelesen werden.",
       "failed": "Der Anmeldelink konnte nicht erstellt werden.",
       "popupBlocked": "Ihr Browser hat den neuen Tab blockiert. Erlauben Sie Pop-ups für dieses Panel und versuchen Sie es erneut.",
       "redirecting": "Sie werden angemeldet…",
@@ -3586,10 +3586,10 @@
       "pageTitle": "Deployment",
       "pageSubtitle": "Deployen Sie Ihren Code und richten Sie automatische Deploys bei Push ein.",
       "loadFailed": "Dieses Deployment konnte nicht geladen werden.",
-      "provisioning": "Diese Website wird noch eingerichtet. Das Deployment steht bereit, sobald sie läuft.",
+      "provisioning": "Diese Anwendung wird noch eingerichtet. Das Deployment steht bereit, sobald sie läuft.",
       "deploy": {
         "title": "Deployen",
-        "subtitle": "Holen Sie den neuesten Code aus Ihrem Repository und bauen Sie die Website neu.",
+        "subtitle": "Holen Sie den neuesten Code aus Ihrem Repository und bauen Sie die Anwendung neu.",
         "repository": "Repository",
         "branch": "Branch",
         "lastDeploy": "Zuletzt deployt",
@@ -3608,8 +3608,8 @@
         "failed": "Das Deployment konnte nicht gestartet werden.",
         "failedAt": "Das letzte Deployment ist bei „{step}“ gescheitert. Live ist weiterhin die vorherige Version.",
         "reference": "Referenz: {reference}",
-        "notDeployedYet": "Diese Website hat noch keinen Code — deployen Sie, um Ihr Repository von {branch} zu holen und live zu gehen.",
-        "resetNote": "Ein Deployment setzt die Website auf den Branch {branch} zurück; direkt auf dem Server gemachte Änderungen werden verworfen.",
+        "notDeployedYet": "Diese Anwendung hat noch keinen Code — deployen Sie, um Ihr Repository von {branch} zu holen und live zu gehen.",
+        "resetNote": "Ein Deployment setzt die Anwendung auf den Branch {branch} zurück; direkt auf dem Server gemachte Änderungen werden verworfen.",
         "viewCommit": "Commit bei Ihrem Git-Anbieter ansehen"
       },
       "webhook": {
@@ -3654,7 +3654,7 @@
       },
       "cancel": "Abbrechen",
       "runtime": {
-        "title": "Wie diese Website läuft",
+        "title": "Wie diese Anwendung läuft",
         "subtitle": "Der Befehl, der den Prozess startet, und der Port, auf dem er lauscht.",
         "startCommand": "Startbefehl",
         "startCommandHint": "Die Startdatei, zum Beispiel „node index.js“. Nicht „npm start“ — ein Paketmanager startet den eigentlichen Prozess als Kindprozess, sodass Stopp-Signale ihn nie erreichen.",
@@ -3672,7 +3672,7 @@
         "branch": "Branch",
         "branchHint": "Der Branch, den jedes Deployment auscheckt.",
         "script": "Deploy-Skript",
-        "scriptHint": "Läuft nach dem Holen des Codes, als Benutzer Ihrer Website.",
+        "scriptHint": "Läuft nach dem Holen des Codes, als Benutzer Ihrer Anwendung.",
         "scriptFallbackHint": "Es ist nichts Eigenes gesetzt, also ist dies der Build-Befehl, der heute läuft. Bearbeiten Sie ihn, um ihn zu Ihrem zu machen.",
         "placeholders": "Sie können verwenden:",
         "resetScript": "Auf Standard zurücksetzen",
@@ -3680,7 +3680,7 @@
         "saveNote": "Gilt für das nächste Deployment, nicht für das gerade laufende.",
         "saved": "Deploy-Einstellungen gespeichert.",
         "saveFailed": "Diese Einstellungen konnten nicht gespeichert werden.",
-        "noPermission": "Ihre Rolle enthält nicht „Deployment“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+        "noPermission": "Ihre Rolle enthält nicht „Deployment“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "nothingToSave": "Nichts zu speichern",
         "branchPlaceholder": "main",
         "branchSearch": "Branches suchen…",
@@ -3688,10 +3688,10 @@
           "loading": "Branches werden aus dem Repository geladen…",
           "empty": "Das Repository hat keine Branches gemeldet — tippen Sie den Namen stattdessen ein.",
           "error": "Die Branches konnten nicht aus dem Repository geladen werden. Tippen Sie den Namen stattdessen ein.",
-          "unlinked": "Diese Website hat kein funktionierendes Git-Konto, daher lassen sich keine Branches auflisten. Verbinden Sie sie auf der Anwendungsseite neu."
+          "unlinked": "Diese Anwendung hat kein funktionierendes Git-Konto, daher lassen sich keine Branches auflisten. Verbinden Sie sie auf der Anwendungsseite neu."
         },
         "title": "Was bei einer Bereitstellung läuft",
-        "subtitle": "Der Branch, der ausgecheckt wird, und die Befehle, die die Website danach bauen."
+        "subtitle": "Der Branch, der ausgecheckt wird, und die Befehle, die die Anwendung danach bauen."
       },
       "history": {
         "empty": {
@@ -3700,15 +3700,15 @@
         },
         "noMessage": "Keine Commit-Nachricht",
         "system": "System",
-        "redeploy": "Erneut ausführen",
-        "redeployStarted": "Dieses Deployment wird erneut ausgeführt.",
-        "redeployFailed": "Dieses Deployment konnte nicht erneut ausgeführt werden.",
+        "redeploy": "Erneut deployen",
+        "redeployStarted": "Der neueste Code dieses Branches wird deployt.",
+        "redeployFailed": "Dieses Deployment konnte nicht gestartet werden.",
         "output": "Build-Protokoll",
         "copy": "Protokoll kopieren",
         "loadingLog": "Build-Protokoll wird geladen…",
         "noOutput": "Dieses Deployment hat keine Ausgabe erzeugt.",
         "logFailed": "Das Build-Protokoll konnte nicht geladen werden.",
-        "noPermission": "Ihre Rolle enthält nicht „Deployment“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+        "noPermission": "Ihre Rolle enthält nicht „Deployment“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "title": "Deploy-Verlauf",
         "subtitle": "Jedes Deployment, neueste zuerst. Öffnen Sie eines, um sein Build-Protokoll zu lesen."
       },
@@ -3720,14 +3720,14 @@
     },
     "files": {
       "pageTitle": "Dateien",
-      "pageSubtitle": "Durchsuchen, ansehen und bearbeiten Sie die Dateien dieser Website.",
+      "pageSubtitle": "Durchsuchen, ansehen und bearbeiten Sie die Dateien dieser Anwendung.",
       "loadFailed": "Die Dateien konnten nicht geladen werden.",
-      "provisioning": "Diese Website wird noch eingerichtet. Die Dateien stehen bereit, sobald sie läuft.",
-      "noPermission": "Ihre Rolle enthält nicht „Dateien“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "provisioning": "Diese Anwendung wird noch eingerichtet. Die Dateien stehen bereit, sobald sie läuft.",
+      "noPermission": "Ihre Rolle enthält nicht „Dateien“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "cancel": "Abbrechen",
       "saving": "Wird gespeichert…",
       "breadcrumbLabel": "Ordnerpfad",
-      "root": "Website-Wurzel",
+      "root": "Anwendungswurzel",
       "symlinkHint": "Symbolische Links werden von dieser Funktion nicht unterstützt.",
       "symlinkBrokenHint": "Dieser Link zeigt auf etwas, das nicht mehr existiert.",
       "notProvisioned": {
@@ -3772,9 +3772,9 @@
       "itemCount": "{count, plural, =0 {Keine Einträge} one {# Eintrag} other {# Einträge}}",
       "itemCountFiltered": "{shown} von {total} Einträgen",
       "siteSearch": {
-        "action": "Ganze Website nach „{query}“ durchsuchen",
-        "noResults": "Auf dieser Website passt nichts zu „{query}“.",
-        "failed": "Die Suche auf der Website ist fehlgeschlagen.",
+        "action": "Ganze Anwendung nach „{query}“ durchsuchen",
+        "noResults": "Auf dieser Anwendung passt nichts zu „{query}“.",
+        "failed": "Die Suche auf der Anwendung ist fehlgeschlagen.",
         "inFolder": "in {folder}"
       },
       "imagePreview": {
@@ -3840,7 +3840,7 @@
       },
       "targetDialog": {
         "pathLabel": "Pfad",
-        "rootPlaceholder": "Website-Wurzel",
+        "rootPlaceholder": "Anwendungswurzel",
         "pathLabelHint": "Wo die Datei abgelegt wird, ausgehend vom obersten Verzeichnis der Seite.",
         "destination": "Entpackt nach",
         "copyDestination": "Diesen Pfad kopieren"
@@ -3921,7 +3921,7 @@
       },
       "fixPermissions": {
         "action": "Berechtigungen korrigieren",
-        "title": "Dateiberechtigungen dieser Website zurücksetzen?",
+        "title": "Dateiberechtigungen dieser Anwendung zurücksetzen?",
         "description": "Setzt Besitzer und Berechtigungen jeder Datei und jedes Ordners auf die Standardwerte zurück.",
         "foldersLabel": "Ordner",
         "filesLabel": "Dateien",
@@ -3948,11 +3948,11 @@
         "archiveName": "Archivname",
         "moveTitle": "{count, plural, one {# Eintrag} other {# Einträge}} verschieben",
         "moveDescription": "Die Namen bleiben. Was dort schon liegt, bleibt unberührt und wird nicht überschrieben.",
-        "moveHint": "Pfad ab der Website-Wurzel, z. B. wp-content/keep",
+        "moveHint": "Pfad ab der Anwendungswurzel, z. B. wp-content/keep",
         "moveDone": "{count, plural, one {# Eintrag verschoben.} other {# Einträge verschoben.}}",
         "copyTitle": "{count, plural, one {# Eintrag} other {# Einträge}} kopieren",
         "copyDescription": "Die Namen bleiben. Was dort schon liegt, bleibt unberührt und wird nicht überschrieben.",
-        "copyHint": "Pfad ab der Website-Wurzel, z. B. wp-content/keep",
+        "copyHint": "Pfad ab der Anwendungswurzel, z. B. wp-content/keep",
         "copyDone": "{count, plural, one {# Eintrag kopiert.} other {# Einträge kopiert.}}",
         "compressTitle": "{count, plural, one {# Eintrag} other {# Einträge}} komprimieren",
         "compressDescription": "Ein Archiv mit den Namen, wie sie jetzt sind.",
@@ -4017,7 +4017,7 @@
         "batchEmptied": "Endgültig gelöscht.",
         "emptyFailed": "Der Papierkorb konnte nicht geleert werden.",
         "itemCount": "{count, plural, one {# Eintrag} other {# Einträge}}",
-        "noPermission": "Ihre Rolle enthält nicht „Dateien“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+        "noPermission": "Ihre Rolle enthält nicht „Dateien“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "loadFailed": "Der Papierkorb konnte nicht geladen werden.",
         "cancel": "Abbrechen",
         "confirmSubmit": "Endgültig löschen",
@@ -4034,7 +4034,7 @@
           "description": "Diese werden auf dem Server vernichtet. Das lässt sich nicht zurücknehmen."
         },
         "deletedAt": "Gelöscht",
-        "siteRoot": "Website-Wurzel",
+        "siteRoot": "Anwendungswurzel",
         "holding": "Belegt {size} Speicher",
         "retention": "{days, plural, one {Wird nach # Tag automatisch entfernt} other {Wird nach # Tagen automatisch entfernt}}"
       },
@@ -4070,11 +4070,11 @@
     },
     "workers": {
       "pageTitle": "Worker",
-      "pageSubtitle": "Halten Sie lang laufende Prozesse — Queue-Worker, Horizon oder Ihren eigenen Befehl — für diese Website am Laufen.",
+      "pageSubtitle": "Halten Sie lang laufende Prozesse — Queue-Worker, Horizon oder Ihren eigenen Befehl — für diese Anwendung am Laufen.",
       "loadFailed": "Die Worker konnten nicht geladen werden.",
-      "provisioning": "Diese Website wird noch eingerichtet. Die Worker stehen bereit, sobald sie läuft.",
+      "provisioning": "Diese Anwendung wird noch eingerichtet. Die Worker stehen bereit, sobald sie läuft.",
       "addWorker": "Worker hinzufügen",
-      "noPermission": "Ihre Rolle enthält nicht „Worker“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "noPermission": "Ihre Rolle enthält nicht „Worker“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "cancel": "Abbrechen",
       "saving": "Wird gespeichert…",
       "empty": {
@@ -4098,7 +4098,7 @@
       "noRestartOnDeployTag": "Startet nach dem Deployment nicht neu",
       "noAutoRestartTag": "Startet nach einem Stopp nicht neu",
       "addedAgo": "Hinzugefügt {time}",
-      "customDirectoryTooltip": "Läuft aus {path} statt aus dem Document-Root der Website.",
+      "customDirectoryTooltip": "Läuft aus {path} statt aus dem Document-Root der Anwendung.",
       "busy": {
         "start": "Wird gestartet…",
         "stop": "Wird gestoppt…",
@@ -4162,7 +4162,7 @@
         "nameHint": "Eine kurze Bezeichnung, an der Sie diesen Worker erkennen.",
         "useTemplate": "Vorlage verwenden",
         "command": "Befehl",
-        "commandHint": "Läuft als der eigene Benutzer dieser Website. supervisord führt den Befehl direkt aus, nicht über eine Shell.",
+        "commandHint": "Läuft als der eigene Benutzer dieser Anwendung. supervisord führt den Befehl direkt aus, nicht über eine Shell.",
         "processes": "Prozesse",
         "processesHint": "Wie viele Kopien gleichzeitig laufen, um mehr Jobs parallel abzuarbeiten.",
         "restartOnDeploy": "Nach dem Deployment neu starten",
@@ -4173,8 +4173,8 @@
         "enabledHint": "Ausschalten, um den Worker konfiguriert zu lassen, ohne ihn laufen zu lassen.",
         "advanced": "Erweiterte Einstellungen",
         "directory": "Arbeitsverzeichnis",
-        "directoryPlaceholder": "Standard ist der Code-Ordner der Website",
-        "directoryHint": "Von wo aus der Befehl läuft. Leer lassen, um den Code-Ordner der Website zu nutzen — bei den meisten Frameworks ist das der Ordner mit dem Code der Website, nicht der, den der Webserver ausliefert.",
+        "directoryPlaceholder": "Standard ist der Code-Ordner der Anwendung",
+        "directoryHint": "Von wo aus der Befehl läuft. Leer lassen, um den Code-Ordner der Anwendung zu nutzen — bei den meisten Frameworks ist das der Ordner mit dem Code der Anwendung, nicht der, den der Webserver ausliefert.",
         "stopWaitSeconds": "Stopp-Zeitlimit (Sekunden)",
         "stopWaitSecondsHint": "Wie lange er zu Ende bringen darf, woran er arbeitet, bevor er zum Stopp gezwungen wird.",
         "conflict": {
@@ -4183,7 +4183,7 @@
         },
         "user": "Als Benutzer ausführen",
         "userPlaceholder": "deploy",
-        "userHint": "Leer lassen, um als der eigene Benutzer dieser Website zu laufen — das ist fast immer richtig.",
+        "userHint": "Leer lassen, um als der eigene Benutzer dieser Anwendung zu laufen — das ist fast immer richtig.",
         "logFile": "Protokolldatei",
         "logFilePlaceholder": "/var/log/my-worker.log",
         "logFileHint": "Absoluter Pfad, und er darf kein .. enthalten — leer lassen, dann wählt supervisord einen.",
@@ -4212,7 +4212,7 @@
           "custom": "Eigener"
         }
       },
-      "runsAsTooltip": "Läuft als {user}, nicht als der eigene Benutzer dieser Website.",
+      "runsAsTooltip": "Läuft als {user}, nicht als der eigene Benutzer dieser Anwendung.",
       "supervisor": {
         "missing": "Supervisor ist auf diesem Server nicht installiert. Worker laufen darunter, daher kann keiner starten, bevor er installiert ist.",
         "install": "Supervisor installieren",
@@ -4222,18 +4222,18 @@
     },
     "security": {
       "pageTitle": "Passwortschutz",
-      "pageSubtitle": "Verlangen Sie Benutzername und Passwort, bevor jemand diese Website ansehen kann.",
+      "pageSubtitle": "Verlangen Sie Benutzername und Passwort, bevor jemand diese Anwendung ansehen kann.",
       "loadFailed": "Das konnte nicht geladen werden.",
-      "provisioning": "Diese Website wird noch eingerichtet. Der Passwortschutz steht bereit, sobald sie läuft.",
+      "provisioning": "Diese Anwendung wird noch eingerichtet. Der Passwortschutz steht bereit, sobald sie läuft.",
       "statusProtected": "Geschützt",
       "statusNotProtected": "Nicht geschützt",
       "enable": "Passwort verlangen",
-      "enableHint": "Besucher müssen sich mit den Daten unten anmelden, bevor sie die Website sehen können.",
+      "enableHint": "Besucher müssen sich mit den Daten unten anmelden, bevor sie die Anwendung sehen können.",
       "whenToUseTitle": "Wann Sie das nutzen",
-      "whenToUseBody": "Gut für eine Staging-Website, ein laufendes Redesign oder eine Kundenvorschau, die vor dem Start nicht gefunden werden soll. Schalten Sie es ab, sobald die Website für die Öffentlichkeit bereit ist.",
-      "warning": "Das schützt die ganze Website, nicht nur einen Adminbereich — Suchmaschinen, Uptime-Monitore und jede Integration auf dieser Domain werden ebenfalls blockiert, bis sie die Zugangsdaten haben. Wenn das Probleme macht, können Sie es hier jederzeit ausschalten.",
-      "credentialsNote": "Das erstellt einen neuen Login nur für diese Website — getrennt von Ihrem {brand}-Konto. Besucher sehen die schlichte Anmeldeaufforderung ihres Browsers, keine gestaltete Seite.",
-      "disabledHint": "Die Website ist öffentlich erreichbar — jeder kann sie ansehen.",
+      "whenToUseBody": "Gut für eine Staging-Anwendung, ein laufendes Redesign oder eine Kundenvorschau, die vor dem Start nicht gefunden werden soll. Schalten Sie es ab, sobald die Anwendung für die Öffentlichkeit bereit ist.",
+      "warning": "Das schützt die ganze Anwendung, nicht nur einen Adminbereich — Suchmaschinen, Uptime-Monitore und jede Integration auf dieser Domain werden ebenfalls blockiert, bis sie die Zugangsdaten haben. Wenn das Probleme macht, können Sie es hier jederzeit ausschalten.",
+      "credentialsNote": "Das erstellt einen neuen Login nur für diese Anwendung — getrennt von Ihrem {brand}-Konto. Besucher sehen die schlichte Anmeldeaufforderung ihres Browsers, keine gestaltete Seite.",
+      "disabledHint": "Die Anwendung ist öffentlich erreichbar — jeder kann sie ansehen.",
       "unsupportedForType": "Diese Anwendung meldet sich über den Authorization-Header an, den HTTP nur einmal pro Anfrage erlaubt. Der Passwortschutz würde ihn belegen und die Anwendung unerreichbar machen. Sie verlangt bereits eigene Zugangsdaten.",
       "username": "Benutzername",
       "usernamePlaceholder": "z. B. admin",
@@ -4245,20 +4245,20 @@
       "saving": "Wird gespeichert…",
       "savingNote": "Das kann einige Sekunden dauern — der Webserver wird neu geladen.",
       "discard": "Verwerfen",
-      "noPermission": "Ihre Rolle enthält nicht „Passwortschutz“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "noPermission": "Ihre Rolle enthält nicht „Passwortschutz“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "nothingToSave": "Nichts zu speichern",
       "enabledToast": "Der Passwortschutz ist an.",
-      "disabledToast": "Der Passwortschutz ist aus — die Website ist wieder öffentlich.",
+      "disabledToast": "Der Passwortschutz ist aus — die Anwendung ist wieder öffentlich.",
       "savedCredentials": "Sichern Sie diese jetzt — sie werden nicht wieder angezeigt:",
-      "openSite": "Website öffnen",
+      "openSite": "Anwendung öffnen",
       "showPassword": "Passwort anzeigen",
       "hidePassword": "Passwort verbergen"
     },
     "botBlocker": {
       "pageTitle": "KI-Bot-Blocker",
-      "pageSubtitle": "Wählen Sie, welche KI-Bots diese Website lesen dürfen.",
+      "pageSubtitle": "Wählen Sie, welche KI-Bots diese Anwendung lesen dürfen.",
       "loadFailed": "Das konnte nicht geladen werden.",
-      "provisioning": "Diese Website wird noch eingerichtet. Der KI-Bot-Blocker steht bereit, sobald sie läuft.",
+      "provisioning": "Diese Anwendung wird noch eingerichtet. Der KI-Bot-Blocker steht bereit, sobald sie läuft.",
       "explainer": "KI-Bots sind automatische Besucher von KI-Firmen. Manche kopieren nur Ihre Inhalte; andere können Ihnen echte Besucher schicken.",
       "activeNow": "Jetzt aktiv",
       "chooseLabel": "Wählen, was erlaubt ist",
@@ -4268,13 +4268,13 @@
       "showBots": "Die {count} Bots ansehen, die das blockiert",
       "hideBots": "Liste ausblenden",
       "traffic": {
-        "title": "KI-Bots, die diese Website besucht haben",
-        "subtitle": "Aus dem Zugriffsprotokoll dieser Website gelesen.",
+        "title": "KI-Bots, die diese Anwendung besucht haben",
+        "subtitle": "Aus dem Zugriffsprotokoll dieser Anwendung gelesen.",
         "range": "{days} Tage",
-        "unavailable": "Das Zugriffsprotokoll dieser Website konnte nicht gelesen werden, daher gibt es noch nichts zu zeigen. Das ist nicht dasselbe wie „keine Bots waren da“.",
+        "unavailable": "Das Zugriffsprotokoll dieser Anwendung konnte nicht gelesen werden, daher gibt es noch nichts zu zeigen. Das ist nicht dasselbe wie „keine Bots waren da“.",
         "empty": "In den letzten {days} Tagen war kein KI-Bot hier.",
         "summary": "{bots, plural, one {# Bot} other {# Bots}} · {hits, plural, one {# Anfrage} other {# Anfragen}} · {blocked, plural, other {# blockiert}}",
-        "partial": "Nur der neueste Teil des Protokolls wurde durchsucht, bei viel besuchten Websites können es also mehr gewesen sein.",
+        "partial": "Nur der neueste Teil des Protokolls wurde durchsucht, bei viel besuchten Anwendungen können es also mehr gewesen sein.",
         "blocked": "Blockiert",
         "allowed": "Kommt durch",
         "columns": {
@@ -4316,11 +4316,11 @@
         "errors": {
           "invalid": "Verwenden Sie den User-Agent-Namen des Bots — nur Buchstaben, Ziffern, Punkte und Bindestriche.",
           "tooBroad": "Das würde auch gewöhnliche Crawler treffen, darunter den von Google. Verwenden Sie den vollen Namen des Bots.",
-          "searchEngine": "Das ist eine Suchmaschine, kein KI-Crawler — sie zu blockieren nimmt die Website aus den Suchergebnissen.",
+          "searchEngine": "Das ist eine Suchmaschine, kein KI-Crawler — sie zu blockieren nimmt die Anwendung aus den Suchergebnissen.",
           "duplicate": "Dieser Bot steht schon auf der Liste.",
           "limit": "Mehr Bots kann diese Liste nicht aufnehmen."
         },
-        "noPermission": "Ihre Rolle enthält nicht „KI-Bot-Blocker“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum."
+        "noPermission": "Ihre Rolle enthält nicht „KI-Bot-Blocker“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum."
       },
       "howItWorks": "Ihre robots.txt wird nicht geändert, und Google sowie echte Besucher sind nicht betroffen.",
       "save": "Speichern",
@@ -4329,17 +4329,17 @@
       "discard": "Verwerfen",
       "saved": "KI-Bot-Einstellungen gespeichert.",
       "saveFailed": "Das konnte nicht gespeichert werden.",
-      "noPermission": "Ihre Rolle enthält nicht „KI-Bot-Blocker“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "noPermission": "Ihre Rolle enthält nicht „KI-Bot-Blocker“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "nothingToSave": "Nichts zu speichern"
     },
     "firewall": {
       "pageTitle": "Web-Firewall",
-      "pageSubtitle": "Weist verbreitete Angriffe ab, bevor sie diese Website erreichen.",
+      "pageSubtitle": "Weist verbreitete Angriffe ab, bevor sie diese Anwendung erreichen.",
       "loadFailed": "Das konnte nicht geladen werden.",
-      "provisioning": "Diese Website wird noch eingerichtet. Die Firewall steht bereit, sobald sie läuft.",
-      "explainer": "Die Firewall prüft jede Anfrage auf Muster, die bei Angriffen vorkommen, und kann sie abweisen, bevor Ihre Website Code ausführt.",
+      "provisioning": "Diese Anwendung wird noch eingerichtet. Die Firewall steht bereit, sobald sie läuft.",
+      "explainer": "Die Firewall prüft jede Anfrage auf Muster, die bei Angriffen vorkommen, und kann sie abweisen, bevor Ihre Anwendung Code ausführt.",
       "openlitespeed": "Auf diesem Server läuft OpenLiteSpeed, wo diese Regeln noch nicht angewendet werden. Ihre Einstellungen werden gespeichert, geprüft wird aber nichts, bis die Unterstützung dafür kommt.",
-      "enable": "Diese Website schützen",
+      "enable": "Diese Anwendung schützen",
       "statusOff": "Aus",
       "statusWatching": "Nur beobachten",
       "statusBlocking": "Blockiert",
@@ -4347,24 +4347,24 @@
       "watchingHint": "Verdächtige Anfragen werden aufgezeichnet, aber weiterhin durchgelassen.",
       "blockingHint": "Verdächtige Anfragen werden abgewiesen.",
       "whenToUseTitle": "Wann Sie das nutzen",
-      "whenToUseBody": "Für jede öffentliche Website lohnt es sich. Beginnen Sie einige Tage mit dem Beobachten — so sehen Sie, ob es etwas Echtes gestoppt hätte, bevor es zu blockieren beginnt.",
+      "whenToUseBody": "Für jede öffentliche Anwendung lohnt es sich. Beginnen Sie einige Tage mit dem Beobachten — so sehen Sie, ob es etwas Echtes gestoppt hätte, bevor es zu blockieren beginnt.",
       "modeLabel": "Was soll mit einer verdächtigen Anfrage passieren?",
       "modeDetectHint": "Es wird nichts blockiert. Treffer werden in ein Protokoll geschrieben, damit Sie zuerst auf Fehlalarme prüfen können.",
       "modeEnforceHint": "Passende Anfragen werden sofort abgewiesen. Wechseln Sie hierher, sobald das Beobachten sauber aussieht.",
       "categoriesLabel": "Was geprüft wird",
-      "categoriesHint": "Schalten Sie eine Prüfung ab, wenn sie etwas Legitimem auf Ihrer Website im Weg steht.",
+      "categoriesHint": "Schalten Sie eine Prüfung ab, wenn sie etwas Legitimem auf Ihrer Anwendung im Weg steht.",
       "categoryHints": {
         "query_string": "Angriffscode, versteckt im Teil eines Links nach dem Zeichen ?.",
         "request_uri": "Anfragen nach Dateien und Pfaden, nach denen nur Angreifer suchen.",
         "user_agent": "Besucher, die sich als bekannte Scanner und Angriffswerkzeuge ausgeben.",
         "referrer": "Verkehr, der vorgibt, von Spam- und Malware-Seiten zu kommen.",
-        "cookie": "Manipulierte Cookies, mit denen Code an Ihrer Website vorbeigeschmuggelt wird.",
+        "cookie": "Manipulierte Cookies, mit denen Code an Ihrer Anwendung vorbeigeschmuggelt wird.",
         "method": "Arten, eine Anfrage zu senden, die ein normaler Browser nie verwendet."
       },
       "lastCategory": "Mindestens eine Prüfung muss an bleiben. Um gar nicht mehr zu prüfen, schalten Sie die Firewall aus.",
       "advanced": "Feinabstimmung",
       "exceptionsTitle": "Diese durchlassen",
-      "exceptionsHint": "Eine Anfrage, die eines dieser Wörter enthält, überspringt jede Prüfung — verglichen wird mit der Webadresse, dem Teil nach dem ? und dem Browsernamen. Halten Sie sie spezifisch: ein kurzes oder häufiges Wort schaltet die Firewall auf großen Teilen Ihrer Website ab.",
+      "exceptionsHint": "Eine Anfrage, die eines dieser Wörter enthält, überspringt jede Prüfung — verglichen wird mit der Webadresse, dem Teil nach dem ? und dem Browsernamen. Halten Sie sie spezifisch: ein kurzes oder häufiges Wort schaltet die Firewall auf großen Teilen Ihrer Anwendung ab.",
       "exceptionsPlaceholder": "z. B. mein-plugin-name",
       "exceptionsEmpty": "Es wird nichts durchgelassen.",
       "blocksTitle": "Diese immer blockieren",
@@ -4384,7 +4384,7 @@
       "discard": "Verwerfen",
       "saved": "Firewall-Einstellungen gespeichert.",
       "saveFailed": "Das konnte nicht gespeichert werden.",
-      "noPermission": "Ihre Rolle enthält nicht „Web-Firewall“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "noPermission": "Ihre Rolle enthält nicht „Web-Firewall“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "nothingToSave": "Nichts zu speichern",
       "detectCaught": "{count, plural, one {# Anfrage wäre bisher blockiert worden} other {# Anfragen wären bisher blockiert worden}}.",
       "detectNothingYet": "Bisher wurde nichts erfasst.",
@@ -4397,9 +4397,9 @@
       }
     },
     "clone": {
-      "pageTitle": "Website klonen",
+      "pageTitle": "Anwendung klonen",
       "pageSubtitle": "Erstellen Sie eine eigenständige Kopie von {name} unter einer neuen Domain.",
-      "loadFailed": "Diese Website konnte nicht geladen werden.",
+      "loadFailed": "Diese Anwendung konnte nicht geladen werden.",
       "failed": "Der Klon konnte nicht gestartet werden.",
       "what": {
         "title": "Was kopiert wird",
@@ -4425,11 +4425,11 @@
       "form": {
         "domain": "Domain für die Kopie",
         "domainPlaceholder": "kopie.example.com",
-        "submit": "Website-Kopie erstellen",
-        "noPermission": "Ihre Rolle enthält nicht „Website klonen“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+        "submit": "Anwendungskopie erstellen",
+        "noPermission": "Ihre Rolle enthält nicht „Anwendung klonen“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "defaultName": "{name} (Klon)",
         "name": "Name der Kopie",
-        "domainTaken": "Eine Website auf diesem Server nutzt diese Domain schon."
+        "domainTaken": "Eine Anwendung auf diesem Server nutzt diese Domain schon."
       },
       "create": {
         "title": "Kopie erstellen",
@@ -4441,16 +4441,16 @@
       },
       "blocked": {
         "provisioning": {
-          "title": "Diese Website wird noch eingerichtet",
+          "title": "Diese Anwendung wird noch eingerichtet",
           "body": "Es gibt noch nichts zu kopieren. Sobald das fertig ist, können Sie sie hier klonen."
         },
         "noRecipe": {
-          "title": "Dieser Website-Typ lässt sich noch nicht klonen",
+          "title": "Dieser Anwendungstyp lässt sich noch nicht klonen",
           "body": "{type} speichert seine Adresse in der eigenen Datenbank, und das Verfahren, das sicher umzuschreiben, ist noch nicht gebaut. Heute lässt sich nur WordPress samt Datenbank kopieren."
         },
         "sourceFailed": {
-          "title": "Diese Website wurde nicht fertig eingerichtet",
-          "body": "Es gibt nichts Vollständiges zu kopieren. Bringen Sie zuerst das Original in Ordnung — eine Kopie einer halb gebauten Website würde dasselbe Problem erben."
+          "title": "Diese Anwendung wurde nicht fertig eingerichtet",
+          "body": "Es gibt nichts Vollständiges zu kopieren. Bringen Sie zuerst das Original in Ordnung — eine Kopie einer halb gebauten Anwendung würde dasselbe Problem erben."
         }
       },
       "result": {
@@ -4459,7 +4459,7 @@
           "subtitle": "Vier Dinge, die die Kopie nicht erbt.",
           "items": {
             "ssl": {
-              "title": "SSL-Zertifikat ausstellen",
+              "title": "SSL einrichten",
               "body": "Bis dahin wird die Kopie über einfaches HTTP ausgeliefert."
             },
             "backups": {
@@ -4485,7 +4485,7 @@
         }
       },
       "copies": {
-        "title": "{count, plural, one {Eine Kopie dieser Website erstellt} other {# Kopien dieser Website erstellt}}",
+        "title": "{count, plural, one {Eine Kopie dieser Anwendung erstellt} other {# Kopien dieser Anwendung erstellt}}",
         "made": "erstellt {when}"
       },
       "progress": {
@@ -4499,10 +4499,10 @@
         "stalledBody": "Er hat seit 20 Minuten keinen Fortschritt gemeldet. Möglicherweise läuft er noch, oder der Job ist gestoppt. Prüfen Sie erneut oder bitten Sie die Person, die diesen Server verwaltet, nachzusehen.",
         "checkAgain": "Erneut prüfen",
         "doneTitle": "Die Kopie ist bereit",
-        "doneBody": "Sie ist jetzt eine völlig eigenständige Website.",
+        "doneBody": "Sie ist jetzt eine völlig eigenständige Anwendung.",
         "completedBadge": "Abgeschlossen",
-        "source": "Ursprungs-Website",
-        "destination": "Neue Website",
+        "source": "Ursprungs-Anwendung",
+        "destination": "Neue Anwendung",
         "duration": "Fertig in {duration}",
         "finished": "Abgeschlossen {when}",
         "name": "Name",
@@ -4517,7 +4517,7 @@
         "tryAgain": "Erneut versuchen",
         "target": "Wird nach {domain} kopiert",
         "steps": {
-          "provisioning": "Website wird erstellt",
+          "provisioning": "Anwendung wird erstellt",
           "copying_files": "Dateien werden kopiert",
           "cloning_database": "Datenbank wird geklont",
           "starting_process": "Anwendung wird gestartet"
@@ -4526,32 +4526,32 @@
       "warnings": {
         "dns": "Richten Sie die neue Domain auf diesen Server, bevor Sie ein Zertifikat ausstellen — solange das DNS nicht auflöst, wird die Kopie über einfaches HTTP ausgeliefert.",
         "password": "Der Passwortschutz wird nicht kopiert. Die Kopie ist öffentlich, bis Sie ihn einschalten.",
-        "time": "Eine große Website braucht einige Minuten zum Kopieren."
+        "time": "Eine große Anwendung braucht einige Minuten zum Kopieren."
       },
       "confirm": {
         "title": "Kopie von {name} erstellen?",
-        "body": "Die Original-Website bleibt unverändert.",
+        "body": "Die Original-Anwendung bleibt unverändert.",
         "source": "Kopie von",
         "domain": "Neue Domain",
         "name": "Name",
         "cancel": "Abbrechen"
       },
-      "noPermission": "Ihre Rolle enthält nicht „Website klonen“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum."
+      "noPermission": "Ihre Rolle enthält nicht „Anwendung klonen“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum."
     },
     "php": {
       "pageTitle": "PHP-Einstellungen",
-      "pageSubtitle": "Die PHP-Version und die Limits, mit denen diese Website läuft.",
+      "pageSubtitle": "Die PHP-Version und die Limits, mit denen diese Anwendung läuft.",
       "loadFailed": "Diese Einstellungen konnten nicht geladen werden.",
-      "provisioning": "Diese Website wird noch eingerichtet. Ihre PHP-Einstellungen erscheinen, sobald das fertig ist.",
+      "provisioning": "Diese Anwendung wird noch eingerichtet. Ihre PHP-Einstellungen erscheinen, sobald das fertig ist.",
       "saved": "PHP-Einstellungen gespeichert.",
       "saveFailed": "Die Einstellungen konnten nicht gespeichert werden.",
       "savingNote": "PHP wird angewendet und neu geladen…",
-      "noPermission": "Ihre Rolle enthält nicht „PHP-Einstellungen“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "noPermission": "Ihre Rolle enthält nicht „PHP-Einstellungen“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "nothingToSave": "Nichts hat sich geändert",
       "versionLabel": "PHP {version}",
       "presetsLabel": "Worker-Voreinstellungen",
       "useSuggested": "Empfohlene Liste verwenden",
-      "unmanaged": "Die PHP-Pool-Datei dieser Website wurde von Hand bearbeitet. Hier zu speichern ersetzt sie durch die Version des Panels, und diese Änderungen gehen verloren.",
+      "unmanaged": "Die PHP-Pool-Datei dieser Anwendung wurde von Hand bearbeitet. Hier zu speichern ersetzt sie durch die Version des Panels, und diese Änderungen gehen verloren.",
       "fields": {
         "version": "PHP-Version",
         "upload": "Größte Datei, die jemand hochladen darf",
@@ -4561,7 +4561,7 @@
         "memory": "Speicher, den eine Anfrage nutzen darf",
         "children": "PHP-Worker-Prozesse",
         "inputVars": "Felder, die ein Formular enthalten darf",
-        "openBasedir": "PHP im Ordner dieser Website halten",
+        "openBasedir": "PHP im Ordner dieser Anwendung halten",
         "allowUrlFopen": "PHP darf entfernte URLs öffnen",
         "disableFunctions": "Gesperrte PHP-Funktionen",
         "pmType": "Wie Worker starten",
@@ -4581,11 +4581,11 @@
         "maxRequests": "Schützt vor langsamen Speicherlecks. 0 startet nie neu.",
         "sessionLifetime": "Sekunden, die eine Sitzungsdatei behalten wird, bevor sie aufgeräumt werden darf.",
         "timezone": "Betrifft nur Datumsangaben, die PHP erzeugt, nicht die Serveruhr.",
-        "autoPrepend": "Ein Pfad innerhalb dieser Website. Leer lassen, sofern Ihnen nichts anderes gesagt wurde.",
+        "autoPrepend": "Ein Pfad innerhalb dieser Anwendung. Leer lassen, sofern Ihnen nichts anderes gesagt wurde.",
         "directives": "Eine pro Zeile, wie in einer php.ini. Was hier steht, gewinnt gegen die Felder oben.",
-        "openBasedir": "Verhindert, dass PHP Dateien außerhalb des Ordners dieser Website liest oder schreibt.",
+        "openBasedir": "Verhindert, dass PHP Dateien außerhalb des Ordners dieser Anwendung liest oder schreibt.",
         "allowUrlFopen": "Erlaubt PHP, entfernte URLs abzurufen. Ausschalten blockiert einen verbreiteten Weg, auf dem Malware nach Hause telefoniert.",
-        "upload": "Hebt auch das eigene Limit des Webservers an, der große Uploads ablehnt, bevor PHP sie sieht. Eine früher eingerichtete Website übernimmt das beim ersten Speichern.",
+        "upload": "Hebt auch das eigene Limit des Webservers an, der große Uploads ablehnt, bevor PHP sie sieht. Eine früher eingerichtete Anwendung übernimmt das beim ersten Speichern.",
         "version": "Die PHP-Version, auf der diese Seite läuft. Neuer ist schneller und besser unterstützt, aber eine sehr alte Seite funktioniert möglicherweise nicht darauf. Ändern Sie sie und prüfen Sie, ob die Seite weiterhin lädt.",
         "memory": "Wie viel Speicher ein Seitenaufruf nutzen darf, bevor PHP aufgibt. Erhöhen Sie den Wert, wenn „allowed memory size exhausted“ erscheint.",
         "executionTime": "Wie viele Sekunden PHP eine Seite laufen lässt, bevor es sie abbricht. Erhöhen Sie den Wert für Importe und Sicherungen; belassen Sie ihn für gewöhnliche Seiten niedrig.",
@@ -4599,22 +4599,22 @@
         "static": "Immer laufend"
       },
       "isolation": {
-        "offTitle": "Diese Website hat keinen eigenen PHP-Pool",
-        "offBody": "Sie läuft unter dem Konto des Webservers, geteilt mit jeder anderen Website, daher lassen sich Limits pro Website nicht anwenden.",
+        "offTitle": "Diese Anwendung hat keinen eigenen PHP-Pool",
+        "offBody": "Sie läuft unter dem Konto des Webservers, geteilt mit jeder anderen Anwendung, daher lassen sich Limits pro Anwendung nicht anwenden.",
         "runsAs": "läuft als {user}",
         "sharedBadge": "Geteiltes PHP · läuft als {user}",
-        "isolateAction": "Dieser Website eigenes PHP geben",
-        "isolateHelper": "Erstellt einen PHP-FPM-Pool für diese Website und stellt sie auf einen eigenen Benutzer um. Dateien und Datenbank der Website bleiben unverändert.",
-        "required": "Geben Sie dieser Website zuerst eigenes PHP",
-        "isolated": "Diese Website hat jetzt ihr eigenes PHP.",
+        "isolateAction": "Dieser Anwendung eigenes PHP geben",
+        "isolateHelper": "Erstellt einen PHP-FPM-Pool für diese Anwendung und stellt sie auf einen eigenen Benutzer um. Dateien und Datenbank der Anwendung bleiben unverändert.",
+        "required": "Geben Sie dieser Anwendung zuerst eigenes PHP",
+        "isolated": "Diese Anwendung hat jetzt ihr eigenes PHP.",
         "failed": "Das konnte nicht ausgeführt werden.",
         "unsupportedTitle": "Auf diesem Webserver nicht verfügbar",
-        "unsupportedBody": "OpenLiteSpeed startet PHP selbst und hat keine Pools pro Website, daher lassen sich diese Einstellungen hier nicht anwenden."
+        "unsupportedBody": "OpenLiteSpeed startet PHP selbst und hat keine Pools pro Anwendung, daher lassen sich diese Einstellungen hier nicht anwenden."
       },
       "budget": {
         "available": "{value} von {total} noch frei",
         "over": "Mehr als die {total} dieses Servers",
-        "legend": "{sites, plural, =0 {Keine andere Website nutzt Speicher} one {Eine andere Website hat {value} beansprucht} other {# andere Websites haben {value} beansprucht}}",
+        "legend": "{sites, plural, =0 {Keine andere Anwendung nutzt Speicher} one {Eine andere Anwendung hat {value} beansprucht} other {# andere Anwendungen haben {value} beansprucht}}",
         "equation": "{limit} × {workers} Worker = {total} bei voller Last",
         "overDetail": "{required} erforderlich, aber dieser Server hat {total}. Senken Sie das Speicherlimit oder die Zahl der Worker."
       },
@@ -4642,19 +4642,19 @@
           "security": "PHP-Sicherheit abriegeln",
           "directives": "Erweiterte PHP-Direktiven feinjustieren"
         },
-        "versionHint": "Die PHP-Version steht in der Webserver-Konfiguration der Website, sie lässt sich also ohne Pool ändern."
+        "versionHint": "Die PHP-Version steht in der Webserver-Konfiguration der Anwendung, sie lässt sich also ohne Pool ändern."
       },
       "blocked": {
-        "description": "PHP führt diese nicht aus. Die meisten Websites brauchen sie nie — es sind die, nach denen ein Angreifer zuerst greift.",
+        "description": "PHP führt diese nicht aus. Die meisten Anwendungen brauchen sie nie — es sind die, nach denen ein Angreifer zuerst greift.",
         "count": "{count, plural, =0 {Nichts ist gesperrt} one {# Funktion gesperrt} other {# Funktionen gesperrt}}",
         "addPlaceholder": "Funktion hinzufügen, z. B. eval",
         "add": "Hinzufügen",
         "remove": "{name} entfernen",
-        "empty": "Nichts ist gesperrt. Jede PHP-Funktion, die auf dieser Website installiert ist, darf laufen.",
+        "empty": "Nichts ist gesperrt. Jede PHP-Funktion, die auf dieser Anwendung installiert ist, darf laufen.",
         "presetsLabel": "Beginnen mit",
         "presetsCustom": "Ihre eigene Liste."
       },
-      "saveNote": "Beim Speichern wird der PHP-Pool dieser Website neu geschrieben und neu geladen. Laufende Anfragen werden vorher beendet.",
+      "saveNote": "Beim Speichern wird der PHP-Pool dieser Anwendung neu geschrieben und neu geladen. Laufende Anfragen werden vorher beendet.",
       "tabs": {
         "basic": "Grundeinstellungen",
         "security": "Sicherheit",
@@ -4665,21 +4665,21 @@
         "runtime": "Laufzeit",
         "limits": "Anfragelimits"
       },
-      "advancedNote": "Diese ändern, wie PHP-FPM diese Website betreibt. Die Standardwerte passen für fast jede Website — ändern Sie sie nur, wenn Sie wissen, warum.",
+      "advancedNote": "Diese ändern, wie PHP-FPM diese Anwendung betreibt. Die Standardwerte passen für fast jede Anwendung — ändern Sie sie nur, wenn Sie wissen, warum.",
       "presetsCustom": "Eigene — keine der Voreinstellungen oben.",
       "reset": "Zurücksetzen",
       "resetDone": "Zurück auf den Standard.",
       "resetFailed": "Diese Einstellung konnte nicht zurückgesetzt werden.",
       "basedir": {
-        "offHint": "PHP kann jede Datei öffnen, die der Linux-Benutzer dieser Website erreicht.",
+        "offHint": "PHP kann jede Datei öffnen, die der Systembenutzer dieser Anwendung erreicht.",
         "previewTrigger": "Was das Einschalten erlauben würde",
         "previewLabel": "PHP wäre auf diese Ordner begrenzt",
         "alwaysLabel": "Immer enthalten",
-        "alwaysHint": "Wird bei jedem Speichern ergänzt. Ohne diese kann die Website nicht laufen.",
+        "alwaysHint": "Wird bei jedem Speichern ergänzt. Ohne diese kann die Anwendung nicht laufen.",
         "extraLabel": "Zusätzliche Ordner",
         "extraPlaceholder": "/var/www/shared-uploads",
         "extraHint": "Einer pro Zeile. Nur vollständige Pfade, beginnend mit /.",
-        "unknown": "Diese Website hat noch keine PHP-Pool-Datei, daher lässt sich der aktuelle Wert nicht lesen.",
+        "unknown": "Diese Anwendung hat noch keine PHP-Pool-Datei, daher lässt sich der aktuelle Wert nicht lesen.",
         "disagrees": "Der Server setzt etwas anderes durch als das, was hier gespeichert ist.",
         "disagreesWhy": "Entweder wurde die Pool-Datei von Hand bearbeitet, oder eine open_basedir-Zeile unter „Zusätzliche Direktiven“ überschreibt diese.",
         "liveLabel": "Was der Server derzeit durchsetzt"
@@ -4694,24 +4694,24 @@
       "sessionGcMaxlifetimePlaceholder": "1440",
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
-      "versionUnsupported": "{type} unterstützt PHP {range}. Diese Website auf eine andere Version zu bringen macht sie wahrscheinlich kaputt.",
+      "versionUnsupported": "{type} unterstützt PHP {range}. Diese Anwendung auf eine andere Version zu bringen macht sie wahrscheinlich kaputt.",
       "presetsLabelHint": "Fertige Einstellungen, zugeschnitten auf kleine, mittlere und große Seiten. Ein Ausgangspunkt — Sie können danach jeden Wert weiterhin ändern."
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
-      "pageSubtitle": "Sperrt Adressen, die diese Website immer wieder angreifen.",
-      "loadFailed": "Der Schutz dieser Website konnte nicht geprüft werden.",
-      "provisioning": "Diese Website wird noch eingerichtet. Schutz lässt sich hinzufügen, sobald das fertig ist.",
+      "pageSubtitle": "Sperrt Adressen, die diese Anwendung immer wieder angreifen.",
+      "loadFailed": "Der Schutz dieser Anwendung konnte nicht geprüft werden.",
+      "provisioning": "Diese Anwendung wird noch eingerichtet. Schutz lässt sich hinzufügen, sobald das fertig ist.",
       "empty": {
         "title": "Fail2ban ist nicht eingerichtet",
-        "body": "Niemand beobachtet das Zugriffsprotokoll dieser Website, eine Adresse kann also beliebig lange Passwörter erraten. Beim Einrichten bekommen Sie eine Startkonfiguration, die Sie bearbeiten können.",
+        "body": "Niemand beobachtet das Zugriffsprotokoll dieser Anwendung, eine Adresse kann also beliebig lange Passwörter erraten. Beim Einrichten bekommen Sie eine Startkonfiguration, die Sie bearbeiten können.",
         "action": "Fail2ban einrichten"
       },
       "state": {
         "on": "Fail2ban ist an",
-        "onBody": "fail2ban beobachtet das Zugriffsprotokoll dieser Website und sperrt Adressen, die auf den Filter unten passen.",
+        "onBody": "fail2ban beobachtet das Zugriffsprotokoll dieser Anwendung und sperrt Adressen, die auf den Filter unten passen.",
         "setup": "Fail2ban wird eingerichtet",
-        "setupBody": "Beide Dateien unten beginnen mit den Standardwerten des Panels. Bis Sie sie speichern, beobachtet niemand diese Website."
+        "setupBody": "Beide Dateien unten beginnen mit den Standardwerten des Panels. Bis Sie sie speichern, beobachtet niemand diese Anwendung."
       },
       "files": {
         "jail": "Jail",
@@ -4727,61 +4727,61 @@
       "savingNote": "fail2ban wird getestet und neu geladen…",
       "nothingToSave": "Nichts hat sich geändert",
       "bothRequired": "Beide Dateien brauchen Inhalt",
-      "noPermission": "Ihre Rolle enthält nicht „Fail2ban“ für diese Website mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+      "noPermission": "Ihre Rolle enthält nicht „Fail2ban“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "saved": "Fail2ban gespeichert und neu geladen.",
       "saveFailed": "Das konnte nicht gespeichert werden.",
       "testFailed": "fail2ban hat diese Konfiguration abgelehnt.",
       "removeAction": "Schutz entfernen",
       "removeTitle": "Fail2ban entfernen?",
-      "removeBody": "Die Jail- und Filterdateien werden gelöscht und fail2ban beobachtet diese Website nicht mehr. Bereits gesperrte Adressen werden freigegeben.",
+      "removeBody": "Die Jail- und Filterdateien werden gelöscht und fail2ban beobachtet diese Anwendung nicht mehr. Bereits gesperrte Adressen werden freigegeben.",
       "removeConfirm": "Entfernen",
       "removed": "Fail2ban entfernt.",
       "removeFailed": "Das konnte nicht entfernt werden.",
       "createAction": "Fail2ban einschalten",
-      "removeBodyDirty": "Die Jail- und Filterdateien werden gelöscht und fail2ban beobachtet diese Website nicht mehr. Bereits gesperrte Adressen werden freigegeben — und {count, plural, one {die Datei, die Sie bearbeitet, aber nicht gespeichert haben, geht mit} other {die # Dateien, die Sie bearbeitet, aber nicht gespeichert haben, gehen mit}}.",
+      "removeBodyDirty": "Die Jail- und Filterdateien werden gelöscht und fail2ban beobachtet diese Anwendung nicht mehr. Bereits gesperrte Adressen werden freigegeben — und {count, plural, one {die Datei, die Sie bearbeitet, aber nicht gespeichert haben, geht mit} other {die # Dateien, die Sie bearbeitet, aber nicht gespeichert haben, gehen mit}}.",
       "tooLong": "Diese Konfiguration ist zu lang. Jede Datei muss unter 65.535 Zeichen bleiben.",
       "invalidConfig": "Diese Konfiguration kann nicht gespeichert werden. Prüfen Sie, ob beide Dateien gefüllt sind."
     },
     "staging": {
       "pageTitle": "Staging-Bereich",
-      "pageSubtitle": "Eine Kopie dieser Website, die Sie kaputt machen können, ohne dass es jemand merkt.",
-      "loadFailed": "Der Staging-Bereich dieser Website konnte nicht geprüft werden.",
-      "provisioning": "Diese Website wird noch eingerichtet. Eine Staging-Kopie lässt sich anlegen, sobald das fertig ist.",
-      "unsupported": "Staging gibt es nur für WordPress-Websites. Diese ist eine {type}-Website.",
-      "manageAction": "Staging-Website öffnen",
+      "pageSubtitle": "Eine Kopie dieser Anwendung, die Sie kaputt machen können, ohne dass es jemand merkt.",
+      "loadFailed": "Der Staging-Bereich dieser Anwendung konnte nicht geprüft werden.",
+      "provisioning": "Diese Anwendung wird noch eingerichtet. Eine Staging-Kopie lässt sich anlegen, sobald das fertig ist.",
+      "unsupported": "Staging gibt es nur für WordPress-Anwendungen. Diese ist eine {type}-Anwendung.",
+      "manageAction": "Staging-Anwendung öffnen",
       "empty": {
         "title": "Noch keine Staging-Kopie",
-        "body": "Eine Staging-Website ist eine vollständige Kopie dieser Website unter einer eigenen Domain — ein Ort, um ein Plugin, ein Theme oder ein Update auszuprobieren, bevor Ihre Besucher es sehen.",
-        "action": "Staging-Website erstellen"
+        "body": "Eine Staging-Anwendung ist eine vollständige Kopie dieser Anwendung unter einer eigenen Domain — ein Ort, um ein Plugin, ein Theme oder ein Update auszuprobieren, bevor Ihre Besucher es sehen.",
+        "action": "Staging-Anwendung erstellen"
       },
       "push": {
         "title": "Staging über die Produktion kopieren",
-        "body": "Ersetzt {domain} durch das, was auf der Staging-Website liegt. Es gibt kein Zurück.",
+        "body": "Ersetzt {domain} durch das, was auf der Staging-Anwendung liegt. Es gibt kein Zurück.",
         "action": "In die Produktion übertragen"
       },
       "createDialog": {
-        "title": "Staging-Website erstellen",
+        "title": "Staging-Anwendung erstellen",
         "description": "Eine Kopie von {domain} unter einer eigenen Domain.",
         "domainLabel": "Domain für die Kopie",
         "domainPlaceholder": "staging.example.com",
         "domainHint": "Richten Sie diese Domain zuerst auf diesen Server, sonst ist die Kopie nicht erreichbar.",
-        "slow": "Das kopiert die ganze Website und kann mehrere Minuten dauern. Lassen Sie dieses Fenster offen — es gibt keinen Fortschritt, zu dem Sie zurückkehren können.",
+        "slow": "Das kopiert die ganze Anwendung und kann mehrere Minuten dauern. Lassen Sie dieses Fenster offen — es gibt keinen Fortschritt, zu dem Sie zurückkehren können.",
         "cancel": "Abbrechen",
-        "submit": "Staging-Website erstellen",
+        "submit": "Staging-Anwendung erstellen",
         "creating": "Wird erstellt…",
-        "done": "Staging-Website unter {domain} erstellt.",
-        "failed": "Die Staging-Website konnte nicht erstellt werden.",
+        "done": "Staging-Anwendung unter {domain} erstellt.",
+        "failed": "Die Staging-Anwendung konnte nicht erstellt werden.",
         "domainLabelHint": "Die Adresse für die Staging-Kopie. Verwenden Sie etwas, das offensichtlich nicht Ihre Live-Seite ist."
       },
       "pushDialog": {
         "title": "Staging über {domain} übertragen?",
         "description": "Alles auf {staging} wird über {production} kopiert. Das lässt sich nicht zurücknehmen.",
-        "downtime": "Ihre Website wird währenddessen offline genommen, und Besucher sehen bis zum Ende eine Wartungsseite.",
+        "downtime": "Ihre Anwendung wird währenddessen offline genommen, und Besucher sehen bis zum Ende eine Wartungsseite.",
         "whatToPush": "Was kopiert werden soll",
         "modes": {
           "files": {
             "label": "Nur Dateien",
-            "replaces": "Die Dateien der Website",
+            "replaces": "Die Dateien der Anwendung",
             "deletes": "Dateien, die es nur auf Produktion gibt",
             "undo": "Keiner – vorher wird nichts kopiert"
           },
@@ -4790,11 +4790,11 @@
             "replaces": "Die Datenbank",
             "deletes": "Alles seit der Kopie Geschriebene: Bestellungen, Kommentare, Beiträge",
             "undo": "Die alte Datenbank wird vorher gesichert",
-            "note": "Produktion braucht dieselben Plugins und Themes wie Staging. Die Datenbank erwartet sie, und fehlt eines, kann die Website leer bleiben."
+            "note": "Produktion braucht dieselben Plugins und Themes wie Staging. Die Datenbank erwartet sie, und fehlt eines, kann die Anwendung leer bleiben."
           },
           "full": {
             "label": "Dateien und Datenbank",
-            "replaces": "Die Dateien der Website und die Datenbank",
+            "replaces": "Die Dateien der Anwendung und die Datenbank",
             "deletes": "Dateien, die es nur auf Produktion gibt, und alles seit der Kopie Geschriebene",
             "undo": "Die alte Datenbank wird vorher gesichert, die Dateien nicht"
           }
@@ -4818,9 +4818,9 @@
         }
       },
       "isCopy": {
-        "title": "Diese Website ist eine Staging-Kopie",
-        "body": "Sie wurde als Kopie einer anderen Website erstellt und bekommt daher keinen eigenen Staging-Bereich. Übertragen Sie sie von der Website aus, zu der sie gehört.",
-        "action": "Zur ursprünglichen Website"
+        "title": "Diese Anwendung ist eine Staging-Kopie",
+        "body": "Sie wurde als Kopie einer anderen Anwendung erstellt und bekommt daher keinen eigenen Staging-Bereich. Übertragen Sie sie von der Anwendung aus, zu der sie gehört.",
+        "action": "Zur ursprünglichen Anwendung"
       },
       "copyAge": "Kopie erstellt {age}"
     },
@@ -4828,24 +4828,24 @@
     "paused": "Pausiert",
     "webRoot": {
       "title": "Web-Root ändern",
-      "description": "Das Verzeichnis, das der Webserver für diese Website ausliefert.",
+      "description": "Das Verzeichnis, das der Webserver für diese Anwendung ausliefert.",
       "label": "Web-Root",
-      "hint": "Relativ zum Website-Ordner, z. B. /public. Leer lassen, um den Website-Ordner selbst auszuliefern.",
+      "hint": "Relativ zum Anwendungsordner, z. B. /public. Leer lassen, um den Anwendungsordner selbst auszuliefern.",
       "submit": "Web-Root ändern",
       "cancel": "Abbrechen",
       "saved": "Web-Root geändert.",
       "failed": "Der Web-Root konnte nicht geändert werden."
     },
     "missing": {
-      "title": "Diese Website ist nicht mehr hier",
+      "title": "Diese Anwendung ist nicht mehr hier",
       "description": "Sie wurde möglicherweise gelöscht oder ihre Einrichtung zurückgenommen. Sonst hat sich auf Ihrem Server nichts geändert.",
-      "action": "Zurück zu den Websites"
+      "action": "Zurück zu Anwendungen"
     },
     "size": {
       "notMeasured": "Nicht gemessen",
       "measuring": "Misst…",
       "measureFailed": "Die Größe konnte nicht gemessen werden.",
-      "measureHint": "Diese Website jetzt auf der Platte messen"
+      "measureHint": "Diese Anwendung jetzt auf der Platte messen"
     },
     "status": {
       "pending": "Ausstehend",
@@ -4862,7 +4862,7 @@
       "bots": "KI-Bots",
       "on": "An",
       "off": "Aus",
-      "description": "Schutzeinstellungen für diese Website."
+      "description": "Schutzeinstellungen für diese Anwendung."
     },
     "backups": {
       "title": "Backups",
@@ -4883,24 +4883,24 @@
       "manage": "Backups verwalten",
       "setUp": "Backups einrichten",
       "loadFailed": "Die Backup-Einstellungen konnten nicht geladen werden.",
-      "unprotectedRisk": "Es wird nichts gesichert. Geht diese Website verloren, gibt es nichts wiederherzustellen.",
+      "unprotectedRisk": "Es wird nichts gesichert. Geht diese Anwendung verloren, gibt es nichts wiederherzustellen.",
       "pausedRisk": "Backups sind eingerichtet, laufen aber nicht — die neueste Kopie wird also immer älter.",
-      "description": "Ob diese Website wiederherstellbar wäre.",
-      "runningNote": "Gerade läuft ein Backup dieser Website. Diese Karte aktualisiert sich selbst.",
+      "description": "Ob diese Anwendung wiederherstellbar wäre.",
+      "runningNote": "Gerade läuft ein Backup dieser Anwendung. Diese Karte aktualisiert sich selbst.",
       "queuedNote": "Backup eingeplant. Es beginnt, sobald der Server es aufnimmt.",
       "queuedStalled": "Dieses Backup hat noch nicht begonnen. Bleibt es so, läuft möglicherweise der Hintergrund-Worker nicht.",
-      "alreadyRunning": "Es läuft schon ein Backup dieser Website."
+      "alreadyRunning": "Es läuft schon ein Backup dieser Anwendung."
     },
     "attention": {
       "title": "Handlungsbedarf",
-      "allClear": "Auf dieser Website braucht nichts Aufmerksamkeit.",
+      "allClear": "Auf dieser Anwendung braucht nichts Aufmerksamkeit.",
       "noBackups": "Backups nicht eingerichtet",
       "setUpBackups": "Backups einrichten",
-      "noCertificate": "SSL nicht installiert",
-      "issueCertificate": "SSL ausstellen",
+      "noCertificate": "SSL nicht eingerichtet",
+      "issueCertificate": "SSL einrichten",
       "reviewSecurity": "Sicherheit prüfen",
       "protectionsOff": "{count, plural, one {# Schutz aus} other {# Schutzfunktionen aus}}",
-      "noDatabase": "Diese Website hat keine Datenbank, ihre Backups enthalten also keine",
+      "noDatabase": "Diese Anwendung hat keine Datenbank, ihre Backups enthalten also keine",
       "attachDatabase": "Datenbank verknüpfen",
       "issueAction": {
         "certificate": "SSL prüfen",
@@ -4917,19 +4917,19 @@
     },
     "noDatabase": {
       "title": "Es ist keine Datenbank-Engine installiert",
-      "body": "Website-Typen, die eine Datenbank brauchen — WordPress, Joomla und andere — lassen sich erst installieren, wenn eine da ist. Typen, die keine brauchen, sind nicht betroffen.",
+      "body": "Anwendungstypen, die eine Datenbank brauchen — WordPress, Joomla und andere — lassen sich erst installieren, wenn eine da ist. Typen, die keine brauchen, sind nicht betroffen.",
       "action": "Datenbank installieren",
       "installingTitle": "Eine Datenbank-Engine wird installiert",
-      "installingBody": "Warten Sie, bis sie fertig ist, bevor Sie eine Website anlegen, die eine Datenbank braucht. Den Fortschritt sehen Sie auf der Seite „Datenbanken“."
+      "installingBody": "Warten Sie, bis sie fertig ist, bevor Sie eine Anwendung anlegen, die eine Datenbank braucht. Den Fortschritt sehen Sie auf der Seite „Datenbanken“."
     },
     "databaseCard": {
       "title": "Datenbank",
-      "description": "Was die Backups dieser Website enthalten werden. Das Verknüpfen ändert nicht, wie Ihre Website sich verbindet.",
+      "description": "Was die Backups dieser Anwendung enthalten werden. Das Verknüpfen ändert nicht, wie Ihre Anwendung sich verbindet.",
       "count": "{count, plural, one {# Datenbank} other {# Datenbanken}}",
       "notBackedUp": "Nicht gesichert",
-      "missingWarning": "Es ist keine Datenbank verknüpft, Backups dieser Website enthalten also keine.",
-      "missingFine": "Diese Website hat keine Datenbank verknüpft.",
-      "loadFailed": "Die Datenbanken dieser Website konnten nicht geprüft werden.",
+      "missingWarning": "Es ist keine Datenbank verknüpft, Backups dieser Anwendung enthalten also keine.",
+      "missingFine": "Diese Anwendung hat keine Datenbank verknüpft.",
+      "loadFailed": "Die Datenbanken dieser Anwendung konnten nicht geprüft werden.",
       "attach": "Datenbank verknüpfen",
       "manage": "Verwalten",
       "create": "Datenbank anlegen"
@@ -4945,9 +4945,9 @@
       "submit": "Verknüpfen",
       "saving": "Wird verknüpft…",
       "cancel": "Abbrechen",
-      "done": "{name} wird jetzt von dieser Website genutzt.",
+      "done": "{name} wird jetzt von dieser Anwendung genutzt.",
       "failed": "Diese Datenbank konnte nicht verknüpft werden.",
-      "hint": "Bestimmt, was die Backups dieser Website enthalten. Es ändert nicht, wie Ihre Website sich verbindet — die nutzt weiter, was in ihrer eigenen Konfiguration steht."
+      "hint": "Bestimmt, was die Backups dieser Anwendung enthalten. Es ändert nicht, wie Ihre Anwendung sich verbindet — die nutzt weiter, was in ihrer eigenen Konfiguration steht."
     },
     "unavailableDatabase": {
       "missing": "Braucht {engines}. Auf diesem Server nicht installiert.",
@@ -4955,49 +4955,49 @@
       "installing": "Braucht {engines}. Die Installation läuft noch."
     },
     "pause": {
-      "action": "Website pausieren",
-      "resume": "Website fortsetzen",
+      "action": "Anwendung pausieren",
+      "resume": "Anwendung fortsetzen",
       "resuming": "Wird fortgesetzt…",
       "pausing": "Wird pausiert…",
-      "confirm": "Website pausieren",
+      "confirm": "Anwendung pausieren",
       "cancel": "Abbrechen",
       "title": "{name} pausieren?",
-      "description": "Besucher sehen eine kurze Seite mit dem Hinweis, dass die Website zeitweise nicht verfügbar ist, bis Sie sie fortsetzen.",
+      "description": "Besucher sehen eine kurze Seite mit dem Hinweis, dass die Anwendung zeitweise nicht verfügbar ist, bis Sie sie fortsetzen.",
       "keeps": "Es wird nichts gelöscht. Dateien, Datenbank, Backups, Cronjobs und Zertifikate bleiben genau, wie sie sind.",
       "reversible": "Sie können sie jederzeit über dasselbe Menü fortsetzen.",
-      "seo": "Suchmaschinen sehen eine gewöhnliche Seite statt einer „später erneut versuchen“-Antwort, eine lange pausierte Website kann daher im Ranking verlieren. Für eine Stunde unproblematisch, für einen Monat gut zu wissen.",
+      "seo": "Suchmaschinen sehen eine gewöhnliche Seite statt einer „später erneut versuchen“-Antwort, eine lange pausierte Anwendung kann daher im Ranking verlieren. Für eine Stunde unproblematisch, für einen Monat gut zu wissen.",
       "paused": "{name} ist pausiert.",
       "resumed": "{name} ist wieder online.",
-      "failed": "Die Website konnte nicht pausiert werden.",
-      "resumeFailed": "Die Website konnte nicht fortgesetzt werden."
+      "failed": "Die Anwendung konnte nicht pausiert werden.",
+      "resumeFailed": "Die Anwendung konnte nicht fortgesetzt werden."
     },
     "unavailableRuntime": {
       "php": {
-        "install": "Diese Website braucht PHP {range}, und dieser Server hat {installed}. Installieren Sie PHP {suggest}, um sie zu erstellen.",
-        "none": "Diese Website braucht PHP {range}, und dieser Server hat {installed}. Keine der zur Installation angebotenen PHP-Versionen liegt in diesem Bereich."
+        "install": "Diese Anwendung braucht PHP {range}, und dieser Server hat {installed}. Installieren Sie PHP {suggest}, um sie zu erstellen.",
+        "none": "Diese Anwendung braucht PHP {range}, und dieser Server hat {installed}. Keine der zur Installation angebotenen PHP-Versionen liegt in diesem Bereich."
       },
       "node": {
-        "install": "Diese Website braucht Node {range}, und dieser Server hat {installed}. Installieren Sie Node {suggest}, um sie zu erstellen.",
-        "none": "Diese Website braucht Node {range}, und dieser Server hat {installed}. Keine der zur Installation angebotenen Node-Versionen liegt in diesem Bereich."
+        "install": "Diese Anwendung braucht Node {range}, und dieser Server hat {installed}. Installieren Sie Node {suggest}, um sie zu erstellen.",
+        "none": "Diese Anwendung braucht Node {range}, und dieser Server hat {installed}. Keine der zur Installation angebotenen Node-Versionen liegt in diesem Bereich."
       }
     },
     "gitAccountHint": "Ein verbundenes Git-Konto, das zum Lesen Ihrer privaten Repositorys verwendet wird. Fügen Sie unter Integrationen eines hinzu, falls diese Liste leer ist.",
     "systemUserHint": "Das Linux-Konto, dem die Dateien dieser Seite gehören. Wenn jede Seite ihr eigenes Konto erhält, kann eine Seite nicht die Daten einer anderen lesen.",
     "fieldHints": {
-      "web_root": "Der Ordner innerhalb Ihrer Website, den Besucher tatsächlich sehen. Belassen Sie ihn so, wie er ist, sofern Ihr Framework nicht aus einem Unterordner wie /public ausliefert.",
-      "table_prefix": "Wird jedem Datenbank-Tabellennamen vorangestellt, damit zwei Websites eine Datenbank gemeinsam nutzen können, ohne sich zu überschneiden. Die Vorgabe ist in Ordnung.",
+      "web_root": "Der Ordner innerhalb Ihrer Anwendung, den Besucher tatsächlich sehen. Belassen Sie ihn so, wie er ist, sofern Ihr Framework nicht aus einem Unterordner wie /public ausliefert.",
+      "table_prefix": "Wird jedem Datenbank-Tabellennamen vorangestellt, damit zwei Anwendungen eine Datenbank gemeinsam nutzen können, ohne sich zu überschneiden. Die Vorgabe ist in Ordnung.",
       "package_manager": "Das Werkzeug, mit dem die Abhängigkeiten dieses Projekts installiert werden. Wählen Sie dasjenige, das zur Lock-Datei in Ihrem Repository passt.",
       "rendering_type": "Wie die Seiten erzeugt werden. Serverseitig rendert jede Anfrage auf dem Server; statisch baut die Seiten einmal auf; clientseitig wird ein Bündel an den Browser gesendet, das dieser rendert.",
-      "build_command": "Wird einmal nach dem Holen des Codes ausgeführt, um die Website zu kompilieren. Lassen Sie das Feld leer, wenn das Projekt keinen Build-Schritt benötigt.",
+      "build_command": "Wird einmal nach dem Holen des Codes ausgeführt, um die Anwendung zu kompilieren. Lassen Sie das Feld leer, wenn das Projekt keinen Build-Schritt benötigt.",
       "start_command": "Der Befehl, der die Anwendung am Laufen hält. Er muss im Vordergrund bleiben — ein Befehl, der sofort beendet wird, wirkt wie ein Absturz.",
       "deploy_script": "Die bei jedem Deploy der Reihe nach ausgeführten Befehle. Hier holen Sie den Code, installieren Abhängigkeiten und starten die Anwendung neu.",
       "app_port": "Der Port, auf dem die Anwendung innerhalb des Servers lauscht. Besucher sehen ihn nie — der Webserver leitet an ihn weiter.",
-      "php_version": "Die PHP-Version, auf der diese Website läuft. Neuer ist schneller und besser unterstützt, aber eine sehr alte Site läuft möglicherweise nicht darauf.",
-      "node_version": "Die Node.js-Version, auf der diese Website läuft. Gleichen Sie sie mit der Version ab, gegen die das Projekt entwickelt wurde.",
+      "php_version": "Die PHP-Version, auf der diese Anwendung läuft. Neuer ist schneller und besser unterstützt, aber eine sehr alte Anwendung läuft möglicherweise nicht darauf.",
+      "node_version": "Die Node.js-Version, auf der diese Anwendung läuft. Gleichen Sie sie mit der Version ab, gegen die das Projekt entwickelt wurde.",
       "timezone": "Die Zeitzone, die diese Anwendung verwendet, wenn sie ein Datum anzeigt oder speichert. Sie ändert nicht die Uhrzeit des Servers selbst.",
-      "site_language": "Die Sprache, in der die installierte Website eingerichtet ist. Sie ändert nicht die Sprache dieses Panels.",
-      "locale": "Die Sprache, in der die installierte Website eingerichtet ist. Sie ändert nicht die Sprache dieses Panels.",
-      "language": "Die Sprache, in der die installierte Website eingerichtet ist. Sie ändert nicht die Sprache dieses Panels.",
+      "site_language": "Die Sprache, in der die installierte Anwendung eingerichtet ist. Sie ändert nicht die Sprache dieses Panels.",
+      "locale": "Die Sprache, in der die installierte Anwendung eingerichtet ist. Sie ändert nicht die Sprache dieses Panels.",
+      "language": "Die Sprache, in der die installierte Anwendung eingerichtet ist. Sie ändert nicht die Sprache dieses Panels.",
       "short_name": "Ein kurzer Bezeichner, der innerhalb der Anwendung verwendet wird. Nur Buchstaben und Zahlen, keine Leerzeichen."
     },
     "branchHint": "Der Branch, aus dem wir bereitstellen. Wenn Sie in einen anderen Branch pushen, bleibt diese Seite unverändert.",
@@ -5046,30 +5046,30 @@
     "siteTypeDetection": {
       "detectHint": "Prüfen, was hier installiert ist",
       "reviewHint": "Gefundenes überprüfen",
-      "detectFailed": "Das Verzeichnis der Website konnte nicht gelesen werden.",
+      "detectFailed": "Das Verzeichnis der Anwendung konnte nicht gelesen werden.",
       "looksLike": "Sieht aus wie {type}",
       "looksLikeBecause": "Sieht aus wie {type} — {file} gefunden",
       "nothingFound": "Bei der letzten Prüfung wurde nichts Erkennbares gefunden",
-      "confirmTitle": "Diese Website als {type} behandeln?",
-      "confirmFound": "{file} ist im Verzeichnis dieser Website vorhanden.",
-      "confirmNarrow": "Das Panel bietet die anwendungsspezifischen Seiten dieser Website nicht mehr an.",
+      "confirmTitle": "Diese Anwendung als {type} behandeln?",
+      "confirmFound": "{file} ist im Verzeichnis dieser Anwendung vorhanden.",
+      "confirmNarrow": "Das Panel bietet die typspezifischen Seiten dieser Anwendung nicht mehr an.",
       "confirmAction": "Typ ändern",
-      "applied": "Diese Website wird jetzt als {type} behandelt.",
-      "failed": "Der Website-Typ konnte nicht geändert werden.",
+      "applied": "Diese Anwendung wird jetzt als {type} behandelt.",
+      "failed": "Der Anwendungstyp konnte nicht geändert werden.",
       "changesLabel": "Was sich ändert",
-      "changesBody": "Das Panel bietet ab dann die Seiten an, die es für {type}-Websites vorsieht.",
+      "changesBody": "Das Panel bietet ab dann die Seiten an, die es für {type}-Anwendungen vorsieht.",
       "unchangedLabel": "Was gleich bleibt",
       "unchangedBody": "Ihre Dateien, die Datenbank und die Einstellungen. Es wird nichts installiert, heruntergeladen oder verschoben.",
       "reversible": "Sie können jederzeit zu {from} zurückwechseln.",
       "reviewAction": "Ansehen",
       "detectAction": "Prüfen, was installiert ist",
       "changeTo": "Typ zu {type} ändern",
-      "menuHint": "Optionen für den Website-Typ"
+      "menuHint": "Optionen für den Anwendungstyp"
     }
   },
   "panelUpdate": {
     "title": "Panel-Update",
-    "subtitle": "Aktualisieren Sie {brand} selbst. Gehostete Websites bleiben online; nur dieses Panel startet neu.",
+    "subtitle": "Aktualisieren Sie {brand} selbst. Gehostete Anwendungen bleiben online; nur dieses Panel startet neu.",
     "loadFailed": "Der Update-Status konnte nicht geladen werden. Versuchen Sie es gleich erneut.",
     "versionValue": "v{version}",
     "versionUnknown": "Unbekannte Version",
@@ -5105,7 +5105,7 @@
     "couldNotCheck": "Nach Updates konnte nicht gesucht werden",
     "couldNotCheckBody": "Der Release-Server war nicht erreichbar. Mit Ihrem Panel ist alles in Ordnung — versuchen Sie es in einer Weile erneut.",
     "confirmTitle": "Panel aktualisieren?",
-    "confirmBody": "Das Panel geht für einige Minuten offline, während es aktualisiert wird, und startet dann neu. Gehostete Websites sind nicht betroffen.",
+    "confirmBody": "Das Panel geht für einige Minuten offline, während es aktualisiert wird, und startet dann neu. Gehostete Anwendungen sind nicht betroffen.",
     "cancel": "Abbrechen",
     "working": "Läuft…",
     "stepCount": "Schritt {step} von {total}",
@@ -5192,7 +5192,7 @@
   },
   "setup": {
     "title": "Richten Sie Ihren Server ein",
-    "subtitle": "Installieren Sie, was Ihre Websites brauchen werden. Nichts davon ist Pflicht — Sie können später weitermachen.",
+    "subtitle": "Installieren Sie, was Ihre Anwendungen brauchen werden. Nichts davon ist Pflicht — Sie können später weitermachen.",
     "loadFailed": "Der Einrichtungsstatus konnte nicht geladen werden.",
     "progressLabel": "Einrichtungsfortschritt",
     "progressComplete": "Alle empfohlenen Komponenten installiert",
@@ -5243,9 +5243,9 @@
     "sectionOptional": "Ebenfalls verfügbar",
     "summaryInstalled": "{count} installiert",
     "percentComplete": "{pct} % abgeschlossen",
-    "sectionAttentionHint": "Etwas wurde nicht abgeschlossen. Klären Sie das, bevor Sie eine Website hinzufügen.",
+    "sectionAttentionHint": "Etwas wurde nicht abgeschlossen. Klären Sie das, bevor Sie eine Anwendung hinzufügen.",
     "sectionRecommendedHint": "Für die meisten Server ratsam. Sie können das jederzeit ergänzen.",
-    "sectionOptionalHint": "Nur von manchen Websites gebraucht.",
+    "sectionOptionalHint": "Nur von manchen Anwendungen gebraucht.",
     "alreadyInstalledHint": "Schon auf diesem Server. Hier ist nichts zu tun.",
     "chooseEngineFirst": "Wählen Sie zuerst eine Datenbank-Engine",
     "oneSqlOnly": "Ein Server betreibt eine SQL-Engine. Sobald diese installiert ist, heißt ein Wechsel zur anderen, den Server neu aufzubauen.",
@@ -5371,7 +5371,7 @@
         "client_secret": "Wird beim Erstellen neben der Client-ID angezeigt. Wie ein Passwort behandeln."
       },
       "plainFtpWarning": "TLS ist aus. Passwort und jede Sicherung werden unverschlüsselt gesendet.",
-      "prefixHintRemote": "Optionaler Ordner im entfernten Verzeichnis, damit ein Server mehrere Sites aufnehmen kann.",
+      "prefixHintRemote": "Optionaler Ordner im entfernten Verzeichnis, damit ein Server mehrere Anwendungen aufnehmen kann.",
       "placeholders": {
         "bucket": "meine-backups",
         "region": "eu-west-1",
@@ -5478,7 +5478,7 @@
   },
   "backups": {
     "title": "Backups",
-    "subtitle": "Welche Websites geschützt sind und wie Sie eine zurückholen.",
+    "subtitle": "Welche Anwendungen geschützt sind und wie Sie eine zurückholen.",
     "loadFailed": "Die Backups konnten nicht geladen werden. Versuchen Sie es gleich erneut.",
     "tabs": {
       "label": "Backup-Bereiche",
@@ -5498,12 +5498,12 @@
       "started": "{name} wird jetzt gesichert.",
       "startFailed": "Dieses Backup konnte nicht gestartet werden.",
       "staging": "Staging",
-      "unknownApplication": "Gelöschte Website",
-      "allCovered": "Jede Website wird gesichert.",
-      "exposed": "{count, plural, one {# Website wird nicht gesichert} other {# Websites werden nicht gesichert}}",
-      "exposedHint": "Geht dieser Server verloren, lassen sich diese Websites nicht zurückholen. Eine einzurichten dauert etwa eine Minute.",
+      "unknownApplication": "Gelöschte Anwendung",
+      "allCovered": "Jede Anwendung wird gesichert.",
+      "exposed": "{count, plural, one {# Anwendung wird nicht gesichert} other {# Anwendungen werden nicht gesichert}}",
+      "exposedHint": "Geht dieser Server verloren, lassen sich diese Anwendungen nicht zurückholen. Eine einzurichten dauert etwa eine Minute.",
       "columns": {
-        "site": "Website",
+        "site": "Anwendung",
         "status": "Backups",
         "schedule": "Zeitplan",
         "lastRun": "Letzter Lauf",
@@ -5519,13 +5519,13 @@
         "unknown": "Unbekannt"
       },
       "neverRunShort": "Nie",
-      "allCoveredHint": "Jede Website hat einen Zeitplan und führt ihn aus.",
+      "allCoveredHint": "Jede Anwendung hat einen Zeitplan und führt ihn aus.",
       "keeps": "behält {count}",
       "nextRun": "Nächster: {when}",
       "runBackup": "Backup ausführen",
       "viewBackups": "Backups ansehen",
-      "searchPlaceholder": "Websites suchen",
-      "noMatches": "Keine Website passt zu diesen Filtern.",
+      "searchPlaceholder": "Anwendungen suchen",
+      "noMatches": "Keine Anwendung passt zu diesen Filtern.",
       "showing": "{shown} von {total} werden gezeigt",
       "filters": {
         "all": "Alle",
@@ -5546,13 +5546,13 @@
         "lastRun": "Nie"
       },
       "runsShortly": "Läuft in Kürze",
-      "notSetUpLine": "Nicht eingerichtet — von dieser Website wird nichts gesichert.",
+      "notSetUpLine": "Nicht eingerichtet — von dieser Anwendung wird nichts gesichert.",
       "needsDestination": "Es ist noch kein Speicherziel eingerichtet. Fügen Sie zuerst eines unter Integrationen → Speicher hinzu.",
       "timesShownIn": "Zeiten in {timezone}"
     },
     "setup": {
       "title": "Backups einrichten",
-      "subtitle": "Wählen Sie eine Website und wie oft sie von diesem Server weg kopiert werden soll.",
+      "subtitle": "Wählen Sie eine Anwendung und wie oft sie von diesem Server weg kopiert werden soll.",
       "cancel": "Abbrechen",
       "submit": "Backup-Einstellungen speichern",
       "saving": "Wird gespeichert…",
@@ -5569,7 +5569,7 @@
       "keep": "behält {count}",
       "blocked": {
         "noStorage": "Verbinden Sie zuerst einen Speicher.",
-        "noSite": "Wählen Sie eine Website, um fortzufahren.",
+        "noSite": "Wählen Sie eine Anwendung, um fortzufahren.",
         "noDestination": "Wählen Sie, wo Backups gespeichert werden.",
         "incomplete": "Füllen Sie den Zeitplan aus, um fortzufahren.",
         "unchanged": "Nichts hat sich geändert."
@@ -5582,9 +5582,9 @@
       "refreshFailed": "Die Speicherliste konnte nicht aktualisiert werden."
     },
     "form": {
-      "applicationPlaceholder": "Website auswählen",
-      "applicationSearch": "Websites suchen",
-      "applicationEmpty": "Keine Websites gefunden",
+      "applicationPlaceholder": "Anwendung auswählen",
+      "applicationSearch": "Anwendungen suchen",
+      "applicationEmpty": "Keine Anwendungen gefunden",
       "noDestinations": "Backups brauchen ein Ziel. Verbinden Sie zuerst ein S3-kompatibles Speicherziel — dafür genügen ein Bucket und ein Schlüssel.",
       "addDestination": "Speicher einrichten",
       "checkAgain": "Erneut prüfen",
@@ -5630,7 +5630,7 @@
       "databaseExcludes": "Datenbanken",
       "databaseExcludesPlaceholder": "analytics_cache",
       "groups": {
-        "site": "Welche Website",
+        "site": "Welche Anwendung",
         "content": "Was gesichert wird",
         "schedule": "Wann es läuft",
         "storage": "Wo es gespeichert wird"
@@ -5646,8 +5646,8 @@
       },
       "destinationFailing": "Der letzte Verbindungstest zu {name} ist fehlgeschlagen, dorthin gesendete Backups werden also nicht geschrieben, bis das behoben ist.",
       "noDatabase": {
-        "blocked": "Diese Website hat keine Datenbank",
-        "filesOnly": "Diese Website hat keine Datenbank, es werden also nur ihre Dateien gesichert."
+        "blocked": "Diese Anwendung hat keine Datenbank",
+        "filesOnly": "Diese Anwendung hat keine Datenbank, es werden also nur ihre Dateien gesichert."
       },
       "automaticHint": "Führt die Sicherung nach einem Zeitplan aus, statt nur auf Knopfdruck.",
       "fileExcludesHint": "Pfade, die von der Sicherung ausgeschlossen werden, einer pro Zeile. Caches und Protokolle lohnen sich auszuschließen; Uploads nicht.",
@@ -5656,7 +5656,7 @@
       "destinationNotConnected": "{name} ist noch nicht mit Ihrem Google-Konto verbunden — dorthin gesendete Sicherungen schlagen fehl."
     },
     "history": {
-      "allApplications": "Alle Websites",
+      "allApplications": "Alle Anwendungen",
       "allStatuses": "Jeder Status",
       "statuses": {
         "verified": "Abgeschlossen",
@@ -5667,17 +5667,17 @@
       },
       "empty": {
         "title": "Es ist noch kein Backup gelaufen",
-        "description": "Sobald eine Website eingerichtet ist, erscheint hier jeder Lauf — und von hier stellen Sie wieder her."
+        "description": "Sobald eine Anwendung eingerichtet ist, erscheint hier jeder Lauf — und von hier stellen Sie wieder her."
       },
       "emptyFiltered": {
         "title": "Kein Backup passt zu diesen Filtern",
-        "description": "Versuchen Sie eine andere Website oder einen anderen Status."
+        "description": "Versuchen Sie eine andere Anwendung oder einen anderen Status."
       },
       "restore": "Dieses Backup wiederherstellen…",
       "noPermission": "Ihre Rolle enthält nicht „Backups“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "safetyBadge": "Sicherheitskopie",
       "sizeUnknown": "Unbekannt",
-      "unknownApplication": "Gelöschte Website",
+      "unknownApplication": "Gelöschte Anwendung",
       "unknownReason": "Der Grund wurde nicht aufgezeichnet. Sehen Sie in den Serverprotokollen zu diesem Lauf nach.",
       "restoreShort": "Wiederherstellen",
       "counts": {
@@ -5687,7 +5687,7 @@
         "running": "Läuft"
       },
       "columns": {
-        "site": "Website",
+        "site": "Anwendung",
         "status": "Status",
         "type": "Backup-Art",
         "destination": "Ziel",
@@ -5720,7 +5720,7 @@
       "queuedNote": "Backup für {name} eingeplant. Es erscheint in dieser Liste, sobald der Server es zu schreiben beginnt.",
       "queuedHidden": "Backup für {name} eingeplant. Der gesetzte Statusfilter verbirgt es — setzen Sie den Filter zurück, um es laufen zu sehen.",
       "queuedStalled": "Das für {name} eingeplante Backup hat noch nicht begonnen. Bleibt es so, läuft möglicherweise der Hintergrund-Worker nicht.",
-      "alreadyRunning": "Es läuft schon ein Backup dieser Website. Sobald es fertig ist, können Sie ein weiteres starten.",
+      "alreadyRunning": "Es läuft schon ein Backup dieser Anwendung. Sobald es fertig ist, können Sie ein weiteres starten.",
       "delete": {
         "action": "Löschen",
         "selectedCount": "{count} ausgewählt",
@@ -5750,7 +5750,7 @@
     },
     "restore": {
       "title": "{name} wiederherstellen",
-      "description": "Setzt die Website auf den Zustand von {ago} ({when}) zurück. Das ersetzt die Website durch diese Kopie — alles, was seither geändert wurde, ist verloren.",
+      "description": "Setzt die Anwendung auf den Zustand von {ago} ({when}) zurück. Das ersetzt die Anwendung durch diese Kopie — alles, was seither geändert wurde, ist verloren.",
       "whatToRestore": "Was zurückgeholt wird",
       "types": {
         "full": {
@@ -5766,21 +5766,21 @@
           "hint": "Lässt die aktuellen Dateien unberührt."
         }
       },
-      "safetyPromise": "Von der Website wird vorher eine Kopie im jetzigen Zustand erstellt, das lässt sich also zurücknehmen.",
+      "safetyPromise": "Von der Anwendung wird vorher eine Kopie im jetzigen Zustand erstellt, das lässt sich also zurücknehmen.",
       "confirmLabel": "Tippen Sie {domain}, um zu bestätigen",
       "cancel": "Abbrechen",
-      "submit": "Website wiederherstellen",
+      "submit": "Anwendung wiederherstellen",
       "starting": "Wird gestartet…",
       "failed": "Die Wiederherstellung konnte nicht gestartet werden.",
-      "typeToUnlock": "Tippen Sie die Domain der Website, um zu bestätigen.",
+      "typeToUnlock": "Tippen Sie die Domain der Anwendung, um zu bestätigen.",
       "blocked": {
         "unverified": "Nicht geprüft",
-        "noApplication": "Website gelöscht",
+        "noApplication": "Anwendung gelöscht",
         "alreadyRunning": "Wiederherstellung läuft",
         "inFlight": "Läuft noch",
         "failed": "Dieses Backup ist fehlgeschlagen"
       },
-      "descriptionShort": "Das ersetzt die Website durch die Kopie unten. Alles, was seither geändert wurde, ist verloren.",
+      "descriptionShort": "Das ersetzt die Anwendung durch die Kopie unten. Alles, was seither geändert wurde, ist verloren.",
       "facts": {
         "taken": "Erstellt",
         "type": "Enthält",
@@ -5792,19 +5792,19 @@
       "whatToRestoreHint": "Stellt die Dateien, die Datenbank oder beides wieder her. Das Wiederherstellen der Datenbank ersetzt alle aktuellen Inhalte der Seite."
     },
     "progress": {
-      "running": "Die Website wird wiederhergestellt",
+      "running": "Die Anwendung wird wiederhergestellt",
       "starting": "Wird vorbereitet…",
       "step": "Schritt {step} von {total}",
       "dontLeave": "Das kann einige Minuten dauern. Sie können diese Seite verlassen — es läuft weiter.",
-      "succeeded": "Die Website wurde wiederhergestellt",
-      "succeededBody": "Fertig {when}. Prüfen Sie die Website und blenden Sie das dann aus.",
-      "succeededBodyPlain": "Prüfen Sie die Website und blenden Sie das dann aus.",
+      "succeeded": "Die Anwendung wurde wiederhergestellt",
+      "succeededBody": "Fertig {when}. Prüfen Sie die Anwendung und blenden Sie das dann aus.",
+      "succeededBodyPlain": "Prüfen Sie die Anwendung und blenden Sie das dann aus.",
       "undo": "Diese Wiederherstellung zurücknehmen",
-      "undoHint": "Holt die Sicherheitskopie zurück, die direkt davor erstellt wurde — die Website, wie sie vor der Wiederherstellung war.",
+      "undoHint": "Holt die Sicherheitskopie zurück, die direkt davor erstellt wurde — die Anwendung, wie sie vor der Wiederherstellung war.",
       "undoFailed": "Die Sicherheitskopie konnte nicht geladen werden.",
       "dismiss": "Ausblenden",
       "failed": "Die Wiederherstellung wurde nicht abgeschlossen",
-      "failedSafe": "Vorher wurde eine Sicherheitskopie erstellt, die Website lässt sich also wieder in ihren Zustand bringen.",
+      "failedSafe": "Vorher wurde eine Sicherheitskopie erstellt, die Anwendung lässt sich also wieder in ihren Zustand bringen.",
       "failedNoSafety": "Die Wiederherstellung ist gestoppt, bevor sie etwas geändert hat.",
       "reference": "Referenz: {reference}",
       "unknownReason": "Der Grund wurde nicht aufgezeichnet.",
@@ -5813,20 +5813,20 @@
       "checkAgain": "Erneut prüfen",
       "hide": "Ausblenden",
       "queued": "Wiederherstellung eingeplant",
-      "queuedBody": "Wartet darauf, dass der Server sie aufnimmt. An der Website wurde noch nichts geändert.",
+      "queuedBody": "Wartet darauf, dass der Server sie aufnimmt. An der Anwendung wurde noch nichts geändert.",
       "stalledQueued": "Diese Wiederherstellung hat nicht begonnen",
-      "stalledQueuedBody": "Sie wartet seit einigen Minuten darauf, dass der Server sie aufnimmt. An der Website wurde nichts geändert. Der Job läuft möglicherweise nicht — prüfen Sie erneut oder bitten Sie die Person, die diesen Server verwaltet, nachzusehen.",
+      "stalledQueuedBody": "Sie wartet seit einigen Minuten darauf, dass der Server sie aufnimmt. An der Anwendung wurde nichts geändert. Der Job läuft möglicherweise nicht — prüfen Sie erneut oder bitten Sie die Person, die diesen Server verwaltet, nachzusehen.",
       "undone": "Die Wiederherstellung wurde zurückgenommen",
-      "undoneBody": "Die Website ist wieder wie vor der Wiederherstellung. Prüfen Sie die Website und blenden Sie das dann aus."
+      "undoneBody": "Die Anwendung ist wieder wie vor der Wiederherstellung. Prüfen Sie die Anwendung und blenden Sie das dann aus."
     },
     "application": {
       "pageTitle": "Backups",
-      "pageSubtitle": "Kopien dieser Website außerhalb des Servers und wann sie erstellt werden.",
-      "provisioning": "Diese Website wird noch eingerichtet. Backups lassen sich konfigurieren, sobald sie bereit ist.",
-      "loadFailed": "Die Backup-Einstellungen dieser Website konnten nicht geladen werden.",
+      "pageSubtitle": "Kopien dieser Anwendung außerhalb des Servers und wann sie erstellt werden.",
+      "provisioning": "Diese Anwendung wird noch eingerichtet. Backups lassen sich konfigurieren, sobald sie bereit ist.",
+      "loadFailed": "Die Backup-Einstellungen dieser Anwendung konnten nicht geladen werden.",
       "state": {
         "protected": {
-          "title": "Diese Website wird gesichert",
+          "title": "Diese Anwendung wird gesichert",
           "body": "{schedule}, gespeichert auf {destination}."
         },
         "paused": {
@@ -5834,9 +5834,9 @@
           "body": "Es läuft nichts nach Zeitplan. Backups entstehen nur, wenn Sie „Jetzt sichern“ drücken."
         },
         "unprotected": {
-          "title": "Diese Website wird nicht gesichert",
-          "body": "Geht der Server verloren, geht diese Website mit. Legen Sie unten einen Zeitplan fest.",
-          "bodyReadOnly": "Geht der Server verloren, geht diese Website mit. Bitten Sie eine Administratorin oder einen Administrator, Backups einzurichten."
+          "title": "Diese Anwendung wird nicht gesichert",
+          "body": "Geht der Server verloren, geht diese Anwendung mit. Legen Sie unten einen Zeitplan fest.",
+          "bodyReadOnly": "Geht der Server verloren, geht diese Anwendung mit. Bitten Sie eine Administratorin oder einen Administrator, Backups einzurichten."
         }
       },
       "lastRun": "Zuletzt ausgeführt {when}",
@@ -5850,8 +5850,8 @@
       "recentTitle": "Letzte Backups",
       "showing": "{shown} von {total} werden gezeigt",
       "viewAll": "Alle Backups",
-      "noRuns": "Für diese Website ist noch kein Backup gelaufen.",
-      "historyFailed": "Der Backup-Verlauf dieser Website konnte nicht geladen werden.",
+      "noRuns": "Für diese Anwendung ist noch kein Backup gelaufen.",
+      "historyFailed": "Der Backup-Verlauf dieser Anwendung konnte nicht geladen werden.",
       "safetyBadge": "Sicherheitskopie",
       "summary": {
         "what": "Was gesichert wird",
@@ -5890,25 +5890,25 @@
       },
       "queuedNote": "Backup eingeplant. Es erscheint hier, sobald der Server es zu schreiben beginnt.",
       "queuedStalled": "Dieses Backup hat noch nicht begonnen. Es ist weiterhin eingeplant — bleibt es so, läuft möglicherweise der Hintergrund-Worker nicht.",
-      "alreadyRunning": "Es läuft schon ein Backup dieser Website. Sobald es fertig ist, können Sie ein weiteres starten.",
+      "alreadyRunning": "Es läuft schon ein Backup dieser Anwendung. Sobald es fertig ist, können Sie ein weiteres starten.",
       "noDatabase": {
-        "title": "Diese Website hat keine Datenbank",
-        "description": "Backups dieser Website enthalten keine, bis Sie eine verknüpfen."
+        "title": "Diese Anwendung hat keine Datenbank",
+        "description": "Backups dieser Anwendung enthalten keine, bis Sie eine verknüpfen."
       }
     },
     "empty": {
       "title": "Auf diesem Server wird noch nichts gesichert",
-      "body": "Ein Backup kopiert Dateien und Datenbank einer Website nach Zeitplan in einen Speicher, der Ihnen gehört. Geht der Server je verloren, ist diese Kopie das, was die Website zurückbringt.",
-      "reassurance": "Beim Wiederherstellen wird immer zuerst eine Sicherheitskopie der aktuellen Website erstellt, eine Wiederherstellung lässt sich also zurücknehmen.",
+      "body": "Ein Backup kopiert Dateien und Datenbank einer Anwendung nach Zeitplan in einen Speicher, der Ihnen gehört. Geht der Server je verloren, ist diese Kopie das, was die Anwendung zurückbringt.",
+      "reassurance": "Beim Wiederherstellen wird immer zuerst eine Sicherheitskopie der aktuellen Anwendung erstellt, eine Wiederherstellung lässt sich also zurücknehmen.",
       "covers": {
-        "files": "Website-Dateien",
+        "files": "Anwendungsdateien",
         "database": "Datenbank",
         "schedule": "Nach Zeitplan",
         "offsite": "Außerhalb dieses Servers gespeichert"
       },
       "stepsTitle": "So richten Sie es ein",
       "step1": "Verbinden Sie ein Speicherziel — den Bucket, in den Ihre Backups geschrieben werden.",
-      "step2": "Wählen Sie eine Website, was kopiert wird und wie oft.",
+      "step2": "Wählen Sie eine Anwendung, was kopiert wird und wie oft.",
       "step3": "Stellen Sie im Tab „Verlauf“ aus jedem geprüften Backup wieder her.",
       "action": "Backups einrichten",
       "addStorage": "Zuerst Speicher einrichten"
@@ -5934,7 +5934,7 @@
     },
     "restores": {
       "columns": {
-        "site": "Website",
+        "site": "Anwendung",
         "status": "Status",
         "type": "Was zurückgeholt wurde",
         "when": "Gestartet",
@@ -5946,11 +5946,11 @@
         "succeeded": "Wiederhergestellt",
         "failed": "Fehlgeschlagen"
       },
-      "unknownApplication": "Gelöschte Website",
+      "unknownApplication": "Gelöschte Anwendung",
       "unknownReason": "Der Grund wurde nicht aufgezeichnet.",
       "noSafetyCopy": "Keine erstellt",
       "findSafetyCopy": "Sicherheitskopie finden",
-      "allApplications": "Alle Websites",
+      "allApplications": "Alle Anwendungen",
       "allStatuses": "Jeder Status",
       "allTypes": "Jede Art der Wiederherstellung",
       "anyTime": "Jederzeit",
@@ -5962,11 +5962,11 @@
       },
       "empty": {
         "title": "Noch keine Wiederherstellungen",
-        "description": "Wird ein Backup über eine Website zurückgeholt, wird es hier festgehalten — was wiederhergestellt wurde, wann, und ob es geklappt hat."
+        "description": "Wird ein Backup über eine Anwendung zurückgeholt, wird es hier festgehalten — was wiederhergestellt wurde, wann, und ob es geklappt hat."
       },
       "emptyFiltered": {
         "title": "Keine Wiederherstellung passt zu diesen Filtern",
-        "description": "Versuchen Sie eine andere Website oder einen anderen Status."
+        "description": "Versuchen Sie eine andere Anwendung oder einen anderen Status."
       },
       "notStarted": "Nicht gestartet"
     }
@@ -6083,7 +6083,7 @@
     "cancel": "Abbrechen",
     "power": {
       "title": "Dieser Schlüssel hat vollen Administratorzugriff",
-      "body": "Wer ihn hat, kann auf diesem Server Websites, Datenbanken, Systembenutzer und Firewall-Regeln anlegen und löschen. Der Schlüssel lässt sich nicht einschränken und nicht auf Lesezugriff setzen.",
+      "body": "Wer ihn hat, kann auf diesem Server Anwendungen, Datenbanken, Systembenutzer und Firewall-Regeln anlegen und löschen. Der Schlüssel lässt sich nicht einschränken und nicht auf Lesezugriff setzen.",
       "attribution": "Alles, was damit getan wird, wird im Aktivitätsprotokoll unter einem eigenen Konto festgehalten, sodass Sie es von Ihren eigenen Änderungen unterscheiden können."
     },
     "actions": {

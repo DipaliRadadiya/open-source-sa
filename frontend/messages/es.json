@@ -4,7 +4,7 @@
     "nothingToRevert": "Nada que deshacer — aún no hay cambios.",
     "enterAValue": "Introduce un valor primero.",
     "chooseAnOption": "Elige una opción primero.",
-    "needsBackupTarget": "Configura primero las copias de seguridad de este sitio.",
+    "needsBackupTarget": "Configura primero las copias de seguridad de esta aplicación.",
     "nothingToSave": "Nada que guardar — haz un cambio primero.",
     "mongoRenameNeedsPassword": "Renombrar un usuario de MongoDB lo recrea, por lo que hace falta una contraseña.",
     "passwordRules": {
@@ -217,10 +217,10 @@
     "endpointFormat": "Debe ser una dirección https:// completa",
     "endpointInsecure": "Usa https://, no http:// — tus claves se enviarían sin cifrar.",
     "endpointPlaceholder": "Sustituye la parte entre <corchetes angulares> por tu propio valor",
-    "required_application": "Elige un sitio",
+    "required_application": "Elige una aplicación",
     "required_destination": "Elige dónde guardar las copias",
     "retentionRange": "Conserva entre 1 y 365 copias",
-    "required_confirm": "Escribe el dominio del sitio para confirmar",
+    "required_confirm": "Escribe el dominio de la aplicación para confirmar",
     "cloneDomainRequired": "Introduce el dominio de la copia.",
     "cloneDomainInvalid": "Introduce un dominio completo, como copia.ejemplo.com",
     "scheduleTime": "Usa una hora como 02:00",
@@ -547,7 +547,7 @@
       },
       "permDesc": {
         "dashboard": "Resumen del servidor, estadísticas y estado.",
-        "application": "Sitios y aplicaciones alojados en el servidor.",
+        "application": "Aplicaciones alojadas en el servidor.",
         "database": "Bases de datos y usuarios de base de datos.",
         "system_user": "Usuarios del sistema Linux y su acceso.",
         "firewall": "Abrir o cerrar puertos y gestionar reglas.",
@@ -561,23 +561,23 @@
         "backup": "Copias de seguridad del servidor y dónde se guardan.",
         "php": "Versiones y extensiones de PHP en el servidor.",
         "node": "Versiones de Node.js en el servidor.",
-        "sync": "Adoptar sitios y ajustes que ya están en la máquina.",
-        "git": "Cuentas de Git conectadas para desplegar sitios.",
+        "sync": "Adoptar aplicaciones y ajustes que ya están en la máquina.",
+        "git": "Cuentas de Git conectadas para desplegar aplicaciones.",
         "storage": "Almacenamiento remoto donde se guardan las copias.",
-        "app_domain": "Dominios apuntados a este sitio y su SSL.",
-        "app_deployment": "Desplegar este sitio y ver despliegues anteriores.",
-        "app_environment": "El archivo .env de este sitio.",
+        "app_domain": "Dominios apuntados a esta aplicación y su SSL.",
+        "app_deployment": "Desplegar esta aplicación y ver despliegues anteriores.",
+        "app_environment": "El archivo .env de esta aplicación.",
         "app_worker": "Procesos en segundo plano que siguen corriendo.",
-        "app_file": "Explorar, editar y subir los archivos de este sitio.",
-        "app_log": "Registros de acceso y errores de este sitio.",
-        "app_backup": "Copias de seguridad solo de este sitio.",
-        "app_php": "Versión y límites de PHP para este sitio.",
-        "app_security": "Poner usuario y contraseña delante del sitio.",
-        "app_firewall": "Bloquea ataques comunes antes de que lleguen al sitio.",
-        "app_bot_blocker": "Impide que los rastreadores de IA lean el sitio.",
+        "app_file": "Explorar, editar y subir los archivos de esta aplicación.",
+        "app_log": "Registros de acceso y errores de esta aplicación.",
+        "app_backup": "Copias de seguridad solo de esta aplicación.",
+        "app_php": "Versión y límites de PHP para esta aplicación.",
+        "app_security": "Poner usuario y contraseña delante de la aplicación.",
+        "app_firewall": "Bloquea ataques comunes antes de que lleguen a la aplicación.",
+        "app_bot_blocker": "Impide que los rastreadores de IA lean la aplicación.",
         "app_fail2ban": "Bloquea direcciones que fallan al entrar aquí.",
-        "app_staging": "Una copia del sitio para probar cambios.",
-        "app_clone": "Hacer una copia de este sitio en otro sitio."
+        "app_staging": "Una copia de la aplicación para probar cambios.",
+        "app_clone": "Hacer una copia de esta aplicación en otro lugar."
       },
       "unsavedTitle": "¿Descartar los cambios sin guardar?",
       "unsavedDescription": "Has hecho cambios en este rol que no se han guardado. Si sales ahora, se perderán.",
@@ -605,7 +605,7 @@
   },
   "systemUsers": {
     "title": "Usuarios del sistema",
-    "subtitle": "Cuentas del sistema operativo Linux que poseen y ejecutan tus sitios.",
+    "subtitle": "Cuentas del sistema operativo Linux que poseen y ejecutan tus aplicaciones.",
     "searchPlaceholder": "Buscar usuarios…",
     "clearSearch": "Borrar búsqueda",
     "columns": {
@@ -614,12 +614,12 @@
       "home": "Directorio",
       "shell": "Shell",
       "access": "Acceso",
-      "applications": "Apps",
+      "applications": "Aplicaciones",
       "created": "Creado"
     },
     "sudo": "Sudo",
     "ssh": "SSH",
-    "appsCount": "{count, plural, =0 {Sin apps} one {# app} other {# apps}}",
+    "appsCount": "{count, plural, =0 {Sin aplicaciones} one {# aplicación} other {# aplicaciones}}",
     "empty": {
       "title": "Aún no hay usuarios del sistema",
       "desc": "Los usuarios del sistema son las cuentas Linux que poseen y ejecutan tus aplicaciones.",
@@ -873,7 +873,7 @@
     "liveLabel": "Ahora mismo",
     "attention": {
       "title": "Requiere atención",
-      "count": "{count, plural, one {# sitio requiere atención} other {# sitios requieren atención}}",
+      "count": "{count, plural, one {# aplicación requiere atención} other {# aplicaciones requieren atención}}",
       "insecure": {
         "chip": "{site} no tiene certificado SSL",
         "detail": "Los visitantes llegan por HTTP sin cifrar, así que los navegadores les muestran un aviso de «No es seguro».",
@@ -881,7 +881,7 @@
       },
       "failed": {
         "chip": "{site} no terminó de configurarse",
-        "detail": "La configuración de este sitio se detuvo a medias, así que todavía no se está sirviendo.",
+        "detail": "La configuración de esta aplicación se detuvo a medias, así que todavía no se está sirviendo.",
         "action": "Ver qué falló"
       },
       "git": {
@@ -955,10 +955,10 @@
       "username": "Usuario del sistema",
       "usernameHint": "Debe existir ya en el servidor, por ejemplo root o www-data.",
       "path": "Ruta de la aplicación",
-      "pathPickerPlaceholder": "Elige un sitio",
+      "pathPickerPlaceholder": "Elige una aplicación",
       "pathCustom": "Escribir una ruta manualmente",
-      "pathSitesGroup": "Tus sitios",
-      "pathHint": "El directorio absoluto del sitio, usado para completar el comando.",
+      "pathSitesGroup": "Tus aplicaciones",
+      "pathHint": "El directorio absoluto de la aplicación, usado para completar el comando.",
       "command": "Comando",
       "schedule": "Programación",
       "expression": "Expresión cron",
@@ -1217,7 +1217,7 @@
     "phpIni": {
       "title": "php.ini — PHP {version}",
       "description": "El archivo completo, tal como lo lee PHP. Al guardar se hace una copia, se escribe, se comprueba con php-fpm -t y se recarga. Si PHP lo rechaza, se restaura el archivo anterior y no se recarga nada.",
-      "acknowledge": "Entiendo que un php.ini incorrecto puede impedir que arranque FPM de PHP {version}, lo que dejaría sin servicio todos los sitios de esa versión.",
+      "acknowledge": "Entiendo que un php.ini incorrecto puede impedir que arranque FPM de PHP {version}, lo que dejaría sin servicio todas las aplicaciones de esa versión.",
       "rejectedTitle": "PHP rechazó este archivo: no se cambió nada",
       "save": "Guardar y recargar",
       "cancel": "Cancelar",
@@ -1485,7 +1485,7 @@
       "emptyTitle": "Todavía no hay reglas",
       "emptyBody": "Añade una regla para dejar pasar algo — una web en el 443, o SSH solo desde tu oficina.",
       "protectedHint": "Añadida automáticamente para que no te quedes fuera de este servidor.",
-      "protectedReason": "Esta te mantiene conectado: desactivarla puede dejarte fuera del servidor o tumbar tus sitios.",
+      "protectedReason": "Esta te mantiene conectado: desactivarla puede dejarte fuera del servidor o tumbar tus aplicaciones.",
       "confirmTitle": "¿Eliminar esta regla?",
       "confirmBodyOn": "{rule} — tiene efecto de inmediato. Lo que dejaba pasar quedará bloqueado.",
       "confirmBodyOff": "{rule} — el cortafuegos está apagado, así que hoy no cambia nada, pero la regla no volverá cuando lo actives.",
@@ -1848,14 +1848,14 @@
         "cancelFailed": "No se pudo cancelar el reinicio.",
         "scheduledAt": "Reinicio programado para {at}.",
         "title": "Reinicio manual",
-        "description": "Todos los sitios alojados quedan inaccesibles hasta que vuelva, normalmente menos de un minuto.",
+        "description": "Todas las aplicaciones alojadas quedan inaccesibles hasta que vuelva, normalmente menos de un minuto.",
         "when": "Inicio",
         "now": "Ahora mismo",
         "inMinutes": "Dentro de {minutes} minutos",
         "action": "Reiniciar servidor",
         "confirmTitle": "¿Reiniciar este servidor?",
-        "confirmNow": "Todos los sitios, bases de datos y servicios de esta máquina se detienen ahora y vuelven cuando haya arrancado. El panel no estará accesible mientras tanto.",
-        "confirmDelayed": "El servidor se reiniciará dentro de {minutes} minutos. Todos los sitios, bases de datos y servicios se detendrán hasta que vuelva.",
+        "confirmNow": "Todas las aplicaciones, bases de datos y servicios de esta máquina se detienen ahora y vuelven cuando haya arrancado. El panel no estará accesible mientras tanto.",
+        "confirmDelayed": "El servidor se reiniciará dentro de {minutes} minutos. Todas las aplicaciones, bases de datos y servicios se detendrán hasta que vuelva.",
         "confirmCancel": "Cancelar",
         "confirmSubmit": "Reiniciar",
         "scheduled": "Reinicio programado dentro de {minutes} minutos.",
@@ -1867,7 +1867,7 @@
         "description": "Reiniciar en un intervalo fijo, independientemente de las actualizaciones.",
         "save": "Guardar programación",
         "enable": "Reiniciar según programación",
-        "enableHint": "Todos los sitios quedan sin servicio alrededor de un minuto cada vez.",
+        "enableHint": "Todas las aplicaciones quedan sin servicio alrededor de un minuto cada vez.",
         "frequency": "Intervalo",
         "dayOfWeek": "Día de la semana",
         "dayOfMonth": "Día del mes",
@@ -1895,12 +1895,12 @@
   },
   "php": {
     "title": "PHP",
-    "subtitle": "El PHP de este servidor y las extensiones que pueden usar tus sitios.",
+    "subtitle": "El PHP de este servidor y las extensiones que pueden usar tus aplicaciones.",
     "loadFailed": "No pudimos leer la configuración de PHP de este servidor.",
     "noPermission": "Tu rol no incluye PHP con acceso de gestión. Pide a un administrador que te lo conceda.",
     "empty": {
       "title": "No hay PHP instalado",
-      "description": "Instala una versión para ejecutar sitios PHP en este servidor."
+      "description": "Instala una versión para ejecutar aplicaciones PHP en este servidor."
     },
     "versions": {
       "pickerLabel": "Versiones de PHP",
@@ -1908,12 +1908,12 @@
       "default": "Predeterminada",
       "panelRuns": "El propio panel funciona con esta versión.",
       "isDefault": "Esta es la versión predeterminada.",
-      "usedBy": "{count, plural, one {# sitio usa esta versión} other {# sitios usan esta versión}}.",
-      "usedByCount": "{count, plural, one {La usa # sitio} other {La usan # sitios}}.",
-      "usedByNone": "Todavía no la usa ningún sitio.",
+      "usedBy": "{count, plural, one {# aplicación usa esta versión} other {# aplicaciones usan esta versión}}.",
+      "usedByCount": "{count, plural, one {La usa # aplicación} other {La usan # aplicaciones}}.",
+      "usedByNone": "Todavía no la usa ninguna aplicación.",
       "makeDefault": "Hacer predeterminada",
       "remove": "Quitar",
-      "defaultHint": "Tus sitios conservan su propia versión: esto solo cambia el comando php.",
+      "defaultHint": "Tus aplicaciones conservan su propia versión: esto solo cambia el comando php.",
       "defaultSet": "PHP {version} ya es la predeterminada.",
       "defaultFailed": "No se pudo establecer esa versión como predeterminada.",
       "removed": "PHP {version} eliminada.",
@@ -1959,7 +1959,7 @@
       "installing": "Instalando {name}; esto tarda unos minutos.",
       "installingShort": "Iniciando",
       "failed": "No se pudo cambiar esa extensión.",
-      "summary": "{on} de {total} activadas. Activa las que necesiten tus sitios.",
+      "summary": "{on} de {total} activadas. Activa las que necesiten tus aplicaciones.",
       "filterAll": "Todas",
       "filterOn": "Activadas",
       "filterOff": "Desactivadas",
@@ -1985,7 +1985,7 @@
       "started": "Instalando PHP {version}; esto tarda unos minutos.",
       "already": "PHP {version} ya estaba instalada.",
       "failed": "No se pudo instalar esa versión.",
-      "eolWarning": "PHP {version} ya no recibe correcciones de seguridad. Instálala solo si algún sitio la necesita.",
+      "eolWarning": "PHP {version} ya no recibe correcciones de seguridad. Instálala solo si alguna aplicación la necesita.",
       "noneAvailable": "Ahora mismo no hay versiones nuevas para instalar.",
       "installedTag": "Instalada",
       "allInstalled": "Todas las versiones que ofrece este servidor ya están instaladas."
@@ -2061,7 +2061,7 @@
       "unsupported": "ionCube no publica ningún loader para PHP {version}. Utilice otra versión para el software que lo necesite.",
       "loadFailed": "No se pudo leer el estado de ionCube Loader.",
       "removeConfirmTitle": "¿Eliminar ionCube Loader?",
-      "removeConfirmBody": "Cualquier sitio en PHP {version} que ejecute software cifrado dejará de funcionar hasta que se vuelva a instalar.",
+      "removeConfirmBody": "Cualquier aplicación en PHP {version} que ejecute software cifrado dejará de funcionar hasta que se vuelva a instalar.",
       "hint": "Un archivo de código cerrado de ionCube, no un paquete apt: por eso tiene su propia pestaña en lugar de una fila en Extensiones.",
       "onShort": "Activado",
       "offShort": "Desactivado",
@@ -2105,7 +2105,7 @@
       "isDefault": "Esta es la versión predeterminada.",
       "usedBy": "{count, plural, one {# aplicación usa esta versión} other {# aplicaciones usan esta versión}}.",
       "usedByCount": "{count, plural, one {La usa # aplicación} other {La usan # aplicaciones}}.",
-      "usedByNone": "Todavía ninguna aplicación usa esta versión.",
+      "usedByNone": "Todavía no la usa ninguna aplicación.",
       "makeDefault": "Hacer predeterminada",
       "remove": "Quitar",
       "defaultHint": "Tus aplicaciones conservan su propia versión: esto solo cambia el comando node.",
@@ -2151,7 +2151,7 @@
       "started": "Instalando Node.js {version}: esto tarda unos minutos.",
       "already": "Node.js {version} ya estaba instalada.",
       "failed": "No se pudo instalar esa versión.",
-      "eolWarning": "Node.js {version} ya no recibe parches de seguridad. Instálala solo si una aplicación la necesita.",
+      "eolWarning": "Node.js {version} ya no recibe correcciones de seguridad. Instálala solo si alguna aplicación la necesita.",
       "noneAvailable": "Ahora mismo no hay versiones nuevas para instalar.",
       "installedTag": "Instalada",
       "allInstalled": "Todas las versiones que ofrece este servidor ya están instaladas."
@@ -2273,7 +2273,7 @@
     "message": "Este servidor necesita reiniciarse para terminar de aplicar una actualización instalada.",
     "action": "Reiniciar ahora",
     "confirmTitle": "¿Reiniciar este servidor ahora?",
-    "confirmDescription": "Todos los sitios alojados quedan inaccesibles hasta que vuelva, normalmente menos de un minuto.",
+    "confirmDescription": "Todas las aplicaciones alojadas quedan inaccesibles hasta que vuelva, normalmente menos de un minuto.",
     "confirmCancel": "Cancelar",
     "confirmSubmit": "Reiniciar servidor",
     "failed": "No se pudo iniciar el reinicio.",
@@ -2282,7 +2282,7 @@
   "serverRestart": {
     "goingDown": {
       "title": "Reiniciando el servidor",
-      "body": "Tus sitios estarán sin conexión hasta que vuelva. Normalmente tarda menos de un minuto."
+      "body": "Tus aplicaciones estarán sin conexión hasta que vuelva. Normalmente tarda menos de un minuto."
     },
     "offline": {
       "title": "Esperando al servidor",
@@ -2391,10 +2391,10 @@
       "noUsers": "Sin usuarios",
       "lastExport": "Última exportación",
       "neverExported": "Nunca",
-      "application": "Sitio",
+      "application": "Aplicación",
       "notLinked": "Sin vincular",
-      "applicationUnknown": "Otro sitio",
-      "attachFor": "Elige qué sitio usa {name}"
+      "applicationUnknown": "Otra aplicación",
+      "attachFor": "Elige qué aplicación usa {name}"
     },
     "empty": {
       "title": "Todavía no hay bases de datos",
@@ -2427,11 +2427,11 @@
       "noEngine": "Instala primero un motor de base de datos.",
       "usernamePlaceholder": "usuario_mi_app",
       "application": "Usada por",
-      "applicationNone": "Sin vincular a ningún sitio",
-      "applicationSearch": "Buscar sitios…",
+      "applicationNone": "Sin vincular a ninguna aplicación",
+      "applicationSearch": "Buscar aplicaciones…",
       "applicationTaken": "Ya tiene una base de datos",
-      "applicationHint": "Determina qué sitio respalda esta base de datos. No conecta tu sitio con ella: el sitio sigue usando lo que indique su propia configuración.",
-      "applicationEngine": "Este sitio funciona con {engines}.",
+      "applicationHint": "Determina qué aplicación respalda esta base de datos. No conecta tu aplicación con ella: la aplicación sigue usando lo que indique su propia configuración.",
+      "applicationEngine": "Esta aplicación funciona con {engines}.",
       "sqlWords": {
         "charset": "Juego de caracteres",
         "collation": "Cotejamiento",
@@ -2448,7 +2448,7 @@
         "charsetHint": "Qué caracteres puede almacenar la base de datos. UTF8 admite todos los idiomas y emojis: elija esta opción a menos que necesite otra distinta.",
         "collationHint": "Las reglas de idioma que se usan para ordenar y comparar el texto. Se derivan de la codificación."
       },
-      "accessHint": "Desde qué máquinas puede conectarse este usuario. Solo este servidor es la respuesta más segura y la correcta para un sitio alojado aquí. Evite \"desde cualquier lugar\" a menos que realmente necesite acceso remoto.",
+      "accessHint": "Desde qué máquinas puede conectarse este usuario. Solo este servidor es la respuesta más segura y la correcta para una aplicación alojada aquí. Evite \"desde cualquier lugar\" a menos que realmente necesite acceso remoto.",
       "engineHint": "Sobre qué software de base de datos se ejecuta. No se puede cambiar después: mover una base de datos a otro motor significa crearla de nuevo."
     },
     "access": {
@@ -2509,7 +2509,7 @@
       "clearAll": "Borrar",
       "submit": "Adoptar",
       "adopting": "Adoptando…",
-      "done": "{count, plural, one {# base de datos adoptada. Aún no está vinculada a ningún sitio, así que ninguna copia la incluye.} other {# bases de datos adoptadas. Aún no están vinculadas a ningún sitio, así que ninguna copia las incluye.}}",
+      "done": "{count, plural, one {# base de datos adoptada. Aún no está vinculada a ninguna aplicación, así que ninguna copia la incluye.} other {# bases de datos adoptadas. Aún no están vinculadas a ninguna aplicación, así que ninguna copia las incluye.}}",
       "failed": "No se pudieron adoptar."
     },
     "engineList": {
@@ -2801,35 +2801,35 @@
     },
     "usedBy": {
       "title": "Usada por",
-      "included": "Incluida en las copias de seguridad de este sitio.",
-      "noneWarning": "Sin vincular a ningún sitio, por lo que ninguna copia la incluye.",
-      "unknownSite": "Vinculada a un sitio que no puedes ver.",
-      "attach": "Vincular a un sitio",
+      "included": "Incluida en las copias de seguridad de esta aplicación.",
+      "noneWarning": "Sin vincular a ninguna aplicación, por lo que ninguna copia la incluye.",
+      "unknownSite": "Vinculada a una aplicación que no puedes ver.",
+      "attach": "Vincular a una aplicación",
       "change": "Cambiar",
       "noPermission": "No tienes permiso para cambiar esto."
     },
     "attach": {
-      "title": "¿Qué sitio usa esta base de datos?",
-      "subtitle": "Elige el sitio al que pertenece {name}.",
+      "title": "¿Qué aplicación usa esta base de datos?",
+      "subtitle": "Elige la aplicación a la que pertenece {name}.",
       "label": "Usada por",
-      "none": "Sin vincular a ningún sitio",
-      "search": "Buscar sitios…",
+      "none": "Sin vincular a ninguna aplicación",
+      "search": "Buscar aplicaciones…",
       "taken": "Ya tiene una base de datos",
-      "hint": "Determina qué sitio respalda esta base de datos. No conecta tu sitio con ella: el sitio sigue usando lo que indique su propia configuración.",
+      "hint": "Determina qué aplicación respalda esta base de datos. No conecta tu aplicación con ella: la aplicación sigue usando lo que indique su propia configuración.",
       "submit": "Guardar",
       "saving": "Guardando…",
       "cancel": "Cancelar",
-      "attached": "Base de datos vinculada al sitio.",
-      "detached": "La base de datos ya no está vinculada a ningún sitio.",
-      "failed": "No se pudo cambiar qué sitio usa esta base de datos.",
-      "unchanged": "Elige primero otro sitio.",
-      "engineNotAccepted": "Este sitio funciona con {engines}."
+      "attached": "Base de datos vinculada a la aplicación.",
+      "detached": "La base de datos ya no está vinculada a ninguna aplicación.",
+      "failed": "No se pudo cambiar qué aplicación usa esta base de datos.",
+      "unchanged": "Elige primero otra aplicación.",
+      "engineNotAccepted": "Esta aplicación funciona con {engines}."
     },
     "unlinked": {
-      "title": "{count, plural, one {# base de datos no está vinculada a ningún sitio} other {# bases de datos no están vinculadas a ningún sitio}}",
-      "description": "Las copias de seguridad solo incluyen bases de datos vinculadas a un sitio, así que estas no están en ninguna copia.",
+      "title": "{count, plural, one {# base de datos no está vinculada a ninguna aplicación} other {# bases de datos no están vinculadas a ninguna aplicación}}",
+      "description": "Las copias de seguridad solo incluyen bases de datos vinculadas a una aplicación, así que estas no están en ninguna copia.",
       "action": "Mostrarlas",
-      "filtered": "Mostrando solo bases de datos sin vincular a un sitio",
+      "filtered": "Mostrando solo bases de datos sin vincular a una aplicación",
       "showAll": "Mostrar todas"
     }
   },
@@ -2844,7 +2844,7 @@
       "recheck": "Volver a comprobar todas las cuentas"
     },
     "onboarding": {
-      "title": "Tu cuenta de Git está conectada",
+      "title": "{label} está conectada",
       "description": "Elígela como origen al crear una aplicación.",
       "action": "Crear aplicación"
     },
@@ -2982,17 +2982,17 @@
   "applications": {
     "logs": {
       "pageTitle": "Registros",
-      "pageSubtitle": "Consulta los registros de acceso, error y aplicación de este sitio.",
-      "provisioning": "Los registros estarán disponibles cuando el sitio termine de aprovisionarse.",
+      "pageSubtitle": "Consulta los registros de acceso, error y salida de esta aplicación.",
+      "provisioning": "Los registros estarán disponibles cuando la aplicación termine de aprovisionarse.",
       "loadFailed": "No pudimos cargar los registros.",
       "sourcesLabel": "Fuente de registro",
-      "proxyHint": "Estos son los registros del proxy inverso — la salida de tu app está en «Salida de la aplicación».",
+      "proxyHint": "Estos son los registros del proxy inverso — la salida de tu aplicación está en «Salida de la aplicación».",
       "empty": {
         "badge": "vacío"
       },
       "noSources": {
-        "title": "Sin registros para este sitio",
-        "body": "Este sitio aún no tiene fuentes de registro legibles."
+        "title": "Sin registros para esta aplicación",
+        "body": "Esta aplicación aún no tiene fuentes de registro legibles."
       },
       "clear": {
         "title": "¿Vaciar el {label}?",
@@ -3005,11 +3005,11 @@
     },
     "environment": {
       "pageTitle": "Entorno",
-      "pageSubtitle": "Edita el archivo .env de este sitio.",
-      "provisioning": "El entorno estará disponible cuando el sitio termine de aprovisionarse.",
+      "pageSubtitle": "Edita el archivo .env de esta aplicación.",
+      "provisioning": "El entorno estará disponible cuando la aplicación termine de aprovisionarse.",
       "loadFailed": "No pudimos cargar el entorno.",
       "sectionTitle": "Entorno",
-      "sectionSubtitle": "El .env del sitio, editado como un solo archivo.",
+      "sectionSubtitle": "El .env de la aplicación, editado como un solo archivo.",
       "pathUnknown": ".env",
       "copy": "Copiar",
       "emptyPlaceholder": "# Aún no hay .env — añade variables y guarda para crear el archivo",
@@ -3022,8 +3022,8 @@
       "saveFailed": "No pudimos guardar el entorno.",
       "revert": "Revertir",
       "unsaved": "Cambios sin guardar",
-      "restartHint": "Esta app lee el archivo al iniciar — usa Guardar y reiniciar para aplicar los cambios.",
-      "applyHint": "Esta app cachea su configuración — Guardar y aplicar limpia la caché por ti.",
+      "restartHint": "Esta aplicación lee el archivo al iniciar — usa Guardar y reiniciar para aplicar los cambios.",
+      "applyHint": "Esta aplicación cachea su configuración — Guardar y aplicar limpia la caché por ti.",
       "readOnly": "Tienes acceso de solo lectura a este archivo.",
       "syntaxTitle": "No guardado — error de sintaxis",
       "fixSet": "Poner {key}={value}",
@@ -3032,10 +3032,10 @@
         "action": "Restaurar",
         "title": "Restaurar una copia",
         "subtitle": "Elige una copia guardada. El archivo actual se respalda primero, así que es reversible.",
-        "restart": "Reiniciar la app después de restaurar",
+        "restart": "Reiniciar la aplicación después de restaurar",
         "done": "Entorno restaurado.",
         "failed": "No pudimos restaurar la copia.",
-        "restartHint": "Reinicie el sitio para que la configuración restaurada surta efecto ahora. Sin esto, se aplicará en el próximo reinicio."
+        "restartHint": "Reinicie la aplicación para que la configuración restaurada surta efecto ahora. Sin esto, se aplicará en el próximo reinicio."
       },
       "history": {
         "title": "Historial de cambios",
@@ -3068,7 +3068,7 @@
       }
     },
     "title": "Aplicaciones",
-    "subtitle": "Sitios y servicios que se ejecutan en este servidor.",
+    "subtitle": "Aplicaciones y servicios que se ejecutan en este servidor.",
     "loadFailed": "No pudimos cargar las aplicaciones.",
     "noPermission": "Tu rol no incluye Aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
     "create": "Crear aplicación",
@@ -3084,16 +3084,16 @@
     "configuration": "Configuración",
     "advanced": "Ajustes avanzados",
     "source": {
-      "accountMissing": "La cuenta de Git que usaba este sitio se ha desconectado. Los despliegues fallarán hasta que se vincule a otra cuenta.",
+      "accountMissing": "La cuenta de Git que usaba esta aplicación se ha desconectado. Los despliegues fallarán hasta que se vincule a otra cuenta.",
       "relink": {
         "action": "Reconectar",
-        "title": "Reconectar este sitio a una cuenta de Git",
+        "title": "Reconectar esta aplicación a una cuenta de Git",
         "description": "El repositorio y la rama no cambian — {repository}. La cuenta elegida se comprueba contra ellos antes de guardar nada.",
         "choose": "Elige una cuenta",
         "cancel": "Cancelar",
         "submit": "Reconectar",
-        "done": "Sitio reconectado.",
-        "failed": "No se pudo reconectar el sitio."
+        "done": "Aplicación reconectada.",
+        "failed": "No se pudo reconectar la aplicación."
       },
       "title": "Origen y despliegue",
       "repository": "Repositorio",
@@ -3133,14 +3133,14 @@
       "type": "Tipo",
       "domain": "Dominio",
       "status": "Estado",
-      "owner": "Propietario",
+      "owner": "Usuario del sistema",
       "size": "Tamaño",
       "created": "Creada",
       "php": "PHP"
     },
     "empty": {
       "title": "Tu servidor está listo para su primera aplicación",
-      "description": "Crea un sitio o servicio en un flujo guiado. {brand} lo aprovisionará y luego mostrará aquí su estado en directo.",
+      "description": "Crea una aplicación o servicio en un flujo guiado. {brand} lo aprovisionará y luego mostrará aquí su estado en directo.",
       "filteredTitle": "No hay aplicaciones coincidentes",
       "filteredDescription": "Ninguna aplicación coincide con tu búsqueda.",
       "clearSearch": "Borrar búsqueda",
@@ -3163,11 +3163,11 @@
     "searchPlaceholder": "Buscar aplicaciones…",
     "details": {
       "title": "Aplicación",
-      "settingUp": "Configurando tu sitio",
+      "settingUp": "Configurando tu aplicación",
       "failedTitle": "La configuración falló",
       "pending": "En cola: empezará en un momento.",
       "keepWaiting": "Esto continúa en el servidor. Puedes salir de esta página sin problema.",
-      "takesMinutes": "La mayoría de los sitios están listos en unos minutos. Un instalador de un clic tarda más.",
+      "takesMinutes": "La mayoría de las aplicaciones están listas en unos minutos. Un instalador de un clic tarda más.",
       "starting": "Iniciando…",
       "working": "Trabajando…",
       "failedAt": "Se detuvo en: {step}",
@@ -3177,10 +3177,10 @@
       "copyReference": "Copiar la referencia de soporte",
       "unknownStep": "Se completó un paso",
       "steps": {
-        "create_directory": "Creando la carpeta del sitio",
+        "create_directory": "Creando la carpeta de la aplicación",
         "placeholder": "Añadiendo una página provisional",
         "set_ownership": "Configurando los permisos de archivos",
-        "create_php_pool": "Configurando PHP para este sitio",
+        "create_php_pool": "Configurando PHP para esta aplicación",
         "harden_php": "Restringiendo funciones de PHP",
         "create_database": "Creando la base de datos",
         "write_config": "Escribiendo la configuración del servidor web",
@@ -3193,7 +3193,7 @@
         "fetch": "Descargando el código más reciente",
         "checkout": "Actualizando los archivos",
         "seed_env": "Escribiendo el archivo de entorno",
-        "verify": "Comprobando que el sitio responde",
+        "verify": "Comprobando que la aplicación responde",
         "download": "Descargando archivos",
         "extract": "Descomprimiendo archivos",
         "configure": "Aplicando la configuración",
@@ -3208,10 +3208,10 @@
       "stalledTitle": "Esto está tardando más de lo esperado",
       "stalledBody": "La configuración no ha informado avances desde hace un rato. Puede que siga en marcha: vuelve a comprobarlo o contacta con soporte si sigue así.",
       "checkAgain": "Comprobar de nuevo",
-      "startedAgo": "Comenzó {ago}. La mayoría de los sitios están listos en unos minutos; un instalador de un clic tarda más."
+      "startedAgo": "Comenzó {ago}. La mayoría de las aplicaciones están listas en unos minutos; un instalador de un clic tarda más."
     },
     "port": {
-      "label": "Puerto de aplicación",
+      "label": "Puerto de la aplicación",
       "checking": "Comprobando puerto…",
       "available": "Este puerto está disponible.",
       "warning": "{message}",
@@ -3225,7 +3225,7 @@
       "typeHint": "Elige el punto de partida para tu proyecto. Podrás ajustar la configuración avanzada más adelante.",
       "configureHint": "Solo se muestran los campos que esta aplicación necesita.",
       "reviewTitle": "Listo para aprovisionar",
-      "reviewHint": "{brand} creará la configuración del sitio y mostrará el progreso en la siguiente pantalla.",
+      "reviewHint": "{brand} creará la configuración de la aplicación y mostrará el progreso en la siguiente pantalla.",
       "selected": "Seleccionada",
       "change": "Cambiar"
     },
@@ -3255,9 +3255,9 @@
       "noSystemUserCreatePermission": "Necesitas permiso para administrar usuarios del sistema. Pide a un administrador que cree uno.",
       "createSystemUser": "Crear usuario del sistema",
       "generateSystemUser": "Generar un nuevo usuario del sistema",
-      "generateSystemUserHint": "Una cuenta de Linux dedicada con el nombre de este sitio.",
+      "generateSystemUserHint": "Un usuario del sistema dedicado con el nombre de esta aplicación.",
       "pickSystemUser": "Usar un usuario del sistema existente",
-      "pickSystemUserHint": "Compartir una cuenta con sus otros sitios.",
+      "pickSystemUserHint": "Compartir una cuenta con sus otras aplicaciones.",
       "systemUserWillBeCreated": "Se creará un usuario nuevo",
       "repositoriesLoading": "Cargando repositorios…",
       "repositoriesEmpty": "No hay repositorios disponibles para esta cuenta.",
@@ -3290,13 +3290,13 @@
       "submitMissing": "{count, plural, one {Completa # elemento obligatorio para continuar.} other {Completa # elementos obligatorios para continuar.}}",
       "repositoryNeedsAccount": "Elige primero una cuenta de Git.",
       "branchNeedsRepository": "Elige primero un repositorio.",
-      "noOptions": "Este tipo de sitio no ofreció opciones para este campo, así que no hay nada que elegir.",
+      "noOptions": "Este tipo de aplicación no ofreció opciones para este campo, así que no hay nada que elegir.",
       "runtimeRequirement": "Esta aplicación necesita {runtime} {range}.",
       "typePlaceholder": "Busca y selecciona un tipo de aplicación…",
       "domainMode": {
         "own": "Mi dominio",
         "temporary": "Temporal",
-        "label": "Dónde vivirá este sitio"
+        "label": "Dónde vivirá esta aplicación"
       },
       "temporaryDomainHint": "Funciona al instante. Usa un dominio real antes de publicar.",
       "nameHint": "Solo se usa en el panel; los visitantes no lo ven.",
@@ -3306,7 +3306,7 @@
       "needsGitAccount": "No hay ninguna cuenta de Git conectada. Usa «Conectar Git» abajo y luego Actualizar.",
       "installPhpVersion": "Instalar una versión de PHP",
       "installNodeVersion": "Instalar una versión de Node",
-      "databaseEnginePermanent": "Esto no se puede cambiar después: mover un sitio a otro motor significa crearlo de nuevo.",
+      "databaseEnginePermanent": "Esto no se puede cambiar después: mover una aplicación a otro motor significa crearla de nuevo.",
       "refreshVersions": "Actualizar",
       "refreshVersionsHint": "Actualizar las versiones de {runtime} instaladas en este servidor",
       "versionsAdded": "{runtime} {versions} ya {count, plural, one {está disponible} other {están disponibles}}.",
@@ -3337,8 +3337,8 @@
     "actions": {
       "label": "Acciones",
       "open": "Abrir panel",
-      "visit": "Visitar sitio",
-      "visitHint": "El sitio se sirve cuando termina el aprovisionamiento.",
+      "visit": "Visitar aplicación",
+      "visitHint": "La aplicación se sirve cuando termina el aprovisionamiento.",
       "delete": "Eliminar aplicación",
       "go": {
         "files": "Abrir archivos",
@@ -3349,10 +3349,10 @@
     },
     "delete": {
       "title": "¿Eliminar {name}?",
-      "description": "Se elimina la configuración del sitio y {domain} deja de servirse. Esto no se puede deshacer.",
-      "removeFiles": "Eliminar también los archivos y las copias de seguridad del sitio",
-      "removeFilesOn": "Se eliminan el directorio del sitio y todas sus copias de seguridad, incluidos los archivos guardados en tu almacenamiento.",
-      "removeFilesOff": "Los archivos permanecen en el servidor. Las copias de seguridad del sitio desaparecen del panel junto con él, pero sus archivos siguen en tu almacenamiento: elimínalos allí si ya no los quieres.",
+      "description": "Se elimina la configuración de la aplicación y {domain} deja de servirse. Esto no se puede deshacer.",
+      "removeFiles": "Eliminar también los archivos y las copias de seguridad de la aplicación",
+      "removeFilesOn": "Se eliminan el directorio de la aplicación y todas sus copias de seguridad, incluidos los archivos guardados en tu almacenamiento.",
+      "removeFilesOff": "Los archivos permanecen en el servidor. Las copias de seguridad de la aplicación desaparecen del panel junto con ella, pero sus archivos siguen en tu almacenamiento: elimínalos allí si ya no los quieres.",
       "confirmLabel": "Escribe <code>{domain}</code> para confirmar",
       "submit": "Eliminar aplicación",
       "deleting": "Eliminando…",
@@ -3360,20 +3360,20 @@
       "failed": "No pudimos eliminar esta aplicación.",
       "cancel": "Cancelar",
       "copyDomain": "Copiar dominio",
-      "removeDatabases": "{count, plural, one {Eliminar también la base de datos de este sitio} other {Eliminar también las # bases de datos de este sitio}}",
+      "removeDatabases": "{count, plural, one {Eliminar también la base de datos de esta aplicación} other {Eliminar también las # bases de datos de esta aplicación}}",
       "removeDatabasesOn": "{count, plural, one {{databases} se eliminará del servidor, junto con los usuarios que se conectan a ella.} other {{databases} se eliminarán del servidor, junto con los usuarios que se conectan a ellas.}}",
-      "removeDatabasesOff": "{count, plural, one {{databases} permanece en el servidor, sin vincular a ningún sitio. Elimínala desde Bases de datos si ya no la necesitas.} other {{databases} permanecen en el servidor, sin vincular a ningún sitio. Elimínalas desde Bases de datos si ya no las necesitas.}}",
-      "databasesFailed": "El sitio se eliminó, pero no se pudo eliminar {databases}.",
+      "removeDatabasesOff": "{count, plural, one {{databases} permanece en el servidor, sin vincular a ninguna aplicación. Elimínala desde Bases de datos si ya no la necesitas.} other {{databases} permanecen en el servidor, sin vincular a ninguna aplicación. Elimínalas desde Bases de datos si ya no las necesitas.}}",
+      "databasesFailed": "La aplicación se eliminó, pero no se pudo eliminar {databases}.",
       "goToDatabases": "Abrir Bases de datos",
-      "removeFilesHint": "Desactivado: el sitio se elimina del panel pero sus archivos permanecen en el servidor. Activado: los archivos y sus copias de seguridad se eliminan y no se pueden recuperar."
+      "removeFilesHint": "Desactivado: la aplicación se elimina del panel pero sus archivos permanecen en el servidor. Activado: los archivos y sus copias de seguridad se eliminan y no se pueden recuperar."
     },
     "facts": {
       "title": "Aplicación",
       "webRoot": "Raíz web",
       "php": "Versión de PHP",
       "node": "Versión de Node",
-      "port": "Puerto",
-      "description": "Tipo, propietario y dónde vive este sitio."
+      "port": "Puerto de la aplicación",
+      "description": "Tipo, usuario del sistema y dónde vive esta aplicación."
     },
     "process": {
       "title": "Proceso",
@@ -3388,7 +3388,7 @@
       "stopped": "El proceso se ha detenido.",
       "restarted": "El proceso se ha reiniciado.",
       "failed": "No pudimos cambiar el proceso.",
-      "deployToStart": "Este sitio se inicia tras su primer despliegue correcto."
+      "deployToStart": "Esta aplicación se inicia tras su primer despliegue correcto."
     },
     "domains": {
       "title": "Dominios y SSL",
@@ -3398,10 +3398,10 @@
       "manage": "Gestionar dominios",
       "loadFailed": "No pudimos cargar los dominios de esta aplicación.",
       "pageTitle": "Dominios y SSL",
-      "pageSubtitle": "Gestiona los nombres a los que responde este sitio y su certificado HTTPS.",
-      "provisioning": "Los dominios y el SSL estarán disponibles cuando el sitio termine de aprovisionarse.",
+      "pageSubtitle": "Gestiona los nombres a los que responde esta aplicación y su certificado HTTPS.",
+      "provisioning": "Los dominios y el SSL estarán disponibles cuando la aplicación termine de aprovisionarse.",
       "sectionTitle": "Dominios",
-      "sectionSubtitle": "Todos los nombres a los que responde este sitio.",
+      "sectionSubtitle": "Todos los nombres a los que responde esta aplicación.",
       "tabs": {
         "domains": "Dominios",
         "ssl": "SSL",
@@ -3410,7 +3410,7 @@
         "sslUnknown": "Estado del certificado desconocido"
       },
       "emptyTitle": "Aún no hay dominios",
-      "emptyBody": "Agrega un dominio para apuntarlo a este sitio. Puedes añadir más nombres y alias en cualquier momento.",
+      "emptyBody": "Agrega un dominio para apuntarlo a esta aplicación. Puedes añadir más nombres y alias en cualquier momento.",
       "testDomain": "Dominio de prueba",
       "rowActions": "Acciones",
       "makePrimary": "Hacer principal",
@@ -3419,10 +3419,10 @@
       "add": {
         "action": "Añadir dominio",
         "title": "Añadir un dominio",
-        "subtitle": "Apunta otro nombre a este sitio.",
+        "subtitle": "Apunta otro nombre a esta aplicación.",
         "domain": "Dominio",
         "type": "Tipo",
-        "aliasHint": "Un alias sirve el mismo sitio con un segundo nombre. Nota: los buscadores pueden indexar ambos y dividir el posicionamiento.",
+        "aliasHint": "Un alias sirve la misma aplicación con un segundo nombre. Nota: los buscadores pueden indexar ambos y dividir el posicionamiento.",
         "redirectHint": "Una redirección no sirve nada: envía a los visitantes a otra dirección.",
         "redirectTo": "Redirigir a",
         "redirectStatus": "Estado",
@@ -3431,8 +3431,8 @@
         "dnsNoteIp": "Después de añadirlo, apunta un registro A de este nombre a tu servidor:",
         "dnsNote": "Después de añadirlo, apunta un registro A de este nombre a tu servidor para poder emitir HTTPS.",
         "dnsNoteSecured": "Después de añadirlo, apunte un registro A de este nombre a su servidor.",
-        "certNotice": "El certificado {current} de este sitio no cubrirá el nuevo nombre hasta que lo reemita. Hasta entonces, quien visite ese nombre verá un aviso de certificado en lugar de su sitio.",
-        "certUploadedNotice": "Este sitio usa un certificado subido, que este panel no puede reemitir. Hasta que suba uno que cubra el nuevo nombre —o cambie a Let's Encrypt— quien lo visite verá un aviso de certificado en lugar de su sitio.",
+        "certNotice": "El certificado {current} de esta aplicación no cubrirá el nuevo nombre hasta que lo reemita. Hasta entonces, quien visite ese nombre verá un aviso de certificado en lugar de su aplicación.",
+        "certUploadedNotice": "Esta aplicación usa un certificado subido, que este panel no puede reemitir. Hasta que suba uno que cubra el nuevo nombre —o cambie a Let's Encrypt— quien lo visite verá un aviso de certificado en lugar de su aplicación.",
         "certNoticeForceHttps": "Forzar HTTPS está activado, así que se envía a los visitantes directamente a ese aviso, sin forma de continuar.",
         "redirectStatusOption": {
           "301": "301 — Permanente",
@@ -3440,18 +3440,18 @@
           "307": "307 — Temporal, conserva el método",
           "308": "308 — Permanente, conserva el método"
         },
-        "redirectToHint": "La dirección a la que se envía a los visitantes en su lugar. Úselo cuando un dominio deba apuntar a otro en lugar de servir su propio sitio.",
-        "typeHint": "Principal es la dirección principal del sitio. Alias muestra el mismo sitio en una segunda dirección. Redirigir envía a los visitantes a otro lugar.",
+        "redirectToHint": "La dirección a la que se envía a los visitantes en su lugar. Úselo cuando un dominio deba apuntar a otro en lugar de servir su propia aplicación.",
+        "typeHint": "Principal es la dirección principal de la aplicación. Alias muestra la misma aplicación en una segunda dirección. Redirigir envía a los visitantes a otro lugar.",
         "redirectStatusHint": "301 indica que la mudanza es permanente, así que los buscadores actualizan sus registros y los navegadores de los visitantes lo recuerdan. 302 indica que es temporal."
       },
       "type": {
-        "alias": "Alias (mismo sitio, segundo nombre)",
+        "alias": "Alias (misma aplicación, segundo nombre)",
         "redirect": "Redirección (enviar a otra dirección)",
         "primaryHint": "El nombre canónico. Los alias y las redirecciones apuntan a él.",
-        "aliasHint": "Sirve el mismo sitio bajo otro nombre.",
+        "aliasHint": "Sirve la misma aplicación bajo otro nombre.",
         "redirectHint": "Envía a los visitantes a otra dirección."
       },
-      "openSite": "Abrir sitio",
+      "openSite": "Abrir aplicación",
       "copyDomain": "Copiar dominio",
       "dns": {
         "verified": "DNS verificado",
@@ -3463,16 +3463,16 @@
       },
       "promote": {
         "title": "¿Hacer que {domain} sea el dominio principal?",
-        "body": "Esta pasa a ser la dirección canónica del sitio.",
+        "body": "Esta pasa a ser la dirección canónica de la aplicación.",
         "nowLabel": "Ahora",
         "afterLabel": "Después",
-        "keepsServing": "{domain} queda como alias y sigue sirviendo este sitio.",
-        "renamesFiles": "Se renombran los archivos de configuración y de registro del sitio.",
-        "cmsWarning": "WordPress conserva guardada la dirección anterior, así que puede redirigir a los visitantes de vuelta hasta que la cambies en el sitio."
+        "keepsServing": "{domain} queda como alias y sigue sirviendo esta aplicación.",
+        "renamesFiles": "Se renombran los archivos de configuración y de registro de la aplicación.",
+        "cmsWarning": "WordPress conserva guardada la dirección anterior, así que puede redirigir a los visitantes de vuelta hasta que la cambies en la aplicación."
       },
       "removeConfirm": {
         "title": "¿Eliminar {domain}?",
-        "body": "El sitio dejará de responder con este nombre. Esto no se puede deshacer."
+        "body": "La aplicación dejará de responder con este nombre. Esto no se puede deshacer."
       },
       "toast": {
         "added": "Dominio añadido.",
@@ -3488,8 +3488,8 @@
       },
       "ssl": {
         "sectionTitle": "Certificado SSL",
-        "sectionSubtitle": "Un certificado protege este sitio con HTTPS.",
-        "none": "Este sitio se sirve por HTTP sin cifrar.",
+        "sectionSubtitle": "Un certificado protege esta aplicación con HTTPS.",
+        "none": "Esta aplicación se sirve por HTTP sin cifrar.",
         "noneBody": "Pulsa Habilitar HTTPS: comprobaremos cada dominio y te diremos exactamente qué corregir si un nombre no está listo.",
         "notCertifiable": "El SSL no está disponible para dominios de prueba (como *.nip.io). Añade primero un dominio real.",
         "enable": "Activar HTTPS",
@@ -3509,13 +3509,13 @@
         "forceHttps": "Forzar HTTPS",
         "forceHttpsHint": "Redirige a todos los visitantes de HTTP a HTTPS.",
         "forceHttpsEnabled": "Los visitantes ahora se redirigen a HTTPS.",
-        "forceHttpsDisabled": "Redirección a HTTPS desactivada. El sitio también responde por HTTP.",
+        "forceHttpsDisabled": "Redirección a HTTPS desactivada. La aplicación también responde por HTTP.",
         "forceHttpsFailed": "No se pudo cambiar la redirección de HTTPS.",
         "deleteFailed": "No se pudo eliminar el certificado.",
         "removeTitle": "¿Eliminar el certificado?",
-        "removeBody": "El sitio volverá a HTTP sin cifrar y se detendrá la renovación automática. Esto no se puede deshacer.",
-        "issueTitle": "Emitir un certificado",
-        "issueSubtitle": "Protege este sitio con HTTPS.",
+        "removeBody": "La aplicación volverá a HTTP sin cifrar y se detendrá la renovación automática. Esto no se puede deshacer.",
+        "issueTitle": "Configurar SSL",
+        "issueSubtitle": "Protege esta aplicación con HTTPS.",
         "method": "Método",
         "method_letsencrypt": "Let's Encrypt (gratis, automático)",
         "method_self_signed": "Autofirmado",
@@ -3527,17 +3527,17 @@
         "dryRunHint": "Ensaye todo el proceso primero: comprobamos cada dominio y luego pedimos la validación al servidor de pruebas de Let's Encrypt. No se emite nada ni se gasta ningún intento.",
         "dryRunStage_reachability": "Comprobando que cada dominio sirve el archivo de validación…",
         "dryRunStage_acme": "Pidiendo la validación al servidor de pruebas de Let's Encrypt. Esto puede tardar un minuto.",
-        "dryRunPassed": "La simulación funcionó: este sitio está listo para un certificado.",
+        "dryRunPassed": "La simulación funcionó: esta aplicación está lista para un certificado.",
         "dryRunFailed": "La simulación falló: emitir ahora no funcionaría.",
         "dryRunStartFailed": "No se pudo iniciar la simulación.",
         "certificate": "Certificado (PEM)",
         "privateKey": "Clave privada (PEM)",
         "chain": "Cadena / intermedios",
         "optional": "opcional",
-        "refusedTitle": "El sitio aún no es accesible para la validación",
+        "refusedTitle": "La aplicación aún no es accesible para la validación",
         "forceHint": "Si este servidor no puede alcanzar su propia dirección pública (p. ej. detrás de NAT), puedes omitir la comprobación de accesibilidad.",
-        "forceIssue": "Emitir de todos modos",
-        "issue": "Emitir certificado",
+        "forceIssue": "Configurar de todas formas",
+        "issue": "Configurar SSL",
         "issueFailed": "No se pudo emitir el certificado.",
         "reissueTitle": "Reemitir el certificado",
         "reissueSubtitle": "Sustituye el certificado actual — normalmente para cubrir un nombre que le falta.",
@@ -3545,16 +3545,16 @@
         "certificateHint": "El certificado que su proveedor emitió para este dominio. Pegue todo el bloque, incluidas las líneas BEGIN y END.",
         "privateKeyHint": "La clave secreta que acompaña al certificado. Se creó cuando lo solicitó; nunca la comparta con nadie.",
         "chainHint": "Los certificados adicionales que enlazan el suyo con una autoridad de confianza. Sin ellos, algunos navegadores y teléfonos muestran una advertencia. Su proveedor los suministra.",
-        "servingStale": "Este sitio sigue entregando a los visitantes un certificado antiguo. Los navegadores mostrarán una advertencia de seguridad hasta que se recargue el servidor web.",
+        "servingStale": "Esta aplicación sigue entregando a los visitantes un certificado antiguo. Los navegadores mostrarán una advertencia de seguridad hasta que se recargue el servidor web.",
         "servingStaleDetail": "Se sirve: caduca {served} · En disco: caduca {onDisk}",
         "reloadWebServer": "Recargar {service}",
         "reloaded": "Se recargó el servidor web.",
         "reloadFailed": "No se pudo recargar el servidor web.",
-        "staleDomains": "{domains} está en este certificado pero ya no en este sitio. La renovación falla para todo el certificado hasta que se vuelva a emitir.",
+        "staleDomains": "{domains} está en este certificado pero ya no en esta aplicación. La renovación falla para todo el certificado hasta que se vuelva a emitir.",
         "uploadNeedsBoth": "Pega tanto el certificado como su clave privada."
       },
-      "issueCertificate": "Emitir certificado SSL",
-      "description": "Nombres que llegan a este sitio y su certificado.",
+      "issueCertificate": "Configurar SSL",
+      "description": "Nombres que llegan a esta aplicación y su certificado.",
       "more": "+{count} más",
       "types": {
         "primary": "Principal",
@@ -3569,8 +3569,8 @@
       "subtitle": "Elija con qué administrador desea entrar. No hace falta contraseña.",
       "signIn": "Entrar",
       "cancel": "Cancelar",
-      "none": "Este sitio no tiene cuentas de administrador.",
-      "listFailed": "No se pudieron leer los administradores de este sitio.",
+      "none": "Esta aplicación no tiene cuentas de administrador.",
+      "listFailed": "No se pudieron leer los administradores de esta aplicación.",
       "failed": "No se pudo crear el enlace de acceso.",
       "popupBlocked": "Su navegador bloqueó la pestaña nueva. Permita las ventanas emergentes de este panel e inténtelo de nuevo.",
       "redirecting": "Iniciando su sesión…",
@@ -3586,10 +3586,10 @@
       "pageTitle": "Despliegue",
       "pageSubtitle": "Despliega tu código y configura despliegues automáticos al hacer push.",
       "loadFailed": "No se pudo cargar este despliegue.",
-      "provisioning": "Este sitio todavía se está configurando. El despliegue estará disponible cuando esté en funcionamiento.",
+      "provisioning": "Esta aplicación todavía se está configurando. El despliegue estará disponible cuando esté en funcionamiento.",
       "deploy": {
         "title": "Desplegar",
-        "subtitle": "Obtén el código más reciente de tu repositorio y reconstruye el sitio.",
+        "subtitle": "Obtén el código más reciente de tu repositorio y reconstruye la aplicación.",
         "repository": "Repositorio",
         "branch": "Rama",
         "lastDeploy": "Último despliegue",
@@ -3608,8 +3608,8 @@
         "failed": "No se pudo iniciar el despliegue.",
         "failedAt": "El último despliegue falló en «{step}». La versión anterior sigue activa.",
         "reference": "Referencia: {reference}",
-        "notDeployedYet": "Este sitio aún no tiene código: despliega para obtener tu repositorio de {branch} y ponerlo en línea.",
-        "resetNote": "Al desplegar, el sitio se restablece a la rama {branch}; los cambios hechos directamente en el servidor se descartan.",
+        "notDeployedYet": "Esta aplicación aún no tiene código: despliega para obtener tu repositorio de {branch} y ponerlo en línea.",
+        "resetNote": "Al desplegar, la aplicación se restablece a la rama {branch}; los cambios hechos directamente en el servidor se descartan.",
         "viewCommit": "Ver el commit en tu proveedor de Git"
       },
       "webhook": {
@@ -3654,7 +3654,7 @@
       },
       "cancel": "Cancelar",
       "runtime": {
-        "title": "Cómo se ejecuta este sitio",
+        "title": "Cómo se ejecuta esta aplicación",
         "subtitle": "El comando que inicia el proceso y el puerto en el que escucha.",
         "startCommand": "Comando de inicio",
         "startCommandHint": "El archivo de entrada, por ejemplo \"node index.js\". No \"npm start\": un gestor de paquetes bifurca el proceso real, así que las señales de apagado nunca le llegan.",
@@ -3672,7 +3672,7 @@
         "branch": "Rama",
         "branchHint": "La rama que descarga cada despliegue.",
         "script": "Script de despliegue",
-        "scriptHint": "Se ejecuta tras descargar el código, con el usuario de tu sitio.",
+        "scriptHint": "Se ejecuta tras descargar el código, con el usuario de tu aplicación.",
         "scriptFallbackHint": "No hay nada personalizado, así que este es el comando de compilación que se ejecuta hoy. Edítalo para hacerlo tuyo.",
         "placeholders": "Puedes usar:",
         "resetScript": "Restablecer al valor por defecto",
@@ -3680,7 +3680,7 @@
         "saveNote": "Se aplica al próximo despliegue, no al que está en curso.",
         "saved": "Ajustes de despliegue guardados.",
         "saveFailed": "No se pudieron guardar esos ajustes.",
-        "noPermission": "Tu rol no incluye Despliegue de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+        "noPermission": "Tu rol no incluye Despliegue de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
         "nothingToSave": "Nada que guardar",
         "branchPlaceholder": "main",
         "branchSearch": "Buscar ramas…",
@@ -3688,10 +3688,10 @@
           "loading": "Cargando ramas del repositorio…",
           "empty": "El repositorio no informó de ninguna rama: escribe el nombre.",
           "error": "No se pudieron cargar las ramas del repositorio. Escribe el nombre.",
-          "unlinked": "Este sitio no tiene una cuenta de Git operativa, así que no se pueden listar las ramas. Vuelve a conectarla en la página de la aplicación."
+          "unlinked": "Esta aplicación no tiene una cuenta de Git operativa, así que no se pueden listar las ramas. Vuelve a conectarla en la página de la aplicación."
         },
         "title": "Qué ejecuta un despliegue",
-        "subtitle": "La rama que se descarga y los comandos que construyen el sitio después."
+        "subtitle": "La rama que se descarga y los comandos que construyen la aplicación después."
       },
       "history": {
         "empty": {
@@ -3700,15 +3700,15 @@
         },
         "noMessage": "Sin mensaje de commit",
         "system": "Sistema",
-        "redeploy": "Repetir",
-        "redeployStarted": "Repitiendo ese despliegue.",
-        "redeployFailed": "No se pudo repetir ese despliegue.",
+        "redeploy": "Volver a desplegar",
+        "redeployStarted": "Desplegando el código más reciente de esta rama.",
+        "redeployFailed": "No se pudo iniciar ese despliegue.",
         "output": "Registro de compilación",
         "copy": "Copiar registro",
         "loadingLog": "Cargando el registro de compilación…",
         "noOutput": "Este despliegue no produjo salida.",
         "logFailed": "No se pudo cargar el registro de compilación.",
-        "noPermission": "Tu rol no incluye Despliegue de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+        "noPermission": "Tu rol no incluye Despliegue de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
         "title": "Historial de despliegues",
         "subtitle": "Todos los despliegues, del más reciente al más antiguo. Abre uno para leer su registro."
       },
@@ -3720,14 +3720,14 @@
     },
     "files": {
       "pageTitle": "Archivos",
-      "pageSubtitle": "Explora, visualiza y edita los archivos de este sitio.",
+      "pageSubtitle": "Explora, visualiza y edita los archivos de esta aplicación.",
       "loadFailed": "No se pudieron cargar los archivos.",
-      "provisioning": "Este sitio todavía se está configurando. Los archivos estarán disponibles cuando esté en funcionamiento.",
-      "noPermission": "Tu rol no incluye Archivos de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "provisioning": "Esta aplicación todavía se está configurando. Los archivos estarán disponibles cuando esté en funcionamiento.",
+      "noPermission": "Tu rol no incluye Archivos de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
       "cancel": "Cancelar",
       "saving": "Guardando…",
       "breadcrumbLabel": "Ruta de la carpeta",
-      "root": "Raíz del sitio",
+      "root": "Raíz de la aplicación",
       "symlinkHint": "Los enlaces simbólicos no son compatibles con esta función.",
       "symlinkBrokenHint": "Este enlace apunta a algo que ya no existe.",
       "notProvisioned": {
@@ -3772,9 +3772,9 @@
       "itemCount": "{count, plural, =0 {Sin elementos} one {# elemento} other {# elementos}}",
       "itemCountFiltered": "{shown} de {total} elementos",
       "siteSearch": {
-        "action": "Buscar «{query}» en todo el sitio",
-        "noResults": "Nada en este sitio coincide con «{query}».",
-        "failed": "La búsqueda en el sitio falló.",
+        "action": "Buscar «{query}» en toda la aplicación",
+        "noResults": "Nada en esta aplicación coincide con «{query}».",
+        "failed": "La búsqueda en la aplicación falló.",
         "inFolder": "en {folder}"
       },
       "imagePreview": {
@@ -3840,8 +3840,8 @@
       },
       "targetDialog": {
         "pathLabel": "Ruta",
-        "rootPlaceholder": "Raíz del sitio",
-        "pathLabelHint": "Dónde colocarlo, contado desde la raíz de la carpeta del sitio.",
+        "rootPlaceholder": "Raíz de la aplicación",
+        "pathLabelHint": "Dónde colocarlo, contado desde la raíz de la carpeta de la aplicación.",
         "destination": "Se extrae en",
         "copyDestination": "Copiar esta ruta"
       },
@@ -3921,7 +3921,7 @@
       },
       "fixPermissions": {
         "action": "Corregir permisos",
-        "title": "¿Restablecer los permisos de archivos de este sitio?",
+        "title": "¿Restablecer los permisos de archivos de esta aplicación?",
         "description": "Restablece el propietario y los permisos de cada archivo y carpeta a los valores predeterminados.",
         "foldersLabel": "Carpetas",
         "filesLabel": "Archivos",
@@ -3948,11 +3948,11 @@
         "archiveName": "Nombre del archivo",
         "moveTitle": "Mover {count, plural, one {# elemento} other {# elementos}}",
         "moveDescription": "Conservan su nombre. Lo que ya esté allí no se sobrescribe.",
-        "moveHint": "Ruta desde la raíz del sitio, p. ej. wp-content/keep",
+        "moveHint": "Ruta desde la raíz de la aplicación, p. ej. wp-content/keep",
         "moveDone": "{count, plural, one {# elemento movido.} other {# elementos movidos.}}",
         "copyTitle": "Copiar {count, plural, one {# elemento} other {# elementos}}",
         "copyDescription": "Conservan su nombre. Lo que ya esté allí no se sobrescribe.",
-        "copyHint": "Ruta desde la raíz del sitio, p. ej. wp-content/keep",
+        "copyHint": "Ruta desde la raíz de la aplicación, p. ej. wp-content/keep",
         "copyDone": "{count, plural, one {# elemento copiado.} other {# elementos copiados.}}",
         "compressTitle": "Comprimir {count, plural, one {# elemento} other {# elementos}}",
         "compressDescription": "Un solo archivo comprimido, con los nombres tal como están ahora.",
@@ -4017,7 +4017,7 @@
         "batchEmptied": "Borrado definitivamente.",
         "emptyFailed": "No se pudo vaciar la papelera.",
         "itemCount": "{count, plural, one {# elemento} other {# elementos}}",
-        "noPermission": "Tu rol no incluye Archivos de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+        "noPermission": "Tu rol no incluye Archivos de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
         "loadFailed": "No se pudo cargar la papelera.",
         "cancel": "Cancelar",
         "confirmSubmit": "Borrar definitivamente",
@@ -4034,7 +4034,7 @@
           "description": "Se destruyen en el servidor. Esto no se puede deshacer."
         },
         "deletedAt": "Borrado",
-        "siteRoot": "Raíz del sitio",
+        "siteRoot": "Raíz de la aplicación",
         "holding": "Ocupa {size} de disco",
         "retention": "{days, plural, one {Se elimina automáticamente después de # día} other {Se elimina automáticamente después de # días}}"
       },
@@ -4070,11 +4070,11 @@
     },
     "workers": {
       "pageTitle": "Workers",
-      "pageSubtitle": "Mantén en ejecución los procesos de larga duración de este sitio: workers de cola, Horizon o tu propio comando.",
+      "pageSubtitle": "Mantén en ejecución los procesos de larga duración de esta aplicación: workers de cola, Horizon o tu propio comando.",
       "loadFailed": "No se pudieron cargar los workers.",
-      "provisioning": "Este sitio todavía se está configurando. Los workers estarán disponibles cuando esté en funcionamiento.",
+      "provisioning": "Esta aplicación todavía se está configurando. Los workers estarán disponibles cuando esté en funcionamiento.",
       "addWorker": "Añadir worker",
-      "noPermission": "Tu rol no incluye Procesos de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "noPermission": "Tu rol no incluye Procesos de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
       "cancel": "Cancelar",
       "saving": "Guardando…",
       "empty": {
@@ -4098,7 +4098,7 @@
       "noRestartOnDeployTag": "No se reiniciará tras el despliegue",
       "noAutoRestartTag": "No se reiniciará si se detiene",
       "addedAgo": "Añadido {time}",
-      "customDirectoryTooltip": "Se ejecuta desde {path} en lugar del directorio raíz del sitio.",
+      "customDirectoryTooltip": "Se ejecuta desde {path} en lugar del directorio raíz de la aplicación.",
       "busy": {
         "start": "Iniciando…",
         "stop": "Deteniendo…",
@@ -4162,7 +4162,7 @@
         "nameHint": "Una etiqueta corta para identificar este worker.",
         "useTemplate": "Usar plantilla",
         "command": "Comando",
-        "commandHint": "Se ejecuta con el propio usuario de este sitio. supervisord ejecuta el comando directamente, no a través de un shell.",
+        "commandHint": "Se ejecuta con el propio usuario de esta aplicación. supervisord ejecuta el comando directamente, no a través de un shell.",
         "processes": "Procesos",
         "processesHint": "Cuántas copias ejecutar a la vez, para procesar más trabajos en paralelo.",
         "restartOnDeploy": "Reiniciar tras el despliegue",
@@ -4173,8 +4173,8 @@
         "enabledHint": "Desactívalo para mantener el worker configurado pero sin ejecutarse.",
         "advanced": "Ajustes avanzados",
         "directory": "Directorio de trabajo",
-        "directoryPlaceholder": "Por defecto, la carpeta de código del sitio",
-        "directoryHint": "Desde dónde se ejecuta el comando. Déjalo vacío para usar la carpeta de código del sitio: en la mayoría de los frameworks es la carpeta que contiene el código, no la que sirve el servidor web.",
+        "directoryPlaceholder": "Por defecto, la carpeta de código de la aplicación",
+        "directoryHint": "Desde dónde se ejecuta el comando. Déjalo vacío para usar la carpeta de código de la aplicación: en la mayoría de los frameworks es la carpeta que contiene el código, no la que sirve el servidor web.",
         "stopWaitSeconds": "Tiempo de espera al detener (segundos)",
         "stopWaitSecondsHint": "Cuánto tiempo dejarlo terminar lo que está haciendo antes de forzar su detención.",
         "conflict": {
@@ -4183,7 +4183,7 @@
         },
         "user": "Ejecutar como usuario",
         "userPlaceholder": "deploy",
-        "userHint": "Déjalo vacío para usar el usuario propio del sitio, que casi siempre es lo correcto.",
+        "userHint": "Déjalo vacío para usar el usuario propio de la aplicación, que casi siempre es lo correcto.",
         "logFile": "Archivo de registro",
         "logFilePlaceholder": "/var/log/mi-worker.log",
         "logFileHint": "Ruta absoluta y sin «..». Déjalo vacío y supervisord elegirá una.",
@@ -4212,7 +4212,7 @@
           "custom": "Personalizado"
         }
       },
-      "runsAsTooltip": "Se ejecuta como {user}, no como el usuario propio del sitio.",
+      "runsAsTooltip": "Se ejecuta como {user}, no como el usuario propio de la aplicación.",
       "supervisor": {
         "missing": "Supervisor no está instalado en este servidor. Los workers se ejecutan bajo él, así que ninguno puede arrancar hasta que lo esté.",
         "install": "Instalar Supervisor",
@@ -4222,18 +4222,18 @@
     },
     "security": {
       "pageTitle": "Protección con contraseña",
-      "pageSubtitle": "Exige un usuario y una contraseña antes de que cualquiera pueda ver este sitio.",
+      "pageSubtitle": "Exige un usuario y una contraseña antes de que cualquiera pueda ver esta aplicación.",
       "loadFailed": "No se pudo cargar esto.",
-      "provisioning": "Este sitio todavía se está configurando. La protección con contraseña estará disponible cuando esté en funcionamiento.",
+      "provisioning": "Esta aplicación todavía se está configurando. La protección con contraseña estará disponible cuando esté en funcionamiento.",
       "statusProtected": "Protegido",
       "statusNotProtected": "Sin protección",
       "enable": "Exigir una contraseña",
-      "enableHint": "Los visitantes deberán iniciar sesión con las credenciales de abajo antes de poder ver el sitio.",
+      "enableHint": "Los visitantes deberán iniciar sesión con las credenciales de abajo antes de poder ver la aplicación.",
       "whenToUseTitle": "Cuándo usar esto",
-      "whenToUseBody": "Útil para un sitio en pruebas, un rediseño en curso o una vista previa para un cliente que no quieres que se encuentre antes del lanzamiento. Desactívalo cuando el sitio esté listo para el público.",
-      "warning": "Esto protege todo el sitio, no solo un área de administración: los motores de búsqueda, los monitores de disponibilidad y cualquier integración que acceda a este dominio también quedarán bloqueados hasta que reciban las credenciales. Puedes desactivarlo aquí en cualquier momento si eso causa un problema.",
-      "credentialsNote": "Esto crea un inicio de sesión nuevo solo para este sitio, independiente de tu cuenta de {brand}. Los visitantes verán el aviso de inicio de sesión propio del navegador, no una página con estilo.",
-      "disabledHint": "El sitio es de acceso público: cualquiera puede verlo.",
+      "whenToUseBody": "Útil para una aplicación en pruebas, un rediseño en curso o una vista previa para un cliente que no quieres que se encuentre antes del lanzamiento. Desactívalo cuando la aplicación esté lista para el público.",
+      "warning": "Esto protege toda la aplicación, no solo un área de administración: los motores de búsqueda, los monitores de disponibilidad y cualquier integración que acceda a este dominio también quedarán bloqueados hasta que reciban las credenciales. Puedes desactivarlo aquí en cualquier momento si eso causa un problema.",
+      "credentialsNote": "Esto crea un inicio de sesión nuevo solo para esta aplicación, independiente de tu cuenta de {brand}. Los visitantes verán el aviso de inicio de sesión propio del navegador, no una página con estilo.",
+      "disabledHint": "La aplicación es de acceso público: cualquiera puede verla.",
       "unsupportedForType": "Esta aplicación inicia sesión con la cabecera Authorization, que HTTP solo permite una vez por petición. La protección con contraseña la consumiría y dejaría la aplicación inaccesible. Ya requiere sus propias credenciales.",
       "username": "Usuario",
       "usernamePlaceholder": "p. ej. admin",
@@ -4245,20 +4245,20 @@
       "saving": "Guardando…",
       "savingNote": "Esto puede tardar unos segundos: se está recargando el servidor web.",
       "discard": "Descartar",
-      "noPermission": "Tu rol no incluye Protección con contraseña de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "noPermission": "Tu rol no incluye Protección con contraseña de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
       "nothingToSave": "Nada que guardar",
       "enabledToast": "La protección con contraseña está activada.",
-      "disabledToast": "La protección con contraseña está desactivada: el sitio vuelve a ser público.",
+      "disabledToast": "La protección con contraseña está desactivada: la aplicación vuelve a ser pública.",
       "savedCredentials": "Guarda esto ahora: no se volverá a mostrar:",
-      "openSite": "Abrir sitio",
+      "openSite": "Abrir aplicación",
       "showPassword": "Mostrar contraseña",
       "hidePassword": "Ocultar contraseña"
     },
     "botBlocker": {
       "pageTitle": "Bloqueador de bots de IA",
-      "pageSubtitle": "Elige qué bots de IA pueden leer este sitio.",
+      "pageSubtitle": "Elige qué bots de IA pueden leer esta aplicación.",
       "loadFailed": "No se pudo cargar esto.",
-      "provisioning": "Este sitio todavía se está configurando. El bloqueador de bots de IA estará disponible cuando esté en funcionamiento.",
+      "provisioning": "Esta aplicación todavía se está configurando. El bloqueador de bots de IA estará disponible cuando esté en funcionamiento.",
       "explainer": "Los bots de IA son visitantes automáticos de empresas de IA. Algunos solo copian tu contenido; otros pueden enviarte visitantes reales.",
       "activeNow": "Activo ahora",
       "chooseLabel": "Elige qué permitir",
@@ -4268,13 +4268,13 @@
       "showBots": "Ver los {count} bots que bloquea",
       "hideBots": "Ocultar la lista",
       "traffic": {
-        "title": "Bots de IA que visitaron este sitio",
-        "subtitle": "Leído del registro de acceso de este sitio.",
+        "title": "Bots de IA que visitaron esta aplicación",
+        "subtitle": "Leído del registro de acceso de esta aplicación.",
         "range": "{days} días",
-        "unavailable": "No se pudo leer el registro de acceso de este sitio, así que todavía no hay nada que mostrar. No es lo mismo que no reciba visitas de bots.",
+        "unavailable": "No se pudo leer el registro de acceso de esta aplicación, así que todavía no hay nada que mostrar. No es lo mismo que no reciba visitas de bots.",
         "empty": "Ningún bot de IA ha visitado en los últimos {days} días.",
         "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# solicitud} other {# solicitudes}} · {blocked, plural, other {# bloqueadas}}",
-        "partial": "Solo se analizó la parte más reciente del registro, así que en sitios con mucho tráfico puede haber más.",
+        "partial": "Solo se analizó la parte más reciente del registro, así que en aplicaciones con mucho tráfico puede haber más.",
         "blocked": "Bloqueado",
         "allowed": "Pasa",
         "columns": {
@@ -4316,11 +4316,11 @@
         "errors": {
           "invalid": "Usa el nombre del user-agent del bot: solo letras, dígitos, puntos y guiones.",
           "tooBroad": "Eso también afectaría a rastreadores normales, incluido el de Google. Usa el nombre completo del bot.",
-          "searchEngine": "Eso es un buscador, no un rastreador de IA: bloquearlo sacaría el sitio de los resultados de búsqueda.",
+          "searchEngine": "Eso es un buscador, no un rastreador de IA: bloquearlo sacaría la aplicación de los resultados de búsqueda.",
           "duplicate": "Ese bot ya está en esta lista.",
           "limit": "Esta lista no admite más bots."
         },
-        "noPermission": "Tu rol no incluye Bloqueador de bots de IA de este sitio con acceso de gestión. Pide a un administrador que te lo conceda."
+        "noPermission": "Tu rol no incluye Bloqueador de bots de IA de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda."
       },
       "howItWorks": "Tu robots.txt no se modifica, y Google y los visitantes reales no se ven afectados.",
       "save": "Guardar",
@@ -4329,17 +4329,17 @@
       "discard": "Descartar",
       "saved": "Ajustes de bots de IA guardados.",
       "saveFailed": "No se pudo guardar.",
-      "noPermission": "Tu rol no incluye Bloqueador de bots de IA de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "noPermission": "Tu rol no incluye Bloqueador de bots de IA de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
       "nothingToSave": "Nada que guardar"
     },
     "firewall": {
       "pageTitle": "Firewall web",
-      "pageSubtitle": "Rechaza los ataques más comunes antes de que lleguen a este sitio.",
+      "pageSubtitle": "Rechaza los ataques más comunes antes de que lleguen a esta aplicación.",
       "loadFailed": "No se pudo cargar esto.",
-      "provisioning": "Este sitio todavía se está configurando. El cortafuegos estará disponible cuando esté en funcionamiento.",
-      "explainer": "El cortafuegos revisa cada solicitud en busca de patrones usados en ataques y puede rechazarla antes de que tu sitio ejecute código.",
+      "provisioning": "Esta aplicación todavía se está configurando. El cortafuegos estará disponible cuando esté en funcionamiento.",
+      "explainer": "El cortafuegos revisa cada solicitud en busca de patrones usados en ataques y puede rechazarla antes de que tu aplicación ejecute código.",
       "openlitespeed": "Este servidor usa OpenLiteSpeed, donde estas reglas aún no se aplican. Tus ajustes se guardan, pero no se revisa nada hasta que llegue la compatibilidad.",
-      "enable": "Proteger este sitio",
+      "enable": "Proteger esta aplicación",
       "statusOff": "Desactivado",
       "statusWatching": "Solo observando",
       "statusBlocking": "Bloqueando",
@@ -4347,24 +4347,24 @@
       "watchingHint": "Las solicitudes sospechosas se registran, pero se dejan pasar.",
       "blockingHint": "Las solicitudes sospechosas se rechazan.",
       "whenToUseTitle": "Cuándo usar esto",
-      "whenToUseBody": "Conviene activarlo en cualquier sitio público. Empieza observando unos días: así verás si habría bloqueado algo legítimo antes de que empiece a bloquear.",
+      "whenToUseBody": "Conviene activarlo en cualquier aplicación pública. Empieza observando unos días: así verás si habría bloqueado algo legítimo antes de que empiece a bloquear.",
       "modeLabel": "¿Qué hacer con una solicitud sospechosa?",
       "modeDetectHint": "No se bloquea nada. Las coincidencias se escriben en un registro para que primero revises si hay errores.",
       "modeEnforceHint": "Las solicitudes coincidentes se rechazan de inmediato. Cambia a esto cuando la observación se vea limpia.",
       "categoriesLabel": "Qué revisa",
-      "categoriesHint": "Desactiva una si está estorbando algo legítimo de tu sitio.",
+      "categoriesHint": "Desactiva una si está estorbando algo legítimo de tu aplicación.",
       "categoryHints": {
         "query_string": "Código de ataque oculto en la parte del enlace posterior al signo ?.",
         "request_uri": "Solicitudes de archivos y rutas que solo buscan los atacantes.",
         "user_agent": "Visitantes que se identifican como escáneres y herramientas de ataque conocidas.",
         "referrer": "Tráfico que dice venir de sitios de spam y malware.",
-        "cookie": "Cookies manipuladas para colar código en tu sitio.",
+        "cookie": "Cookies manipuladas para colar código en tu aplicación.",
         "method": "Formas de enviar una solicitud que un navegador normal nunca usa."
       },
       "lastCategory": "Al menos una comprobación debe seguir activa. Para dejar de revisar por completo, desactiva el cortafuegos.",
       "advanced": "Ajuste fino",
       "exceptionsTitle": "Dejar pasar esto",
-      "exceptionsHint": "Una solicitud que contenga cualquiera de estas palabras se salta todas las comprobaciones: se busca en la dirección web, en la parte posterior al ?, y en el nombre del navegador. Sé específico: una palabra corta o común desactiva el cortafuegos en gran parte de tu sitio.",
+      "exceptionsHint": "Una solicitud que contenga cualquiera de estas palabras se salta todas las comprobaciones: se busca en la dirección web, en la parte posterior al ?, y en el nombre del navegador. Sé específico: una palabra corta o común desactiva el cortafuegos en gran parte de tu aplicación.",
       "exceptionsPlaceholder": "p. ej. nombre-de-mi-plugin",
       "exceptionsEmpty": "No se está dejando pasar nada.",
       "blocksTitle": "Bloquear siempre esto",
@@ -4384,7 +4384,7 @@
       "discard": "Descartar",
       "saved": "Ajustes del cortafuegos guardados.",
       "saveFailed": "No se pudo guardar.",
-      "noPermission": "Tu rol no incluye Firewall web de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "noPermission": "Tu rol no incluye Firewall web de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
       "nothingToSave": "Nada que guardar",
       "detectCaught": "{count, plural, one {Se habría bloqueado # solicitud hasta ahora} other {Se habrían bloqueado # solicitudes hasta ahora}}.",
       "detectNothingYet": "Todavía no se ha detectado nada.",
@@ -4397,9 +4397,9 @@
       }
     },
     "clone": {
-      "pageTitle": "Clonar sitio",
+      "pageTitle": "Clonar aplicación",
       "pageSubtitle": "Crea una copia independiente de {name} en un dominio nuevo.",
-      "loadFailed": "No se pudo cargar este sitio.",
+      "loadFailed": "No se pudo cargar esta aplicación.",
       "failed": "No se pudo iniciar la clonación.",
       "what": {
         "title": "Qué se copia",
@@ -4425,11 +4425,11 @@
       "form": {
         "domain": "Dominio para la copia",
         "domainPlaceholder": "copia.ejemplo.com",
-        "submit": "Crear copia del sitio",
-        "noPermission": "Tu rol no incluye Clonar sitio de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+        "submit": "Crear copia de la aplicación",
+        "noPermission": "Tu rol no incluye Clonar aplicación de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
         "defaultName": "{name} (Copia)",
         "name": "Nombre de la copia",
-        "domainTaken": "Ya hay un sitio en este servidor con ese dominio."
+        "domainTaken": "Ya hay una aplicación en este servidor con ese dominio."
       },
       "create": {
         "title": "Crear la copia",
@@ -4441,16 +4441,16 @@
       },
       "blocked": {
         "provisioning": {
-          "title": "Este sitio aún se está configurando",
+          "title": "Esta aplicación aún se está configurando",
           "body": "Todavía no hay nada que copiar. Cuando termine, podrás clonarlo desde aquí."
         },
         "noRecipe": {
-          "title": "Este tipo de sitio aún no se puede clonar",
+          "title": "Este tipo de aplicación aún no se puede clonar",
           "body": "{type} guarda su dirección dentro de su propia base de datos, y todavía no existe la receta para reescribirla de forma segura. Hoy solo WordPress se puede copiar con su base de datos."
         },
         "sourceFailed": {
-          "title": "Este sitio no terminó de configurarse",
-          "body": "No hay nada completo que copiar. Arregla primero el original: una copia de un sitio a medio construir heredaría el mismo problema."
+          "title": "Esta aplicación no terminó de configurarse",
+          "body": "No hay nada completo que copiar. Arregla primero el original: una copia de una aplicación a medio construir heredaría el mismo problema."
         }
       },
       "result": {
@@ -4459,7 +4459,7 @@
           "subtitle": "Cuatro cosas que la copia no hereda.",
           "items": {
             "ssl": {
-              "title": "Emitir un certificado SSL",
+              "title": "Configurar SSL",
               "body": "Hasta entonces la copia se sirve por HTTP sin cifrar."
             },
             "backups": {
@@ -4485,7 +4485,7 @@
         }
       },
       "copies": {
-        "title": "{count, plural, one {Una copia hecha de este sitio} other {# copias hechas de este sitio}}",
+        "title": "{count, plural, one {Una copia hecha de esta aplicación} other {# copias hechas de esta aplicación}}",
         "made": "creada {when}"
       },
       "progress": {
@@ -4499,10 +4499,10 @@
         "stalledBody": "No ha informado de progreso durante 20 minutos. Puede que siga en marcha o que el trabajo se haya detenido. Vuelve a comprobarlo o pide a quien gestione este servidor que lo revise.",
         "checkAgain": "Comprobar de nuevo",
         "doneTitle": "La copia está lista",
-        "doneBody": "Ya es un sitio totalmente independiente.",
+        "doneBody": "Ya es una aplicación totalmente independiente.",
         "completedBadge": "Completado",
-        "source": "Sitio de origen",
-        "destination": "Sitio nuevo",
+        "source": "Aplicación de origen",
+        "destination": "Aplicación nueva",
         "duration": "Terminó en {duration}",
         "finished": "Completado {when}",
         "name": "Nombre",
@@ -4517,7 +4517,7 @@
         "tryAgain": "Reintentar",
         "target": "Copiando a {domain}",
         "steps": {
-          "provisioning": "Creando el sitio",
+          "provisioning": "Creando la aplicación",
           "copying_files": "Copiando archivos",
           "cloning_database": "Clonando la base de datos",
           "starting_process": "Iniciando la aplicación"
@@ -4526,32 +4526,32 @@
       "warnings": {
         "dns": "Apunta el dominio nuevo a este servidor antes de emitir un certificado: hasta que el DNS resuelva, la copia se sirve por HTTP sin cifrar.",
         "password": "La protección con contraseña no se copia. La copia es pública hasta que la actives.",
-        "time": "Un sitio grande tarda unos minutos en copiarse."
+        "time": "Una aplicación grande tarda unos minutos en copiarse."
       },
       "confirm": {
         "title": "¿Crear una copia de {name}?",
-        "body": "El sitio original no cambiará.",
+        "body": "La aplicación original no cambiará.",
         "source": "Copia de",
         "domain": "Dominio nuevo",
         "name": "Nombre",
         "cancel": "Cancelar"
       },
-      "noPermission": "Tu rol no incluye Clonar sitio de este sitio con acceso de gestión. Pide a un administrador que te lo conceda."
+      "noPermission": "Tu rol no incluye Clonar aplicación de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda."
     },
     "php": {
       "pageTitle": "Ajustes de PHP",
-      "pageSubtitle": "La versión de PHP y los límites con los que funciona este sitio.",
+      "pageSubtitle": "La versión de PHP y los límites con los que funciona esta aplicación.",
       "loadFailed": "No se pudieron cargar estos ajustes.",
-      "provisioning": "Este sitio aún se está creando. Sus ajustes de PHP aparecerán cuando termine.",
+      "provisioning": "Esta aplicación aún se está creando. Sus ajustes de PHP aparecerán cuando termine.",
       "saved": "Ajustes de PHP guardados.",
       "saveFailed": "No se pudieron guardar los ajustes.",
       "savingNote": "Aplicando y recargando PHP…",
-      "noPermission": "Tu rol no incluye Ajustes de PHP de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "noPermission": "Tu rol no incluye Ajustes de PHP de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
       "nothingToSave": "No ha cambiado nada",
       "versionLabel": "PHP {version}",
       "presetsLabel": "Ajustes rápidos",
       "useSuggested": "Usar la lista recomendada",
-      "unmanaged": "El archivo del pool de PHP de este sitio se ha editado a mano. Al guardar aquí se reemplaza por la versión del panel y esos cambios se perderán.",
+      "unmanaged": "El archivo del pool de PHP de esta aplicación se ha editado a mano. Al guardar aquí se reemplaza por la versión del panel y esos cambios se perderán.",
       "fields": {
         "version": "Versión de PHP",
         "upload": "Archivo más grande que se puede subir",
@@ -4561,7 +4561,7 @@
         "memory": "Memoria por petición",
         "children": "Procesos de PHP",
         "inputVars": "Campos que puede tener un formulario",
-        "openBasedir": "Mantener PHP dentro de la carpeta del sitio",
+        "openBasedir": "Mantener PHP dentro de la carpeta de la aplicación",
         "allowUrlFopen": "Permitir que PHP abra URLs remotas",
         "disableFunctions": "Funciones de PHP bloqueadas",
         "pmType": "Cómo se inician los procesos",
@@ -4581,17 +4581,17 @@
         "maxRequests": "Protege frente a fugas de memoria lentas. 0 no reinicia nunca.",
         "sessionLifetime": "Segundos que se guarda una sesión antes de poder limpiarse.",
         "timezone": "Solo afecta a las fechas que genera PHP, no al reloj del servidor.",
-        "autoPrepend": "Una ruta dentro de este sitio. Déjalo vacío salvo que te hayan indicado otra cosa.",
+        "autoPrepend": "Una ruta dentro de esta aplicación. Déjalo vacío salvo que te hayan indicado otra cosa.",
         "directives": "Uno por línea, como un php.ini. Lo de aquí manda sobre los campos de arriba.",
-        "openBasedir": "Impide que PHP lea o escriba archivos fuera de la carpeta de este sitio.",
+        "openBasedir": "Impide que PHP lea o escriba archivos fuera de la carpeta de esta aplicación.",
         "allowUrlFopen": "Permite que PHP descargue URLs remotas. Desactivarlo bloquea una vía habitual del malware para comunicarse.",
-        "upload": "También sube el límite del propio servidor web, que rechaza las subidas grandes antes de que PHP las vea. Un sitio creado antes lo aplica la primera vez que guardas.",
-        "version": "La versión de PHP en la que se ejecuta este sitio. Las más nuevas son más rápidas y mejor soportadas, pero un sitio muy antiguo podría no funcionar en ellas. Cámbiela y luego verifique que el sitio siga cargando.",
+        "upload": "También sube el límite del propio servidor web, que rechaza las subidas grandes antes de que PHP las vea. Una aplicación creada antes lo aplica la primera vez que guardas.",
+        "version": "La versión de PHP en la que se ejecuta esta aplicación. Las más nuevas son más rápidas y mejor soportadas, pero una aplicación muy antigua podría no funcionar en ellas. Cámbiela y luego verifique que la aplicación siga cargando.",
         "memory": "Cuánta memoria puede usar una carga de página antes de que PHP se rinda. Auméntela si ve «allowed memory size exhausted».",
         "executionTime": "Cuántos segundos dejará PHP correr una página antes de detenerla. Auméntelo para importaciones y copias de seguridad; déjelo bajo para páginas comunes.",
         "inputVars": "Cuántos campos separados puede enviar un formulario. Las páginas de configuración grandes y los maquetadores pueden superar el valor por defecto.",
-        "disableFunctions": "Comandos de PHP que este sitio no tiene permiso para ejecutar. Los valores por defecto bloquean los que se usan con mayor frecuencia en ataques; solo elimine uno si el sitio realmente lo necesita.",
-        "children": "Cuántas solicitudes puede atender este sitio al mismo tiempo. Si son muy pocas, los visitantes esperan en una cola; si son demasiadas, el servidor se queda sin memoria."
+        "disableFunctions": "Comandos de PHP que esta aplicación no tiene permiso para ejecutar. Los valores por defecto bloquean los que se usan con mayor frecuencia en ataques; solo elimine uno si la aplicación realmente lo necesita.",
+        "children": "Cuántas solicitudes puede atender esta aplicación al mismo tiempo. Si son muy pocas, los visitantes esperan en una cola; si son demasiadas, el servidor se queda sin memoria."
       },
       "pmTypes": {
         "ondemand": "Bajo demanda",
@@ -4599,22 +4599,22 @@
         "static": "Siempre activos"
       },
       "isolation": {
-        "offTitle": "Este sitio no tiene su propio pool de PHP",
-        "offBody": "Se ejecuta con la cuenta del servidor web, compartida con todos los demás sitios, así que no se pueden aplicar límites por sitio.",
+        "offTitle": "Esta aplicación no tiene su propio pool de PHP",
+        "offBody": "Se ejecuta con la cuenta del servidor web, compartida con todas las demás aplicaciones, así que no se pueden aplicar límites por aplicación.",
         "runsAs": "se ejecuta como {user}",
         "sharedBadge": "PHP compartido · se ejecuta como {user}",
-        "isolateAction": "Dar PHP propio a este sitio",
-        "isolateHelper": "Crea un pool PHP-FPM para este sitio y lo pasa a su propio usuario. Los archivos y la base de datos no cambian.",
-        "required": "Primero dale a este sitio su propio PHP",
-        "isolated": "Este sitio ya tiene su propio PHP.",
+        "isolateAction": "Dar PHP propio a esta aplicación",
+        "isolateHelper": "Crea un pool PHP-FPM para esta aplicación y la pasa a su propio usuario. Los archivos y la base de datos no cambian.",
+        "required": "Primero dale a esta aplicación su propio PHP",
+        "isolated": "Esta aplicación ya tiene su propio PHP.",
         "failed": "No se pudo completar.",
         "unsupportedTitle": "No disponible en este servidor web",
-        "unsupportedBody": "OpenLiteSpeed inicia PHP por su cuenta y no tiene pools por sitio, así que estos ajustes no pueden aplicarse."
+        "unsupportedBody": "OpenLiteSpeed inicia PHP por su cuenta y no tiene pools por aplicación, así que estos ajustes no pueden aplicarse."
       },
       "budget": {
         "available": "{value} de {total} aún libres",
         "over": "Más de los {total} de este servidor",
-        "legend": "{sites, plural, =0 {Ningún otro sitio usa memoria} one {Otro sitio ha reservado {value}} other {# sitios más han reservado {value}}}",
+        "legend": "{sites, plural, =0 {Ninguna otra aplicación usa memoria} one {Otra aplicación ha reservado {value}} other {# aplicaciones más han reservado {value}}}",
         "equation": "{limit} × {workers} workers = {total} a plena carga",
         "overDetail": "Se necesitan {required}, pero este servidor tiene {total}. Reduce el límite de memoria o el número de workers."
       },
@@ -4642,19 +4642,19 @@
           "security": "Bloquear funciones peligrosas",
           "directives": "Afinar directivas avanzadas"
         },
-        "versionHint": "La versión de PHP está en la configuración del servidor web del sitio, así que se puede cambiar sin un pool."
+        "versionHint": "La versión de PHP está en la configuración del servidor web de la aplicación, así que se puede cambiar sin un pool."
       },
       "blocked": {
-        "description": "PHP se negará a ejecutarlas. Casi ningún sitio las necesita y son lo primero que busca un atacante.",
+        "description": "PHP se negará a ejecutarlas. Casi ninguna aplicación las necesita y son lo primero que busca un atacante.",
         "count": "{count, plural, =0 {No hay nada bloqueado} one {# función bloqueada} other {# funciones bloqueadas}}",
         "addPlaceholder": "Añade una función, p. ej. eval",
         "add": "Añadir",
         "remove": "Quitar {name}",
-        "empty": "No hay nada bloqueado. Cualquier función de PHP instalada en este sitio puede ejecutarse.",
+        "empty": "No hay nada bloqueado. Cualquier función de PHP instalada en esta aplicación puede ejecutarse.",
         "presetsLabel": "Empezar desde",
         "presetsCustom": "Tu propia lista."
       },
-      "saveNote": "Al guardar se reescribe el pool de PHP de este sitio y se recarga. Las peticiones en curso terminan primero.",
+      "saveNote": "Al guardar se reescribe el pool de PHP de esta aplicación y se recarga. Las peticiones en curso terminan primero.",
       "tabs": {
         "basic": "Ajustes básicos",
         "security": "Seguridad",
@@ -4665,21 +4665,21 @@
         "runtime": "Entorno",
         "limits": "Límites por petición"
       },
-      "advancedNote": "Esto cambia cómo PHP-FPM ejecuta este sitio. Los valores por defecto sirven para casi todos los sitios: cámbialos solo si sabes por qué.",
+      "advancedNote": "Esto cambia cómo PHP-FPM ejecuta esta aplicación. Los valores por defecto sirven para casi todas las aplicaciones: cámbialos solo si sabes por qué.",
       "presetsCustom": "Personalizado: no coincide con ninguno de los ajustes anteriores.",
       "reset": "Restablecer",
       "resetDone": "Se ha restablecido el valor predeterminado.",
       "resetFailed": "No se pudo restablecer este ajuste.",
       "basedir": {
-        "offHint": "PHP puede abrir cualquier archivo al que llegue el usuario Linux de este sitio.",
+        "offHint": "PHP puede abrir cualquier archivo al que llegue el usuario del sistema de esta aplicación.",
         "previewTrigger": "Qué permitiría activarlo",
         "previewLabel": "PHP quedaría limitado a estas carpetas",
         "alwaysLabel": "Siempre incluidas",
-        "alwaysHint": "Se añaden en cada guardado. Sin ellas el sitio no puede funcionar.",
+        "alwaysHint": "Se añaden en cada guardado. Sin ellas la aplicación no puede funcionar.",
         "extraLabel": "Carpetas adicionales",
         "extraPlaceholder": "/var/www/shared-uploads",
         "extraHint": "Una por línea. Solo rutas completas que empiecen por /.",
-        "unknown": "Este sitio aún no tiene archivo de pool de PHP, así que no se puede leer el valor actual.",
+        "unknown": "Esta aplicación aún no tiene archivo de pool de PHP, así que no se puede leer el valor actual.",
         "disagrees": "El servidor está aplicando algo distinto de lo que está guardado aquí.",
         "disagreesWhy": "O se editó el archivo de pool a mano, o una línea open_basedir en Directivas adicionales está anulando esta.",
         "liveLabel": "Lo que el servidor aplica ahora"
@@ -4694,24 +4694,24 @@
       "sessionGcMaxlifetimePlaceholder": "1440",
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
-      "versionUnsupported": "{type} admite PHP {range}. Cambiar este sitio a otra versión probablemente lo romperá.",
-      "presetsLabelHint": "Configuraciones prediseñadas dimensionadas para sitios pequeños, medianos y grandes. Un punto de partida: aún puede cambiar cualquier valor después."
+      "versionUnsupported": "{type} admite PHP {range}. Cambiar esta aplicación a otra versión probablemente la romperá.",
+      "presetsLabelHint": "Configuraciones prediseñadas dimensionadas para aplicaciones pequeñas, medianas y grandes. Un punto de partida: aún puede cambiar cualquier valor después."
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
-      "pageSubtitle": "Bloquea direcciones que atacan este sitio de forma repetida.",
-      "loadFailed": "No pudimos comprobar la protección de este sitio.",
-      "provisioning": "Este sitio aún se está creando. La protección se puede añadir cuando termine.",
+      "pageSubtitle": "Bloquea direcciones que atacan esta aplicación de forma repetida.",
+      "loadFailed": "No pudimos comprobar la protección de esta aplicación.",
+      "provisioning": "Esta aplicación aún se está creando. La protección se puede añadir cuando termine.",
       "empty": {
         "title": "Fail2ban no está configurado",
-        "body": "Nada vigila el registro de acceso de este sitio, así que una dirección puede seguir probando contraseñas indefinidamente. Al configurarla obtienes una configuración inicial que puedes editar.",
+        "body": "Nada vigila el registro de acceso de esta aplicación, así que una dirección puede seguir probando contraseñas indefinidamente. Al configurarla obtienes una configuración inicial que puedes editar.",
         "action": "Configurar Fail2ban"
       },
       "state": {
         "on": "Fail2ban está activo",
-        "onBody": "fail2ban vigila el registro de acceso de este sitio y bloquea las direcciones que coinciden con el filtro de abajo.",
+        "onBody": "fail2ban vigila el registro de acceso de esta aplicación y bloquea las direcciones que coinciden con el filtro de abajo.",
         "setup": "Configurando Fail2ban",
-        "setupBody": "Ambos archivos parten de los valores por defecto del panel. Nada vigila este sitio hasta que los guardes."
+        "setupBody": "Ambos archivos parten de los valores por defecto del panel. Nada vigila esta aplicación hasta que los guardes."
       },
       "files": {
         "jail": "Jail",
@@ -4727,61 +4727,61 @@
       "savingNote": "Probando y recargando fail2ban…",
       "nothingToSave": "No ha cambiado nada",
       "bothRequired": "Ambos archivos necesitan contenido",
-      "noPermission": "Tu rol no incluye Fail2ban de este sitio con acceso de gestión. Pide a un administrador que te lo conceda.",
+      "noPermission": "Tu rol no incluye Fail2ban de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
       "saved": "Fail2ban guardado y recargado.",
       "saveFailed": "No se pudo guardar.",
       "testFailed": "fail2ban rechazó esta configuración.",
       "removeAction": "Quitar la protección",
       "removeTitle": "¿Quitar Fail2ban?",
-      "removeBody": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar este sitio. Quien esté bloqueado quedará liberado.",
+      "removeBody": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar esta aplicación. Quien esté bloqueado quedará liberado.",
       "removeConfirm": "Quitarla",
       "removed": "Fail2ban eliminado.",
       "removeFailed": "No se pudo eliminar.",
       "createAction": "Activar Fail2ban",
-      "removeBodyDirty": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar este sitio. Quien esté bloqueado quedará liberado, y {count, plural, one {el archivo que has editado sin guardar se perderá} other {los # archivos que has editado sin guardar se perderán}}.",
+      "removeBodyDirty": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar esta aplicación. Quien esté bloqueado quedará liberado, y {count, plural, one {el archivo que has editado sin guardar se perderá} other {los # archivos que has editado sin guardar se perderán}}.",
       "tooLong": "Esa configuración es demasiado larga. Cada archivo debe tener menos de 65.535 caracteres.",
       "invalidConfig": "Esa configuración no se puede guardar. Comprueba que ambos archivos estén completos."
     },
     "staging": {
       "pageTitle": "Área de pruebas",
-      "pageSubtitle": "Una copia de este sitio que puedes romper sin que nadie lo note.",
-      "loadFailed": "No pudimos comprobar el área de pruebas de este sitio.",
-      "provisioning": "Este sitio aún se está creando. Podrás hacer una copia de pruebas cuando termine.",
-      "unsupported": "El área de pruebas solo está disponible para sitios WordPress. Este es un sitio {type}.",
-      "manageAction": "Abrir sitio de pruebas",
+      "pageSubtitle": "Una copia de esta aplicación que puedes romper sin que nadie lo note.",
+      "loadFailed": "No pudimos comprobar el área de pruebas de esta aplicación.",
+      "provisioning": "Esta aplicación aún se está creando. Podrás hacer una copia de pruebas cuando termine.",
+      "unsupported": "El área de pruebas solo está disponible para aplicaciones WordPress. Esta es una aplicación {type}.",
+      "manageAction": "Abrir aplicación de pruebas",
       "empty": {
         "title": "Todavía no hay copia de pruebas",
-        "body": "Un sitio de pruebas es una copia completa de este en su propio dominio: un lugar donde probar un plugin, un tema o una actualización antes de que lo vean tus visitantes.",
-        "action": "Crear sitio de pruebas"
+        "body": "Una aplicación de pruebas es una copia completa de esta en su propio dominio: un lugar donde probar un plugin, un tema o una actualización antes de que la vean tus visitantes.",
+        "action": "Crear aplicación de pruebas"
       },
       "push": {
         "title": "Copiar pruebas sobre producción",
-        "body": "Sustituye {domain} por lo que hay en el sitio de pruebas. No se puede deshacer.",
+        "body": "Sustituye {domain} por lo que hay en la aplicación de pruebas. No se puede deshacer.",
         "action": "Publicar en producción"
       },
       "createDialog": {
-        "title": "Crear sitio de pruebas",
+        "title": "Crear aplicación de pruebas",
         "description": "Una copia de {domain}, en un dominio propio.",
         "domainLabel": "Dominio para la copia",
         "domainPlaceholder": "pruebas.ejemplo.com",
         "domainHint": "Apunta primero este dominio a este servidor o la copia no será accesible.",
-        "slow": "Esto copia el sitio entero y puede tardar varios minutos. Mantén esta ventana abierta: no hay ningún progreso al que volver.",
+        "slow": "Esto copia la aplicación entera y puede tardar varios minutos. Mantén esta ventana abierta: no hay ningún progreso al que volver.",
         "cancel": "Cancelar",
-        "submit": "Crear sitio de pruebas",
+        "submit": "Crear aplicación de pruebas",
         "creating": "Creando…",
-        "done": "Sitio de pruebas creado en {domain}.",
-        "failed": "No se pudo crear el sitio de pruebas.",
-        "domainLabelHint": "La dirección para la copia de staging. Use algo que obviamente no sea su sitio en producción."
+        "done": "Aplicación de pruebas creada en {domain}.",
+        "failed": "No se pudo crear la aplicación de pruebas.",
+        "domainLabelHint": "La dirección para la copia de staging. Use algo que obviamente no sea su aplicación en producción."
       },
       "pushDialog": {
         "title": "¿Publicar pruebas sobre {domain}?",
         "description": "Todo lo que hay en {staging} se copia sobre {production}. No se puede deshacer.",
-        "downtime": "Tu sitio se queda fuera de servicio mientras se ejecuta, y los visitantes verán una página de mantenimiento hasta que termine.",
+        "downtime": "Tu aplicación se queda fuera de servicio mientras se ejecuta, y los visitantes verán una página de mantenimiento hasta que termine.",
         "whatToPush": "Qué se debe copiar",
         "modes": {
           "files": {
             "label": "Solo archivos",
-            "replaces": "Los archivos del sitio",
+            "replaces": "Los archivos de la aplicación",
             "deletes": "Los archivos que solo existen en producción",
             "undo": "Ninguno: no se copia nada antes"
           },
@@ -4790,11 +4790,11 @@
             "replaces": "La base de datos",
             "deletes": "Todo lo escrito desde que se hizo la copia: pedidos, comentarios, entradas",
             "undo": "La base de datos anterior se guarda antes",
-            "note": "Producción necesita los mismos plugins y temas que staging. La base de datos los espera, y si falta alguno el sitio puede quedarse en blanco."
+            "note": "Producción necesita los mismos plugins y temas que staging. La base de datos los espera, y si falta alguno la aplicación puede quedarse en blanco."
           },
           "full": {
             "label": "Archivos y base de datos",
-            "replaces": "Los archivos del sitio y la base de datos",
+            "replaces": "Los archivos de la aplicación y la base de datos",
             "deletes": "Los archivos que solo están en producción y todo lo escrito desde la copia",
             "undo": "La base de datos anterior se guarda antes; los archivos no"
           }
@@ -4818,9 +4818,9 @@
         }
       },
       "isCopy": {
-        "title": "Este sitio es una copia de pruebas",
-        "body": "Se creó como copia de otro sitio, así que no tiene su propia área de pruebas. Publícalo desde el sitio al que pertenece.",
-        "action": "Ir al sitio original"
+        "title": "Esta aplicación es una copia de pruebas",
+        "body": "Se creó como copia de otra aplicación, así que no tiene su propia área de pruebas. Publícala desde la aplicación a la que pertenece.",
+        "action": "Ir a la aplicación original"
       },
       "copyAge": "Copia hecha {age}"
     },
@@ -4828,24 +4828,24 @@
     "paused": "En pausa",
     "webRoot": {
       "title": "Cambiar la raíz web",
-      "description": "El directorio que el servidor web sirve para este sitio.",
+      "description": "El directorio que el servidor web sirve para esta aplicación.",
       "label": "Raíz web",
-      "hint": "Relativa a la carpeta del sitio, p. ej. /public. Déjala vacía para servir la carpeta del sitio.",
+      "hint": "Relativa a la carpeta de la aplicación, p. ej. /public. Déjala vacía para servir la carpeta de la aplicación.",
       "submit": "Cambiar la raíz web",
       "cancel": "Cancelar",
       "saved": "Raíz web cambiada.",
       "failed": "No se pudo cambiar la raíz web."
     },
     "missing": {
-      "title": "Este sitio ya no existe",
+      "title": "Esta aplicación ya no existe",
       "description": "Puede que se haya eliminado o que su configuración se haya revertido. No ha cambiado nada más en tu servidor.",
-      "action": "Volver a los sitios"
+      "action": "Volver a aplicaciones"
     },
     "size": {
       "notMeasured": "Sin medir",
       "measuring": "Midiendo…",
       "measureFailed": "No se pudo medir el tamaño.",
-      "measureHint": "Medir este sitio en el disco ahora"
+      "measureHint": "Medir esta aplicación en el disco ahora"
     },
     "status": {
       "pending": "Pendiente",
@@ -4862,7 +4862,7 @@
       "bots": "Bots de IA",
       "on": "Activado",
       "off": "Desactivado",
-      "description": "Ajustes de protección de este sitio."
+      "description": "Ajustes de protección de esta aplicación."
     },
     "backups": {
       "title": "Copias de seguridad",
@@ -4883,24 +4883,24 @@
       "manage": "Gestionar copias",
       "setUp": "Configurar copias de seguridad",
       "loadFailed": "No se pudo cargar la configuración de copias.",
-      "unprotectedRisk": "No se está haciendo ninguna copia de seguridad. Si pierdes este sitio, no habrá nada que restaurar.",
+      "unprotectedRisk": "No se está haciendo ninguna copia de seguridad. Si pierdes esta aplicación, no habrá nada que restaurar.",
       "pausedRisk": "Las copias están configuradas pero no se ejecutan, así que la copia más reciente envejece.",
-      "description": "Si este sitio podría restaurarse.",
-      "runningNote": "Se está haciendo una copia de este sitio ahora. Esta tarjeta se actualiza sola.",
+      "description": "Si esta aplicación podría restaurarse.",
+      "runningNote": "Se está haciendo una copia de esta aplicación ahora. Esta tarjeta se actualiza sola.",
       "queuedNote": "Copia en cola. Empieza en cuanto el servidor la recoja.",
       "queuedStalled": "Esta copia aún no ha empezado. Si sigue así, puede que el proceso en segundo plano no esté funcionando.",
-      "alreadyRunning": "Ya se está haciendo una copia de este sitio."
+      "alreadyRunning": "Ya se está haciendo una copia de esta aplicación."
     },
     "attention": {
       "title": "Requiere atención",
-      "allClear": "No hay nada que requiera atención en este sitio.",
+      "allClear": "No hay nada que requiera atención en esta aplicación.",
       "noBackups": "Copias de seguridad sin configurar",
       "setUpBackups": "Configurar copias de seguridad",
-      "noCertificate": "SSL no instalado",
-      "issueCertificate": "Emitir SSL",
+      "noCertificate": "SSL no configurado",
+      "issueCertificate": "Configurar SSL",
       "reviewSecurity": "Revisar seguridad",
       "protectionsOff": "{count, plural, one {# protección desactivada} other {# protecciones desactivadas}}",
-      "noDatabase": "Este sitio no tiene base de datos, por lo que sus copias no incluirán ninguna",
+      "noDatabase": "Esta aplicación no tiene base de datos, por lo que sus copias no incluirán ninguna",
       "attachDatabase": "Vincular una base de datos",
       "issueAction": {
         "certificate": "Revisar SSL",
@@ -4917,19 +4917,19 @@
     },
     "noDatabase": {
       "title": "No hay ningún motor de base de datos instalado",
-      "body": "Los tipos de sitio que necesitan una base de datos —WordPress, Joomla y otros— no se pueden instalar hasta que haya uno. Los tipos que no la necesitan no se ven afectados.",
+      "body": "Los tipos de aplicación que necesitan una base de datos —WordPress, Joomla y otros— no se pueden instalar hasta que haya uno. Los tipos que no la necesitan no se ven afectados.",
       "action": "Instalar una base de datos",
       "installingTitle": "Se está instalando un motor de base de datos",
-      "installingBody": "Espera a que termine antes de crear un sitio que necesite una base de datos. El progreso está en la página Bases de datos."
+      "installingBody": "Espera a que termine antes de crear una aplicación que necesite una base de datos. El progreso está en la página Bases de datos."
     },
     "databaseCard": {
       "title": "Base de datos",
-      "description": "Lo que incluirán las copias de seguridad de este sitio. Vincularla no cambia cómo se conecta tu sitio.",
+      "description": "Lo que incluirán las copias de seguridad de esta aplicación. Vincularla no cambia cómo se conecta tu aplicación.",
       "count": "{count, plural, one {# base de datos} other {# bases de datos}}",
       "notBackedUp": "Sin copia de seguridad",
-      "missingWarning": "No hay ninguna base de datos vinculada, así que las copias de este sitio no incluirán ninguna.",
-      "missingFine": "Este sitio no tiene ninguna base de datos vinculada.",
-      "loadFailed": "No se pudieron comprobar las bases de datos de este sitio.",
+      "missingWarning": "No hay ninguna base de datos vinculada, así que las copias de esta aplicación no incluirán ninguna.",
+      "missingFine": "Esta aplicación no tiene ninguna base de datos vinculada.",
+      "loadFailed": "No se pudieron comprobar las bases de datos de esta aplicación.",
       "attach": "Vincular una base de datos",
       "manage": "Gestionar",
       "create": "Crear una base de datos"
@@ -4945,9 +4945,9 @@
       "submit": "Vincular",
       "saving": "Vinculando…",
       "cancel": "Cancelar",
-      "done": "{name} ahora la usa este sitio.",
+      "done": "{name} ahora la usa esta aplicación.",
       "failed": "No se pudo vincular esa base de datos.",
-      "hint": "Determina lo que incluyen las copias de seguridad de este sitio. No cambia cómo se conecta tu sitio: sigue usando lo que indique su propia configuración."
+      "hint": "Determina lo que incluyen las copias de seguridad de esta aplicación. No cambia cómo se conecta tu aplicación: sigue usando lo que indique su propia configuración."
     },
     "unavailableDatabase": {
       "missing": "Necesita {engines}. No está instalado en este servidor.",
@@ -4955,53 +4955,53 @@
       "installing": "Necesita {engines}. La instalación aún está en curso."
     },
     "pause": {
-      "action": "Pausar sitio",
-      "resume": "Reanudar sitio",
+      "action": "Pausar aplicación",
+      "resume": "Reanudar aplicación",
       "resuming": "Reanudando…",
       "pausing": "Pausando…",
-      "confirm": "Pausar sitio",
+      "confirm": "Pausar aplicación",
       "cancel": "Cancelar",
       "title": "¿Pausar {name}?",
-      "description": "Los visitantes verán una página breve que indica que el sitio no está disponible temporalmente, hasta que lo reanudes.",
+      "description": "Los visitantes verán una página breve que indica que la aplicación no está disponible temporalmente, hasta que la reanudes.",
       "keeps": "No se elimina nada. Los archivos, la base de datos, las copias de seguridad, las tareas cron y los certificados se mantienen tal cual.",
       "reversible": "Puedes reanudarlo cuando quieras desde este mismo menú.",
-      "seo": "Los buscadores ven una página normal en lugar de una respuesta de \"inténtalo más tarde\", así que un sitio pausado durante mucho tiempo puede perder posiciones. No pasa nada por una hora; conviene saberlo si va a ser un mes.",
+      "seo": "Los buscadores ven una página normal en lugar de una respuesta de \"inténtalo más tarde\", así que una aplicación pausada durante mucho tiempo puede perder posiciones. No pasa nada por una hora; conviene saberlo si va a ser un mes.",
       "paused": "{name} está en pausa.",
       "resumed": "{name} vuelve a estar en línea.",
-      "failed": "No pudimos pausar el sitio.",
-      "resumeFailed": "No pudimos reanudar el sitio."
+      "failed": "No pudimos pausar la aplicación.",
+      "resumeFailed": "No pudimos reanudar la aplicación."
     },
     "unavailableRuntime": {
       "php": {
-        "install": "Este sitio necesita PHP {range} y este servidor tiene {installed}. Instala PHP {suggest} para crearlo.",
-        "none": "Este sitio necesita PHP {range} y este servidor tiene {installed}. Ninguna de las versiones de PHP que se ofrecen para instalar entra en ese rango."
+        "install": "Esta aplicación necesita PHP {range} y este servidor tiene {installed}. Instala PHP {suggest} para crearla.",
+        "none": "Esta aplicación necesita PHP {range} y este servidor tiene {installed}. Ninguna de las versiones de PHP que se ofrecen para instalar entra en ese rango."
       },
       "node": {
-        "install": "Este sitio necesita Node {range} y este servidor tiene {installed}. Instala Node {suggest} para crearlo.",
-        "none": "Este sitio necesita Node {range} y este servidor tiene {installed}. Ninguna de las versiones de Node que se ofrecen para instalar entra en ese rango."
+        "install": "Esta aplicación necesita Node {range} y este servidor tiene {installed}. Instala Node {suggest} para crearla.",
+        "none": "Esta aplicación necesita Node {range} y este servidor tiene {installed}. Ninguna de las versiones de Node que se ofrecen para instalar entra en ese rango."
       }
     },
     "gitAccountHint": "Una cuenta de Git conectada, utilizada para leer sus repositorios privados. Agregue una en Integraciones si esta lista está vacía.",
-    "systemUserHint": "La cuenta de Linux que es dueña de los archivos de este sitio. Dar a cada sitio su propia cuenta impide que un sitio lea los datos de otro.",
+    "systemUserHint": "El usuario del sistema que es dueño de los archivos de esta aplicación. Dar a cada aplicación su propio usuario impide que una aplicación lea los datos de otra.",
     "fieldHints": {
-      "web_root": "La carpeta dentro de su sitio que los visitantes realmente ven. Déjelo como está a menos que su framework sirva desde una subcarpeta como /public.",
-      "table_prefix": "Se coloca delante del nombre de cada tabla de la base de datos, para que dos sitios puedan compartir una base de datos sin entrar en conflicto. El valor predeterminado está bien.",
+      "web_root": "La carpeta dentro de su aplicación que los visitantes realmente ven. Déjelo como está a menos que su framework sirva desde una subcarpeta como /public.",
+      "table_prefix": "Se coloca delante del nombre de cada tabla de la base de datos, para que dos aplicaciones puedan compartir una base de datos sin entrar en conflicto. El valor predeterminado está bien.",
       "package_manager": "La herramienta utilizada para instalar las dependencias de este proyecto. Elija la que coincida con el archivo de bloqueo en su repositorio.",
       "rendering_type": "Cómo se generan las páginas. Del lado del servidor renderiza cada solicitud en el servidor; estático genera las páginas una sola vez; del lado del cliente envía un paquete que el navegador renderiza.",
-      "build_command": "Se ejecuta una vez después de obtener el código, para compilar el sitio. Déjelo vacío si el proyecto no necesita un paso de compilación.",
+      "build_command": "Se ejecuta una vez después de obtener el código, para compilar la aplicación. Déjelo vacío si el proyecto no necesita un paso de compilación.",
       "start_command": "El comando que mantiene la aplicación en ejecución. Debe permanecer en primer plano: un comando que termina de inmediato parece un fallo.",
       "deploy_script": "Los comandos que se ejecutan en cada despliegue, en orden. Aquí es donde descarga el código, instala las dependencias y reinicia la aplicación.",
       "app_port": "El puerto en el que la aplicación escucha dentro del servidor. Los visitantes nunca lo ven: el servidor web reenvía las solicitudes hacia él.",
-      "php_version": "La versión de PHP con la que se ejecuta este sitio. Las versiones más recientes son más rápidas y tienen mejor soporte, pero un sitio muy antiguo podría no funcionar en ellas.",
-      "node_version": "La versión de Node.js con la que se ejecuta este sitio. Debe coincidir con la versión contra la que se construyó el proyecto.",
+      "php_version": "La versión de PHP con la que se ejecuta esta aplicación. Las versiones más recientes son más rápidas y tienen mejor soporte, pero una aplicación muy antigua podría no funcionar en ellas.",
+      "node_version": "La versión de Node.js con la que se ejecuta esta aplicación. Debe coincidir con la versión contra la que se construyó el proyecto.",
       "timezone": "La zona horaria que utiliza esta aplicación cuando muestra o almacena una fecha. No cambia el reloj del servidor.",
-      "site_language": "El idioma en el que está configurado el sitio instalado. No cambia el idioma de este panel.",
-      "locale": "El idioma en el que está configurado el sitio instalado. No cambia el idioma de este panel.",
-      "language": "El idioma en el que está configurado el sitio instalado. No cambia el idioma de este panel.",
+      "site_language": "El idioma en el que está configurada la aplicación instalada. No cambia el idioma de este panel.",
+      "locale": "El idioma en el que está configurada la aplicación instalada. No cambia el idioma de este panel.",
+      "language": "El idioma en el que está configurada la aplicación instalada. No cambia el idioma de este panel.",
       "short_name": "Un identificador corto que se utiliza dentro de la aplicación. Solo letras y números, sin espacios."
     },
-    "branchHint": "La rama desde la que desplegamos. Hacer push a cualquier otra rama deja este sitio como está.",
-    "repositoryHint": "Dónde reside el código de este sitio. Elija uno de la cuenta conectada arriba.",
+    "branchHint": "La rama desde la que desplegamos. Hacer push a cualquier otra rama deja esta aplicación como está.",
+    "repositoryHint": "Dónde reside el código de esta aplicación. Elija uno de la cuenta conectada arriba.",
     "requiredServices": {
       "heading": "{app} necesita {count, plural, one {# servicio más} other {# servicios más}}",
       "headingReady": "{app} ya se puede crear",
@@ -5046,30 +5046,30 @@
     "siteTypeDetection": {
       "detectHint": "Comprobar qué hay instalado aquí",
       "reviewHint": "Revisar lo que se encontró",
-      "detectFailed": "No se pudo leer el directorio del sitio.",
+      "detectFailed": "No se pudo leer el directorio de la aplicación.",
       "looksLike": "Parece {type}",
       "looksLikeBecause": "Parece {type} — se encontró {file}",
       "nothingFound": "No se encontró nada reconocible en la última comprobación",
-      "confirmTitle": "¿Tratar este sitio como {type}?",
-      "confirmFound": "{file} está presente en el directorio de este sitio.",
-      "confirmNarrow": "El panel dejará de ofrecer las pantallas específicas de la aplicación de este sitio.",
+      "confirmTitle": "¿Tratar esta aplicación como {type}?",
+      "confirmFound": "{file} está presente en el directorio de esta aplicación.",
+      "confirmNarrow": "El panel dejará de ofrecer las pantallas específicas del tipo de esta aplicación.",
       "confirmAction": "Cambiar el tipo",
-      "applied": "Este sitio ahora se trata como {type}.",
-      "failed": "No se pudo cambiar el tipo de sitio.",
+      "applied": "Esta aplicación ahora se trata como {type}.",
+      "failed": "No se pudo cambiar el tipo de aplicación.",
       "changesLabel": "Qué cambia",
-      "changesBody": "El panel empezará a ofrecer las pantallas que tiene para sitios {type}.",
+      "changesBody": "El panel empezará a ofrecer las pantallas que tiene para aplicaciones {type}.",
       "unchangedLabel": "Qué se mantiene igual",
       "unchangedBody": "Tus archivos, la base de datos y la configuración. No se instala, descarga ni mueve nada.",
       "reversible": "Puedes volver a {from} en cualquier momento.",
       "reviewAction": "Revisar",
       "detectAction": "Comprobar qué hay instalado",
       "changeTo": "Cambiar el tipo a {type}",
-      "menuHint": "Opciones del tipo de sitio"
+      "menuHint": "Opciones del tipo de aplicación"
     }
   },
   "panelUpdate": {
     "title": "Actualización del panel",
-    "subtitle": "Actualiza {brand}. Los sitios alojados siguen en línea; solo se reinicia este panel.",
+    "subtitle": "Actualiza {brand}. Las aplicaciones alojadas siguen en línea; solo se reinicia este panel.",
     "loadFailed": "No pudimos cargar el estado de la actualización. Inténtalo de nuevo en un momento.",
     "versionValue": "v{version}",
     "versionUnknown": "Versión desconocida",
@@ -5105,7 +5105,7 @@
     "couldNotCheck": "No se pudo comprobar si hay actualizaciones",
     "couldNotCheckBody": "No se pudo contactar con el servidor de versiones. Tu panel está bien: inténtalo de nuevo en un momento.",
     "confirmTitle": "¿Actualizar el panel?",
-    "confirmBody": "El panel estará fuera de línea unos minutos mientras se actualiza y luego se reinicia. Los sitios alojados no se ven afectados.",
+    "confirmBody": "El panel estará fuera de línea unos minutos mientras se actualiza y luego se reinicia. Las aplicaciones alojadas no se ven afectadas.",
     "cancel": "Cancelar",
     "working": "Trabajando…",
     "stepCount": "Paso {step} de {total}",
@@ -5192,7 +5192,7 @@
   },
   "setup": {
     "title": "Configura tu servidor",
-    "subtitle": "Instala lo que tus sitios vayan a necesitar. Nada es obligatorio: puedes terminar más tarde.",
+    "subtitle": "Instala lo que tus aplicaciones vayan a necesitar. Nada es obligatorio: puedes terminar más tarde.",
     "loadFailed": "No pudimos cargar el estado de configuración.",
     "progressLabel": "Progreso de configuración",
     "progressComplete": "Todos los componentes recomendados instalados",
@@ -5243,9 +5243,9 @@
     "sectionOptional": "También disponibles",
     "summaryInstalled": "{count} instalados",
     "percentComplete": "{pct}% completado",
-    "sectionAttentionHint": "Algo no terminó. Conviene resolverlo antes de añadir un sitio.",
+    "sectionAttentionHint": "Algo no terminó. Conviene resolverlo antes de añadir una aplicación.",
     "sectionRecommendedHint": "Aconsejado para la mayoría de servidores. Puedes añadirlos cuando quieras.",
-    "sectionOptionalHint": "Solo los necesitan algunos sitios.",
+    "sectionOptionalHint": "Solo las necesitan algunas aplicaciones.",
     "alreadyInstalledHint": "Ya están en este servidor. Aquí no hay nada que hacer.",
     "chooseEngineFirst": "Elige primero un motor de base de datos",
     "oneSqlOnly": "Un servidor ejecuta un solo motor SQL. Una vez instalado, cambiar al otro implica reconstruir el servidor.",
@@ -5371,7 +5371,7 @@
         "client_secret": "Se muestra junto al ID de cliente al crearlo. Trátelo como una contraseña."
       },
       "plainFtpWarning": "TLS está desactivado. La contraseña y todas las copias se enviarán sin cifrar.",
-      "prefixHintRemote": "Carpeta opcional dentro del directorio remoto, para que un servidor pueda alojar varios sitios.",
+      "prefixHintRemote": "Carpeta opcional dentro del directorio remoto, para que un servidor pueda alojar varias aplicaciones.",
       "placeholders": {
         "bucket": "mis-copias",
         "region": "eu-west-1",
@@ -5478,7 +5478,7 @@
   },
   "backups": {
     "title": "Copias de seguridad",
-    "subtitle": "Qué sitios están protegidos y cómo restaurar uno.",
+    "subtitle": "Qué aplicaciones están protegidas y cómo restaurar una.",
     "loadFailed": "No se pudieron cargar las copias de seguridad. Inténtalo de nuevo en un momento.",
     "tabs": {
       "label": "Secciones de copias",
@@ -5498,12 +5498,12 @@
       "started": "Copiando {name} ahora.",
       "startFailed": "No se pudo iniciar esa copia.",
       "staging": "Pruebas",
-      "unknownApplication": "Sitio eliminado",
-      "allCovered": "Todos los sitios tienen copias.",
-      "exposed": "{count, plural, one {# sitio sin copias} other {# sitios sin copias}}",
-      "exposedHint": "Si se pierde este servidor, esos sitios no se pueden recuperar. Configurar uno lleva un minuto.",
+      "unknownApplication": "Aplicación eliminada",
+      "allCovered": "Todas las aplicaciones tienen copias.",
+      "exposed": "{count, plural, one {# aplicación sin copias} other {# aplicaciones sin copias}}",
+      "exposedHint": "Si se pierde este servidor, esas aplicaciones no se pueden recuperar. Configurar una lleva un minuto.",
       "columns": {
-        "site": "Sitio",
+        "site": "Aplicación",
         "status": "Copias de seguridad",
         "schedule": "Programación",
         "lastRun": "Última copia",
@@ -5519,13 +5519,13 @@
         "unknown": "Desconocido"
       },
       "neverRunShort": "Nunca",
-      "allCoveredHint": "Todos los sitios tienen una programación y la están ejecutando.",
+      "allCoveredHint": "Todas las aplicaciones tienen una programación y la están ejecutando.",
       "keeps": "conserva {count}",
       "nextRun": "Próxima: {when}",
       "runBackup": "Ejecutar copia",
       "viewBackups": "Ver copias",
-      "searchPlaceholder": "Buscar sitios",
-      "noMatches": "Ningún sitio coincide con esos filtros.",
+      "searchPlaceholder": "Buscar aplicaciones",
+      "noMatches": "Ninguna aplicación coincide con esos filtros.",
       "showing": "Mostrando {shown} de {total}",
       "filters": {
         "all": "Todos",
@@ -5546,13 +5546,13 @@
         "lastRun": "Nunca"
       },
       "runsShortly": "Se ejecuta en breve",
-      "notSetUpLine": "Sin configurar: no se respalda nada de este sitio.",
+      "notSetUpLine": "Sin configurar: no se respalda nada de esta aplicación.",
       "needsDestination": "Aún no hay ningún destino de almacenamiento. Añade uno en Integraciones → Almacenamiento primero.",
       "timesShownIn": "Horas mostradas en {timezone}"
     },
     "setup": {
       "title": "Configurar copias de seguridad",
-      "subtitle": "Elige un sitio y con qué frecuencia se copia fuera de este servidor.",
+      "subtitle": "Elige una aplicación y con qué frecuencia se copia fuera de este servidor.",
       "cancel": "Cancelar",
       "submit": "Guardar ajustes de copia",
       "saving": "Guardando…",
@@ -5569,7 +5569,7 @@
       "keep": "conservar {count}",
       "blocked": {
         "noStorage": "Conecta primero un almacenamiento.",
-        "noSite": "Elige un sitio para continuar.",
+        "noSite": "Elige una aplicación para continuar.",
         "noDestination": "Elige dónde guardar las copias.",
         "incomplete": "Completa la programación para continuar.",
         "unchanged": "No ha cambiado nada."
@@ -5582,9 +5582,9 @@
       "refreshFailed": "No se pudo actualizar la lista de almacenamiento."
     },
     "form": {
-      "applicationPlaceholder": "Elige un sitio",
-      "applicationSearch": "Buscar sitios",
-      "applicationEmpty": "No se encontraron sitios",
+      "applicationPlaceholder": "Elige una aplicación",
+      "applicationSearch": "Buscar aplicaciones",
+      "applicationEmpty": "No se encontraron aplicaciones",
       "noDestinations": "Las copias necesitan un destino. Conecta primero un almacenamiento compatible con S3: solo hace falta un bucket y una clave.",
       "addDestination": "Configurar almacenamiento",
       "checkAgain": "Comprobar de nuevo",
@@ -5630,7 +5630,7 @@
       "databaseExcludes": "Bases de datos",
       "databaseExcludesPlaceholder": "analytics_cache",
       "groups": {
-        "site": "Qué sitio",
+        "site": "Qué aplicación",
         "content": "Qué copiar",
         "schedule": "Cuándo se ejecuta",
         "storage": "Dónde se guarda"
@@ -5646,8 +5646,8 @@
       },
       "destinationFailing": "La última prueba de conexión con {name} falló, así que las copias enviadas allí no se escribirán hasta que se corrija.",
       "noDatabase": {
-        "blocked": "Este sitio no tiene base de datos",
-        "filesOnly": "Este sitio no tiene base de datos, por lo que solo se respaldarán sus archivos."
+        "blocked": "Esta aplicación no tiene base de datos",
+        "filesOnly": "Esta aplicación no tiene base de datos, por lo que solo se respaldarán sus archivos."
       },
       "automaticHint": "Ejecuta la copia de seguridad de forma programada en lugar de solo cuando presiona el botón.",
       "fileExcludesHint": "Rutas a excluir de la copia de seguridad, una por línea. Vale la pena excluir cachés y registros; los archivos subidos, no.",
@@ -5656,7 +5656,7 @@
       "destinationNotConnected": "{name} aún no está conectado a tu cuenta de Google, así que las copias enviadas allí fallarán."
     },
     "history": {
-      "allApplications": "Todos los sitios",
+      "allApplications": "Todas las aplicaciones",
       "allStatuses": "Cualquier estado",
       "statuses": {
         "verified": "Completada",
@@ -5667,17 +5667,17 @@
       },
       "empty": {
         "title": "Todavía no se ha ejecutado ninguna copia",
-        "description": "Cuando configures un sitio, cada ejecución aparecerá aquí, y desde aquí se restaura."
+        "description": "Cuando configures una aplicación, cada ejecución aparecerá aquí, y desde aquí se restaura."
       },
       "emptyFiltered": {
         "title": "Ninguna copia coincide con esos filtros",
-        "description": "Prueba con otro sitio u otro estado."
+        "description": "Prueba con otra aplicación u otro estado."
       },
       "restore": "Restaurar esta copia…",
       "noPermission": "Tu rol no incluye Copias de seguridad con acceso de gestión. Pide a un administrador que te lo conceda.",
       "safetyBadge": "Copia de seguridad previa",
       "sizeUnknown": "Desconocido",
-      "unknownApplication": "Sitio eliminado",
+      "unknownApplication": "Aplicación eliminada",
       "unknownReason": "El motivo no se registró. Revisa los registros del servidor para esta ejecución.",
       "restoreShort": "Restaurar",
       "counts": {
@@ -5687,7 +5687,7 @@
         "running": "En ejecución"
       },
       "columns": {
-        "site": "Sitio",
+        "site": "Aplicación",
         "status": "Estado",
         "type": "Tipo de copia",
         "destination": "Destino",
@@ -5720,7 +5720,7 @@
       "queuedNote": "Copia de seguridad en cola para {name}. Aparecerá en esta lista en cuanto el servidor empiece a escribirla.",
       "queuedHidden": "Copia de seguridad en cola para {name}. El filtro de estado que has aplicado la ocultará: quita el filtro para verla ejecutarse.",
       "queuedStalled": "La copia de seguridad en cola para {name} aún no ha comenzado. Si continúa así, es posible que el proceso en segundo plano no esté funcionando.",
-      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de este sitio. Podrás iniciar otra cuando termine.",
+      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de esta aplicación. Podrás iniciar otra cuando termine.",
       "delete": {
         "action": "Eliminar",
         "selectedCount": "{count} seleccionados",
@@ -5750,7 +5750,7 @@
     },
     "restore": {
       "title": "Restaurar {name}",
-      "description": "Devuelve el sitio a como estaba {ago} ({when}). Esto reemplaza el sitio por esa copia: todo lo cambiado desde entonces se pierde.",
+      "description": "Devuelve la aplicación a como estaba {ago} ({when}). Esto reemplaza la aplicación por esa copia: todo lo cambiado desde entonces se pierde.",
       "whatToRestore": "Qué restaurar",
       "types": {
         "full": {
@@ -5766,21 +5766,21 @@
           "hint": "Deja intactos los archivos actuales."
         }
       },
-      "safetyPromise": "Primero se toma una copia del sitio tal y como está ahora, así que esto se puede deshacer.",
+      "safetyPromise": "Primero se toma una copia de la aplicación tal y como está ahora, así que esto se puede deshacer.",
       "confirmLabel": "Escribe {domain} para confirmar",
       "cancel": "Cancelar",
-      "submit": "Restaurar sitio",
+      "submit": "Restaurar aplicación",
       "starting": "Iniciando…",
       "failed": "No se pudo iniciar la restauración.",
-      "typeToUnlock": "Escribe el dominio del sitio para confirmar.",
+      "typeToUnlock": "Escribe el dominio de la aplicación para confirmar.",
       "blocked": {
         "unverified": "Sin verificar",
-        "noApplication": "Sitio eliminado",
+        "noApplication": "Aplicación eliminada",
         "alreadyRunning": "Restauración en curso",
         "inFlight": "Aún en curso",
         "failed": "Esta copia falló"
       },
-      "descriptionShort": "Esto reemplaza el sitio por la copia de abajo. Todo lo cambiado desde entonces se pierde.",
+      "descriptionShort": "Esto reemplaza la aplicación por la copia de abajo. Todo lo cambiado desde entonces se pierde.",
       "facts": {
         "taken": "Tomada",
         "type": "Contiene",
@@ -5789,22 +5789,22 @@
       },
       "confirmLabelPlain": "Escribe esto para confirmar",
       "copyDomain": "Copiar dominio",
-      "whatToRestoreHint": "Restaurar los archivos, la base de datos o ambos. Restaurar la base de datos reemplaza todo el contenido actual del sitio."
+      "whatToRestoreHint": "Restaurar los archivos, la base de datos o ambos. Restaurar la base de datos reemplaza todo el contenido actual de la aplicación."
     },
     "progress": {
-      "running": "Restaurando el sitio",
+      "running": "Restaurando la aplicación",
       "starting": "Preparando…",
       "step": "Paso {step} de {total}",
       "dontLeave": "Esto puede tardar unos minutos. Puedes salir de esta página: el proceso continúa.",
-      "succeeded": "El sitio se ha restaurado",
-      "succeededBody": "Terminó {when}. Revisa el sitio y luego cierra este aviso.",
-      "succeededBodyPlain": "Revisa el sitio y luego cierra este aviso.",
+      "succeeded": "La aplicación se ha restaurado",
+      "succeededBody": "Terminó {when}. Revisa la aplicación y luego cierra este aviso.",
+      "succeededBodyPlain": "Revisa la aplicación y luego cierra este aviso.",
       "undo": "Deshacer esta restauración",
-      "undoHint": "Restaura la copia de seguridad tomada justo antes: el sitio tal y como estaba antes de restaurar.",
+      "undoHint": "Restaura la copia de seguridad tomada justo antes: la aplicación tal y como estaba antes de restaurar.",
       "undoFailed": "No se pudo cargar la copia de seguridad previa.",
       "dismiss": "Descartar",
       "failed": "La restauración no terminó",
-      "failedSafe": "Se tomó una copia de seguridad previa, así que el sitio se puede dejar como estaba.",
+      "failedSafe": "Se tomó una copia de seguridad previa, así que la aplicación se puede dejar como estaba.",
       "failedNoSafety": "La restauración se detuvo antes de cambiar nada.",
       "reference": "Referencia: {reference}",
       "unknownReason": "No se registró el motivo.",
@@ -5813,20 +5813,20 @@
       "checkAgain": "Comprobar de nuevo",
       "hide": "Ocultar",
       "queued": "Restauración en cola",
-      "queuedBody": "Esperando a que el servidor la tome. Todavía no se ha cambiado nada en el sitio.",
+      "queuedBody": "Esperando a que el servidor la tome. Todavía no se ha cambiado nada en la aplicación.",
       "stalledQueued": "Esta restauración no ha empezado",
-      "stalledQueuedBody": "Lleva un par de minutos esperando a que el servidor la recoja. No se ha cambiado nada en el sitio. Puede que el proceso no esté en marcha: vuelve a comprobarlo o pide a quien gestione el servidor que lo revise.",
+      "stalledQueuedBody": "Lleva un par de minutos esperando a que el servidor la recoja. No se ha cambiado nada en la aplicación. Puede que el proceso no esté en marcha: vuelve a comprobarlo o pide a quien gestione el servidor que lo revise.",
       "undone": "Se ha deshecho la restauración",
-      "undoneBody": "El sitio ha vuelto a como estaba antes de restaurar. Revisa el sitio y luego descarta este aviso."
+      "undoneBody": "La aplicación ha vuelto a como estaba antes de restaurar. Revisa la aplicación y luego descarta este aviso."
     },
     "application": {
       "pageTitle": "Copias de seguridad",
-      "pageSubtitle": "Copias de este sitio guardadas fuera del servidor, y cuándo se toman.",
-      "provisioning": "Este sitio todavía se está preparando. Podrás configurar las copias cuando esté listo.",
-      "loadFailed": "No se pudieron cargar los ajustes de copia de este sitio.",
+      "pageSubtitle": "Copias de esta aplicación guardadas fuera del servidor, y cuándo se toman.",
+      "provisioning": "Esta aplicación todavía se está preparando. Podrás configurar las copias cuando esté lista.",
+      "loadFailed": "No se pudieron cargar los ajustes de copia de esta aplicación.",
       "state": {
         "protected": {
-          "title": "Este sitio tiene copias de seguridad",
+          "title": "Esta aplicación tiene copias de seguridad",
           "body": "{schedule}, guardadas en {destination}."
         },
         "paused": {
@@ -5834,9 +5834,9 @@
           "body": "No se ejecuta nada de forma programada. Las copias solo se hacen cuando pulsas Copiar ahora."
         },
         "unprotected": {
-          "title": "Este sitio no tiene copias de seguridad",
-          "body": "Si se pierde el servidor, se pierde este sitio. Configura una programación abajo.",
-          "bodyReadOnly": "Si se pierde el servidor, se pierde este sitio. Pide a un administrador que configure las copias."
+          "title": "Esta aplicación no tiene copias de seguridad",
+          "body": "Si se pierde el servidor, se pierde esta aplicación. Configura una programación abajo.",
+          "bodyReadOnly": "Si se pierde el servidor, se pierde esta aplicación. Pide a un administrador que configure las copias."
         }
       },
       "lastRun": "Última ejecución {when}",
@@ -5850,8 +5850,8 @@
       "recentTitle": "Copias recientes",
       "showing": "Mostrando {shown} de {total}",
       "viewAll": "Todas las copias",
-      "noRuns": "Todavía no se ha hecho ninguna copia de este sitio.",
-      "historyFailed": "No se pudo cargar el historial de copias de este sitio.",
+      "noRuns": "Todavía no se ha hecho ninguna copia de esta aplicación.",
+      "historyFailed": "No se pudo cargar el historial de copias de esta aplicación.",
       "safetyBadge": "Copia de seguridad previa",
       "summary": {
         "what": "Qué se copia",
@@ -5890,25 +5890,25 @@
       },
       "queuedNote": "Copia de seguridad en cola. Aparecerá aquí en cuanto el servidor empiece a escribirla.",
       "queuedStalled": "Esta copia de seguridad aún no ha comenzado. Sigue en cola: si continúa así, es posible que el proceso en segundo plano no esté funcionando.",
-      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de este sitio. Podrás iniciar otra cuando termine.",
+      "alreadyRunning": "Ya se está ejecutando una copia de seguridad de esta aplicación. Podrás iniciar otra cuando termine.",
       "noDatabase": {
-        "title": "Este sitio no tiene base de datos",
-        "description": "Las copias de seguridad de este sitio no incluirán ninguna hasta que la vincules."
+        "title": "Esta aplicación no tiene base de datos",
+        "description": "Las copias de seguridad de esta aplicación no incluirán ninguna hasta que la vincules."
       }
     },
     "empty": {
       "title": "Todavía no hay copias de seguridad en este servidor",
-      "body": "Una copia de seguridad guarda los archivos y la base de datos de un sitio en un almacenamiento tuyo, de forma programada. Si alguna vez se pierde el servidor, esa copia es lo que devuelve el sitio.",
-      "reassurance": "Al restaurar siempre se toma primero una copia del sitio actual, así que una restauración se puede deshacer.",
+      "body": "Una copia de seguridad guarda los archivos y la base de datos de una aplicación en un almacenamiento tuyo, de forma programada. Si alguna vez se pierde el servidor, esa copia es lo que devuelve la aplicación.",
+      "reassurance": "Al restaurar siempre se toma primero una copia de la aplicación actual, así que una restauración se puede deshacer.",
       "covers": {
-        "files": "Archivos del sitio",
+        "files": "Archivos de la aplicación",
         "database": "Base de datos",
         "schedule": "De forma programada",
         "offsite": "Guardadas fuera de este servidor"
       },
       "stepsTitle": "Cómo empezar",
       "step1": "Conecta un destino de almacenamiento: el bucket donde se escriben las copias.",
-      "step2": "Elige un sitio, qué copiar y con qué frecuencia.",
+      "step2": "Elige una aplicación, qué copiar y con qué frecuencia.",
       "step3": "Restaura desde cualquier copia verificada, en la pestaña Historial.",
       "action": "Configurar copias de seguridad",
       "addStorage": "Configurar almacenamiento primero"
@@ -5934,7 +5934,7 @@
     },
     "restores": {
       "columns": {
-        "site": "Sitio",
+        "site": "Aplicación",
         "status": "Estado",
         "type": "Qué se restauró",
         "when": "Iniciada",
@@ -5946,11 +5946,11 @@
         "succeeded": "Restaurado",
         "failed": "Fallida"
       },
-      "unknownApplication": "Sitio eliminado",
+      "unknownApplication": "Aplicación eliminada",
       "unknownReason": "No se registró el motivo.",
       "noSafetyCopy": "No se tomó ninguna",
       "findSafetyCopy": "Buscar copia previa",
-      "allApplications": "Todos los sitios",
+      "allApplications": "Todas las aplicaciones",
       "allStatuses": "Cualquier estado",
       "allTypes": "Cualquier tipo",
       "anyTime": "Cualquier fecha",
@@ -5962,11 +5962,11 @@
       },
       "emptyFiltered": {
         "title": "Ninguna restauración coincide con esos filtros",
-        "description": "Prueba con otro sitio u otro estado."
+        "description": "Prueba con otra aplicación u otro estado."
       },
       "empty": {
         "title": "Aún no hay restauraciones",
-        "description": "Cuando se restaure una copia sobre un sitio, quedará registrada aquí: qué se restauró, cuándo y si funcionó."
+        "description": "Cuando se restaure una copia sobre una aplicación, quedará registrada aquí: qué se restauró, cuándo y si funcionó."
       },
       "notStarted": "Sin empezar"
     }
@@ -6065,7 +6065,7 @@
       "summaryIgnored": "{count, plural, one {Se dejará intacto # elemento descartado} other {Se dejarán intactos # elementos descartados}}.",
       "summaryIrreversible": "Esto no se puede deshacer: los elementos añadidos hay que eliminarlos uno a uno.",
       "confirm": "{count, plural, =0 {Añadir al panel} one {Añadir # elemento} other {Añadir # elementos}}",
-      "includeFirewallHint": "Abre también los puertos que este sitio necesita, para que sea accesible de inmediato."
+      "includeFirewallHint": "Abre también los puertos que esta aplicación necesita, para que sea accesible de inmediato."
     },
     "errors": {
       "startFailed": "No se pudo iniciar el análisis.",
@@ -6083,7 +6083,7 @@
     "cancel": "Cancelar",
     "power": {
       "title": "Esta clave tiene acceso completo de administrador",
-      "body": "Quien la tenga puede crear y eliminar sitios, bases de datos, usuarios del sistema y reglas del firewall en este servidor. La clave no se puede limitar ni hacer de solo lectura.",
+      "body": "Quien la tenga puede crear y eliminar aplicaciones, bases de datos, usuarios del sistema y reglas del firewall en este servidor. La clave no se puede limitar ni hacer de solo lectura.",
       "attribution": "Todo lo que se haga con ella queda registrado en el registro de actividad bajo una cuenta aparte, así puedes distinguirlo de tus propios cambios."
     },
     "actions": {
