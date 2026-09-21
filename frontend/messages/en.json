@@ -57,7 +57,13 @@
       "stopped": "The panel has stopped checking for updates on this page.",
       "checkAgain": "Check again"
     },
-    "whatIsThis": "What is this?"
+    "whatIsThis": "What is this?",
+    "theme": {
+      "label": "Change theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
   },
   "systemUsers": {
     "title": "System Users",

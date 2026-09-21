@@ -57,7 +57,13 @@
       "stopped": "このページでの更新確認を停止しました。",
       "checkAgain": "再確認"
     },
-    "whatIsThis": "これは何ですか？"
+    "whatIsThis": "これは何ですか？",
+    "theme": {
+      "label": "テーマを変更",
+      "light": "ライト",
+      "dark": "ダーク",
+      "system": "システム"
+    }
   },
   "systemUsers": {
     "title": "システムユーザー",

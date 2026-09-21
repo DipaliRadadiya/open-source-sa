@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react"
 import { cva } from "class-variance-authority";
+import { useTranslations } from "next-intl";
 import { Slot } from "radix-ui"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -244,12 +245,30 @@ function Sidebar({
   );
 }
 
+/*
+ * Both controls name themselves in the reader's language.
+ *
+ * This is a shadcn primitive and it shipped with "Toggle Sidebar" written into
+ * it, so a screen reader announced English in all eight locales — and on the
+ * rail the same string is a `title`, which is a visible tooltip. The strings
+ * already existed as `common.expandSidebar` / `common.collapseSidebar`; only
+ * the wrapper in `sidebar-toggle.jsx` was using them, and a tooltip beside an
+ * sr-only span does not become the accessible name, it competes with it.
+ */
+function useToggleLabel() {
+  const t = useTranslations("common");
+  const { state } = useSidebar();
+
+  return state === "collapsed" ? t("expandSidebar") : t("collapseSidebar");
+}
+
 function SidebarTrigger({
   className,
   onClick,
   ...props
 }) {
   const { toggleSidebar } = useSidebar()
+  const label = useToggleLabel()
 
   return (
     <Button
@@ -264,7 +283,7 @@ function SidebarTrigger({
       }}
       {...props}>
       <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">{label}</span>
     </Button>
   );
 }
@@ -274,15 +293,16 @@ function SidebarRail({
   ...props
 }) {
   const { toggleSidebar } = useSidebar()
+  const label = useToggleLabel()
 
   return (
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
+      aria-label={label}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      title={label}
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",

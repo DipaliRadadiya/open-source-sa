@@ -57,7 +57,13 @@
       "stopped": "El panel ha dejado de buscar novedades en esta página.",
       "checkAgain": "Comprobar de nuevo"
     },
-    "whatIsThis": "¿Qué es esto?"
+    "whatIsThis": "¿Qué es esto?",
+    "theme": {
+      "label": "Cambiar tema",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
+    }
   },
   "auth": {
     "loginTitle": "Iniciar sesión",

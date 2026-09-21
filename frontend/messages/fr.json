@@ -57,7 +57,13 @@
       "stopped": "Le panneau a arrêté de vérifier les mises à jour sur cette page.",
       "checkAgain": "Vérifier à nouveau"
     },
-    "whatIsThis": "Qu’est-ce que c’est ?"
+    "whatIsThis": "Qu’est-ce que c’est ?",
+    "theme": {
+      "label": "Changer de thème",
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
+    }
   },
   "systemUsers": {
     "title": "Utilisateurs système",

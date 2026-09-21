@@ -60,6 +60,13 @@ export const MANY_MEANINGS = {
     reason:
       "An adjective. German, French, Portuguese and Russian must agree it with the noun it qualifies.",
   },
+  System: {
+    // Scoped to ru: every other locale uses one word for both and must keep
+    // doing so, so leaving this unscoped would hide a real split there.
+    locales: ["ru"],
+    reason:
+      "The noun for a system-owned record, and an adjective on the theme menu qualifying тема. Russian inflects the second (Системная) and not the first.",
+  },
   Other: {
     reason:
       "An adjective qualifying a different noun on each screen — a disk-usage group, a storage provider — so it inflects with each.",

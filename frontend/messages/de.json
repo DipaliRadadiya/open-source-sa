@@ -57,7 +57,13 @@
       "stopped": "Diese Seite sucht nicht mehr automatisch nach Aktualisierungen.",
       "checkAgain": "Erneut prüfen"
     },
-    "whatIsThis": "Was ist das?"
+    "whatIsThis": "Was ist das?",
+    "theme": {
+      "label": "Design ändern",
+      "light": "Hell",
+      "dark": "Dunkel",
+      "system": "System"
+    }
   },
   "systemUsers": {
     "title": "Systembenutzer",

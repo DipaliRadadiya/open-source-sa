@@ -57,7 +57,13 @@
       "stopped": "O painel parou de verificar atualizações nesta página.",
       "checkAgain": "Verificar novamente"
     },
-    "whatIsThis": "O que é isso?"
+    "whatIsThis": "O que é isso?",
+    "theme": {
+      "label": "Alterar tema",
+      "light": "Claro",
+      "dark": "Escuro",
+      "system": "Sistema"
+    }
   },
   "systemUsers": {
     "title": "Usuários do sistema",
