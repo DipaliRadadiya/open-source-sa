@@ -5802,7 +5802,9 @@
           }
         }
       },
-      "copyUid": "बकेट में इस संग्रह का फ़ाइल नाम कॉपी करें"
+      "copyUid": "बकेट में इस संग्रह का फ़ाइल नाम कॉपी करें",
+      "uploadProgress": "{total} में से {done}",
+      "uploadProgressBare": "{done} अपलोड हुआ"
     },
     "restore": {
       "title": "{name} रीस्टोर करें",

@@ -88,7 +88,23 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 4200),
+            /*
+             * Must exceed the longest job's timeout, or Redis hands that job to
+             * a second worker while the first is still working on it — two
+             * concurrent backups of one site, writing the same archive key.
+             *
+             * Derived from the backup timeout rather than set beside it: these
+             * were two independent literals (3600 and 4200) and raising either
+             * one alone reintroduces the bug silently, because nothing fails —
+             * the duplicate run just happens. The grace matches
+             * `ExpiresUniqueLock::UNIQUE_LOCK_GRACE` for the same reason the
+             * reaper borrows its bound: three numbers that must agree should
+             * have one source.
+             */
+            'retry_after' => (int) env(
+                'REDIS_QUEUE_RETRY_AFTER',
+                (int) env('BACKUP_JOB_TIMEOUT', 21600) + 600,
+            ),
             'block_for' => null,
             'after_commit' => false,
         ],

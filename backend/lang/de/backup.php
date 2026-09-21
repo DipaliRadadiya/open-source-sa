@@ -47,6 +47,7 @@ return [
         'archive_files' => 'Das Archiv konnte nicht erstellt werden — meist ist kein Speicherplatz mehr frei.',
         'upload_artifact' => 'Das Archiv konnte nicht hochgeladen werden. Prüfen Sie, ob das Speicherziel weiterhin Schreibzugriffe annimmt.',
         'verify_artifact' => 'Der Upload stimmt nicht mit dem Gesendeten überein; dieser Sicherung ist nicht zu trauen. Es wurde nichts Altes gelöscht.',
+        'upload_stalled' => 'Der Upload hat keine Daten mehr gesendet und wurde abgebrochen. Die Verbindung blieb offen, aber es wurde nichts übertragen — meist bedeutet das, dass der Speicheranbieter sie getrennt hat. Mit dem Ziel stimmt alles; der nächste geplante Lauf versucht es erneut.',
         'unknown' => 'Die Sicherung schlug aus unbekanntem Grund fehl.',
         'crashed' => 'Die Sicherung wurde unerwartet beendet — der Prozess wurde abgebrochen, bevor er fertig war. Meist ging dem Server der Arbeitsspeicher aus oder der Worker wurde mittendrin neu gestartet.',
         'abandoned' => 'Diese Sicherung hat sich nie zurückgemeldet und wurde abgeschlossen. Ihr Worker existiert nicht mehr, es wurde nichts hochgeladen.',

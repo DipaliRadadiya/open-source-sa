@@ -47,6 +47,7 @@ return [
         'archive_files' => 'The archive could not be created — usually the server is out of disk space.',
         'upload_artifact' => 'The archive could not be uploaded. Check the storage destination still accepts writes.',
         'verify_artifact' => 'The upload did not match what was sent, so this backup cannot be trusted. Nothing old was removed.',
+        'upload_stalled' => 'The upload stopped sending data and was abandoned. The connection stayed open but nothing transferred, which usually means the storage provider dropped it. Nothing is wrong with the destination — the next scheduled run will try again.',
         'unknown' => 'The backup failed for an unknown reason.',
         'crashed' => 'The backup stopped unexpectedly — the process was killed before it could finish. Usually the server ran out of memory, or the worker was restarted mid-backup.',
         'abandoned' => 'This backup never reported back and has been closed out. Its worker is gone, so nothing was uploaded.',

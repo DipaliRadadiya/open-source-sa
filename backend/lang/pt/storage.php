@@ -104,6 +104,10 @@ return [
         'sftp_auth_required' => 'Informe uma senha ou uma chave privada.',
     ],
 
+    'upload' => [
+        'stalled' => 'O envio parou de transmitir dados e foi abandonado. A ligação permaneceu aberta mas nada foi transferido, o que normalmente significa que o fornecedor de armazenamento a interrompeu. A cópia de segurança tentará novamente na próxima execução.',
+    ],
+
     'oauth' => [
         'not_connected' => 'Ainda não conectado. Clique em Conectar para autorizar o acesso à sua conta Google.',
         'revoked' => 'O Google revogou este acesso. Normalmente o aplicativo OAuth ficou em "Testing" — o Google expira esses tokens em cerca de uma semana — ou o acesso foi removido em myaccount.google.com. Conecte novamente.',

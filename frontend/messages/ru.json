@@ -5802,7 +5802,9 @@
           }
         }
       },
-      "copyUid": "Скопировать имя файла этого архива в бакете"
+      "copyUid": "Скопировать имя файла этого архива в бакете",
+      "uploadProgress": "{done} из {total}",
+      "uploadProgressBare": "{done} загружено"
     },
     "restore": {
       "title": "Восстановить {name}",

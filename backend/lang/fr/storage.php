@@ -104,6 +104,10 @@ return [
         'sftp_auth_required' => 'Indiquez soit un mot de passe, soit une clé privée.',
     ],
 
+    'upload' => [
+        'stalled' => "L'envoi a cessé de transmettre des données et a été abandonné. La connexion est restée ouverte mais rien n'a été transféré, ce qui signifie généralement que le fournisseur de stockage l'a interrompue. La sauvegarde réessaiera lors de sa prochaine exécution.",
+    ],
+
     'oauth' => [
         'not_connected' => 'Pas encore connecté. Cliquez sur Connecter pour autoriser l’accès à votre compte Google.',
         'revoked' => 'Google a révoqué cet accès. Le plus souvent, l’application OAuth est restée en « Testing » — Google expire ces jetons au bout d’une semaine environ — ou l’accès a été retiré sur myaccount.google.com. Reconnectez-vous.',

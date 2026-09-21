@@ -2,6 +2,8 @@
 
 namespace App\Jobs\Concerns;
 
+use App\Services\Server\Backups\StaleBackupReaper;
+
 /**
  * Gives a unique job's lock an expiry tied to its own timeout.
  *
@@ -28,8 +30,15 @@ trait ExpiresUniqueLock
     /**
      * Long enough that the worker has certainly given up first — the timeout
      * kills the job, and only then does the lock become collectable.
+     *
+     * Public because {@see StaleBackupReaper} now
+     * applies the same grace to its heartbeat bound. Two classes deciding
+     * independently how long to wait before calling a job dead is how a lock
+     * and a row end up disagreeing, and a disagreement between them is exactly
+     * the state where a dispatch is silently discarded while the panel reports
+     * it accepted.
      */
-    private const UNIQUE_LOCK_GRACE = 300;
+    public const UNIQUE_LOCK_GRACE = 300;
 
     public function uniqueFor(): int
     {

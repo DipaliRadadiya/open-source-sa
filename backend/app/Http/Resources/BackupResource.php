@@ -60,6 +60,28 @@ class BackupResource extends JsonResource
                 ? null
                 : __('backup.errors.'.$this->reason),
             'size_bytes' => $this->size_bytes,
+
+            // How far the upload has actually got.
+            //
+            // `size_bytes` above is only set once a backup has *finished*, so
+            // while one is running the panel had no number at all — a row that
+            // said `upload_artifact` for three and a half hours and could not
+            // distinguish a healthy transfer from a dead socket. It was
+            // reported as a hang, twice, and answering it needed `strace` on
+            // the box.
+            //
+            // Sent raw rather than as a percentage: the denominator can be
+            // null (a step that does not know its own total), and a server that
+            // computes `0` from a missing total hands the client a progress bar
+            // that confidently says nothing is happening. Let the client show a
+            // byte count when it cannot show a fraction.
+            'bytes_transferred' => $this->bytes_transferred,
+            'bytes_total' => $this->bytes_total,
+
+            // The heartbeat, exposed because "moving" and "stuck" look
+            // identical in a byte count sampled once. A client that can see
+            // this go stale can say so before the reaper gets there.
+            'progress_at' => $this->progress_at?->format('d-m-Y H:i:s'),
             'reason' => $this->reason,
             'log_key' => $this->log_key,
             'reference' => $this->reference,

@@ -5802,7 +5802,9 @@
           }
         }
       },
-      "copyUid": "バケット内のこのアーカイブのファイル名をコピー"
+      "copyUid": "バケット内のこのアーカイブのファイル名をコピー",
+      "uploadProgress": "{total} 中 {done}",
+      "uploadProgressBare": "{done} アップロード済み"
     },
     "restore": {
       "title": "{name} を復元",

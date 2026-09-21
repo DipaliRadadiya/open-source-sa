@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\ProvisionProgress;
+use App\Services\Server\Backups\Storage\GoogleHttpClient;
 use App\Services\Server\Backups\Storage\GoogleOauthTokens;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Firewall\UfwFirewall;
@@ -125,6 +126,9 @@ class AppServiceProvider extends ServiceProvider
         // isolation rule every other storage driver follows.
         Storage::extend('google', function ($app, array $config): FilesystemAdapter {
             $client = new GoogleClient;
+            // Low-speed abort, so a dead upload fails instead of occupying the
+            // only queue worker until the job timeout. See GoogleHttpClient.
+            $client->setHttpClient(GoogleHttpClient::make());
             $client->setAuthConfig(json_decode((string) ($config['service_account'] ?? ''), true, 512, JSON_THROW_ON_ERROR));
             $client->setScopes([GoogleDrive::DRIVE]);
 
@@ -172,6 +176,9 @@ class AppServiceProvider extends ServiceProvider
          */
         Storage::extend('google_oauth', function ($app, array $config): FilesystemAdapter {
             $client = new GoogleClient;
+            // Same low-speed abort as the service-account disk above; this is
+            // the one that actually carries multi-gigabyte backups.
+            $client->setHttpClient(GoogleHttpClient::make());
             $client->setClientId((string) ($config['client_id'] ?? ''));
             $client->setClientSecret((string) ($config['client_secret'] ?? ''));
             // The same constant the consent request uses. Asking for one scope

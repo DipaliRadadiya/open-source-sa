@@ -3,9 +3,13 @@
 namespace App\Services\Server\Backups\Steps;
 
 use App\Contracts\BackupStep;
+use App\Exceptions\UploadStalled;
 use App\Services\Server\Backups\BackupContext;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\UploadProgressFilter;
+use App\Services\Server\Backups\UploadProgressReporter;
 use RuntimeException;
+use Throwable;
 
 /**
  * Streams the archive to the storage destination.
@@ -43,11 +47,48 @@ class UploadArtifact implements BackupStep
             throw new RuntimeException('could not open the archive for upload');
         }
 
+        // Progress is measured as the adapter reads, which is the only place
+        // every driver behaves the same and — as the run that prompted this
+        // proved — the only counter that moves at all during an upload. See
+        // {@see UploadProgressFilter} for why this is a filter and not a
+        // hand-rolled chunk loop.
+        $size = filesize($context->archivePath);
+        $reporter = new UploadProgressReporter($context->backup, $size === false ? null : $size);
+
+        UploadProgressFilter::register();
+        stream_filter_append($handle, UploadProgressFilter::NAME, STREAM_FILTER_READ, $reporter);
+
         try {
             // writeStream, not put: the whole point is never to hold the
             // archive in memory.
             $disk->writeStream($key, $handle);
+
+            // The throttle swallows the last partial interval, and an upload
+            // that finished while showing 97% reads as one that stopped short.
+            $reporter->flush();
+        } catch (Throwable $e) {
+            // Record how far it actually got before rethrowing. A failed
+            // backup that reports 19 of 24 GB is a different conversation from
+            // one that reports zero — the first says the link died mid-flight,
+            // the second says it never started — and losing that number here
+            // would leave both looking identical on screen.
+            $reporter->flush();
+
+            if ($this->stalled($e)) {
+                throw new UploadStalled(
+                    'the upload stopped transferring and was abandoned',
+                    previous: $e,
+                );
+            }
+
+            throw $e;
         } finally {
+            // The filter is deliberately *not* removed by hand. A read filter
+            // that has reached EOF has nothing left to flush, and
+            // `stream_filter_remove()` warns "Unable to flush filter, not
+            // removing" when asked anyway — a warning on every successful
+            // backup. Closing the handle detaches it, which is the next line.
+            //
             // fclose even on failure — a leaked handle keeps the file alive on
             // disk after cleanup unlinks it, so the space is not reclaimed
             // until the worker exits.
@@ -58,6 +99,27 @@ class UploadArtifact implements BackupStep
 
         $context->remoteKey = $key;
         $context->manifest['key'] = $key;
+    }
+
+    /**
+     * Did this failure come from the low-speed abort rather than a real error?
+     *
+     * Walks the whole chain, because Flysystem wraps the adapter's exception
+     * and the adapter wraps Guzzle's — the cURL wording sits three links down
+     * and `getMessage()` on the outermost is not it.
+     */
+    private function stalled(Throwable $e): bool
+    {
+        for ($link = $e; $link !== null; $link = $link->getPrevious()) {
+            $message = strtolower($link->getMessage());
+
+            if (str_contains($message, 'operation too slow')
+                || str_contains($message, 'less than 1 bytes/sec')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

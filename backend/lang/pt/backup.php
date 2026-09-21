@@ -47,6 +47,7 @@ return [
         'archive_files' => 'Não foi possível criar o arquivo — normalmente o servidor ficou sem espaço em disco.',
         'upload_artifact' => 'Não foi possível enviar o arquivo. Verifique se o destino de armazenamento ainda aceita escritas.',
         'verify_artifact' => 'O envio não corresponde ao que foi transmitido, por isso esta cópia não é fiável. Nada de antigo foi removido.',
+        'upload_stalled' => 'O envio parou de transmitir dados e foi abandonado. A ligação permaneceu aberta mas nada foi transferido, o que normalmente significa que o fornecedor de armazenamento a interrompeu. Não há qualquer problema com o destino — a próxima execução agendada tentará novamente.',
         'unknown' => 'A cópia de segurança falhou por um motivo desconhecido.',
         'crashed' => 'A cópia de segurança parou inesperadamente — o processo foi encerrado antes de terminar. Normalmente o servidor ficou sem memória, ou o worker reiniciou no meio.',
         'abandoned' => 'Esta cópia de segurança nunca respondeu e foi encerrada. O seu worker desapareceu, portanto nada foi enviado.',

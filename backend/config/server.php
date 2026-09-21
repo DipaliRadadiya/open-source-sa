@@ -290,6 +290,50 @@ return [
         // rather than /tmp: /tmp is cleared on reboot and is often a small
         // tmpfs, and a multi-gigabyte site archive would fill it.
         'working_dir' => env('BACKUP_WORKING_DIR', storage_path('app/backups')),
+
+        /*
+         * How long one backup or restore may run before the worker kills it.
+         *
+         * This was a hardcoded 3600 and it made large sites impossible, not
+         * slow: a 24 GB archive measured 13 minutes to build and — on a link
+         * whose congestion control could not fill it — over three hours to
+         * upload, so the job was killed at the hour mark every time. The
+         * failure looked like a stall rather than a limit, because nothing
+         * recorded progress to contradict it.
+         *
+         * Six hours is not a guess at how long a backup "should" take. It is
+         * the point past which waiting is worse than failing, and the stall
+         * guard below — not this number — is what ends a genuinely wedged run.
+         * A ceiling this high is only safe *because* that guard exists; raise
+         * one without the other and a dead upload owns the only worker until
+         * the timeout, which is precisely the bug this pair replaces.
+         *
+         * `queue.connections.redis.retry_after` MUST stay above this, or a slow
+         * job is handed to a second worker while the first is still running and
+         * the site is archived twice, concurrently, to one key (Laravel queues:
+         * job expirations & timeouts). `config/queue.php` derives it from here
+         * so the two cannot drift.
+         */
+        'job_timeout' => (int) env('BACKUP_JOB_TIMEOUT', 21600),
+
+        /*
+         * Fail an upload that has transferred nothing for this long.
+         *
+         * A backup can be slow for honest reasons — a big archive on a thin
+         * link — and no wall-clock limit can tell that apart from a dead
+         * connection. Bytes can: a transfer that is moving is alive however
+         * slowly, and one that has moved nothing in twenty minutes is not
+         * coming back. Google hangs up on an idle resumable session and the
+         * client does not always notice; without this the worker sits in
+         * `poll()` on a half-closed socket until the job timeout above, and
+         * every other backup and restore queues behind it.
+         *
+         * Twenty minutes rather than five: chunks are 100 MB, and at the
+         * ~2 MB/s a throttled link gives, a single chunk legitimately takes
+         * most of a minute — while a *stalled* one shows zero movement, not
+         * slow movement. The guard keys on zero, so it is generous by design.
+         */
+        'upload_stall_seconds' => (int) env('BACKUP_UPLOAD_STALL_SECONDS', 1200),
     ],
 
     /*

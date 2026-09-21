@@ -33,13 +33,23 @@ class RunRestore implements ShouldBeUnique, ShouldQueue
     public int $tries = 1;
 
     /**
-     * An hour. A restore downloads the archive, takes a full safety backup and
-     * imports a database, so it is legitimately slower than the backup it came
-     * from. `retry_after` on the connection must exceed this.
+     * The same ceiling as {@see RunBackup}, and for a stronger reason.
+     *
+     * A restore downloads the archive, takes a full safety backup and imports a
+     * database, so it is legitimately slower than the backup it came from — and
+     * it carried the identical hardcoded 3600. Any archive large enough that
+     * backing it up hit the limit would hit it again coming back, which meant
+     * the recovery path failed precisely for the sites that most needed it.
+     *
+     * `retry_after` on the connection must exceed this; `config/queue.php`
+     * derives it from the same key.
      */
-    public int $timeout = 3600;
+    public int $timeout;
 
-    public function __construct(public int $restoreId, public int $applicationId) {}
+    public function __construct(public int $restoreId, public int $applicationId)
+    {
+        $this->timeout = (int) config('server.backups.job_timeout', 21600);
+    }
 
     public function uniqueId(): string
     {

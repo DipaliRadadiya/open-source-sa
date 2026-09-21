@@ -8,6 +8,7 @@ use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Services\ActivityLogger;
 use App\Services\Server\Backups\BackupRunner;
+use App\Services\Server\Backups\Storage\GoogleHttpClient;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -38,18 +39,34 @@ class RunBackup implements ShouldBeUnique, ShouldQueue
     public int $tries = 1;
 
     /**
-     * An hour. A large site legitimately takes a long time, and killing a
-     * backup at the default 60 seconds would mean the feature only ever works
-     * for small sites. `retry_after` on the connection must exceed this or a
-     * slow backup gets picked up a second time while the first is still
-     * running (Laravel queues: job expirations & timeouts).
+     * Configuration, not a literal, and not an hour.
+     *
+     * A hardcoded 3600 did not make large backups slow, it made them
+     * impossible: a 24 GB archive measured 13 minutes to build and — before
+     * the link's congestion control was fixed — over three hours to upload, so
+     * the worker killed the job at the hour mark on every single attempt. The
+     * run never reached `verified`, and because nothing recorded progress, the
+     * failure was indistinguishable from a hang.
+     *
+     * The ceiling is high enough to be irrelevant to honest work. What ends a
+     * genuinely wedged run is the byte-rate stall guard
+     * ({@see GoogleHttpClient}), not a
+     * clock — because a clock cannot tell a slow upload from a dead one, and a
+     * limit tuned to catch the dead one kills the slow one too.
+     *
+     * `retry_after` on the connection must exceed this or a slow backup is
+     * picked up a second time while the first is still running (Laravel queues:
+     * job expirations & timeouts). `config/queue.php` derives it from the same
+     * key so the two cannot drift apart.
      */
-    public int $timeout = 3600;
+    public int $timeout;
 
     public function __construct(
         public int $backupTargetId,
         public ?int $actorId = null,
-    ) {}
+    ) {
+        $this->timeout = (int) config('server.backups.job_timeout', 21600);
+    }
 
     public function uniqueId(): string
     {

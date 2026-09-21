@@ -111,6 +111,10 @@ return [
         'sftp_auth_required' => 'Provide either a password or a private key.',
     ],
 
+    'upload' => [
+        'stalled' => 'The upload stopped sending data and was abandoned. The connection stayed open but nothing transferred, which usually means the storage provider dropped it. The backup will try again on its next run.',
+    ],
+
     'oauth' => [
         'not_connected' => 'Not connected yet. Use Connect to approve access to your Google account.',
         'revoked' => 'Google has revoked this access. That usually means the OAuth app was left in "Testing" — Google expires those after about a week — or access was removed at myaccount.google.com. Connect again to restore it.',

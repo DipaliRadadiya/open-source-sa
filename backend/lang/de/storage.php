@@ -104,6 +104,10 @@ return [
         'sftp_auth_required' => 'Geben Sie entweder ein Passwort oder einen privaten Schlüssel an.',
     ],
 
+    'upload' => [
+        'stalled' => 'Der Upload hat keine Daten mehr gesendet und wurde abgebrochen. Die Verbindung blieb offen, aber wurde nichts übertragen — meist bedeutet das, dass der Speicheranbieter sie getrennt hat. Die Sicherung versucht es beim nächsten Lauf erneut.',
+    ],
+
     'oauth' => [
         'not_connected' => 'Noch nicht verbunden. Klicken Sie auf Verbinden, um den Zugriff auf Ihr Google-Konto zu erlauben.',
         'revoked' => 'Google hat diesen Zugriff widerrufen. Meist wurde die OAuth-App auf „Testing“ belassen — solche Tokens laufen nach etwa einer Woche ab — oder der Zugriff wurde unter myaccount.google.com entfernt. Verbinden Sie erneut.',

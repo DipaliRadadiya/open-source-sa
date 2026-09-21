@@ -194,11 +194,41 @@ function SizeCell({ row }) {
   const format = useFormatter();
   const { size_bytes: size } = row.original;
 
+  // A finished backup has a size; a running one has progress. Before this the
+  // column said "Not yet" for the entire upload — three and a half hours, on
+  // the run that prompted it — which is true and useless: it reads the same at
+  // 2% as at 98%, and identically to an upload whose connection has died. The
+  // number is the whole difference between "wait" and "something is wrong".
+  const progress = uploadProgress(row.original, t, format);
+
   return (
     <span className="text-sm tabular-nums text-muted-foreground">
-      {size ? formatBytes(size, format) : sizeNote(row.original, t)}
+      {size ? formatBytes(size, format) : (progress ?? sizeNote(row.original, t))}
     </span>
   );
+}
+
+/**
+ * How far a running upload has got, or null if it has not said yet.
+ *
+ * Falls back to a bare byte count when the total is unknown. A step that
+ * cannot know its own denominator should not get one invented for it — a
+ * progress bar derived from a guessed total is a confident lie, and the raw
+ * "1.4 GB uploaded" is both honest and enough to see movement between refreshes.
+ */
+export function uploadProgress(backup, t, format) {
+  const done = backup.bytes_transferred;
+
+  if (!BACKUP_IN_FLIGHT.includes(backup.status) || !done) return null;
+
+  const total = backup.bytes_total;
+
+  if (!total) return t("uploadProgressBare", { done: formatBytes(done, format) });
+
+  return t("uploadProgress", {
+    done: formatBytes(done, format),
+    total: formatBytes(total, format),
+  });
 }
 
 /**

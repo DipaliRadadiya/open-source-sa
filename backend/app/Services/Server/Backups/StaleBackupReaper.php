@@ -74,10 +74,48 @@ class StaleBackupReaper
             return false;
         }
 
+        // A run that is reporting bytes is alive, whatever its age. This is the
+        // half that was missing: the bound below is the job's whole timeout,
+        // so before there was a heartbeat, a backup killed one minute in
+        // locked its target out for the remaining six hours — the site could
+        // not be backed up again, and nothing on screen said why. Measuring the
+        // last sign of life instead of the first means a crashed run is
+        // collectable within the stall window rather than within the timeout.
+        //
+        // Deliberately *not* `staleAfterSeconds()`: that bound answers "could a
+        // job still be running", and a heartbeat answers the stronger question
+        // "is one". A transfer that has moved nothing for longer than the
+        // upload guard allows has already been abandoned by the guard, so
+        // waiting the full timeout on top of it adds nothing but the lockout.
+        if ($backup->progress_at !== null) {
+            return $backup->progress_at->addSeconds(self::heartbeatGraceSeconds())->isPast();
+        }
+
         $startedAt = $backup->started_at ?? $backup->created_at;
 
         return $startedAt !== null
             && $startedAt->addSeconds(self::staleAfterSeconds())->isPast();
+    }
+
+    /**
+     * How long a silent heartbeat is tolerated before the run counts as dead.
+     *
+     * The upload stall guard plus a grace, so the two cannot contradict each
+     * other: cURL abandons a transfer that has moved nothing for
+     * `upload_stall_seconds`, and this waits slightly longer before declaring
+     * the row dead. Reversing that order would let the reaper close a run the
+     * worker is still inside — freeing the guard for a second backup to start
+     * alongside the first, both writing one archive key, which is the outcome
+     * every bound in this class exists to prevent.
+     */
+    public static function heartbeatGraceSeconds(): int
+    {
+        // Reached through RunBackup, not through the trait: PHP does not allow
+        // `Trait::CONSTANT` (only a *using* class exposes it), and reading it
+        // off the job is also the more honest reference — the grace belongs to
+        // the job whose death this is waiting on.
+        return (int) config('server.backups.upload_stall_seconds', 1200)
+            + RunBackup::UNIQUE_LOCK_GRACE;
     }
 
     /**

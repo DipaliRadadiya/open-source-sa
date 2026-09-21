@@ -4,6 +4,7 @@ namespace App\Services\Server\Backups;
 
 use App\Contracts\BackupStep;
 use App\Enums\BackupStatus;
+use App\Exceptions\UploadStalled;
 use App\Models\Backup;
 use App\Models\BackupTarget;
 use Illuminate\Support\Facades\File;
@@ -96,6 +97,13 @@ class BackupRunner
             $backup->update([
                 'status' => BackupStatus::Failed,
                 'manifest' => $context->manifest,
+                // A stall replaces the step name, which would otherwise say
+                // only `upload_artifact` — true, and the least useful half of
+                // the truth. The step is implied by the reason; the reason is
+                // not implied by the step, and it is the part that tells an
+                // operator whether to go and fix something or to wait for the
+                // next run.
+                'reason' => $e instanceof UploadStalled ? UploadStalled::REASON : $backup->reason,
                 'finished_at' => now(),
             ]);
 

@@ -46,12 +46,45 @@ trait ClassifiesFailures
             if ($category !== null) {
                 return $category;
             }
+
+            $category = $this->sharedCategoryForMessage(strtolower($link->getMessage()));
+
+            if ($category !== null) {
+                return $category;
+            }
         }
 
         // Unreachable is the honest default: something failed and nothing in
         // the chain said what. It must stay the *last* answer rather than an
         // early one — that is the bug this trait exists to stop.
         return 'storage.test.unreachable';
+    }
+
+    /**
+     * Rules that belong to no single driver.
+     *
+     * A stalled transfer is not an S3 problem or a Drive problem — it is cURL
+     * reporting that the bytes stopped, and every driver that speaks HTTP can
+     * produce it. Put in one place rather than copied into each
+     * `categoryForMessage()`, because a rule duplicated four times is a rule
+     * that will be updated in three.
+     *
+     * Checked *after* the driver's own pass, so a provider that has a more
+     * specific name for the same condition keeps it.
+     */
+    private function sharedCategoryForMessage(string $message): ?string
+    {
+        // cURL error 28 with this wording is specifically the low-speed abort
+        // configured in GoogleHttpClient — the transfer moved nothing for the
+        // stall window — and not an ordinary timeout. Saying "unreachable"
+        // here would send an operator to check a network that is working
+        // fine; the connection was established and then went quiet.
+        if (str_contains($message, 'operation too slow')
+            || str_contains($message, 'less than 1 bytes/sec')) {
+            return 'storage.upload.stalled';
+        }
+
+        return null;
     }
 
     /**

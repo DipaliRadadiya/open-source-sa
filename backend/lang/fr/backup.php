@@ -47,6 +47,7 @@ return [
         'archive_files' => 'L’archive n’a pas pu être créée — le serveur manque généralement d’espace disque.',
         'upload_artifact' => 'L’archive n’a pas pu être envoyée. Vérifiez que la destination de stockage accepte toujours les écritures.',
         'verify_artifact' => 'L’envoi ne correspond pas à ce qui a été transmis ; cette sauvegarde n’est pas fiable. Aucune ancienne sauvegarde n’a été supprimée.',
+        'upload_stalled' => "L'envoi a cessé de transmettre des données et a été abandonné. La connexion est restée ouverte mais rien n'a été transféré, ce qui signifie généralement que le fournisseur de stockage l'a interrompue. La destination n'a aucun problème — la prochaine exécution planifiée réessaiera.",
         'unknown' => 'La sauvegarde a échoué pour une raison inconnue.',
         'crashed' => "La sauvegarde s'est arrêtée brutalement — le processus a été tué avant de finir. En général le serveur a manqué de mémoire, ou le worker a redémarré en cours de route.",
         'abandoned' => "Cette sauvegarde n'a jamais donné de nouvelles et a été clôturée. Son worker a disparu, rien n'a été téléversé.",

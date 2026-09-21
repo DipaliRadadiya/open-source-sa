@@ -5802,7 +5802,9 @@
           }
         }
       },
-      "copyUid": "Copiar el nombre de archivo de esta copia en el bucket"
+      "copyUid": "Copiar el nombre de archivo de esta copia en el bucket",
+      "uploadProgress": "{done} de {total}",
+      "uploadProgressBare": "{done} subidos"
     },
     "restore": {
       "title": "Restaurar {name}",
