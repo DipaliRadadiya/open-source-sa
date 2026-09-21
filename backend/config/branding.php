@@ -2,7 +2,20 @@
 
 return [
 
-    'name' => env('BRANDING_NAME', 'ServerAvatar'),
+    /*
+     * `?:` rather than only an `env()` default, because the two differ for the
+     * case that reaches users: `BRANDING_NAME=` with nothing after it is a
+     * *set* variable, so env()'s default never applies and the name resolves
+     * to an empty string. That is not hypothetical — every consumer then has
+     * to invent its own fallback, and the one in GoogleDriveWorkspace put this
+     * product's name inside `app/`, where WhiteLabelTest forbids it, and from
+     * there onto a folder created in a customer's personal Google Drive.
+     *
+     * Resolved once, here. This is the file a deployment is meant to override
+     * and the only one exempt from the white-label check, so it is the correct
+     * — and the only correct — place for the literal to live.
+     */
+    'name' => trim((string) env('BRANDING_NAME')) ?: 'ServerAvatar',
 
     'logo' => env('BRANDING_LOGO', 'https://app.serveravatar.com/logo/SaLogoDark.png'),
 
@@ -19,6 +32,7 @@ return [
     // The vendor's hosted control plane, which a self-hosted panel can be
     // connected to. Named here rather than in the code so a reseller's
     // installation shows their own product throughout.
-    'central_name' => env('BRANDING_CENTRAL_NAME', env('BRANDING_NAME', 'ServerAvatar').' Central'),
+    'central_name' => trim((string) env('BRANDING_CENTRAL_NAME'))
+        ?: (trim((string) env('BRANDING_NAME')) ?: 'ServerAvatar').' Central',
 
 ];

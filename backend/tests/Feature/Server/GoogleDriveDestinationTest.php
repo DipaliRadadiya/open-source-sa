@@ -4,6 +4,7 @@ use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
 use App\Models\User;
 use App\Services\Server\Backups\Storage\GoogleDriveFolder;
+use App\Services\Server\Backups\Storage\GoogleDriveWorkspace;
 use App\Services\Server\Backups\Storage\SftpHostKey;
 use App\Services\Server\Backups\Storage\StorageConnectionProber;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
@@ -285,4 +286,56 @@ it('does not run the SFTP host-key reader for a Drive destination', function () 
     $result = driveProber(fakeDriveFolder(driveId: '0ABC'))->probe(makeDriveDestination());
 
     expect($result['success'])->toBeTrue();
+});
+
+/*
+| What the folder in somebody's personal Drive is called.
+|
+| 🔴 This had no test, and the gap showed: the name carried a hardcoded
+| 'ServerAvatar' fallback, which turned WhiteLabelTest red for two days and,
+| more to the point, would have created a folder named after the vendor in a
+| reseller customer's own Drive — next to their photos.
+|
+| The brand belongs in config/branding.php, which exists so a deployment can
+| name itself and which WhiteLabelTest exempts for that reason. Anywhere else
+| it is a leak.
+*/
+
+it('names the folder from configurable branding, not a literal', function () {
+    config([
+        'branding.name' => 'Acme Cloud',
+        'server.storage.panel_url' => 'https://panel.acme.test',
+    ]);
+
+    $destination = StorageDestination::create([
+        'name' => 'Nightly',
+        'provider' => StorageProvider::GoogleDrive->value,
+        'config' => ['folder_id' => 'abc', 'service_account' => '{}'],
+    ]);
+
+    expect(app(GoogleDriveWorkspace::class)->folderName($destination))
+        ->toBe('Acme Cloud Backups (panel.acme.test) — Nightly');
+});
+
+it('puts no product name on the folder when branding is blank', function () {
+    // An operator who clears the name is saying "put no product name on it".
+    // Falling back to the vendor's would override that in the one place it is
+    // least acceptable: a folder created inside a customer's personal Drive.
+    config([
+        'branding.name' => '',
+        'server.storage.panel_url' => 'https://panel.acme.test',
+    ]);
+
+    $destination = StorageDestination::create([
+        'name' => 'Nightly',
+        'provider' => StorageProvider::GoogleDrive->value,
+        'config' => ['folder_id' => 'abc', 'service_account' => '{}'],
+    ]);
+
+    $name = app(GoogleDriveWorkspace::class)->folderName($destination);
+
+    // The host still distinguishes one panel's backups from another's — that
+    // is the part carrying information, and it survives.
+    expect($name)->toBe('Backups (panel.acme.test) — Nightly')
+        ->and($name)->not->toContain('ServerAvatar');
 });

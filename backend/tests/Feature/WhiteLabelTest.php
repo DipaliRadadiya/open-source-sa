@@ -59,3 +59,28 @@ it('keeps the installer free of product names too', function () {
     expect($contents)->not->toContain('serveravatar');
     expect($contents)->toContain('PANEL_SLUG');
 });
+
+/*
+| The brand is resolved in one place, and that place is config/branding.php.
+|
+| `BRANDING_NAME=` with nothing after it is a *set* variable, so env()'s default
+| never applied and the name resolved to an empty string. Every consumer then
+| invented its own fallback — and one of them put the product name inside
+| `app/`, which is what the test above forbids and what reached a folder
+| created in a customer's personal Google Drive.
+*/
+
+it('resolves a blank branding name to the default, not to nothing', function () {
+    $resolved = trim((string) config('branding.name'));
+
+    expect($resolved)->not->toBe('', 'branding.name must never resolve empty');
+});
+
+it('never builds the central name from an empty brand', function () {
+    // `'' . " Central"` is " Central", with a leading space and no product in
+    // it — the same class of bug one field along.
+    $central = trim((string) config('branding.central_name'));
+
+    expect($central)->not->toBe('')
+        ->and($central)->not->toStartWith('Central');
+});
