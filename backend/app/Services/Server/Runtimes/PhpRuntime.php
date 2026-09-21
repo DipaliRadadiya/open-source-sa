@@ -198,6 +198,31 @@ class PhpRuntime implements Runtime
 
         $missing = array_values(array_diff($packages, $available));
 
+        // 🔴 Everything was dropped, which is not what this filter is for.
+        //
+        // The filter exists so that one genuinely absent extension cannot take
+        // the whole transaction down with it. Losing *all* of them is a
+        // different event with a different cause: the index did not have the
+        // repository at all, so `apt-cache policy` answered "no" to every
+        // question. What gets installed then is a bare interpreter with no
+        // mysql and no curl, reported as a successful install — and the first
+        // anyone hears of it is an application failing on a missing extension
+        // some time later, which is how this was found on a real OpenLiteSpeed
+        // server: PHP 8.3 installed, Nextcloud refused with curl missing.
+        //
+        // Still not fatal, because refusing here would make an unreadable
+        // index mean "this version cannot be installed", which is worse and
+        // also wrong. Logged at warning so that it is separable from the
+        // ordinary case above.
+        if ($missing !== [] && $available === []) {
+            Log::channel('server-ops')->warning('php.packages_index_empty', [
+                'feature' => 'runtime',
+                'op' => 'php_install',
+                'version' => $version,
+                'skipped' => $missing,
+            ]);
+        }
+
         if ($missing !== []) {
             // Recorded, not swallowed. A site missing an extension it expected
             // is a real difference in what it can run, and "the panel quietly
@@ -271,6 +296,42 @@ class PhpRuntime implements Runtime
      */
     public function install(string $version, ?callable $onOutput = null): void
     {
+        // 🔴 Before the existence checks, not after, and this is the whole
+        // point of it being here.
+        //
+        // `installablePackages()` asks `apt-cache policy` whether each
+        // extension exists, and that reads the **local index**, not the
+        // repository. On a server whose index has never been refreshed since
+        // the LiteSpeed (or ondrej) list was added, every `lsphp83-*` answers
+        // "no", every extension is silently skipped, and the install succeeds
+        // with a bare interpreter. Found on a real OpenLiteSpeed box: PHP 8.3
+        // installed cleanly, then Nextcloud refused to install because curl
+        // was missing — a package that exists upstream and was never asked
+        // for.
+        //
+        // The same reasoning `MongoDbInstaller` states after writing its
+        // repository list: "The list on disk is not the index."
+        //
+        // **Deliberately not fatal.** `apt-get update` exits non-zero when
+        // *any* configured source fails, including one that has nothing to do
+        // with PHP, and a server that could still install perfectly well must
+        // not be refused over an unrelated 404. A stale index after this is
+        // the pre-existing behaviour, now with a warning naming it.
+        $refreshed = $this->serverOps->apt(
+            ['apt-get', 'update'],
+            ['feature' => 'runtime', 'op' => 'php_index_refresh', 'version' => $version],
+            timeout: (int) config('server.runtimes.php.install_timeout', 900),
+        );
+
+        if ($refreshed->failed()) {
+            Log::channel('server-ops')->warning('php.index_refresh_failed', [
+                'feature' => 'runtime',
+                'op' => 'php_index_refresh',
+                'version' => $version,
+                'reference' => $refreshed->reference,
+            ]);
+        }
+
         $result = $this->serverOps->apt(
             ['apt-get', 'install', '-y', '--no-install-recommends', ...$this->installablePackages($version)],
             ['feature' => 'runtime', 'op' => 'php_install', 'version' => $version],

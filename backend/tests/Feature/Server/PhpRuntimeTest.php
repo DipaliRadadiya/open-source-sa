@@ -224,6 +224,15 @@ it('does not clear the directory when the purge failed', function () {
     // Stripping a version's configuration after apt refused to remove the
     // version would leave a working PHP with no config at all — worse than
     // the leftovers this exists to sweep up.
+    // The failure this fake injects is "E: Could not get lock", which is one of
+    // `server.transient.patterns` — so `ServerOps::apt()` retried it on the
+    // real budget, 40 attempts 15 seconds apart. That is a genuine `usleep` of
+    // **600 seconds** inside one test, and the whole suite runs in 764: four
+    // fifths of every run was this line waiting. The retry budget itself is
+    // covered by ServerOpsRetryTest, which sets its own; here it is incidental
+    // to a test about not deleting a directory.
+    config(['server.apt.lock_attempts' => 2, 'server.apt.lock_delay_ms' => 0]);
+
     $runs = fakePhp(default: '8.4', ok: false);
 
     expect(fn () => app(PhpRuntime::class)->uninstall('8.3'))
@@ -247,7 +256,7 @@ it('installs a usable PHP, not a bare interpreter', function () {
 
     app(PhpRuntime::class)->install('8.2');
 
-    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get');
+    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get' && ($c[1] ?? '') === 'install');
     expect($install)->toContain('php8.2-fpm', 'php8.2-mysql', 'php8.2-curl', 'php8.2-mbstring');
 });
 
@@ -260,7 +269,7 @@ it('drops a package this server cannot install, and keeps the rest', function ()
 
     app(PhpRuntime::class)->install('8.2');
 
-    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get');
+    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get' && ($c[1] ?? '') === 'install');
 
     expect($install)->not->toContain('php8.2-mbstring')
         // ...and the ones that DO exist still get installed, which is the
@@ -276,7 +285,7 @@ it('never drops the interpreter itself', function () {
 
     app(PhpRuntime::class)->install('8.2');
 
-    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get');
+    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get' && ($c[1] ?? '') === 'install');
 
     // Still handed to apt, so apt refuses out loud rather than the panel
     // quietly installing an empty set and calling it done.
@@ -302,7 +311,7 @@ it('installs the full set when the availability check itself fails', function ()
 
     app(PhpRuntime::class)->install('8.2');
 
-    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get');
+    $install = collect($runs)->pluck('command')->first(fn ($c) => ($c[0] ?? '') === 'apt-get' && ($c[1] ?? '') === 'install');
     expect($install)->toContain('php8.2-fpm', 'php8.2-mysql', 'php8.2-curl', 'php8.2-mbstring');
 });
 
@@ -311,7 +320,7 @@ it('runs apt unattended, or it waits for a prompt nobody will answer', function 
 
     app(PhpRuntime::class)->install('8.2');
 
-    $install = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'apt-get');
+    $install = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'apt-get' && ($run['command'][1] ?? '') === 'install');
     expect($install['env'])->toBe(['DEBIAN_FRONTEND' => 'noninteractive']);
 });
 
@@ -417,4 +426,61 @@ it('denies every mutation to a view-only user', function () {
     ] as [$method, $uri, $body]) {
         $this->withHeader('Authorization', "Bearer {$token}")->json($method, $uri, $body)->assertForbidden();
     }
+});
+
+it('refreshes the package index before asking what exists', function () {
+    // 🔴 Reported from a real OpenLiteSpeed server: PHP 8.3 installed cleanly,
+    // then Nextcloud refused to install because curl was missing — a package
+    // that exists upstream, is named correctly by the panel, and was never
+    // asked for.
+    //
+    // `installablePackages()` asks `apt-cache policy` whether each extension
+    // exists, and that reads the LOCAL index. On a box whose index predates
+    // the repository, every extension answers "no", every one is skipped by
+    // the degrade-gracefully filter, and a bare interpreter installs while
+    // reporting success.
+    //
+    // Ordering is the assertion, not presence: a refresh after the checks
+    // answers a question that has already been asked wrongly.
+    $runs = fakePhp();
+
+    app(PhpRuntime::class)->install('8.2');
+
+    $commands = collect($runs)->pluck('command')->values();
+    $refresh = $commands->search(fn ($c) => ($c[0] ?? '') === 'apt-get' && ($c[1] ?? '') === 'update');
+    $firstCheck = $commands->search(fn ($c) => ($c[0] ?? '') === 'apt-cache' && ($c[1] ?? '') === 'policy');
+
+    expect($refresh)->not->toBeFalse()
+        ->and($firstCheck)->not->toBeFalse()
+        ->and($refresh)->toBeLessThan($firstCheck);
+});
+
+it('installs anyway when the index refresh fails', function () {
+    // `apt-get update` exits non-zero when ANY configured source fails,
+    // including one with nothing to do with PHP. Refusing to install over an
+    // unrelated 404 would turn a working server into one that cannot add a PHP
+    // version — a worse failure than the stale index this guards against.
+    config(['server.apt.lock_attempts' => 2, 'server.apt.lock_delay_ms' => 0]);
+
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $command = $process->command;
+        $runs[] = ['command' => $command, 'env' => $process->environment ?? []];
+
+        return match (true) {
+            ($command[0] ?? '') === 'apt-get' && ($command[1] ?? '') === 'update' => Process::result(
+                exitCode: 1, errorOutput: 'E: Failed to fetch https://example.invalid 404',
+            ),
+            ($command[0] ?? '') === 'apt-cache' => Process::result(output: "  Candidate: 1.0\n"),
+            default => Process::result(exitCode: 0),
+        };
+    });
+
+    app(PhpRuntime::class)->install('8.2');
+
+    $install = collect($runs)->pluck('command')
+        ->first(fn ($c) => ($c[0] ?? '') === 'apt-get' && ($c[1] ?? '') === 'install');
+
+    expect($install)->not->toBeNull()->and($install)->toContain('php8.2-fpm');
 });
