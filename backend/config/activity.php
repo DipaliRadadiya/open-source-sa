@@ -39,6 +39,10 @@ return [
             'server',
             'service',
             'setting',
+            // Where this machine's backups are sent. A connection made on the
+            // server's behalf, and the row sits beside the backups it exists
+            // to carry — not beside the people who administer the panel.
+            'storage_destination',
             // Reading a migrated box into the panel. Squarely a machine
             // operation: it creates users, sites and databases in one go.
             'sync',

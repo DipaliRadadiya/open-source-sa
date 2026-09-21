@@ -147,7 +147,7 @@ it('returns the known distinct types and actions for filter dropdowns', function
         ->getJson('/api/admin/activity-log/filters');
 
     $response->assertOk()
-        ->assertJsonPath('types', ['application', 'backup', 'central', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'role', 'server', 'service', 'setting', 'sync', 'system_user', 'user']);
+        ->assertJsonPath('types', ['application', 'backup', 'central', 'cronjob', 'database', 'disk_cleaner', 'fail2ban', 'firewall', 'git_account', 'log', 'node', 'panel_update', 'permission', 'php', 'role', 'server', 'service', 'setting', 'storage_destination', 'sync', 'system_user', 'user']);
 
     // `all` is the deduped union of every type's verbs — asserted as that
     // relationship rather than as a literal count.
@@ -170,7 +170,7 @@ it('returns the known distinct types and actions for filter dropdowns', function
     expect($response->json('actions.database'))->toContain('created', 'deleted', 'user_created', 'user_deleted', 'password_reset', 'imported', 'connection_updated');
     expect($response->json('actions.system_user'))->toContain('created', 'ssh_key_added', 'password_set', 'sudo_enabled', 'shell_changed', 'ssh_enabled', 'ssh_disabled')->not->toContain('registered');
     expect($response->json('actions.role'))->toEqual(['created', 'deleted', 'updated']);
-    expect($response->json('actions.panel_update'))->toEqual(['failed', 'started']);
+    expect($response->json('actions.panel_update'))->toEqual(['failed', 'started', 'succeeded']);
     expect($response->json('actions.git_account'))->toEqual(['connected', 'disconnected', 'updated']);
 });
 
