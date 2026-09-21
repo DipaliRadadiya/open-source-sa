@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { PageHeader } from "@/components/ui/page-header";
 import { GoogleDriveCallback } from "@/components/integrations/storage/google-drive-callback";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +30,7 @@ export async function generateMetadata() {
  * API route behind it must never be registered as an authorized redirect URI.
  */
 export default async function StorageOauthCallbackPage({ searchParams }) {
-  const [permissions, t, params] = await Promise.all([
-    getPermissions(),
-    getTranslations("storage.oauth"),
-    searchParams,
-  ]);
+  const [permissions, params] = await Promise.all([getPermissions(), searchParams]);
 
   // Completing a connection writes a credential that can create files in
   // somebody's personal Google account. The API enforces this too; checking
@@ -44,9 +39,15 @@ export default async function StorageOauthCallbackPage({ searchParams }) {
   if (!can(permissions, "storage", "manage")) redirect("/dashboard");
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t("callbackTitle")} subtitle={t("callbackSubtitle")} />
-      <div className="max-w-2xl">
+    /*
+      Centred, like the 404, because this screen is the same kind of thing: one
+      job, one outcome, one way out. It was a normal page — a `PageHeader`
+      reading "Connecting Google Drive" over a box announcing "Connected to
+      Google Drive", with the rest of the viewport empty. The header was
+      written for the working state and never changed, so the page contradicted
+      itself on success and lied on failure. The card owns its own heading now.
+    */
+    <div className="flex min-h-[60vh] items-center justify-center py-8">
         <GoogleDriveCallback
           code={typeof params?.code === "string" ? params.code : null}
           state={typeof params?.state === "string" ? params.state : null}
@@ -55,7 +56,6 @@ export default async function StorageOauthCallbackPage({ searchParams }) {
           // changed" rather than "something went wrong".
           deniedError={typeof params?.error === "string" ? params.error : null}
         />
-      </div>
     </div>
   );
 }

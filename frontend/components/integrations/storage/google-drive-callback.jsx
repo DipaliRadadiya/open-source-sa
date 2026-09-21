@@ -5,11 +5,90 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { completeDriveConnect } from "@/lib/api/storage";
 import { apiMessage } from "@/lib/api/error-message";
 
 const STORAGE_PAGE = "/integrations/storage";
+
+/**
+ * The card this page is, in each of its three states.
+ *
+ * Presentational and exported so all three can be rendered — the connected
+ * state is otherwise unreachable without a live single-use Google code, which
+ * is exactly the state worth looking at.
+ *
+ * A centred card rather than the panel's page shell, like the 404: this screen
+ * has one job, one outcome and one way out. As a normal page it carried a
+ * `PageHeader` reading "Connecting Google Drive" above a box announcing
+ * "Connected to Google Drive" — the heading was written for the working state
+ * and never changed, so the page said two different things at once, and on a
+ * failure "Finishing the approval you just gave Google" was simply untrue. The
+ * heading belongs to the state, so the state owns it.
+ */
+export function CallbackCard({ status, message }) {
+  const t = useTranslations("storage.oauth");
+
+  const view = {
+    working: {
+      icon: Loader2,
+      spin: true,
+      tone: "bg-muted text-muted-foreground",
+      title: t("callbackTitle"),
+      body: t("finishing"),
+    },
+    connected: {
+      icon: CheckCircle2,
+      tone: "bg-success/10 text-success",
+      title: t("connected"),
+      // The reassurance is the body here rather than fine print: this is the
+      // end of a five-step setup, and "what can it actually see" is the
+      // question somebody finishes that setup holding.
+      body: t("scopeNote"),
+    },
+    failed: {
+      icon: TriangleAlert,
+      tone: "bg-destructive/10 text-destructive",
+      title: t("callbackFailed"),
+      body: message,
+    },
+  }[status];
+
+  const Icon = view.icon;
+
+  return (
+    <div className="w-full max-w-md rounded-2xl border bg-card p-6 text-center shadow-e1 ring-1 ring-foreground/[0.07]">
+      <span
+        className={cn(
+          "mx-auto flex size-12 items-center justify-center rounded-full",
+          view.tone,
+        )}
+      >
+        <Icon className={cn("size-6", view.spin && "animate-spin")} aria-hidden />
+      </span>
+
+      <h1 className="mt-4 text-lg font-semibold tracking-tight">{view.title}</h1>
+      {view.body ? (
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{view.body}</p>
+      ) : null}
+
+      {/* No way out while the exchange is in flight — there is nothing to
+          decide yet, and a button here would invite leaving mid-request. */}
+      {status !== "working" ? (
+        <Button
+          asChild
+          variant={status === "connected" ? "default" : "outline"}
+          className="mt-6 w-full"
+        >
+          {/* A link, not a click handler: middle-click and "open in new tab"
+              both work, and it is the browser's own navigation. */}
+          <a href={STORAGE_PAGE}>{t("backToStorage")}</a>
+        </Button>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Turns Google's redirect into an authenticated request, once.
@@ -70,48 +149,5 @@ export function GoogleDriveCallback({ code, state, deniedError }) {
   const status = blocked ? "failed" : (result?.status ?? "working");
   const message = blocked ?? result?.message ?? null;
 
-  if (status === "working") {
-    return (
-      <div className="flex items-center gap-2 rounded-lg border p-4 text-sm">
-        <Loader2 className="size-4 animate-spin" />
-        {t("finishing")}
-      </div>
-    );
-  }
-
-  if (status === "connected") {
-    return (
-      <div className="rounded-lg border border-success/30 bg-success/5 p-4">
-        <p className="flex items-center gap-2 text-sm font-medium">
-          <CheckCircle2 className="size-4 shrink-0 text-success" />
-          {t("connected")}
-        </p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("scopeNote")}</p>
-        <Button type="button" size="sm" className="mt-3" onClick={() => router.push(STORAGE_PAGE)}>
-          {t("backToStorage")}
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4">
-      <p className="flex items-center gap-2 text-sm font-medium">
-        <TriangleAlert className="size-4 shrink-0 text-destructive" />
-        {t("callbackFailed")}
-      </p>
-      {message ? <p className="mt-1 text-xs leading-relaxed">{message}</p> : null}
-      {/* Back to the destination, not a retry button here: starting again needs
-          a fresh `state`, which only the Connect button on the row can issue. */}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="mt-3"
-        onClick={() => router.push(STORAGE_PAGE)}
-      >
-        {t("backToStorage")}
-      </Button>
-    </div>
-  );
+  return <CallbackCard status={status} message={message} />;
 }
