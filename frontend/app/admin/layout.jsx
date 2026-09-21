@@ -12,6 +12,10 @@ import { UnsavedProvider } from "@/components/ui/unsaved-guard";
 import { PanelFocus } from "@/components/sections/panel-focus";
 import { RateLimited } from "@/components/sections/rate-limited";
 import { isRateLimited } from "@/lib/api/rate-limited";
+import { PanelUnavailable } from "@/components/sections/panel-unavailable";
+import { isPanelUnavailable } from "@/lib/api/unavailable";
+import { RequestFailed } from "@/components/sections/request-failed";
+import { isRequestFailed, requestFailureProps } from "@/lib/api/request-failed";
 import { ErrorCopy } from "@/components/sections/error-copy";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +31,8 @@ export default async function AdminLayout({ children }) {
     // Same reason as the server panel: a throw in a layout escapes every
     // error.jsx below it.
     if (isRateLimited(error)) return <RateLimited />;
+    if (isPanelUnavailable(error)) return <PanelUnavailable />;
+    if (isRequestFailed(error)) return <RequestFailed {...requestFailureProps(error)} />;
     throw error;
   }
   if (!user) redirect(await signedOutPath());

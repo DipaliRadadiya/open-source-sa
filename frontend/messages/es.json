@@ -1039,7 +1039,56 @@
     "rateLimited": {
       "title": "Demasiadas solicitudes",
       "body": "El panel consultó al servidor más veces de las que permite por minuto. No ha cambiado nada: espera un momento e inténtalo de nuevo."
-    }
+    },
+    "unavailable": {
+      "title": "El panel se está actualizando",
+      "body": "El servidor rechaza las peticiones mientras se actualiza. Normalmente se resuelve en menos de un minuto.",
+      "stuck": "La actualización se quedó a medias. Ejecuta esto en el servidor para recuperar la API:",
+      "stuckLabel": "Si no se resuelve",
+      "copyCommand": "Copiar comando"
+    },
+    "request": {
+      "endpoint": "Petición",
+      "status": "Respuesta",
+      "host": "Servidor",
+      "noResponse": "sin respuesta",
+      "details": "Detalles técnicos",
+      "serverSaid": "Tu servidor dice",
+      "debugWarning": "Este detalle solo está disponible porque tu servidor está en modo depuración. Desactívalo en un panel público: expone información interna a cualquiera que llegue a la página de inicio de sesión."
+    },
+    "why": {
+      "network": {
+        "title": "Tu servidor no responde",
+        "body": "El panel intentó conectar con {host} y no obtuvo ninguna respuesta.",
+        "next": "Normalmente la API está detenida, todavía reiniciándose, o su puerto está bloqueado por un firewall. Revisa el servidor web de esa máquina."
+      },
+      "server": {
+        "title": "Tu servidor devolvió un error",
+        "body": "La API respondió con el error {status} en lugar de los datos de tu cuenta.",
+        "next": "Algo falló dentro de la API, no en esta página. El motivo queda escrito en el registro de la API, en tu servidor."
+      },
+      "forbidden": {
+        "title": "Tu servidor rechazó esta petición",
+        "body": "La API respondió {status}: esta cuenta no tiene permiso para hacerlo.",
+        "next": "Pide a un administrador que dé permiso a tu cuenta y vuelve a iniciar sesión."
+      },
+      "notFound": {
+        "title": "El panel pidió algo que no existe",
+        "body": "La API respondió {status} para {path}.",
+        "next": "Eso suele significar que el panel y la API son versiones distintas. Actualiza ambos a la misma versión."
+      },
+      "gateway": {
+        "title": "La API no respondió",
+        "body": "El servidor web de {host} respondió {status}, lo que significa que no obtuvo respuesta de la API que tiene detrás.",
+        "next": "Normalmente PHP-FPM está detenido o la petición tardó demasiado. Revisa PHP-FPM en esa máquina: el registro de la API estará vacío, porque nunca llegó a ejecutarse."
+      },
+      "rejected": {
+        "title": "Tu servidor rechazó la petición",
+        "body": "La API respondió {status} para {path}. No falló: rechazó lo que el panel envió.",
+        "next": "Normalmente el panel y la API son versiones distintas, o algo entre medias reescribe las peticiones. Actualiza ambos a la misma versión."
+      }
+    },
+    "whatToDo": "Qué hacer"
   },
   "logs": {
     "title": "Registros",

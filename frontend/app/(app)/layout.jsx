@@ -16,6 +16,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageCrumbProvider } from "@/components/sections/page-crumb";
 import { RateLimited } from "@/components/sections/rate-limited";
 import { isRateLimited } from "@/lib/api/rate-limited";
+import { PanelUnavailable } from "@/components/sections/panel-unavailable";
+import { isPanelUnavailable } from "@/lib/api/unavailable";
+import { RequestFailed } from "@/components/sections/request-failed";
+import { isRequestFailed, requestFailureProps } from "@/lib/api/request-failed";
 import { ApplicationNavProvider } from "@/components/sections/application-nav";
 import { UnsavedProvider } from "@/components/ui/unsaved-guard";
 import { ServerRestartProvider } from "@/components/sections/server-restart-overlay";
@@ -40,6 +44,8 @@ export default async function AppLayout({ children }) {
     user = await getCurrentUser();
   } catch (error) {
     if (isRateLimited(error)) return <RateLimited />;
+    if (isPanelUnavailable(error)) return <PanelUnavailable />;
+    if (isRequestFailed(error)) return <RequestFailed {...requestFailureProps(error)} />;
     throw error;
   }
   if (!user) redirect(await signedOutPath());
@@ -53,6 +59,8 @@ export default async function AppLayout({ children }) {
     ]);
   } catch (error) {
     if (isRateLimited(error)) return <RateLimited />;
+    if (isPanelUnavailable(error)) return <PanelUnavailable />;
+    if (isRequestFailed(error)) return <RequestFailed {...requestFailureProps(error)} />;
     throw error;
   }
 

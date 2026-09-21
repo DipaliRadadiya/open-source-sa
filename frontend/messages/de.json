@@ -1039,7 +1039,56 @@
     "rateLimited": {
       "title": "Zu viele Anfragen",
       "body": "Das Panel hat den Server öfter angefragt, als pro Minute erlaubt ist. Nichts wurde geändert – warten Sie einen Moment und versuchen Sie es erneut."
-    }
+    },
+    "unavailable": {
+      "title": "Das Panel wird aktualisiert",
+      "body": "Der Server weist Anfragen ab, während er aktualisiert wird. Das ist normalerweise innerhalb einer Minute vorbei.",
+      "stuck": "Die Aktualisierung ist steckengeblieben. Führen Sie dies auf dem Server aus, um die API zurückzuholen:",
+      "stuckLabel": "Falls es nicht aufhört",
+      "copyCommand": "Befehl kopieren"
+    },
+    "request": {
+      "endpoint": "Anfrage",
+      "status": "Antwort",
+      "host": "Server",
+      "noResponse": "keine Antwort",
+      "details": "Technische Details",
+      "serverSaid": "Ihr Server meldet",
+      "debugWarning": "Dieses Detail war nur sichtbar, weil Ihr Server im Debug-Modus läuft. Schalten Sie das auf einem öffentlichen Panel ab – es gibt Interna an jeden preis, der die Anmeldeseite erreicht."
+    },
+    "why": {
+      "network": {
+        "title": "Ihr Server antwortet nicht",
+        "body": "Das Panel hat versucht, {host} zu erreichen, und gar keine Antwort erhalten.",
+        "next": "Meist ist die API gestoppt, startet noch, oder ihr Port ist durch eine Firewall blockiert. Prüfen Sie den Webserver auf dieser Maschine."
+      },
+      "server": {
+        "title": "Ihr Server hat einen Fehler zurückgegeben",
+        "body": "Die API hat mit Fehler {status} geantwortet statt mit Ihren Kontodaten.",
+        "next": "Etwas ist innerhalb der API fehlgeschlagen, nicht auf dieser Seite. Der Grund steht im Log der API auf Ihrem Server."
+      },
+      "forbidden": {
+        "title": "Ihr Server hat diese Anfrage abgelehnt",
+        "body": "Die API hat {status} geantwortet – dieses Konto darf das nicht.",
+        "next": "Bitten Sie eine Administratorin oder einen Administrator um die Berechtigung und melden Sie sich erneut an."
+      },
+      "notFound": {
+        "title": "Das Panel hat etwas angefragt, das es nicht gibt",
+        "body": "Die API hat {status} für {path} geantwortet.",
+        "next": "Das bedeutet meist, dass Panel und API unterschiedliche Versionen sind. Aktualisieren Sie beide auf dieselbe Version."
+      },
+      "gateway": {
+        "title": "Die API hat nicht geantwortet",
+        "body": "Der Webserver auf {host} hat {status} geantwortet – er hat also von der dahinterliegenden API keine Antwort bekommen.",
+        "next": "Meist ist PHP-FPM gestoppt oder die Anfrage hat zu lange gedauert. Prüfen Sie PHP-FPM auf dieser Maschine – das Log der API bleibt leer, weil sie nie gelaufen ist."
+      },
+      "rejected": {
+        "title": "Ihr Server hat die Anfrage zurückgewiesen",
+        "body": "Die API hat {status} für {path} geantwortet. Sie ist nicht fehlgeschlagen – sie hat abgelehnt, was das Panel gesendet hat.",
+        "next": "Meist sind Panel und API unterschiedliche Versionen, oder etwas dazwischen schreibt Anfragen um. Aktualisieren Sie beide auf dieselbe Version."
+      }
+    },
+    "whatToDo": "Was zu tun ist"
   },
   "logs": {
     "title": "Protokolle",

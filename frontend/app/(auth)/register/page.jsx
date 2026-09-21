@@ -6,6 +6,12 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getBasicInfo } from "@/lib/basic-info/get-basic-info";
+import { PanelUnavailableCard } from "@/components/sections/panel-unavailable";
+import { isPanelUnavailable } from "@/lib/api/unavailable";
+import { RateLimitedCard } from "@/components/sections/rate-limited";
+import { isRateLimited } from "@/lib/api/rate-limited";
+import { RequestFailedCard } from "@/components/sections/request-failed";
+import { isRequestFailed, requestFailureProps } from "@/lib/api/request-failed";
 import { RegisterForm } from "@/components/forms/register-form";
 import { Logo } from "@/components/logo";
 import {
@@ -17,11 +23,22 @@ import {
 } from "@/components/ui/card";
 
 export default async function RegisterPage() {
-  const [user, basicInfo, t] = await Promise.all([
-    getCurrentUser(),
-    getBasicInfo(),
-    getTranslations("auth"),
-  ]);
+  let user, basicInfo, t;
+  try {
+    [user, basicInfo, t] = await Promise.all([
+      getCurrentUser(),
+      getBasicInfo(),
+      getTranslations("auth"),
+    ]);
+  } catch (error) {
+    // 429 too: the login page is the easiest place in the panel to hit the
+    // rate limit (a reload loop while the API is unhappy), and it was the one
+    // screen that still answered it with a digest.
+    if (isRateLimited(error)) return <RateLimitedCard />;
+    if (isPanelUnavailable(error)) return <PanelUnavailableCard />;
+    if (isRequestFailed(error)) return <RequestFailedCard {...requestFailureProps(error)} />;
+    throw error;
+  }
 
   if (user) redirect("/dashboard");
   // Registration is bootstrap-only: once the admin exists the backend closes it.

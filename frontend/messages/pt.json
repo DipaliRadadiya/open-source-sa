@@ -1039,7 +1039,56 @@
     "rateLimited": {
       "title": "Muitas requisições",
       "body": "O painel pediu ao servidor mais vezes do que ele permite em um minuto. Nada foi alterado — aguarde um instante e tente novamente."
-    }
+    },
+    "unavailable": {
+      "title": "O painel está sendo atualizado",
+      "body": "O servidor recusa requisições enquanto é atualizado. Isso costuma se resolver em menos de um minuto.",
+      "stuck": "A atualização parou pela metade. Execute isto no servidor para trazer a API de volta:",
+      "stuckLabel": "Se não resolver",
+      "copyCommand": "Copiar comando"
+    },
+    "request": {
+      "endpoint": "Requisição",
+      "status": "Resposta",
+      "host": "Servidor",
+      "noResponse": "sem resposta",
+      "details": "Detalhes técnicos",
+      "serverSaid": "Seu servidor disse",
+      "debugWarning": "Este detalhe só apareceu porque seu servidor está em modo de depuração. Desative isso em um painel público: expõe informações internas a qualquer um que chegue à página de login."
+    },
+    "why": {
+      "network": {
+        "title": "Seu servidor não está respondendo",
+        "body": "O painel tentou alcançar {host} e não obteve resposta alguma.",
+        "next": "Normalmente a API está parada, ainda reiniciando, ou a porta está bloqueada por um firewall. Verifique o servidor web dessa máquina."
+      },
+      "server": {
+        "title": "Seu servidor retornou um erro",
+        "body": "A API respondeu com o erro {status} em vez dos dados da sua conta.",
+        "next": "Algo falhou dentro da API, não nesta página. O motivo fica registrado no log da API, no seu servidor."
+      },
+      "forbidden": {
+        "title": "Seu servidor recusou esta requisição",
+        "body": "A API respondeu {status} — esta conta não tem permissão para isso.",
+        "next": "Peça a um administrador que dê permissão à sua conta e entre novamente."
+      },
+      "notFound": {
+        "title": "O painel pediu algo que não existe",
+        "body": "A API respondeu {status} para {path}.",
+        "next": "Isso costuma significar que o painel e a API estão em versões diferentes. Atualize os dois para a mesma versão."
+      },
+      "gateway": {
+        "title": "A API não respondeu",
+        "body": "O servidor web em {host} respondeu {status}, ou seja, não conseguiu resposta da API que está atrás dele.",
+        "next": "Normalmente o PHP-FPM está parado, ou a requisição demorou demais. Verifique o PHP-FPM nessa máquina — o log da própria API ficará vazio, porque ela nunca chegou a rodar."
+      },
+      "rejected": {
+        "title": "Seu servidor rejeitou a requisição",
+        "body": "A API respondeu {status} para {path}. Ela não falhou: recusou o que o painel enviou.",
+        "next": "Normalmente o painel e a API estão em versões diferentes, ou algo entre eles reescreve as requisições. Atualize ambos para a mesma versão."
+      }
+    },
+    "whatToDo": "O que fazer"
   },
   "logs": {
     "title": "Logs",

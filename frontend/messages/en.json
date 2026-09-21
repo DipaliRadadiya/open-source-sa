@@ -1039,7 +1039,56 @@
     "rateLimited": {
       "title": "Too many requests",
       "body": "The panel asked the server more times than it allows in a minute. Nothing has changed — wait a moment and try again."
-    }
+    },
+    "unavailable": {
+      "title": "The panel is updating",
+      "body": "The server is refusing requests while it updates. This usually clears within a minute.",
+      "stuck": "The update stopped part-way. Run this on the server to bring the API back:",
+      "stuckLabel": "If it does not clear",
+      "copyCommand": "Copy command"
+    },
+    "request": {
+      "endpoint": "Request",
+      "status": "Response",
+      "host": "Server",
+      "noResponse": "no reply",
+      "details": "Technical details",
+      "serverSaid": "Your server said",
+      "debugWarning": "This detail was only available because your server is running in debug mode. Turn that off on a public panel — it exposes internals to anyone who reaches the login page."
+    },
+    "why": {
+      "network": {
+        "title": "Your server is not answering",
+        "body": "The panel tried to reach {host} and got no reply at all.",
+        "next": "The API is usually stopped, still restarting, or its port is closed by a firewall. Check the web server on that machine."
+      },
+      "server": {
+        "title": "Your server returned an error",
+        "body": "The API answered with error {status} instead of your account details.",
+        "next": "Something failed inside the API, not in this page. The reason is written to the API's log on your server."
+      },
+      "forbidden": {
+        "title": "Your server refused this request",
+        "body": "The API answered {status} — this account is not allowed to do that.",
+        "next": "Ask an administrator to give your account permission, then sign in again."
+      },
+      "notFound": {
+        "title": "The panel asked for something that is not there",
+        "body": "The API answered {status} for {path}.",
+        "next": "That usually means the panel and the API are different versions. Update them both to the same release."
+      },
+      "gateway": {
+        "title": "The API did not respond",
+        "body": "The web server on {host} answered {status}, which means it could not get a reply from the API behind it.",
+        "next": "Usually PHP-FPM has stopped, or the request took too long. Check PHP-FPM on that machine — the API's own log will be empty, because it never ran."
+      },
+      "rejected": {
+        "title": "Your server rejected the request",
+        "body": "The API answered {status} for {path}. It did not fail — it refused what the panel sent.",
+        "next": "Usually the panel and the API are different versions, or something between them is rewriting requests. Update both to the same release."
+      }
+    },
+    "whatToDo": "What to do"
   },
   "logs": {
     "title": "System Logs",

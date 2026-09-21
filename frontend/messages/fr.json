@@ -1039,7 +1039,56 @@
     "rateLimited": {
       "title": "Trop de requêtes",
       "body": "Le panneau a sollicité le serveur plus de fois qu'il ne l'autorise en une minute. Rien n'a changé — attendez un moment et réessayez."
-    }
+    },
+    "unavailable": {
+      "title": "Le panneau est en cours de mise à jour",
+      "body": "Le serveur refuse les requêtes pendant sa mise à jour. Cela se résout généralement en moins d'une minute.",
+      "stuck": "La mise à jour s'est arrêtée en cours de route. Exécutez ceci sur le serveur pour relancer l'API :",
+      "stuckLabel": "Si cela persiste",
+      "copyCommand": "Copier la commande"
+    },
+    "request": {
+      "endpoint": "Requête",
+      "status": "Réponse",
+      "host": "Serveur",
+      "noResponse": "aucune réponse",
+      "details": "Détails techniques",
+      "serverSaid": "Votre serveur indique",
+      "debugWarning": "Ce détail n'est visible que parce que votre serveur est en mode débogage. Désactivez-le sur un panneau public : il expose des informations internes à quiconque atteint la page de connexion."
+    },
+    "why": {
+      "network": {
+        "title": "Votre serveur ne répond pas",
+        "body": "Le panneau a tenté de joindre {host} et n'a reçu aucune réponse.",
+        "next": "En général l'API est arrêtée, en cours de redémarrage, ou son port est bloqué par un pare-feu. Vérifiez le serveur web de cette machine."
+      },
+      "server": {
+        "title": "Votre serveur a renvoyé une erreur",
+        "body": "L'API a répondu avec l'erreur {status} au lieu des informations de votre compte.",
+        "next": "Quelque chose a échoué dans l'API, pas dans cette page. La raison est inscrite dans le journal de l'API, sur votre serveur."
+      },
+      "forbidden": {
+        "title": "Votre serveur a refusé cette requête",
+        "body": "L'API a répondu {status} — ce compte n'y est pas autorisé.",
+        "next": "Demandez à un administrateur d'accorder l'autorisation à votre compte, puis reconnectez-vous."
+      },
+      "notFound": {
+        "title": "Le panneau a demandé quelque chose qui n'existe pas",
+        "body": "L'API a répondu {status} pour {path}.",
+        "next": "Cela signifie généralement que le panneau et l'API sont dans des versions différentes. Mettez les deux à la même version."
+      },
+      "gateway": {
+        "title": "L'API n'a pas répondu",
+        "body": "Le serveur web de {host} a répondu {status}, ce qui signifie qu'il n'a obtenu aucune réponse de l'API située derrière lui.",
+        "next": "En général PHP-FPM est arrêté, ou la requête a pris trop de temps. Vérifiez PHP-FPM sur cette machine — le journal de l'API sera vide, car elle n'a jamais été exécutée."
+      },
+      "rejected": {
+        "title": "Votre serveur a rejeté la requête",
+        "body": "L'API a répondu {status} pour {path}. Elle n'a pas échoué : elle a refusé ce que le panneau a envoyé.",
+        "next": "En général le panneau et l'API sont dans des versions différentes, ou quelque chose entre les deux réécrit les requêtes. Mettez les deux à la même version."
+      }
+    },
+    "whatToDo": "Que faire"
   },
   "logs": {
     "title": "Journaux",
