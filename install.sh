@@ -649,37 +649,89 @@ add_php_repository() {
 
     # A glob inside [[ -f ]] is not expanded, so it is matched with compgen —
     # the naive version silently always thought the repository was missing.
+    #
+    # The refresh happens either way, and that is the point. `add-apt-repository`
+    # writes the sources file before the download succeeds, so a run interrupted
+    # between the two leaves a file apt has never fetched an index for. Skipping
+    # the refresh because the file exists is what turned that into a dead
+    # install: apt has the source and no packages from it.
     if ! compgen -G "/etc/apt/sources.list.d/ondrej*php*" >/dev/null; then
         run_progress "Adding the ondrej/php repository" add-apt-repository -y ppa:ondrej/php
-        run_progress "Refreshing package lists from the PHP repository" apt-get update -qq
-        ok "ondrej/php repository added"
     else
-        skip "ondrej/php repository"
+        say "     → ondrej/php repository already configured, refreshing it..."
     fi
+
+    run_progress "Refreshing package lists from the PHP repository" apt-get update -qq
+    ok "ondrej/php repository ready"
 }
 
-# Proven before anything is installed, not discovered halfway through.
+# The version apt would install for php${PHP_VERSION}-fpm, empty when there is
+# none. `(none)` is apt's way of saying the package is known but unreachable —
+# flattened to empty here so callers have one thing to test.
+php_candidate() {
+    local candidate
+    candidate=$(apt-cache policy "php${PHP_VERSION}-fpm" 2>/dev/null | awk '/Candidate:/ {print $2}')
+
+    [[ "$candidate" == "(none)" ]] && candidate=""
+
+    printf '%s' "$candidate"
+}
+
+# Proven before anything is installed, not discovered halfway through: without
+# this the install would die on `apt-get install php8.4-fpm` with the web server
+# and Redis already on the box, which is the half-installed state preflight
+# exists to avoid.
 #
-# Every failure this catches is the same shape: a repository that was added
-# successfully but carries nothing for this release. `add-apt-repository` and a
-# written sources file both succeed in that case, and the install would then
-# die on `apt-get install php8.4-fpm` — after the web server and Redis are
-# already on the box, which is the half-installed state preflight exists to
-# avoid.
-assert_php_available() {
+# Asks apt the question that matters — "can you install php8.4?" — rather than
+# "does a file with the right name exist?".
+#
+# The difference is the whole bug this replaced. The old flow decided the
+# repository was present from a filename, skipped refreshing it, and then died
+# claiming the repository "carries no php${PHP_VERSION}". That sentence was
+# false: ondrej publishes php8.4 for noble, and has throughout. What had
+# actually happened was that apt never fetched the index — a previous run
+# interrupted after `add-apt-repository` wrote the file, or a refresh that
+# failed to download.
+#
+# `apt-get update` is the reason that goes unnoticed: it exits **0** when a
+# repository cannot be fetched, printing only `W: Failed to fetch`. Verified
+# against a deliberately unreachable source. So "the repository was added"
+# could be reported over a download that never happened.
+#
+# Hence: ask, and only if the answer is no, add/refresh and ask again. A repair
+# rather than an accusation — which also makes re-running the installer fix the
+# box, the case users actually hit.
+ensure_php_available() {
     if (( DRY_RUN )); then
         printf '     %s$ apt-cache policy php%s-fpm%s\n' "$DIM" "$PHP_VERSION" "$RESET"
         return
     fi
 
     local candidate
-    candidate=$(apt-cache policy "php${PHP_VERSION}-fpm" 2>/dev/null | awk '/Candidate:/ {print $2}')
+    candidate=$(php_candidate)
 
-    if [[ -z "$candidate" || "$candidate" == "(none)" ]]; then
-        die "PHP ${PHP_VERSION} is not available from apt on ${PRETTY_NAME:-this release}.
-     The PHP repository was added but carries no php${PHP_VERSION} for ${OS_CODENAME}.
-     Check it resolves:
+    # Already resolvable: the repository is configured *and* fetched. Nothing to
+    # add, and no apt-get update anybody is waiting on.
+    if [[ -n "$candidate" ]]; then
+        ok "PHP ${PHP_VERSION} available (${candidate})"
+        return
+    fi
+
+    add_php_repository
+
+    candidate=$(php_candidate)
+
+    if [[ -z "$candidate" ]]; then
+        # Says what was established, not what was assumed. The repository being
+        # empty is only one of the reasons, and it is the least likely.
+        die "apt cannot install PHP ${PHP_VERSION} on ${PRETTY_NAME:-this release}, after adding and refreshing the PHP repository.
+     Usually one of:
+       - the repository index failed to download (apt-get update reports this as a warning, not an error)
+       - a stale PHP repository on this box points at a different Ubuntu release
+       - no network route to the repository
+     Check what apt sees:
        apt-cache policy php${PHP_VERSION}-fpm
+       grep -r . /etc/apt/sources.list.d/ | grep -i -e ondrej -e sury
      Nothing further has been installed."
     fi
 
@@ -948,8 +1000,11 @@ install_packages() {
         # elsewhere.
         run ln -sfn "$PANEL_PHP_BIN" /usr/local/bin/php
     else
-        add_php_repository
-        assert_php_available
+        # Adds the repository only when apt cannot already resolve PHP — see
+        # ensure_php_available(). The two used to be separate calls, and the
+        # first one deciding by filename is what let the second die blaming the
+        # repository for a download that had failed.
+        ensure_php_available
 
         # Matches the extensions the panel actually loads. Kept explicit rather
         # than pulling php${V} — the metapackage drags in apache2 as a

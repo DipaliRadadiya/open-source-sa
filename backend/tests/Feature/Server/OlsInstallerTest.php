@@ -47,17 +47,6 @@ const OLS_VHOST_WRITERS = [
     'ols_acme_context',
 ];
 
-function installerSource(): string
-{
-    $path = base_path('../install.sh');
-
-    if (! is_file($path)) {
-        test()->markTestSkipped('install.sh is not in this checkout');
-    }
-
-    return (string) file_get_contents($path);
-}
-
 /**
  * @return array<int, string>
  */
