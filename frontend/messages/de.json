@@ -79,8 +79,7 @@
     "empty": {
       "title": "Noch keine Systembenutzer",
       "desc": "Systembenutzer sind die Linux-Konten, die Ihre Anwendungen besitzen und ausführen.",
-      "filteredTitle": "Keine passenden Benutzer",
-      "filteredDesc": "Keine Systembenutzer entsprechen Ihrer Suche."
+      "filteredTitle": "Keine passenden Benutzer"
     },
     "addUser": "Benutzer hinzufügen",
     "cancel": "Abbrechen",
@@ -2453,8 +2452,7 @@
     "empty": {
       "title": "Noch keine Datenbanken",
       "description": "In einer Datenbank hält Ihre Anwendung ihre Daten. Legen Sie eine an, um zu beginnen.",
-      "filteredTitle": "Keine Treffer",
-      "filteredDesc": "Keine Datenbank passt zu dieser Suche.",
+      "filteredTitle": "Keine passenden Datenbanken",
       "clearSearch": "Suche zurücksetzen"
     },
     "create": {
@@ -3196,7 +3194,6 @@
       "title": "Ihr Server ist bereit für die erste Anwendung",
       "description": "Legen Sie eine Anwendung oder einen Dienst in einem geführten Ablauf an. {brand} richtet alles ein und zeigt hier den aktuellen Status.",
       "filteredTitle": "Keine passenden Anwendungen",
-      "filteredDescription": "Keine Anwendung passt zu Ihrer Suche.",
       "clearSearch": "Suche zurücksetzen",
       "guideTitle": "Von der Idee zur laufenden Anwendung",
       "steps": {
@@ -3819,7 +3816,6 @@
         "title": "Dieser Ordner ist leer",
         "description": "Laden Sie eine Datei hoch oder erstellen Sie eine neue Datei oder einen Ordner, um zu beginnen.",
         "filteredTitle": "Keine passenden Dateien",
-        "filteredDescription": "Keine Datei und kein Ordner in diesem Verzeichnis passt zu Ihrer Suche.",
         "hiddenOnlyTitle": "{count, plural, one {Hier ist nur # ausgeblendete Datei} other {Hier sind nur # ausgeblendete Dateien}}",
         "hiddenOnlyDescription": "Namen, die mit einem Punkt beginnen, sind standardmäßig ausgeblendet."
       },

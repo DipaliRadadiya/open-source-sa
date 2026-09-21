@@ -79,8 +79,7 @@
     "empty": {
       "title": "Aucun utilisateur système",
       "desc": "Les utilisateurs système sont les comptes Linux qui détiennent et exécutent vos applications.",
-      "filteredTitle": "Aucun utilisateur correspondant",
-      "filteredDesc": "Aucun utilisateur système ne correspond à votre recherche."
+      "filteredTitle": "Aucun utilisateur correspondant"
     },
     "addUser": "Ajouter un utilisateur",
     "cancel": "Annuler",
@@ -2453,8 +2452,7 @@
     "empty": {
       "title": "Aucune base de données",
       "description": "Une base de données stocke les données de votre application. Créez-en une pour commencer.",
-      "filteredTitle": "Aucun résultat",
-      "filteredDesc": "Aucune base ne correspond à cette recherche.",
+      "filteredTitle": "Aucune base de données correspondante",
       "clearSearch": "Effacer la recherche"
     },
     "create": {
@@ -3196,7 +3194,6 @@
       "title": "Votre serveur est prêt pour sa première application",
       "description": "Créez une application ou un service via un parcours guidé. {brand} le provisionnera, puis affichera son état en direct ici.",
       "filteredTitle": "Aucune application correspondante",
-      "filteredDescription": "Aucune application ne correspond à votre recherche.",
       "clearSearch": "Effacer la recherche",
       "guideTitle": "De l'idée à l'application en cours d'exécution",
       "steps": {
@@ -3819,7 +3816,6 @@
         "title": "Ce dossier est vide",
         "description": "Téléversez un fichier, ou créez un nouveau fichier ou dossier pour commencer.",
         "filteredTitle": "Aucun fichier correspondant",
-        "filteredDescription": "Aucun fichier ou dossier de ce répertoire ne correspond à votre recherche.",
         "hiddenOnlyTitle": "{count, plural, one {Il n’y a ici que # fichier masqué} other {Il n’y a ici que # fichiers masqués}}",
         "hiddenOnlyDescription": "Les noms commençant par un point sont masqués par défaut."
       },

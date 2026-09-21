@@ -79,8 +79,7 @@
     "empty": {
       "title": "Nenhum usuário de sistema ainda",
       "desc": "Usuários de sistema são as contas Linux que possuem e executam suas aplicações.",
-      "filteredTitle": "Nenhum usuário correspondente",
-      "filteredDesc": "Nenhum usuário de sistema corresponde à sua busca."
+      "filteredTitle": "Nenhum usuário correspondente"
     },
     "addUser": "Adicionar usuário",
     "cancel": "Cancelar",
@@ -2453,8 +2452,7 @@
     "empty": {
       "title": "Nenhum banco de dados ainda",
       "description": "Um banco de dados é onde sua aplicação guarda os dados. Crie um para começar.",
-      "filteredTitle": "Nenhum resultado",
-      "filteredDesc": "Nenhum banco de dados corresponde a essa busca.",
+      "filteredTitle": "Nenhum banco de dados correspondente",
       "clearSearch": "Limpar busca"
     },
     "create": {
@@ -3196,7 +3194,6 @@
       "title": "Seu servidor está pronto para a primeira aplicação",
       "description": "Crie uma aplicação ou serviço em um fluxo guiado. {brand} fará o provisionamento e mostrará o status aqui.",
       "filteredTitle": "Nenhuma aplicação corresponde",
-      "filteredDescription": "Nenhuma aplicação corresponde à sua busca.",
       "clearSearch": "Limpar busca",
       "guideTitle": "Da ideia à aplicação rodando",
       "steps": {
@@ -3819,7 +3816,6 @@
         "title": "Esta pasta está vazia",
         "description": "Envie um arquivo ou crie um novo arquivo ou pasta para começar.",
         "filteredTitle": "Nenhum arquivo correspondente",
-        "filteredDescription": "Nenhum arquivo ou pasta nesta pasta corresponde à sua busca.",
         "hiddenOnlyTitle": "{count, plural, one {Aqui só há # ficheiro oculto} other {Aqui só há # ficheiros ocultos}}",
         "hiddenOnlyDescription": "Os nomes começados por um ponto ficam ocultos por predefinição."
       },

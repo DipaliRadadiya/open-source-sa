@@ -380,7 +380,6 @@ function ApplicationsList({
         <EmptyState
           icon={SearchX}
           title={t("empty.filteredTitle")}
-          description={t("empty.filteredDescription")}
           action={
             <Button
               variant="outline"

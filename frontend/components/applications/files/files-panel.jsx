@@ -425,7 +425,6 @@ export function FilesPanel({
         <EmptyState
           icon={SearchX}
           title={t("empty.filteredTitle")}
-          description={t("empty.filteredDescription")}
           action={
             <Button variant="outline" size="sm" onClick={() => setSiteSearch(true)}>
               <Globe className="size-3.5" />

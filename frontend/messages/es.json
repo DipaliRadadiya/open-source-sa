@@ -623,8 +623,7 @@
     "empty": {
       "title": "Aún no hay usuarios del sistema",
       "desc": "Los usuarios del sistema son las cuentas Linux que poseen y ejecutan tus aplicaciones.",
-      "filteredTitle": "No hay usuarios coincidentes",
-      "filteredDesc": "Ningún usuario del sistema coincide con tu búsqueda."
+      "filteredTitle": "No hay usuarios coincidentes"
     },
     "addUser": "Añadir usuario",
     "cancel": "Cancelar",
@@ -2453,8 +2452,7 @@
     "empty": {
       "title": "Todavía no hay bases de datos",
       "description": "Una base de datos es donde tu aplicación guarda sus datos. Crea una para empezar.",
-      "filteredTitle": "Sin resultados",
-      "filteredDesc": "Ninguna base de datos coincide con esa búsqueda.",
+      "filteredTitle": "No hay bases de datos coincidentes",
       "clearSearch": "Borrar búsqueda"
     },
     "create": {
@@ -3196,7 +3194,6 @@
       "title": "Tu servidor está listo para su primera aplicación",
       "description": "Crea una aplicación o servicio en un flujo guiado. {brand} lo aprovisionará y luego mostrará aquí su estado en directo.",
       "filteredTitle": "No hay aplicaciones coincidentes",
-      "filteredDescription": "Ninguna aplicación coincide con tu búsqueda.",
       "clearSearch": "Borrar búsqueda",
       "guideTitle": "De la idea a una aplicación en marcha",
       "steps": {
@@ -3819,7 +3816,6 @@
         "title": "Esta carpeta está vacía",
         "description": "Sube un archivo, o crea un archivo o carpeta nuevos para empezar.",
         "filteredTitle": "Sin archivos coincidentes",
-        "filteredDescription": "Ningún archivo o carpeta de este directorio coincide con tu búsqueda.",
         "hiddenOnlyTitle": "{count, plural, one {Aquí solo hay # archivo oculto} other {Aquí solo hay # archivos ocultos}}",
         "hiddenOnlyDescription": "Los nombres que empiezan por un punto están ocultos de forma predeterminada."
       },

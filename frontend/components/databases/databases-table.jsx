@@ -400,7 +400,6 @@ function DatabasesList({
           <EmptyState
             icon={SearchX}
             title={t("empty.filteredTitle")}
-            description={t("empty.filteredDesc")}
             action={
               <Button variant="outline" onClick={() => setQuery({ search: undefined }, { resetPage: true })}>
                 {t("empty.clearSearch")}

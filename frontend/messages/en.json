@@ -79,8 +79,7 @@
     "empty": {
       "title": "No system users yet",
       "desc": "System users are the Linux accounts that own and run your applications.",
-      "filteredTitle": "No matching users",
-      "filteredDesc": "No system users match your search."
+      "filteredTitle": "No matching users"
     },
     "addUser": "Add user",
     "cancel": "Cancel",
@@ -2453,8 +2452,7 @@
     "empty": {
       "title": "No databases yet",
       "description": "A database is where your application keeps its data. Create one to get started.",
-      "filteredTitle": "No matches",
-      "filteredDesc": "No database matches that search.",
+      "filteredTitle": "No matching databases",
       "clearSearch": "Clear search"
     },
     "create": {
@@ -3196,7 +3194,6 @@
       "title": "Your server is ready for its first application",
       "description": "Create an application or service in a guided flow. {brand} will provision it, then show its live status here.",
       "filteredTitle": "No matching applications",
-      "filteredDescription": "No applications match your search.",
       "clearSearch": "Clear search",
       "guideTitle": "From idea to a running application",
       "steps": {
@@ -3819,7 +3816,6 @@
         "title": "This folder is empty",
         "description": "Upload a file, or create a new file or folder to get started.",
         "filteredTitle": "No matching files",
-        "filteredDescription": "No files or folders in this directory match your search.",
         "hiddenOnlyTitle": "{count, plural, one {Nothing here but # hidden file} other {Nothing here but # hidden files}}",
         "hiddenOnlyDescription": "Names beginning with a dot are hidden by default."
       },

@@ -43,9 +43,21 @@ export function EmptyState({ icon: Icon, title, description, action, compact = f
       >
         <Icon className={compact ? "size-4" : "size-5"} />
       </span>
+      {/* The description is optional, and rendering it unconditionally is why
+          it looked mandatory.
+          
+          Every filtered empty state here carries a Clear-search button, so a
+          middle line reading "No applications match your search" under a title
+          reading "No matching applications" is the same sentence three times.
+          Where the line names WHICH filters are in play it earns its space;
+          where it only rephrases the title it does not, and four call sites now
+          pass nothing. Without this guard that left an empty <p> holding
+          space-y-1 open. */}
       <div className="space-y-1">
         <p className={cn("font-medium", compact && "text-sm")}>{title}</p>
-        <p className="max-w-sm text-sm text-pretty text-muted-foreground">{description}</p>
+        {description ? (
+          <p className="max-w-sm text-sm text-pretty text-muted-foreground">{description}</p>
+        ) : null}
       </div>
       {action}
     </div>
