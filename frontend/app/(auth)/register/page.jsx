@@ -40,7 +40,7 @@ export default async function RegisterPage() {
     throw error;
   }
 
-  if (user) redirect("/dashboard");
+  if (user) redirect("/");
   // Registration is bootstrap-only: once the admin exists the backend closes it.
   if (!basicInfo.registration_open) redirect("/login");
 

@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ScrollText } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
@@ -11,6 +10,7 @@ import { LogsPanel } from "@/components/logs/logs-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,7 @@ export default async function LogsPage({ searchParams }) {
   // is meant to remove.
   const followPreference = cookieStore.get(FOLLOW_COOKIE)?.value ?? null;
 
-  if (!can(permissions, "logs", "view")) redirect("/dashboard");
+  if (!can(permissions, "logs", "view")) return <PermissionDenied title={t("title")} />;
   // Emptying a log is a different trust from reading one.
   const canManage = can(permissions, "logs", "manage");
 

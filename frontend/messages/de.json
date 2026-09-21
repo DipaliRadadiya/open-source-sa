@@ -63,6 +63,10 @@
       "light": "Hell",
       "dark": "Dunkel",
       "system": "System"
+    },
+    "permissionDenied": {
+      "title": "Sie haben keinen Zugriff auf {feature}",
+      "description": "Ihre Rolle enthält keine Berechtigung, dies anzusehen. Bitten Sie einen Administrator darum."
     }
   },
   "systemUsers": {

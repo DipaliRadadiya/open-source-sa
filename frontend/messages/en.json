@@ -63,6 +63,10 @@
       "light": "Light",
       "dark": "Dark",
       "system": "System"
+    },
+    "permissionDenied": {
+      "title": "You don't have access to {feature}",
+      "description": "Your role doesn't include permission to view this. Ask an administrator to grant it."
     }
   },
   "systemUsers": {

@@ -63,6 +63,10 @@
       "light": "Clair",
       "dark": "Sombre",
       "system": "Système"
+    },
+    "permissionDenied": {
+      "title": "Vous n'avez pas accès à {feature}",
+      "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur."
     }
   },
   "systemUsers": {

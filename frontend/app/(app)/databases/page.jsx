@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations, getFormatter } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -21,6 +20,7 @@ import { DatabasesTable } from "@/components/databases/databases-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +43,7 @@ export default async function DatabasesPage({ searchParams }) {
   ]);
   const { engines, failed, status, failure } = live;
 
-  if (!can(permissions, "database", "view")) redirect("/dashboard");
+  if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
 
   if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;

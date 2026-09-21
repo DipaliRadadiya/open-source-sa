@@ -63,6 +63,10 @@
       "light": "Claro",
       "dark": "Escuro",
       "system": "Sistema"
+    },
+    "permissionDenied": {
+      "title": "Você não tem acesso a {feature}",
+      "description": "Sua função não inclui permissão para ver isto. Peça a um administrador para conceder."
     }
   },
   "systemUsers": {

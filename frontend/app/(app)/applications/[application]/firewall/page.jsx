@@ -14,6 +14,7 @@ import { DetectLogCard } from "@/components/applications/firewall/detect-log-car
 import { getApplicationLog } from "@/lib/applications/get-application-logs";
 import { parseDetectLog } from "@/lib/firewall/parse-detect-log";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function ApplicationFirewallPage({ params }) {
     getApplicationWaf(id),
   ]);
 
-  if (!can(permissions, "application", "view")) redirect("/dashboard");
+  if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");

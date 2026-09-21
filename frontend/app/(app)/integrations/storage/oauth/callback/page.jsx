@@ -36,8 +36,13 @@ export default async function StorageOauthCallbackPage({ searchParams }) {
   // somebody's personal Google account. The API enforces this too; checking
   // here means an unauthorised arrival sees the dashboard rather than a page
   // that fires a request only to be refused.
-  if (!can(permissions, "storage", "manage")) redirect("/dashboard");
-
+  /*
+   * Home, not a refusal card. This screen has no heading of its own — it is a
+   * centred one-job card, and it is reached from Google's consent screen
+   * rather than from anywhere in the panel, so there is no page name to
+   * refuse by. `/` lands them wherever their role can actually go.
+   */
+  if (!can(permissions, "storage", "manage")) redirect("/");
   return (
     /*
       Centred, like the 404, because this screen is the same kind of thing: one

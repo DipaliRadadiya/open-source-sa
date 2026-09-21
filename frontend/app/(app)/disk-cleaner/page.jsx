@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -13,6 +12,7 @@ import { ScheduleCard } from "@/components/disk-cleaner/schedule-card";
 import { RunsCard } from "@/components/disk-cleaner/runs-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,7 @@ export default async function DiskCleanerPage() {
     getTranslations("diskCleaner"),
   ]);
 
-  if (!can(permissions, "disk_cleaner", "view")) redirect("/dashboard");
+  if (!can(permissions, "disk_cleaner", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "disk_cleaner", "manage");
 
   // The schedule and history are secondary: if either fails the page is still

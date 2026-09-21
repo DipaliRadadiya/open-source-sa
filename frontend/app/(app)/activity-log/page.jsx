@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -12,6 +11,7 @@ import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +27,7 @@ export default async function ActivityLogPage({ searchParams }) {
     getTranslations("activity"),
   ]);
 
-  if (!can(permissions, "activity_log", "view")) redirect("/dashboard");
-
+  if (!can(permissions, "activity_log", "view")) return <PermissionDenied title={t("title")} />;
   const [{ activity_log: entries, meta, failed, status, failure }, filters] = await Promise.all([
     getMyActivity(sp, "server"),
     getMyActivityFilters(),

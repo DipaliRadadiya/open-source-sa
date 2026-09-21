@@ -43,7 +43,9 @@ export function LoginForm() {
     try {
       await login(values);
       startNavigation(() => {
-        router.push("/dashboard");
+        // "/" and not "/dashboard": the landing page depends on what this
+        // role can open, which only the server knows. app/page.js decides.
+        router.push("/");
         router.refresh();
       });
     } catch (error) {

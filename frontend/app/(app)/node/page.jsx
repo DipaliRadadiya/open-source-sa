@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Hexagon } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
@@ -14,6 +13,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RuntimeStatusNotice } from "@/components/runtime/version-status";
 import { anyInFlight, RUNTIME_POLL_MS, RUNTIME_POLL_STOP_MS } from "@/lib/runtime/in-flight";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,7 @@ export default async function NodePage({ searchParams }) {
     getNode(),
   ]);
 
-  if (!can(permissions, "node", "view")) redirect("/dashboard");
+  if (!can(permissions, "node", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "node", "manage");
 
   if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;

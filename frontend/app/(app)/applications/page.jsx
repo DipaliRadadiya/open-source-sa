@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { Globe2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
@@ -12,6 +11,7 @@ import { ApplicationsTable } from "@/components/applications/applications-table"
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -41,8 +41,7 @@ export default async function ApplicationsPage({ searchParams }) {
   // The filter's options come from the catalog, not from the ten rows we hold.
   const { siteTypes } = await getSiteTypes();
 
-  if (!can(permissions, "application", "view")) redirect("/dashboard");
-
+  if (!can(permissions, "application", "view")) return <PermissionDenied title={t("title")} />;
   // Databases are a server-level permission: a reader without it gets no
   // marker rather than a marker they could do nothing about.
   const dbCounts = can(permissions, "database", "view")

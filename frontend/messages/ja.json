@@ -63,6 +63,10 @@
       "light": "ライト",
       "dark": "ダーク",
       "system": "システム"
+    },
+    "permissionDenied": {
+      "title": "{feature} にアクセスする権限がありません",
+      "description": "このロールにはこれを表示する権限が含まれていません。管理者に権限の付与を依頼してください。"
     }
   },
   "systemUsers": {

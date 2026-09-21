@@ -63,6 +63,10 @@
       "light": "Claro",
       "dark": "Oscuro",
       "system": "Sistema"
+    },
+    "permissionDenied": {
+      "title": "No tienes acceso a {feature}",
+      "description": "Tu rol no incluye permiso para ver esto. Pide a un administrador que te lo conceda."
     }
   },
   "auth": {

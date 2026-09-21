@@ -31,6 +31,7 @@ import { MagicLoginLauncher } from "@/components/applications/magic-login-launch
 import { CopyButton } from "@/components/ui/copy-button";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ export default async function ApplicationDetailPage({ params }) {
     getApplication(id),
   ]);
 
-  if (!can(permissions, "application", "view")) redirect("/dashboard");
+  if (!can(permissions, "application", "view")) return <PermissionDenied title={t("title")} />;
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");

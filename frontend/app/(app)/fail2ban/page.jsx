@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { CircleCheck, CircleAlert } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
@@ -15,6 +14,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +29,7 @@ export default async function Fail2banPage() {
     getTranslations("fail2ban"),
   ]);
 
-  if (!can(permissions, "fail2ban", "view")) redirect("/dashboard");
-
+  if (!can(permissions, "fail2ban", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "fail2ban", "manage");
   // One fail2ban log for all jails, per the API docs — so this is a link to the
   // log, not to a filtered view of one ban. Hidden entirely without the Logs

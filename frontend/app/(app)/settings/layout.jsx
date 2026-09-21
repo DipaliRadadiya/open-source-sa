@@ -1,10 +1,10 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getSettings } from "@/lib/settings/get-settings";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +19,7 @@ export default async function SettingsLayout({ children }) {
     getTranslations("settings"),
   ]);
 
-  if (!can(permissions, "setting", "view")) redirect("/dashboard");
-
+  if (!can(permissions, "setting", "view")) return <PermissionDenied title={t("title")} />;
   // The badges are the only reason the layout reads settings — the point of a
   // dot on a tab is that it's visible from the section you're already on.
   // `getSettings` is request-cached, so the open section shares this call.

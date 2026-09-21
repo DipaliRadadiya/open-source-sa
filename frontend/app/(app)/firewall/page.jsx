@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
@@ -12,6 +11,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +27,7 @@ export default async function FirewallPage({ searchParams }) {
     getTranslations("firewall"),
   ]);
 
-  if (!can(permissions, "firewall", "view")) redirect("/dashboard");
-
+  if (!can(permissions, "firewall", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "firewall", "manage");
 
   // Presets are only needed for the add form; a failure there must not take the

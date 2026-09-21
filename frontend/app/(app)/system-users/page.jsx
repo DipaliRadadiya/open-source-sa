@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -8,6 +7,7 @@ import { SystemUsersTable } from "@/components/system-users/system-users-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +27,7 @@ export default async function SystemUsersPage({ searchParams }) {
   ]);
 
   // Feature is permission-gated; without `view`, bounce to the dashboard.
-  if (!can(permissions, "system_user", "view")) redirect("/dashboard");
-
+  if (!can(permissions, "system_user", "view")) return <PermissionDenied title={t("title")} />;
   // Shells come from the server so the picker can never offer one it refuses.
   const [usersPage, shells] = await Promise.all([getSystemUsersPage(query), getShells()]);
   const canManage = can(permissions, "system_user", "manage");
