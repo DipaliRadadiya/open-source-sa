@@ -5089,7 +5089,11 @@
       },
       "footerIdleOne": "Установка идёт в фоне — форму можно заполнять дальше.",
       "subImpossible": "В нынешнем виде этот сервер не может запустить это приложение.",
-      "footerImpossible": "Отсюда это не исправить."
+      "footerImpossible": "Отсюда это не исправить.",
+      "needs": {
+        "node": "{app} требуется Node {requirement} — установим именно это",
+        "php": "{app} требуется PHP {requirement} — установим именно это"
+      }
     },
     "phpFact": "PHP {version}",
     "siteTypeDetection": {

@@ -5089,7 +5089,11 @@
       },
       "footerIdleOne": "यह बैकग्राउंड में इंस्टॉल होती है — आप फ़ॉर्म भरते रह सकते हैं।",
       "subImpossible": "यह सर्वर इस ऐप्लिकेशन को इस रूप में नहीं चला सकता।",
-      "footerImpossible": "यहाँ से इसे ठीक नहीं किया जा सकता।"
+      "footerImpossible": "यहाँ से इसे ठीक नहीं किया जा सकता।",
+      "needs": {
+        "node": "{app} को Node {requirement} चाहिए — हम यही इंस्टॉल करेंगे",
+        "php": "{app} को PHP {requirement} चाहिए — हम यही इंस्टॉल करेंगे"
+      }
     },
     "phpFact": "PHP {version}",
     "siteTypeDetection": {

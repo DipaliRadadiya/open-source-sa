@@ -5089,7 +5089,11 @@
       },
       "footerIdleOne": "It installs in the background — you can keep filling in the form.",
       "subImpossible": "This server cannot run this application as it stands.",
-      "footerImpossible": "Nothing here can fix this on its own."
+      "footerImpossible": "Nothing here can fix this on its own.",
+      "needs": {
+        "node": "{app} needs Node {requirement} — this is what we will install",
+        "php": "{app} needs PHP {requirement} — this is what we will install"
+      }
     },
     "phpFact": "PHP {version}",
     "siteTypeDetection": {

@@ -289,21 +289,23 @@ test("a partial upper bound covers its whole line", () => {
   assert.equal(versionWithin("8.2.0", PRESTASHOP), false);
 });
 
-test("the card names a version on offer, not the bottom of the range", async () => {
-  const { highestInRange } = await import("../lib/runtime/version-range.js");
+test("the card names a version ON OFFER that satisfies the range", async () => {
+  const { lowestInRange } = await import("../lib/runtime/version-range.js");
   const { runtimeBlocks } = await import("../lib/applications/runtime-readiness.js");
 
   // What the Node page actually offers: the 20 line is end-of-life and hidden,
-  // which is why the reporter could not find the 20.19 our message named.
+  // which is why the reporter could not find the 20.19 our message named. The
+  // filter runs over THIS list, so whatever comes back is installable —
+  // that part of the original fix is what still matters.
   const installable = v("24.20.0", "22.14.0");
-  assert.equal(highestInRange(installable, N8N), "24.20.0", "newest that fits, not oldest");
+  assert.equal(lowestInRange(installable, N8N), "22.14.0", "offered, and enough");
 
   const [block] = runtimeBlocks({
     type: { node_version_range: N8N },
     nodeVersions: v("18.20.0"),
     nodeInstallable: installable,
   });
-  assert.equal(block.suggest, "24.20.0");
+  assert.equal(block.suggest, "22.14.0");
 
   // Nothing on offer fits is a different sentence, not a worse guess.
   const [dead] = runtimeBlocks({
@@ -312,6 +314,57 @@ test("the card names a version on offer, not the bottom of the range", async () 
     nodeInstallable: installable,
   });
   assert.equal(dead.suggest, null);
+});
+
+test("what the application requires, not the newest thing we could install", async () => {
+  /*
+   * Krishna, on n8n blocking a fresh server: "the requirement should be based
+   * on n8n's actual runtime/dependency requirement, not simply whether the
+   * default/latest Node.js version is installed."
+   *
+   * Verified against the registry: n8n 2.39.9 declares `engines.node
+   * ">=24.0.0"`, and the backend's fallback range is `min 24, max null` —
+   * they agree. So Node 24 is enough, and the panel was naming 26.9.0 only
+   * because it was the newest on offer. The row reads "Node 26.9.0 — the
+   * runtime n8n runs on", which states a requirement n8n does not have.
+   */
+  const { lowestInRange, highestInRange } = await import("../lib/runtime/version-range.js");
+  const N8N_TODAY = { min: "24", max: null };
+  const offered = v("26.9.0", "24.12.0", "22.22.0");
+
+  assert.equal(lowestInRange(offered, N8N_TODAY), "24.12.0", "what n8n asks for");
+  assert.equal(highestInRange(offered, N8N_TODAY), "26.9.0", "what it used to name");
+
+  // And an installed Node 24 is not a blocker at all — the fresh-server case
+  // is the only one that should ever ask.
+  const { rangeUnsatisfied } = await import("../lib/runtime/version-range.js");
+  assert.equal(rangeUnsatisfied(v("24.12.0"), N8N_TODAY), false, "24 already satisfies n8n");
+  assert.equal(rangeUnsatisfied(v("22.22.0"), N8N_TODAY), true, "22 does not");
+});
+
+test("the row says what was required, so the exact build is not read as the requirement", async () => {
+  const fs = await import("node:fs");
+  const services = fs.readFileSync("components/applications/required-services.jsx", "utf8");
+  const panel = fs.readFileSync("components/applications/required-services-panel.jsx", "utf8");
+
+  assert.match(services, /requirement: blocker\.range \? rangeLabel\(blocker\.range\) : null/);
+  assert.match(panel, /service\.requirement/);
+  assert.match(panel, /t\(`needs\.\$\{service\.kind\}`/);
+
+  const routing = fs.readFileSync("i18n/routing.js", "utf8");
+  const locales = routing
+    .match(/export const locales = \[([^\]]+)\]/)[1]
+    .split(",")
+    .map((c) => c.trim().replace(/['"]/g, ""))
+    .filter(Boolean);
+  for (const locale of locales) {
+    const ns = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8"))
+      .applications.requiredServices.needs;
+    for (const kind of ["node", "php"]) {
+      assert.match(ns?.[kind] ?? "", /\{requirement\}/, `${locale} needs.${kind}`);
+      assert.match(ns[kind], /\{app\}/, `${locale} needs.${kind}`);
+    }
+  }
 });
 
 // --- The same bug on the site's own PHP screen ---

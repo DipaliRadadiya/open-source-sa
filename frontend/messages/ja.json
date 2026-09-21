@@ -5089,7 +5089,11 @@
       },
       "footerIdleOne": "バックグラウンドでインストールされます。フォームの入力は続けられます。",
       "subImpossible": "このサーバーでは、現状このアプリケーションを動かせません。",
-      "footerImpossible": "ここから解決できることはありません。"
+      "footerImpossible": "ここから解決できることはありません。",
+      "needs": {
+        "node": "{app} には Node {requirement} が必要です。これをインストールします",
+        "php": "{app} には PHP {requirement} が必要です。これをインストールします"
+      }
     },
     "phpFact": "PHP {version}",
     "siteTypeDetection": {

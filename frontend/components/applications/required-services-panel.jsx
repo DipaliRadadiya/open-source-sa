@@ -239,7 +239,19 @@ export function RequiredServicesPanel({
                 <span className="block truncate text-xs text-muted-foreground">
                   {service.state === "failed" && service.error
                     ? service.error
-                    : t(`purpose.${service.kind}`, { app: typeTitle })}
+                    : /*
+                       * The REQUIREMENT, when the application states one.
+                       *
+                       * The row's title is one exact build — "Node 24.12.0" —
+                       * and on its own that reads as the thing n8n demands.
+                       * It demands 24 or newer; 24.12.0 is merely the version
+                       * this panel will install to satisfy it. Saying both
+                       * stops the next person asking why their Node 24 is not
+                       * good enough.
+                       */
+                      service.requirement
+                      ? t(`needs.${service.kind}`, { app: typeTitle, requirement: service.requirement })
+                      : t(`purpose.${service.kind}`, { app: typeTitle })}
                 </span>
               </span>
               <span className="flex shrink-0 items-center gap-2">

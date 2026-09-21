@@ -5089,7 +5089,11 @@
       },
       "footerIdleOne": "Se instala en segundo plano: puedes seguir rellenando el formulario.",
       "subImpossible": "Este servidor no puede ejecutar esta aplicación tal como está.",
-      "footerImpossible": "Nada de aquí puede resolverlo por sí solo."
+      "footerImpossible": "Nada de aquí puede resolverlo por sí solo.",
+      "needs": {
+        "node": "{app} necesita Node {requirement}: esto es lo que instalaremos",
+        "php": "{app} necesita PHP {requirement}: esto es lo que instalaremos"
+      }
     },
     "phpFact": "PHP {version}",
     "siteTypeDetection": {

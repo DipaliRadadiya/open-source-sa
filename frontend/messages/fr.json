@@ -5089,7 +5089,11 @@
       },
       "footerIdleOne": "L'installation se fait en arrière-plan — vous pouvez continuer à remplir le formulaire.",
       "subImpossible": "Ce serveur ne peut pas faire tourner cette application en l’état.",
-      "footerImpossible": "Rien ici ne peut y remédier."
+      "footerImpossible": "Rien ici ne peut y remédier.",
+      "needs": {
+        "node": "{app} a besoin de Node {requirement} — voici ce que nous allons installer",
+        "php": "{app} a besoin de PHP {requirement} — voici ce que nous allons installer"
+      }
     },
     "phpFact": "PHP {version}",
     "siteTypeDetection": {

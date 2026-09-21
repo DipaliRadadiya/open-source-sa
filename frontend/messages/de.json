@@ -5089,7 +5089,11 @@
       },
       "footerIdleOne": "Die Installation läuft im Hintergrund — Sie können das Formular weiter ausfüllen.",
       "subImpossible": "Dieser Server kann diese Anwendung so nicht ausführen.",
-      "footerImpossible": "Von hier aus lässt sich das nicht beheben."
+      "footerImpossible": "Von hier aus lässt sich das nicht beheben.",
+      "needs": {
+        "node": "{app} benötigt Node {requirement} – das wird installiert",
+        "php": "{app} benötigt PHP {requirement} – das wird installiert"
+      }
     },
     "phpFact": "PHP {version}",
     "siteTypeDetection": {

@@ -107,10 +107,38 @@ function toPrecisionOf(version, bound) {
  * principle and nothing we can install satisfies it.
  */
 export function highestInRange(versions, range) {
+  return sortedInRange(versions, range).at(-1) ?? null;
+}
+
+/**
+ * The LOWEST offered version that satisfies a range — what to install.
+ *
+ * Krishna, about n8n on a fresh server: "the requirement should be based on
+ * n8n's actual runtime/dependency requirement, not simply whether the
+ * default/latest Node.js version is installed."
+ *
+ * n8n declares `>=24.0.0` and the panel offered Node 26.9.0, because that was
+ * the newest thing it could install. Nothing was *wrong* — 26 satisfies the
+ * range — but the row read "Node 26.9.0 — the runtime n8n runs on", which
+ * states a requirement n8n does not have, and it installs the least-tested
+ * major for an application that names 24 as its floor.
+ *
+ * NOT the bottom of the declared range, which is the bug this replaced: n8n
+ * once declared a floor of 20.19, the card printed it, and a reporter went
+ * looking for a Node 20 that the install list deliberately hides because the
+ * line is end-of-life. Both functions filter the OFFERED list first, so
+ * whatever comes back is a version the Node page will actually show.
+ */
+export function lowestInRange(versions, range) {
+  return sortedInRange(versions, range)[0] ?? null;
+}
+
+/** Versions in range, ascending. */
+function sortedInRange(versions, range) {
   return versionsInRange(versions, range)
     .map((item) => item?.version)
     .filter((version) => typeof version === "string" && version !== "")
-    .sort((a, b) => compareVersions(b, a))[0] ?? null;
+    .sort(compareVersions);
 }
 
 /**

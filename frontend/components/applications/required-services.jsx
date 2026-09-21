@@ -6,7 +6,7 @@ import { installEngine } from "@/lib/api/databases";
 import { installPhpVersion } from "@/lib/api/php";
 import { installNodeVersion } from "@/lib/api/node";
 import { apiMessage } from "@/lib/api/error-message";
-import { highestInRange } from "@/lib/runtime/version-range";
+import { lowestInRange, rangeLabel } from "@/lib/runtime/version-range";
 import { RequiredServicesPanel } from "@/components/applications/required-services-panel";
 
 /**
@@ -85,8 +85,12 @@ function servicesFor(type, { phpInstallable, nodeInstallable }) {
      * Null means nothing we can install fits, which is a state of its own:
      * PrestaShop wants PHP 7.2–8.1 and this panel only offers 8.3 and 8.4.
      * Offering a button there would be a button that cannot work.
+     *
+     * The LOWEST that fits, matching `runtime-readiness`. On a fresh server
+     * there is no range to satisfy and no `suggest`, and taking the newest on
+     * offer is how n8n came to demand Node 26.9.0 when it asks for 24.
      */
-    const version = blocker.suggest ?? highestInRange(installable[runtime], blocker.range ?? null);
+    const version = blocker.suggest ?? lowestInRange(installable[runtime], blocker.range ?? null);
     const label = RUNTIME_NAMES[runtime] ?? runtime;
 
     return [
@@ -94,6 +98,10 @@ function servicesFor(type, { phpInstallable, nodeInstallable }) {
         key: `runtime-${runtime}`,
         kind: runtime,
         version,
+        // What the application actually asked for, so the exact version above
+        // does not read as the requirement. "Node 24.12.0" alone looks like
+        // n8n needs that build; it needs 24 or newer.
+        requirement: blocker.range ? rangeLabel(blocker.range) : null,
         // Never the bare runtime name: "PHP — Not installed" is false on a
         // server running PHP 8.4. It is the wrong LINE, not absent.
         name: version ? `${label} ${version}` : blocker.label ? `${label} ${blocker.label}` : label,

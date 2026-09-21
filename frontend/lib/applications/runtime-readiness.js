@@ -1,4 +1,4 @@
-import { highestInRange, rangeLabel, rangeUnsatisfied } from "../runtime/version-range.js";
+import { lowestInRange, rangeLabel, rangeUnsatisfied } from "../runtime/version-range.js";
 
 /**
  * Whether this server's installed runtimes can actually run a site type.
@@ -83,8 +83,14 @@ export function runtimeBlocks({
          * page will actually show them. Null when nothing on offer fits, and
          * that is worth saying out loud rather than papering over — it means
          * the range and this server genuinely cannot be reconciled today.
+         *
+         * LOWEST of those, not highest. n8n asks for `>=24` and the panel was
+         * naming Node 26.9.0 simply because it was the newest thing on offer —
+         * a requirement n8n does not have, on the least-tested major, for an
+         * application that names 24 as its floor. The install list already
+         * hides end-of-life lines, so the lowest offered is still supported.
          */
-        suggest: highestInRange(available[runtime.installableField], range),
+        suggest: lowestInRange(available[runtime.installableField], range),
       },
     ];
   });
