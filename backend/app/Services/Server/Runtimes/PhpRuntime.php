@@ -146,6 +146,81 @@ class PhpRuntime implements Runtime
         return in_array($version, $this->versions->versions(), true);
     }
 
+    /**
+     * Base packages this version is meant to have and does not.
+     *
+     * 🔴 "Installed" and "usable" are not the same question, and the panel was
+     * only ever asking the first. Found on a real OpenLiteSpeed server: the
+     * `openlitespeed` package pulls in `lsphp83` as its **own dependency**, so
+     * a version nobody asked for appears in the list as a bare interpreter —
+     * no curl, no sqlite3, no redis, no intl, no pgsql. Offered in the version
+     * picker it looks identical to a healthy one, and a site put on it fails
+     * later with "curl is not installed", which is exactly the report this
+     * whole sequence started from.
+     *
+     * The same shape exists on the FPM stacks: a hand-installed `php8.1-fpm`
+     * has the interpreter and none of the set.
+     *
+     * Only packages the index actually has are reported. Several base names do
+     * not exist on LSPHP because LiteSpeed compiles them in — listing
+     * `lsphp83-mbstring` as "missing" would be alarming and false, and the
+     * order of the conditions below keeps `apt-cache` off the common path
+     * where nothing is missing at all.
+     *
+     * @return array<int, string>
+     */
+    public function missingBasePackages(string $version): array
+    {
+        if (! $this->installed($version)) {
+            return [];
+        }
+
+        $packages = $this->stack->versionPackages($version);
+
+        // The interpreter itself is what `installed()` means, so its presence
+        // is already established and its absence is a different state.
+        array_shift($packages);
+
+        $present = $this->installedPackages($packages);
+
+        return array_values(array_filter(
+            $packages,
+            fn (string $package): bool => ! in_array($package, $present, true)
+                && $this->packageExists($package),
+        ));
+    }
+
+    /**
+     * Which of these packages dpkg reports as installed.
+     *
+     * One call for the whole set rather than one per package, for the reason
+     * `PhpExtensionManager::packageModules()` gives about rendering a screen
+     * with eighty subprocesses.
+     *
+     * dpkg-query exits non-zero when *any* name is unknown, which is the
+     * ordinary case here — that is the question being asked, not a failure, so
+     * those codes are expected and the output is read either way.
+     *
+     * @param  array<int, string>  $packages
+     * @return array<int, string>
+     */
+    private function installedPackages(array $packages): array
+    {
+        if ($packages === []) {
+            return [];
+        }
+
+        $result = $this->serverOps->run(
+            ['dpkg-query', '-W', '-f=${Package} ${Status}\n', ...$packages],
+            ['feature' => 'runtime', 'op' => 'php_packages_installed', 'version' => ''],
+            expectedExitCodes: [1, 2],
+        );
+
+        preg_match_all('/^(\S+) install ok installed$/m', $result->output(), $matches);
+
+        return $matches[1] ?? [];
+    }
+
     public function binaryPath(string $version): string
     {
         return $this->stack->binaryPath($version);

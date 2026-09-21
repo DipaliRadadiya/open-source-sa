@@ -62,6 +62,16 @@ class PhpOverview
                     // link the user to a service that does not exist.
                     'service' => $this->stack->serviceName($version['version']),
                     'ini_path' => $this->versions->iniPath($version['version']),
+                    // Base packages this version should have and does not.
+                    //
+                    // Empty for every version the panel installed. Non-empty
+                    // means the interpreter arrived some other way — as an apt
+                    // dependency of the web server, or by hand — and is a bare
+                    // one: no curl, no sqlite3, no redis. Published so the
+                    // screen can say so rather than showing it indis-
+                    // tinguishably beside a healthy version, and so the user
+                    // knows pressing Install on it will do something.
+                    'missing_packages' => $this->runtime->missingBasePackages($version['version']),
                 ];
             }, $this->runtime->versions()),
             array_map(fn (string $version) => [

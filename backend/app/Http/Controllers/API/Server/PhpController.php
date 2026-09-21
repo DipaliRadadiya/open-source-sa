@@ -56,7 +56,19 @@ class PhpController extends Controller
 
         // Idempotent: asking for a version that is already here is a no-op
         // rather than an error, since the outcome the caller wanted is true.
-        if ($php->installed($version)) {
+        //
+        // 🔴 But "already here" has to mean *usable*, not merely present. The
+        // `openlitespeed` package installs `lsphp83` as its own dependency, so
+        // the panel lists a version it never set up: a bare interpreter with
+        // no curl, sqlite3, redis, intl or pgsql. Checking only `installed()`
+        // answered "already installed" and did nothing, which left the one
+        // control that could have fixed it refusing to act — on a version the
+        // panel was still offering for new sites.
+        //
+        // Falling through to the install completes it: apt is idempotent, so
+        // this is the existing path rather than a new one, and "Install PHP
+        // 8.3" now means what the person pressing it meant.
+        if ($php->installed($version) && $php->missingBasePackages($version) === []) {
             return response()->json(['message' => __('php.already_installed', ['version' => $version])], 200);
         }
 

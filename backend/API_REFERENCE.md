@@ -5079,6 +5079,7 @@ Omit `password` to leave it unchanged. `{"remove_password": true}` clears it.
     "version": "8.4", "path": "/usr/bin/php8.4", "is_default": true,
     "source": "apt", "in_use_by_panel": true, "in_use_by": 0,
     "service": "php8.4-fpm", "ini_path": "/etc/php/8.4/fpm/php.ini",
+    "missing_packages": [],
     "status": "ready", "started_at": null, "reason": null, "message": null, "reference": null
   }, {
     "version": "8.3", "status": "installing", "started_at": "29-07-2026 05:20:11"
@@ -5092,6 +5093,45 @@ Omit `password` to leave it unchanged. `{"remove_password": true}` clears it.
 **`failed` rows persist** until retried. `reason`: `package_not_found | apt_lock | no_space | network | worker | enable_failed | unknown`. `message` is localised. `reference` locates raw apt output.
 
 **`installing` and `removing` rows have no other fields** — the requested filesystem state is still changing.
+
+🔴 **`missing_packages` — a version that is present but not usable. Needs UI.**
+
+Empty for every version the panel installed. **Non-empty means the interpreter
+arrived some other way and is a bare one** — no curl, no sqlite3, no redis, no
+intl, no pgsql.
+
+This is not hypothetical. On OpenLiteSpeed the `openlitespeed` package pulls in
+`lsphp83` as its *own* apt dependency, so a fresh server lists a PHP 8.3 the
+panel never set up. Measured on a real box, 2026-09-21:
+
+```
+8.3 (apt dependency)   curl ✗  sqlite3 ✗  redis ✗  intl ✗  pgsql ✗
+8.4 (panel installed)  curl ✓  sqlite3 ✓  redis ✓  intl ✓  pgsql ✓
+```
+
+In the picker the two are indistinguishable. A site placed on 8.3 then fails
+with *"curl is not installed"* — a real customer report.
+
+**What the frontend needs to do:**
+
+1. **Show it.** A version with `missing_packages.length > 0` is *incomplete*,
+   not ready — e.g. `Incomplete — 5 extensions missing`. Today the row's status
+   line is built only from `in_use_by_panel`, `is_default` and `in_use_by`, so
+   a crippled version renders identically to a healthy one.
+2. **Give it an action.** `POST /php/versions {"version":"8.3"}` now **repairs**
+   such a version instead of answering *"already installed"* — apt is
+   idempotent, so it is the same endpoint the install button already calls.
+   ⚠️ The install picker currently sets `disabled={option.installed}`, so an
+   incomplete version cannot be selected there; the action has to live on the
+   version row itself.
+3. **Warn where it bites.** The site-create PHP picker is where an incomplete
+   version causes the damage, so flagging it there is worth more than flagging
+   it on the PHP screen.
+
+Names are apt package names (`php8.3-curl`, `lsphp83-curl`), already filtered
+to ones the index actually has — LiteSpeed compiles `mbstring`, `xml`, `zip`,
+`gd`, `bcmath` and `soap` into the interpreter, so those never appear here even
+though they have no package.
 
 ---
 

@@ -35,11 +35,11 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->phpDir));
 
-function fakePhp(string $default = '8.4', bool $ok = true, array $absent = []): ArrayObject
+function fakePhp(string $default = '8.4', bool $ok = true, array $absent = [], bool $bare = false): ArrayObject
 {
     $runs = new ArrayObject;
 
-    Process::fake(function ($process) use ($runs, $default, $ok, $absent) {
+    Process::fake(function ($process) use ($runs, $default, $ok, $absent, $bare) {
         $runs[] = ['command' => $process->command, 'env' => $process->environment ?? []];
         $command = $process->command;
 
@@ -68,6 +68,23 @@ function fakePhp(string $default = '8.4', bool $ok = true, array $absent = []): 
             ),
             ($command[0] ?? '') === 'apt-cache' => Process::result(
                 output: "php8.2-fpm - server-side scripting\nphp8.3-fpm - server-side scripting\nphp8.4-fpm - server-side scripting\n"
+            ),
+            // `dpkg-query -W` — which of the base packages are actually on the
+            // box. A version the panel installed has all of them, which is the
+            // default here; `$bare` models the case that prompted this, a
+            // version that arrived as somebody else's apt dependency with only
+            // the interpreter.
+            //
+            // dpkg-query exits non-zero when a name is unknown, and that is
+            // the ordinary answer rather than a failure — modelled, because a
+            // fake that always exits 0 would hide the expected-exit handling.
+            ($command[0] ?? '') === 'dpkg-query' && ($command[1] ?? '') === '-W' => Process::result(
+                output: $bare
+                    ? ''
+                    : collect(array_slice($command, 3))
+                        ->map(fn (string $package) => "{$package} install ok installed")
+                        ->implode("\n")."\n",
+                exitCode: $bare ? 1 : 0,
             ),
             default => Process::result(exitCode: 0),
         };
@@ -535,4 +552,85 @@ it('always installs the driver for the panel\'s own database', function () {
     // scheduler, the queue — the moment it becomes the default. A parity test
     // says "the lists match"; this says which package must never leave.
     expect((array) config('server.runtimes.php.base_packages'))->toContain('sqlite3');
+});
+
+/*
+| A version the panel did not install.
+|
+| 🔴 Found on a real OpenLiteSpeed server, 2026-09-21. The `openlitespeed`
+| package pulls in `lsphp83` as its OWN dependency, so the panel listed a
+| version nobody asked for — and it was a bare interpreter:
+|
+|   PHP 8.3 (apt dependency)   curl ✗  sqlite3 ✗  redis ✗  intl ✗  pgsql ✗
+|   PHP 8.4 (panel installed)  curl ✓  sqlite3 ✓  redis ✓  intl ✓  pgsql ✓
+|
+| In the version picker the two look identical. A site put on 8.3 then fails
+| with "curl is not installed" — the report this whole sequence began from,
+| reproduced on a brand-new server with every earlier fix in place.
+|
+| And the one control that could have repaired it refused to act: `store()`
+| asked `installed()`, which only means the interpreter exists.
+|
+| The same shape exists on FPM — a hand-installed php8.1-fpm has an
+| interpreter and none of the set — so none of this is OpenLiteSpeed-specific.
+*/
+
+it('reports the base packages a half-installed version is missing', function () {
+    $runs = fakePhp(bare: true);
+
+    $missing = app(PhpRuntime::class)->missingBasePackages('8.3');
+
+    expect($missing)->not->toBeEmpty()
+        ->and($missing)->toContain('php8.3-curl')
+        ->and($missing)->toContain('php8.3-sqlite3')
+        // Never the interpreter: its presence is what "installed" means, and
+        // its absence would be a different state entirely.
+        ->and($missing)->not->toContain('php8.3-fpm')
+        ->and(collect($runs)->pluck('command')->contains(fn ($c) => ($c[0] ?? '') === 'dpkg-query'))->toBeTrue();
+});
+
+it('reports nothing missing for a version the panel installed', function () {
+    fakePhp();
+
+    expect(app(PhpRuntime::class)->missingBasePackages('8.4'))->toBe([]);
+});
+
+it('never reports a package the index does not have', function () {
+    // LiteSpeed compiles mbstring, xml, zip, gd, bcmath and soap into the
+    // interpreter, so those names exist nowhere. Calling them "missing" would
+    // be alarming and false — the version has the capability.
+    fakePhp(bare: true, absent: ['php8.3-mbstring', 'php8.3-soap']);
+
+    $missing = app(PhpRuntime::class)->missingBasePackages('8.3');
+
+    expect($missing)->not->toContain('php8.3-mbstring')
+        ->and($missing)->not->toContain('php8.3-soap')
+        ->and($missing)->toContain('php8.3-curl');
+});
+
+it('completes a half-installed version instead of calling it done', function () {
+    // The bug: "Install PHP 8.3" answered "already installed" and did nothing,
+    // on a version the panel was still offering for new sites. apt is
+    // idempotent, so falling through to the install is the existing path.
+    $this->seed(PermissionSeeder::class);
+    $admin = User::factory()->admin()->create();
+
+    fakePhp(bare: true);
+
+    $this->actingAs($admin)
+        ->postJson('/api/php/versions', ['version' => '8.3'])
+        ->assertStatus(202);
+});
+
+it('still treats a complete version as done', function () {
+    // The pre-existing behaviour, which must not regress: a healthy version
+    // is a no-op, not an apt run on every press.
+    $this->seed(PermissionSeeder::class);
+    $admin = User::factory()->admin()->create();
+
+    fakePhp();
+
+    $this->actingAs($admin)
+        ->postJson('/api/php/versions', ['version' => '8.4'])
+        ->assertStatus(200);
 });
