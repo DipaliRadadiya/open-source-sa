@@ -1998,7 +1998,8 @@
       "incomplete": "Неполная",
       "incompleteDetail": "Отсутствуют {packages} — её установил другой пакет, а не панель.",
       "completeInstall": "Завершить установку",
-      "completing": "Завершается установка PHP {version}…"
+      "completing": "Завершается установка PHP {version}…",
+      "incompleteDefault": "Сначала завершите установку — PHP по умолчанию работает везде, где версия не задана явно."
     },
     "extensions": {
       "title": "Расширения",

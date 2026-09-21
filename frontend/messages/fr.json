@@ -1998,7 +1998,8 @@
       "incomplete": "Incomplète",
       "incompleteDetail": "Il manque {packages} — elle a été installée par un autre paquet, pas par le panneau.",
       "completeInstall": "Compléter l'installation",
-      "completing": "Finalisation de PHP {version}…"
+      "completing": "Finalisation de PHP {version}…",
+      "incompleteDefault": "Complétez d'abord l'installation — le PHP par défaut est celui qui s'exécute quand rien ne fixe de version."
     },
     "extensions": {
       "title": "Extensions",

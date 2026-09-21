@@ -101,9 +101,35 @@ test("the create form warns about the version actually chosen", () => {
   );
 });
 
+test("an incomplete version cannot be made the server default", () => {
+  /*
+   * The API allows it. That is not a reason to offer it: the default is what
+   * `php` resolves to for everything that does not pin a version — cron jobs,
+   * composer, anything run by hand over SSH — so making the half-installed one
+   * default takes curl, redis and pgsql away from all of it at once.
+   *
+   * Greyed with the reason stated, not hidden. The row already says the version
+   * is incomplete and offers the repair; a control that vanishes when it would
+   * be wrong leaves the reader wondering where it went.
+   */
+  const row = read("components/php/version-summary.jsx");
+  const start = row.indexOf("{!showMakeDefault ? null : (");
+  assert.ok(start > 0, "the make-default branch moved");
+  const branch = row.slice(start, start + 900);
+  assert.match(branch, /disabled=\{[^}]*\|\| incomplete\}/, "incomplete must disable it");
+  assert.match(branch, /incomplete \? t\("versions\.incompleteDefault"\) : null/, "and state why");
+
+  for (const locale of LOCALES) {
+    assert.ok(
+      messages[locale].php.versions.incompleteDefault?.trim(),
+      `${locale} php.versions.incompleteDefault`,
+    );
+  }
+});
+
 test("every new string exists in all eight locales", () => {
   for (const locale of LOCALES) {
-    for (const key of ["incomplete", "incompleteDetail", "completeInstall", "completing"]) {
+    for (const key of ["incomplete", "incompleteDetail", "completeInstall", "completing", "incompleteDefault"]) {
       assert.ok(messages[locale].php.versions[key]?.trim(), `${locale} php.versions.${key}`);
     }
     assert.ok(

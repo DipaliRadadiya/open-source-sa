@@ -1998,7 +1998,8 @@
       "incomplete": "不完全",
       "incompleteDetail": "{packages} がありません。パネルではなく別のパッケージによってインストールされたためです。",
       "completeInstall": "インストールを完了する",
-      "completing": "PHP {version} を完了しています…"
+      "completing": "PHP {version} を完了しています…",
+      "incompleteDefault": "先にインストールを完了してください。デフォルトの PHP は、バージョンが指定されていないすべての処理で使われます。"
     },
     "extensions": {
       "title": "拡張機能",

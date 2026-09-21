@@ -1998,7 +1998,8 @@
       "incomplete": "अधूरा",
       "incompleteDetail": "{packages} मौजूद नहीं हैं — इसे पैनल ने नहीं, किसी दूसरे पैकेज ने इंस्टॉल किया था।",
       "completeInstall": "इंस्टॉलेशन पूरा करें",
-      "completing": "PHP {version} पूरा किया जा रहा है…"
+      "completing": "PHP {version} पूरा किया जा रहा है…",
+      "incompleteDefault": "पहले इंस्टॉलेशन पूरा करें — डिफ़ॉल्ट PHP वही चलता है जहाँ कोई वर्शन तय नहीं किया गया हो।"
     },
     "extensions": {
       "title": "एक्सटेंशन",

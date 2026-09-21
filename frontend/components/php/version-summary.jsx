@@ -247,12 +247,26 @@ export function VersionSummary({
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {children}
 
+            {/* An incomplete version cannot become the server default.
+             *
+             * `php` would then resolve to an interpreter with no curl, redis
+             * or pgsql for everything that does not pin its own version —
+             * cron jobs, composer, anything run by hand over SSH. The API
+             * allows it; that is not a reason to offer it, and a greyed
+             * control with a stated reason beats one that quietly makes the
+             * server worse. */}
             {!showMakeDefault ? null : (
-              <ReasonTooltip reason={notReadyReason ?? (canManage ? null : t("noPermission"))}>
+              <ReasonTooltip
+                reason={
+                  notReadyReason ??
+                  (incomplete ? t("versions.incompleteDefault") : null) ??
+                  (canManage ? null : t("noPermission"))
+                }
+              >
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!canManage || pending || Boolean(notReadyReason)}
+                  disabled={!canManage || pending || Boolean(notReadyReason) || incomplete}
                   onClick={makeDefault}
                 >
                   {running === "default" ? <Loader2 className="size-4 animate-spin" /> : null}

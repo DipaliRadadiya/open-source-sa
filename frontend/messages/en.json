@@ -1998,7 +1998,8 @@
       "incomplete": "Incomplete",
       "incompleteDetail": "Missing {packages} — it was installed by another package, not by the panel.",
       "completeInstall": "Complete install",
-      "completing": "Completing PHP {version}…"
+      "completing": "Completing PHP {version}…",
+      "incompleteDefault": "Complete the install first — the default PHP is what runs when nothing pins a version."
     },
     "extensions": {
       "title": "Extensions",

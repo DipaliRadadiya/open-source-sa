@@ -1998,7 +1998,8 @@
       "incomplete": "Unvollständig",
       "incompleteDetail": "Es fehlen {packages} – installiert wurde sie von einem anderen Paket, nicht vom Panel.",
       "completeInstall": "Installation vervollständigen",
-      "completing": "PHP {version} wird vervollständigt …"
+      "completing": "PHP {version} wird vervollständigt …",
+      "incompleteDefault": "Vervollständigen Sie zuerst die Installation – das Standard-PHP läuft überall dort, wo keine Version festgelegt ist."
     },
     "extensions": {
       "title": "Erweiterungen",
