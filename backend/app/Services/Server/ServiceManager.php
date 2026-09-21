@@ -93,14 +93,21 @@ class ServiceManager
     }
 
     /**
-     * The display shape for one catalog entry, or null when it isn't installed.
+     * The display shape for one catalog entry, or null when it isn't installed
+     * — or when it is only an alias of a unit another entry owns.
      *
      * @param  array{key: string, unit: string, label: string}  $service
      * @return array<string, mixed>|null
      */
     public function describe(array $service): ?array
     {
-        return $this->describeState($service, $this->inspect($service['unit']));
+        $state = $this->inspect($service['unit']);
+
+        if ($state['installed'] && $this->isAliasOfAnotherEntry($service, $state['id'])) {
+            return null;
+        }
+
+        return $this->describeState($service, $state);
     }
 
     /**
@@ -447,6 +454,54 @@ class ServiceManager
                 'TasksCurrent' => $this->property($output, 'TasksCurrent'),
             ],
         ];
+    }
+
+    /**
+     * Is this entry only an alias of a unit another catalog entry owns?
+     *
+     * Packages expose compatibility aliases: MariaDB ships `mysql.service` as
+     * an alias of `mariadb.service`, so probing `mysql` on a box with no MySQL
+     * at all reports a loaded, active unit. {@see list()} has always folded
+     * that away — one daemon, one row — but the single-entry path did not, and
+     * the two paths disagreeing is the whole bug:
+     *
+     *   PUT /services/mysql {"action":"restart"}  ->  200, restarts MariaDB
+     *
+     * on a server whose own service list contains no `mysql` row, and whose
+     * activity log then reads "Restarted the MySQL service". Confirmed live on
+     * Ubuntu 26.04: MariaDB's ActiveEnterTimestamp moved, and `mysql-server`
+     * was never installed. Stop would have been the same call.
+     *
+     * Ownership is decided on unit names alone — no extra systemctl call — so
+     * this costs nothing on a path that already inspected the unit.
+     *
+     * Only an entry that another entry *names canonically* is refused. Where no
+     * configured entry owns the resolved unit there is nobody better to answer,
+     * and refusing would remove a service the panel legitimately manages; that
+     * matches list(), which keeps the first alias in the same situation.
+     *
+     * @param  array{key: string, unit: string, label: string}  $service
+     */
+    private function isAliasOfAnotherEntry(array $service, ?string $unitId): bool
+    {
+        // Self-canonical: the unit resolved to itself, so it is not an alias.
+        //
+        // A short-circuit, not a rule — removing it leaves every test green,
+        // because the loop below reaches the same answer for every catalog we
+        // ship. It is kept for the cost (no catalog scan on the common path)
+        // and because it is the only thing standing between a catalog that
+        // named one unit twice and both entries refusing each other.
+        if ($unitId === null || $this->systemdId($service['unit']) === $unitId) {
+            return false;
+        }
+
+        foreach ($this->catalog() as $other) {
+            if ($other['key'] !== $service['key'] && $this->systemdId($other['unit']) === $unitId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function systemdId(string $unit): string

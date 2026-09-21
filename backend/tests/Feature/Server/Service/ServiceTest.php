@@ -378,3 +378,66 @@ it('does not probe a service that has no health command', function () {
     // only where the catalog asks for it.
     expect($probed)->not->toContain('pg_isready');
 });
+
+/*
+ * Acting on an alias.
+ *
+ * `list()` folded `mysql.service` into the MariaDB row from the start, and a
+ * test above pins that. The single-entry path did not, so the two disagreed:
+ * the services screen showed no MySQL row while `PUT /services/mysql` returned
+ * 200 and restarted MariaDB, logging "Restarted the MySQL service".
+ *
+ * Found on a live Ubuntu 26.04 box where `mysql-server` was never installed.
+ */
+it('refuses to act on a service key that is only an alias of another entry', function () {
+    fakeServices([
+        'mysql' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'id' => 'mariadb.service'],
+        'mariadb' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'id' => 'mariadb.service'],
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/services/mysql', ['action' => 'restart'])
+        ->assertNotFound();
+});
+
+it('still acts on the entry that owns the unit the alias points at', function () {
+    fakeServices([
+        'mysql' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'id' => 'mariadb.service'],
+        'mariadb' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'id' => 'mariadb.service'],
+    ]);
+
+    // The refusal must be aimed at the alias alone. Refusing both would trade
+    // a wrong action for a service nobody can restart.
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/services/mariadb', ['action' => 'restart'])
+        ->assertOk()
+        ->assertJsonPath('service.key', 'mariadb');
+});
+
+it('keeps acting on a service whose unit is merely named differently', function () {
+    // `redis` -> `redis-server` is a rename, not an alias: the unit resolves to
+    // itself. Live on the OLS box, so a fix that confused the two would break a
+    // service that works today.
+    fakeServices([
+        'redis-server' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'id' => 'redis-server.service'],
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/services/redis', ['action' => 'restart'])
+        ->assertOk()
+        ->assertJsonPath('service.key', 'redis');
+});
+
+it('acts on an aliased unit when no configured entry owns it', function () {
+    // Nobody better to answer: refusing here would drop a service the panel
+    // legitimately manages, which is why ownership is the test rather than
+    // "the id differs". Mirrors list(), which keeps the first alias.
+    fakeServices([
+        'supervisor' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'id' => 'supervisord.service'],
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/services/supervisor', ['action' => 'restart'])
+        ->assertOk()
+        ->assertJsonPath('service.key', 'supervisor');
+});
