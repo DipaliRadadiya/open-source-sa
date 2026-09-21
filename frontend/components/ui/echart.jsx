@@ -12,6 +12,7 @@ import {
   DataZoomComponent,
   GridComponent,
   LegendComponent,
+  MarkLineComponent,
   TooltipComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
@@ -36,6 +37,11 @@ echarts.use([
   LegendComponent,
   DataZoomComponent,
   AriaComponent,
+  // Capacity references — the "4 cores" rule on the load chart. Tree-shaking
+  // is why this list exists, and it is also why a missing entry is invisible:
+  // ECharts drops an unregistered component's config without a warning, so
+  // the load chart asked for a markLine for months and silently got nothing.
+  MarkLineComponent,
   CanvasRenderer,
 ]);
 
