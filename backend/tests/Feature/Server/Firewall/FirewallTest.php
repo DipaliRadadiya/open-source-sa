@@ -637,3 +637,43 @@ it('denies a viewer without manage from adding a rule', function () {
         ->postJson('/api/firewall/rules', ['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow'])
         ->assertForbidden();
 });
+
+/*
+ * A newly created rule must not report itself as off.
+ *
+ * `enabled` defaults to true in the database, and a model built by `create()`
+ * never learns a database default — so the 201 body said `enabled: false`
+ * while ufw already had the port open. Every later read said true. A client
+ * rendering the create response, which is the natural thing to do, showed the
+ * user a disabled rule for an open port.
+ *
+ * Found by driving the real API on a live box. The existing create test above
+ * asserts origin, protected and summary — everything except the field that was
+ * wrong, which is why this survived to be found by hand.
+ */
+it('reports a newly created rule as enabled, because ufw has already applied it', function () {
+    fakeUfw();
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 8081, 'protocol' => 'tcp', 'action' => 'allow'])
+        ->assertCreated()
+        ->assertJsonPath('rule.enabled', true);
+
+    // The response and the row have to agree. Asserting only the response
+    // would pass against a model that lies in both places.
+    expect(FirewallRule::find($response->json('rule.id'))->enabled)->toBeTrue();
+
+    Process::assertRan(fn ($p) => $p->command === ['ufw', 'allow', '8081/tcp']);
+});
+
+it('keeps the model default and the column default saying the same thing', function () {
+    // Read as source text rather than through the schema: the point is that
+    // the two declarations agree, and a test that asked the database would be
+    // asking the very default the model is supposed to mirror.
+    $migration = file_get_contents(
+        collect(glob(database_path('migrations/*_create_firewall_rules_table.php')))->firstOrFail()
+    );
+
+    expect($migration)->toContain("boolean('enabled')->default(true)")
+        ->and((new FirewallRule)->enabled)->toBeTrue();
+});
