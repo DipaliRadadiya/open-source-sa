@@ -46,7 +46,7 @@ function querySeries(metrics) {
 
 function ChartNotice({ message }) {
   return (
-    <Card>
+    <Card className="gap-0 py-0">
       <CardContent className="flex items-center gap-3 py-5 text-sm text-muted-foreground">
         <Activity className="size-4 shrink-0" />
         <p>{message}</p>

@@ -38,7 +38,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
 
   if (failed || !ioncube) {
     return (
-      <Card>
+      <Card className="gap-0 py-0">
         <CardContent className="px-5 py-4 text-sm text-muted-foreground">
           {t("loadFailed")}
         </CardContent>
@@ -81,7 +81,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   }
 
   return (
-    <Card>
+    <Card className="gap-0 py-0">
       <CardContent className="flex flex-col gap-4 px-5 py-4 @2xl:flex-row @2xl:items-start @2xl:justify-between">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">

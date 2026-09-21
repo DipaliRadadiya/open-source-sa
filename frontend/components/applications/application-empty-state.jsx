@@ -87,7 +87,7 @@ export function ApplicationEmptyState({ canManage = false, compact = false }) {
   }
 
   return (
-    <Card className="overflow-hidden border-dashed bg-gradient-to-br from-primary/[0.07] via-background to-background shadow-none">
+    <Card className="gap-0 overflow-hidden border-dashed bg-gradient-to-br from-primary/[0.07] via-background to-background py-0 shadow-none">
       <CardContent className="grid gap-8 px-5 py-8 sm:px-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)] lg:items-center">
         <div className="max-w-xl space-y-5">
           <span className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm"><Globe2 className="size-5" /></span>

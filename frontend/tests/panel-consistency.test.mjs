@@ -150,3 +150,25 @@ test("a stat card's value and its hint stack before they can overflow", () => {
   // rem would re-open the same off-by-a-root-font-size question.
   assert.doesNotMatch(card, /@max-\[[\d.]+rem\]\/stat/);
 });
+
+test("a card's vertical padding is set once, not twice", () => {
+  /*
+   * Krishna, on the ionCube card: "why it has too much space on top and bottom
+   * padding". Measured: 32px each side where every other card has 16.
+   *
+   * `Card` carries `py-(--card-spacing)`; `CardContent` sets only `px`. So a
+   * `py-4` on the content does not replace the card's padding, it adds a
+   * second one. Fifteen cards already avoided this by handing the padding over
+   * — `<Card className="gap-0 py-0">` — and eight did not.
+   *
+   * ⚠️ I read it backwards first and stripped the padding from all 23, which
+   * would have left the fifteen correct ones with none at all. The question is
+   * not "does the content set py" but "does exactly one of the pair set it".
+   */
+  const pkg = JSON.parse(read("package.json"));
+  assert.match(pkg.scripts.lint, /check-card-padding\.mjs/, "not in the lint chain");
+  const out = execFileSync("node", ["scripts/check-card-padding.mjs"], { encoding: "utf8" });
+  assert.match(out, /card padding ok/);
+  // The count is asserted so deleting the cards is not a way to pass.
+  assert.match(out, /\d+ content-padded cards/);
+});

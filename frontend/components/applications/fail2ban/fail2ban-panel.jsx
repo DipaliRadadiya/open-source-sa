@@ -192,7 +192,7 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
   if (!config && !editing) {
     return (
       <div className="max-w-4xl">
-        <Card className="overflow-hidden shadow-sm">
+        <Card className="gap-0 overflow-hidden py-0 shadow-sm">
           <CardContent className="flex flex-col items-center gap-3 px-6 py-10 text-center">
             <span className="flex size-11 items-center justify-center rounded-lg bg-muted">
               <ShieldOff className="size-5 text-muted-foreground" />

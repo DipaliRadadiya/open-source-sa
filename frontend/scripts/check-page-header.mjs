@@ -28,6 +28,10 @@ const ALLOWED = new Map([
   ],
   ["app/(setup)/setup/page.jsx", "onboarding card: an icon, then the heading"],
   ["components/sections/not-found-content.jsx", "centred 404, not a page shell"],
+  [
+    "components/integrations/storage/google-drive-callback.jsx",
+    "centred OAuth result: the heading is the outcome, so each state owns it",
+  ],
   ["components/ui/page-header.jsx", "the component itself"],
 ]);
 

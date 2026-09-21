@@ -42,7 +42,7 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
 
   if (rows.length === 0) {
     return (
-      <Card className="shadow-sm">
+      <Card className="gap-0 py-0 shadow-sm">
         <CardContent className="py-10 text-center text-sm text-muted-foreground">
           {t("noMatches")}
         </CardContent>
