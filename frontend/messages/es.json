@@ -1727,7 +1727,6 @@
         "none": "Este servidor no tiene archivo de swap.",
         "size": "Cuánta",
         "sizeHint": "1–2 GB basta para la mayoría de servidores. «Desactivada» la elimina.",
-        "floorReason": "Al menos {minimum} MB en este servidor: el panel necesita {required} MB entre memoria y swap para compilar su propia actualización.",
         "saved": "Swap actualizada.",
         "confirmTitle": "¿Desactivar la swap?",
         "confirmDescription": "Ahora mismo hay {used} en uso. Eso tendrá que caber en la RAM, y si no cabe el kernel empezará a matar procesos.",

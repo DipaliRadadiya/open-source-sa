@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
@@ -10,18 +9,6 @@ import { Button } from "@/components/ui/button";
 import { completeDriveConnect } from "@/lib/api/storage";
 import { apiMessage } from "@/lib/api/error-message";
 
-/*
- * A real link, not `router.push` in an onClick.
- *
- * Reported as "Back to Storage destinations button not working". This is the
- * only navigation button in the panel that was written as a click handler —
- * every other one is `<Button asChild><Link>` — and it sits on a route that
- * has just called `router.refresh()` on a force-dynamic page, so a push queued
- * behind that transition does nothing visible.
- *
- * An anchor does not depend on the router being idle. It also restores
- * middle-click and open-in-new-tab, which an onClick silently swallows.
- */
 const STORAGE_PAGE = "/integrations/storage";
 
 /**
@@ -100,8 +87,8 @@ export function GoogleDriveCallback({ code, state, deniedError }) {
           {t("connected")}
         </p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("scopeNote")}</p>
-        <Button asChild size="sm" className="mt-3">
-          <Link href={STORAGE_PAGE}>{t("backToStorage")}</Link>
+        <Button type="button" size="sm" className="mt-3" onClick={() => router.push(STORAGE_PAGE)}>
+          {t("backToStorage")}
         </Button>
       </div>
     );
@@ -116,8 +103,14 @@ export function GoogleDriveCallback({ code, state, deniedError }) {
       {message ? <p className="mt-1 text-xs leading-relaxed">{message}</p> : null}
       {/* Back to the destination, not a retry button here: starting again needs
           a fresh `state`, which only the Connect button on the row can issue. */}
-      <Button asChild variant="outline" size="sm" className="mt-3">
-        <Link href={STORAGE_PAGE}>{t("backToStorage")}</Link>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="mt-3"
+        onClick={() => router.push(STORAGE_PAGE)}
+      >
+        {t("backToStorage")}
       </Button>
     </div>
   );

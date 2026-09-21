@@ -1727,7 +1727,6 @@
         "none": "Este servidor não tem arquivo de swap.",
         "size": "Quanto",
         "sizeHint": "1–2 GB é suficiente para a maioria dos servidores. Desligado remove.",
-        "floorReason": "Pelo menos {minimum} MB neste servidor — o painel precisa de {required} MB somando memória e swap para compilar a própria atualização.",
         "saved": "Swap atualizado.",
         "confirmTitle": "Desativar o swap?",
         "confirmDescription": "{used} está em uso agora. Isso precisa caber na RAM, e se não couber o kernel começa a matar processos.",

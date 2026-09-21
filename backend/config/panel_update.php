@@ -36,19 +36,7 @@ return [
      * passes with the build-worker cap now set in next.config.mjs, and it is
      * checked against available memory *plus free swap* — see
      * UpdatePreflight::freeMemory(), and install.sh's configure_swap(), which
-     * sizes the swapfile to clear it.
-     *
-     * install.sh targets `BUILD_MEMORY_MB=3072`, deliberately above this, so a
-     * freshly installed box has headroom rather than sitting exactly on the
-     * line. The two are *not* the same constant and must not be assumed equal —
-     * an earlier version of this comment said they were. What must hold is
-     * `BUILD_MEMORY_MB >= min_free_memory_mb`; `SwapFloorMatchesInstallerTest`
-     * fails if an edit to either inverts that.
-     *
-     * It is also the floor under the Memory screen: `SwapSettings::minimumMb()`
-     * refuses to leave a machine with less swap than this number needs, because
-     * the check below is **advisory** — an update on a box that cannot build
-     * proceeds anyway and is OOM-killed part-way.
+     * sizes the swapfile to clear this same number.
      *
      * The old default of 768 MB was not a floor at all: it passed on boxes
      * where the build was certain to be OOM-killed minutes later, which is the

@@ -178,22 +178,3 @@ test("the redirect URI sits in the step that registers it", () => {
 
   assert.match(step4, /GoogleDriveRedirectUri/);
 });
-
-/*
- * "Back to Storage destinations button not working."
- *
- * It was the only navigation button in the panel written as `router.push` in
- * an onClick — everything else is `<Button asChild><Link>`. On this route that
- * push follows a `router.refresh()` on a force-dynamic page, so it can queue
- * behind that transition and do nothing visible.
- *
- * An anchor does not depend on the router being idle, and it restores
- * middle-click and open-in-new-tab, which an onClick silently swallows.
- */
-test("leaving the callback page is a link, not a click handler", () => {
-  const source = read(CALLBACK_COMPONENT);
-
-  assert.match(source, /<Button asChild/);
-  assert.match(source, /<Link href=\{STORAGE_PAGE\}>/);
-  assert.doesNotMatch(source, /onClick=\{\(\) => router\.push/);
-});

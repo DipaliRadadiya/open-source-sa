@@ -56,19 +56,6 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
     defaultValues: defaults,
   });
 
-  // The smallest swap this machine may be left with. The panel builds its own
-  // frontend to update itself, and below `build_requirement_mb` of RAM + swap
-  // that build is OOM-killed — so "Off" on a small VPS is a button that removes
-  // the panel's ability to update. Computed per server, and 0 whenever the
-  // machine clears the requirement without our file, in which case nothing here
-  // changes at all.
-  const minimumMb = swap?.minimum_mb ?? 0;
-  const requiredMb = swap?.build_requirement_mb ?? 0;
-  const floorReason =
-    minimumMb > 0
-      ? t("swap.floorReason", { minimum: minimumMb, required: requiredMb })
-      : null;
-
   const sizeMb = useWatch({ control: form.control, name: "size_mb" });
   const matchesPreset = PRESETS.includes(Number(sizeMb));
   // Custom stays open once chosen, so the field doesn't vanish under the cursor
@@ -160,7 +147,7 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
               render={({ field }) => (
                 <Row
                   label={t("swap.size")}
-                  hint={floorReason ?? t("swap.sizeHint")}
+                  hint={t("swap.sizeHint")}
                   error={validationMessage(
                     tv,
                     form.formState.errors.size_mb?.message,
@@ -175,35 +162,22 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                     disabled={!canManage}
                     className="flex-wrap justify-start gap-2"
                   >
-                    {PRESETS.map((mb) => {
-                      // Below the floor: offered but refused, and the tooltip
-                      // says why. Hiding them instead would leave someone
-                      // hunting for an "Off" that used to be there, and the
-                      // rule is worth stating rather than concealing.
-                      const belowFloor = mb < minimumMb;
-
-                      return (
-                        <DisabledReasonProvider
-                          key={mb}
-                          reason={belowFloor ? floorReason : null}
-                        >
-                          <ToggleGroupItem
-                            value={String(mb)}
-                            className="px-4"
-                            disabled={belowFloor}
-                          >
-                            {mb === 0
-                              ? t("swap.off")
-                              : t("swap.gb", { gb: mb / 1024 })}
-                            {mb !== 0 && mb === recommendedMb ? (
-                              <span className="text-xs text-muted-foreground">
-                                {t("swap.recommended")}
-                              </span>
-                            ) : null}
-                          </ToggleGroupItem>
-                        </DisabledReasonProvider>
-                      );
-                    })}
+                    {PRESETS.map((mb) => (
+                      <ToggleGroupItem
+                        key={mb}
+                        value={String(mb)}
+                        className="px-4"
+                      >
+                        {mb === 0
+                          ? t("swap.off")
+                          : t("swap.gb", { gb: mb / 1024 })}
+                        {mb !== 0 && mb === recommendedMb ? (
+                          <span className="text-xs text-muted-foreground">
+                            {t("swap.recommended")}
+                          </span>
+                        ) : null}
+                      </ToggleGroupItem>
+                    ))}
                     <ToggleGroupItem value={CUSTOM} className="px-4">
                       {t("swap.custom")}
                     </ToggleGroupItem>

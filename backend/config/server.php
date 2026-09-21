@@ -2128,40 +2128,6 @@ return [
 
     'swap_max_mb' => (int) env('SERVER_SWAP_MAX_MB', 65536), // 64 GB ceiling
 
-    /*
-     * The floor under the Memory screen, and why one has to exist.
-     *
-     * The panel updates itself by building its own frontend, and that build is
-     * OOM-killed below `panel_update.preflight.min_free_memory_mb`. On a small
-     * VPS the only thing clearing that number is the swapfile install.sh
-     * created — the same file this screen manages. So "set swap to 0" was a
-     * button that quietly removed the panel's ability to update itself, and
-     * the preflight that would have caught it is advisory: the update runs
-     * anyway and the build is killed.
-     *
-     * v7 could not do this. Its agent kept two files, `/saswapfile` and
-     * `/saswapfile_1`, and the user-facing control only ever touched the
-     * second — asked for less than the base, it answered "Swap size will not
-     * be reduced". v8 collapsed them into one file and inherited the control
-     * without the floor.
-     *
-     * Computed rather than fixed, by exactly install.sh's own arithmetic, and
-     * discounting swap the panel does not manage: a box with its own 4 GB swap
-     * partition needs nothing from us and may switch ours off. See
-     * `SwapSettings::minimumMb()`.
-     */
-    'swap_minimum_mb' => (int) env('SERVER_SWAP_MINIMUM_MB', 1024),
-
-    /*
-     * The escape hatch, mirroring install.sh's `PANEL_SWAP_MB=0`.
-     *
-     * An operator who manages swap themselves — a dedicated swap partition, a
-     * tuned zram setup, a host that forbids swapfiles — should be able to turn
-     * the panel's off. Setting this false removes the floor entirely; the
-     * screen still says what the build needs, it simply stops refusing.
-     */
-    'swap_enforce_minimum' => (bool) env('SERVER_SWAP_ENFORCE_MINIMUM', true),
-
     'fstab' => env('SERVER_FSTAB', '/etc/fstab'),
 
     /*

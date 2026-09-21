@@ -26,14 +26,6 @@ export const swapSettingsSchema = z.object({
   used_human: z.string(),
   free: z.number(),
   free_human: z.string(),
-
-  // The floor and the number behind it. Declared because Zod strips keys it
-  // does not know: without these two lines the API sends them, the parse drops
-  // them, `swap.minimum_mb` reads undefined, and the screen silently offers an
-  // "Off" the server will refuse. Optional so an older API does not fail the
-  // whole settings read over a field only this card uses.
-  minimum_mb: z.number().optional(),
-  build_requirement_mb: z.number().optional(),
 });
 
 export const securitySettingsSchema = z.object({

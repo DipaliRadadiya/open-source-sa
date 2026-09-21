@@ -1727,7 +1727,6 @@
         "none": "Ce serveur n'a pas de fichier de swap.",
         "size": "Quantité",
         "sizeHint": "1–2 GB suffit pour la plupart des serveurs. Désactivé le supprime.",
-        "floorReason": "Au moins {minimum} Mo sur ce serveur — le panneau a besoin de {required} Mo de mémoire et de swap réunis pour compiler sa propre mise à jour.",
         "saved": "Swap mis à jour.",
         "confirmTitle": "Désactiver le swap ?",
         "confirmDescription": "{used} est utilisé actuellement. Il doit tenir dans la RAM à la place, et si ce n'est pas le cas, le noyau commence à tuer des processus.",
