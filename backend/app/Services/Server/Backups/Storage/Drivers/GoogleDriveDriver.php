@@ -206,4 +206,13 @@ class GoogleDriveDriver implements StorageDriver
      * created, so its absence is somebody else's decision to undo.
      */
     public function heal(StorageDestination $destination): void {}
+
+    /**
+     * No special path needed: this driver's `readStream()` genuinely streams,
+     * so the caller's copy never holds the whole archive anywhere.
+     */
+    public function downloadTo(StorageDestination $destination, string $key, string $path): bool
+    {
+        return false;
+    }
 }

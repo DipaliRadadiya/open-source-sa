@@ -25,6 +25,12 @@ class FtpDriver extends RemoteHostDriver
 
     private const DEFAULT_PORT = 21;
 
+    /**
+     * Bounds a *stalled* socket, not the length of a transfer — PHP applies it
+     * per network operation, so a steady multi-gigabyte download is unaffected.
+     */
+    private const TRANSFER_TIMEOUT_SECONDS = 30;
+
     public function provider(): StorageProvider
     {
         return StorageProvider::Ftp;
@@ -53,7 +59,7 @@ class FtpDriver extends RemoteHostDriver
 
             // A backup upload is long; a stalled control connection should
             // not hang a queue worker indefinitely.
-            'timeout' => 30,
+            'timeout' => self::TRANSFER_TIMEOUT_SECONDS,
 
             // Same reason as S3: without it a failed write returns false and
             // an upload that never happened looks exactly like one that did.
@@ -143,5 +149,72 @@ class FtpDriver extends RemoteHostDriver
         }
 
         return null;
+    }
+
+    /**
+     * Download straight onto disk, never through `php://temp`.
+     *
+     * The adapter's `readStream()` is `fopen('php://temp')` + `ftp_fget`: the
+     * whole object lands in a buffer before the caller sees a byte, and that
+     * buffer spills into the system temp directory — a tmpfs of a couple of
+     * gigabytes on a normal install. Restoring a 24 GB archive failed with
+     * "Unable to read file" while the transfer itself was perfectly healthy;
+     * the same download to /dev/null finished in 34 seconds.
+     *
+     * `ftp_fget` writes to whatever handle it is given, so handing it the
+     * destination file removes the buffer entirely. The archive is then
+     * bounded by the disk it is about to be extracted on, which is the only
+     * limit that should apply.
+     *
+     * Returns false rather than throwing when it cannot connect: the caller
+     * falls back to the streaming copy, and a slow fallback beats a restore
+     * that refuses to start.
+     */
+    public function downloadTo(StorageDestination $destination, string $key, string $path): bool
+    {
+        $host = (string) $destination->configValue('host', '');
+        $port = (int) ($destination->configValue('port') ?: self::DEFAULT_PORT);
+        $ssl = (bool) ($destination->configValue('ssl') ?? true);
+        $timeout = self::TRANSFER_TIMEOUT_SECONDS;
+
+        $connection = $ssl
+            ? @ftp_ssl_connect($host, $port, $timeout)
+            : @ftp_connect($host, $port, $timeout);
+
+        if ($connection === false) {
+            return false;
+        }
+
+        try {
+            $user = (string) $destination->configValue('username', '');
+            $password = (string) $destination->configValue('password', '');
+
+            if (! @ftp_login($connection, $user, $password)) {
+                return false;
+            }
+
+            // Passive unless explicitly turned off, for the reason `config()`
+            // gives: an active transfer needs the server to open a connection
+            // back to the panel, which a firewall drops.
+            @ftp_pasv($connection, (bool) ($destination->configValue('passive') ?? true));
+            @ftp_set_option($connection, FTP_TIMEOUT_SEC, $timeout);
+
+            $root = $this->remoteRoot($destination);
+            $remote = ($root === '' ? '' : rtrim($root, '/').'/').ltrim($key, '/');
+
+            $handle = fopen($path, 'wb');
+
+            if ($handle === false) {
+                return false;
+            }
+
+            try {
+                return @ftp_fget($connection, $handle, $remote, FTP_BINARY);
+            } finally {
+                fclose($handle);
+            }
+        } finally {
+            @ftp_close($connection);
+        }
     }
 }

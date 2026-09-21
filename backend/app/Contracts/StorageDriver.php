@@ -125,4 +125,28 @@ interface StorageDriver
      * path reports it.
      */
     public function heal(StorageDestination $destination): void;
+
+    /**
+     * Fetch one object straight onto local disk.
+     *
+     * Exists because `readStream()` is not always a stream. The FTP adapter
+     * implements it as `fopen('php://temp')` + `ftp_fget`, which downloads the
+     * **entire** object into a buffer before the caller sees a byte — and
+     * `php://temp` spills into the system temp directory, which on a normal
+     * install is a tmpfs of a couple of gigabytes. A 24 GB archive therefore
+     * filled /tmp and the restore failed with "Unable to read file", while the
+     * transfer itself was fine: the same download to /dev/null finished in 34
+     * seconds.
+     *
+     * The panel had already decided this for the other direction —
+     * `server.backups.working_dir` lives under `storage/` precisely because
+     * "/tmp is cleared on reboot and is often a small tmpfs, and a
+     * multi-gigabyte site archive would fill it". Backups honoured that;
+     * restores went through /tmp anyway, via the adapter.
+     *
+     * Returning false means "I have no special way to do this", and the caller
+     * falls back to the streaming copy — correct for the drivers whose
+     * `readStream()` really does stream.
+     */
+    public function downloadTo(StorageDestination $destination, string $key, string $path): bool;
 }

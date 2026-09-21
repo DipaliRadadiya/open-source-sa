@@ -4,6 +4,7 @@ namespace App\Services\Server\Restores\Steps;
 
 use App\Contracts\RestoreStep;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Services\Server\Restores\RestoreContext;
 use RuntimeException;
 
@@ -16,7 +17,10 @@ use RuntimeException;
  */
 class DownloadArtifact implements RestoreStep
 {
-    public function __construct(private DestinationDisk $disks) {}
+    public function __construct(
+        private DestinationDisk $disks,
+        private StorageDriverFactory $drivers,
+    ) {}
 
     public function key(): string
     {
@@ -56,6 +60,25 @@ class DownloadArtifact implements RestoreStep
         }
 
         $archive = $context->track($context->workingDirectory.'/restore.tar.gz');
+
+        // Ask the driver for a direct download first.
+        //
+        // `readStream()` is not always a stream: the FTP adapter implements it
+        // as `fopen('php://temp')` + `ftp_fget`, so the whole archive is
+        // buffered before a byte reaches us — and that buffer spills into the
+        // system temp directory, usually a tmpfs of a couple of gigabytes. A
+        // 24 GB restore therefore failed with "Unable to read file" while the
+        // transfer itself was healthy.
+        //
+        // The working directory is deliberately not on /tmp for exactly this
+        // reason (`server.backups.working_dir`), so a driver able to write
+        // there directly should. Drivers whose `readStream()` genuinely
+        // streams return false and fall through to the copy below.
+        if ($this->drivers->for($destination)->downloadTo($destination, $key, $archive)) {
+            $context->archivePath = $archive;
+
+            return;
+        }
 
         $source = $disk->readStream($key);
 
