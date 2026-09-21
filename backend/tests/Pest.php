@@ -185,6 +185,44 @@ function grantPermission(User $user, string $permissionName, bool $view = true, 
     $user->roles()->syncWithoutDetaching([$role->id]);
 }
 
+/**
+ * What `systemctl show` replies for the units named in $command.
+ *
+ * One blank-line separated block per unit asked about, in the order asked —
+ * systemd's real shape, including a block for units that do not exist. The
+ * panel now inspects its whole service catalog in a single call, so a fake
+ * that answers with one block regardless of how many units were named would
+ * hand every unit after the first somebody else's state, or none at all.
+ *
+ * Shared because three test files had each hand-rolled this, all three of them
+ * single-block, and all three broke together the moment the caller batched.
+ *
+ * @param  array<int, string>  $command  the faked process command
+ * @param  array<string, array{load?: string, active?: string, file?: string, id?: string, reload?: bool}>  $units
+ * @param  array<string, mixed>|null  $default  state for units not in $units; null means not-found
+ */
+function systemctlShowOutput(array $command, array $units = [], ?array $default = null): string
+{
+    $asked = array_values(array_filter(
+        array_slice($command, 2),
+        fn (string $arg): bool => ! str_starts_with($arg, '--'),
+    ));
+
+    $blocks = array_map(function (string $unit) use ($units, $default): string {
+        $s = $units[$unit] ?? $default ?? ['load' => 'not-found', 'active' => 'inactive', 'file' => 'disabled'];
+
+        return implode("\n", [
+            'Id='.($s['id'] ?? "{$unit}.service"),
+            'LoadState='.($s['load'] ?? 'not-found'),
+            'ActiveState='.($s['active'] ?? 'inactive'),
+            'UnitFileState='.($s['file'] ?? 'disabled'),
+            'CanReload='.(($s['reload'] ?? false) ? 'yes' : 'no'),
+        ])."\n";
+    }, $asked);
+
+    return implode("\n", $blocks);
+}
+
 /*
 |--------------------------------------------------------------------------
 | Expectations

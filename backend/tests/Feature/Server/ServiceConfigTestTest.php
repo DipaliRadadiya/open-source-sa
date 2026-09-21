@@ -25,7 +25,11 @@ afterEach(function () {
 function fakeSystemd(): void
 {
     Process::fake(fn ($process) => match (true) {
-        ($process->command[0] ?? '') === 'systemctl' && ($process->command[1] ?? '') === 'show' => Process::result(output: "LoadState=loaded\nActiveState=active\nUnitFileState=enabled\n"),
+        ($process->command[0] ?? '') === 'systemctl' && ($process->command[1] ?? '') === 'show' => Process::result(
+            // Every unit loaded and running: this file is about which services
+            // can validate their configuration, not about who is up.
+            output: systemctlShowOutput($process->command, default: ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']),
+        ),
         default => Process::result(exitCode: 0),
     });
 }
@@ -79,7 +83,11 @@ it('uses the OpenLiteSpeed configuration validator', function () {
 
 it('reports a failing configuration without reloading anything', function () {
     Process::fake(fn ($process) => match (true) {
-        ($process->command[0] ?? '') === 'systemctl' && ($process->command[1] ?? '') === 'show' => Process::result(output: "LoadState=loaded\nActiveState=active\nUnitFileState=enabled\n"),
+        ($process->command[0] ?? '') === 'systemctl' && ($process->command[1] ?? '') === 'show' => Process::result(
+            // Every unit loaded and running: this file is about which services
+            // can validate their configuration, not about who is up.
+            output: systemctlShowOutput($process->command, default: ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']),
+        ),
         $process->command === ['nginx', '-t'] => Process::result(errorOutput: 'nginx: [emerg] unknown directive "foo" in /etc/nginx/x.conf:3', exitCode: 1),
         default => Process::result(exitCode: 0),
     });
@@ -116,4 +124,41 @@ it('denies a config test without the service permission', function () {
     $this->withHeader('Authorization', "Bearer {$token}")
         ->postJson('/api/services/nginx/config-test')
         ->assertForbidden();
+});
+
+/*
+ * An alias is not a service this panel manages.
+ *
+ * `configTest` checked `find()` alone, which answers "is this a managed key"
+ * — yes for `mysql` on a MariaDB box, where mysql.service is a compatibility
+ * alias and no MySQL is installed. The reply was then a 422 about
+ * configuration, for a service that is not here. The action path already
+ * refuses it; this closes the other half.
+ */
+it('refuses a config test for a key that is only an alias of another service', function () {
+    Process::fake(fn ($process) => match (true) {
+        ($process->command[0] ?? '') === 'systemctl' && ($process->command[1] ?? '') === 'show' => Process::result(
+            output: systemctlShowOutput($process->command, [
+                'mysql' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'id' => 'mariadb.service'],
+                'mariadb' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled', 'id' => 'mariadb.service'],
+            ]),
+        ),
+        default => Process::result(exitCode: 0),
+    });
+
+    $this->withHeaders(svcHeaders())->postJson('/api/services/mysql/config-test')->assertNotFound();
+});
+
+it('refuses a config test for a managed service that is not installed', function () {
+    // Nothing to validate: there is no configuration on this box to be right
+    // or wrong about, so "not found" is the honest answer rather than a
+    // sentence about configuration tests.
+    Process::fake(fn ($process) => match (true) {
+        ($process->command[0] ?? '') === 'systemctl' && ($process->command[1] ?? '') === 'show' => Process::result(
+            output: systemctlShowOutput($process->command),
+        ),
+        default => Process::result(exitCode: 0),
+    });
+
+    $this->withHeaders(svcHeaders())->postJson('/api/services/nginx/config-test')->assertNotFound();
 });

@@ -30,12 +30,7 @@ function fakeServices(array $units): void
 {
     Process::fake(function ($process) use ($units) {
         if (($process->command[1] ?? null) === 'show') {
-            $unit = $process->command[2] ?? '';
-            $s = $units[$unit] ?? ['load' => 'not-found', 'active' => 'inactive', 'file' => 'disabled'];
-            $id = $s['id'] ?? "{$unit}.service";
-            $canReload = ($s['reload'] ?? false) ? 'yes' : 'no';
-
-            return Process::result(output: "Id={$id}\nLoadState={$s['load']}\nActiveState={$s['active']}\nUnitFileState={$s['file']}\nCanReload={$canReload}\n");
+            return Process::result(output: systemctlShowOutput($process->command, $units));
         }
 
         return Process::result(exitCode: 0);
@@ -309,10 +304,7 @@ function fakeServicesWithPostgres(array $units, bool $postgresAnswers): void
         }
 
         if (($process->command[1] ?? null) === 'show') {
-            $unit = $process->command[2] ?? '';
-            $s = $units[$unit] ?? ['load' => 'not-found', 'active' => 'inactive', 'file' => 'disabled'];
-
-            return Process::result(output: "Id={$unit}.service\nLoadState={$s['load']}\nActiveState={$s['active']}\nUnitFileState={$s['file']}\nCanReload=no\n");
+            return Process::result(output: systemctlShowOutput($process->command, $units));
         }
 
         return Process::result(exitCode: 0);
@@ -440,4 +432,59 @@ it('acts on an aliased unit when no configured entry owns it', function () {
         ->putJson('/api/services/supervisor', ['action' => 'restart'])
         ->assertOk()
         ->assertJsonPath('service.key', 'supervisor');
+});
+
+/*
+ * What the services page is allowed to cost.
+ *
+ * Every row used to be its own `systemctl show`. On a live Ubuntu 26.04 box
+ * that measured 174 ms as ten calls against 43 ms as one, for identical
+ * information, on a route the frontend polls every three seconds.
+ *
+ * A regression here is invisible — the screen stays correct and merely gets
+ * slower — so counting the calls is the only thing that would notice.
+ */
+it('inspects the whole catalog in a single systemctl call', function () {
+    fakeServices([
+        'lshttpd' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled'],
+        'mariadb' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled'],
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")->getJson('/api/services')->assertOk();
+
+    Process::assertRanTimes(fn ($p) => ($p->command[1] ?? null) === 'show', 1);
+
+    // …and that one call asked about everything, rather than reaching a count
+    // of one by quietly inspecting less.
+    Process::assertRan(fn ($p) => ($p->command[1] ?? null) === 'show'
+        && ! array_diff(['mariadb', 'lshttpd', 'postgresql', 'redis-server'], $p->command));
+});
+
+/*
+ * Blocks are matched to units by position, never by Id.
+ *
+ * Id is the canonical unit, so an alias reports its target's: ask for `mysql`
+ * and `mariadb` on a MariaDB box and both blocks read `Id=mariadb.service`.
+ * Keying by it would give one of them the other's state — the same alias
+ * confusion that let `PUT /services/mysql` restart MariaDB.
+ */
+it('gives each unit its own block even when one in the middle does not exist', function () {
+    // apache sits between lshttpd and mariadb in the catalog and is absent, so
+    // an off-by-one would hand MariaDB the not-found block, or Apache's row
+    // MariaDB's state. Both are silent failures that still render a page.
+    fakeServices([
+        'lshttpd' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled'],
+        'mariadb' => ['load' => 'loaded', 'active' => 'failed', 'file' => 'enabled'],
+        'redis-server' => ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled'],
+    ]);
+
+    $services = collect(
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/services')->assertOk()->json('services')
+    )->keyBy('key');
+
+    expect($services->keys()->all())->not->toContain('apache')
+        ->and($services['mariadb']['status'])->toBe('failed')
+        ->and($services['openlitespeed']['status'])->toBe('active')
+        ->and($services['redis']['status'])->toBe('active');
 });

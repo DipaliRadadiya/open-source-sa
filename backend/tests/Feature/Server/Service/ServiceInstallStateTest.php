@@ -42,10 +42,7 @@ function fakeUnits(array $units): void
 {
     Process::fake(function ($process) use ($units) {
         if (($process->command[1] ?? null) === 'show') {
-            $unit = $process->command[2] ?? '';
-            $s = $units[$unit] ?? ['load' => 'not-found', 'active' => 'inactive', 'file' => 'disabled'];
-
-            return Process::result(output: "LoadState={$s['load']}\nActiveState={$s['active']}\nUnitFileState={$s['file']}\n");
+            return Process::result(output: systemctlShowOutput($process->command, $units));
         }
 
         return Process::result(exitCode: 0);

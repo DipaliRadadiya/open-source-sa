@@ -30,7 +30,14 @@ class ServiceController extends Controller
      */
     public function configTest(string $service, ServiceManager $services, ConfigTester $tester): JsonResponse
     {
-        abort_if($services->find($service) === null, 404);
+        // The same existence test the action path uses, rather than `find()`
+        // alone. `find()` answers "is this a managed key", which said yes to a
+        // compatibility alias — `mysql` on a MariaDB box — and to a service
+        // that is not installed. Both then fell through to a 422 about
+        // configuration, for a service the panel does not manage here.
+        $entry = $services->find($service);
+
+        abort_if($entry === null || $services->describe($entry) === null, 404);
 
         $result = $tester->test($service);
 
