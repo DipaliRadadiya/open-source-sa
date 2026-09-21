@@ -15,6 +15,32 @@ use InvalidArgumentException;
  */
 class DatabaseManager
 {
+    /**
+     * Detected versions for the lifetime of THIS instance, keyed by engine.
+     *
+     * Not a cache, and deliberately not one. The detect-don't-trust rule says a
+     * stored answer about the server goes stale — so this is scoped to a single
+     * object rather than to a key with a TTL. Nothing binds this class as a
+     * singleton (see the test that pins that), so each injection point holds
+     * its own and re-detects: a request, a controller, a queue job. Inside one
+     * of those the engine cannot meaningfully change, and asking four times is
+     * only four subprocesses saying the same thing.
+     *
+     * @var array<string, ?string>|null
+     */
+    private ?array $detectedVersions = null;
+
+    /**
+     * The full capability list for this instance, on the same terms.
+     *
+     * Separate from {@see $detectedVersions} because it is the more expensive
+     * half: `installed()` asks the package manager about every engine that did
+     * not answer, and that question does not short-circuit on repeat.
+     *
+     * @var array<int, array<string, mixed>>|null
+     */
+    private ?array $capabilities = null;
+
     public function __construct(private ServerOps $serverOps) {}
 
     /**
@@ -69,15 +95,47 @@ class DatabaseManager
     }
 
     /**
+     * The live version of every engine, or null where it did not answer.
+     *
+     * The cheap half of {@see capabilities()}: one probe per engine and no
+     * package-manager questions. Split out because the setup page reads only
+     * `running` and `version` — it never looks at `installed`, and `installed`
+     * is the `dpkg-query` half. Rendering that page used to cost 24 commands,
+     * 12 of which were answering a question nobody asked.
+     *
+     * Memoised per instance, so the three calls the setup component makes
+     * become one. See {@see $detectedVersions} for why that is not a cache.
+     *
+     * @return array<string, ?string>
+     */
+    public function detectedVersions(): array
+    {
+        return $this->detectedVersions ??= array_reduce(
+            $this->engineNames(),
+            function (array $versions, string $engine): array {
+                $versions[$engine] = $this->engine($engine)->version();
+
+                return $versions;
+            },
+            [],
+        );
+    }
+
+    /**
      * Capability list — one entry per supported engine (detect-don't-trust).
      *
      * @return array<int, array<string, mixed>>
      */
     public function capabilities(): array
     {
-        return array_map(function (string $engine) {
-            $engineObj = $this->engine($engine);
-            $version = $engineObj->version();
+        if ($this->capabilities !== null) {
+            return $this->capabilities;
+        }
+
+        $versions = $this->detectedVersions();
+
+        return $this->capabilities = array_map(function (string $engine) use ($versions) {
+            $version = $versions[$engine];
 
             return [
                 'engine' => $engine,

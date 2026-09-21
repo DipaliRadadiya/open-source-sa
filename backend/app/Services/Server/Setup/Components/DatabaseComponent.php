@@ -29,7 +29,7 @@ class DatabaseComponent implements SetupComponent
      */
     public function installed(): bool
     {
-        return collect($this->databases->capabilities())->contains(fn (array $e) => $e['running'] === true);
+        return collect($this->databases->detectedVersions())->contains(fn (?string $version) => $version !== null);
     }
 
     public function recommended(): bool
@@ -39,13 +39,15 @@ class DatabaseComponent implements SetupComponent
 
     public function detail(): ?string
     {
-        $running = collect($this->databases->capabilities())->firstWhere('running', true);
+        $versions = collect($this->databases->detectedVersions())->filter(fn (?string $version) => $version !== null);
 
-        if ($running === null) {
+        if ($versions->isEmpty()) {
             return null;
         }
 
-        return trim(((string) config("server.databases.engines.{$running['engine']}.label")).' '.((string) $running['version']));
+        $engine = (string) $versions->keys()->first();
+
+        return trim(((string) config("server.databases.engines.{$engine}.label")).' '.((string) $versions->first()));
     }
 
     public function action(): ?array
@@ -62,15 +64,15 @@ class DatabaseComponent implements SetupComponent
      */
     public function options(): array
     {
-        return array_map(function (array $engine) {
-            $name = (string) $engine['engine'];
+        return array_map(function (string $name) {
+            $version = $this->databases->detectedVersions()[$name] ?? null;
             $installable = $this->installers->canInstall($name);
 
             return [
                 'value' => $name,
                 'label' => (string) config("server.databases.engines.{$name}.label"),
-                'installed' => $engine['running'] === true,
-                'version' => $engine['version'],
+                'installed' => $version !== null,
+                'version' => $version,
                 'installable' => $installable,
                 // MariaDB first, and pre-selected: it is what Ubuntu packages
                 // directly, so there is no third-party repository to add and no
@@ -80,6 +82,6 @@ class DatabaseComponent implements SetupComponent
                     ? ['method' => 'POST', 'endpoint' => "/api/databases/engines/{$name}"]
                     : null,
             ];
-        }, $this->databases->capabilities());
+        }, $this->databases->engineNames());
     }
 }
