@@ -951,6 +951,11 @@ install_packages() {
             # one — the databases would be creatable and unusable.
             "php${PHP_VERSION}-pgsql"
             "php${PHP_VERSION}-redis" "php${PHP_VERSION}-igbinary" "php${PHP_VERSION}-opcache"
+            # soap has no package on the LiteSpeed stack because LSPHP compiles
+            # it in, so an OpenLiteSpeed box has always had it. Naming it here
+            # is what stops nginx and Apache being the odd ones out: the two
+            # lists are now identical, and PhpRuntimeTest fails if they drift.
+            "php${PHP_VERSION}-soap"
         )
     fi
     # Only the chosen web server. Installing both would have them fight over

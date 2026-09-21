@@ -2009,7 +2009,19 @@ return [
             // version means installing something usable.
             'base_packages' => array_values(array_filter(explode(',', (string) env(
                 'SERVER_PHP_BASE_PACKAGES',
-                'fpm,cli,common,mysql,pgsql,curl,mbstring,xml,zip,gd,intl,bcmath,soap'
+                // 🔴 This is install.sh's list, and must stay identical to it.
+                // `sqlite3` is the one that was missing and the one that hurt:
+                // the panel's own database is SQLite, so a version installed
+                // from the panel and then made the default left bare `php` —
+                // which the deploy runbook uses — unable to open it at all.
+                // Reported from a real server as "could not find driver" from
+                // `php artisan migrate`, on a box where PHP 8.5 had been added
+                // from the PHP screen.
+                //
+                // OpenLiteSpeed never had this because OlsInstallerTest has
+                // asserted the same parity since its own drift caused an
+                // install of nothing. PhpRuntimeTest now does the same here.
+                'fpm,cli,common,mysql,pgsql,curl,mbstring,xml,zip,gd,intl,bcmath,soap,sqlite3,redis,igbinary,opcache'
             )))),
             'install_timeout' => (int) env('SERVER_PHP_INSTALL_TIMEOUT', 900),
 

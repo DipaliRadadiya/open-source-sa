@@ -484,3 +484,55 @@ it('installs anyway when the index refresh fails', function () {
 
     expect($install)->not->toBeNull()->and($install)->toContain('php8.2-fpm');
 });
+
+/*
+| The FPM package list, against install.sh's.
+|
+| 🔴 These two drifted, and the gap reached a real server: the panel's list
+| omitted `sqlite3`, so PHP 8.5 added from the PHP screen had no pdo_sqlite.
+| Made the system default, it left bare `php` — which the deploy runbook uses —
+| unable to open the panel's own SQLite database:
+|
+|   In Connector.php line 67:  could not find driver
+|
+| OpenLiteSpeed never had this bug, and the reason is instructive: the same
+| drift happened there first, caused an "install PHP 8.3" that installed
+| nothing, and `OlsInstallerTest` has asserted parity ever since. The FPM stack
+| had no such guard. This is it.
+|
+| install.sh is the source of truth in both, for the reason the OLS test gives:
+| it is the set proven on hardware. Whichever list a future edit changes, the
+| other has to move with it.
+*/
+
+it('installs from the panel exactly what install.sh installs', function () {
+    $path = base_path('../install.sh');
+
+    if (! is_file($path)) {
+        test()->markTestSkipped('install.sh is not in this checkout');
+    }
+
+    // The FPM branch only. `install_ols_packages` builds `${lsphp}-` names and
+    // is covered by OlsInstallerTest; matching both here would compare two
+    // stacks' lists to one config key.
+    preg_match_all('/php\$\{PHP_VERSION\}-([a-z0-9]+)/', (string) file_get_contents($path), $matches);
+
+    $fromInstaller = array_values(array_unique($matches[1]));
+    $fromConfig = (array) config('server.runtimes.php.base_packages');
+
+    expect($fromInstaller)->not->toBeEmpty('install.sh installs no php packages?');
+
+    sort($fromInstaller);
+    sort($fromConfig);
+
+    expect($fromConfig)->toBe($fromInstaller);
+});
+
+it('always installs the driver for the panel\'s own database', function () {
+    // Named on its own rather than left to the parity check. Losing sqlite3 is
+    // not one missing extension among sixteen: the panel stores itself in
+    // SQLite, so a version without it breaks `artisan` — migrations, the
+    // scheduler, the queue — the moment it becomes the default. A parity test
+    // says "the lists match"; this says which package must never leave.
+    expect((array) config('server.runtimes.php.base_packages'))->toContain('sqlite3');
+});
