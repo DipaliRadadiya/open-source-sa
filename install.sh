@@ -881,7 +881,20 @@ install_packages() {
     # pending and security updates. Without it the Settings page cannot tell the
     # difference between "nothing waiting" and "could not look", so it reports
     # neither. Cheap, and it is the same source Ubuntu's own MOTD uses.
-    run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common
+    #
+    # build-essential is here because npm packages ship prebuilt binaries only
+    # for some Node versions, and fall back to compiling from source for the
+    # rest. A server with no compiler turns that fallback into a dead install:
+    # n8n died in `node-gyp` building isolated-vm on 2026-09-15, and the error
+    # it surfaced was about dependency resolution, because npm buries the one
+    # line that matters under thousands of peer warnings.
+    #
+    # Installed for every stack, deliberately. Which packages need compiling is
+    # not knowable at install time — the user picks site types later, and a
+    # git-deployed project can depend on anything — so a conditional would have
+    # to guess the future. It is ~235 MB, and it is the difference between an
+    # install that works and one that fails for a reason the user cannot act on.
+    run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common build-essential
 
     local php_pkgs=()
 

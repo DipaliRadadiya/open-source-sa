@@ -201,7 +201,7 @@ return [
         'serving_error' => 'The application started but answers every request with an error. Its assets were most likely not built completely — check the application log for details.',
         'not_answering' => 'The application started but never answered a request. Check the application log for why it is not listening.',
         'out_of_memory' => 'The server ran out of memory during this step and it was stopped by the system. Free some memory, or add swap, and try again.',
-        'no_build_tools' => 'This step needed to compile a native module, and this server has no compiler installed. Either install the build tools, or create the site on a long-term-support Node version — those usually ship ready-built binaries and need no compiler at all.',
+        'no_build_tools' => 'This step needed to compile a native module, and this server has no compiler installed. Install the build tools from the setup screen, then try again. Choosing a different Node version may also help, since some versions ship ready-built binaries — but which ones do is up to each package, so it is not a reliable fix on its own.',
         'composer_platform' => 'Composer could not install this application\'s dependencies under the PHP version this site is set to. The site\'s PHP version, or one of the extensions it needs, does not meet what the project requires. Change the site\'s PHP version to one the project supports, or install the missing extension, and deploy again.',
         'composer_dependencies_missing' => 'This project requires Composer dependencies and none were installed, so the application has no vendor/autoload.php and every request to it will fail. Add a build step that runs composer install to the deployment script, then deploy again.',
     ],

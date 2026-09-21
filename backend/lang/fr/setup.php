@@ -29,6 +29,10 @@ return [
             'title' => 'fail2ban',
             'description' => 'Bloque les tentatives de connexion répétées contre SSH et vos sites.',
         ],
+        'build_tools' => [
+            'title' => 'Outils de compilation',
+            'description' => 'Permet au serveur de compiler les composants d\'application qui ne sont pas livrés précompilés. Certaines applications Node en ont besoin pour s\'installer.',
+        ],
     ],
 
 ];

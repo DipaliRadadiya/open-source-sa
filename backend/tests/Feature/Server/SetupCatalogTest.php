@@ -49,7 +49,7 @@ it('lists every component with a detected state', function () {
     $setup = fetchSetup();
 
     expect(collect($setup['components'])->pluck('key')->all())
-        ->toBe(['database', 'php', 'node', 'redis', 'fail2ban']);
+        ->toBe(['database', 'php', 'node', 'build_tools', 'redis', 'fail2ban']);
 
     foreach ($setup['components'] as $component) {
         expect($component['state'])->toBeIn(['installed', 'pending', 'installing', 'failed']);
@@ -180,7 +180,7 @@ it('is complete when the recommended set is present, not when everything is', fu
     $setup = fetchSetup();
     $recommended = collect($setup['components'])->where('recommended', true)->pluck('key');
 
-    expect($recommended->all())->toBe(['database', 'fail2ban']);
+    expect($recommended->all())->toBe(['database', 'build_tools', 'fail2ban']);
 });
 
 it('needs the setting permission to read', function () {
