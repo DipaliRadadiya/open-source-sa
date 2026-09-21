@@ -3,6 +3,7 @@
 namespace App\Services\Server\Backups\Storage\Drivers;
 
 use App\Contracts\StorageDriver;
+use App\Http\Controllers\API\Server\BackupController;
 use App\Models\StorageDestination;
 use App\Rules\SafeRemoteHost;
 use App\Rules\SingleLine;
@@ -111,5 +112,20 @@ abstract class RemoteHostDriver implements StorageDriver
     public function downloadTo(StorageDestination $destination, string $key, string $path): bool
     {
         return false;
+    }
+
+    /**
+     * Null: FTP and SFTP have no concept of a URL at all.
+     *
+     * There is no honest link to hand a browser here, and inventing one would
+     * mean the panel streaming 25 GB through a PHP worker — which
+     * {@see BackupController::download()}
+     * rejects for pinning that worker for the length of the transfer. The
+     * caller reports that Download is unavailable for this destination, which
+     * is the truth.
+     */
+    public function downloadUrl(StorageDestination $destination, string $key): ?string
+    {
+        return null;
     }
 }

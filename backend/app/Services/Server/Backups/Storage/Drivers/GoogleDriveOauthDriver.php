@@ -300,6 +300,32 @@ class GoogleDriveOauthDriver implements StorageDriver
     }
 
     /**
+     * The archive is in the operator's own Drive, so send them to it.
+     *
+     * This is the one driver that can answer, and it can answer precisely
+     * because of what makes it different from its service-account sibling: the
+     * files belong to a real person whose browser is already signed into that
+     * Google account. Drive's `webContentLink` authenticates by cookie, so it
+     * works for exactly that person and for nobody else — no sharing, no
+     * public link, no credential in a URL.
+     *
+     * The consequence worth stating: signed into the wrong Google account, the
+     * operator gets Google's permission page rather than the file. That is the
+     * correct failure. The alternative — widening permissions so any holder of
+     * the link could fetch it — would publish a complete copy of the site and
+     * its database to buy a nicer error message.
+     */
+    public function downloadUrl(StorageDestination $destination, string $key): ?string
+    {
+        return $this->workspace->downloadLink(
+            (string) $destination->configValue('client_id', ''),
+            (string) $destination->configValue('client_secret', ''),
+            (string) $destination->configValue('refresh_token', ''),
+            $key,
+        );
+    }
+
+    /**
      * No special path needed: this driver's `readStream()` genuinely streams,
      * so the caller's copy never holds the whole archive anywhere.
      */

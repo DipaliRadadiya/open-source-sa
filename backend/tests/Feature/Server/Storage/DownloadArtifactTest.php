@@ -80,6 +80,14 @@ it('asks the driver for a direct download before falling back to a stream', func
             return true;
         }
 
+        // Null, as the real FTP driver does: there is no URL a browser could
+        // fetch an archive from over FTP, and the caller reports that Download
+        // is unavailable rather than inventing one.
+        public function downloadUrl(StorageDestination $d, string $key): ?string
+        {
+            return null;
+        }
+
         public function provider(): StorageProvider
         {
             return StorageProvider::Ftp;

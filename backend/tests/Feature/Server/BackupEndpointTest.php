@@ -515,6 +515,10 @@ describe('downloading a backup', function () {
         $this->fakeDestinationDisk = function (bool $exists = true) {
             $disk = Mockery::mock(FilesystemAdapter::class);
             $disk->shouldReceive('exists')->andReturn($exists);
+            // The controller asks before it signs. It has to: `temporaryUrl()`
+            // throws on every adapter but S3, and that exception escaping was
+            // the 500 four providers out of five used to get.
+            $disk->shouldReceive('providesTemporaryUrls')->andReturn(true);
             $disk->shouldReceive('temporaryUrl')
                 ->andReturn('https://bucket.example.com/a1b2c3.tar.gz?X-Amz-Signature=deadbeef');
 
@@ -540,6 +544,32 @@ describe('downloading a backup', function () {
             // by side in a downloads folder.
             ->and($response->json('download.filename'))->toContain('shop-example-test')
             ->and($response->json('download.filename'))->toEndWith('-full.tar.gz');
+    });
+
+    it('says download is unavailable rather than answering 500', function () {
+        // The regression this exists to hold. A disk that cannot sign URLs —
+        // FTP, SFTP, a service-account Drive — used to reach
+        // `temporaryUrl()` and throw `RuntimeException: This driver does not
+        // support creating temporary URLs`, which the handler turned into a
+        // bare 500. Four providers out of five, for the whole life of the
+        // feature, discovered only when the first Drive backup finally got far
+        // enough to be downloadable.
+        $disk = Mockery::mock(FilesystemAdapter::class);
+        $disk->shouldReceive('exists')->andReturn(true);
+        $disk->shouldReceive('providesTemporaryUrls')->andReturn(false);
+        // Deliberately not stubbed: if the controller still calls this, the
+        // test fails loudly instead of quietly passing on a mocked answer.
+        $disk->shouldNotReceive('temporaryUrl');
+
+        $this->app->bind(
+            DestinationDisk::class,
+            fn () => new DestinationDisk(app(StorageDriverFactory::class), builder: fn (array $config) => $disk),
+        );
+
+        $this->withHeaders(backupHeaders())
+            ->getJson("/api/backups/{$this->backup->id}/download")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('backup');
     });
 
     it('records who asked, without putting the signed url in the log', function () {

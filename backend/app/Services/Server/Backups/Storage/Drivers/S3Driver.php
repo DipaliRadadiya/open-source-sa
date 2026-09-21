@@ -185,4 +185,18 @@ class S3Driver implements StorageDriver
     {
         return false;
     }
+
+    /**
+     * Null, because S3 already has a better answer.
+     *
+     * The adapter implements Flysystem's `TemporaryUrlGenerator`, so
+     * `BackupController::download()` falls through to `temporaryUrl()` and gets
+     * a signed, expiring link — narrower than anything this method could
+     * return, since it carries its own expiry rather than relying on who the
+     * browser is signed in as.
+     */
+    public function downloadUrl(StorageDestination $destination, string $key): ?string
+    {
+        return null;
+    }
 }

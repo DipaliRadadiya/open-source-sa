@@ -48,6 +48,7 @@ return [
         'upload_artifact' => 'Das Archiv konnte nicht hochgeladen werden. Prüfen Sie, ob das Speicherziel weiterhin Schreibzugriffe annimmt.',
         'verify_artifact' => 'Der Upload stimmt nicht mit dem Gesendeten überein; dieser Sicherung ist nicht zu trauen. Es wurde nichts Altes gelöscht.',
         'upload_stalled' => 'Der Upload hat keine Daten mehr gesendet und wurde abgebrochen. Die Verbindung blieb offen, aber es wurde nichts übertragen — meist bedeutet das, dass der Speicheranbieter sie getrennt hat. Mit dem Ziel stimmt alles; der nächste geplante Lauf versucht es erneut.',
+        'download_not_supported' => 'Der Download ist für diesen Zieltyp nicht verfügbar. Das Panel kann Ihrem Browser nur dann einen Link geben, wenn der Speicheranbieter das unterstützt — Amazon S3 und Google Drive (Ihr eigenes Konto) tun das. Das Wiederherstellen dieser Sicherung funktioniert weiterhin normal.',
         'unknown' => 'Die Sicherung schlug aus unbekanntem Grund fehl.',
         'crashed' => 'Die Sicherung wurde unerwartet beendet — der Prozess wurde abgebrochen, bevor er fertig war. Meist ging dem Server der Arbeitsspeicher aus oder der Worker wurde mittendrin neu gestartet.',
         'abandoned' => 'Diese Sicherung hat sich nie zurückgemeldet und wurde abgeschlossen. Ihr Worker existiert nicht mehr, es wurde nichts hochgeladen.',

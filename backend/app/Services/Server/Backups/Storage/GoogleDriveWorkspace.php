@@ -153,6 +153,75 @@ class GoogleDriveWorkspace
      *
      * @return array{ok: bool, reason: string|null}
      */
+    /**
+     * A link the operator's own browser can download the archive from.
+     *
+     * Drive's `webContentLink` authenticates **by browser cookie**, which is
+     * precisely why it fits here and nowhere else: these archives live in the
+     * operator's personal Drive, so the browser that is already signed into
+     * that Google account can fetch them, and nobody else can. Nothing is
+     * shared, no permission is widened, and the file's `shared` flag stays
+     * false — verified against the real 24 GB archive on 2026-09-21.
+     *
+     * It is also the only option that does not make things worse.
+     * `?alt=media` needs an `Authorization` header a browser will not send on
+     * a plain link; Google no longer accepts an access token in the query
+     * string; and proxying the bytes through the panel would pin a PHP worker
+     * for the length of a multi-gigabyte transfer.
+     *
+     * Searched by name rather than resolved through the folder tree: the name
+     * ends in the backup's uid, so it is unique by construction, and under
+     * `drive.file` the panel can only see files it created itself — there is
+     * nothing else in the account for it to match against.
+     *
+     * Returns null on any failure. A missing link is "Download is not
+     * available", which the caller reports plainly; it is never a reason to
+     * turn a listing page into a 500.
+     */
+    public function downloadLink(string $clientId, string $clientSecret, string $refreshToken, string $key): ?string
+    {
+        $name = basename($key);
+
+        if ($name === '') {
+            return null;
+        }
+
+        try {
+            $drive = ($this->factory)($clientId, $clientSecret, $refreshToken);
+
+            $found = $drive->files->listFiles([
+                'q' => sprintf("name = '%s' and trashed = false", str_replace("'", "\\'", $name)),
+                'fields' => 'files(id,webContentLink,capabilities/canDownload)',
+                'pageSize' => 2,
+            ])->getFiles();
+        } catch (Throwable $e) {
+            Log::channel('server-ops')->warning('could not resolve a Drive download link.', [
+                'feature' => 'storage',
+                'detail' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        // Exactly one, or none. Two files with this name would mean two backups
+        // share a uid, and guessing which archive the operator gets is worse
+        // than telling them Download is unavailable.
+        if (count($found) !== 1) {
+            return null;
+        }
+
+        $file = $found[0];
+
+        // Drive says the account cannot download its own file — a Workspace
+        // policy can do this. Handing over the link anyway would send them to
+        // a Google error page with no explanation of why.
+        if ($file->getCapabilities()?->getCanDownload() === false) {
+            return null;
+        }
+
+        return $file->getWebContentLink() ?: null;
+    }
+
     public function folderExists(string $clientId, string $clientSecret, string $refreshToken, string $folderId): array
     {
         if (trim($folderId) === '') {

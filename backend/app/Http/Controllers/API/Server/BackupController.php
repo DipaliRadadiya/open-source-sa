@@ -22,9 +22,13 @@ use App\Models\BackupTarget;
 use App\Services\ActivityLogger;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Support\ListSearch;
 use App\Support\ListSort;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
+use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -279,7 +283,7 @@ class BackupController extends Controller
      * three guards below already exclude every case where there is nothing
      * to hand over.
      */
-    public function download(Backup $backup, DestinationDisk $disks, ActivityLogger $activity): JsonResponse
+    public function download(Backup $backup, DestinationDisk $disks, StorageDriverFactory $drivers, ActivityLogger $activity): JsonResponse
     {
         $key = $backup->manifest['key'] ?? null;
 
@@ -296,6 +300,14 @@ class BackupController extends Controller
                 'backup' => [__('backup.errors.download_no_destination')],
             ]);
         }
+
+        // Asked of the *driver* before the disk, because only the driver knows
+        // whether its provider has such a thing. This used to go straight to
+        // `temporaryUrl()`, which only the S3 adapter implements — so FTP,
+        // SFTP and both Drive destinations answered a raw 500 for the entire
+        // life of the feature, surfacing the day the first Drive backup got
+        // far enough to be downloadable.
+        $driverUrl = $drivers->for($destination)->downloadUrl($destination, $key);
 
         $disk = $disks->for($destination);
 
@@ -323,12 +335,38 @@ class BackupController extends Controller
 
         return response()->json([
             'download' => [
-                'url' => $disk->temporaryUrl($key, $expiresAt),
-                'expires_at' => $expiresAt->format('d-m-Y H:i:s'),
+                'url' => $driverUrl ?? $this->signedUrl($disk, $key, $expiresAt),
+
+                // Only meaningful for a signed URL. A Drive link does not
+                // expire — it is gated on who the browser is signed in as, not
+                // on a clock — and printing a five-minute countdown next to one
+                // would be a confident lie about when it stops working.
+                'expires_at' => $driverUrl !== null ? null : $expiresAt->format('d-m-Y H:i:s'),
                 'filename' => $this->filename($backup),
                 'size_bytes' => $backup->size_bytes,
             ],
         ]);
+    }
+
+    /**
+     * The S3 path: a signed link that carries its own expiry.
+     *
+     * Guarded rather than called blind. `temporaryUrl()` throws
+     * `RuntimeException: This driver does not support creating temporary URLs`
+     * on every adapter but S3, and that exception reaching the handler is the
+     * 500 this whole change exists to remove — so the one place still allowed
+     * to call it checks first, and a driver that can do neither gets a named
+     * reason instead.
+     */
+    private function signedUrl(Filesystem $disk, string $key, CarbonInterface $expiresAt): string
+    {
+        if (! $disk instanceof FilesystemAdapter || ! $disk->providesTemporaryUrls()) {
+            throw ValidationException::withMessages([
+                'backup' => [__('backup.errors.download_not_supported')],
+            ]);
+        }
+
+        return $disk->temporaryUrl($key, $expiresAt);
     }
 
     /**

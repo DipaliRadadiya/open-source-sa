@@ -48,6 +48,7 @@ return [
         'upload_artifact' => 'No se pudo subir el archivo. Comprueba que el destino de almacenamiento sigue aceptando escrituras.',
         'verify_artifact' => 'La subida no coincide con lo enviado, así que no se puede confiar en esta copia. No se eliminó ninguna copia antigua.',
         'upload_stalled' => 'La subida dejó de enviar datos y se abandonó. La conexión siguió abierta pero no se transfirió nada, lo que suele significar que el proveedor de almacenamiento la cortó. El destino no tiene ningún problema: la próxima ejecución programada lo intentará de nuevo.',
+        'download_not_supported' => 'La descarga no está disponible para este tipo de destino. El panel solo puede darle un enlace a su navegador si el proveedor de almacenamiento lo admite: Amazon S3 y Google Drive (su propia cuenta) lo hacen. La restauración de esta copia de seguridad sigue funcionando con normalidad.',
         'unknown' => 'La copia de seguridad falló por un motivo desconocido.',
         'crashed' => 'La copia de seguridad se detuvo inesperadamente: el proceso terminó antes de completarse. Normalmente el servidor se quedó sin memoria o el worker se reinició a mitad.',
         'abandoned' => 'Esta copia de seguridad nunca respondió y se ha cerrado. Su worker ya no existe, así que no se subió nada.',

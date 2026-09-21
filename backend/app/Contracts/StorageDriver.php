@@ -149,4 +149,27 @@ interface StorageDriver
      * `readStream()` really does stream.
      */
     public function downloadTo(StorageDestination $destination, string $key, string $path): bool;
+
+    /**
+     * A URL the operator's browser can fetch the archive from directly.
+     *
+     * `BackupController::download()` used to call `$disk->temporaryUrl()`
+     * unconditionally. **Only the S3 adapter implements that**, so Download
+     * answered a raw 500 — "This driver does not support creating temporary
+     * URLs" — for FTP, SFTP and both Drive destinations: four providers out of
+     * five, for as long as the feature has existed. It surfaced the day the
+     * first Drive backup got far enough to be downloadable.
+     *
+     * Returning null means "I have no such URL", exactly as `downloadTo()`
+     * returns false, and the caller then falls back to `temporaryUrl()` before
+     * refusing with a named reason. A driver that cannot do this is a normal
+     * state to be reported, not an exception to be thrown.
+     *
+     * **Never a link that makes the archive public.** The object is a complete
+     * copy of a site and its database. An implementation that widens
+     * permissions to produce a URL is trading the operator's data for
+     * convenience they did not ask for; if the only way to produce a link is
+     * to share the file, return null instead.
+     */
+    public function downloadUrl(StorageDestination $destination, string $key): ?string;
 }

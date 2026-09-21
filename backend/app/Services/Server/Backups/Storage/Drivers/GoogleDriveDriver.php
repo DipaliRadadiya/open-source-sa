@@ -215,4 +215,20 @@ class GoogleDriveDriver implements StorageDriver
     {
         return false;
     }
+
+    /**
+     * Null, unlike the OAuth sibling, and the difference is *whose* Drive it is.
+     *
+     * `webContentLink` authenticates by browser cookie. The sibling can use it
+     * because the archive sits in the operator's own Drive and their browser is
+     * already signed into that account. A service account is not a person and
+     * nobody can be signed in as one, so the same link would refuse them — and
+     * the only way to make it work would be to share the file more widely,
+     * which for a full copy of a site and its database is not a trade this
+     * driver gets to make on the operator's behalf.
+     */
+    public function downloadUrl(StorageDestination $destination, string $key): ?string
+    {
+        return null;
+    }
 }
