@@ -1821,6 +1821,7 @@
         "removeCancel": "Keep it",
         "removeSubmit": "Remove password",
         "removed": "Redis password removed.",
+        "removeFailed": "Could not remove the Redis password.",
         "notRunning": "Redis is not running.",
         "usage": "{used} in use",
         "usageOfLimit": "{used} of {limit}"

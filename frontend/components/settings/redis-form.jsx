@@ -98,7 +98,10 @@ export function RedisForm({ redis, canManage, changedBy }) {
       setRemoving(false);
       router.refresh();
     } catch (error) {
-      toast.error(apiMessage(error, t("redis.saved")));
+      // The fallback is what a reader sees when the API sends no message of
+      // its own, so it has to be the failure — this said "Redis settings
+      // saved." in a red toast, which is the one thing that had not happened.
+      toast.error(apiMessage(error, t("redis.removeFailed")));
     } finally {
       setPendingRemoval(false);
     }

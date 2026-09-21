@@ -1821,6 +1821,7 @@
         "removeCancel": "रहने दें",
         "removeSubmit": "पासवर्ड हटाएँ",
         "removed": "Redis पासवर्ड हटा दिया गया।",
+        "removeFailed": "Redis पासवर्ड हटाया नहीं जा सका।",
         "notRunning": "Redis नहीं चल रहा है।",
         "usage": "{used} उपयोग में",
         "usageOfLimit": "{limit} में से {used}"

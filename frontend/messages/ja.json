@@ -1821,6 +1821,7 @@
         "removeCancel": "維持する",
         "removeSubmit": "パスワードを解除",
         "removed": "Redis のパスワードを解除しました。",
+        "removeFailed": "Redis のパスワードを削除できませんでした。",
         "notRunning": "Redis は実行されていません。",
         "usage": "使用中 {used}",
         "usageOfLimit": "{limit} のうち {used}"

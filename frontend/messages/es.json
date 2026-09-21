@@ -1821,6 +1821,7 @@
         "removeCancel": "Conservarla",
         "removeSubmit": "Quitar contraseña",
         "removed": "Contraseña de Redis eliminada.",
+        "removeFailed": "No se pudo quitar la contraseña de Redis.",
         "notRunning": "Redis no está en ejecución.",
         "usage": "{used} en uso",
         "usageOfLimit": "{used} de {limit}"

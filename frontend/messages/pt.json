@@ -1821,6 +1821,7 @@
         "removeCancel": "Manter",
         "removeSubmit": "Remover senha",
         "removed": "Senha do Redis removida.",
+        "removeFailed": "Não foi possível remover a senha do Redis.",
         "notRunning": "O Redis não está em execução.",
         "usage": "{used} em uso",
         "usageOfLimit": "{used} de {limit}"

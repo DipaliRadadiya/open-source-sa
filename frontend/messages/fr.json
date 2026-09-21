@@ -1821,6 +1821,7 @@
         "removeCancel": "Le conserver",
         "removeSubmit": "Retirer le mot de passe",
         "removed": "Mot de passe Redis supprimé.",
+        "removeFailed": "Impossible de supprimer le mot de passe Redis.",
         "notRunning": "Redis n'est pas en exécution.",
         "usage": "{used} utilisé",
         "usageOfLimit": "{used} sur {limit}"

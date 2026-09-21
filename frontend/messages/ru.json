@@ -1821,6 +1821,7 @@
         "removeCancel": "Оставить",
         "removeSubmit": "Убрать пароль",
         "removed": "Пароль Redis удалён.",
+        "removeFailed": "Не удалось удалить пароль Redis.",
         "notRunning": "Redis не запущен.",
         "usage": "Используется {used}",
         "usageOfLimit": "{used} из {limit}"
