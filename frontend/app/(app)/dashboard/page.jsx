@@ -27,9 +27,10 @@ export async function generateMetadata() {
 }
 
 export default async function DashboardPage() {
-  const [permissions, t] = await Promise.all([
+  const [permissions, t, tDenied] = await Promise.all([
     getPermissions(),
     getTranslations("serverDashboard"),
+    getTranslations("common.permissionDenied"),
   ]);
 
   // Only someone who could act on setup gets the nudge, and only while the
@@ -145,10 +146,14 @@ export default async function DashboardPage() {
           />
         </>
       ) : (
+        /* The same refusal every other screen gives, so the panel has one
+           voice about access. The dashboard cannot use <PermissionDenied />
+           itself — it is the one page that must render its own header first,
+           since it is also the fallback landing route. */
         <EmptyState
           icon={ShieldOff}
-          title={t("noPermission.title")}
-          description={t("noPermission.description")}
+          title={tDenied("title", { feature: t("title") })}
+          description={tDenied("description")}
         />
       )}
     </div>

@@ -18,6 +18,10 @@ import { landingPath } from "../lib/permissions/landing-path.js";
  */
 
 const read = (p) => fs.readFileSync(p, "utf8");
+// Comments mention the components they explain. Asserting against prose finds
+// a page that only TALKS about <PermissionDenied /> — the dashboard's does,
+// saying why it cannot use one.
+const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const LOCALES = read("i18n/routing.js")
   .match(/export const locales = \[([^\]]+)\]/)[1]
   .split(",")
@@ -44,11 +48,11 @@ test("a refused page names itself, not whatever it would have bounced to", () =>
    * The title passed in is the page's OWN heading, so the refusal can never
    * drift from what the sidebar calls the screen.
    */
-  const guarded = pages.filter((p) => read(p).includes("<PermissionDenied"));
+  const guarded = pages.filter((p) => strip(read(p)).includes("<PermissionDenied"));
   assert.ok(guarded.length >= 30, `expected the whole set, found ${guarded.length}`);
   for (const p of guarded) {
     assert.match(
-      read(p),
+      strip(read(p)),
       /<PermissionDenied title=\{t\("(title|pageTitle)"\)\} \/>/,
       `${p} must name itself`,
     );
@@ -128,4 +132,31 @@ test("the refusal reads in every locale", () => {
     assert.match(ns.title, /\{feature\}/, `${locale} must name the screen`);
     assert.ok(ns.description?.trim(), `${locale} description`);
   }
+});
+
+test("the dashboard refuses in the same words as everywhere else", () => {
+  /*
+   * It cannot use <PermissionDenied /> itself — it is the fallback landing
+   * route, so it renders its own header first and a second one would stack.
+   * It uses the shared STRINGS instead, which is what a reader notices: it
+   * said "the dashboard" in lower case beside twelve screens saying "PHP",
+   * "Firewall", "System Users".
+   */
+  const src = read("app/(app)/dashboard/page.jsx");
+  assert.match(src, /getTranslations\("common\.permissionDenied"\)/);
+  assert.match(src, /tDenied\("title", \{ feature: t\("title"\) \}\)/);
+  assert.doesNotMatch(strip(src), /noPermission\./, "the bespoke pair is gone");
+
+  for (const locale of LOCALES) {
+    const dash = JSON.parse(read(`messages/${locale}.json`)).serverDashboard;
+    assert.equal(dash.noPermission, undefined, `${locale} still carries serverDashboard.noPermission`);
+  }
+});
+
+test("a screen is spelled one way", () => {
+  // English disagreed with itself one key apart: the Activity Log page titled
+  // itself "Activity log" while its own table said "Activity Log".
+  const en = JSON.parse(read("messages/en.json")).activity;
+  assert.equal(en.title, "Activity Log");
+  assert.equal(en.title, en.mine.title);
 });

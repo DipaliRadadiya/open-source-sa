@@ -851,10 +851,6 @@
     "ofCores": "sur {count} cœurs",
     "breakdown": "{used} utilisé · {free} libre · {total} total",
     "loadFailed": "Impossible de charger ces données. Essayez de rafraîchir la page.",
-    "noPermission": {
-      "title": "Vous n'avez pas accès au tableau de bord",
-      "description": "Votre rôle n'inclut pas la permission de voir les métriques du serveur. Demandez à un administrateur d'accorder l'accès au tableau de bord."
-    },
     "staleHint": "Affichage des dernières valeurs reçues.",
     "kill": {
       "action": "Arrêter ce processus",

@@ -851,10 +851,6 @@
     "ofCores": "de {count} núcleos",
     "breakdown": "{used} usado · {free} livre · {total} total",
     "loadFailed": "Não foi possível carregar estes dados. Tente atualizar a página.",
-    "noPermission": {
-      "title": "Você não tem acesso ao painel",
-      "description": "Seu papel não inclui permissão para visualizar métricas do servidor. Peça a um administrador para conceder acesso ao painel."
-    },
     "staleHint": "Exibindo os últimos valores recebidos.",
     "kill": {
       "action": "Parar este processo",

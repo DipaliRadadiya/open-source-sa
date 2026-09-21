@@ -593,7 +593,7 @@
     }
   },
   "activity": {
-    "title": "Activity log",
+    "title": "Activity Log",
     "subtitle": "Every action taken across the panel.",
     "searchPlaceholder": "Search action or user…",
     "empty": {
@@ -851,10 +851,6 @@
     "ofCores": "of {count} cores",
     "breakdown": "{used} used · {free} free · {total} total",
     "loadFailed": "Could not load this data. Try refreshing the page.",
-    "noPermission": {
-      "title": "You don't have access to the dashboard",
-      "description": "Your role doesn't include permission to view server metrics. Ask an administrator to grant dashboard access."
-    },
     "staleHint": "Showing the last values received.",
     "kill": {
       "action": "Stop this process",
