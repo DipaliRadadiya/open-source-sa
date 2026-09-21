@@ -334,6 +334,22 @@ return [
          * slow movement. The guard keys on zero, so it is generous by design.
          */
         'upload_stall_seconds' => (int) env('BACKUP_UPLOAD_STALL_SECONDS', 1200),
+
+        /*
+         * How long a run that has reported *no* progress at all is given.
+         *
+         * Only reachable before the upload starts — a crash during the database
+         * dump or while building the archive, where there is no heartbeat to
+         * read. Separate from `job_timeout` on purpose: this used to be derived
+         * from it, so raising the timeout to six hours would have stretched
+         * this from 65 minutes to six hours as a side effect, locking a target
+         * out for an afternoon because of a change about upload speed.
+         *
+         * Must stay well above the longest archive step. Too low does not
+         * abort anything — it frees the guard while the worker is still
+         * writing, and a second backup starts alongside the first.
+         */
+        'no_heartbeat_stale_seconds' => (int) env('BACKUP_NO_HEARTBEAT_STALE_SECONDS', 3900),
     ],
 
     /*

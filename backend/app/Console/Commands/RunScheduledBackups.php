@@ -40,7 +40,14 @@ class RunScheduledBackups extends Command
             // target, and this tick is the only thing that visits a target
             // nobody is looking at — without it a site stops being backed up
             // and the first anyone hears of it is when they need the backup.
-            $reaper->reap($target);
+            // Checked, not assumed. This loop used to lean on the queue's
+            // uniqueness lock to skip a target that was already running; that
+            // lock is now released when a job is picked up, so by the time a
+            // long backup is halfway through its archive the lock is gone and
+            // this tick would happily queue a second one alongside it.
+            if ($reaper->hasLiveRun($target)) {
+                continue;
+            }
 
             // Not marked as run here: the runner sets last_run_at when it
             // finishes, success or failure. Marking it now would mean a job

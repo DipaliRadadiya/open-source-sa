@@ -3,7 +3,6 @@
 namespace App\Services\Server\Backups;
 
 use App\Enums\BackupStatus;
-use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Jobs\RunBackup;
 use App\Models\Backup;
 use App\Models\BackupTarget;
@@ -23,13 +22,12 @@ use Illuminate\Support\Facades\Log;
  * database. A backup feature that has silently stopped backing up is the one
  * failure this feature cannot have.
  *
- * **The bound is borrowed, not invented.** {@see ExpiresUniqueLock}
- * already decided how long to wait before assuming a job is dead — the job's own
- * timeout plus a grace — and expires the queue lock on exactly that. Reusing it
- * means the lock and the row cannot disagree about whether a run is alive, and
- * the direction of the error stays the one that trait argued for: expiring late
- * costs a delayed run, expiring early costs two concurrent backups of the same
- * site competing for one disk.
+ * **Two bounds, because there are two kinds of evidence.** A run that has
+ * reported bytes is judged on its heartbeat; one that has not is judged on its
+ * age. Both err the same way on purpose — late rather than early. Expiring late
+ * costs a delayed run; expiring early frees the guard for a second backup to
+ * start alongside a first that is still writing, and both then archive one site
+ * to one key.
  *
  * Reaped rows are marked `Failed` rather than deleted or ignored. Ignoring one
  * would let backups resume while the screen still showed a run in progress that
@@ -50,14 +48,30 @@ class StaleBackupReaper
     ];
 
     /**
-     * A run older than this cannot still be alive: the worker's own timeout has
-     * passed and the queue lock is already collectable.
+     * How long a run with *no heartbeat at all* is given before it counts dead.
+     *
+     * Used only before the upload has reported a single byte — in practice a
+     * crash during the dump or the archive, where there is no progress to read
+     * and the only evidence is age.
+     *
+     * **Deliberately not `RunBackup::uniqueFor()` any more.** This used to
+     * borrow the job's timeout so the row and the queue lock could not
+     * disagree. Two things changed: the lock is released at pickup now, so it
+     * no longer describes a running job at all, and the timeout was raised from
+     * one hour to six. Still borrowing it would have quietly stretched this
+     * bound sixfold — a backup killed during archiving would have locked its
+     * target out for six hours instead of 65 minutes, a regression introduced
+     * by a change that had nothing to do with it.
+     *
+     * So it is pinned, and pinned to the value it effectively had before, which
+     * has the operational history behind it. The bound must stay comfortably
+     * above the longest archive step: reaping early does not stop the worker,
+     * it just frees the guard for a second backup to start alongside the first,
+     * and both then write one key.
      */
     public static function staleAfterSeconds(): int
     {
-        $job = new RunBackup(0);
-
-        return $job->uniqueFor();
+        return (int) config('server.backups.no_heartbeat_stale_seconds', 3900);
     }
 
     /**

@@ -8,12 +8,15 @@ use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Models\StorageDestination;
+use App\Services\ActivityLogger;
 use App\Services\Server\Backups\BackupContext;
+use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Steps\UploadArtifact;
 use App\Services\Server\Backups\Storage\DestinationDisk;
 use App\Services\Server\Backups\UploadProgressReporter;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 /**
@@ -217,4 +220,42 @@ it('leaves a slow but living upload alone', function () {
     ])->save();
 
     expect(app(StaleBackupReaper::class)->isStale($backup->fresh()))->toBeFalse();
+});
+
+it('releases the uniqueness lock at pickup so a killed worker strands nothing', function () {
+    // The failure this replaces: a `kill -9` left the lock held for the job's
+    // full TTL, and every dispatch after that was *discarded* — not refused.
+    // The API still answered 202, so the panel reported a backup started and
+    // nothing ran. Raising the timeout to six hours would have stretched that
+    // dead window from 65 minutes to six.
+    expect(new RunBackup(1))->toBeInstanceOf(ShouldBeUniqueUntilProcessing::class)
+        ->and(new RunRestore(1, 1))->toBeInstanceOf(ShouldBeUniqueUntilProcessing::class);
+});
+
+it('refuses to start a second run for a target that is already live', function () {
+    $backup = progressBackup();
+
+    // With the lock released at pickup, two jobs for one target can sit in the
+    // queue legitimately. This is the check that cannot be raced — it runs on
+    // the worker about to start writing. Without it the raised timeout would
+    // have traded a stuck lock for two concurrent archives of one site.
+    $backup->forceFill(['progress_at' => now()])->save();
+
+    (new RunBackup($backup->backup_target_id))->handle(
+        app(BackupRunner::class),
+        app(ActivityLogger::class),
+    );
+
+    // Still exactly one run: the job returned without creating a second.
+    expect(Backup::where('backup_target_id', $backup->backup_target_id)->count())->toBe(1);
+});
+
+it('does not stretch the no-heartbeat lockout when the job timeout is raised', function () {
+    // This bound used to be derived from the job timeout. Raising the timeout
+    // 6x for large uploads would have silently made a crash during *archiving*
+    // lock its target out for six hours instead of 65 minutes — a regression in
+    // a completely unrelated part of the feature.
+    expect(StaleBackupReaper::staleAfterSeconds())->toBe(3900)
+        ->and(StaleBackupReaper::staleAfterSeconds())
+        ->toBeLessThan(config('server.backups.job_timeout'));
 });

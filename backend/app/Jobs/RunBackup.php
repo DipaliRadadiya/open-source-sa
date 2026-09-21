@@ -8,8 +8,9 @@ use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Services\ActivityLogger;
 use App\Services\Server\Backups\BackupRunner;
+use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\GoogleHttpClient;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -26,12 +27,28 @@ use Throwable;
  * Unique per target, so a manual run started while the scheduled one is still
  * going cannot produce two archives of the same site at once.
  *
+ * **Unique *until processing*, not until completion.** A lock held for the
+ * whole run is only released if the job reaches an end — and the case that
+ * matters is the one where it does not: `kill -9`, an OOM, a reboot. The lock
+ * then survives with the job's full `uniqueFor` TTL, and every dispatch for
+ * that target is silently discarded. Not refused — discarded, with the API
+ * still answering `202`, so the panel reports a backup started and nothing ran.
+ * That happened on 2026-09-21 and cost an afternoon; raising the timeout to six
+ * hours would have stretched the same dead window from 65 minutes to six hours.
+ *
+ * Releasing at pickup means a killed worker leaves nothing behind. What then
+ * prevents two concurrent runs is the backup row itself — `hasLiveRun()`, which
+ * every dispatch path now checks, including the scheduler — and that guard is
+ * strictly better than the lock was: it is visible in the database, it says
+ * *why* on screen, and since it reads the progress heartbeat it clears within
+ * the stall window instead of the job's whole timeout.
+ *
  * Dispatched to the default queue, deliberately: the installer runs a single
  * `queue:work` with no `--queue`, so that is the only queue anything drains.
  * This job used to go to a `backups` queue that no worker consumed, which is
  * why scheduled backups never ran on any real install.
  */
-class RunBackup implements ShouldBeUnique, ShouldQueue
+class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use ExpiresUniqueLock;
     use Queueable;
@@ -80,6 +97,21 @@ class RunBackup implements ShouldBeUnique, ShouldQueue
         if ($target === null) {
             // Dispatched by id so a target deleted between queueing and
             // running is a graceful no-op rather than a crash.
+            return;
+        }
+
+        // The lock is released at pickup now, so two jobs for one target can
+        // legitimately sit in the queue if the second was dispatched while the
+        // first was running. Both callers check this before dispatching; this
+        // is the check that cannot be raced, because it happens on the worker
+        // that is about to start writing. Two concurrent runs would archive one
+        // site twice, to one key, on one disk.
+        if (app(StaleBackupReaper::class)->hasLiveRun($target)) {
+            Log::channel('server-ops')->info('backup skipped, one is already running', [
+                'feature' => 'backup',
+                'backup_target' => $this->backupTargetId,
+            ]);
+
             return;
         }
 

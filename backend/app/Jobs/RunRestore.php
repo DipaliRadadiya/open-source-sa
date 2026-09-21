@@ -7,7 +7,7 @@ use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\Restore;
 use App\Services\ActivityLogger;
 use App\Services\Server\Restores\RestoreRunner;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -25,7 +25,7 @@ use Throwable;
  * (ShouldBeUniqueUntilProcessing releases at pickup) — two restores writing
  * the same site directory at once is the one thing worse than none.
  */
-class RunRestore implements ShouldBeUnique, ShouldQueue
+class RunRestore implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use ExpiresUniqueLock;
     use Queueable;
