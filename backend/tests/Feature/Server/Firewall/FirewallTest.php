@@ -677,3 +677,108 @@ it('keeps the model default and the column default saying the same thing', funct
     expect($migration)->toContain("boolean('enabled')->default(true)")
         ->and((new FirewallRule)->enabled)->toBeTrue();
 });
+
+/*
+|--------------------------------------------------------------------------
+| Searching the rules list by service name
+|--------------------------------------------------------------------------
+|
+| The rules the panel seeds itself carry no description — measured on a live
+| OpenLiteSpeed box, where 22, 80 and 443 all had `description: null`. So
+| searching "ssh" matched nothing while the row sat in plain sight, and the
+| list showed a readable summary that is built at read time and therefore
+| exists nowhere the database can search.
+|
+| A service name now resolves to its port. The text search is unchanged, and
+| the regression tests below are what say so.
+*/
+
+/** The rules list as the API returns it, for `?search=$term`. */
+function searchRules(string $term): array
+{
+    return test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/firewall/rules?search='.urlencode($term))
+        ->assertOk()
+        ->json('rules');
+}
+
+it('finds a seeded rule by its service name, though it has no description', function () {
+    $rule = FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    // The precondition is the whole point: nothing on this row contains "ssh".
+    expect($rule->description)->toBeNull();
+
+    expect(collect(searchRules('ssh'))->pluck('id'))->toContain($rule->id);
+});
+
+it('matches a service name whatever case it is typed in', function () {
+    FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    foreach (['SSH', 'Ssh', ' ssh '] as $term) {
+        expect(searchRules($term))->toHaveCount(1, "search({$term}) found nothing");
+    }
+});
+
+it('does not return every web rule when asked for https', function () {
+    FirewallRule::create(['port_from' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+    $https = FirewallRule::create(['port_from' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    // A negative control. A mapping that resolved loosely, or a LIKE over the
+    // port digits, would hand back 80 as well and still look like it worked.
+    expect(collect(searchRules('https'))->pluck('id')->all())->toBe([$https->id]);
+});
+
+it('finds a port range that covers the service', function () {
+    $range = FirewallRule::create(['port_from' => 20, 'port_to' => 30, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+
+    expect(collect(searchRules('ssh'))->pluck('id'))->toContain($range->id);
+});
+
+it('treats custom as a word, not a port, because it names no service', function () {
+    FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+    $described = FirewallRule::create(['port_from' => 9000, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user', 'description' => 'Custom app']);
+
+    // `custom` is the UI's "let me type a port" entry and has none of its own.
+    // It must fall through to the text search rather than resolve to null and
+    // quietly match everything.
+    expect(collect(searchRules('custom'))->pluck('id')->all())->toBe([$described->id]);
+});
+
+it('still searches port, source and description as text', function () {
+    $high = FirewallRule::create(['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+    $office = FirewallRule::create(['port_from' => 9001, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user', 'source_ip' => '203.0.113.7']);
+    $named = FirewallRule::create(['port_from' => 9002, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user', 'description' => 'Plesk panel']);
+
+    expect(collect(searchRules('8080'))->pluck('id'))->toContain($high->id)
+        ->and(collect(searchRules('203.0.113'))->pluck('id'))->toContain($office->id)
+        ->and(collect(searchRules('plesk'))->pluck('id'))->toContain($named->id);
+});
+
+it('keeps a text port match partial, so 80 still finds 8080', function () {
+    $http = FirewallRule::create(['port_from' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+    $alt = FirewallRule::create(['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+
+    // Documented behaviour, not an accident: someone scanning for rules about
+    // the web server wants both. The service-name mapping must not narrow it.
+    expect(collect(searchRules('80'))->pluck('id')->all())
+        ->toEqualCanonicalizing([$http->id, $alt->id]);
+});
+
+/**
+ * The guard that matters.
+ *
+ * The service-name match is an OR and the filters are an AND. Unbracketed,
+ * the OR escapes its group and the filter stops applying — the request asks
+ * for denied rules and is answered with an allowed one. That failure reads
+ * as "search works" in every other test here.
+ */
+it('keeps a filter applied when the search matches a service name', function () {
+    FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/firewall/rules?search=ssh&filter[action]=deny')
+        ->assertOk();
+
+    expect($response->json('rules'))->toBe([])
+        ->and($response->json('meta.total'))->toBe(0);
+});

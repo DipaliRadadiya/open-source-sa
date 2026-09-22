@@ -4445,6 +4445,8 @@ Separate endpoint on purpose: `GET /firewall` also reports live UFW status and t
 
 `?search=` case-insensitively matches port, source IP and description (text match, so `80` finds both 80 and 8080); `?filter[enabled]=0|1`, `?filter[action]=allow|deny`, `?filter[origin]=user|default|db_user`; `?sort=created_at|port_from|action|protocol`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10.
 
+`search` also accepts a **service name** — `ssh`, `http`, `https`, `mysql`, `postgresql`, `redis`, `ftp`, `smtp`, `dns` (the `GET /firewall/presets` keys, minus `custom`, which has no port and falls through to the text match). The name resolves to its port and matches any rule on that port, including a range covering it: `search=ssh` finds the rule for 22 and a rule for 20:30. This exists because the rules the panel seeds itself carry **no description**, so searching for a service by name previously returned nothing while the row was on screen. Matching is on the name, not the rule's origin — a rule someone opened on 3306 for their own reasons is returned by `search=mysql`.
+
 ```json
 {"rules": [{"id": 1, "port_from": 443, "…": "…"}],
  "meta": {"current_page": 1, "per_page": 10, "total": 12, "last_page": 2}}
