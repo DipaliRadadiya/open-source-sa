@@ -3201,7 +3201,6 @@
       "title": "Your server is ready for its first application",
       "description": "Create an application or service in a guided flow. {brand} will provision it, then show its live status here.",
       "filteredTitle": "No matching applications",
-      "clearSearch": "Clear search",
       "guideTitle": "From idea to a running application",
       "steps": {
         "choose": {
@@ -3412,6 +3411,7 @@
       "removeFiles": "Also delete the application’s files and backups",
       "removeFilesOn": "The application’s directory, and every backup it has — including the archives in your storage — are deleted.",
       "removeFilesOff": "The files stay on the server. The application’s backups leave the panel with it, but their archives stay in your storage — delete them there if you no longer want them.",
+      "systemUserStays": "The system user {username} is not removed. If no other application uses it, you can delete it from System Users.",
       "confirmLabel": "Type <code>{domain}</code> to confirm",
       "submit": "Delete application",
       "deleting": "Deleting…",

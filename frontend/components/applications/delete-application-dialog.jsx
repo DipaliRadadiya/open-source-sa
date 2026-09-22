@@ -186,6 +186,22 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
           </div>
         ) : null}
 
+        {/* The Linux account this application generated.
+        
+            `POST /applications/{id}` accepts `remove_files` and
+            `remove_databases` and nothing else, so there is no checkbox to
+            offer — the account cannot be removed from here. What it CAN do is
+            stop being silent about it: the dialog listed configuration, files
+            and databases and never mentioned the user, so deleting a
+            test application left a Linux account owning nothing and nothing on
+            screen said so. Found on this server, twice: `qa-throwaway` and
+            `prestashop`, both with zero applications. */}
+        {application?.system_user?.username ? (
+          <p className="text-xs leading-5 text-muted-foreground">
+            {t("systemUserStays", { username: application.system_user.username })}
+          </p>
+        ) : null}
+
         <div className="space-y-2">
           {/* One sentence, not three fragments. `Label` is display:flex, so
               "Type", the domain and "to confirm" were laid out as flex items

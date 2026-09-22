@@ -3201,7 +3201,6 @@
       "title": "Votre serveur est prêt pour sa première application",
       "description": "Créez une application ou un service via un parcours guidé. {brand} le provisionnera, puis affichera son état en direct ici.",
       "filteredTitle": "Aucune application correspondante",
-      "clearSearch": "Effacer la recherche",
       "guideTitle": "De l'idée à l'application en cours d'exécution",
       "steps": {
         "choose": {
@@ -3412,6 +3411,7 @@
       "removeFiles": "Supprimer aussi les fichiers et sauvegardes de l'application",
       "removeFilesOn": "Le répertoire de l'application, ainsi que toutes ses sauvegardes — y compris les archives dans votre stockage — sont supprimés.",
       "removeFilesOff": "Les fichiers restent sur le serveur. Les sauvegardes de l'application quittent le panneau avec elle, mais leurs archives restent dans votre stockage — supprimez-les là-bas si vous n'en voulez plus.",
+      "systemUserStays": "L'utilisateur système {username} n'est pas supprimé. Si aucune autre application ne l'utilise, vous pouvez le supprimer dans Utilisateurs système.",
       "confirmLabel": "Tapez <code>{domain}</code> pour confirmer",
       "submit": "Supprimer l'application",
       "deleting": "Suppression…",

@@ -31,6 +31,12 @@ const badgeVariants = cva(
           "bg-success/10 text-success dark:bg-success/20",
         warning:
           "bg-warning/15 text-warning dark:bg-warning/20",
+        // A status that is filled like its siblings but carries no alarm.
+        // `secondary` is a quiet LABEL — no fill at all — so a Pending
+        // application sat in a column of coloured pills with nothing around it
+        // and read as a missing badge rather than a state.
+        muted:
+          "bg-muted text-muted-foreground dark:bg-muted/60",
         outline:
           "rounded-md border-border/70 px-1.5 text-muted-foreground [a]:hover:text-foreground",
         ghost:

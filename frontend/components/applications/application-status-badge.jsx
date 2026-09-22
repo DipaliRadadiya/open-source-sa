@@ -30,7 +30,7 @@ export const STATUS_VARIANTS = {
   active: "success",
   failed: "destructive",
   provisioning: "warning",
-  pending: "secondary",
+  pending: "muted",
 };
 
 // A site can be "active" and still be in trouble: its process may have died, or
@@ -133,8 +133,13 @@ export function ApplicationStatusNotes({ application, className }) {
     <div className={cn("space-y-1", className)}>
       {/* The API sends raw step identifiers (`create_php_pool`), which were
           being printed straight into the row. */}
+      {/* Wraps. It was `truncate` inside a 125px column, which cut "Setting up
+          PHP for this application" to "Setting up PHP for t…" — and on a
+          FAILED row the same cap took the reason, which is the one thing on
+          that row worth reading. No tooltip either, so the rest existed
+          nowhere. A taller row is the cheaper of the two. */}
       {provisioning ? (
-        <p className="max-w-40 truncate text-xs text-muted-foreground">
+        <p className="max-w-40 text-xs text-pretty text-muted-foreground">
           {provisionStepLabel(application.steps.at(-1), t, "details.")}
         </p>
       ) : null}
@@ -162,11 +167,16 @@ export function ApplicationStatusNotes({ application, className }) {
         // better answer than the step: "Killed — the server ran out of memory"
         // tells someone what to do, "Stopped at: Installing" does not.
         application.failed_reason_title ? (
-          <p className="max-w-52 truncate text-xs text-destructive">
+          /* Wrapped, unlike the reference below. A truncated UUID is still
+             recognisable as that UUID; a truncated sentence is not a sentence.
+             "Could not create the PHP pool" was arriving as "Could not create
+             the…", which is the reason for the failure with the reason
+             removed. */
+          <p className="max-w-52 text-xs text-pretty text-destructive">
             {application.failed_reason_title}
           </p>
         ) : PROVISION_STEPS.has(application.failed_step) ? (
-          <p className="max-w-52 truncate text-xs text-destructive">
+          <p className="max-w-52 text-xs text-pretty text-destructive">
             {/* The detail page's own string, not a second one that means the
                 same thing — the two screens describe one failure. */}
             {t("details.failedAt", {

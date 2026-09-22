@@ -3201,7 +3201,6 @@
       "title": "Ihr Server ist bereit für die erste Anwendung",
       "description": "Legen Sie eine Anwendung oder einen Dienst in einem geführten Ablauf an. {brand} richtet alles ein und zeigt hier den aktuellen Status.",
       "filteredTitle": "Keine passenden Anwendungen",
-      "clearSearch": "Suche zurücksetzen",
       "guideTitle": "Von der Idee zur laufenden Anwendung",
       "steps": {
         "choose": {
@@ -3412,6 +3411,7 @@
       "removeFiles": "Auch die Dateien und Backups der Anwendung löschen",
       "removeFilesOn": "Das Verzeichnis der Anwendung und jedes ihrer Backups — samt der Archive in Ihrem Speicher — werden gelöscht.",
       "removeFilesOff": "Die Dateien bleiben auf dem Server. Die Backups der Anwendung verlassen das Panel mit ihr, ihre Archive bleiben aber in Ihrem Speicher — löschen Sie sie dort, wenn Sie sie nicht mehr wollen.",
+      "systemUserStays": "Der Systembenutzer {username} wird nicht entfernt. Wenn keine andere Anwendung ihn nutzt, können Sie ihn unter Systembenutzer löschen.",
       "confirmLabel": "Tippen Sie <code>{domain}</code>, um zu bestätigen",
       "submit": "Anwendung löschen",
       "deleting": "Wird gelöscht…",

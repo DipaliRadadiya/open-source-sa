@@ -160,3 +160,45 @@ test("a screen is spelled one way", () => {
   assert.equal(en.title, "Activity Log");
   assert.equal(en.title, en.mine.title);
 });
+
+test("the clear button names what it actually clears", () => {
+  /*
+   * Filtering Applications by status = Failed and getting no rows offered
+   * "Clear search" — a control the reader never touched. It clears all three
+   * (search, status, type), and Applications is the only list with more than a
+   * search box, so it is the only one where "Clear search" is wrong.
+   */
+  const table = read("components/applications/applications-table.jsx");
+  assert.match(table, /setQuery\(\{ search: undefined, status: undefined, site_type: undefined \}/);
+  assert.match(table, /tCommon\("clearFilters"\)/);
+  assert.doesNotMatch(strip(table), /t\("empty\.clearSearch"\)/);
+
+  for (const locale of LOCALES) {
+    const m = JSON.parse(read(`messages/${locale}.json`));
+    assert.ok(m.common.clearFilters?.trim(), `${locale} common.clearFilters`);
+    assert.equal(m.applications.empty.clearSearch, undefined, `${locale} still carries the old key`);
+  }
+
+  // The single-filter lists keep "Clear search", because there it is true.
+  assert.match(read("components/databases/databases-table.jsx"), /t\("empty\.clearSearch"\)/);
+});
+
+test("deleting an application admits the system user survives", () => {
+  /*
+   * Create generates a Linux account nobody asked for; delete removes the
+   * application, its files and its databases and leaves the account behind.
+   * `DestroyApplicationRequest` accepts `remove_files` and `remove_databases`
+   * and nothing else, so there is no checkbox to offer — but the dialog listed
+   * everything it DID remove and never mentioned the account, which is how
+   * this server ended up with `qa-throwaway` and `prestashop` owning nothing.
+   */
+  const dlg = read("components/applications/delete-application-dialog.jsx");
+  assert.match(dlg, /application\?\.system_user\?\.username \?/, "only when there is one to name");
+  assert.match(dlg, /t\("systemUserStays", \{ username: application\.system_user\.username \}\)/);
+
+  for (const locale of LOCALES) {
+    const s = JSON.parse(read(`messages/${locale}.json`)).applications.delete.systemUserStays;
+    assert.ok(s?.trim(), `${locale} delete.systemUserStays`);
+    assert.match(s, /\{username\}/, `${locale} must name the account`);
+  }
+});

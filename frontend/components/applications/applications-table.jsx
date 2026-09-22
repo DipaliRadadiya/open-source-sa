@@ -247,6 +247,7 @@ function ApplicationsList({
   gitProviders = new Map(),
 }) {
   const t = useTranslations("applications");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
@@ -385,7 +386,11 @@ function ApplicationsList({
               variant="outline"
               onClick={() => setQuery({ search: undefined, status: undefined, site_type: undefined }, { resetPage: true })}
             >
-              {t("empty.clearSearch")}
+              {/* "Clear filters", not "Clear search". This button clears all
+                  three — and this is the only list with more than a search
+                  box, so filtering by Status and being offered "Clear search"
+                  names a control the reader never touched. */}
+              {tCommon("clearFilters")}
             </Button>
           }
         />

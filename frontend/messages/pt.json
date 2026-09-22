@@ -3201,7 +3201,6 @@
       "title": "Seu servidor está pronto para a primeira aplicação",
       "description": "Crie uma aplicação ou serviço em um fluxo guiado. {brand} fará o provisionamento e mostrará o status aqui.",
       "filteredTitle": "Nenhuma aplicação corresponde",
-      "clearSearch": "Limpar busca",
       "guideTitle": "Da ideia à aplicação rodando",
       "steps": {
         "choose": {
@@ -3412,6 +3411,7 @@
       "removeFiles": "Excluir também os arquivos e backups da aplicação",
       "removeFilesOn": "O diretório da aplicação e todos os backups dela — incluindo os arquivos no seu storage — serão excluídos.",
       "removeFilesOff": "Os arquivos permanecem no servidor. Os backups da aplicação saem do painel junto com ela, mas os arquivos ficam no seu storage — exclua-os lá se não quiser mais mantê-los.",
+      "systemUserStays": "O usuário do sistema {username} não é removido. Se nenhum outro aplicativo o usa, você pode excluí-lo em Usuários do sistema.",
       "confirmLabel": "Digite <code>{domain}</code> para confirmar",
       "submit": "Excluir aplicação",
       "deleting": "Excluindo…",

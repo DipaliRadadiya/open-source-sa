@@ -3201,7 +3201,6 @@
       "title": "Tu servidor está listo para su primera aplicación",
       "description": "Crea una aplicación o servicio en un flujo guiado. {brand} lo aprovisionará y luego mostrará aquí su estado en directo.",
       "filteredTitle": "No hay aplicaciones coincidentes",
-      "clearSearch": "Borrar búsqueda",
       "guideTitle": "De la idea a una aplicación en marcha",
       "steps": {
         "choose": {
@@ -3412,6 +3411,7 @@
       "removeFiles": "Eliminar también los archivos y las copias de seguridad de la aplicación",
       "removeFilesOn": "Se eliminan el directorio de la aplicación y todas sus copias de seguridad, incluidos los archivos guardados en tu almacenamiento.",
       "removeFilesOff": "Los archivos permanecen en el servidor. Las copias de seguridad de la aplicación desaparecen del panel junto con ella, pero sus archivos siguen en tu almacenamiento: elimínalos allí si ya no los quieres.",
+      "systemUserStays": "El usuario del sistema {username} no se elimina. Si ninguna otra aplicación lo usa, puedes borrarlo en Usuarios del sistema.",
       "confirmLabel": "Escribe <code>{domain}</code> para confirmar",
       "submit": "Eliminar aplicación",
       "deleting": "Eliminando…",
