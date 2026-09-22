@@ -32,7 +32,11 @@ class BackupRunner
         );
     }
 
-    public function run(BackupTarget $target, ?int $actorId = null): Backup
+    /**
+     * @param  bool  $isSafety  Whether this run is a restore's way back.
+     *                          Stamped at creation, never afterwards — see below.
+     */
+    public function run(BackupTarget $target, ?int $actorId = null, bool $isSafety = false): Backup
     {
         $logKey = (string) Str::uuid();
 
@@ -41,6 +45,30 @@ class BackupRunner
             'application_id' => $target->application_id,
             'user_id' => $actorId,
             'type' => $target->type->value,
+
+            // **Born flagged, not flagged afterwards.**
+            //
+            // `SafetyBackup` used to call this method and then set
+            // `is_safety = true` on the row it got back. Everything in between
+            // — a multi-gigabyte archive and an upload that can run for an hour
+            // — was a window in which the flag was false, and a worker that
+            // died anywhere in it left a safety backup recorded as an ordinary
+            // one.
+            //
+            // That is not cosmetic. `PruneOldBackups` protects these rows with
+            // `where('is_safety', false)`, precisely so retention cannot
+            // "remove the parachute at exactly the wrong moment" — and a
+            // mis-flagged row loses that protection, so a later retention pass
+            // deletes both the row and the archive in the bucket.
+            //
+            // It has already happened here: on 2026-09-22 an OOM killed the
+            // worker mid-run and left restore 5's safety backup reading
+            // `is_safety = 0`, with the restore's `safety_backup_id` still
+            // null. The same argument the model makes for `uid` and
+            // `storage_destination_id` applies — a value that exists because of
+            // *where it is assigned* rather than because someone remembered.
+            'is_safety' => $isSafety,
+
             'status' => BackupStatus::Running,
             'reference' => (string) Str::uuid(),
             'log_key' => $logKey,

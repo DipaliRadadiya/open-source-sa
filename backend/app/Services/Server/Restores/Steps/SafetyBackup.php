@@ -53,15 +53,17 @@ class SafetyBackup implements RestoreStep
         // The configured target, whatever it covers — not just the half being
         // restored. Restoring only the database still changes the site, and a
         // half safety backup is a half way back.
-        $safety = $this->backups->run($target, $context->restore->user_id);
+        // Flagged at creation rather than after the run. The upload can take
+        // an hour, and a worker that dies inside that window used to leave a
+        // safety backup recorded as an ordinary one — which strips it of the
+        // retention exemption that exists to keep it. See BackupRunner::run().
+        $safety = $this->backups->run($target, $context->restore->user_id, isSafety: true);
 
         if ($safety->status !== BackupStatus::Verified) {
             throw new RuntimeException(
                 'the safety backup did not complete, so nothing was restored',
             );
         }
-
-        $safety->update(['is_safety' => true]);
 
         $context->restore->update(['safety_backup_id' => $safety->id]);
 
