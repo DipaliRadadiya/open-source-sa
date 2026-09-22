@@ -120,12 +120,45 @@ export const addDomainFormSchema = z
       .trim()
       .toLowerCase()
       .min(1, "domainRequired")
+      // The backend's own ceiling (`max:253`). Without it a long name was
+      // accepted here and refused by the server, which puts a field problem in
+      // a toast and leaves the box looking fine.
+      .max(253, "hostnameTooLong")
       .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/, "hostnameInvalid"),
     type: z.enum(["alias", "redirect"]).default("alias"),
+    /*
+     * A full URL, checked here as well as server-side.
+     *
+     * The backend rule is Laravel's `url`, which requires a scheme — so
+     * `example.com`, the most natural thing to type into a box labelled
+     * "Redirect to", was accepted by this form and refused by the server with
+     * "The redirect to field must be a valid URL." A field problem answered by
+     * a round trip, and the message never says what is missing.
+     *
+     * http/https only, deliberately narrower than `URL` alone: `javascript:`
+     * and `data:` both parse as URLs, and this value is written into the web
+     * server's redirect directive.
+     */
     redirect_to: z.string().trim().optional().default(""),
     redirect_status: z.coerce.number().refine((n) => REDIRECT_STATUSES.includes(n)).default(301),
   })
   .refine((v) => v.type !== "redirect" || v.redirect_to.length > 0, {
     path: ["redirect_to"],
     message: "redirectTargetRequired",
+  })
+  .refine((v) => v.type !== "redirect" || v.redirect_to.length === 0 || isHttpUrl(v.redirect_to), {
+    path: ["redirect_to"],
+    message: "redirectTargetUrl",
   });
+
+/** `http(s)://host…`, and nothing else. */
+function isHttpUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  // A bare hostname parses as nothing; `javascript:alert(1)` parses fine.
+  return (url.protocol === "http:" || url.protocol === "https:") && Boolean(url.hostname);
+}
