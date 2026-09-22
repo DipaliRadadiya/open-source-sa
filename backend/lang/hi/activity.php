@@ -123,6 +123,7 @@ return [
     'application.process_restart' => ':name पुनः आरंभ किया',
     'application.provisioned' => 'एप्लिकेशन :name सर्वर पर सेट किया',
     'application.domain_added' => 'डोमेन :domain जोड़ा (:type)',
+    'application.domain_updated' => 'डोमेन अपडेट किया गया :domain (:type)',
     'application.domain_removed' => 'डोमेन :domain हटाया (:type)',
     'application.primary_domain_changed' => 'प्राथमिक डोमेन :from से :to में बदला',
     'application.certificate_requested' => ':domain के लिए :type प्रमाणपत्र का अनुरोध किया',

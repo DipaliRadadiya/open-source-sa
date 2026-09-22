@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Server\Application;
 
 use App\Enums\DomainType;
+use App\Models\ApplicationDomain;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -37,6 +38,38 @@ class StoreApplicationDomainRequest extends FormRequest
             'type' => ['sometimes', Rule::in([DomainType::Alias->value, DomainType::Redirect->value])],
             'redirect_to' => ['nullable', 'required_if:type,redirect', 'string', 'max:2048', 'url'],
             'redirect_status' => ['sometimes', Rule::in([301, 302, 307, 308])],
+        ];
+    }
+
+    /**
+     * Name the application already holding it.
+     *
+     * The rule is unique across the whole server, so the default message —
+     * "The domain has already been taken" — is true and useless: it gives no
+     * way to find the site holding the name, and the user's next move is
+     * either to detach it there or to pick a different name. Neither is
+     * possible without knowing where it is.
+     *
+     * No leak: `app_domain` is a server-wide permission and applications are
+     * not scoped per user, so anyone who can reach this endpoint can already
+     * see every application in the list.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        $holder = ApplicationDomain::query()
+            ->where('domain', strtolower(trim((string) $this->input('domain'))))
+            ->with('application')
+            ->first()?->application;
+
+        return [
+            // Falls back to the plain message when the holder cannot be found
+            // — a row deleted between the check and this call, say. Better a
+            // vaguer sentence than one naming an application that is gone.
+            'domain.unique' => $holder === null
+                ? __('errors/application.domain_taken')
+                : __('errors/application.domain_taken_by', ['application' => $holder->name]),
         ];
     }
 

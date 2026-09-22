@@ -1222,6 +1222,25 @@ Check if a port is available before creating an app.
 
 **Response `201`:** `{"domain": {…}}` — the full domain object above.
 
+A name is unique across the **whole server**, not per application. When it is already taken the `422` message names the application holding it, so the user can go and detach it rather than guess.
+
+---
+
+### PUT `/applications/{application}/domains/{domain}`
+**Permission:** `app_domain` (manage)
+
+Change what an attached name **does**. Accepts `type` (`alias` | `redirect`), `redirect_to` and `redirect_status`.
+
+**Request:** `{"redirect_to": "https://example.com"}`
+
+**Response `200`:** `{"domain": {…}}` — the full domain object above.
+
+Switching `type` to `alias` clears `redirect_to`, because an alias serves the site itself. Switching to `redirect` without a target — in the request or already stored — is a `422` on `redirect_to`.
+
+**The name itself cannot be changed here, deliberately.** A rename would leave the old name in the certificate's lineage, and `certbot renew` re-validates every name in a lineage and fails the whole renewal when one of them cannot be validated — so it would silently stop the certificate covering the site's remaining, perfectly good names from ever renewing, and the first anyone hears of it is a browser warning up to ninety days later. Renaming stays a `DELETE` plus a `POST`, which is visibly two decisions. See `stale_domains` on the certificate object.
+
+The **primary** domain is refused with `422`: it names the vhost file and both log files, so changing it is what `POST …/domains/{domain}/primary` is for.
+
 ---
 
 ### POST `/applications/{application}/domains/{domain}/verify`
@@ -1300,6 +1319,8 @@ Read over loopback with SNI, once a day, so it costs nothing and works on a serv
 `renewable` is a property of the type — nothing can renew an uploaded or self-signed certificate — while `auto_renew` is the user's setting. Show a renewal date only when `renewable` is true.
 
 `expiring_soon` is its own flag rather than something the frontend computes from `days_remaining`, so the threshold is one decision in one place (and can move when certificate lifetimes shrink).
+
+**Use `days_remaining`, not `expires_at_human`, for anything a decision hangs on.** `expires_at_human` is `diffForHumans()`, which reports a single unit — so on a ninety-day Let's Encrypt certificate 45, 59 and 60 days out all render as "1 month from now", and 89 and 90 both as "2 months". `days_remaining` is a signed integer (negative once expired, null when there is no expiry date) and is the field to render from.
 
 `message` is always present: a sentence in the *viewer's* locale. `reason` (a classified code) and `reference` appear **only when `status` is `failed`** — the keys are absent otherwise. Neither ever carries certbot's own output, which contains paths, order URLs and occasionally the account key location.
 

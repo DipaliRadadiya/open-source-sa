@@ -104,6 +104,12 @@ Route::get('/applications/{application}/domains', [ApplicationDomainController::
     ->middleware('permission:app_domain');
 Route::post('/applications/{application}/domains', [ApplicationDomainController::class, 'store'])
     ->middleware('permission:app_domain,manage');
+// Changes what a name does, never what it is called. A rename would leave the
+// old name on the certificate, and `certbot renew` fails a whole lineage when
+// one name in it cannot be validated — so it stays a delete plus an add, which
+// is visibly two decisions.
+Route::put('/applications/{application}/domains/{domain}', [ApplicationDomainController::class, 'update'])
+    ->middleware('permission:app_domain,manage');
 Route::post('/applications/{application}/domains/{domain}/verify', [ApplicationDomainController::class, 'verify'])
     ->middleware('permission:app_domain');
 Route::post('/applications/{application}/domains/{domain}/primary', [ApplicationDomainController::class, 'makePrimary'])

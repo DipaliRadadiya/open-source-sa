@@ -13,6 +13,9 @@ return [
     'databases_not_removed' => 'Le site a été supprimé, mais ces bases de données sont toujours sur le serveur : :databases. Supprimez-les depuis l\'écran Bases de données, ou communiquez la référence au support.',
 
     'primary_domain_not_removable' => 'Le domaine principal ne peut pas être supprimé. Définissez d\'abord un autre domaine comme principal.',
+    'primary_domain_not_editable' => 'Un domaine principal ne peut pas être modifié. Définissez d’abord un autre domaine comme principal.',
+    'domain_taken' => 'Ce domaine est déjà utilisé sur ce serveur.',
+    'domain_taken_by' => 'Ce domaine est déjà utilisé par l’application « :application ».',
     'unsupported_web_server' => 'Le panneau ne peut pas écrire la configuration du site pour :web_server.',
     'no_web_server' => 'aucun serveur web détecté',
     'provision_failed' => 'La configuration du site a échoué à l\'étape « :step ».',

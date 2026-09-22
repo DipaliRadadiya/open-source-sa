@@ -123,6 +123,7 @@ return [
     'application.process_restart' => ':name перезапущено',
     'application.provisioned' => 'Приложение :name настроено на сервере',
     'application.domain_added' => 'Добавил домен :domain (:type)',
+    'application.domain_updated' => 'Домен обновлён :domain (:type)',
     'application.domain_removed' => 'Удалил домен :domain (:type)',
     'application.primary_domain_changed' => 'Изменил основной домен с :from на :to',
     'application.certificate_requested' => 'Запросил сертификат :type для :domain',

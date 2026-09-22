@@ -123,6 +123,7 @@ return [
     'application.process_restart' => ':name を再起動しました',
     'application.provisioned' => 'アプリケーション :name をサーバーに構築しました',
     'application.domain_added' => 'ドメイン :domain を追加しました (:type)',
+    'application.domain_updated' => 'ドメインを更新しました :domain (:type)',
     'application.domain_removed' => 'ドメイン :domain を削除しました (:type)',
     'application.primary_domain_changed' => 'プライマリドメインを :from から :to に変更しました',
     'application.certificate_requested' => ':domain の :type 証明書を要求しました',

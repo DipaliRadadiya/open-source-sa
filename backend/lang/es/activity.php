@@ -123,6 +123,7 @@ return [
     'application.process_restart' => 'Se reinició :name',
     'application.provisioned' => 'Configuró la aplicación :name en el servidor',
     'application.domain_added' => 'Añadió el dominio :domain (:type)',
+    'application.domain_updated' => 'Dominio actualizado :domain (:type)',
     'application.domain_removed' => 'Eliminó el dominio :domain (:type)',
     'application.primary_domain_changed' => 'Cambió el dominio principal de :from a :to',
     'application.certificate_requested' => 'Solicitó un certificado :type para :domain',

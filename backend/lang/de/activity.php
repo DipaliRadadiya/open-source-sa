@@ -123,6 +123,7 @@ return [
     'application.process_restart' => ':name neu gestartet',
     'application.provisioned' => 'Anwendung :name auf dem Server eingerichtet',
     'application.domain_added' => 'Domain :domain hinzugefügt (:type)',
+    'application.domain_updated' => 'Domain aktualisiert :domain (:type)',
     'application.domain_removed' => 'Domain :domain entfernt (:type)',
     'application.primary_domain_changed' => 'Primäre Domain von :from auf :to geändert',
     'application.certificate_requested' => 'Hat ein :type-Zertifikat für :domain angefordert',

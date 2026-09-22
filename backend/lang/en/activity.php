@@ -129,6 +129,7 @@ return [
     'application.process_restart' => 'Restarted :name',
     'application.provisioned' => 'Set up application :name on the server',
     'application.domain_added' => 'Added domain :domain (:type)',
+    'application.domain_updated' => 'Updated domain :domain (:type)',
     'application.domain_removed' => 'Removed domain :domain (:type)',
     'application.primary_domain_changed' => 'Changed the primary domain from :from to :to',
     'application.certificate_requested' => 'Requested a :type certificate for :domain',

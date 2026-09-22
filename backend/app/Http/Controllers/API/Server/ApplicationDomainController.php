@@ -5,8 +5,10 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Application\AddDomain;
 use App\Actions\Server\Application\ChangePrimaryDomain;
 use App\Actions\Server\Application\RemoveDomain;
+use App\Actions\Server\Application\UpdateDomain;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\StoreApplicationDomainRequest;
+use App\Http\Requests\Server\Application\UpdateApplicationDomainRequest;
 use App\Http\Resources\ApplicationDomainResource;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
@@ -31,6 +33,27 @@ class ApplicationDomainController extends Controller
                 $action->execute($application, $request->validated())
             )->resolve(),
         ], 201);
+    }
+
+    /**
+     * Change what a name does — its type, redirect target and status.
+     *
+     * Not a rename: see {@see UpdateApplicationDomainRequest} for why the
+     * name itself is not editable here.
+     */
+    public function update(
+        Application $application,
+        ApplicationDomain $domain,
+        UpdateApplicationDomainRequest $request,
+        UpdateDomain $action,
+    ): JsonResponse {
+        abort_unless($domain->application_id === $application->id, 404);
+
+        return response()->json([
+            'domain' => ApplicationDomainResource::make(
+                $action->execute($domain, $request->validated())
+            )->resolve(),
+        ]);
     }
 
     /**

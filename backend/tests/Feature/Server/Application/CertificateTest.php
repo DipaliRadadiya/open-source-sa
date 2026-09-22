@@ -669,3 +669,60 @@ function generateKeyPair(string $commonName): array
 
     return [$pem, $privateKey];
 }
+
+/*
+|--------------------------------------------------------------------------
+| How long is left
+|--------------------------------------------------------------------------
+|
+| `expires_at_human` is `diffForHumans()`, which reports a single unit. On a
+| Let's Encrypt certificate — ninety days — that collapses the entire band in
+| which anybody would decide whether to act. Measured, not assumed:
+|
+|   30d -> "4 weeks"   45d -> "1 month"   59d -> "1 month"   60d -> "1 month"
+|   89d -> "2 months"  90d -> "2 months"  1d  -> "23 hours"
+|
+| The frontend asked for a number to replace it. There already is one:
+| `days_remaining` has been on this resource, and in API_REFERENCE.md, all
+| along. These tests pin that it really does distinguish what the sentence
+| cannot, so the next person to ask gets an answer instead of a second field.
+*/
+
+it('distinguishes expiry dates that diffForHumans renders identically', function () {
+    $soon = activeCertificate($this->application);
+    $soon->forceFill(['expires_at' => now()->addDays(45)])->save();
+    $soonRendered = CertificateResource::make($soon->fresh())->resolve();
+
+    $later = $soon->fresh();
+    $later->forceFill(['expires_at' => now()->addDays(59)])->save();
+    $laterRendered = CertificateResource::make($later->fresh())->resolve();
+
+    // One is comfortable, the other is inside Let's Encrypt's own renewal
+    // window — and the sentence calls them the same thing.
+    expect($soonRendered['expires_at_human'])->toBe($laterRendered['expires_at_human'])
+        ->and($soonRendered['days_remaining'])->toBe(45)
+        ->and($laterRendered['days_remaining'])->toBe(59);
+});
+
+it('reports an expired certificate as a negative number, not zero', function () {
+    // Clamping would render "expired eleven days ago" identically to "expires
+    // within the hour", and those call for different reactions.
+    $certificate = activeCertificate($this->application);
+    $certificate->forceFill(['expires_at' => now()->subDays(11)])->save();
+
+    $rendered = CertificateResource::make($certificate->fresh())->resolve();
+
+    expect($rendered['days_remaining'])->toBe(-11)
+        ->and($rendered['expired'])->toBeTrue();
+});
+
+it('has no number when there is no expiry date', function () {
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::LetsEncrypt,
+        'status' => CertificateStatus::Issuing,
+        'domains' => ['shop.example.com'],
+    ]);
+
+    expect(CertificateResource::make($certificate)->resolve()['days_remaining'])->toBeNull();
+});

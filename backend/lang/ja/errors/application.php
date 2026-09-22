@@ -13,6 +13,9 @@ return [
     'databases_not_removed' => 'サイトは削除されましたが、次のデータベースはサーバーに残っています: :databases。データベース画面から削除するか、参照 ID をサポートにお伝えください。',
 
     'primary_domain_not_removable' => 'プライマリドメインは削除できません。先に別のドメインをプライマリに設定してください。',
+    'primary_domain_not_editable' => 'プライマリドメインは編集できません。先に別のドメインをプライマリにしてください。',
+    'domain_taken' => 'このドメインはこのサーバーで既に使用されています。',
+    'domain_taken_by' => 'このドメインはアプリケーション「:application」で既に使用されています。',
     'unsupported_web_server' => ':web_server 用のサイト設定は作成できません。',
     'no_web_server' => 'ウェブサーバーが検出されません',
     'provision_failed' => 'サイトのセットアップが「:step」の段階で失敗しました。',
