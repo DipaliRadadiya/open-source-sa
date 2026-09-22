@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
+import { parseApiDate } from "@/lib/format/api-date";
 import { toast } from "sonner";
 import {
   MoreHorizontal,
@@ -76,6 +77,12 @@ export function SslSection({
   /*
    * Every date this card prints goes through here.
    *
+   * ⚠️ `parseApiDate`, NOT `new Date`. This API sends `20-11-2026 04:34:36` —
+   * day first, no timezone — which `new Date` cannot parse at all. The first
+   * version of this used `new Date`, passed against a stub that happened to
+   * send ISO, and silently fell back to `expires_at_human` on every real
+   * certificate. The fix did nothing on the panel it was written for.
+   *
    * `expires_at` is an ISO timestamp and `served_expires_at` is a plain date,
    * so the stale-certificate line read "Being served: expires 2026-08-01 · On
    * disk: expires 2026-11-20T12:00:00+00:00" — two dates in one sentence, one
@@ -86,11 +93,8 @@ export function SslSection({
    * unparseable date means; every one of them currently hides the line.
    */
   const asDate = (value) => {
-    if (!value) return null;
-    const when = new Date(value);
-    return Number.isNaN(when.getTime())
-      ? null
-      : format.dateTime(when, { day: "numeric", month: "long", year: "numeric" });
+    const when = parseApiDate(value);
+    return when ? format.dateTime(when, { day: "numeric", month: "long", year: "numeric" }) : null;
   };
   const router = useRouter();
 

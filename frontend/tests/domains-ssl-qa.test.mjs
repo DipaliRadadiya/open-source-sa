@@ -64,21 +64,44 @@ test("removing a covered name warns that the certificate stops renewing", () => 
    * fine, and nothing goes wrong until it expires. The dialog said only "the
    * application will stop answering on this name".
    */
-  assert.match(section, /deleteTarget && onCertificate\(deleteTarget\.domain\)/);
+  assert.match(section, /deleteTarget && coverageOf\(deleteTarget\.domain\) === "covered"/);
   assert.match(section, /removeConfirm\.onCertificate/);
 });
 
 test("promoting a name the certificate does not cover warns first", () => {
   // The address visitors are sent to would answer on 443 with a certificate
   // issued for someone else — a browser refusal, not a downgrade.
-  assert.match(section, /promoteTarget && activeCertificate && !onCertificate\(promoteTarget\.domain\)/);
+  assert.match(section, /promoteTarget && coverageOf\(promoteTarget\.domain\) === "uncovered"/);
   assert.match(section, /promote\.notOnCertificate/);
 });
 
-test("only an ACTIVE certificate is treated as covering anything", () => {
-  // A pending or failed certificate secures nothing, so warning about its
-  // coverage would be noise stacked on a problem the SSL card already reports.
-  assert.match(section, /certificate\?\.status === "active" \? certificate : null/);
+test("one function answers coverage, and 'we cannot tell' is one of its answers", () => {
+  /*
+   * There were briefly two predicates here for the same question, reading
+   * different fields with OPPOSITE defaults — `!missing_domains.includes(x)`
+   * (unknown → covered) beside `domains.includes(x)` (unknown → not). Each
+   * default was right for its own caller and neither said so, which is exactly
+   * how two functions that agree today stop agreeing.
+   *
+   * Merged into one returning covered / uncovered / unknown, so the callers
+   * spell out what they do with "unknown" instead of inheriting it.
+   */
+  assert.match(section, /function certificateCoverage\(certificate, domain\)/);
+  assert.doesNotMatch(section, /function coveredByCertificate/, "the second predicate is gone");
+  assert.doesNotMatch(section, /const onCertificate =/, "and so is the third");
+
+  // A pending or failed certificate secures nothing, so its coverage is not a
+  // fact about what visitors get.
+  assert.match(section, /if \(certificate\?\.status !== "active"\) return "unknown";/);
+
+  // The two callers want opposite things from "unknown", and both say so.
+  // The link keeps https — guessing the other way downgrades a whole panel of
+  // working links to plain http.
+  assert.match(section, /coverageOf\(domain\.domain\) !== "uncovered" \? "https" : "http"/);
+  // The dialogs stay quiet — guessing the other way puts a scary warning on
+  // every confirm the moment a field goes missing.
+  assert.match(section, /=== "covered"/);
+  assert.match(section, /=== "uncovered"/);
 });
 
 test("Verify DNS is offered to anyone who can see the page", () => {
@@ -133,6 +156,18 @@ test("the expiry line gives a date, not a second relative phrase", () => {
    */
   assert.match(ssl, /format\.dateTime\(when, \{ day: "numeric", month: "long", year: "numeric" \}\)/);
   assert.match(ssl, /when: expiresOn \?\? cert\.expires_at_human/, "fall back when there is no machine-readable date");
+
+  /*
+   * ⚠️ `parseApiDate`, never `new Date`.
+   *
+   * This API sends `20-11-2026 04:34:36` — day first, no timezone — which
+   * `new Date` cannot parse. The first version of this fix used `new Date`,
+   * was verified against a stub that happened to send ISO, and fell back to
+   * `expires_at_human` on every real certificate. It did nothing on the panel
+   * it was written for, and the stub is what hid it.
+   */
+  assert.match(ssl, /const when = parseApiDate\(value\);/);
+  assert.doesNotMatch(stripComments(ssl), /new Date\(/, "no raw Date parsing of an API timestamp");
   // Never `toLocaleDateString` — dates follow the panel's locale like the rest.
   // Comments stripped first: the docblock above the fix NAMES the thing it
   // replaced, so matching the raw file finds my own prose and passes on a file
@@ -234,3 +269,30 @@ test("the row action column holds its slots", () => {
   assert.equal(slots.length, 2, "both the open-site and the menu slot are reserved");
 });
 
+test("a rejected certificate upload reports at the fields, not in a toast", () => {
+  /*
+   * Driven against a 422 carrying per-field errors: both messages land under
+   * their own textarea and no toast appears. "The private key does not match
+   * the certificate" in a toast points at neither box and leaves you rereading
+   * both.
+   */
+  const dialog = read("components/applications/domains/issue-cert-dialog.jsx");
+  assert.match(dialog, /setPemErrors\(fieldErrors\)/);
+  assert.match(dialog, /\["certificate", "private_key", "chain"\]/);
+});
+
+test("a per-domain refusal lists the names and offers the force only where it helps", () => {
+  /*
+   * Driven: a 422 with `errors.domain` lists both names in the dialog, and
+   * "Set up anyway" appears. Forcing then closes the dialog and the card moves
+   * to issuing.
+   *
+   * The force is offered for a REACHABILITY failure only — a dry run that got
+   * as far as the CA is not a reachability problem and forcing past it would
+   * fix nothing. Confirmed by driving both verdicts: the button appears for
+   * the first and not the second.
+   */
+  const dialog = read("components/applications/domains/issue-cert-dialog.jsx");
+  assert.match(dialog, /setRefusals\(domainErrors\)/);
+  assert.match(dialog, /dryRun\?\.status === "failed" && dryRun\?\.stage === "reachability"/);
+});

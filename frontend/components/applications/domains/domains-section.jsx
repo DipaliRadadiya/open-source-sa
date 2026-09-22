@@ -58,15 +58,39 @@ const TYPE_VARIANT = {
 };
 
 /**
- * Whether the site's certificate covers this exact name.
+ * Whether an ACTIVE certificate covers this exact name: `"covered"`,
+ * `"uncovered"`, or `"unknown"`.
  *
- * `missing_domains` is the backend's own list of site names the certificate
- * does NOT carry, so this needs no wildcard matching of its own — and when the
- * list is empty for any reason the answer is "covered", which leaves every
- * existing link untouched rather than downgrading a whole panel to http.
+ * Three values, because there were briefly two functions here answering this
+ * one question with opposite defaults — one reading `missing_domains` and
+ * treating an empty list as covered, one reading `domains` and treating an
+ * empty list as not. Both defaults were right for their own caller and neither
+ * said so, which is how two predicates that agree today stop agreeing.
+ *
+ * So "we could not tell" is a value rather than a default, and each caller
+ * spells out what it does with it. They genuinely want opposite things:
+ *
+ *   - The visit link keeps https when unknown. Guessing the other way
+ *     downgrades a whole panel of working links to http.
+ *   - The confirm dialogs stay quiet when unknown. Guessing the other way puts
+ *     a scary warning on every dialog the moment a field goes missing.
+ *
+ * `missing_domains` is preferred because it is the backend's own answer to
+ * exactly this question and needs no wildcard matching here; `domains` is the
+ * fallback for a payload that carries only the positive list.
+ *
+ * Only an active certificate counts. A pending or failed one secures nothing,
+ * so its coverage is not a fact about what visitors get.
  */
-function coveredByCertificate(certificate, domain) {
-  return !certificate?.missing_domains?.includes(domain);
+function certificateCoverage(certificate, domain) {
+  if (certificate?.status !== "active") return "unknown";
+  if (certificate.missing_domains?.length) {
+    return certificate.missing_domains.includes(domain) ? "uncovered" : "covered";
+  }
+  if (certificate.domains?.length) {
+    return certificate.domains.includes(domain) ? "covered" : "uncovered";
+  }
+  return "unknown";
 }
 
 export function DomainsSection({
@@ -96,16 +120,7 @@ export function DomainsSection({
   // Per-row spinner for the inline verify action.
   const [verifying, setVerifying] = useState({});
 
-  /*
-   * Whether an ACTIVE certificate lists this exact name.
-   *
-   * Both confirm dialogs below need it and neither had it. Only an active
-   * certificate counts: a pending or failed one is securing nothing, so
-   * warning about its coverage would be noise on top of a problem the SSL card
-   * already reports.
-   */
-  const activeCertificate = certificate?.status === "active" ? certificate : null;
-  const onCertificate = (domain) => Boolean(activeCertificate?.domains?.includes(domain));
+  const coverageOf = (domain) => certificateCoverage(certificate, domain);
 
   // Same plain button in the header and the empty-state, exactly like the
   // databases list — one definition so they can't drift.
@@ -364,7 +379,7 @@ export function DomainsSection({
                               className="size-8"
                             >
                               <a
-                                href={`${secured && coveredByCertificate(certificate, domain.domain) ? "https" : "http"}://${domain.domain}`}
+                                href={`${secured && coverageOf(domain.domain) !== "uncovered" ? "https" : "http"}://${domain.domain}`}
                                 target="_blank"
                                 rel="noreferrer noopener"
                               >
@@ -504,7 +519,7 @@ export function DomainsSection({
             for somebody else — a browser refusal, not a downgrade. The SSL
             card says a name is uncovered; it cannot know it is about to become
             the main one. */}
-        {promoteTarget && activeCertificate && !onCertificate(promoteTarget.domain) ? (
+        {promoteTarget && coverageOf(promoteTarget.domain) === "uncovered" ? (
           <Caution>
             {t("promote.notOnCertificate", { domain: promoteTarget.domain })}
           </Caution>
@@ -531,7 +546,7 @@ export function DomainsSection({
             which is the worst possible moment to find out. The SSL card
             reports it afterwards as a stale domain; this says it beforehand,
             when it is still a choice. */}
-        {deleteTarget && onCertificate(deleteTarget.domain) ? (
+        {deleteTarget && coverageOf(deleteTarget.domain) === "covered" ? (
           <Caution>
             {t("removeConfirm.onCertificate", { domain: deleteTarget.domain })}
           </Caution>
