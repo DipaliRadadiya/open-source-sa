@@ -142,14 +142,36 @@ export const addDomainFormSchema = z
     redirect_to: z.string().trim().optional().default(""),
     redirect_status: z.coerce.number().refine((n) => REDIRECT_STATUSES.includes(n)).default(301),
   })
-  .refine((v) => v.type !== "redirect" || v.redirect_to.length > 0, {
-    path: ["redirect_to"],
-    message: "redirectTargetRequired",
+  .superRefine(redirectRules);
+
+/**
+ * Edit form for a name that is already attached: what it DOES, never what it
+ * is called.
+ *
+ * `PUT …/domains/{domain}` accepts exactly these three fields, and the same
+ * two redirect rules apply — so they are shared rather than written twice.
+ * A second copy is how the add form and the edit form start disagreeing about
+ * what a redirect needs.
+ */
+export const editDomainFormSchema = z
+  .object({
+    type: z.enum(["alias", "redirect"]).default("alias"),
+    redirect_to: z.string().trim().optional().default(""),
+    redirect_status: z.coerce.number().refine((n) => REDIRECT_STATUSES.includes(n)).default(301),
   })
-  .refine((v) => v.type !== "redirect" || v.redirect_to.length === 0 || isHttpUrl(v.redirect_to), {
-    path: ["redirect_to"],
-    message: "redirectTargetUrl",
-  });
+  .superRefine(redirectRules);
+
+/** A redirect needs a target, and the target has to be a real http(s) one. */
+function redirectRules(values, ctx) {
+  if (values.type !== "redirect") return;
+  if (!values.redirect_to.length) {
+    ctx.addIssue({ code: "custom", path: ["redirect_to"], message: "redirectTargetRequired" });
+    return;
+  }
+  if (!isHttpUrl(values.redirect_to)) {
+    ctx.addIssue({ code: "custom", path: ["redirect_to"], message: "redirectTargetUrl" });
+  }
+}
 
 /** `http(s)://host…`, and nothing else. */
 function isHttpUrl(value) {

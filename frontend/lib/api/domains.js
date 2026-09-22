@@ -23,6 +23,26 @@ export async function makePrimaryDomain(appId, domain) {
   return res.data?.domains;
 }
 
+/*
+ * Changes what an attached name DOES — `type`, `redirect_to`,
+ * `redirect_status`. Not what it is called.
+ *
+ * The name is deliberately not editable server-side: a rename leaves the old
+ * name in the certificate's lineage, and certbot re-validates every name in a
+ * lineage and fails the WHOLE renewal when one cannot be validated. So it
+ * would silently stop the certificate covering the site's remaining, perfectly
+ * good names from renewing, and the first anyone hears of it is a browser
+ * warning up to ninety days later. Renaming stays delete + add, which is
+ * visibly two decisions.
+ *
+ * The primary is refused with a 422 — it names the vhost file and both log
+ * files, so changing it is what the `primary` endpoint above is for.
+ */
+export async function updateDomain(appId, domain, body) {
+  const res = await api.put(`/applications/${appId}/domains/${seg(domain)}`, body);
+  return res.data?.domain;
+}
+
 export async function deleteDomain(appId, domain) {
   await api.delete(`/applications/${appId}/domains/${seg(domain)}`);
 }

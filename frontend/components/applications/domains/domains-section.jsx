@@ -9,6 +9,7 @@ import {
   Plus,
   MoreHorizontal,
   RotateCw,
+  Pencil,
   Star,
   Trash2,
   ShieldAlert,
@@ -52,6 +53,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AddDomainDialog } from "@/components/applications/domains/add-domain-dialog";
+import { EditDomainDialog } from "@/components/applications/domains/edit-domain-dialog";
 
 const TYPE_VARIANT = {
   primary: "default",
@@ -138,6 +140,7 @@ export function DomainsSection({
   // one action whose consequence is about the name being replaced, not the one
   // being clicked.
   const currentPrimary = domains.find((domain) => domain.type === "primary");
+  const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [pending, setPending] = useState(false);
   // Per-row spinner for the inline verify action.
@@ -467,6 +470,15 @@ export function DomainsSection({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="min-w-44">
+                            {/* Change what the name DOES. Only offered off the
+                                primary, which the server refuses: the primary
+                                names the vhost file and both log files, so
+                                "make this one primary" is the endpoint for
+                                that — and this menu is already hidden on it. */}
+                            <DropdownMenuItem onSelect={() => setEditTarget(domain)}>
+                              <Pencil className="size-4" />
+                              {t("edit.action")}
+                            </DropdownMenuItem>
                             {domain.type === "alias" ? (
                               <DropdownMenuItem
                                 onSelect={() => setPromoteTarget(domain)}
@@ -496,13 +508,23 @@ export function DomainsSection({
       </CardContent>
 
       {canManage ? (
-        <AddDomainDialog
-          appId={appId}
-          open={addOpen}
-          onOpenChange={setAddOpen}
-          serverIp={serverIp}
-          certificate={certificate}
-        />
+        <>
+          <AddDomainDialog
+            appId={appId}
+            open={addOpen}
+            onOpenChange={setAddOpen}
+            serverIp={serverIp}
+            certificate={certificate}
+          />
+          {/* One instance for the whole list, keyed on the row it was opened
+              from — it re-seeds itself from `editTarget` on every open. */}
+          <EditDomainDialog
+            appId={appId}
+            domain={editTarget}
+            open={Boolean(editTarget)}
+            onOpenChange={(o) => !o && setEditTarget(null)}
+          />
+        </>
       ) : null}
 
       <ConfirmDialog

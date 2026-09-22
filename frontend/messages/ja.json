@@ -3563,7 +3563,8 @@
         "promoteFailed": "プライマリドメインを変更できませんでした。",
         "removed": "{domain} を削除しました。",
         "removeFailed": "ドメインを削除できませんでした。",
-        "removedAlready": "{domain} はすでに削除されています。"
+        "removedAlready": "{domain} はすでに削除されています。",
+        "updated": "{domain} を更新しました。"
       },
       "ssl": {
         "sectionTitle": "SSL 証明書",
@@ -3649,7 +3650,17 @@
         "alias": "別名",
         "redirect": "リダイレクト"
       },
-      "openNamed": "{domain} を新しいタブで開く"
+      "openNamed": "{domain} を新しいタブで開く",
+      "edit": {
+        "action": "編集",
+        "title": "ドメインを編集",
+        "subtitle": "この名前の動作を変更します。名前そのものはここでは変更できません。",
+        "domain": "ドメイン",
+        "domainLocked": "別の名前を使うには、これを削除して新しい名前を追加してください。ここで改名すると古い名前が証明書に残り、更新が止まります。",
+        "submit": "変更を保存",
+        "submitting": "保存中…",
+        "clearsTarget": "エイリアスに変更すると、リダイレクト先 ({target}) は削除されます。エイリアスはアプリケーション自体を配信します。"
+      }
     },
     "magicLogin": {
       "action": "ワンクリックログイン",

@@ -3563,7 +3563,8 @@
         "promoteFailed": "Não foi possível alterar o domínio principal.",
         "removed": "{domain} removido.",
         "removeFailed": "Não foi possível remover o domínio.",
-        "removedAlready": "{domain} já tinha sido removido."
+        "removedAlready": "{domain} já tinha sido removido.",
+        "updated": "{domain} atualizado."
       },
       "ssl": {
         "sectionTitle": "Certificado SSL",
@@ -3649,7 +3650,17 @@
         "alias": "Alias",
         "redirect": "Redirect"
       },
-      "openNamed": "Abrir {domain} em uma nova aba"
+      "openNamed": "Abrir {domain} em uma nova aba",
+      "edit": {
+        "action": "Editar",
+        "title": "Editar domínio",
+        "subtitle": "Altere o que este nome faz. O nome em si não pode ser alterado aqui.",
+        "domain": "Domínio",
+        "domainLocked": "Para usar outro nome, remova este e adicione o novo. Renomear aqui deixaria o nome antigo no certificado e impediria a renovação.",
+        "submit": "Salvar alterações",
+        "submitting": "Salvando…",
+        "clearsTarget": "Mudar para alias limpa o destino do redirecionamento ({target}). Um alias serve a própria aplicação."
+      }
     },
     "magicLogin": {
       "action": "Início de sessão direto",
