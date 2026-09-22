@@ -1395,7 +1395,26 @@ return [
                 // Left as fail2ban's default it would resolve to 22, so on a
                 // server whose SSH was moved — via this very panel — the ban
                 // would land on a port nobody uses.
-                'options' => ['mode' => 'aggressive', 'port' => '{ssh_port}'],
+                //
+                // `backend` belongs HERE, on the one jail that wants the
+                // journal, and not in `[DEFAULT]` where it used to be. A
+                // backend in `[DEFAULT]` applies to every jail, and the
+                // systemd backend makes fail2ban ignore `logpath` entirely —
+                // so every file-watching jail the panel writes was reading the
+                // journal instead of the file it named, matching nothing. That
+                // silently disabled `recidive` and every per-site application
+                // jail while the panel reported them enabled.
+                //
+                // `%(sshd_backend)s` rather than a literal `systemd`: it is
+                // fail2ban's own variable and resolves to whatever is correct
+                // for the distribution, so this stays right on a box whose
+                // sshd does not log to the journal. Taken from v7, which has
+                // always put it here.
+                'options' => [
+                    'mode' => 'aggressive',
+                    'port' => '{ssh_port}',
+                    'backend' => '%(sshd_backend)s',
+                ],
             ],
             [
                 'name' => 'recidive',

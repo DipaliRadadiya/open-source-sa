@@ -200,8 +200,68 @@ it('owns jail.local, and says so in the file', function () {
     // courtesy — it is how the panel recognises its own file before replacing
     // it, so it is asserted rather than assumed.
     expect(dropIn())->toStartWith(Fail2banManager::MANAGED_HEADER)
-        ->and(dropIn())->toContain('bantime = 7200')
-        ->and(dropIn())->toContain('backend = systemd');
+        ->and(dropIn())->toContain('bantime = 7200');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Which backend each jail reads
+|--------------------------------------------------------------------------
+|
+| `backend` decides where a jail looks: `systemd` reads the journal, anything
+| else reads the file named by `logpath`. Set in `[DEFAULT]` it applies to
+| EVERY jail — and this file used to assert exactly that, with
+| `toContain('backend = systemd')` on the test above. That assertion was
+| pinning the bug.
+|
+| With a systemd default, fail2ban ignores `logpath` entirely. `recidive`
+| names /var/log/fail2ban.log and every per-site application jail names the
+| site's access log, and none of them were ever opened: the jails matched
+| nothing and banned nobody while the panel reported them enabled. Measured on
+| a live server — `recidive` showed `Journal matches: _SYSTEMD_UNIT=fail2ban`
+| and `Total failed: 0` on a box that had banned nine addresses that day.
+|
+| SSH is the one jail that genuinely wants the journal, so the setting belongs
+| on it. This is what v7 has always done.
+*/
+
+it('keeps the backend off [DEFAULT], where it would apply to every jail', function () {
+    fakeFail2ban(bans: []);
+
+    f2b('PUT', '/api/fail2ban', ['bantime' => 7200, 'findtime' => 900, 'maxretry' => 3])->assertOk();
+
+    $default = substr(dropIn(), 0, (int) strpos(dropIn(), '[sshd]'));
+
+    expect($default)->not->toContain('backend');
+});
+
+it('gives the SSH jail the journal, since that is where sshd logs', function () {
+    // The negative control, and the half that matters most: SSH is the jail
+    // that actually protects the box. `%(sshd_backend)s` rather than a literal
+    // `systemd` because it is fail2ban's own variable and resolves to whatever
+    // the distribution uses — hardcoding would be right on Ubuntu and wrong
+    // elsewhere.
+    fakeFail2ban(bans: []);
+
+    f2b('PUT', '/api/fail2ban', ['bantime' => 7200, 'findtime' => 900, 'maxretry' => 3])->assertOk();
+
+    $sshd = substr(dropIn(), (int) strpos(dropIn(), '[sshd]'));
+    $sshd = substr($sshd, 0, (int) strpos($sshd, '[recidive]'));
+
+    expect($sshd)->toContain('backend = %(sshd_backend)s');
+});
+
+it('leaves recidive reading its log file, not the journal', function () {
+    // It names a `logpath`; inheriting a systemd backend made that a file
+    // fail2ban never opened.
+    fakeFail2ban(bans: []);
+
+    f2b('PUT', '/api/fail2ban', ['bantime' => 7200, 'findtime' => 900, 'maxretry' => 3])->assertOk();
+
+    $recidive = substr(dropIn(), (int) strpos(dropIn(), '[recidive]'));
+
+    expect($recidive)->toContain('logpath = /var/log/fail2ban.log')
+        ->and($recidive)->not->toContain('backend');
 });
 
 it('refuses to overwrite a jail.local it did not write', function () {
@@ -646,4 +706,121 @@ it('shows an install in flight, and why it failed, instead of a boolean that nev
     app(InstallTracker::class)->succeed(InstallFail2ban::RUNTIME, InstallFail2ban::VERSION);
 
     f2b('GET', '/api/fail2ban')->assertJsonPath('fail2ban.install', null);
+});
+
+/*
+|--------------------------------------------------------------------------
+| fail2ban:resync — carrying a corrected render to a server that exists
+|--------------------------------------------------------------------------
+|
+| jail.local is written at install and when the settings screen is saved, and
+| nowhere else. So the backend fix above repairs new installs and leaves every
+| existing server with the file it was given. This command is the difference
+| between a fix that shipped and a fix that arrived.
+*/
+
+it('rewrites jail.local through the current template, keeping the settings', function () {
+    fakeFail2ban(bans: []);
+
+    // A server configured before the fix: the same values, rendered by the
+    // old template, with the backend in the place that broke every other jail.
+    File::put("{$this->jailD}/jail.local", implode("\n", [
+        Fail2banManager::MANAGED_HEADER,
+        '[DEFAULT]',
+        'bantime = 7200',
+        'findtime = 900',
+        'maxretry = 4',
+        'ignoreip = 127.0.0.1/8 ::1 203.0.113.7',
+        'backend = systemd',
+        '',
+        '[sshd]',
+        'enabled = true',
+        '',
+        '[recidive]',
+        'enabled = false',
+        '',
+    ]));
+
+    $this->artisan('fail2ban:resync')->assertExitCode(0);
+
+    $after = dropIn();
+    $default = substr($after, 0, (int) strpos($after, '[sshd]'));
+
+    // The bug is gone…
+    expect($default)->not->toContain('backend')
+        // …and nothing the operator chose went with it. A resync that reset
+        // someone's ban time, or dropped an address off their ignore list,
+        // would be a worse bug than the one it fixes.
+        ->and($default)->toContain('bantime = 7200')
+        ->and($default)->toContain('findtime = 900')
+        ->and($default)->toContain('maxretry = 4')
+        ->and($default)->toContain('203.0.113.7')
+        // Including which jails were on. SSH especially: this command runs
+        // unattended from a deploy, and silently disabling the jail that
+        // protects the box would be the worst possible outcome.
+        ->and($after)->toContain("[sshd]\nenabled = true")
+        ->and($after)->toContain("[recidive]\nenabled = false");
+});
+
+it('reads the enabled jails from the file, not from a daemon that disagrees', function () {
+    // 🔴 The guard that stops this command doing harm. `activeJails()` asks
+    // fail2ban-client, which reports what is *running* — and that is not what
+    // the file says whenever the daemon is down, mid-restart, or simply out of
+    // step. Sourcing the rewrite from it would persist the daemon's view, and
+    // in the worst case ("nothing is running") switch off the jail protecting
+    // the operator's SSH.
+    //
+    // The two are made to disagree deliberately: the file has sshd on and
+    // recidive off, the daemon reports the exact opposite. Reading the daemon
+    // flips both.
+    //
+    // ⚠️ This test's first version used `running: false` and asserted sshd
+    // survived. It passed under the sabotage — with no active jails the
+    // command returns early and never writes, so the fixture's own text was
+    // what the assertion read back. A guard whose test cannot fail is not a
+    // guard; the disagreement below is what makes it measurable.
+    fakeFail2ban(bans: ['recidive' => []]);
+
+    File::put("{$this->jailD}/jail.local", implode("\n", [
+        Fail2banManager::MANAGED_HEADER,
+        '[DEFAULT]',
+        'bantime = 3600',
+        'findtime = 600',
+        'maxretry = 5',
+        'ignoreip = 127.0.0.1/8 ::1',
+        '',
+        '[sshd]',
+        'enabled = true',
+        '',
+        '[recidive]',
+        'enabled = false',
+        '',
+    ]));
+
+    $this->artisan('fail2ban:resync')->assertExitCode(0);
+
+    expect(dropIn())->toContain("[sshd]\nenabled = true")
+        ->and(dropIn())->toContain("[recidive]\nenabled = false");
+});
+
+it('leaves a jail.local it does not own completely alone', function () {
+    // An administrator's own file, or one from another panel. There is no
+    // panel configuration to preserve, so there is nothing to resync — and
+    // writing one would mean a deploy deciding which jails this server runs.
+    fakeFail2ban(bans: []);
+
+    $theirs = "[DEFAULT]\nbantime = 99999\n\n[sshd]\nenabled = true\n";
+    File::put("{$this->jailD}/jail.local", $theirs);
+
+    $this->artisan('fail2ban:resync')->assertExitCode(0);
+
+    expect(dropIn())->toBe($theirs);
+});
+
+it('does nothing on a server that has never installed fail2ban', function () {
+    fakeFail2ban(installed: false);
+
+    $this->artisan('fail2ban:resync')->assertExitCode(0);
+
+    expect(File::exists("{$this->jailD}/jail.local"))->toBeFalse();
 });

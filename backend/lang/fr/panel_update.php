@@ -9,6 +9,7 @@ return [
     ],
     'steps' => [
         'record_firewall_defaults' => 'Enregistrement des règles de pare-feu par défaut',
+        'resync_fail2ban' => 'Resynchronisation de la configuration fail2ban',
         'refresh_npm_catalogue' => 'Actualisation du catalogue npm',
         'refresh_lifecycle_catalogue' => 'Actualisation du catalogue de cycle de vie des runtimes',
         'preflight_git' => 'Vérification du dépôt du panneau',
@@ -44,6 +45,7 @@ return [
         'prune' => 'Les anciennes versions n’ont pas pu être supprimées.',
         'sync_privileges' => 'Les privilèges du panneau n’ont pas pu être mis à jour.',
         'record_firewall_defaults' => 'Les règles de pare-feu par défaut n’ont pas pu être enregistrées.',
+        'resync_fail2ban' => 'La configuration fail2ban n’a pas pu être resynchronisée.',
         'refresh_npm_catalogue' => 'Le catalogue npm n’a pas pu être actualisé.',
         'refresh_lifecycle_catalogue' => 'Le catalogue de cycle de vie des runtimes n’a pas pu être actualisé.',
         'launch' => 'La mise à jour n’a pas pu être lancée.',

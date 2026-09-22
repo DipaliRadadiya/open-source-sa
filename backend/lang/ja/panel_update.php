@@ -9,6 +9,7 @@ return [
     ],
     'steps' => [
         'record_firewall_defaults' => 'ファイアウォールの既定ルールを記録しています',
+        'resync_fail2ban' => 'fail2ban の設定を再同期しています',
         'refresh_npm_catalogue' => 'npm カタログを更新しています',
         'refresh_lifecycle_catalogue' => 'ランタイムのサポート状況カタログを更新しています',
         'preflight_git' => 'パネルのリポジトリを確認しています',
@@ -44,6 +45,7 @@ return [
         'prune' => '古いリリースを削除できませんでした。',
         'sync_privileges' => 'パネルの権限を更新できませんでした。',
         'record_firewall_defaults' => 'ファイアウォールの既定ルールを記録できませんでした。',
+        'resync_fail2ban' => 'fail2ban の設定を再同期できませんでした。',
         'refresh_npm_catalogue' => 'npm カタログを更新できませんでした。',
         'refresh_lifecycle_catalogue' => 'ランタイムのサポート状況カタログを更新できませんでした。',
         'launch' => '更新を開始できませんでした。',

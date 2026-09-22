@@ -16,6 +16,7 @@ return [
 
     'steps' => [
         'record_firewall_defaults' => 'Recording the firewall defaults',
+        'resync_fail2ban' => 'Resyncing the fail2ban configuration',
         'refresh_npm_catalogue' => 'Refreshing the npm catalogue',
         'refresh_lifecycle_catalogue' => 'Refreshing the runtime lifecycle catalogue',
         'preflight_git' => 'Checking the panel repository',
@@ -57,6 +58,7 @@ return [
         'prune' => 'The old releases could not be removed.',
         'sync_privileges' => 'The panel’s privileges could not be updated.',
         'record_firewall_defaults' => 'The firewall defaults could not be recorded.',
+        'resync_fail2ban' => 'The fail2ban configuration could not be resynced.',
         'refresh_npm_catalogue' => 'The npm catalogue could not be refreshed.',
         'refresh_lifecycle_catalogue' => 'The runtime lifecycle catalogue could not be refreshed.',
         'launch' => 'The update could not be started.',

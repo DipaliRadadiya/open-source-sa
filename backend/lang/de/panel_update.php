@@ -9,6 +9,7 @@ return [
     ],
     'steps' => [
         'record_firewall_defaults' => 'Firewall-Standardregeln werden erfasst',
+        'resync_fail2ban' => 'fail2ban-Konfiguration wird neu synchronisiert',
         'refresh_npm_catalogue' => 'npm-Katalog wird aktualisiert',
         'refresh_lifecycle_catalogue' => 'Laufzeit-Lebenszykluskatalog wird aktualisiert',
         'preflight_git' => 'Panel-Repository wird geprüft',
@@ -44,6 +45,7 @@ return [
         'prune' => 'Die alten Releases konnten nicht entfernt werden.',
         'sync_privileges' => 'Die Berechtigungen des Panels konnten nicht aktualisiert werden.',
         'record_firewall_defaults' => 'Die Firewall-Standardregeln konnten nicht erfasst werden.',
+        'resync_fail2ban' => 'Die fail2ban-Konfiguration konnte nicht neu synchronisiert werden.',
         'refresh_npm_catalogue' => 'Der npm-Katalog konnte nicht aktualisiert werden.',
         'refresh_lifecycle_catalogue' => 'Der Laufzeit-Lebenszykluskatalog konnte nicht aktualisiert werden.',
         'launch' => 'Das Update konnte nicht gestartet werden.',

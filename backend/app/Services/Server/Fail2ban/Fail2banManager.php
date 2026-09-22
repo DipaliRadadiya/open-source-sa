@@ -297,10 +297,13 @@ class Fail2banManager
             ."bantime = {$settings['bantime']}\n"
             ."findtime = {$settings['findtime']}\n"
             ."maxretry = {$settings['maxretry']}\n"
-            ."ignoreip = {$ignore}\n"
-            // systemd's journal is the reliable source on a modern Ubuntu;
-            // /var/log/auth.log is not guaranteed to exist or be written to.
-            ."backend = systemd\n";
+            // No `backend` here, deliberately. `[DEFAULT]` applies to every
+            // jail, and the systemd backend makes fail2ban ignore `logpath`
+            // and read the journal instead — so a `backend = systemd` here
+            // silently disabled every file-watching jail this panel writes.
+            // It is set on the `sshd` jail instead, where it is wanted; see
+            // `server.fail2ban.jails` for the full reasoning.
+            ."ignoreip = {$ignore}\n";
 
         foreach ((array) config('server.fail2ban.jails', []) as $jail) {
             $body .= "\n[{$jail['name']}]\n"
@@ -490,6 +493,62 @@ class Fail2banManager
     /**
      * @return array<int, string>
      */
+    /**
+     * Which jails the *file* has enabled — not which ones are running.
+     *
+     * {@see activeJails()} asks the daemon, and answers `[]` when it is not
+     * running. That is the right answer for a status screen and a dangerous
+     * one for anything that rewrites the file: a resync run while fail2ban
+     * happened to be down would persist "nothing is enabled" and switch off
+     * the operator's SSH protection. The file is what `write()` is about to
+     * replace, so the file is what it reads.
+     *
+     * Returns an empty array when the panel does not own the file, which the
+     * caller must treat as "do not write" rather than "disable everything" —
+     * there is no panel configuration to preserve.
+     *
+     * @return array<string, bool> jail name => enabled
+     */
+    public function configuredJails(): array
+    {
+        try {
+            $contents = $this->currentDropIn($this->dropInPath());
+        } catch (Fail2banException) {
+            // `currentDropIn()` refuses a file the panel did not write, which
+            // is right for the save path — there, somebody is asking to
+            // replace it and deserves to be told no. Here the answer is just
+            // "there is no panel configuration to read", and this runs
+            // unattended from a deploy where an exception is an aborted
+            // update rather than something anyone can act on.
+            return [];
+        }
+
+        if ($contents === null) {
+            return [];
+        }
+
+        $enabled = [];
+        $section = null;
+
+        foreach (preg_split('/\r?\n/', $contents) ?: [] as $line) {
+            if (preg_match('/^\s*\[([^\]]+)\]/', $line, $matches) === 1) {
+                $section = trim($matches[1]);
+
+                continue;
+            }
+
+            if ($section === null || $section === 'DEFAULT') {
+                continue;
+            }
+
+            if (preg_match('/^\s*enabled\s*=\s*(\S+)/i', $line, $matches) === 1) {
+                $enabled[$section] = filter_var($matches[1], FILTER_VALIDATE_BOOL);
+            }
+        }
+
+        return $enabled;
+    }
+
     public function activeJails(): array
     {
         if (! $this->running()) {
