@@ -90,7 +90,9 @@ class ExtractArchive implements RestoreStep
         $result = $this->serverOps->run(
             $command,
             ['feature' => 'backup', 'op' => 'restore_extract', 'application' => $context->application->id],
-            timeout: 3600,
+            // Same reason as ArchiveFiles: extraction scales with the archive,
+            // so a fixed hour fails exactly the large restores that need it.
+            timeout: (int) config('server.backups.job_timeout', 21600),
         );
 
         if ($result->failed()) {

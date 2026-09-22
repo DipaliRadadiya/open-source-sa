@@ -385,6 +385,33 @@ return [
          * only today's control flow happens to step around.
          */
         'upload_memory_limit' => env('BACKUP_UPLOAD_MEMORY_LIMIT', '768M'),
+
+        /*
+         * What compresses the archive, and how hard.
+         *
+         * `tar -czf` means gzip at level 6 on a single core. Measured on a
+         * 103 GB site: **67 minutes, 99.5% of one core, seven cores idle, and
+         * the output was 99.46% of the input** — an hour of CPU to save half a
+         * percent, because the data was already-compressed media.
+         *
+         * `pigz` is gzip split across cores. Same format, same flags, same
+         * output a plain `gzip -d` reads; it just uses the machine. On an
+         * 8-core box that is the difference between ~67 minutes and ~10.
+         *
+         * **`auto` falls back to gzip when pigz is absent, and that is the
+         * point.** The updater ships code, never packages, so a new dependency
+         * reaches fresh installs only — a version that *required* pigz would
+         * break every existing panel on upgrade. Detection happens at run time,
+         * per archive.
+         *
+         * Level 1 rather than gzip's default 6. For already-compressed data the
+         * level is irrelevant (both measured 99.3%); for compressible data
+         * level 1 is 1.8x faster for 7.8% more bytes. A backup is written once
+         * and read almost never, so speed is worth more than the last few
+         * percent — the same call v7's agent made (`gzip -1`, backup.go:369).
+         */
+        'compressor' => env('BACKUP_COMPRESSOR', 'auto'),
+        'compression_level' => (int) env('BACKUP_COMPRESSION_LEVEL', 1),
     ],
 
     /*

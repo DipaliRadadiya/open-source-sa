@@ -126,7 +126,7 @@ function fakeRestoreCommands(bool $tarFails = false): void
         $binary = $command[0] === 'sudo' ? ($command[2] ?? '') : $command[0];
         $args = $command[0] === 'sudo' ? array_slice($command, 2) : $command;
 
-        if ($binary === 'tar' && ($args[1] ?? '') === '-xzf') {
+        if ($binary === 'tar' && in_array('-xzf', $args, true)) {
             if ($tarFails) {
                 return Process::result(errorOutput: 'tar: unexpected end of file', exitCode: 2);
             }
@@ -155,11 +155,15 @@ function fakeSafetyBackupTar(): void
         $binary = $command[0] === 'sudo' ? ($command[2] ?? '') : $command[0];
         $args = $command[0] === 'sudo' ? array_slice($command, 2) : $command;
 
-        if ($binary === 'tar' && ($args[1] ?? '') === '-czf') {
-            file_put_contents($args[2], str_repeat('s', 4096));
+        // Matched by flag presence, not argv position. Compression moved off
+        // `-z` to `--use-compress-program`, so `$args[1]` is no longer the
+        // mode — and a fixture keyed on position silently stopped recognising
+        // "create", which surfaced as the safety backup failing.
+        if ($binary === 'tar' && (in_array('-czf', $args, true) || in_array('-cf', $args, true))) {
+            file_put_contents(tarArchivePath($args) ?? $args[2], str_repeat('s', 4096));
         }
 
-        if ($binary === 'tar' && ($args[1] ?? '') === '-xzf') {
+        if ($binary === 'tar' && in_array('-xzf', $args, true)) {
             $into = $args[4] ?? null;
             if (is_string($into)) {
                 $site = $into.'/'.basename(test()->siteRoot);
@@ -261,8 +265,8 @@ describe('nothing is touched when it fails early', function () {
             $command = $process->command;
             $args = $command[0] === 'sudo' ? array_slice($command, 2) : $command;
 
-            if (($args[0] ?? '') === 'tar' && ($args[1] ?? '') === '-czf') {
-                file_put_contents($args[2], str_repeat('s', 4096));
+            if (($args[0] ?? '') === 'tar' && (in_array('-czf', $args, true) || in_array('-cf', $args, true))) {
+                file_put_contents(tarArchivePath($args) ?? $args[2], str_repeat('s', 4096));
             }
 
             return Process::result(exitCode: 0);
@@ -283,11 +287,11 @@ it('puts the site back when the swap fails half way', function () {
         $command = $process->command;
         $args = $command[0] === 'sudo' ? array_slice($command, 2) : $command;
 
-        if (($args[0] ?? '') === 'tar' && ($args[1] ?? '') === '-czf') {
-            file_put_contents($args[2], str_repeat('s', 4096));
+        if (($args[0] ?? '') === 'tar' && (in_array('-czf', $args, true) || in_array('-cf', $args, true))) {
+            file_put_contents(tarArchivePath($args) ?? $args[2], str_repeat('s', 4096));
         }
 
-        if (($args[0] ?? '') === 'tar' && ($args[1] ?? '') === '-xzf') {
+        if (($args[0] ?? '') === 'tar' && in_array('-xzf', $args, true)) {
             $site = $args[4].'/'.basename(test()->siteRoot);
             File::ensureDirectoryExists($site);
             File::put($site.'/index.php', '<?php echo "restored";');
