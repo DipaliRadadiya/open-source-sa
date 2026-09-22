@@ -5804,7 +5804,14 @@
       },
       "copyUid": "Copier le nom de fichier de cette archive dans le bucket",
       "uploadProgress": "{done} sur {total}",
-      "uploadProgressBare": "{done} envoyés"
+      "uploadProgressBare": "{done} envoyés",
+      "retryConfirm": {
+        "title": "Lancer une nouvelle sauvegarde de {name} ?",
+        "description": "Ceci ne relance pas la restauration. Une sauvegarde entièrement nouvelle de {name} est créée puis envoyée — la dernière archive faisait {size}, donc sur une connexion lente cela peut prendre des heures et occupera autant d'espace sur la destination.",
+        "cancel": "Annuler",
+        "confirm": "Lancer une nouvelle sauvegarde",
+        "unknownSize": "une taille inconnue"
+      }
     },
     "restore": {
       "title": "Restaurer {name}",

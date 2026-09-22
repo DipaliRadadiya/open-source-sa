@@ -5804,7 +5804,14 @@
       },
       "copyUid": "バケット内のこのアーカイブのファイル名をコピー",
       "uploadProgress": "{total} 中 {done}",
-      "uploadProgressBare": "{done} アップロード済み"
+      "uploadProgressBare": "{done} アップロード済み",
+      "retryConfirm": {
+        "title": "{name} の新しいバックアップを開始しますか？",
+        "description": "これは復元のやり直しではありません。{name} のまったく新しいバックアップを作成してアップロードします。前回のアーカイブは {size} でした。回線が遅い場合は数時間かかることがあり、保存先でも同じだけの容量を使用します。",
+        "cancel": "キャンセル",
+        "confirm": "新しいバックアップを開始",
+        "unknownSize": "不明なサイズ"
+      }
     },
     "restore": {
       "title": "{name} を復元",

@@ -5804,7 +5804,14 @@
       },
       "copyUid": "Copiar o nome deste arquivo no bucket",
       "uploadProgress": "{done} de {total}",
-      "uploadProgressBare": "{done} enviados"
+      "uploadProgressBare": "{done} enviados",
+      "retryConfirm": {
+        "title": "Iniciar uma nova cópia de segurança de {name}?",
+        "description": "Isto não repete a restauração. Cria uma cópia de segurança completamente nova de {name} e envia-a — o último arquivo tinha {size}, por isso numa ligação lenta pode demorar horas e ocupará esse espaço no destino.",
+        "cancel": "Cancelar",
+        "confirm": "Iniciar nova cópia",
+        "unknownSize": "um tamanho desconhecido"
+      }
     },
     "restore": {
       "title": "Restaurar {name}",

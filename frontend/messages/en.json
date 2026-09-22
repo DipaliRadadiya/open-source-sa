@@ -5804,7 +5804,14 @@
       },
       "copyUid": "Copy this archive's file name in the bucket",
       "uploadProgress": "{done} of {total}",
-      "uploadProgressBare": "{done} uploaded"
+      "uploadProgressBare": "{done} uploaded",
+      "retryConfirm": {
+        "title": "Start a new backup of {name}?",
+        "description": "This does not retry the restore. It runs a completely new backup of {name} and uploads it — the last archive was {size}, so on a slow connection this can take hours and will use that much space at the destination.",
+        "cancel": "Cancel",
+        "confirm": "Start a new backup",
+        "unknownSize": "an unknown size"
+      }
     },
     "restore": {
       "title": "Restore {name}",

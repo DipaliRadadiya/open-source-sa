@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useFormatter } from "next-intl";
 import { toast } from "sonner";
-import { Archive, CircleAlert, Loader2 } from "lucide-react";
+import { Archive, CircleAlert, Loader2, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   BACKUP_IN_FLIGHT,
@@ -16,6 +16,7 @@ import {
 import { clearStuckBackup, retryBackup } from "@/lib/api/backups";
 import { newestBackupId, queuedApplications } from "@/lib/backups/queued";
 import { apiMessage } from "@/lib/api/error-message";
+import { formatBytes } from "@/lib/format/bytes";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Card, CardContent } from "@/components/ui/card";
 import { BackupsCards } from "@/components/backups/backups-cards";
@@ -46,9 +47,12 @@ export function BackupsHistory({
   hasFilters,
 }) {
   const t = useTranslations("backups.history");
+  const tr = useTranslations("backups.restore");
+  const format = useFormatter();
   const router = useRouter();
   const params = useSearchParams();
   const { active, start } = useRestoreWatch();
+  const [retrying, setRetrying] = useState(null);
   const [restoring, setRestoring] = useState(null);
   const [clearing, setClearing] = useState(null);
   const [busyId, setBusyId] = useState(null);
@@ -68,6 +72,27 @@ export function BackupsHistory({
   // failed and then re-runs the target, creating a NEW row rather than reviving
   // this one. So what we wait for is "a newer run for this site", not "this row
   // changed".
+  /**
+   * Ask first. Retry spends hours and gigabytes, and nothing here can undo it.
+   *
+   * Every other action in this table already confirms — Restore makes you type
+   * the site's domain, Clear opens a dialog — and Retry, the one you can fire
+   * by accident, went straight to the API. Worse, on a failed *restore* the
+   * only button the row offers is this one, so "retry" reads as "retry the
+   * restore" when it actually starts a brand new backup.
+   */
+  function askRetry(backup) {
+    setRetrying(backup);
+  }
+
+  async function confirmRetry() {
+    const backup = retrying;
+    if (!backup) return;
+
+    setRetrying(null);
+    await retry(backup);
+  }
+
   async function retry(backup) {
     setBusyId(backup.id);
     setStalled(false);
@@ -142,7 +167,7 @@ export function BackupsHistory({
     onDeleted: () => router.refresh(),
     canRun,
     onRestore: setRestoring,
-    onRetry: retry,
+    onRetry: askRetry,
     onClear: setClearing,
     canClear: canRun,
     busyId,
@@ -150,15 +175,24 @@ export function BackupsHistory({
     // Per site: a run under way for THIS site blocks its rows, and leaves every
     // other site's Retry alone. The endpoint refuses a second run per target
     // with a 422, so the button should refuse it first and say why.
-    retryBlockedFor: (backup) =>
-      queuedIds.includes(String(backup.application_id)) ||
-      backups.some(
-        (row) =>
-          row.application_id === backup.application_id &&
-          BACKUP_IN_FLIGHT.includes(row.status),
-      )
+    retryBlockedFor: (backup) => {
+      // A restore under way blocks Retry, and this is the half that was
+      // missing. The guard below only knew about *backups*, so after a restore
+      // failed — the exact moment someone is clicking around trying to work out
+      // why — Retry was fully enabled, and one click started a fresh archive
+      // and a multi-gigabyte upload. The restore's own safety backup competes
+      // for the same disk and the same target.
+      if (restoreInFlight) return tr("blocked.alreadyRunning");
+
+      return queuedIds.includes(String(backup.application_id)) ||
+        backups.some(
+          (row) =>
+            row.application_id === backup.application_id &&
+            BACKUP_IN_FLIGHT.includes(row.status),
+        )
         ? t("alreadyRunning")
-        : null,
+        : null;
+    },
   };
 
   // A backup writes for minutes. Without this the row says "Backing up" until
@@ -271,6 +305,30 @@ export function BackupsHistory({
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(retrying)}
+        onOpenChange={(open) => !busyId && setRetrying(open ? retrying : null)}
+        icon={RotateCw}
+        title={t("retryConfirm.title")}
+        description={
+          retrying
+            ? t("retryConfirm.description", {
+                name: retrying.application_name ?? t("unknownApplication"),
+                // The size of the archive it is about to rebuild and re-upload.
+                // "A new backup" is abstract; "24.1 GB" is the number that makes
+                // someone reconsider on a slow link.
+                size: retrying.size_bytes
+                  ? formatBytes(retrying.size_bytes, format)
+                  : t("retryConfirm.unknownSize"),
+              })
+            : ""
+        }
+        cancelLabel={t("retryConfirm.cancel")}
+        confirmLabel={t("retryConfirm.confirm")}
+        pending={Boolean(retrying && busyId === retrying.id)}
+        onConfirm={confirmRetry}
+      />
 
       <ConfirmDialog
         open={Boolean(clearing)}

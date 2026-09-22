@@ -5804,7 +5804,14 @@
       },
       "copyUid": "Den Dateinamen dieses Archivs im Bucket kopieren",
       "uploadProgress": "{done} von {total}",
-      "uploadProgressBare": "{done} hochgeladen"
+      "uploadProgressBare": "{done} hochgeladen",
+      "retryConfirm": {
+        "title": "Neue Sicherung von {name} starten?",
+        "description": "Dies wiederholt nicht die Wiederherstellung. Es erstellt eine völlig neue Sicherung von {name} und lädt sie hoch — das letzte Archiv war {size} groß, daher kann dies bei langsamer Verbindung Stunden dauern und belegt entsprechend Speicherplatz am Ziel.",
+        "cancel": "Abbrechen",
+        "confirm": "Neue Sicherung starten",
+        "unknownSize": "unbekannter Größe"
+      }
     },
     "restore": {
       "title": "{name} wiederherstellen",
