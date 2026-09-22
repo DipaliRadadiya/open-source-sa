@@ -4912,6 +4912,7 @@
     "size": {
       "notMeasured": "Nicht gemessen",
       "measuring": "Misst…",
+      "measured": "Größe ermittelt.",
       "measureFailed": "Die Größe konnte nicht gemessen werden.",
       "measureHint": "Diese Anwendung jetzt auf der Platte messen"
     },

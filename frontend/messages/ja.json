@@ -4912,6 +4912,7 @@
     "size": {
       "notMeasured": "未計測",
       "measuring": "計測中…",
+      "measured": "サイズを測定しました。",
       "measureFailed": "サイズを測定できませんでした。",
       "measureHint": "このアプリケーションのディスク使用量を今すぐ測定"
     },

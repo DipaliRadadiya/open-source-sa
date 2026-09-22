@@ -311,6 +311,14 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
     setMeasuring(true);
     try {
       await measureApplicationSize(application.id);
+      /*
+       * Say so. Walking every inode can finish with the SAME number — a site
+       * that has not changed since the last measure — so the button spun, the
+       * value stayed put and the only readable outcome was "nothing happened".
+       * The failure path has always had a toast; the success path had none,
+       * which is the one asymmetry that makes a working control look broken.
+       */
+      toast.success(t("size.measured"));
       router.refresh();
     } catch (error) {
       // Throttled, and it refuses outright for a site with no directory on

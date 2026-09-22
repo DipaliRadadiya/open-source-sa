@@ -4912,6 +4912,7 @@
     "size": {
       "notMeasured": "Sin medir",
       "measuring": "Midiendo…",
+      "measured": "Tamaño medido.",
       "measureFailed": "No se pudo medir el tamaño.",
       "measureHint": "Medir esta aplicación en el disco ahora"
     },
