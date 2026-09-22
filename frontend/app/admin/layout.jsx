@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { signedOutPath } from "@/lib/auth/signed-out-path";
+import { RememberPath } from "@/components/remember-path";
 import { AuthProvider } from "@/components/auth-provider";
 import { AdminSidebar } from "@/components/sections/admin-sidebar";
 import { AdminBreadcrumb } from "@/components/sections/admin-breadcrumb";
@@ -51,6 +52,7 @@ export default async function AdminLayout({ children }) {
     <AuthProvider user={user}>
       <TooltipProvider delayDuration={300}>
       <ErrorCopy />
+      <RememberPath />
         <UnsavedProvider>
         <PanelFocus />
         <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>

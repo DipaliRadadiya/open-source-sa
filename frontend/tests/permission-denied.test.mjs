@@ -117,7 +117,13 @@ test("the front door picks a page the caller can actually open", () => {
 });
 
 test("login hands the choice to the server, which is the only side that knows", () => {
-  assert.match(read("components/forms/login-form.jsx"), /router\.push\("\/"\)/);
+  // "/" is still the default; `?next=` only overrides it when something sets
+  // one, and `safeNext` drops anything that is not an in-panel path.
+  assert.match(
+    read("components/forms/login-form.jsx"),
+    /\?\? takeRememberedPath\(\) \?\? "\/"\)/,
+    'the last fallback stays "/" — app/page.js picks a landing page this role can open',
+  );
   assert.doesNotMatch(read("components/forms/login-form.jsx"), /router\.push\("\/dashboard"\)/);
   assert.match(read("app/page.js"), /redirect\(landingPath\(await getPermissions\(\)\)\)/);
   for (const p of ["app/(auth)/login/page.jsx", "app/(auth)/register/page.jsx"]) {
