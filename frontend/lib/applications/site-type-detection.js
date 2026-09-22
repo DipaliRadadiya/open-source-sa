@@ -55,18 +55,29 @@ export function suggestedSiteType(application) {
 }
 
 /**
- * Which of the four things the Type row has to say.
+ * Which of the five things the Type row has to say.
  *
  *   unsupported — git: no probe, no offer, no button
  *   idle        — never probed; offer to look
  *   suggested   — found something this site could become
- *   found       — probed and there is nothing to offer
+ *   recognised  — probed, recognised software, nothing to offer
+ *   found       — probed and the directory held nothing it knows
  *
- * `found` splits into "recognised something, but nothing to offer" and "saw
- * nothing at all" at the call site, because only the second needs the API's
- * explanatory sentence. Softaculous's support board is full of "scan says no
- * installations found" — a probe that reports nothing and does not say so
- * reads as a broken button.
+ * 🔴 `recognised` and `found` were ONE state, split at the call site "because
+ * only the second needs the API's explanatory sentence". The split was never
+ * written, so the call site said "Nothing recognisable found" for both — and
+ * the common case by far is a correctly-labelled site, where the probe reads
+ * `wp-config.php` at confidence 95 and has nothing to offer precisely BECAUSE
+ * the label is already right. Every WordPress site in the panel displayed
+ * "Nothing recognisable found on the last check" underneath the word
+ * WordPress. Reported, correctly, as confusing.
+ *
+ * That is the Softaculous failure this feature was researched to avoid, with
+ * the sign flipped: not a probe that stays quiet about finding nothing, but
+ * one that claims to have found nothing when it found the answer.
+ *
+ * They are separated HERE rather than at the call site so there is no second
+ * place to forget it.
  */
 export function siteTypeDetectionState(application) {
   if (isGitSite(application)) return "unsupported";
@@ -75,8 +86,9 @@ export function siteTypeDetectionState(application) {
   // both before the first probe and after one that found nothing, so branching
   // on it would show "nothing found" to someone who has never pressed the
   // button.
-  if (application?.site_type_detection?.checked_at) return "found";
-  return "idle";
+  if (!application?.site_type_detection?.checked_at) return "idle";
+
+  return application.site_type_detection.detected ? "recognised" : "found";
 }
 
 /**
