@@ -5144,7 +5144,7 @@
       "reversible": "いつでも {from} に戻せます。",
       "reviewAction": "確認",
       "detectAction": "インストール内容を確認",
-      "changeTo": "種類を {type} に変更",
+      "changeTo": "代わりに {type} として扱う",
       "menuHint": "アプリケーション種類のオプション"
     }
   },

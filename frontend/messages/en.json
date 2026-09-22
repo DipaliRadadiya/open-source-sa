@@ -5144,7 +5144,7 @@
       "reversible": "You can set it back to {from} at any time.",
       "reviewAction": "Review",
       "detectAction": "Check what is installed",
-      "changeTo": "Change type to {type}",
+      "changeTo": "Treat as {type} instead",
       "menuHint": "Application type options"
     }
   },

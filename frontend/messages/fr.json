@@ -5144,7 +5144,7 @@
       "reversible": "Vous pouvez revenir à {from} à tout moment.",
       "reviewAction": "Examiner",
       "detectAction": "Vérifier ce qui est installé",
-      "changeTo": "Changer le type en {type}",
+      "changeTo": "Traiter plutôt comme {type}",
       "menuHint": "Options du type d'application"
     }
   },
