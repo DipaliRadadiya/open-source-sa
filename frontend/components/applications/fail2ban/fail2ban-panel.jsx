@@ -292,8 +292,15 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
             <p className="text-xs text-muted-foreground">{t(`files.${tab}Hint`)}</p>
           </div>
 
-          {/* Said before they edit, because the placeholders look like
-              something to fill in and are the one thing that must be left. */}
+          {/* Said before they edit.
+
+              This used to explain the `{name}` / `{filter}` / `{logpath}` /
+              `{slug}` tokens, because the editor was handed the raw template
+              and those tokens were on screen. The backend now renders them
+              before sending — saved configs too — so the sentence described
+              something the reader could no longer see. What survives of it is
+              the part that still matters: `filter` names the other tab's
+              file, and that filename is fixed by the server. */}
           <p className="border-b bg-muted/30 px-5 py-2.5 text-xs text-muted-foreground">
             {t("placeholderNote")}
           </p>

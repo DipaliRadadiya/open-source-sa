@@ -4806,7 +4806,7 @@
         "jailHint": "ブロックの判定 — 試行回数、期間、ブロック時間。",
         "filterHint": "不正な試行の定義 — 各ログ行と照合されます。"
       },
-      "placeholderNote": "{name}, {filter}, {logpath}, {slug} はファイル書き込み時に自動で埋められます。変更しないでください。",
+      "placeholderNote": "Jail 名、ログのパス、フィルターはこのアプリケーションから自動で入ります。filter の行はそのままにしてください — 常にこのアプリケーション名で保存されるフィルターファイルと一致する必要があります。",
       "placeholderLost": "{count, plural, other {{tokens} はもうファイルに含まれていません。埋め込まれる値もそれに伴いません。意図的に置き換えた場合のみ正しい挙動です。}}",
       "unsavedHere": "このファイルに未保存の変更があります",
       "saveAction": "保存して fail2ban を再読込",

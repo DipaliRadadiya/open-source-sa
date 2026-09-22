@@ -4806,7 +4806,7 @@
         "jailHint": "Cuándo bloquear: cuántos intentos, en cuánto tiempo y durante cuánto.",
         "filterHint": "Qué cuenta como intento fallido: se compara con cada línea del registro."
       },
-      "placeholderNote": "{name}, {filter}, {logpath} y {slug} se rellenan al escribir los archivos. Déjalos tal cual.",
+      "placeholderNote": "El nombre de la jaula, la ruta del registro y el filtro se rellenan a partir de esta aplicación. Deja la línea del filtro tal como está: debe coincidir con el archivo Filtro, que siempre lleva el nombre de esta aplicación.",
       "placeholderLost": "{count, plural, one {{tokens} ya no está en el archivo: el valor que representaba no se rellenará. Esto solo es correcto si lo has sustituido a propósito.} other {{tokens} ya no están en el archivo: los valores que representaban no se rellenarán. Esto solo es correcto si los has sustituido a propósito.}}",
       "unsavedHere": "Cambios sin guardar en este archivo",
       "saveAction": "Guardar y recargar fail2ban",

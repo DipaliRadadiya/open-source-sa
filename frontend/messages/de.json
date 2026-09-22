@@ -4806,7 +4806,7 @@
         "jailHint": "Wann gesperrt wird — wie viele Versuche, über welchen Zeitraum, wie lange.",
         "filterHint": "Was als Fehlversuch zählt — verglichen mit jeder Protokollzeile."
       },
-      "placeholderNote": "{name}, {filter}, {logpath} und {slug} werden beim Schreiben der Dateien eingesetzt. Lassen Sie sie, wie sie sind.",
+      "placeholderNote": "Jail-Name, Logpfad und Filter werden aus dieser Anwendung übernommen. Lassen Sie die Filterzeile unverändert — sie muss zur Filter-Datei passen, die immer nach dieser Anwendung benannt ist.",
       "placeholderLost": "{count, plural, one {{tokens} steht nicht mehr in der Datei — der Wert, für den es stand, wird nicht eingesetzt. Das ist nur richtig, wenn Sie es absichtlich ersetzt haben.} other {{tokens} stehen nicht mehr in der Datei — die Werte, für die sie standen, werden nicht eingesetzt. Das ist nur richtig, wenn Sie sie absichtlich ersetzt haben.}}",
       "unsavedHere": "Nicht gespeicherte Änderungen in dieser Datei",
       "saveAction": "Speichern und fail2ban neu laden",

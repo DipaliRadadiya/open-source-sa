@@ -4806,7 +4806,7 @@
         "jailHint": "Quando banir — quantas tentativas, em quanto tempo, por quanto tempo.",
         "filterHint": "O que conta como tentativa ruim — comparado com cada linha do log."
       },
-      "placeholderNote": "{name}, {filter}, {logpath} e {slug} são preenchidos quando os arquivos são gravados. Deixe-os como estão.",
+      "placeholderNote": "O nome do jail, o caminho do log e o filtro são preenchidos a partir desta aplicação. Deixe a linha do filtro como está — ela precisa corresponder ao arquivo Filtro, que recebe sempre o nome desta aplicação.",
       "placeholderLost": "{count, plural, one {{tokens} não está mais no arquivo — o valor que ele representava não será preenchido. Isso só é correto se você o substituiu de propósito.} other {{tokens} não estão mais no arquivo — os valores que eles representavam não serão preenchidos. Isso só é correto se você os substituiu de propósito.}}",
       "unsavedHere": "Alterações não salvas neste arquivo",
       "saveAction": "Salvar e recarregar o fail2ban",

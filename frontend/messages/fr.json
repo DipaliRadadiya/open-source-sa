@@ -4806,7 +4806,7 @@
         "jailHint": "Quand bannir — combien de tentatives, sur quelle durée, pour combien de temps.",
         "filterHint": "Ce qui compte comme mauvaise tentative — comparé à chaque ligne du journal."
       },
-      "placeholderNote": "{name}, {filter}, {logpath} et {slug} sont remplis à l'écriture des fichiers. Laissez-les tels quels.",
+      "placeholderNote": "Le nom du jail, le chemin du journal et le filtre sont renseignés à partir de cette application. Laissez la ligne filter telle quelle : elle doit correspondre au fichier Filtre, toujours nommé d'après cette application.",
       "placeholderLost": "{count, plural, one {{tokens} n'est plus dans le fichier — la valeur qu'il remplaçait ne sera pas insérée. C'est correct uniquement si vous l'avez remplacé volontairement.} other {{tokens} ne sont plus dans le fichier — les valeurs qu'ils remplaçaient ne seront pas insérées. C'est correct uniquement si vous les avez remplacés volontairement.}}",
       "unsavedHere": "Modifications non enregistrées dans ce fichier",
       "saveAction": "Enregistrer et recharger fail2ban",

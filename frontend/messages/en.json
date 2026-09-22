@@ -4806,7 +4806,7 @@
         "jailHint": "When to ban — how many tries, over how long, for how long.",
         "filterHint": "What counts as a bad try — matched against each log line."
       },
-      "placeholderNote": "{name}, {filter}, {logpath} and {slug} are filled in when the files are written. Leave them as they are.",
+      "placeholderNote": "The jail name, log path and filter are filled in from this application. Leave the filter line as it is — it must match the Filter file, which is always named after this application.",
       "placeholderLost": "{count, plural, one {{tokens} is no longer in the file — the value it stood for will not be filled in. That is only correct if you replaced it on purpose.} other {{tokens} are no longer in the file — the values they stood for will not be filled in. That is only correct if you replaced them on purpose.}}",
       "unsavedHere": "Unsaved changes in this file",
       "saveAction": "Save and reload fail2ban",
