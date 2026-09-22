@@ -889,6 +889,16 @@
         "detail": "Setting this application up stopped partway, so it is not serving yet.",
         "action": "See what failed"
       },
+      "deployFailed": {
+        "chip": "{site}'s last deploy failed",
+        "detail": "The application is still serving its previous version, and the next push will fail the same way until this is fixed.",
+        "action": "See the deploy log"
+      },
+      "processDown": {
+        "chip": "{site} has stopped running",
+        "detail": "Its process is not running, so visitors get an error even though the application is not paused.",
+        "action": "Check the process"
+      },
       "git": {
         "chip": "{site} lost its Git account",
         "detail": "The account it deploys from is gone, so the next deployment will fail.",

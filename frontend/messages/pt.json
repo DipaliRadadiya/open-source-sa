@@ -889,6 +889,16 @@
         "detail": "A configuração desta aplicação parou no meio, então ela ainda não está sendo servida.",
         "action": "Ver o que falhou"
       },
+      "deployFailed": {
+        "chip": "A última implantação de {site} falhou",
+        "detail": "O aplicativo continua servindo a versão anterior, e o próximo push falhará da mesma forma até que isso seja corrigido.",
+        "action": "Ver o log de implantação"
+      },
+      "processDown": {
+        "chip": "{site} parou de funcionar",
+        "detail": "Seu processo não está em execução, então os visitantes recebem um erro mesmo que o aplicativo não esteja pausado.",
+        "action": "Verificar o processo"
+      },
       "git": {
         "chip": "{site} perdeu sua conta do Git",
         "detail": "A conta de onde ele é implantado não existe mais, então a próxima implantação vai falhar.",

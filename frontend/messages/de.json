@@ -889,6 +889,16 @@
         "detail": "Die Einrichtung dieser Anwendung ist auf halbem Weg stehen geblieben, daher wird sie noch nicht ausgeliefert.",
         "action": "Fehler ansehen"
       },
+      "deployFailed": {
+        "chip": "Die letzte Bereitstellung von {site} ist fehlgeschlagen",
+        "detail": "Die Anwendung liefert weiterhin die vorherige Version aus, und der nächste Push schlägt genauso fehl, bis dies behoben ist.",
+        "action": "Bereitstellungsprotokoll ansehen"
+      },
+      "processDown": {
+        "chip": "{site} läuft nicht mehr",
+        "detail": "Der Prozess läuft nicht, daher erhalten Besucher einen Fehler, obwohl die Anwendung nicht pausiert ist.",
+        "action": "Prozess prüfen"
+      },
       "git": {
         "chip": "{site} hat sein Git-Konto verloren",
         "detail": "Das Konto, aus dem bereitgestellt wird, existiert nicht mehr, daher wird die nächste Bereitstellung fehlschlagen.",

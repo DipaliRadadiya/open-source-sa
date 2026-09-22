@@ -889,6 +889,16 @@
         "detail": "La configuración de esta aplicación se detuvo a medias, así que todavía no se está sirviendo.",
         "action": "Ver qué falló"
       },
+      "deployFailed": {
+        "chip": "El último despliegue de {site} falló",
+        "detail": "La aplicación sigue sirviendo la versión anterior, y el próximo envío fallará igual hasta que se corrija.",
+        "action": "Ver el registro de despliegue"
+      },
+      "processDown": {
+        "chip": "{site} ha dejado de ejecutarse",
+        "detail": "Su proceso no está en ejecución, así que los visitantes ven un error aunque la aplicación no esté pausada.",
+        "action": "Revisar el proceso"
+      },
       "git": {
         "chip": "{site} perdió su cuenta de Git",
         "detail": "La cuenta desde la que despliega ya no existe, así que el próximo despliegue fallará.",

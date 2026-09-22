@@ -889,6 +889,16 @@
         "detail": "L'installation de cette application s'est arrêtée en cours de route, elle n'est donc pas encore servie.",
         "action": "Voir l’échec"
       },
+      "deployFailed": {
+        "chip": "Le dernier déploiement de {site} a échoué",
+        "detail": "L'application sert toujours sa version précédente, et le prochain envoi échouera de la même façon tant que ce n'est pas corrigé.",
+        "action": "Voir le journal de déploiement"
+      },
+      "processDown": {
+        "chip": "{site} ne fonctionne plus",
+        "detail": "Son processus ne tourne pas, donc les visiteurs obtiennent une erreur même si l'application n'est pas en pause.",
+        "action": "Vérifier le processus"
+      },
       "git": {
         "chip": "{site} a perdu son compte Git",
         "detail": "Le compte depuis lequel il est déployé n’existe plus, le prochain déploiement échouera donc.",
