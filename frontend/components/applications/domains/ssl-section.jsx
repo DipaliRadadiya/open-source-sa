@@ -37,6 +37,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Caution } from "@/components/ui/caution";
 import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
@@ -116,32 +117,13 @@ function Tile({ tone = "idle", icon: Icon, spin = false, title, badge, children 
 }
 
 /**
- * Something the reader has to know before they act on this certificate.
+ * Every note on this card is the shared `Caution` at `md`.
  *
- * Built like the panel's `Caution`: a soft tint inside a light border with the
- * icon carrying the colour and the sentence in ordinary foreground text. A
- * note, in other words — not a banner. Colouring the prose too is what turned
- * earlier versions into a wall of red, and it makes the one line that matters
- * harder to read, not easier.
+ * It was a private copy here for about an hour, which is exactly how the three
+ * hand-rolled red blocks in the issue dialog got there. One component, so the
+ * card and the dialog one click away from it cannot drift apart again.
  */
-function Note({ tone = "warning", icon: Icon, children }) {
-  /*
-   * Red at 5%, amber at 10% — deliberately not the same number. At equal
-   * opacity the red block reads far hotter than the amber one does, because
-   * the hue is doing most of the shouting; matching the numbers is how the
-   * worst state ended up "this much red bg".
-   */
-  const accent = tone === "destructive" ? "border-destructive/40 bg-destructive/[0.05]" : "border-warning/35 bg-warning/10";
-  const mark = tone === "destructive" ? "text-destructive" : "text-warning";
-  return (
-    <div className={cn("flex items-start gap-2.5 rounded-lg border p-3 text-sm", accent)}>
-      <Icon className={cn("mt-0.5 size-4 shrink-0", mark)} aria-hidden />
-      {/* max-w-prose so a long consequence wraps at a readable measure instead
-          of running the full width of a very wide card. */}
-      <div className="min-w-0 flex-1 space-y-2 [&>p]:max-w-prose">{children}</div>
-    </div>
-  );
-}
+const Note = (props) => <Caution size="md" {...props} />;
 
 export function SslSection({
   appId,

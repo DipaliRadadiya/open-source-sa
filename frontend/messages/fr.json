@@ -3483,6 +3483,11 @@
       "emptyTitle": "Aucun domaine pour l'instant",
       "emptyBody": "Ajoutez un domaine pour le pointer vers cette application. Vous pouvez ajouter d'autres noms et alias à tout moment.",
       "testDomain": "Domaine de test",
+      "sslRow": {
+        "secured": "Sécurisé",
+        "notCovered": "Absent du certificat",
+        "none": "Aucun certificat SSL"
+      },
       "rowActions": "Actions",
       "makePrimary": "Définir comme principal",
       "remove": "Retirer",

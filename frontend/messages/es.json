@@ -3483,6 +3483,11 @@
       "emptyTitle": "Aún no hay dominios",
       "emptyBody": "Agrega un dominio para apuntarlo a esta aplicación. Puedes añadir más nombres y alias en cualquier momento.",
       "testDomain": "Dominio de prueba",
+      "sslRow": {
+        "secured": "Protegido",
+        "notCovered": "No está en el certificado",
+        "none": "Sin certificado SSL"
+      },
       "rowActions": "Acciones",
       "makePrimary": "Hacer principal",
       "remove": "Quitar",

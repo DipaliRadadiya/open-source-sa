@@ -3483,6 +3483,11 @@
       "emptyTitle": "No domains yet",
       "emptyBody": "Add a domain to point it at this application. You can add more names and aliases at any time.",
       "testDomain": "Test domain",
+      "sslRow": {
+        "secured": "Secured",
+        "notCovered": "Not on the certificate",
+        "none": "No SSL certificate"
+      },
       "rowActions": "Actions",
       "makePrimary": "Make primary",
       "remove": "Remove",

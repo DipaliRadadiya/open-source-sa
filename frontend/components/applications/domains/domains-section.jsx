@@ -12,6 +12,8 @@ import {
   Star,
   Trash2,
   ShieldAlert,
+  ShieldCheck,
+  ShieldOff,
   CheckCircle2,
   CircleDashed,
   ArrowRight,
@@ -91,6 +93,27 @@ function certificateCoverage(certificate, domain) {
     return certificate.domains.includes(domain) ? "covered" : "uncovered";
   }
   return "unknown";
+}
+
+/**
+ * Whether THIS name is served over HTTPS — answered on the row that asks it.
+ *
+ * The question "which of my domains actually have SSL?" was only answerable by
+ * switching to the other tab and reading a list there. Vercel puts the
+ * certificate state on the domain row for exactly this reason; it is the same
+ * fact, and the row is where someone is standing when they wonder.
+ *
+ * Returns null when the honest answer is "ask the SSL tab": a certificate that
+ * is issuing or has failed secures nothing yet but is not absent either, and
+ * repeating "failed" on every row would say once per domain what the other tab
+ * says once.
+ */
+function sslRowState(certificate, coverage) {
+  if (!certificate) return { key: "none", tone: "text-muted-foreground", icon: ShieldOff };
+  if (certificate.status !== "active") return null;
+  if (coverage === "covered") return { key: "secured", tone: "text-success", icon: ShieldCheck };
+  if (coverage === "uncovered") return { key: "notCovered", tone: "text-warning", icon: ShieldAlert };
+  return null;
 }
 
 export function DomainsSection({
@@ -228,10 +251,15 @@ export function DomainsSection({
               const isVerifying = Boolean(verifying[domain.domain]);
               return (
                 <div key={domain.id} className="flex flex-wrap items-start gap-3 p-4">
-                  <Globe2
-                    className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                  {/* A tinted chip, not a bare glyph — the same mark the SSL
+                      tab puts on every tile. A 16px grey icon floating beside
+                      the name is what made the two tabs read as two products. */}
+                  <span
+                    className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
                     aria-hidden
-                  />
+                  >
+                    <Globe2 className="size-4" />
+                  </span>
 
                   <div className="min-w-40 flex-1 space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
@@ -313,6 +341,21 @@ export function DomainsSection({
                         ) : null}
                       </span>
                     </p>
+
+                    {/* HTTPS for THIS name, beside the DNS line it belongs
+                        with — the two facts that decide whether a visitor
+                        reaches this address safely. */}
+                    {(() => {
+                      const ssl = sslRowState(certificate, coverageOf(domain.domain));
+                      if (!ssl) return null;
+                      const SslIcon = ssl.icon;
+                      return (
+                        <p className={cn("flex items-center gap-1.5 text-xs", ssl.tone)}>
+                          <SslIcon className="size-3.5 shrink-0" aria-hidden />
+                          <span>{t(`sslRow.${ssl.key}`)}</span>
+                        </p>
+                      );
+                    })()}
 
                     {/* Behind Cloudflare — its own message, the #1 support question. */}
                     {domain.behind_proxy ? (

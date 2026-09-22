@@ -3483,6 +3483,11 @@
       "emptyTitle": "ドメインがまだありません",
       "emptyBody": "このアプリケーションに向けてドメインを追加してください。後から名前や別名を追加することもできます。",
       "testDomain": "テストドメイン",
+      "sslRow": {
+        "secured": "保護済み",
+        "notCovered": "証明書に含まれていません",
+        "none": "SSL 証明書なし"
+      },
       "rowActions": "操作",
       "makePrimary": "プライマリにする",
       "remove": "解除",

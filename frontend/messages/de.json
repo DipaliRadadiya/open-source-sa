@@ -3483,6 +3483,11 @@
       "emptyTitle": "Noch keine Domains",
       "emptyBody": "Fügen Sie eine Domain hinzu, um sie auf diese Anwendung zu richten. Weitere Namen und Aliase können Sie jederzeit ergänzen.",
       "testDomain": "Testdomain",
+      "sslRow": {
+        "secured": "Gesichert",
+        "notCovered": "Nicht auf dem Zertifikat",
+        "none": "Kein SSL-Zertifikat"
+      },
       "rowActions": "Aktionen",
       "makePrimary": "Als primär setzen",
       "remove": "Entfernen",
