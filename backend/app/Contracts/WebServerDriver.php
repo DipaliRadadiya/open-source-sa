@@ -38,8 +38,17 @@ interface WebServerDriver
      * On the contract because `apply()` is not the only writer: `sites:resync`
      * renders and writes the same file itself, and used to do so without any
      * of this preparation.
+     *
+     * Returns whether preparation changed anything the running web server
+     * would only notice on a restart. Creating a directory is not such a
+     * change — the config test reads the filesystem when it runs. Adding the
+     * web server's account to a site's log group is: supplementary groups are
+     * read at process start, so until the workers restart the grant does
+     * nothing at all. `sites:resync` decides whether to reload on this,
+     * because a site whose config text is unchanged still needs the restart
+     * when this answers true.
      */
-    public function ensureDirectories(Application $application): void;
+    public function ensureDirectories(Application $application): bool;
 
     /**
      * Take it back out again — the inverse of `apply()`, and the rollback when

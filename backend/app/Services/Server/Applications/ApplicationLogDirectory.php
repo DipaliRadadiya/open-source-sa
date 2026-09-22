@@ -55,8 +55,13 @@ class ApplicationLogDirectory
      * only on creation: a server that provisioned sites before this existed
      * has a user-owned `logs/`, and it repairs itself on the next provision or
      * `sites:resync` without anyone running anything by hand.
+     *
+     * Returns whether anything was actually granted, which the caller needs in
+     * order to know whether the web server has to be restarted — see
+     * {@see admitLogWriter()}. False is the normal answer: on nginx and Apache
+     * always, and on OpenLiteSpeed every run after the first.
      */
-    public function ensure(Application $application): void
+    public function ensure(Application $application): bool
     {
         $directory = $application->logsPath();
         $group = $application->systemUser->username;
@@ -79,7 +84,7 @@ class ApplicationLogDirectory
             );
         }
 
-        $this->admitLogWriter($application, $group);
+        return $this->admitLogWriter($application, $group);
     }
 
     /**
@@ -110,28 +115,49 @@ class ApplicationLogDirectory
      * Best-effort like every other step here. A server running a web server
      * the panel cannot configure has no driver to ask, and that must not stop
      * a log directory being created.
+     *
+     * Returns true only when the membership was actually added. That is what
+     * makes the restart decidable: `sites:resync` reloads the web server when
+     * a site's config text changed, and this grant changes no text at all — so
+     * on a server whose sites were all already current, the grant landed and
+     * sat inert until something else happened to restart the web server.
+     * Measured on a live box: `1 already current, 0 updated`, no reload, and
+     * the site went on logging nothing.
+     *
+     * Asking first, rather than granting unconditionally and reporting true,
+     * is the whole point. `gpasswd -a` succeeds just as happily on an account
+     * that is already a member, so an unconditional grant can only answer "I
+     * ran something", and a resync that restarts the web server on every run
+     * would be a worse bug than the one this fixes.
      */
-    private function admitLogWriter(Application $application, string $group): void
+    private function admitLogWriter(Application $application, string $group): bool
     {
         try {
             $user = $this->webServers->driver()->logWriterUser();
         } catch (Throwable) {
-            return;
+            return false;
         }
 
         if ($user === null || $user === $group) {
-            return;
+            return false;
         }
 
-        $this->serverOps->run(
-            ['gpasswd', '-a', $user, $group],
-            [
-                'feature' => 'application',
-                'op' => 'log_dir_writer',
-                'application' => $application->id,
-                'user' => $user,
-            ],
-            timeout: 15,
-        );
+        $context = [
+            'feature' => 'application',
+            'op' => 'log_dir_writer',
+            'application' => $application->id,
+            'user' => $user,
+        ];
+
+        // `id -nG` lists the account's groups by name. An unreadable answer is
+        // treated as "not a member", which costs one redundant `gpasswd` and a
+        // restart; the opposite default would skip a grant the site needs.
+        $groups = $this->serverOps->run(['id', '-nG', $user], $context, timeout: 15);
+
+        if ($groups->ok && in_array($group, preg_split('/\s+/', trim($groups->output())) ?: [], true)) {
+            return false;
+        }
+
+        return $this->serverOps->run(['gpasswd', '-a', $user, $group], $context, timeout: 15)->ok;
     }
 }

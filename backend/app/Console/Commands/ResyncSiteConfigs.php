@@ -28,12 +28,20 @@ class ResyncSiteConfigs extends Command
     {
         $result = $resyncer->run();
 
+        // The grant is reported separately because it is the one thing here
+        // that can be the *only* reason the web server was restarted. Folded
+        // into "updated" it would read as a config change that did not happen;
+        // left out entirely, a run saying "0 updated. Web server reloaded."
+        // would look like a bug.
         $this->info(sprintf(
-            '%d site(s): %d updated, %d already current, %d failed.%s',
+            '%d site(s): %d updated, %d already current, %d failed.%s%s',
             $result['total'],
             $result['updated'],
             $result['unchanged'],
             count($result['failed']),
+            $result['granted'] > 0
+                ? sprintf(' Log access granted for %d site(s).', $result['granted'])
+                : '',
             $result['reloaded'] ? ' Web server reloaded.' : '',
         ));
 

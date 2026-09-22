@@ -122,7 +122,7 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      * them: a directory that cannot be created is reported by whatever needs
      * it, not by refusing to write a site's configuration.
      */
-    public function ensureDirectories(Application $application): void
+    public function ensureDirectories(Application $application): bool
     {
         $this->ensurePanelDirectory($application);
         $this->ensureChallengeRoot();
@@ -131,7 +131,11 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         // when a log file's directory does not exist. A missing directory here
         // would fail `nginx -t` on every site and read as a bad template
         // rather than as an absent folder.
-        $this->logDirectory->ensure($application);
+        //
+        // The only step here whose effect a running web server cannot see
+        // until it restarts, so it is the only one that answers. The two
+        // above create directories, which every later config test reads fresh.
+        return $this->logDirectory->ensure($application);
     }
 
     /**

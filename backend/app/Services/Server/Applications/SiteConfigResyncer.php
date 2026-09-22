@@ -35,8 +35,9 @@ use App\Services\Server\WebServers\WebServerManager;
  *    without telling you which one;
  *  - a site that fails its test is restored and the run *continues*, because
  *    one bad site must not leave the other forty un-updated;
- *  - nothing is reloaded unless at least one site changed and the config
- *    tests clean at the end.
+ *  - nothing is reloaded unless something actually changed — a site's config
+ *    text, or a grant the running web server can only pick up on a restart —
+ *    and the config tests clean at the end.
  */
 class SiteConfigResyncer
 {
@@ -50,7 +51,7 @@ class SiteConfigResyncer
     ) {}
 
     /**
-     * @return array{total: int, updated: int, unchanged: int, failed: array<int, array{id: int, name: string, reference: ?string}>, reloaded: bool}
+     * @return array{total: int, updated: int, unchanged: int, granted: int, failed: array<int, array{id: int, name: string, reference: ?string}>, reloaded: bool}
      */
     public function run(): array
     {
@@ -67,6 +68,7 @@ class SiteConfigResyncer
 
         $updated = 0;
         $unchanged = 0;
+        $granted = 0;
         $failed = [];
 
         foreach ($applications as $application) {
@@ -125,7 +127,16 @@ class SiteConfigResyncer
             // Cheap enough to do every time: three `mkdir -p`-shaped calls
             // that do nothing when the directories are there, which is the
             // normal case.
-            $driver->ensureDirectories($application);
+            // The return matters, and only for one of the steps inside it.
+            // Creating a directory is visible to the next config test; adding
+            // the web server's account to this site's log group is not, because
+            // supplementary groups are read when a process starts. A site whose
+            // config text is unchanged still needs the restart when this is
+            // true, which is exactly the case the reload condition below used
+            // to miss.
+            if ($driver->ensureDirectories($application)) {
+                $granted++;
+            }
 
             // Nothing shipped changed for this site. Skipping keeps a routine
             // update from rewriting forty files to identical content.
@@ -161,7 +172,10 @@ class SiteConfigResyncer
         // connection for no extra safety.
         $reloaded = false;
 
-        if ($updated > 0 && $driver->test()->ok) {
+        // `$granted` as well as `$updated`: a server whose sites were all
+        // already current got the grant and no restart, so the web server went
+        // on running without the group and the site went on logging nothing.
+        if (($updated > 0 || $granted > 0) && $driver->test()->ok) {
             $driver->reload();
             $reloaded = true;
         }
@@ -170,6 +184,7 @@ class SiteConfigResyncer
             'total' => $applications->count(),
             'updated' => $updated,
             'unchanged' => $unchanged,
+            'granted' => $granted,
             'failed' => $failed,
             'reloaded' => $reloaded,
         ];

@@ -249,3 +249,117 @@ it('is wired into the panel update script', function () {
     $steps = array_flip(UpdateScript::STEPS);
     expect($steps['resync_site_configs'])->toBeGreaterThan($steps['migrate']);
 });
+
+/*
+|--------------------------------------------------------------------------
+| The grant that needs a restart nobody was asking for
+|--------------------------------------------------------------------------
+|
+| OpenLiteSpeed's workers open each site's own access log, so the account they
+| run as has to be in the site's log group. Adding it changes no config text at
+| all — and the reload here was gated on text changing. On a server whose sites
+| were all already current the grant landed and sat inert, because supplementary
+| groups are read when a process starts.
+|
+| Measured live on 2026-09-22: `1 site(s): 0 updated, 1 already current`, no
+| reload, and the site went on logging nothing until OpenLiteSpeed was restarted
+| by hand.
+*/
+
+/** Point the resyncer at an OpenLiteSpeed server. */
+function resyncOnOls(): void
+{
+    ServerCapability::query()->delete();
+    ServerCapability::create([
+        'stack' => 'ols',
+        'web_server' => 'openlitespeed',
+        'capabilities' => ['php' => true],
+        'source' => 'installer',
+        'verified_at' => now(),
+    ]);
+}
+
+/**
+ * Like `fakeResyncServer()`, but answers the two questions the OLS log grant
+ * asks: who the web server runs as, and whether it is already in the group.
+ *
+ * @return ArrayObject<int, array<int, string>> every command run
+ */
+function fakeOlsResync(string $onDisk, bool $alreadyMember): ArrayObject
+{
+    $commands = new ArrayObject;
+
+    Process::fake(function ($process) use ($onDisk, $alreadyMember, $commands) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $commands->append($args);
+
+        if (($args[0] ?? '') === 'cat' && str_contains((string) ($args[1] ?? ''), 'httpd_config')) {
+            return Process::result(output: "serverName Example\nuser nobody\ngroup nogroup\n");
+        }
+
+        if (($args[0] ?? '') === 'cat') {
+            return Process::result(output: $onDisk);
+        }
+
+        if (($args[0] ?? '') === 'id') {
+            return Process::result(output: $alreadyMember ? 'nogroup siteowner' : 'nogroup');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    return $commands;
+}
+
+/** The config the resyncer would render for a site, i.e. "already current". */
+function currentConfigFor(Application $site): string
+{
+    return app(WebServerManager::class)->driver()->renderConfig(
+        $site->load('systemUser'),
+        app(ApplicationProvisioner::class)->documentRoot($site->load('systemUser')),
+    );
+}
+
+it('restarts the web server for a grant, even when no config changed', function () {
+    resyncOnOls();
+    $site = makeSite('one.test');
+
+    $commands = fakeOlsResync(currentConfigFor($site), alreadyMember: false);
+
+    $result = app(SiteConfigResyncer::class)->run();
+
+    expect($result['updated'])->toBe(0)
+        ->and($result['unchanged'])->toBe(1)
+        ->and($result['granted'])->toBe(1)
+        // The whole point: nothing was rewritten and the web server still has
+        // to come back, or the membership does nothing.
+        ->and($result['reloaded'])->toBeTrue();
+
+    $joined = collect($commands)->map(fn ($c) => implode(' ', $c))->join("\n");
+
+    expect($joined)->toContain('gpasswd -a nobody siteowner');
+});
+
+it('does not restart the web server when the account is already in the group', function () {
+    // 🔴 The negative control, and the guard worth reverting hardest. This
+    // command runs on every deploy; restarting the web server each time — for
+    // a grant that was made months ago — would be a worse bug than the one the
+    // test above fixes.
+    resyncOnOls();
+    $site = makeSite('one.test');
+
+    $commands = fakeOlsResync(currentConfigFor($site), alreadyMember: true);
+
+    $result = app(SiteConfigResyncer::class)->run();
+
+    expect($result['granted'])->toBe(0)
+        ->and($result['reloaded'])->toBeFalse();
+
+    // And it does not issue the grant at all. `gpasswd -a` succeeds just as
+    // happily on an existing member, so running it anyway would leave no way
+    // to tell a new grant from a redundant one.
+    $joined = collect($commands)->map(fn ($c) => implode(' ', $c))->join("\n");
+
+    expect($joined)->toContain('id -nG nobody')
+        ->and($joined)->not->toContain('gpasswd');
+});
