@@ -47,6 +47,20 @@ class UploadArtifact implements BackupStep
             throw new RuntimeException('could not open the archive for upload');
         }
 
+        // Raised for the length of the upload, and restored below.
+        //
+        // An archive at or under 100 MB does not stream: the Drive adapter
+        // hands it to Google's `MediaFileUpload`, which base64-encodes the
+        // whole thing in memory. Under the 128 M default a 35 MB backup killed
+        // the queue worker outright — a fatal, so nothing recorded a reason and
+        // the row simply stayed `running`. See `server.backups.upload_memory_limit`.
+        //
+        // Scoped to this step rather than set globally because it is the only
+        // place that needs it, and a worker that keeps a raised ceiling for
+        // every later job hides the next thing that leaks.
+        $previousMemoryLimit = ini_get('memory_limit');
+        $this->raiseMemoryLimit();
+
         // Progress is measured as the adapter reads, which is the only place
         // every driver behaves the same and — as the run that prompted this
         // proved — the only counter that moves at all during an upload. See
@@ -83,6 +97,13 @@ class UploadArtifact implements BackupStep
 
             throw $e;
         } finally {
+            // Put the ceiling back even on failure. A queue worker outlives one
+            // job, and leaving it raised would silently grant every later job
+            // the same headroom.
+            if ($previousMemoryLimit !== false) {
+                ini_set('memory_limit', $previousMemoryLimit);
+            }
+
             // The filter is deliberately *not* removed by hand. A read filter
             // that has reached EOF has nothing left to flush, and
             // `stream_filter_remove()` warns "Unable to flush filter, not
@@ -99,6 +120,47 @@ class UploadArtifact implements BackupStep
 
         $context->remoteKey = $key;
         $context->manifest['key'] = $key;
+    }
+
+    /**
+     * Give the upload room, but never take room away.
+     *
+     * `max()` on the parsed byte values, so a host that already runs a higher
+     * limit — or an unlimited `-1` — keeps it. Writing the configured value in
+     * unconditionally would *lower* the ceiling on exactly those hosts, turning
+     * a fix for small backups into a new failure for large ones.
+     */
+    private function raiseMemoryLimit(): void
+    {
+        $wanted = (string) config('server.backups.upload_memory_limit', '768M');
+        $current = (string) ini_get('memory_limit');
+
+        // Already unlimited. Nothing to raise, and writing a finite value here
+        // would be a downgrade.
+        if (trim($current) === '-1') {
+            return;
+        }
+
+        if ($this->bytes($wanted) > $this->bytes($current)) {
+            ini_set('memory_limit', $wanted);
+        }
+    }
+
+    /**
+     * `memory_limit` shorthand ("768M", "1G") as bytes.
+     */
+    private function bytes(string $value): int
+    {
+        $value = trim($value);
+        $unit = strtolower(substr($value, -1));
+        $number = (int) $value;
+
+        return match ($unit) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => $number,
+        };
     }
 
     /**

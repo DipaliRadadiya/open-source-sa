@@ -350,6 +350,41 @@ return [
          * writing, and a second backup starts alongside the first.
          */
         'no_heartbeat_stale_seconds' => (int) env('BACKUP_NO_HEARTBEAT_STALE_SECONDS', 3900),
+
+        /*
+         * Memory the upload step is allowed while it runs.
+         *
+         * **Small Drive backups OOM; large ones do not.** The threshold is
+         * inverted from every intuition, and it is not ours:
+         * `GoogleDriveAdapter::upload()` branches on
+         * `$size <= self::MAX_CHUNK_SIZE` (100 MB). Above it, a resumable
+         * `StreamableUpload` streams the archive and memory stays flat at any
+         * size — a 25 GB backup completed this way on 2026-09-21. At or below
+         * it, the adapter takes a "one shot" path into Google's
+         * `MediaFileUpload`, whose multipart branch runs
+         * `base64_encode($this->data)`: the whole archive in RAM, plus a 4/3
+         * copy, plus the concatenation it is spliced into.
+         *
+         * A 35 MB archive therefore killed the worker six times under the 128 M
+         * default, with `tried to allocate 47,450,536` — exactly 35,587,878 × 4/3.
+         *
+         * Raising the ceiling is the *complete* fix, not a postponement, and
+         * that turns on one fact: the exposure is **bounded at 100 MB by the
+         * adapter itself**. Worst case is roughly 100 MB of data, a 133 MB
+         * base64 copy, and the 133 MB string it is concatenated into — call it
+         * 500 MB — and every archive past that point uses the streaming path
+         * and needs almost nothing. A ceiling is not a reservation: PHP
+         * allocates only what it uses, so a panel whose backups are small never
+         * touches this.
+         *
+         * The alternative was overriding the vendor's `upload()` to force the
+         * streaming path at every size. Rejected on inspection: it reads three
+         * `private` members a subclass cannot reach, and the block that would
+         * have to be copied calls `$this->unpublish()` — a method that does not
+         * exist anywhere in that class. Copying it means copying a fatal that
+         * only today's control flow happens to step around.
+         */
+        'upload_memory_limit' => env('BACKUP_UPLOAD_MEMORY_LIMIT', '768M'),
     ],
 
     /*

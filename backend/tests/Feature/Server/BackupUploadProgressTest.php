@@ -259,3 +259,65 @@ it('does not stretch the no-heartbeat lockout when the job timeout is raised', f
         ->and(StaleBackupReaper::staleAfterSeconds())
         ->toBeLessThan(config('server.backups.job_timeout'));
 });
+
+/**
+ * Run the upload step against a disk that just reports the ceiling it saw.
+ *
+ * Baselines are set well above the suite's own footprint, never at a flat
+ * "128M": Pest runs every test in one process, so by the time this file is
+ * reached that process is already using ~186 MB and `ini_set()` to anything
+ * lower fails outright. These three passed in isolation and failed in the full
+ * suite for exactly that reason.
+ */
+function ceilingSeenDuringUpload(string $baseline, string $configured): array
+{
+    $original = ini_get('memory_limit');
+
+    config()->set('server.backups.upload_memory_limit', $configured);
+    ini_set('memory_limit', $baseline);
+
+    $backup = progressBackup();
+    $archive = tempnam(sys_get_temp_dir(), 'arc');
+    file_put_contents($archive, 'payload');
+
+    $context = new BackupContext($backup, $backup->target, dirname($archive));
+    $context->archivePath = $archive;
+
+    $seen = null;
+    (new UploadArtifact(fakeUploadDisk(function () use (&$seen) {
+        $seen = ini_get('memory_limit');
+    })))->run($context);
+
+    $after = ini_get('memory_limit');
+
+    ini_set('memory_limit', $original);
+    @unlink($archive);
+
+    return ['during' => $seen, 'after' => $after];
+}
+
+it('raises the memory ceiling for the upload and puts it back afterwards', function () {
+    // A Drive archive at or under 100 MB is base64-encoded whole, in memory, by
+    // Google's MediaFileUpload. Under the 128 M default a 35 MB backup killed
+    // the worker six times — a fatal, so no reason was ever recorded and the
+    // row just stayed `running`.
+    $result = ceilingSeenDuringUpload(baseline: '512M', configured: '1024M');
+
+    expect($result['during'])->toBe('1024M')
+        // Restored: a worker outlives one job, and a ceiling left raised hides
+        // the next thing that leaks.
+        ->and($result['after'])->toBe('512M');
+});
+
+it('never lowers a ceiling the host already set higher', function () {
+    // Writing the configured value in unconditionally would *reduce* memory on
+    // a generously configured host — turning a fix for small backups into a new
+    // failure for large ones.
+    expect(ceilingSeenDuringUpload(baseline: '2048M', configured: '256M')['during'])
+        ->toBe('2048M');
+});
+
+it('leaves an unlimited host unlimited', function () {
+    expect(ceilingSeenDuringUpload(baseline: '-1', configured: '768M')['during'])
+        ->toBe('-1');
+});
