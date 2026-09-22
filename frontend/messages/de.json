@@ -4966,8 +4966,6 @@
       "setUpBackups": "Backups einrichten",
       "noCertificate": "SSL nicht eingerichtet",
       "issueCertificate": "SSL einrichten",
-      "reviewSecurity": "Sicherheit prüfen",
-      "protectionsOff": "{count, plural, one {# Schutz aus} other {# Schutzfunktionen aus}}",
       "noDatabase": "Diese Anwendung hat keine Datenbank, ihre Backups enthalten also keine",
       "attachDatabase": "Datenbank verknüpfen",
       "issueAction": {

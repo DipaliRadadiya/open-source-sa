@@ -4966,8 +4966,6 @@
       "setUpBackups": "バックアップを設定",
       "noCertificate": "SSL 未設定",
       "issueCertificate": "SSL を設定",
-      "reviewSecurity": "セキュリティを確認",
-      "protectionsOff": "{count, plural, other {# 件の保護がオフです}}",
       "noDatabase": "このアプリケーションにはデータベースがないため、バックアップにも含まれません",
       "attachDatabase": "データベースを関連付ける",
       "issueAction": {

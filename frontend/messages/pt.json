@@ -4966,8 +4966,6 @@
       "setUpBackups": "Configurar backups",
       "noCertificate": "SSL não configurado",
       "issueCertificate": "Configurar SSL",
-      "reviewSecurity": "Revisar segurança",
-      "protectionsOff": "{count, plural, one {# proteção desligada} other {# proteções desligadas}}",
       "noDatabase": "Esta aplicação não tem banco de dados, então seus backups não conterão um",
       "attachDatabase": "Vincular um banco de dados",
       "issueAction": {

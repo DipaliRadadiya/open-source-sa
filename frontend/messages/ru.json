@@ -4966,8 +4966,6 @@
       "setUpBackups": "Настроить резервное копирование",
       "noCertificate": "SSL не настроен",
       "issueCertificate": "Настроить SSL",
-      "reviewSecurity": "Проверить безопасность",
-      "protectionsOff": "{count, plural, one {Отключена # защита} few {Отключены # защиты} many {Отключено # защит} other {Отключено # защит}}",
       "noDatabase": "У этого приложения нет базы данных, поэтому его резервные копии не будут её содержать",
       "attachDatabase": "Привязать базу данных",
       "issueAction": {

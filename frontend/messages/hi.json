@@ -4966,8 +4966,6 @@
       "setUpBackups": "बैकअप सेट करें",
       "noCertificate": "SSL सेट नहीं है",
       "issueCertificate": "SSL सेट करें",
-      "reviewSecurity": "सुरक्षा देखें",
-      "protectionsOff": "{count, plural, one {# सुरक्षा बंद} other {# सुरक्षाएँ बंद}}",
       "noDatabase": "इस ऐप्लिकेशन पर कोई डेटाबेस नहीं है, इसलिए इसके बैकअप में डेटाबेस शामिल नहीं होगा",
       "attachDatabase": "डेटाबेस जोड़ें",
       "issueAction": {
