@@ -47,7 +47,12 @@ test("the stale-certificate banner renders only on a definite yes", () => {
    * contents. A stale certificate counts as unhealthy for the panel's tone even
    * though the file on disk is perfectly valid.
    */
-  assert.match(ssl, /const tone = expired \? "bad" : servingStale \? "neutral" : "good"/);
+  // Expiry joined it: painting the frame red as well turned the card into a
+  // red box holding a red box holding red text beside a red button, which is
+  // the same failure one layer up. Neutral withdraws the green claim; the
+  // alert inside stays the only coloured panel.
+  assert.match(ssl, /const tone = expired \|\| servingStale \? "neutral" : "good"/);
+  assert.doesNotMatch(ssl, /tone === "bad"/, "no state may repaint the whole frame red");
   /*
    * Neutral, not red. Making it use the expired tone turned the frame, the
    * alert and the Remove button all red at once, and a wall of red says

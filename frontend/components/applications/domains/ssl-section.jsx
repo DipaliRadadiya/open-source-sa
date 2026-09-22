@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
+  MoreHorizontal,
   ShieldCheck,
   ShieldOff,
   ShieldAlert,
@@ -30,12 +31,30 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { IssueCertDialog } from "@/components/applications/domains/issue-cert-dialog";
 import { VisitSiteLink } from "@/components/applications/visit-site-link";
 
 const POLL_MS = 3000;
+/*
+ * Issuing is a round trip to Let's Encrypt and finishes in under a minute when
+ * it finishes at all. This loop had no end: a certificate wedged in `issuing`
+ * polled every three seconds for as long as the tab stayed open — 20 requests
+ * a minute, each one a real API call against a 180/min budget, for hours.
+ *
+ * Ten minutes is comfortably longer than any successful issuance and short
+ * enough that a stuck one stops costing anything. Giving up is not a failure
+ * verdict: the card keeps showing "issuing", which is still the last thing the
+ * server said, and Refresh re-reads it.
+ */
+const POLL_LIMIT = (10 * 60 * 1000) / POLL_MS;
 const isPending = (c) =>
   c && (c.status === "pending" || c.status === "issuing");
 // Retrying a rate-limit is precisely what must not happen — the wait is a week.
@@ -53,6 +72,26 @@ export function SslSection({
   webServer = null,
 }) {
   const t = useTranslations("applications.domains");
+  const format = useFormatter();
+  /*
+   * Every date this card prints goes through here.
+   *
+   * `expires_at` is an ISO timestamp and `served_expires_at` is a plain date,
+   * so the stale-certificate line read "Being served: expires 2026-08-01 · On
+   * disk: expires 2026-11-20T12:00:00+00:00" — two dates in one sentence, one
+   * of them a machine timestamp complete with timezone offset. Formatting is
+   * not the caller's job to remember.
+   *
+   * Returns null rather than a fallback string so a caller can decide what an
+   * unparseable date means; every one of them currently hides the line.
+   */
+  const asDate = (value) => {
+    if (!value) return null;
+    const when = new Date(value);
+    return Number.isNaN(when.getTime())
+      ? null
+      : format.dateTime(when, { day: "numeric", month: "long", year: "numeric" });
+  };
   const router = useRouter();
 
   const [cert, setCert] = useState(initialCertificate);
@@ -90,7 +129,12 @@ export function SslSection({
   useEffect(() => {
     if (!polling) return undefined;
     let live = true;
+    let ticks = 0;
     const timer = setInterval(async () => {
+      if (++ticks > POLL_LIMIT) {
+        clearInterval(timer);
+        return;
+      }
       try {
         const next = await fetchCertificate(appId);
         if (live) {
@@ -127,10 +171,23 @@ export function SslSection({
     setBusy(true);
     try {
       await deleteCertificate(appId);
+      // Every other action on this screen says what it did. This one dropped
+      // the application back to plain HTTP in silence — the single most
+      // consequential thing the card can do.
+      toast.success(t("ssl.removed"));
       setCert(null);
       setDeleteOpen(false);
       router.refresh();
     } catch (error) {
+      // Already gone. The certificate is not there, which is what was asked
+      // for; a red toast over a closed dialog invites a retry that cannot work.
+      if (error?.response?.status === 404) {
+        toast.info(t("ssl.removedAlready"));
+        setCert(null);
+        setDeleteOpen(false);
+        router.refresh();
+        return;
+      }
       toast.error(apiMessage(error, t("ssl.deleteFailed")));
     } finally {
       setBusy(false);
@@ -168,14 +225,37 @@ export function SslSection({
     // --- Issuing ---
     if (isPending(cert)) {
       return (
-        <div className="flex items-center gap-3 rounded-xl border bg-card p-4">
-          <Loader2 className="size-5 shrink-0 animate-spin text-primary" />
-          <div>
-            <p className="text-sm font-medium">{t("ssl.issuing")}</p>
-            <p className="text-sm text-muted-foreground">
-              {t("ssl.issuingBody")}
-            </p>
+        <div className="space-y-3 rounded-xl border bg-card p-4">
+          <div className="flex items-center gap-3">
+            <Loader2 className="size-5 shrink-0 animate-spin text-primary" />
+            <div>
+              <p className="text-sm font-medium">{t("ssl.issuing")}</p>
+              <p className="text-sm text-muted-foreground">
+                {t("ssl.issuingBody")}
+              </p>
+            </div>
           </div>
+          {/*
+            * A way out of a state that can wedge.
+            *
+            * This card was a spinner and two lines, with no control at all —
+            * so an issuance that never completes left the reader with nothing
+            * to press, on the one screen that decides whether the application
+            * serves HTTPS. Capping the poll made that worse rather than
+            * better: after ten minutes the spinner is no longer even asking.
+            *
+            * Removing a stuck pending certificate is how you get back to a
+            * card that offers Enable HTTPS again.
+            */}
+          {canManage ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+              <p className="text-xs text-muted-foreground">{t("ssl.issuingStuck")}</p>
+              <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+                <Trash2 className="size-4" />
+                {t("ssl.remove")}
+              </Button>
+            </div>
+          ) : null}
         </div>
       );
     }
@@ -183,6 +263,10 @@ export function SslSection({
     // --- Failed ---
     if (cert.status === "failed") {
       const noRetry = NO_RETRY.has(cert.reason);
+      // `apiMessage` reads `error.response.data.message`; this message arrives
+      // on the certificate itself, so it is shaped to match rather than
+      // reimplementing the key-detection here.
+      const certMessage = apiMessage({ response: { data: { message: cert.message } } }, null);
       return (
         <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
           <div className="flex flex-wrap items-start gap-3">
@@ -191,8 +275,13 @@ export function SslSection({
               <p className="text-sm font-medium text-destructive">
                 {t("ssl.failed")}
               </p>
-              {cert.message ? (
-                <p className="mt-0.5 text-sm">{cert.message}</p>
+              {/* Through `apiMessage`, like every other API sentence in the
+                  panel. Printed raw, an untranslated lookup key — the backend
+                  sends `errors/ssl.issue_failed` shapes from some paths —
+                  landed on the card as-is and read as the panel being broken
+                  rather than the certificate. */}
+              {certMessage ? (
+                <p className="mt-0.5 text-sm">{certMessage}</p>
               ) : null}
               {cert.reference ? (
                 <p className="mt-1 font-mono text-xs text-muted-foreground">
@@ -271,7 +360,23 @@ export function SslSection({
      * claim is withdrawn, which was the point, and the alert inside is then the
      * only coloured thing on the panel, which is where the eye should land.
      */
-    const tone = expired ? "bad" : servingStale ? "neutral" : "good";
+    /*
+     * Three tones, and `bad` is now reserved for nothing.
+     *
+     * An expired certificate used to paint the frame red — and once the
+     * "everyone is being redirected into it" alert landed inside, the card was
+     * a red box holding a red box holding red text beside a red button. Five
+     * reds, which is the failure this file already documented for the stale
+     * case: a wall of red says nothing, because every part of it shouts
+     * equally, and the part that matters cannot get louder.
+     *
+     * So expiry withdraws the green claim rather than shouting: neutral frame,
+     * red heading, and the alert inside is then the only coloured panel — the
+     * one place the eye should land, because it is the one with the way out.
+     */
+    const tone = expired || servingStale ? "neutral" : "good";
+    /* Null for a missing or unparseable date, which falls back below. */
+    const expiresOn = asDate(cert.expires_at);
     const expiryTone = expired
       ? "text-destructive"
       : cert.expiring_soon
@@ -281,17 +386,13 @@ export function SslSection({
       <div
         className={cn(
           "space-y-4 rounded-xl border p-4",
-          tone === "bad"
-            ? "border-destructive/30 bg-destructive/5"
-            : tone === "neutral"
-              ? "border-border"
-              : "border-success/30 bg-success/5",
+          tone === "neutral" ? "border-border" : "border-success/30 bg-success/5",
         )}
       >
         <div className="flex flex-wrap items-start gap-3">
           {/* No green tick while the wrong certificate is going out, but no
               second alarm either — the alert below carries that. */}
-          {tone === "bad" ? (
+          {expired ? (
             <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
           ) : tone === "neutral" ? (
             <ShieldAlert className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
@@ -308,25 +409,48 @@ export function SslSection({
               ) : null}
             </p>
             {cert.domains?.length ? (
-              <ul className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                {cert.domains.map((domain) => (
-                  <li key={domain} className="flex min-w-0 items-center gap-1">
-                    <span className="truncate font-mono text-xs text-muted-foreground">{domain}</span>
-                    {/* https without hesitation here: being in this list is
-                        what "the certificate covers it" means. */}
-                    <VisitSiteLink domain={domain} secure label={t("openNamed", { domain })} className="size-5" />
-                  </li>
-                ))}
-              </ul>
+              <>
+                {/* Two mono links jammed together with no heading did not read
+                    as "the names this certificate covers" — which is the whole
+                    question the warnings underneath are about. */}
+                <p className="mt-2 text-xs font-medium text-muted-foreground">
+                  {t("ssl.coversLabel")}
+                </p>
+                <ul className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {cert.domains.map((domain) => (
+                    <li key={domain} className="flex min-w-0 items-center gap-1">
+                      <span className="truncate font-mono text-xs text-muted-foreground">{domain}</span>
+                      {/* https without hesitation here: being in this list is
+                          what "the certificate covers it" means. */}
+                      <VisitSiteLink domain={domain} secure label={t("openNamed", { domain })} className="size-5" />
+                    </li>
+                  ))}
+                </ul>
+              </>
             ) : null}
-            {cert.expires_at_human ? (
+            {/*
+              * A date, not a second relative phrase.
+              *
+              * This read "Expires 1 month from now (59 days)" — the same fact
+              * twice, in two units that disagree, because `expires_at_human`
+              * is the backend's relative rounding and `days_remaining` is the
+              * exact count. One of them had to go, and the vague one is the
+              * one nobody can act on: "1 month from now" cannot be put in a
+              * calendar and is wrong by a month at 59 days.
+              *
+              * Formatted through next-intl rather than `toLocaleDateString`,
+              * so it follows the panel's locale like every other date here.
+              * `expires_at_human` stays as the fallback for a payload that
+              * carries no machine-readable date.
+              */}
+            {expiresOn || cert.expires_at_human ? (
               <p className={cn("mt-1 text-sm", expiryTone)}>
                 {cert.expired
                   ? t("ssl.expired")
                   : t(
                       cert.renewable ? "ssl.expiresRenew" : "ssl.expiresManual",
                       {
-                        when: cert.expires_at_human,
+                        when: expiresOn ?? cert.expires_at_human,
                         days: cert.days_remaining ?? 0,
                       },
                     )}
@@ -334,6 +458,44 @@ export function SslSection({
             ) : null}
           </div>
         </div>
+
+        {/*
+          Expired, and every visitor is still being sent to it.
+          
+          The two facts were on the card separately — "HTTPS is not working"
+          above, a Force HTTPS switch below still described as "Redirect every
+          visitor from HTTP to HTTPS" — and nobody joined them up. Together
+          they mean the application is entirely unreachable: port 80 redirects
+          to 443, 443 presents an expired certificate, and the browser refuses
+          the page with no way through. With the redirect OFF the same expired
+          certificate is a degraded site rather than a dead one.
+          
+          So this is the one state where the panel should say "turn something
+          off", and the switch it means is directly below.
+        */}
+        {expired && cert.force_https ? (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+            <p className="flex items-start gap-2 text-sm text-destructive">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
+              <span>{t("ssl.expiredForcedHttps")}</span>
+            </p>
+            {/* The primary button on the card, not an outline chip. This is the
+                fastest route back to a reachable application — one request,
+                instant — and it was the faintest thing on screen while
+                "Reissue", which takes a minute and can fail, was solid blue. */}
+            {canManage ? (
+              <Button
+                size="sm"
+                className="mt-2"
+                disabled={busy}
+                onClick={() => onToggleForceHttps(false)}
+              >
+                {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+                {t("ssl.turnOffForceHttps")}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
 
         {/*
           The file renewed and the running server never picked it up.
@@ -354,11 +516,11 @@ export function SslSection({
               <ShieldAlert className="mt-0.5 size-4 shrink-0" />
               <span>{t("ssl.servingStale")}</span>
             </p>
-            {cert.served_expires_at ? (
+            {asDate(cert.served_expires_at) ? (
               <p className="mt-1 pl-6 text-xs text-muted-foreground">
                 {t("ssl.servingStaleDetail", {
-                  served: cert.served_expires_at,
-                  onDisk: cert.expires_at ?? "—",
+                  served: asDate(cert.served_expires_at),
+                  onDisk: asDate(cert.expires_at) ?? "—",
                 })}
               </p>
             ) : null}
@@ -440,25 +602,26 @@ export function SslSection({
           <div
             className={cn(
               "flex flex-wrap items-center justify-between gap-3 border-t pt-3",
-              tone === "bad"
-                ? "border-destructive/20"
-                : tone === "neutral"
-                  ? "border-border"
-                  : "border-success/20",
+              tone === "neutral" ? "border-border" : "border-success/20",
             )}
           >
-            <div className="flex items-center gap-3">
+            {/* `items-start`, and the hint on its own line beneath the label.
+                Inline, the two ran together as one long sentence squeezed
+                against the buttons — every other settings row in the panel
+                stacks them. */}
+            <div className="flex items-start gap-3">
               <Switch
                 id="force-https"
                 checked={cert.force_https}
                 disabled={busy}
                 onCheckedChange={onToggleForceHttps}
+                className="mt-0.5"
               />
-              <Label htmlFor="force-https" className="cursor-pointer">
-                <span className="text-sm font-medium">
+              <Label htmlFor="force-https" className="block cursor-pointer">
+                <span className="block text-sm font-medium">
                   {t("ssl.forceHttps")}
                 </span>
-                <span className="block text-xs font-normal text-muted-foreground">
+                <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
                   {t("ssl.forceHttpsHint")}
                 </span>
               </Label>
@@ -469,14 +632,52 @@ export function SslSection({
                 whether this site serves HTTPS at all. Removing the certificate
                 takes the site back to plain http. */}
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 className="size-4" />
-                {t("ssl.remove")}
-              </Button>
+              {/*
+                * Demoted to a menu on a healthy certificate.
+                *
+                * A renewing Let's Encrypt certificate correctly hides Reissue
+                * — there is nothing to do and offering it invites spending
+                * rate limit — which left a red `destructive` Remove as the
+                * ONLY control on the card. The single affordance on a healthy
+                * panel was "destroy this", and it was the loudest thing in a
+                * green box.
+                *
+                * When something IS wrong the buttons come back out (below):
+                * that is when removing is a real option rather than a hazard
+                * sitting under the cursor.
+                */}
+              {expired || !cert.renewable ? (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="size-4" />
+                  {t("ssl.remove")}
+                </Button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="size-8">
+                      <MoreHorizontal className="size-4" />
+                      <span className="sr-only">{t("ssl.moreActions")}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-48">
+                    <DropdownMenuItem onSelect={() => setIssueOpen(true)}>
+                      <RefreshCw className="size-4" />
+                      {t("ssl.reissue")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onSelect={() => setDeleteOpen(true)}
+                    >
+                      <Trash2 className="size-4" />
+                      {t("ssl.remove")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               {/* The way back. Reissue lived only inside the missing-domains
                   warning, so an expired certificate whose domains were all
                   present offered nothing but Remove — delete it and start
@@ -496,8 +697,18 @@ export function SslSection({
                   A renewing certificate still does not show it — there is
                   nothing to do, and an always-present Reissue on a healthy
                   Let's Encrypt cert is an invitation to spend rate limit. */}
+              {/* Secondary while the alert above is carrying the primary.
+                  Two solid blue buttons on one card compete, and the one that
+                  should win is the instant fix inside the red panel — Reissue
+                  takes a minute and can fail. Without that alert (expired but
+                  not redirecting, or simply not renewable) Reissue IS the way
+                  out and keeps the fill. */}
               {expired || !cert.renewable ? (
-                <Button size="sm" onClick={() => setIssueOpen(true)}>
+                <Button
+                  size="sm"
+                  variant={expired && cert.force_https ? "outline" : "default"}
+                  onClick={() => setIssueOpen(true)}
+                >
                   <RefreshCw className="size-4" />
                   {t("ssl.reissue")}
                 </Button>

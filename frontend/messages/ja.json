@@ -3470,9 +3470,6 @@
       "loadFailed": "このアプリケーションのドメインを読み込めませんでした。",
       "pageTitle": "ドメインと SSL",
       "pageSubtitle": "このアプリケーションが応答する名前と HTTPS 証明書を管理します。",
-      "provisioning": "ドメインと SSL はアプリケーションのプロビジョニングが完了すると利用可能になります。",
-      "sectionTitle": "ドメイン",
-      "sectionSubtitle": "このアプリケーションが応答するすべての名前。",
       "tabs": {
         "domains": "ドメイン",
         "ssl": "SSL",
@@ -3480,6 +3477,9 @@
         "notSecured": "保護なし",
         "sslUnknown": "証明書の状態が不明です"
       },
+      "provisioning": "ドメインと SSL はアプリケーションのプロビジョニングが完了すると利用可能になります。",
+      "sectionTitle": "ドメイン",
+      "sectionSubtitle": "このアプリケーションが応答するすべての名前。",
       "emptyTitle": "ドメインがまだありません",
       "emptyBody": "このアプリケーションに向けてドメインを追加してください。後から名前や別名を追加することもできます。",
       "testDomain": "テストドメイン",
@@ -3539,11 +3539,13 @@
         "afterLabel": "後",
         "keepsServing": "{domain} は別名として残り、このアプリケーションの配信を継続します。",
         "renamesFiles": "アプリケーションの設定ファイルとログファイルがリネームされます。",
-        "cmsWarning": "WordPress には古いアドレスが保存されたままになっているため、アプリケーション内で変更するまで訪問者が元のアドレスへリダイレクトされる場合があります。"
+        "cmsWarning": "WordPress には古いアドレスが保存されたままになっているため、アプリケーション内で変更するまで訪問者が元のアドレスへリダイレクトされる場合があります。",
+        "notOnCertificate": "SSL 証明書は {domain} を含んでいません。再発行するまで、新しいアドレスを訪れた人にはセキュリティ警告が表示されます。"
       },
       "removeConfirm": {
         "title": "{domain} を削除しますか？",
-        "body": "この名前でのアプリケーションの応答が停止します。これは元に戻せません。"
+        "body": "この名前でのアプリケーションの応答が停止します。これは元に戻せません。",
+        "onCertificate": "SSL 証明書はこの名前を含んでいます。再発行するまで、証明書は自動更新されなくなります — 証明書に含まれる他のすべての名前についても同様です。"
       },
       "toast": {
         "added": "ドメインを追加しました。",
@@ -3555,7 +3557,8 @@
         "promoted": "{domain} がプライマリドメインになりました。",
         "promoteFailed": "プライマリドメインを変更できませんでした。",
         "removed": "{domain} を削除しました。",
-        "removeFailed": "ドメインを削除できませんでした。"
+        "removeFailed": "ドメインを削除できませんでした。",
+        "removedAlready": "{domain} はすでに削除されています。"
       },
       "ssl": {
         "sectionTitle": "SSL 証明書",
@@ -3566,13 +3569,18 @@
         "enable": "HTTPS を有効化",
         "issuing": "証明書を発行中…",
         "issuingBody": "Let's Encrypt との通信を伴うため、最大 1 分かかる場合があります。",
+        "issuingStuck": "数分経ってもこのままですか？ 削除してもう一度お試しください。",
         "failed": "証明書を発行できませんでした",
         "reference": "参照: {reference}",
         "rateLimited": "Let's Encrypt からこのドメインに対してレート制限を受けています。再試行は約 1 週間待ってください。今の時点で再試行しても解決しません。",
         "reissue": "再発行",
         "remove": "証明書を削除",
+        "moreActions": "証明書のオプション",
         "active": "HTTPS は有効です",
+        "coversLabel": "対象",
         "expired": "この証明書の有効期限が切れています。",
+        "expiredForcedHttps": "すべての訪問者が HTTPS にリダイレクトされますが、その先の証明書は期限切れです — つまり誰もこのアプリケーションにアクセスできません。証明書を直すあいだ、リダイレクトをオフにして通常の HTTP に戻してください。",
+        "turnOffForceHttps": "HTTPS リダイレクトをオフにする",
         "expiredTitle": "HTTPS が機能していません",
         "expiresRenew": "自動更新 · {when} に期限切れ（{days} 日）",
         "expiresManual": "{when} に期限切れ（{days} 日） — 自動更新されません",
@@ -3622,7 +3630,9 @@
         "reloaded": "ウェブサーバーを再読み込みしました。",
         "reloadFailed": "ウェブサーバーを再読み込みできませんでした。",
         "staleDomains": "{domains} はこの証明書に含まれていますが、このアプリケーションのドメインではなくなりました。再発行するまで、証明書全体の更新が失敗します。",
-        "uploadNeedsBoth": "証明書と対応する秘密鍵の両方を貼り付けてください。"
+        "uploadNeedsBoth": "証明書と対応する秘密鍵の両方を貼り付けてください。",
+        "removed": "証明書を削除しました。このアプリケーションは通常の HTTP に戻ります。",
+        "removedAlready": "証明書はすでに削除されています。"
       },
       "issueCertificate": "SSL を設定",
       "description": "このアプリケーションに到達する名前と証明書。",

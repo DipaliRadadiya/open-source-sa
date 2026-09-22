@@ -3470,9 +3470,6 @@
       "loadFailed": "Não foi possível carregar os domínios desta aplicação.",
       "pageTitle": "Domínios e SSL",
       "pageSubtitle": "Gerencie os nomes para os quais esta aplicação responde e seu certificado HTTPS.",
-      "provisioning": "Domínios e SSL ficam disponíveis quando a aplicação termina o provisionamento.",
-      "sectionTitle": "Domínios",
-      "sectionSubtitle": "Todos os nomes para os quais esta aplicação responde.",
       "tabs": {
         "domains": "Domínios",
         "ssl": "SSL",
@@ -3480,6 +3477,9 @@
         "notSecured": "Não protegido",
         "sslUnknown": "Estado do certificado desconhecido"
       },
+      "provisioning": "Domínios e SSL ficam disponíveis quando a aplicação termina o provisionamento.",
+      "sectionTitle": "Domínios",
+      "sectionSubtitle": "Todos os nomes para os quais esta aplicação responde.",
       "emptyTitle": "Ainda sem domínios",
       "emptyBody": "Adicione um domínio para apontá-lo a esta aplicação. Você pode adicionar mais nomes e aliases a qualquer momento.",
       "testDomain": "Domínio de teste",
@@ -3539,11 +3539,13 @@
         "afterLabel": "Depois",
         "keepsServing": "{domain} permanece anexado como alias e continua servindo esta aplicação.",
         "renamesFiles": "Os arquivos de configuração e de log da aplicação são renomeados.",
-        "cmsWarning": "O WordPress ainda tem o endereço antigo salvo, então os visitantes podem ser redirecionados de volta até você alterá-lo na aplicação."
+        "cmsWarning": "O WordPress ainda tem o endereço antigo salvo, então os visitantes podem ser redirecionados de volta até você alterá-lo na aplicação.",
+        "notOnCertificate": "O certificado SSL não abrange {domain}. Quem visitar o novo endereço verá um aviso de segurança até o reemitir."
       },
       "removeConfirm": {
         "title": "Remover {domain}?",
-        "body": "A aplicação deixará de responder por este nome. Isso não pode ser desfeito."
+        "body": "A aplicação deixará de responder por este nome. Isso não pode ser desfeito.",
+        "onCertificate": "O certificado SSL abrange este nome. Até o reemitir, o certificado deixará de se renovar automaticamente — também para todos os outros nomes que contém."
       },
       "toast": {
         "added": "Domínio adicionado.",
@@ -3555,7 +3557,8 @@
         "promoted": "{domain} agora é o domínio principal.",
         "promoteFailed": "Não foi possível alterar o domínio principal.",
         "removed": "{domain} removido.",
-        "removeFailed": "Não foi possível remover o domínio."
+        "removeFailed": "Não foi possível remover o domínio.",
+        "removedAlready": "{domain} já tinha sido removido."
       },
       "ssl": {
         "sectionTitle": "Certificado SSL",
@@ -3566,13 +3569,18 @@
         "enable": "Ativar HTTPS",
         "issuing": "Emitindo certificado…",
         "issuingBody": "Isso envolve uma ida até a Let's Encrypt e pode levar um minuto.",
+        "issuingStuck": "Continua assim ao fim de alguns minutos? Remova-o e tente de novo.",
         "failed": "Não foi possível emitir o certificado",
         "reference": "Referência: {reference}",
         "rateLimited": "A Let's Encrypt limitou este domínio. Aguarde cerca de uma semana antes de tentar novamente — tentar agora não vai ajudar.",
         "reissue": "Reemitir",
         "remove": "Remover certificado",
+        "moreActions": "Opções do certificado",
         "active": "HTTPS está ativo",
+        "coversLabel": "Abrange",
         "expired": "Este certificado expirou.",
+        "expiredForcedHttps": "Todos os visitantes são redirecionados para HTTPS e o certificado que encontram expirou — por isso ninguém consegue aceder a esta aplicação. Desligue o redirecionamento para voltar a HTTP simples enquanto resolve o certificado.",
+        "turnOffForceHttps": "Desligar o redirecionamento HTTPS",
         "expiredTitle": "HTTPS não está funcionando",
         "expiresRenew": "Renova automaticamente · expira em {when} ({days} dias)",
         "expiresManual": "Expira em {when} ({days} dias) — não será renovado automaticamente",
@@ -3622,7 +3630,9 @@
         "reloaded": "O servidor web foi recarregado.",
         "reloadFailed": "Não foi possível recarregar o servidor web.",
         "staleDomains": "{domains} está neste certificado mas já não pertence a esta aplicação. A renovação falha para todo o certificado até que seja reemitido.",
-        "uploadNeedsBoth": "Cole o certificado e a respetiva chave privada."
+        "uploadNeedsBoth": "Cole o certificado e a respetiva chave privada.",
+        "removed": "O certificado foi removido. Esta aplicação voltou a HTTP simples.",
+        "removedAlready": "O certificado já tinha sido removido."
       },
       "issueCertificate": "Configurar SSL",
       "description": "Nomes que acessam esta aplicação e seu certificado.",

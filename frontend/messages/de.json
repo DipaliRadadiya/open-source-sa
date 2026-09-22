@@ -3470,9 +3470,6 @@
       "loadFailed": "Die Domains dieser Anwendung konnten nicht geladen werden.",
       "pageTitle": "Domains & SSL",
       "pageSubtitle": "Verwalten Sie die Namen, unter denen diese Anwendung antwortet, und ihr HTTPS-Zertifikat.",
-      "provisioning": "Domains und SSL stehen bereit, sobald die Einrichtung der Anwendung abgeschlossen ist.",
-      "sectionTitle": "Domains",
-      "sectionSubtitle": "Jeder Name, unter dem diese Anwendung antwortet.",
       "tabs": {
         "domains": "Domains",
         "ssl": "SSL",
@@ -3480,6 +3477,9 @@
         "notSecured": "Nicht gesichert",
         "sslUnknown": "Zertifikatsstatus unbekannt"
       },
+      "provisioning": "Domains und SSL stehen bereit, sobald die Einrichtung der Anwendung abgeschlossen ist.",
+      "sectionTitle": "Domains",
+      "sectionSubtitle": "Jeder Name, unter dem diese Anwendung antwortet.",
       "emptyTitle": "Noch keine Domains",
       "emptyBody": "Fügen Sie eine Domain hinzu, um sie auf diese Anwendung zu richten. Weitere Namen und Aliase können Sie jederzeit ergänzen.",
       "testDomain": "Testdomain",
@@ -3539,11 +3539,13 @@
         "afterLabel": "Danach",
         "keepsServing": "{domain} bleibt als Alias verknüpft und liefert diese Anwendung weiter aus.",
         "renamesFiles": "Die Konfigurations- und Protokolldateien der Anwendung werden umbenannt.",
-        "cmsWarning": "In WordPress ist die alte Adresse noch gespeichert, Besucher werden also möglicherweise zurückgeleitet, bis Sie sie in der Anwendung ändern."
+        "cmsWarning": "In WordPress ist die alte Adresse noch gespeichert, Besucher werden also möglicherweise zurückgeleitet, bis Sie sie in der Anwendung ändern.",
+        "notOnCertificate": "Das SSL-Zertifikat deckt {domain} nicht ab. Besucher der neuen Adresse erhalten eine Sicherheitswarnung, bis Sie es neu ausstellen."
       },
       "removeConfirm": {
         "title": "{domain} entfernen?",
-        "body": "Die Anwendung antwortet unter diesem Namen dann nicht mehr. Das lässt sich nicht zurücknehmen."
+        "body": "Die Anwendung antwortet unter diesem Namen dann nicht mehr. Das lässt sich nicht zurücknehmen.",
+        "onCertificate": "Das SSL-Zertifikat deckt diesen Namen ab. Bis Sie es neu ausstellen, erneuert sich das Zertifikat nicht mehr automatisch — auch nicht für alle anderen Namen darauf."
       },
       "toast": {
         "added": "Domain hinzugefügt.",
@@ -3555,7 +3557,8 @@
         "promoted": "{domain} ist jetzt die primäre Domain.",
         "promoteFailed": "Die primäre Domain konnte nicht geändert werden.",
         "removed": "{domain} entfernt.",
-        "removeFailed": "Die Domain konnte nicht entfernt werden."
+        "removeFailed": "Die Domain konnte nicht entfernt werden.",
+        "removedAlready": "{domain} wurde bereits entfernt."
       },
       "ssl": {
         "sectionTitle": "SSL-Zertifikat",
@@ -3566,13 +3569,18 @@
         "enable": "HTTPS aktivieren",
         "issuing": "Zertifikat wird ausgestellt…",
         "issuingBody": "Dazu gehört eine Anfrage bei Let's Encrypt, das kann eine Minute dauern.",
+        "issuingStuck": "Nach einigen Minuten immer noch hier? Entfernen Sie es und versuchen Sie es erneut.",
         "failed": "Das Zertifikat konnte nicht ausgestellt werden",
         "reference": "Referenz: {reference}",
         "rateLimited": "Let's Encrypt hat diese Domain gedrosselt. Warten Sie etwa eine Woche — ein Versuch jetzt hilft nicht.",
         "reissue": "Neu ausstellen",
         "remove": "Zertifikat entfernen",
+        "moreActions": "Zertifikatsoptionen",
         "active": "HTTPS ist aktiv",
+        "coversLabel": "Gilt für",
         "expired": "Dieses Zertifikat ist abgelaufen.",
+        "expiredForcedHttps": "Alle Besucher werden zu HTTPS umgeleitet, und das Zertifikat dort ist abgelaufen — niemand kann diese Anwendung also erreichen. Schalten Sie die Umleitung ab, um vorerst auf einfaches HTTP zurückzugehen, während Sie das Zertifikat in Ordnung bringen.",
+        "turnOffForceHttps": "HTTPS-Umleitung abschalten",
         "expiredTitle": "HTTPS funktioniert nicht",
         "expiresRenew": "Verlängert sich automatisch · läuft {when} ab ({days} Tage)",
         "expiresManual": "Läuft {when} ab ({days} Tage) — verlängert sich nicht automatisch",
@@ -3622,7 +3630,9 @@
         "reloaded": "Der Webserver wurde neu geladen.",
         "reloadFailed": "Der Webserver konnte nicht neu geladen werden.",
         "staleDomains": "{domains} steht auf diesem Zertifikat, gehört aber nicht mehr zu dieser Anwendung. Die Verlängerung schlägt für das gesamte Zertifikat fehl, bis es neu ausgestellt wird.",
-        "uploadNeedsBoth": "Fügen Sie sowohl das Zertifikat als auch den zugehörigen privaten Schlüssel ein."
+        "uploadNeedsBoth": "Fügen Sie sowohl das Zertifikat als auch den zugehörigen privaten Schlüssel ein.",
+        "removed": "Das Zertifikat wurde entfernt. Diese Anwendung läuft wieder über einfaches HTTP.",
+        "removedAlready": "Das Zertifikat wurde bereits entfernt."
       },
       "issueCertificate": "SSL einrichten",
       "description": "Namen, die diese Anwendung erreichen, und ihr Zertifikat.",

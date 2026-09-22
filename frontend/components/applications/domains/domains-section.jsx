@@ -96,6 +96,17 @@ export function DomainsSection({
   // Per-row spinner for the inline verify action.
   const [verifying, setVerifying] = useState({});
 
+  /*
+   * Whether an ACTIVE certificate lists this exact name.
+   *
+   * Both confirm dialogs below need it and neither had it. Only an active
+   * certificate counts: a pending or failed one is securing nothing, so
+   * warning about its coverage would be noise on top of a problem the SSL card
+   * already reports.
+   */
+  const activeCertificate = certificate?.status === "active" ? certificate : null;
+  const onCertificate = (domain) => Boolean(activeCertificate?.domains?.includes(domain));
+
   // Same plain button in the header and the empty-state, exactly like the
   // databases list — one definition so they can't drift.
   const addButton = canManage ? (
@@ -143,13 +154,26 @@ export function DomainsSection({
   }
 
   async function confirmDelete() {
+    const target = deleteTarget.domain;
     setPending(true);
     try {
-      await deleteDomain(appId, deleteTarget.domain);
-      toast.success(t("toast.removed", { domain: deleteTarget.domain }));
+      await deleteDomain(appId, target);
+      toast.success(t("toast.removed", { domain: target }));
       setDeleteTarget(null);
       router.refresh();
     } catch (error) {
+      /*
+       * Already gone — another tab, another person, or a click that landed
+       * after all. The reader wanted this name off the application and it is
+       * off; reporting a failure leaves the dialog open over a row about to
+       * disappear and invites a retry that can only ever 404.
+       */
+      if (error?.response?.status === 404) {
+        toast.info(t("toast.removedAlready", { domain: target }));
+        setDeleteTarget(null);
+        router.refresh();
+        return;
+      }
       toast.error(apiMessage(error, t("toast.removeFailed")));
     } finally {
       setPending(false);
@@ -180,7 +204,10 @@ export function DomainsSection({
             action={addButton}
           />
         ) : (
-          <div className="divide-y rounded-xl border">
+          /* No border here. The rows already sit inside a Card, and a second
+             frame around them drew the same edge twice — the coloured frames
+             on the SSL card mean something, this one meant nothing. */
+          <div className="-mx-6 -mb-6 divide-y overflow-hidden rounded-b-xl border-t">
             {domains.map((domain) => {
               const isPrimary = domain.type === "primary";
               const isVerifying = Boolean(verifying[domain.domain]);
@@ -193,14 +220,21 @@ export function DomainsSection({
 
                   <div className="min-w-40 flex-1 space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate font-mono text-sm">
-                        {domain.domain}
+                      {/* Name and its copy button are one unit. Loose in the
+                          wrapping row they separated at phone width — the icon
+                          dropped to the next line under a name it no longer
+                          looked attached to, and inconsistently, because it
+                          depended on the length of each name. */}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="truncate font-mono text-sm">
+                          {domain.domain}
+                        </span>
+                        <CopyButton
+                          value={domain.domain}
+                          label={t("copyDomain")}
+                          className="size-6 shrink-0"
+                        />
                       </span>
-                      <CopyButton
-                        value={domain.domain}
-                        label={t("copyDomain")}
-                        className="size-6"
-                      />
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="inline-flex">
@@ -314,43 +348,54 @@ export function DomainsSection({
                       * `domains` would downgrade every site to http. It also
                       * avoids re-implementing wildcard matching here.
                       */}
-                    {domain.dns_verified && domain.type !== "redirect" ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            asChild
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                          >
-                            <a
-                              href={`${secured && coveredByCertificate(certificate, domain.domain) ? "https" : "http"}://${domain.domain}`}
-                              target="_blank"
-                              rel="noreferrer noopener"
+                    {/* The slot is held whether or not the link renders.
+                        Dropped entirely, every button after it shifted left,
+                        so "Verify DNS" sat at a different x on each row and
+                        the column read as ragged — a redirect row and a
+                        verified row never lined up. */}
+                    <span className="inline-flex size-8 shrink-0 items-center justify-center">
+                      {domain.dns_verified && domain.type !== "redirect" ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
                             >
-                              <ExternalLink className="size-4" />
-                              <span className="sr-only">{t("openSite")}</span>
-                            </a>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t("openSite")}</TooltipContent>
-                      </Tooltip>
-                    ) : null}
+                              <a
+                                href={`${secured && coveredByCertificate(certificate, domain.domain) ? "https" : "http"}://${domain.domain}`}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                              >
+                                <ExternalLink className="size-4" />
+                                <span className="sr-only">{t("openSite")}</span>
+                              </a>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("openSite")}</TooltipContent>
+                        </Tooltip>
+                      ) : null}
+                    </span>
+                    {/*
+                      * Not behind `canManage`. Re-checking DNS changes nothing
+                      * on the server — the route is gated by `app_domain` at
+                      * VIEW level, same as reading this page — and "is my DNS
+                      * pointing here yet?" is the question a read-only holder
+                      * most often has. It was the one control on the row that
+                      * they could have used and could not see.
+                      */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={isVerifying}
+                      onClick={() => onVerify(domain)}
+                    >
+                      <RotateCw className={isVerifying ? "size-3.5 animate-spin" : "size-3.5"} />
+                      {t("dns.verify")}
+                    </Button>
                     {canManage ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={isVerifying}
-                          onClick={() => onVerify(domain)}
-                        >
-                          <RotateCw
-                            className={
-                              isVerifying ? "size-3.5 animate-spin" : "size-3.5"
-                            }
-                          />
-                          {t("dns.verify")}
-                        </Button>
+                      <span className="inline-flex size-8 shrink-0 items-center justify-center">
                         {!isPrimary ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -382,7 +427,7 @@ export function DomainsSection({
                           </DropdownMenuContent>
                         </DropdownMenu>
                         ) : null}
-                      </>
+                      </span>
                     ) : null}
                   </div>
                 </div>
@@ -452,6 +497,18 @@ export function DomainsSection({
         {siteType === "wordpress" ? (
           <Caution>{t("promote.cmsWarning")}</Caution>
         ) : null}
+
+        {/* The name about to become the application's canonical address is not
+            on the certificate, so from the moment this is confirmed the
+            address people are sent to answers on 443 with a certificate issued
+            for somebody else — a browser refusal, not a downgrade. The SSL
+            card says a name is uncovered; it cannot know it is about to become
+            the main one. */}
+        {promoteTarget && activeCertificate && !onCertificate(promoteTarget.domain) ? (
+          <Caution>
+            {t("promote.notOnCertificate", { domain: promoteTarget.domain })}
+          </Caution>
+        ) : null}
       </ConfirmDialog>
 
       <ConfirmDialog
@@ -465,7 +522,21 @@ export function DomainsSection({
         confirmLabel={t("remove")}
         pending={pending}
         onConfirm={confirmDelete}
-      />
+      >
+        {/* The consequence nothing on this screen mentioned.
+            certbot validates every name in a certificate's lineage and fails
+            the WHOLE renewal if any one of them cannot be reached — so
+            removing a covered name quietly stops the certificate renewing for
+            the names that are still fine. Nothing goes wrong until it expires,
+            which is the worst possible moment to find out. The SSL card
+            reports it afterwards as a stale domain; this says it beforehand,
+            when it is still a choice. */}
+        {deleteTarget && onCertificate(deleteTarget.domain) ? (
+          <Caution>
+            {t("removeConfirm.onCertificate", { domain: deleteTarget.domain })}
+          </Caution>
+        ) : null}
+      </ConfirmDialog>
     </Card>
   );
 }

@@ -3470,9 +3470,6 @@
       "loadFailed": "We could not load the domains for this application.",
       "pageTitle": "Domains & SSL",
       "pageSubtitle": "Manage the names this application answers to and its HTTPS certificate.",
-      "provisioning": "Domains and SSL become available once the application finishes provisioning.",
-      "sectionTitle": "Domains",
-      "sectionSubtitle": "Every name this application answers to.",
       "tabs": {
         "domains": "Domains",
         "ssl": "SSL",
@@ -3480,6 +3477,9 @@
         "notSecured": "Not secured",
         "sslUnknown": "Certificate status unknown"
       },
+      "provisioning": "Domains and SSL become available once the application finishes provisioning.",
+      "sectionTitle": "Domains",
+      "sectionSubtitle": "Every name this application answers to.",
       "emptyTitle": "No domains yet",
       "emptyBody": "Add a domain to point it at this application. You can add more names and aliases at any time.",
       "testDomain": "Test domain",
@@ -3539,11 +3539,13 @@
         "afterLabel": "After",
         "keepsServing": "{domain} stays attached as an alias and keeps serving this application.",
         "renamesFiles": "The application's config and log files are renamed.",
-        "cmsWarning": "WordPress still has the old address saved, so visitors may be redirected back until you change it in the application."
+        "cmsWarning": "WordPress still has the old address saved, so visitors may be redirected back until you change it in the application.",
+        "notOnCertificate": "The SSL certificate does not cover {domain}. Visitors sent to the new address will get a security warning until you reissue it."
       },
       "removeConfirm": {
         "title": "Remove {domain}?",
-        "body": "The application will stop answering on this name. This cannot be undone."
+        "body": "The application will stop answering on this name. This cannot be undone.",
+        "onCertificate": "The SSL certificate covers this name. Until you reissue it, the certificate will stop renewing itself — for every other name on it too."
       },
       "toast": {
         "added": "Domain added.",
@@ -3555,7 +3557,8 @@
         "promoted": "{domain} is now the primary domain.",
         "promoteFailed": "Couldn't change the primary domain.",
         "removed": "{domain} removed.",
-        "removeFailed": "Couldn't remove the domain."
+        "removeFailed": "Couldn't remove the domain.",
+        "removedAlready": "{domain} had already been removed."
       },
       "ssl": {
         "sectionTitle": "SSL certificate",
@@ -3566,13 +3569,18 @@
         "enable": "Enable HTTPS",
         "issuing": "Issuing certificate…",
         "issuingBody": "This involves a round trip to Let's Encrypt and can take a minute.",
+        "issuingStuck": "Still here after a few minutes? Remove it and try again.",
         "failed": "Certificate could not be issued",
         "reference": "Reference: {reference}",
         "rateLimited": "Let's Encrypt has rate-limited this domain. Wait about a week before trying again — retrying now won't help.",
         "reissue": "Reissue",
         "remove": "Remove certificate",
+        "moreActions": "Certificate options",
         "active": "HTTPS is active",
+        "coversLabel": "Covers",
         "expired": "This certificate has expired.",
+        "expiredForcedHttps": "Every visitor is being redirected to HTTPS, and the certificate they arrive at has expired — so nobody can reach this application at all. Turn the redirect off to put it back on plain HTTP while you sort the certificate out.",
+        "turnOffForceHttps": "Turn off the HTTPS redirect",
         "expiredTitle": "HTTPS is not working",
         "expiresRenew": "Renews automatically · expires {when} ({days} days)",
         "expiresManual": "Expires {when} ({days} days) — won't renew automatically",
@@ -3622,7 +3630,9 @@
         "reloaded": "The web server was reloaded.",
         "reloadFailed": "The web server could not be reloaded.",
         "staleDomains": "{domains} is on this certificate but no longer on this application. Renewal fails for the whole certificate until it is reissued.",
-        "uploadNeedsBoth": "Paste both the certificate and its private key."
+        "uploadNeedsBoth": "Paste both the certificate and its private key.",
+        "removed": "The certificate was removed. This application is back on plain HTTP.",
+        "removedAlready": "The certificate had already been removed."
       },
       "issueCertificate": "Set up SSL",
       "description": "Names that reach this application, and its certificate.",
