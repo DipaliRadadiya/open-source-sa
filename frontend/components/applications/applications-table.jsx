@@ -301,7 +301,7 @@ function ApplicationsList({
       // that has stopped saying anything. Created is the one whose absence
       // costs least — it is not actionable, it never changes, and the detail
       // page carries it.
-      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[32%] xl:w-[29%]" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
+      { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { className: "w-[32%] xl:w-[29%]", sortKey: "name" }, cell: ({ row }) => <NameCell row={row} missingDatabase={missingDatabase.has(row.original.id)} gitProvider={gitProviderFor(row.original, gitProviders)} /> },
       /*
        * PHP stands where Type stood. The logo carries the type now — it is
        * labelled and hoverable — and a version is much shorter than "Craft
@@ -326,7 +326,7 @@ function ApplicationsList({
        * design and 29% is still 329px against a 261px longest cell.
        */
       { id: "php", header: t("columns.php"), meta: { className: "w-[8%] xl:w-[7%]" }, cell: PhpCell },
-      { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: "w-[16%] xl:w-[14%]" }, cell: StatusCell },
+      { accessorKey: "status", header: () => <SortHeader col="status">{t("columns.status")}</SortHeader>, meta: { className: "w-[16%] xl:w-[14%]", sortKey: "status" }, cell: StatusCell },
       // Not sortable, and deliberately so on the API's side: the owner lives on
       // a relation, so ordering by it would mean a join, and the list can
       // already be searched by username.
@@ -349,8 +349,8 @@ function ApplicationsList({
       { id: "owner", header: t("columns.owner"), meta: { className: "w-[23%] xl:w-[19%] h-auto min-h-11 whitespace-normal" }, cell: OwnerCell },
       // descFirst on both: nobody opens a size column to find their smallest
       // application, or a date column to find the oldest.
-      { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, meta: { className: "w-[14%] xl:w-[11%]" }, cell: SizeCell },
-      { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, meta: { className: "hidden xl:table-cell xl:w-[14%]" }, cell: CreatedCell },
+      { id: "size", header: () => <SortHeader col="directory_size_bytes" descFirst>{t("columns.size")}</SortHeader>, meta: { className: "w-[14%] xl:w-[11%]", sortKey: "directory_size_bytes" }, cell: SizeCell },
+      { id: "created", header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>, meta: { className: "hidden xl:table-cell xl:w-[14%]", sortKey: "created_at" }, cell: CreatedCell },
       { id: "actions", header: "", meta: { className: "w-[7%] xl:w-[6%]" }, cell: ActionsCell },
     ],
     // `missingDatabase` belongs here: attaching a database refreshes the route,

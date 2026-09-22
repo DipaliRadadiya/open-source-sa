@@ -15,7 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useNavPending } from "@/components/data-table/nav-transition";
+import { sortDirection } from "@/lib/data-table/sort-direction";
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +104,9 @@ export function DataTable({
 }) {
   const tc = useTranslations("common");
   const pending = useNavPending();
+  // Read once here rather than per header cell: `useSearchParams` in a loop
+  // subscribes the same component repeatedly to the same value.
+  const sortParam = useSearchParams().get("sort");
   const [sorting, setSorting] = useState(defaultSorting);
   const selectable = rowSelection !== undefined && onRowSelectionChange !== undefined;
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table's useReactTable is a known false positive for the React Compiler lint
@@ -166,10 +171,21 @@ export function DataTable({
                       stickyHeader && "bg-muted",
                       header.column.columnDef.meta?.className,
                     )}
+                    /*
+                     * Two kinds of sortable column, and only one of them used
+                     * to say so. `canSort` is TanStack sorting its own rows;
+                     * a server-driven column sorts through the URL instead, so
+                     * TanStack reports it as unsortable and the header was
+                     * announced as an ordinary one — the table could be sorted
+                     * by Size descending with nothing exposing that at all.
+                     * `meta.sortKey` is the column's key in `?sort=`.
+                     */
                     aria-sort={
                       canSort
                         ? { asc: "ascending", desc: "descending" }[direction] ?? "none"
-                        : undefined
+                        : header.column.columnDef.meta?.sortKey
+                          ? sortDirection(sortParam, header.column.columnDef.meta.sortKey)
+                          : undefined
                     }
                   >
                     {header.isPlaceholder ? null : canSort ? (

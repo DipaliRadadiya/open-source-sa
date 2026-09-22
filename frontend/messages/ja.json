@@ -49,7 +49,6 @@
     "unsavedDescription": "このページの変更は保存されていません。変更は失われます。",
     "unsavedStay": "このページに留まる",
     "unsavedLeave": "離れて変更を失う",
-    "sortBy": "この列で並べ替え",
     "navTitles": {
       "app_firewall": "Web ファイアウォール"
     },
