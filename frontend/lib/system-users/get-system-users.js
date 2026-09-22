@@ -46,6 +46,6 @@ export async function getSystemUsersPage(query = "") {
     meta: result.data?.meta ?? EMPTY_LIST_META,
     failed: result.failed,
     status: result.status,
-    failure: result.failure,
+    failure: result.failure, message: result.message, debug: result.debug,
   };
 }

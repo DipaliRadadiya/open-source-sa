@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage({ searchParams }) {
   const sp = await searchParams;
-  const [user, { users, meta, failed, status, failure }, { roles, failed: rolesFailed }, t] = await Promise.all([
+  const [user, { users, meta, failed, status, failure, message }, { roles, failed: rolesFailed }, t] = await Promise.all([
     getCurrentUser(),
     getUsers(sp),
     getRoles(),
@@ -38,7 +38,7 @@ export default async function AdminUsersPage({ searchParams }) {
     // status + failure let the panel name the cause — a 403 is the reader's
     // situation, a 500 is ours. The description is the fallback for the
     // failures it has no specific words for.
-    return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
+    return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
   }
 
   // Before anything renders: a page past the end sends the reader to the

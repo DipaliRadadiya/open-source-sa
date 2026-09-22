@@ -1,4 +1,4 @@
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { cronjobsResponseSchema } from "@/lib/schemas/cronjob";
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
@@ -6,11 +6,22 @@ const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 const ACTIVE_VALUES = ["true", "false"];
 // `failed` separates "you have no cron jobs" from "we couldn't ask" — rendered
 // the same, the empty state would tell the user their jobs are gone.
-const FAILED = {
+const EMPTY = {
   cronjobs: [],
   meta: { current_page: 1, per_page: 10, total: 0, last_page: 1 },
-  failed: true,
 };
+
+// WHICH failure, not just that there was one. A shared `FAILED` constant made
+// every outcome identical, so the error box could not tell a refusal from a
+// crash and printed the same unfalsifiable sentence for both.
+const failedWith = (result) => ({
+  ...EMPTY,
+  failed: true,
+  status: result.status,
+  failure: result.failure,
+  message: result.message,
+  debug: result.debug,
+});
 
 /**
  * GET /api/cronjobs — paginated. Maps the URL's `user`/`active` params onto the
@@ -36,7 +47,7 @@ export async function getCronjobs(searchParams = {}) {
     ? searchParams.active
     : undefined;
 
-  const res = await serverFetch("/cronjobs", {
+  const result = await read("/cronjobs", cronjobsResponseSchema, {
     searchParams: {
       "filter[system_user_id]": isSystemUser ? user : undefined,
       "filter[username]": user && !isSystemUser ? user : undefined,
@@ -46,12 +57,7 @@ export async function getCronjobs(searchParams = {}) {
     },
   });
 
-  if (!res.ok) return FAILED;
+  if (result.failed) return failedWith(result);
 
-  try {
-    const parsed = cronjobsResponseSchema.safeParse(await res.json());
-    return parsed.success ? { ...parsed.data, failed: false } : FAILED;
-  } catch {
-    return FAILED;
-  }
+  return { ...result.data, failed: false, status: result.status, failure: null, message: null, debug: false };
 }

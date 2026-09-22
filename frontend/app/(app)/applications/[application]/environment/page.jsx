@@ -36,7 +36,7 @@ export default async function ApplicationEnvironmentPage({ params }) {
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
-    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
   // The permission is only granted for site types that actually keep a .env, so
@@ -74,7 +74,7 @@ export default async function ApplicationEnvironmentPage({ params }) {
           {t("provisioning")}
         </div>
       ) : envResult.failed || !envResult.environment ? (
-        <LoadFailed description={t("loadFailed")} status={envResult.status} failure={envResult.failure} />
+        <LoadFailed description={t("loadFailed")} status={envResult.status} failure={envResult.failure} message={envResult.message} debug={envResult.debug} />
       ) : (
         <>
           <EnvironmentEditor

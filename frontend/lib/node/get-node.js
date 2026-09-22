@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { z } from "zod";
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { nodeGroupSchema } from "@/lib/schemas/node";
 
 // Imported, never restated inline: a copy of the shape here would keep
@@ -10,13 +10,17 @@ const nodeResponseSchema = z.object({ node: nodeGroupSchema });
 
 /** Everything the Node screen needs, in one call. */
 export const getNode = cache(async function getNode() {
-  try {
-    const res = await serverFetch("/node");
-    if (!res.ok) return { data: null, failed: true };
+  const result = await read("/node", nodeResponseSchema);
 
-    const parsed = nodeResponseSchema.safeParse(await res.json());
-    return parsed.success ? { data: parsed.data.node, failed: false } : { data: null, failed: true };
-  } catch {
-    return { data: null, failed: true };
-  }
+  // Every field `read()` knows, not just whether it worked: without the
+  // status and the kind, the failure box on this screen could not tell a
+  // 403 from a 500 and printed the same unfalsifiable sentence for both.
+  return {
+    data: result.failed ? null : (result.data.node ?? null),
+    failed: result.failed,
+    status: result.status,
+    failure: result.failure,
+    message: result.message,
+    debug: result.debug,
+  };
 });

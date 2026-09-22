@@ -15,15 +15,12 @@ import {
  * must never render as "nothing is protecting this server".
  */
 export async function getFirewall() {
-  try {
-    const res = await serverFetch("/firewall");
-    if (!res.ok) return { data: null, failed: true };
+  const result = await read("/firewall", firewallResponseSchema);
 
-    const parsed = firewallResponseSchema.safeParse(await res.json());
-    return parsed.success ? { data: parsed.data, failed: false } : { data: null, failed: true };
-  } catch {
-    return { data: null, failed: true };
-  }
+  // WHICH failure, not just that there was one: without the status and the
+  // kind, the error box on this screen printed the same sentence whether the
+  // API refused, crashed, or was not there at all.
+  return { data: result.failed ? null : (result.data ?? null), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }
 
 /**
@@ -62,7 +59,7 @@ export async function getFirewallRules(searchParams = {}) {
     // Carried so the rules card can say WHICH failure — a 403 is a permission
     // problem the reader can act on, a 500 is ours.
     status: result.status,
-    failure: result.failure,
+    failure: result.failure, message: result.message, debug: result.debug,
   };
 }
 

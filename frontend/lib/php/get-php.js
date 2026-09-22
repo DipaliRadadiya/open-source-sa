@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { z } from "zod";
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { phpGroupSchema } from "@/lib/schemas/php";
 
 // One definition of the shape. This restated it inline, so when the API changed
@@ -17,13 +17,17 @@ const phpResponseSchema = z.object({ php: phpGroupSchema });
  * feature behind one `php` permission now.
  */
 export const getPhp = cache(async function getPhp() {
-  try {
-    const res = await serverFetch("/php");
-    if (!res.ok) return { data: null, failed: true };
+  const result = await read("/php", phpResponseSchema);
 
-    const parsed = phpResponseSchema.safeParse(await res.json());
-    return parsed.success ? { data: parsed.data.php, failed: false } : { data: null, failed: true };
-  } catch {
-    return { data: null, failed: true };
-  }
+  // Every field `read()` knows, not just whether it worked: without the
+  // status and the kind, the failure box on this screen could not tell a
+  // 403 from a 500 and printed the same unfalsifiable sentence for both.
+  return {
+    data: result.failed ? null : (result.data.php ?? null),
+    failed: result.failed,
+    status: result.status,
+    failure: result.failure,
+    message: result.message,
+    debug: result.debug,
+  };
 });

@@ -10,7 +10,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsSecurityPage() {
-  const [permissions, t, { data, lastChanged, failed, status, failure }] = await Promise.all([
+  const [permissions, t, { data, lastChanged, failed, status, failure, message }] = await Promise.all([
     getPermissions(),
     getTranslations("settings"),
     getSettings(),
@@ -19,7 +19,7 @@ export default async function SettingsSecurityPage() {
   const canManage = can(permissions, "setting", "manage");
 
   if (failed || !data?.security)
-    return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
+    return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   // The rule holding the CURRENT SSH port open. Move the port and it is left
   // guarding a port nothing listens on, so the confirm dialog offers to switch

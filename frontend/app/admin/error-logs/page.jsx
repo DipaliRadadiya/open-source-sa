@@ -24,7 +24,7 @@ export default async function AdminErrorLogsPage({ searchParams }) {
   const lines = linesFromSearchParams(sp);
   const reference = referenceFromSearchParams(sp);
 
-  const [t, format, { data, failed, status, failure }] = await Promise.all([
+  const [t, format, { data, failed, status, failure, message }] = await Promise.all([
     getTranslations("errorLogs"),
     getFormatter(),
     getErrorLogs(lines, reference),
@@ -50,7 +50,7 @@ export default async function AdminErrorLogsPage({ searchParams }) {
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {failed ? (
-        <LoadFailed status={status} failure={failure} />
+        <LoadFailed status={status} failure={failure} message={message} />
       ) : (
         <>
           {/* Same neutral summary band as System Health: status is carried by

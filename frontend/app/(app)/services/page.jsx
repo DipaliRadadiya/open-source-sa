@@ -31,7 +31,7 @@ export default async function ServicesPage() {
   // FPM row is only offered to someone who can actually open that page —
   // otherwise it lands on a redirect back to the dashboard.
   const canSeePhp = can(permissions, "php", "view");
-  const [{ services, failed, status, failure }, php] = await Promise.all([
+  const [{ services, failed, status, failure, message }, php] = await Promise.all([
     getServices(),
     canSeePhp ? getPhp() : Promise.resolve({ data: null }),
   ]);
@@ -47,7 +47,7 @@ export default async function ServicesPage() {
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {failed ? (
-        <LoadFailed description={t("loadFailed")} status={status} failure={failure} />
+        <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : services.length === 0 ? (
         <EmptyState
           icon={Cog}

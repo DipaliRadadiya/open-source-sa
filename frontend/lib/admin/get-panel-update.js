@@ -13,10 +13,10 @@ import { panelUpdateStateSchema } from "@/lib/schemas/panel-update";
  * screen could only say "could not be loaded" and the journal got nothing.
  */
 export const getPanelUpdate = cache(async function getPanelUpdate() {
-  const { data, failed, status, failure } = await read(
+  const { data, failed, status, failure, message, debug } = await read(
     "/admin/panel-update",
     z.object({ panel_update: panelUpdateStateSchema }),
   );
 
-  return { state: data?.panel_update ?? null, failed, status, failure };
+  return { state: data?.panel_update ?? null, failed, status, failure, message, debug };
 });

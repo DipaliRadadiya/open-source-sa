@@ -42,7 +42,7 @@ export default async function ApplicationFirewallPage({ params }) {
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
-  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
   if (!can(appPermissions, "app_firewall", "view", "application")) {
@@ -55,7 +55,7 @@ export default async function ApplicationFirewallPage({ params }) {
   // nothing truthful to render, so a failure there is a load failure. The web
   // server is a separate, non-fatal question — if it can't be determined, the
   // screen just doesn't claim anything about OpenLiteSpeed.
-  const [{ categories, modes, failed: optionsFailed, status: optionsStatus, failure: optionsFailure }, { webServer }] = settled
+  const [{ categories, modes, failed: optionsFailed, status: optionsStatus, failure: optionsFailure, message: optionsMessage }, { webServer }] = settled
     ? await Promise.all([getWafOptions(), getServerCapabilities()])
     : [{ categories: [], modes: [], failed: false }, { webServer: null }];
 
@@ -101,7 +101,7 @@ export default async function ApplicationFirewallPage({ params }) {
           {t("provisioning")}
         </div>
       ) : optionsFailed || categories.length === 0 || modes.length === 0 ? (
-        <LoadFailed description={t("loadFailed")} status={optionsStatus} failure={optionsFailure} />
+        <LoadFailed description={t("loadFailed")} status={optionsStatus} failure={optionsFailure} message={optionsMessage} />
       ) : (
         <>
           {/* Stated rather than hidden: on OpenLiteSpeed the settings still

@@ -15,6 +15,6 @@ export async function getDeployments(applicationId) {
     settings: result.data?.settings ?? null,
     failed: result.failed,
     status: result.status,
-    failure: result.failure,
+    failure: result.failure, message: result.message, debug: result.debug,
   };
 }

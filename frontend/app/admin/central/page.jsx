@@ -12,7 +12,7 @@ export async function generateMetadata() {
 }
 
 export default async function AdminCentralPage() {
-  const [t, { data, failed, status, failure }] = await Promise.all([
+  const [t, { data, failed, status, failure, message }] = await Promise.all([
     getTranslations("central"),
     getCentralStatus(),
   ]);
@@ -22,7 +22,7 @@ export default async function AdminCentralPage() {
       <PageHeader title={t("title")} subtitle={t("pageSubtitle")} />
 
       {failed ? (
-        <LoadFailed status={status} failure={failure} />
+        <LoadFailed status={status} failure={failure} message={message} />
       ) : (
         <CentralPanel status={data?.central ?? { enabled: false, token: null }} />
       )}

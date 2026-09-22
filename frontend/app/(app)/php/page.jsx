@@ -29,7 +29,7 @@ export async function generateMetadata() {
 
 export default async function PhpPage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, { data, failed, status, failure }] = await Promise.all([
+  const [permissions, t, { data, failed, status, failure, message }] = await Promise.all([
     getPermissions(),
     getTranslations("php"),
     getPhp(),
@@ -39,7 +39,7 @@ export default async function PhpPage({ searchParams }) {
   if (!can(permissions, "php", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "php", "manage");
 
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
+  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   const php = data;
   const versions = php?.versions ?? [];

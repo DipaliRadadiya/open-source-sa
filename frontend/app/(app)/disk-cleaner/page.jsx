@@ -32,13 +32,13 @@ export default async function DiskCleanerPage() {
 
   // The schedule and history are secondary: if either fails the page is still
   // useful, so they degrade to null/empty rather than taking the page down.
-  const [{ data, failed, status, failure }, schedule, { runs }] = await Promise.all([
+  const [{ data, failed, status, failure, message }, schedule, { runs }] = await Promise.all([
     getDiskCleaner(),
     getCleanerSchedule(),
     getCleanerRuns(),
   ]);
 
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
+  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   const categories = data.categories ?? [];
   const reclaimable = categories

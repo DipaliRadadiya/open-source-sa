@@ -28,7 +28,7 @@ export default async function GitIntegrationsPage() {
   if (!can(permissions, "git", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "git", "manage");
 
-  if (list.failed) return <LoadFailed description={t("loadFailed")} status={list.status} failure={list.failure} />;
+  if (list.failed) return <LoadFailed description={t("loadFailed")} status={list.status} failure={list.failure} message={list.message} debug={list.debug} />;
 
   return (
     <div className="space-y-6">

@@ -76,7 +76,7 @@ export default async function DatabasePage({ params, searchParams }) {
      */
     getEngines().catch(() => ({ engines: [] })),
   ]);
-  const { data, failed, status, failure } = live;
+  const { data, failed, status, failure, message } = live;
 
   if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
@@ -89,7 +89,7 @@ export default async function DatabasePage({ params, searchParams }) {
       <LoadFailed
         description={t("loadFailed")}
         status={status}
-        failure={failure}
+        failure={failure} message={message}
       />
     );
 

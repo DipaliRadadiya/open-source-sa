@@ -12,7 +12,7 @@ import { trashResponseSchema } from "@/lib/schemas/file";
  * nothing reached the journal.
  */
 export async function getTrash(appId) {
-  const { data, failed, status, failure } = await read(
+  const { data, failed, status, failure, message, debug } = await read(
     `/applications/${appId}/files/trash`,
     trashResponseSchema,
   );
@@ -26,5 +26,7 @@ export async function getTrash(appId) {
     failed,
     status,
     failure,
+    message,
+    debug,
   };
 }

@@ -72,7 +72,7 @@ export async function getBackups(searchParams = {}) {
     meta: result.data?.meta ?? { current_page: 1, per_page: PER_PAGE_OPTIONS[0], total: 0, last_page: 1 },
     failed: result.failed,
     status: result.status,
-    failure: result.failure,
+    failure: result.failure, message: result.message, debug: result.debug,
   };
 }
 
@@ -155,7 +155,7 @@ export async function getRestores(searchParams = {}) {
     meta: result.data?.meta ?? { current_page: 1, per_page: PER_PAGE_OPTIONS[0], total: 0, last_page: 1 },
     failed: result.failed,
     status: result.status,
-    failure: result.failure,
+    failure: result.failure, message: result.message, debug: result.debug,
   };
 }
 
@@ -207,7 +207,7 @@ export async function getActiveRestore(applicationId) {
  */
 export const getBackupTarget = cache(async function getBackupTarget(applicationId) {
   const result = await read(`/applications/${applicationId}/backup-target`, backupTargetResponseSchema);
-  return { target: result.data?.backup_target ?? null, failed: result.failed, status: result.status, failure: result.failure };
+  return { target: result.data?.backup_target ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
 /**
@@ -270,7 +270,7 @@ export async function getBackupCoverage() {
     total: meta?.total ?? rows.length,
     failed: result.failed,
     status: result.status,
-    failure: result.failure,
+    failure: result.failure, message: result.message, debug: result.debug,
   };
 }
 

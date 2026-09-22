@@ -42,7 +42,7 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
-    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
   // app_log is its own grant — a site's access log and the machine's auth.log
@@ -55,7 +55,7 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
   const canManage = can(appPermissions, "app_log", "manage", "application");
   const settled = application.status === "active";
 
-  const { logs: sources, failed, status: logsStatus, failure: logsFailure } = settled
+  const { logs: sources, failed, status: logsStatus, failure: logsFailure, message: logsMessage } = settled
     ? await getApplicationLogs(id)
     : { logs: [], failed: false, status: null, failure: null };
 
@@ -83,7 +83,7 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
           {t("provisioning")}
         </div>
       ) : failed ? (
-        <LoadFailed description={t("loadFailed")} status={logsStatus} failure={logsFailure} />
+        <LoadFailed description={t("loadFailed")} status={logsStatus} failure={logsFailure} message={logsMessage} />
       ) : sources.length === 0 ? (
         <EmptyState
           icon={ScrollText}

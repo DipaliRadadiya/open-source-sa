@@ -27,7 +27,7 @@ export default async function SyncPage() {
     return (
       <div className="space-y-6">
         <Header t={t} />
-        <LoadFailed status={latest.status} failure={latest.failure} />
+        <LoadFailed status={latest.status} failure={latest.failure} message={latest.message} debug={latest.debug} />
       </div>
     );
   }

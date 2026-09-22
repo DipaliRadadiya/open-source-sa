@@ -32,7 +32,7 @@ export default async function AdminPanelUpdatePage() {
         <LoadFailed
           description={t("loadFailed")}
           status={update.status}
-          failure={update.failure}
+          failure={update.failure} message={update.message} debug={update.debug}
         />
       </div>
     );

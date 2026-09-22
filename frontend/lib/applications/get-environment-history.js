@@ -1,4 +1,4 @@
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { envHistoryResponseSchema } from "@/lib/schemas/environment";
 
 /**
@@ -10,16 +10,10 @@ import { envHistoryResponseSchema } from "@/lib/schemas/environment";
  * of them should reassure anyone.
  */
 export async function getEnvironmentHistory(id) {
-  try {
-    const res = await serverFetch(`/applications/${id}/environment/history`);
-    if (!res.ok) return { history: null, failed: true };
+  const result = await read(`/applications/${id}/environment/history`, envHistoryResponseSchema);
 
-    const parsed = envHistoryResponseSchema.safeParse(await res.json());
-
-    return parsed.success
-      ? { history: parsed.data.history, failed: false }
-      : { history: null, failed: true };
-  } catch {
-    return { history: null, failed: true };
-  }
+  // WHICH failure, not just that there was one: without the status and the
+  // kind, the error box on this screen printed the same sentence whether the
+  // API refused, crashed, or was not there at all.
+  return { history: result.failed ? null : (result.data?.history ?? null), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }

@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
  * Without them the box was unfalsifiable: it looked identical whichever had
  * happened, and the reason existed nowhere else either.
  */
-export function LoadFailed({ description, status = null, failure = null }) {
+export function LoadFailed({ description, status = null, failure = null, message = null, debug = false }) {
   const t = useTranslations("errors");
   const { refresh, pending } = useRefresh();
 
@@ -58,6 +58,20 @@ export function LoadFailed({ description, status = null, failure = null }) {
         <p className="max-w-sm text-sm text-muted-foreground">
           {reason ?? description ?? t("partial.description")}
         </p>
+        {/* The server's OWN words, under our category.
+        
+            Ours names the KIND of failure — "The server had a problem" — which
+            is all the panel can know on its own. The API often knows more, and
+            said so: "The application list could not be read from disk." Quoted
+            and set apart so nobody reads it as the panel talking. */}
+        {message ? (
+          <blockquote className="mx-auto max-w-sm border-l-2 border-destructive/30 py-0.5 pl-3 text-left text-sm text-foreground">
+            {message}
+          </blockquote>
+        ) : null}
+        {debug ? (
+          <p className="text-xs text-amber-700 dark:text-amber-500">{t("request.debugWarning")}</p>
+        ) : null}
         {/* The code, small and last: meaningless to most people, and the first
             thing anyone asks for when reporting this. Not shown for a shape
             failure — the request succeeded, so printing "Error 200" would

@@ -32,7 +32,7 @@ export default async function ApplicationFail2banPage({ params }) {
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
-  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
   if (!can(appPermissions, "app_fail2ban", "view", "application")) {
@@ -57,7 +57,7 @@ export default async function ApplicationFail2banPage({ params }) {
         </div>
       ) : status.failed ? (
         // "We could not ask" must never render as "nothing is protecting you".
-        <LoadFailed description={t("loadFailed")} status={status.status} failure={status.failure} />
+        <LoadFailed description={t("loadFailed")} status={status.status} failure={status.failure} message={status.message} debug={status.debug} />
       ) : (
         <Fail2banPanel
           appId={id}

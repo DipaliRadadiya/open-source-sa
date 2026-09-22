@@ -62,7 +62,7 @@ export default async function CreateApplicationPage({ searchParams }) {
 
   if (!can(permissions, "application", "manage")) redirect("/applications");
 
-  if (types.failed) return <LoadFailed description={t("loadFailed")} status={types.status} failure={types.failure} />;
+  if (types.failed) return <LoadFailed description={t("loadFailed")} status={types.status} failure={types.failure} message={types.message} debug={types.debug} />;
 
   // Marked here rather than in the picker so the whole form works from one
   // list: the prefill below reads the same `available` the grid greys on, and

@@ -35,7 +35,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
     getTranslations("databases.monitor"),
     getEngines(),
   ]);
-  const { engines, failed: enginesFailed, status: enginesStatus, failure: enginesFailure } = live;
+  const { engines, failed: enginesFailed, status: enginesStatus, failure: enginesFailure, message: enginesMessage } = live;
 
   if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
@@ -59,7 +59,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
           always done this correctly; this one dropped it.
         */}
         {enginesFailed ? (
-          <LoadFailed status={enginesStatus} failure={enginesFailure} />
+          <LoadFailed status={enginesStatus} failure={enginesFailure} message={enginesMessage} />
         ) : (
           <EmptyState
             icon={Activity}

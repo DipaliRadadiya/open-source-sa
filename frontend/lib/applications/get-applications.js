@@ -38,7 +38,7 @@ export const getApplications = cache(async function getApplications(query = "") 
     meta: result.data?.meta ?? EMPTY_LIST_META,
     failed: result.failed,
     status: result.status,
-    failure: result.failure,
+    failure: result.failure, message: result.message, debug: result.debug,
   };
 });
 
@@ -58,19 +58,19 @@ export const getAllApplications = cache(async function getAllApplications() {
   const result = await read("/applications", applicationsResponseSchema, {
     searchParams: { per_page: 100 },
   });
-  return { applications: result.data?.applications ?? [], failed: result.failed, status: result.status, failure: result.failure };
+  return { applications: result.data?.applications ?? [], failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
 export const getSiteTypes = cache(async function getSiteTypes() {
   const result = await read("/site-types", siteTypesResponseSchema);
-  return { siteTypes: result.data?.site_types ?? [], failed: result.failed, status: result.status, failure: result.failure };
+  return { siteTypes: result.data?.site_types ?? [], failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
 // Server-wide catalog, identical for every application — cached per request so
 // the bot list is fetched once even if something else on the page asks for it.
 export const getAiBotPolicies = cache(async function getAiBotPolicies() {
   const result = await read("/ai-bot-policies", aiBotPoliciesResponseSchema);
-  return { policies: result.data?.ai_bot_policies ?? null, failed: result.failed, status: result.status, failure: result.failure };
+  return { policies: result.data?.ai_bot_policies ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
 // Cached per request: the layout needs the name for the breadcrumb, the page
@@ -78,7 +78,7 @@ export const getAiBotPolicies = cache(async function getAiBotPolicies() {
 // site that used to be three round-trips.
 export const getApplication = cache(async function getApplication(id) {
   const result = await read(`/applications/${id}`, applicationResponseSchema);
-  return { application: result.data?.application ?? null, failed: result.failed, status: result.status, failure: result.failure };
+  return { application: result.data?.application ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });
 
 /**
@@ -105,7 +105,7 @@ export async function getApplicationIssues(id) {
 // application endpoint, so this is not interchangeable with getApplication.
 export async function getApplicationWaf(id) {
   const result = await read(`/applications/${id}/waf`, applicationResponseSchema);
-  return { application: result.data?.application ?? null, failed: result.failed, status: result.status, failure: result.failure };
+  return { application: result.data?.application ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }
 
 // Server-wide, identical for every application — cached per request.
@@ -116,7 +116,7 @@ export const getWafOptions = cache(async function getWafOptions() {
     modes: result.data?.waf_modes ?? [],
     failed: result.failed,
     status: result.status,
-    failure: result.failure,
+    failure: result.failure, message: result.message, debug: result.debug,
   };
 });
 
@@ -147,14 +147,14 @@ export async function getApplicationFail2ban(id) {
  */
 export async function getApplicationPhp(id) {
   const result = await read(`/applications/${id}/php`, applicationPhpResponseSchema);
-  return { php: result.data?.php ?? null, failed: result.failed, status: result.status, failure: result.failure };
+  return { php: result.data?.php ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }
 
 // Gated by `app_log` on the backend, not `app_bot_blocker` — it reads the
 // site's access log. Callers must check that permission before asking.
 export async function getBotTraffic(id, days) {
   const result = await read(`/applications/${id}/bot-traffic?days=${days}`, botTrafficResponseSchema);
-  return { traffic: result.data?.bot_traffic ?? null, failed: result.failed, status: result.status, failure: result.failure };
+  return { traffic: result.data?.bot_traffic ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }
 
 export const getServerCapabilities = cache(async function getServerCapabilities() {
@@ -166,7 +166,7 @@ export const getServerCapabilities = cache(async function getServerCapabilities(
     temporaryDomainSuffixes: capabilities?.temporary_domain_suffixes ?? [],
     failed: result.failed,
     status: result.status,
-    failure: result.failure,
+    failure: result.failure, message: result.message, debug: result.debug,
   };
 });
 

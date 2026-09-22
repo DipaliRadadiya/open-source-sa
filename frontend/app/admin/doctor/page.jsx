@@ -70,7 +70,7 @@ export default async function AdminDoctorPage() {
         <LoadFailed
           description={t("loadFailed")}
           status={result.status}
-          failure={result.failure}
+          failure={result.failure} message={result.message} debug={result.debug}
         />
       ) : (
         <>

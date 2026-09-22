@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
 import fs from "node:fs";
 
 /*
@@ -140,9 +142,53 @@ test("the monitor page does not report the engine down when it could not ask", (
 
 test("getEngines carries WHICH failure, not just that there was one", () => {
   // LoadFailed turns a 403 into "you do not have permission" and a 500 into
-  // "this is ours" — but only if status and failure reach it.
+  // "this is ours" — but only if status and failure reach it. And `message`
+  // beside them, or the box prints our category over the server's reason.
   const fetcher = strip(read("lib/databases/get-databases.js"));
-  assert.match(fetcher, /return \{ engines: data\?\.engines \?\? \[\], failed, status, failure \}/);
+  assert.match(
+    fetcher,
+    /return \{ engines: data\?\.engines \?\? \[\], failed, status, failure, message, debug \}/,
+  );
+});
+
+test("no fetcher answers a failure with only a boolean", () => {
+  /*
+   * Thirteen of them hand-rolled `serverFetch` and returned `{ data, failed }`.
+   * With no status and no kind, LoadFailed fell back to "This part could not
+   * be loaded" — the same sentence whether the API refused, crashed, or was
+   * not there at all, which is exactly what that component was written to
+   * stop. Found by pointing a stub API at the preview and making it fail:
+   * four pages out of eight could not name what had happened.
+   */
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const offenders = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(p);
+      else if (p.endsWith(".js")) {
+        const src = strip(fs.readFileSync(p, "utf8"));
+        // A fetcher that reports failure at all must report which one.
+        if (/failed: true/.test(src) && !/status/.test(src)) offenders.push(p);
+      }
+    }
+  };
+  walk("lib");
+
+  /*
+   * Two degrade on purpose and never reach a LoadFailed, so there is no box
+   * for a status to appear in:
+   *
+   *   get-impersonation   a banner that is either there or not
+   *   get-server-processes  one card on a dashboard that keeps rendering
+   */
+  const DEGRADES_ON_PURPOSE = [
+    "lib/activity-log/get-impersonation.js",
+    "lib/server/get-server-processes.js",
+  ];
+  const real = offenders.filter((f) => !DEGRADES_ON_PURPOSE.includes(f));
+  assert.deepEqual(real, [], `\n${real.join("\n")}`);
 });
 
 test("the admin audit feed does not report silence it did not observe", () => {

@@ -64,7 +64,7 @@ export default async function SystemUsersPage({ searchParams }) {
         <LoadFailed
           description={t("loadFailed")}
           status={usersPage.status}
-          failure={usersPage.failure}
+          failure={usersPage.failure} message={usersPage.message} debug={usersPage.debug}
         />
       ) : (
         <SystemUsersTable

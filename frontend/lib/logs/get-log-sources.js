@@ -1,4 +1,4 @@
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { logSourcesResponseSchema } from "@/lib/schemas/log";
 
 /**
@@ -10,15 +10,10 @@ import { logSourcesResponseSchema } from "@/lib/schemas/log";
  * The panel shows the failure where the list would have been.
  */
 export async function getLogSources() {
-  try {
-    const res = await serverFetch("/logs");
-    if (!res.ok) return { logs: [], failed: true };
+  const result = await read("/logs", logSourcesResponseSchema);
 
-    const parsed = logSourcesResponseSchema.safeParse(await res.json());
-    return parsed.success
-      ? { logs: parsed.data.logs, failed: false }
-      : { logs: [], failed: true };
-  } catch {
-    return { logs: [], failed: true };
-  }
+  // WHICH failure, not just that there was one: without the status and the
+  // kind, the error box on this screen printed the same sentence whether the
+  // API refused, crashed, or was not there at all.
+  return { logs: result.failed ? [] : (result.data?.logs ?? []), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }

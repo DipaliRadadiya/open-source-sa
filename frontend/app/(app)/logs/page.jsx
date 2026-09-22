@@ -38,7 +38,7 @@ export default async function LogsPage({ searchParams }) {
   // Emptying a log is a different trust from reading one.
   const canManage = can(permissions, "logs", "manage");
 
-  const { logs: sources, failed, status, failure } = await getLogSources();
+  const { logs: sources, failed, status, failure, message } = await getLogSources();
   // Default to the first source the panel can actually open, so a box where
   // most logs need elevated access still lands on something useful.
   const selected =
@@ -67,7 +67,7 @@ export default async function LogsPage({ searchParams }) {
       {/* "We couldn't ask" before "there are none": an unanswered request must
           never render as a claim about what's on the server. */}
       {failed ? (
-        <LoadFailed description={t("loadFailedSources")} status={status} failure={failure} />
+        <LoadFailed description={t("loadFailedSources")} status={status} failure={failure} message={message} />
       ) : sources.length === 0 ? (
         <EmptyState
           icon={ScrollText}

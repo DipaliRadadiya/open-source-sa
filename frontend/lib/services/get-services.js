@@ -1,4 +1,4 @@
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { servicesResponseSchema } from "@/lib/schemas/service";
 
 /**
@@ -9,15 +9,10 @@ import { servicesResponseSchema } from "@/lib/schemas/service";
  * we'd be making it without having heard from the machine.
  */
 export async function getServices() {
-  try {
-    const res = await serverFetch("/services");
-    if (!res.ok) return { services: [], failed: true };
+  const result = await read("/services", servicesResponseSchema);
 
-    const parsed = servicesResponseSchema.safeParse(await res.json());
-    return parsed.success
-      ? { services: parsed.data.services, failed: false }
-      : { services: [], failed: true };
-  } catch {
-    return { services: [], failed: true };
-  }
+  // WHICH failure, not just that there was one: without the status and the
+  // kind, the error box on this screen printed the same sentence whether the
+  // API refused, crashed, or was not there at all.
+  return { services: result.failed ? [] : (result.data?.services ?? []), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }

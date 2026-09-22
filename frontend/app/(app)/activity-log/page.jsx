@@ -28,7 +28,7 @@ export default async function ActivityLogPage({ searchParams }) {
   ]);
 
   if (!can(permissions, "activity_log", "view")) return <PermissionDenied title={t("title")} />;
-  const [{ activity_log: entries, meta, failed, status, failure }, filters] = await Promise.all([
+  const [{ activity_log: entries, meta, failed, status, failure, message }, filters] = await Promise.all([
     getMyActivity(sp, "server"),
     getMyActivityFilters(),
   ]);
@@ -46,7 +46,7 @@ export default async function ActivityLogPage({ searchParams }) {
       <PageHeader title={t("mine.title")} subtitle={t("mine.subtitle")} />
 
       {failed ? (
-        <LoadFailed description={t("mine.loadFailed")} status={status} failure={failure} />
+        <LoadFailed description={t("mine.loadFailed")} status={status} failure={failure} message={message} />
       ) : (
         <NavTransitionProvider>
           <ActivityToolbar

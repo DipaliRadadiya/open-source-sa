@@ -72,7 +72,7 @@ export default async function ApplicationsPage({ searchParams }) {
   const gitProviders = needsGitAccounts
     ? providersByAccountId(await getGitAccounts().then((r) => r.accounts ?? []).catch(() => []))
     : new Map();
-  if (result.failed) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+  if (result.failed) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
 
   // Before anything renders: a page past the end sends the reader to the

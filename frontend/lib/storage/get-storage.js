@@ -16,6 +16,6 @@ export const getStorageDestinations = cache(async function getStorageDestination
     oauthRedirectUri: result.data?.google_oauth_redirect_uri ?? null,
     failed: result.failed,
     status: result.status,
-    failure: result.failure,
+    failure: result.failure, message: result.message, debug: result.debug,
   };
 });

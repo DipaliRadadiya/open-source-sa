@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function BackupsHistoryPage({ searchParams }) {
   const sp = await searchParams;
-  const [{ backups, meta, failed, status, failure }, { applications }, permissions, appPermissions, t] = await Promise.all([
+  const [{ backups, meta, failed, status, failure, message }, { applications }, permissions, appPermissions, t] = await Promise.all([
     getBackups(sp),
     getAllApplications(),
     getPermissions(),
@@ -21,7 +21,7 @@ export default async function BackupsHistoryPage({ searchParams }) {
     getTranslations("backups"),
   ]);
 
-  if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
+  if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   const counts = backupCounts(meta);
 

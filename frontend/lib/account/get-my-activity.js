@@ -1,12 +1,23 @@
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { myActivityResponseSchema } from "@/lib/schemas/account";
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
-const FAILED = {
+const EMPTY = {
   activity_log: [],
   meta: { current_page: 1, per_page: 10, total: 0, last_page: 1 },
-  failed: true,
 };
+
+// WHICH failure, not just that there was one. A shared FAILED constant made a
+// refusal, a crash and an unreachable API render the same sentence, so the box
+// could not be wrong — it never said anything specific enough to be.
+const failedWith = (result) => ({
+  ...EMPTY,
+  failed: true,
+  status: result.status,
+  failure: result.failure,
+  message: result.message,
+  debug: result.debug,
+});
 
 /**
  * The current user's own activity history (GET /activity-log). Returns a safe
@@ -20,7 +31,7 @@ export async function getMyActivity(searchParams = {}, scope) {
 
   // No filter[user_id] here — the endpoint is always scoped to the caller, and
   // `search` matches type + action only (there's one actor, so no names).
-  const res = await serverFetch("/activity-log", {
+  const result = await read("/activity-log", myActivityResponseSchema, {
     searchParams: {
       search: searchParams.search?.trim() || undefined,
       // Fixed by the page, not the URL: the server page is server rows and the
@@ -37,8 +48,7 @@ export async function getMyActivity(searchParams = {}, scope) {
   // and "we couldn't load your history" look identical to the user, and with
   // filters applied it reads as "no matches" — a wrong answer, not an error.
   // It's flagged rather than thrown: the rest of the account page is fine.
-  if (!res.ok) return FAILED;
+  if (result.failed) return failedWith(result);
 
-  const parsed = myActivityResponseSchema.safeParse(await res.json());
-  return parsed.success ? { ...parsed.data, failed: false } : FAILED;
+  return { ...result.data, failed: false, status: result.status, failure: null, message: null, debug: false };
 }
