@@ -51,6 +51,11 @@ function fakeDb(): void
                 str_contains($sql, "LIKE 'max_connections'") => Process::result(output: "max_connections\t151"),
                 str_contains($sql, 'SHOW GLOBAL STATUS') => Process::result(output: "Threads_connected\t5\nThreads_running\t1\nQueries\t1000\nSlow_queries\t2\nUptime\t3600"),
                 str_contains($sql, 'SELECT table_name') => Process::result(output: "users\t42\t8192\nposts\t10\t4096"),
+                // information_schema.schemata — what a database was created
+                // with. Answered before the COALESCE size query below, which
+                // also selects from information_schema and would otherwise
+                // swallow this one.
+                str_contains($sql, 'default_character_set_name') => Process::result(output: "utf8mb4\tutf8mb4_uca1400_ai_ci"),
                 str_contains($sql, 'SELECT COALESCE') => Process::result(output: '1048576'),
                 str_contains($sql, 'SELECT 1') => Process::result(output: '1'),
                 default => Process::result(exitCode: 0), // CREATE/DROP/ALTER/GRANT/RENAME/OPTIMIZE/REPAIR/KILL
@@ -472,6 +477,46 @@ it('adopts untracked databases without dropping anything', function () {
 
     expect(Database::where('name', 'other_db')->exists())->toBeTrue();
     test()->assertDatabaseHas('activity_logs', ['type' => 'database', 'action' => 'imported']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| What an adopted database was created with
+|--------------------------------------------------------------------------
+|
+| The panel records charset and collation when it *creates* a database and
+| recorded neither when it adopted one, so every database brought over from
+| another panel showed a blank charset forever — on the screen that exists for
+| migrated servers, beside panel-created databases showing theirs.
+|
+| Measured on a live server before fixing it: the engines knew all along.
+|
+|   untracked_pg     UTF8      C.UTF-8
+|   untracked_maria  utf8mb4   utf8mb4_uca1400_ai_ci
+*/
+
+it('records the charset an adopted database already had', function () {
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->postJson('/api/databases/adopt', ['engine' => 'mysql', 'names' => ['other_db']])
+        ->assertStatus(201)
+        ->assertJsonPath('databases.0.charset', 'utf8mb4')
+        ->assertJsonPath('databases.0.collation', 'utf8mb4_uca1400_ai_ci');
+
+    expect(Database::where('name', 'other_db')->first())
+        ->charset->toBe('utf8mb4')
+        ->collation->toBe('utf8mb4_uca1400_ai_ci');
+});
+
+it('leaves the charset null when the engine cannot say', function () {
+    // MongoDB has no database-level charset — encoding is UTF-8 by definition
+    // of BSON and a collation belongs to an index or a query. Null rather than
+    // inventing "UTF8" to fill the column: the field means "what this was
+    // created with", and for Mongo that question has no answer.
+    fakeDb();
+
+    expect(app(DatabaseManager::class)->engine('mongodb')->describeDatabase('anything'))
+        ->toBe(['charset' => null, 'collation' => null]);
 });
 
 it('saves and tests a connection', function () {

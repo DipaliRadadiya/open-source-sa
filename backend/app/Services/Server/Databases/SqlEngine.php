@@ -205,6 +205,33 @@ class SqlEngine implements DatabaseEngine
         return $result->ok ? (int) trim($result->output()) : 0;
     }
 
+    /**
+     * MySQL and MariaDB both answer from `information_schema.schemata`.
+     *
+     * One row, two columns, tab-separated by the client — parsed positionally
+     * rather than by name because the batch client prints no header.
+     *
+     * @return array{charset: ?string, collation: ?string}
+     */
+    public function describeDatabase(string $name): array
+    {
+        $result = $this->run(
+            'SELECT default_character_set_name, default_collation_name '
+            ."FROM information_schema.schemata WHERE schema_name = '".$this->esc($name)."';"
+        );
+
+        if (! $result->ok) {
+            return ['charset' => null, 'collation' => null];
+        }
+
+        $columns = preg_split('/\t/', trim($result->output())) ?: [];
+
+        return [
+            'charset' => ($columns[0] ?? '') !== '' ? $columns[0] : null,
+            'collation' => ($columns[1] ?? '') !== '' ? $columns[1] : null,
+        ];
+    }
+
     public function createUser(string $username, string $host, string $password, string $database): void
     {
         $account = "'".$this->esc($username)."'@'".$this->esc($host)."'";
