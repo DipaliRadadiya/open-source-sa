@@ -135,11 +135,16 @@ test("the plain button does not hand its click event to the site id", () => {
 test("the tab is still opened inside the click that asked for it", () => {
   const button = fs.readFileSync(path.join(root, "components/databases/phpmyadmin-button.jsx"), "utf8");
   const body = button.slice(button.indexOf("async function open("));
-  const openTab = body.indexOf('window.open("", "_blank")');
+  const openTab = body.indexOf("openBlankTab()");
   // The call itself, not the word — a comment above the function says "after
   // the await" and matched before the code did.
   const firstAwait = body.indexOf("await phpmyadminSso(");
   assert.ok(openTab !== -1 && openTab < firstAwait, "a tab opened after an await is a blocked popup");
+
+  // And the holding page goes up before the await too, or the tab is white for
+  // as long as the request takes — which is what Magic Login was doing.
+  const paint = body.indexOf("paintPlaceholder(");
+  assert.ok(paint !== -1 && paint < firstAwait, "the placeholder must be painted inside the click as well");
 });
 
 test("the id reaches the API as application_id, beside the user id it already sent", () => {

@@ -6,11 +6,8 @@ import {
   createMagicLogin,
 } from "@/lib/api/magic-login";
 import { apiMessage } from "@/lib/api/error-message";
-import {
-  openBlankTab,
-  submitMagicLogin,
-  discardTab,
-} from "@/lib/applications/magic-login-window";
+import { submitMagicLogin } from "@/lib/applications/magic-login-window";
+import { openBlankTab, paintPlaceholder, discardTab } from "@/lib/browser/new-tab";
 
 /**
  * One click, and a picker only when there is something to pick.
@@ -46,6 +43,18 @@ export function useMagicLogin(appId) {
       toast.error(t("popupBlocked"));
       return;
     }
+
+    /*
+     * Say what the tab is for, immediately.
+     *
+     * Reading the administrator list runs WP-CLI on the server and minting the
+     * token is a second request, so this tab sat white for TEN SECONDS before
+     * WordPress appeared — reported as "it opens a blank page". The wait
+     * cannot go (the tab must exist before the token does, see new-tab.js),
+     * but it does not have to be unexplained. phpMyAdmin has done this since
+     * 05429064; this launcher was simply never given the same treatment.
+     */
+    paintPlaceholder(tab, t("redirecting"), t("action"));
 
     setPending(true);
     try {

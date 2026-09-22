@@ -15,6 +15,9 @@ const launcher = read("components/applications/magic-login-launcher.jsx");
  * so it lives in one file and is asserted against that file.
  */
 const tabs = read("lib/applications/magic-login-window.js");
+// Opening, painting and discarding the tab are shared with phpMyAdmin — same
+// constraint, same care, and it was being half-copied between the two.
+const newTab = read("lib/browser/new-tab.js");
 const hook = read("components/applications/use-magic-login.js");
 const page = read("app/(app)/applications/[application]/page.jsx");
 const navigation = read("lib/navigation.js");
@@ -60,7 +63,7 @@ test("the form is built through the DOM, not written as HTML", () => {
 test("the opened tab cannot reach back into the panel", () => {
   // `noopener` in the feature string would make window.open return null and
   // cost us the handle the form needs, so the opener is severed by hand.
-  assert.match(tabs, /tab\.opener = null/);
+  assert.match(newTab, /tab\.opener = null/);
   assert.doesNotMatch(tabs, /window\.open\([^)]*noopener/);
 });
 

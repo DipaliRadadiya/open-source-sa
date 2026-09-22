@@ -4,11 +4,8 @@ import { toast } from "sonner";
 import { KeyRound, Loader2, User } from "lucide-react";
 import { createMagicLogin } from "@/lib/api/magic-login";
 import { apiMessage } from "@/lib/api/error-message";
-import {
-  openBlankTab,
-  submitMagicLogin,
-  discardTab,
-} from "@/lib/applications/magic-login-window";
+import { submitMagicLogin } from "@/lib/applications/magic-login-window";
+import { openBlankTab, paintPlaceholder, discardTab } from "@/lib/browser/new-tab";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 
@@ -37,6 +34,11 @@ export function MagicLoginDialog({ appId, admins, open, onOpenChange }) {
       toast.error(t("popupBlocked"));
       return;
     }
+
+    // The same holding page the one-administrator path paints. This route is
+    // one request rather than two, so the gap is shorter — but a white tab for
+    // a second and a half still reads as nothing happening.
+    paintPlaceholder(tab, t("redirecting"), t("action"));
 
     setPendingId(admin.id);
     try {
