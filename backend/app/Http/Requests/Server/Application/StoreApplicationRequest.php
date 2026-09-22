@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\Application;
 
 use App\Contracts\SiteType;
 use App\Enums\DomainOrigin;
+use App\Models\Application;
 use App\Rules\AvailablePort;
 use App\Rules\SingleLine;
 use App\Rules\StartCommand;
@@ -50,7 +51,7 @@ class StoreApplicationRequest extends FormRequest
             // `SingleLine` because the name reaches the systemd unit's
             // `Description=` for a Node application: a newline there injects a
             // directive into a file the panel writes and systemd runs.
-            'name' => ['required', 'string', 'max:255', new SingleLine, Rule::unique('applications', 'name')],
+            'name' => ['required', 'string', 'max:'.Application::MAX_NAME_LENGTH, new SingleLine, Rule::unique('applications', 'name')],
             'domain' => [
                 'required', 'string', 'max:255',
                 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/',

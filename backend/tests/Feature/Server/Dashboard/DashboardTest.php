@@ -45,7 +45,6 @@ function fakeDashboard(): void
             $cmd === ['uname', '-r'] => Process::result(output: '6.8.0-generic'),
             $cmd === ['uname', '-m'] => Process::result(output: 'x86_64'),
             ($cmd[0] ?? '') === 'timedatectl' => Process::result(output: 'Etc/UTC'),
-            ($cmd[0] ?? '') === 'php' => Process::result(output: '8.4.1'),
             ($cmd[0] ?? '') === 'node' => Process::result(output: 'v20.11.0'),
             ($cmd[0] ?? '') === 'nginx' => Process::result(errorOutput: 'nginx version: nginx/1.24.0'),
             ($cmd[0] ?? '') === 'redis-server' => Process::result(output: 'Redis server v=7.2.4 sha=0'),
@@ -67,7 +66,10 @@ it('returns server facts', function () {
         ->assertJsonPath('facts.cpu.cores', 2)
         ->assertJsonPath('facts.timezone', 'Etc/UTC')
         ->assertJsonPath('facts.reboot_required', false)
-        ->assertJsonPath('facts.runtimes.php', '8.4.1')
+        // PHP_VERSION, not the faked subprocess: the probe used to shell out
+        // to `php` and resolve it from PATH, which the web process does not
+        // share with the CLI. Asking PHP itself cannot depend on PATH.
+        ->assertJsonPath('facts.runtimes.php', PHP_VERSION)
         ->assertJsonPath('facts.runtimes.node', '20.11.0');
 });
 
