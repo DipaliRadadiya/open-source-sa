@@ -29,7 +29,10 @@ export function useSetQuery() {
       }
       if (resetPage) params.delete("page");
       const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      // Same rule as the provider — see nav-transition.jsx for why.
+      const hadQuery = searchParams.toString() !== "";
+      const navigate = hadQuery || !qs ? router.replace : router.push;
+      navigate.call(router, qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
     [router, pathname, searchParams],
   );
