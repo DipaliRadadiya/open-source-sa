@@ -42,7 +42,7 @@ export default async function ApplicationDeploymentPage({ params }) {
   const application = result.application;
   // Deployment is its own grant, separate from the server-level `application`.
   if (!can(appPermissions, "app_deployment", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
   // Git sites only — the deploy endpoint 404s for anything else and the sidebar
   // hides the item, so a hand-typed URL for a non-git site is simply not found.

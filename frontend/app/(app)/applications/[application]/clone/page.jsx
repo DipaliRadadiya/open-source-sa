@@ -37,7 +37,7 @@ export default async function CloneApplicationPage({ params }) {
   // Granted per site type, the same contract as every other application
   // screen: no grant here means this screen should not exist for this site.
   if (!can(appPermissions, "app_clone", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const application = result.application;

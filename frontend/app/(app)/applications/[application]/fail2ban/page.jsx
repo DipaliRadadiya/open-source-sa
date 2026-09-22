@@ -36,7 +36,7 @@ export default async function ApplicationFail2banPage({ params }) {
 
   const application = result.application;
   if (!can(appPermissions, "app_fail2ban", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const canManage = can(appPermissions, "app_fail2ban", "manage", "application");

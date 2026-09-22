@@ -46,7 +46,7 @@ export default async function ApplicationFirewallPage({ params }) {
 
   const application = result.application;
   if (!can(appPermissions, "app_firewall", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_firewall", "manage", "application");
   const settled = application.status === "active";

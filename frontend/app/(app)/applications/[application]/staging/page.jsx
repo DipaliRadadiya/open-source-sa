@@ -36,7 +36,7 @@ export default async function ApplicationStagingPage({ params }) {
 
   const application = result.application;
   if (!can(appPermissions, "app_staging", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const canManage = can(appPermissions, "app_staging", "manage", "application");

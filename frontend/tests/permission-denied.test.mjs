@@ -202,3 +202,52 @@ test("deleting an application admits the system user survives", () => {
     assert.match(s, /\{username\}/, `${locale} must name the account`);
   }
 });
+
+test("an application sub-page refuses in place too, not just the server ones", () => {
+  /*
+   * Yesterday's pass converted the SERVER-level guard on every screen and
+   * missed the application-level one sitting four lines below it:
+   *
+   *     if (!can(permissions, "application", "view"))            <- converted
+   *     if (!can(appPermissions, "app_backup", "view", ...))     <- missed
+   *          redirect(`/applications/${id}`)
+   *
+   * The second is the one that fires for a real restricted role: it HAS
+   * `application.view`, so the first check passes and the second threw it back
+   * to the overview with no explanation. Fourteen screens did that.
+   *
+   * Missed because the converter searched for `redirect("/dashboard")` and
+   * these say `redirect(\`/applications/${id}\`)` — different string, same
+   * fault. Found by logging in as the role and typing each URL.
+   */
+  const dir = "app/(app)/applications/[application]";
+  const subs = fs.readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => `${dir}/${e.name}/page.jsx`)
+    .filter((p) => fs.existsSync(p) && read(p).includes("appPermissions"));
+
+  assert.ok(subs.length >= 14, `expected every sub-page, found ${subs.length}`);
+  for (const p of subs) {
+    const src = strip(read(p));
+    assert.doesNotMatch(
+      src,
+      /if \(!can\(appPermissions[\s\S]{0,120}?redirect\(/,
+      `${p} still bounces instead of refusing`,
+    );
+    assert.match(
+      src,
+      /if \(!can\(appPermissions, "\w+", "view", "application"\)\) \{\s*return <PermissionDenied title=\{t\("(pageTitle|title)"\)\} \/>;/,
+      `${p} must refuse in place, named`,
+    );
+  }
+});
+
+test("the files path guard is still a redirect, because it is not a permission", () => {
+  /*
+   * `isSafePath` rejects a traversal in the ?path= query. Rendering a refusal
+   * there would leave the bad path in the address bar; bouncing to the
+   * application's own file root is the fix, not a message.
+   */
+  const src = read("app/(app)/applications/[application]/files/page.jsx");
+  assert.match(src, /if \(!isSafePath\(path\)\) redirect\(`\/applications\/\$\{id\}\/files`\);/);
+});

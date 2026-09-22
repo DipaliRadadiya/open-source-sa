@@ -45,7 +45,7 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
 
   const application = result.application;
   if (!can(appPermissions, "app_bot_blocker", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_bot_blocker", "manage", "application");
   const settled = application.status === "active";

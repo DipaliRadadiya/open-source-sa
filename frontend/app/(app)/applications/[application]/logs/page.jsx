@@ -48,7 +48,7 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
   // app_log is its own grant — a site's access log and the machine's auth.log
   // are different things to be trusted with.
   if (!can(appPermissions, "app_log", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
 
   // Emptying a log is a different trust from reading one.

@@ -42,7 +42,7 @@ export default async function ApplicationWorkersPage({ params }) {
   // Craft, Statamic, blank PHP) — a missing grant here means the screen
   // shouldn't exist for this site, the same contract as Environment/Deployment.
   if (!can(appPermissions, "app_worker", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_worker", "manage", "application");
   const settled = application.status === "active";

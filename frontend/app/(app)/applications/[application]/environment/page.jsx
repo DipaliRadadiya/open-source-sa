@@ -42,7 +42,7 @@ export default async function ApplicationEnvironmentPage({ params }) {
   // The permission is only granted for site types that actually keep a .env, so
   // a missing grant here means the screen shouldn't exist for this site.
   if (!can(appPermissions, "app_environment", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(
     appPermissions,

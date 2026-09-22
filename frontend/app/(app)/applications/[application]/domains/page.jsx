@@ -41,7 +41,9 @@ export default async function ApplicationDomainsPage({ params }) {
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
-  if (!can(appPermissions, "app_domain", "view", "application")) redirect(`/applications/${id}`);
+  if (!can(appPermissions, "app_domain", "view", "application")) {
+    return <PermissionDenied title={t("pageTitle")} />;
+  }
   const canManage = can(appPermissions, "app_domain", "manage", "application");
   const settled = application.status === "active";
 

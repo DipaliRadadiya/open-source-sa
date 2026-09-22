@@ -42,7 +42,7 @@ export default async function ApplicationBackupsPage({ params }) {
   // Granted per site type, the same contract as the other application screens:
   // no grant here means this screen should not exist for this site.
   if (!can(appPermissions, "app_backup", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const application = result.application;

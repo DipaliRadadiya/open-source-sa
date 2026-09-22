@@ -65,7 +65,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
 
   const application = result.application;
   if (!can(appPermissions, "app_file", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_file", "manage", "application");
   const settled = application.status === "active";

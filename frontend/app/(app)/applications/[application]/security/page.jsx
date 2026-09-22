@@ -36,7 +36,7 @@ export default async function ApplicationSecurityPage({ params }) {
 
   const application = result.application;
   if (!can(appPermissions, "app_security", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_security", "manage", "application");
   const settled = application.status === "active";
