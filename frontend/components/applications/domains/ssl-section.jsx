@@ -6,6 +6,8 @@ import { useFormatter, useTranslations } from "next-intl";
 import { parseApiDate } from "@/lib/format/api-date";
 import { toast } from "sonner";
 import {
+  AlertCircle,
+  CheckCircle2,
   MoreHorizontal,
   ShieldCheck,
   ShieldOff,
@@ -14,6 +16,8 @@ import {
   Trash2,
   RefreshCw,
   Lock,
+  Globe,
+  Clock3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -28,9 +32,11 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
@@ -60,6 +66,82 @@ const isPending = (c) =>
   c && (c.status === "pending" || c.status === "issuing");
 // Retrying a rate-limit is precisely what must not happen — the wait is a week.
 const NO_RETRY = new Set(["rate_limited"]);
+
+/*
+ * The panel's own tile vocabulary, lifted from `admin/dashboard/status-tile`:
+ * a hairline card with `shadow-sm`, a 2px accent down the left edge and a
+ * tinted icon chip. Colour arrives as a chip and an edge, never as a fill —
+ * the one exception is `destructive`, whose 2% wash is below the threshold at
+ * which it reads as "red box" and above the one at which it reads as nothing.
+ *
+ * Reusing this rather than inventing a fifth look: it is already the language
+ * the rest of the product speaks, and every version of this card that invented
+ * its own was rejected.
+ */
+const TONES = {
+  success: { chip: "bg-success/10 text-success", accent: "bg-success/45", tint: "", title: "" },
+  warning: { chip: "bg-warning/10 text-warning", accent: "bg-warning/50", tint: "", title: "" },
+  destructive: {
+    chip: "bg-destructive/10 text-destructive",
+    accent: "bg-destructive/50",
+    tint: "bg-destructive/[0.02]",
+    title: "text-destructive",
+  },
+  progress: { chip: "bg-primary/10 text-primary", accent: "bg-primary/50", tint: "", title: "" },
+  idle: { chip: "bg-muted text-muted-foreground", accent: "bg-border", tint: "", title: "" },
+};
+
+/** The card's headline state: what the certificate is, in one tile. */
+function Tile({ tone = "idle", icon: Icon, spin = false, title, badge, children }) {
+  const { chip, accent, tint, title: titleTint } = TONES[tone] ?? TONES.idle;
+  return (
+    <div className={cn("relative overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm", tint)}>
+      <span className={cn("absolute inset-y-0 left-0 w-[2px]", accent)} aria-hidden />
+      <div className="flex items-start gap-3 py-4 pr-4 pl-5">
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", chip)}>
+          <Icon className={cn("size-[18px]", spin && "animate-spin")} aria-hidden />
+        </span>
+        {/* min-w-48, not min-w-0: beside a shrink-0 chip a flex-1 child will
+            squeeze to one word per line rather than wrap. */}
+        <div className="min-w-48 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h3 className={cn("text-base leading-tight font-semibold", titleTint)}>{title}</h3>
+            {badge}
+          </div>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Something the reader has to know before they act on this certificate.
+ *
+ * Built like the panel's `Caution`: a soft tint inside a light border with the
+ * icon carrying the colour and the sentence in ordinary foreground text. A
+ * note, in other words — not a banner. Colouring the prose too is what turned
+ * earlier versions into a wall of red, and it makes the one line that matters
+ * harder to read, not easier.
+ */
+function Note({ tone = "warning", icon: Icon, children }) {
+  /*
+   * Red at 5%, amber at 10% — deliberately not the same number. At equal
+   * opacity the red block reads far hotter than the amber one does, because
+   * the hue is doing most of the shouting; matching the numbers is how the
+   * worst state ended up "this much red bg".
+   */
+  const accent = tone === "destructive" ? "border-destructive/40 bg-destructive/[0.05]" : "border-warning/35 bg-warning/10";
+  const mark = tone === "destructive" ? "text-destructive" : "text-warning";
+  return (
+    <div className={cn("flex items-start gap-2.5 rounded-lg border p-3 text-sm", accent)}>
+      <Icon className={cn("mt-0.5 size-4 shrink-0", mark)} aria-hidden />
+      {/* max-w-prose so a long consequence wraps at a readable measure instead
+          of running the full width of a very wide card. */}
+      <div className="min-w-0 flex-1 space-y-2 [&>p]:max-w-prose">{children}</div>
+    </div>
+  );
+}
 
 export function SslSection({
   appId,
@@ -198,70 +280,67 @@ export function SslSection({
     }
   }
 
-  // One Card, four bodies — the state-specific surface goes in CardContent so
-  // the section header stays put no matter what the certificate is doing.
-  function body() {
+  /*
+   * One card, four states — and each state returns its SURFACE and its ACTIONS
+   * together.
+   *
+   * The actions used to be rendered inside each body, which meant every state
+   * spelled out its own `canManage` branch and its own button row, in four
+   * different shapes. They now land in one CardFooter, which is where every
+   * other card in the panel puts them.
+   */
+  function view() {
     // --- No certificate ---
     if (!cert) {
-      return (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-muted/30 p-4">
-          <ShieldOff className="size-5 shrink-0 text-muted-foreground" />
-          <div className="min-w-40 flex-1">
-            <p className="text-sm font-medium">{t("ssl.none")}</p>
-            <p className="text-sm text-muted-foreground">
+      return {
+        content: (
+          <Tile icon={ShieldOff} title={t("ssl.none")}>
+            <p className="max-w-prose text-sm text-muted-foreground">
               {certifiable ? t("ssl.noneBody") : t("ssl.notCertifiable")}
             </p>
-          </div>
-          {/* Default height, like "Add domain" on the Domains tab and "Set up
-              backups" on its card: this is the section's primary action, and
-              `sm` is for the inline reissue/remove chips further down. It read
-              as a minor link next to a full-size button one tab away. */}
-          {canManage && certifiable ? (
-            <Button className="shrink-0" onClick={() => setIssueOpen(true)}>
+          </Tile>
+        ),
+        actions:
+          canManage && certifiable ? (
+            <Button onClick={() => setIssueOpen(true)}>
               <Lock className="size-4" />
               {t("ssl.enable")}
             </Button>
-          ) : null}
-        </div>
-      );
+          ) : null,
+      };
     }
 
     // --- Issuing ---
     if (isPending(cert)) {
-      return (
-        <div className="space-y-3 rounded-xl border bg-card p-4">
-          <div className="flex items-center gap-3">
-            <Loader2 className="size-5 shrink-0 animate-spin text-primary" />
-            <div>
-              <p className="text-sm font-medium">{t("ssl.issuing")}</p>
-              <p className="text-sm text-muted-foreground">
-                {t("ssl.issuingBody")}
-              </p>
-            </div>
-          </div>
-          {/*
-            * A way out of a state that can wedge.
-            *
-            * This card was a spinner and two lines, with no control at all —
-            * so an issuance that never completes left the reader with nothing
-            * to press, on the one screen that decides whether the application
-            * serves HTTPS. Capping the poll made that worse rather than
-            * better: after ten minutes the spinner is no longer even asking.
-            *
-            * Removing a stuck pending certificate is how you get back to a
-            * card that offers Enable HTTPS again.
-            */}
-          {canManage ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-              <p className="text-xs text-muted-foreground">{t("ssl.issuingStuck")}</p>
-              <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="size-4" />
-                {t("ssl.remove")}
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      );
+      return {
+        content: (
+          <>
+            <Tile tone="progress" icon={Loader2} spin title={t("ssl.issuing")}>
+              <p className="max-w-prose text-sm text-muted-foreground">{t("ssl.issuingBody")}</p>
+            </Tile>
+            {/*
+              * A way out of a state that can wedge.
+              *
+              * This card was a spinner and two lines with no control at all, so
+              * an issuance that never completes left the reader with nothing to
+              * press on the one screen that decides whether the application
+              * serves HTTPS. Capping the poll made that worse, not better:
+              * after ten minutes the spinner is no longer even asking.
+              */}
+            {canManage ? (
+              <Note icon={Clock3}>
+                <p>{t("ssl.issuingStuck")}</p>
+              </Note>
+            ) : null}
+          </>
+        ),
+        actions: canManage ? (
+          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="size-4" />
+            {t("ssl.remove")}
+          </Button>
+        ) : null,
+      };
     }
 
     // --- Failed ---
@@ -271,53 +350,33 @@ export function SslSection({
       // on the certificate itself, so it is shaped to match rather than
       // reimplementing the key-detection here.
       const certMessage = apiMessage({ response: { data: { message: cert.message } } }, null);
-      return (
-        <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-          <div className="flex flex-wrap items-start gap-3">
-            <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
-            <div className="min-w-40 flex-1">
-              <p className="text-sm font-medium text-destructive">
-                {t("ssl.failed")}
-              </p>
+      return {
+        content: (
+          <>
+            <Tile tone="destructive" icon={ShieldAlert} title={t("ssl.failed")}>
               {/* Through `apiMessage`, like every other API sentence in the
                   panel. Printed raw, an untranslated lookup key — the backend
                   sends `errors/ssl.issue_failed` shapes from some paths —
                   landed on the card as-is and read as the panel being broken
                   rather than the certificate. */}
-              {certMessage ? (
-                <p className="mt-0.5 text-sm">{certMessage}</p>
-              ) : null}
+              {certMessage ? <p className="max-w-prose text-sm">{certMessage}</p> : null}
               {cert.reference ? (
-                <p className="mt-1 font-mono text-xs text-muted-foreground">
+                <p className="font-mono text-xs text-muted-foreground">
                   {t("ssl.reference", { reference: cert.reference })}
                 </p>
               ) : null}
-              {noRetry ? (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t("ssl.rateLimited")}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          {/* Shaped like the failed-provisioning card, which is the same
-              situation: an operation did not work and one action fixes it.
-              Full-height buttons, the recovery one primary and last, separated
-              from the error text by a rule. As small outline/ghost chips they
-              read as footnotes to the error rather than the way out of it. */}
-          {canManage && !noRetry ? (
-            <div className="flex flex-wrap justify-end gap-2 border-t border-destructive/20 pt-3">
-              {/* `destructive` (the tinted variant, as on the reboot banner),
-                  not ghost: a ghost button on this card is bare foreground text
-                  until you hover it, so it read as a sentence rather than a
-                  control — and nothing about it said it deletes. The explicit
-                  border is because the variant's own tint is destructive/10 and
-                  the card underneath is destructive/5; without an edge the two
-                  wash together. */}
-              <Button
-                variant="destructive"
-                className="border-destructive/25"
-                onClick={() => setDeleteOpen(true)}
-              >
+            </Tile>
+            {noRetry ? (
+              <Note icon={Clock3}>
+                <p>{t("ssl.rateLimited")}</p>
+              </Note>
+            ) : null}
+          </>
+        ),
+        actions:
+          canManage && !noRetry ? (
+            <>
+              <Button variant="ghost" onClick={() => setDeleteOpen(true)}>
                 <Trash2 className="size-4" />
                 {t("ssl.remove")}
               </Button>
@@ -325,404 +384,218 @@ export function SslSection({
                 <RefreshCw className="size-4" />
                 {t("ssl.reissue")}
               </Button>
-            </div>
-          ) : null}
-        </div>
-      );
+            </>
+          ) : null,
+      };
     }
 
     // --- Active ---
-    // An expired certificate is not a healthy one with a footnote. Browsers
-    // refuse the site outright, so the card carries the failure treatment —
-    // it used to be green, headed "HTTPS is active", with the expiry in small
-    // red text underneath, and the reassuring half was the loud half.
     const expired = cert.expired;
-    /*
-     * A green panel is a claim, and it must not be made while the site is
-     * handing visitors a certificate their browser rejects.
-     *
-     * Only rendering this showed it: the stale-certificate alert came out as a
-     * red box inside a green "HTTPS is active" frame with a healthy countdown
-     * above it. The frame contradicted its own contents, and the frame is what
-     * someone reads first. So a stale certificate is BROKEN for the purposes of
-     * this panel's tone, even though the file on disk is perfectly valid.
-     *
-     * The heading still says HTTPS is active, because it is — what is wrong is
-     * which certificate is being served, and the alert inside says exactly that.
-     */
     const servingStale = cert.serving_stale === true;
 
     /*
-     * Three tones, not two.
-     *
-     * The first attempt at this made a stale certificate use the expired tone,
-     * which turned the whole panel red — red frame, red alert inside it, red
-     * Remove button — and a wall of red says nothing because every part of it
-     * is shouting equally. Reported as exactly that.
-     *
-     * So a stale certificate makes the frame NEUTRAL rather than red: the green
-     * claim is withdrawn, which was the point, and the alert inside is then the
-     * only coloured thing on the panel, which is where the eye should land.
+     * Every name this certificate has an opinion about, in one list.
+     * `domains` are on it, `missing_domains` are the application's names it
+     * does not carry, `stale_domains` are names it carries that the
+     * application has dropped — one question, so one list.
      */
-    /*
-     * Three tones, and `bad` is now reserved for nothing.
-     *
-     * An expired certificate used to paint the frame red — and once the
-     * "everyone is being redirected into it" alert landed inside, the card was
-     * a red box holding a red box holding red text beside a red button. Five
-     * reds, which is the failure this file already documented for the stale
-     * case: a wall of red says nothing, because every part of it shouts
-     * equally, and the part that matters cannot get louder.
-     *
-     * So expiry withdraws the green claim rather than shouting: neutral frame,
-     * red heading, and the alert inside is then the only coloured panel — the
-     * one place the eye should land, because it is the one with the way out.
-     */
-    const tone = expired || servingStale ? "neutral" : "good";
-    /* Null for a missing or unparseable date, which falls back below. */
+    const names = [
+      ...(cert.domains ?? []).map((domain) => ({ domain, state: "covered" })),
+      ...(cert.missing_domains ?? []).map((domain) => ({ domain, state: "missing" })),
+      ...(cert.stale_domains ?? []).map((domain) => ({ domain, state: "stale" })),
+    ];
+    // certbot validates every name in a lineage and fails the WHOLE renewal if
+    // one cannot be validated, so a gap is not cosmetic.
+    const hasCoverageGap = Boolean(cert.missing_domains?.length || cert.stale_domains?.length);
+    const secured = names.filter((n) => n.state === "covered").length;
     const expiresOn = asDate(cert.expires_at);
-    const expiryTone = expired
-      ? "text-destructive"
-      : cert.expiring_soon
-        ? "text-warning"
-        : "text-muted-foreground";
-    return (
-      <div
-        className={cn(
-          "space-y-4 rounded-xl border p-4",
-          tone === "neutral" ? "border-border" : "border-success/30 bg-success/5",
-        )}
-      >
-        <div className="flex flex-wrap items-start gap-3">
-          {/* No green tick while the wrong certificate is going out, but no
-              second alarm either — the alert below carries that. */}
-          {expired ? (
-            <ShieldAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
-          ) : tone === "neutral" ? (
-            <ShieldAlert className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-          ) : (
-            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-success" />
-          )}
-          <div className="min-w-40 flex-1">
-            <p className={cn("text-sm font-medium", expired && "text-destructive")}>
-              {expired ? t("ssl.expiredTitle") : t("ssl.active")}
-              {cert.type_title ? (
-                <span className="ml-1 font-normal text-muted-foreground">
-                  · {cert.type_title}
-                </span>
-              ) : null}
-            </p>
-            {cert.domains?.length ? (
-              <>
-                {/* Two mono links jammed together with no heading did not read
-                    as "the names this certificate covers" — which is the whole
-                    question the warnings underneath are about. */}
-                <p className="mt-2 text-xs font-medium text-muted-foreground">
-                  {t("ssl.coversLabel")}
-                </p>
-                <ul className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {cert.domains.map((domain) => (
-                    <li key={domain} className="flex min-w-0 items-center gap-1">
-                      <span className="truncate font-mono text-xs text-muted-foreground">{domain}</span>
-                      {/* https without hesitation here: being in this list is
-                          what "the certificate covers it" means. */}
-                      <VisitSiteLink domain={domain} secure label={t("openNamed", { domain })} className="size-5" />
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-            {/*
-              * A date, not a second relative phrase.
-              *
-              * This read "Expires 1 month from now (59 days)" — the same fact
-              * twice, in two units that disagree, because `expires_at_human`
-              * is the backend's relative rounding and `days_remaining` is the
-              * exact count. One of them had to go, and the vague one is the
-              * one nobody can act on: "1 month from now" cannot be put in a
-              * calendar and is wrong by a month at 59 days.
-              *
-              * Formatted through next-intl rather than `toLocaleDateString`,
-              * so it follows the panel's locale like every other date here.
-              * `expires_at_human` stays as the fallback for a payload that
-              * carries no machine-readable date.
-              */}
-            {expiresOn || cert.expires_at_human ? (
-              <p className={cn("mt-1 text-sm", expiryTone)}>
-                {cert.expired
-                  ? t("ssl.expired")
-                  : t(
-                      cert.renewable ? "ssl.expiresRenew" : "ssl.expiresManual",
-                      {
-                        when: expiresOn ?? cert.expires_at_human,
-                        days: cert.days_remaining ?? 0,
-                      },
-                    )}
-              </p>
-            ) : null}
-          </div>
-        </div>
+    // Declared before anything reads it: an earlier version put this below the
+    // tone that depends on it, which built and linted and then crashed on two
+    // of the three states at render time.
+    const healthy = !expired && !servingStale && !hasCoverageGap;
+    const tone = expired ? "destructive" : healthy ? "success" : "warning";
 
-        {/*
-          Expired, and every visitor is still being sent to it.
-          
-          The two facts were on the card separately — "HTTPS is not working"
-          above, a Force HTTPS switch below still described as "Redirect every
-          visitor from HTTP to HTTPS" — and nobody joined them up. Together
-          they mean the application is entirely unreachable: port 80 redirects
-          to 443, 443 presents an expired certificate, and the browser refuses
-          the page with no way through. With the redirect OFF the same expired
-          certificate is a degraded site rather than a dead one.
-          
-          So this is the one state where the panel should say "turn something
-          off", and the switch it means is directly below.
-        */}
-        {expired && cert.force_https ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-            <p className="flex items-start gap-2 text-sm text-destructive">
-              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-              <span>{t("ssl.expiredForcedHttps")}</span>
-            </p>
-            {/* The primary button on the card, not an outline chip. This is the
-                fastest route back to a reachable application — one request,
-                instant — and it was the faintest thing on screen while
-                "Reissue", which takes a minute and can fail, was solid blue. */}
-            {canManage ? (
-              <Button
-                size="sm"
-                className="mt-2"
-                disabled={busy}
-                onClick={() => onToggleForceHttps(false)}
-              >
-                {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-                {t("ssl.turnOffForceHttps")}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/*
-          The file renewed and the running server never picked it up.
-          
-          This is the one certificate state where the panel and the browser
-          disagree: the countdown above says "expires in 60 days" from the file
-          on disk while every visitor is handed the old one and shown a warning.
-          Destructive rather than warning for that reason — it is live breakage,
-          not a thing to get round to.
-          
-          Strictly `=== true`. The field is null when nothing managed to complete
-          a handshake to look, and "we could not check" must never render as
-          either a problem or a tick.
-        */}
-        {cert.serving_stale === true ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-            <p className="flex items-start gap-2 text-sm text-destructive">
-              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-              <span>{t("ssl.servingStale")}</span>
-            </p>
-            {asDate(cert.served_expires_at) ? (
-              <p className="mt-1 pl-6 text-xs text-muted-foreground">
-                {t("ssl.servingStaleDetail", {
-                  served: asDate(cert.served_expires_at),
-                  onDisk: asDate(cert.expires_at) ?? "—",
-                })}
-              </p>
-            ) : null}
-            {canManage && webServer ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2"
-                onClick={reloadWebServer}
-                disabled={reloading}
-              >
-                {reloading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="size-4" />
-                )}
-                {t("ssl.reloadWebServer", { service: webServer })}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/*
-          Names on the certificate the site no longer has.
-          
-          Not cosmetic and not the same as `missing_domains`: certbot fails a
-          whole renewal if any one name in the lineage cannot be validated, so
-          this certificate has quietly stopped renewing for the domains that are
-          perfectly fine too. Nothing shows until it expires.
-        */}
-        {cert.stale_domains?.length ? (
-          <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
-            <p className="flex items-start gap-2 text-sm text-warning">
-              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-              <span>
-                {t("ssl.staleDomains", { domains: cert.stale_domains.join(", ") })}
-              </span>
-            </p>
-            {canManage ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2"
-                onClick={() => setIssueOpen(true)}
-              >
-                <RefreshCw className="size-4" />
-                {t("ssl.reissue")}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/* A name added after issuance is not on the cert — the quiet failure. */}
-        {cert.missing_domains?.length ? (
-          <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
-            <p className="flex items-start gap-2 text-sm text-warning">
-              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-              <span>
-                {t("ssl.missingDomains", {
-                  domains: cert.missing_domains.join(", "),
-                })}
-              </span>
-            </p>
-            {canManage ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2"
-                onClick={() => setIssueOpen(true)}
-              >
-                <RefreshCw className="size-4" />
-                {t("ssl.reissue")}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {canManage ? (
-          <div
-            className={cn(
-              "flex flex-wrap items-center justify-between gap-3 border-t pt-3",
-              tone === "neutral" ? "border-border" : "border-success/20",
-            )}
+    return {
+      content: (
+        <>
+          {/* THE ANSWER — one tile, the only one with a status colour. */}
+          <Tile
+            tone={tone}
+            icon={healthy ? ShieldCheck : ShieldAlert}
+            title={expired ? t("ssl.expiredTitle") : t("ssl.active")}
+            badge={
+              cert.type_title ? (
+                <Badge variant="muted" className="font-normal">
+                  {cert.type_title}
+                </Badge>
+              ) : null
+            }
           >
-            {/* `items-start`, and the hint on its own line beneath the label.
-                Inline, the two ran together as one long sentence squeezed
-                against the buttons — every other settings row in the panel
-                stacks them. */}
-            <div className="flex items-start gap-3">
+            {/* `tabular-nums` because a day count is data. */}
+            {expiresOn || cert.expires_at_human ? (
+              <p className="text-sm text-muted-foreground tabular-nums">
+                {expired
+                  ? t("ssl.expired")
+                  : t(cert.renewable ? "ssl.expiresRenew" : "ssl.expiresManual", {
+                      when: expiresOn ?? cert.expires_at_human,
+                      days: cert.days_remaining ?? 0,
+                    })}
+              </p>
+            ) : null}
+          </Tile>
+
+          {/* THE NAMES — a bounded list with its own header and a count, so
+              "which of my domains are actually secured" is answered by
+              scanning one column rather than reading prose. */}
+          {names.length ? (
+            <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+              <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-4 py-2.5">
+                <Globe className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                <h4 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  {t("ssl.namesTitle")}
+                </h4>
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                  {t("ssl.namesCount", { secured, total: names.length })}
+                </span>
+              </div>
+              <ul className="divide-y divide-border/60">
+                {names.map(({ domain, state }) => (
+                  // Left-grouped on purpose. `justify-between` on a 940px card
+                  // throws the name and its status to opposite edges with a
+                  // void between them; the group ends where its content ends.
+                  <li key={domain} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-4 py-2.5">
+                    {state === "covered" ? (
+                      <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
+                    ) : (
+                      <AlertCircle className="size-4 shrink-0 text-warning" aria-hidden />
+                    )}
+                    {/* Wraps rather than truncates. `truncate` here hid the
+                        second half of every name at 390px — and the name is
+                        the one thing the row exists to tell you.
+                        The max-width keeps ~46px free on the last line so the
+                        open-site link stays beside the name instead of
+                        wrapping onto a line of its own. No effect on a desktop
+                        row, where the cap is 800px and a hostname is 250. */}
+                    <span className="max-w-[calc(100%-4.5rem)] font-mono text-sm break-all">{domain}</span>
+                    {state === "covered" ? (
+                      <VisitSiteLink
+                        domain={domain}
+                        secure
+                        label={t("openNamed", { domain })}
+                        className="size-6 shrink-0"
+                      />
+                    ) : (
+                      <span className="shrink-0 text-xs text-warning">
+                        {t(state === "missing" ? "ssl.nameMissing" : "ssl.nameStale")}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {/* WHAT IS WRONG — as notes, not banners. */}
+          {expired && cert.force_https ? (
+            <Note tone="destructive" icon={ShieldAlert}>
+              <p>{t("ssl.expiredForcedHttps")}</p>
+              {canManage ? (
+                <Button size="sm" disabled={busy} onClick={() => onToggleForceHttps(false)}>
+                  {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {t("ssl.turnOffForceHttps")}
+                </Button>
+              ) : null}
+            </Note>
+          ) : null}
+
+          {servingStale ? (
+            <Note tone="destructive" icon={ShieldAlert}>
+              <p>{t("ssl.servingStale")}</p>
+              {asDate(cert.served_expires_at) ? (
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {t("ssl.servingStaleDetail", {
+                    served: asDate(cert.served_expires_at),
+                    onDisk: asDate(cert.expires_at) ?? "—",
+                  })}
+                </p>
+              ) : null}
+              {canManage && webServer ? (
+                <Button size="sm" variant="outline" onClick={reloadWebServer} disabled={reloading}>
+                  {reloading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                  {t("ssl.reloadWebServer", { service: webServer })}
+                </Button>
+              ) : null}
+            </Note>
+          ) : null}
+
+          {hasCoverageGap ? (
+            <Note icon={AlertCircle}>
+              <p>{t("ssl.coverageGap")}</p>
+            </Note>
+          ) : null}
+
+          {/* THE SETTING — its own tile, because it is a control the reader
+              changes rather than a fact the card is reporting. */}
+          {canManage ? (
+            <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-sm">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <Lock className="size-[18px]" aria-hidden />
+              </span>
+              <Label htmlFor="force-https" className="block min-w-48 flex-1 cursor-pointer">
+                <span className="block text-sm font-medium">{t("ssl.forceHttps")}</span>
+                <span className="mt-0.5 block max-w-prose text-xs leading-relaxed font-normal text-muted-foreground">
+                  {t("ssl.forceHttpsHint")}
+                </span>
+              </Label>
               <Switch
                 id="force-https"
                 checked={cert.force_https}
                 disabled={busy}
                 onCheckedChange={onToggleForceHttps}
-                className="mt-0.5"
+                className="mt-1 shrink-0"
               />
-              <Label htmlFor="force-https" className="block cursor-pointer">
-                <span className="block text-sm font-medium">
-                  {t("ssl.forceHttps")}
-                </span>
-                <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                  {t("ssl.forceHttpsHint")}
-                </span>
-              </Label>
             </div>
-            {/* Destructive, like the same action forty lines up. As a ghost it
-                had no fill, no border and no colour — it read as a label, not a
-                control, sitting beside a switch on the one card that decides
-                whether this site serves HTTPS at all. Removing the certificate
-                takes the site back to plain http. */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/*
-                * Demoted to a menu on a healthy certificate.
-                *
-                * A renewing Let's Encrypt certificate correctly hides Reissue
-                * — there is nothing to do and offering it invites spending
-                * rate limit — which left a red `destructive` Remove as the
-                * ONLY control on the card. The single affordance on a healthy
-                * panel was "destroy this", and it was the loudest thing in a
-                * green box.
-                *
-                * When something IS wrong the buttons come back out (below):
-                * that is when removing is a real option rather than a hazard
-                * sitting under the cursor.
-                */}
-              {expired || !cert.renewable ? (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  <Trash2 className="size-4" />
-                  {t("ssl.remove")}
-                </Button>
-              ) : (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8">
-                      <MoreHorizontal className="size-4" />
-                      <span className="sr-only">{t("ssl.moreActions")}</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-48">
-                    <DropdownMenuItem onSelect={() => setIssueOpen(true)}>
-                      <RefreshCw className="size-4" />
-                      {t("ssl.reissue")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onSelect={() => setDeleteOpen(true)}
-                    >
-                      <Trash2 className="size-4" />
-                      {t("ssl.remove")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              {/* The way back. Reissue lived only inside the missing-domains
-                  warning, so an expired certificate whose domains were all
-                  present offered nothing but Remove — delete it and start
-                  again was the only route out of a site that had stopped
-                  serving HTTPS. The endpoint is the same POST; it replaces an
-                  existing certificate by design.
-
-                  Offered BEFORE expiry too, for anything that will not renew
-                  itself. This card already tells those certificates they must
-                  be renewed by hand (`ssl.expiresManual`, keyed off the same
-                  flag) and then gave them no way to do it: the only button was
-                  Remove, so replacing one meant deleting it first and dropping
-                  the site to plain http in between. Waiting for `expired` means
-                  the one action that avoids an outage only appears once the
-                  outage has started.
-
-                  A renewing certificate still does not show it — there is
-                  nothing to do, and an always-present Reissue on a healthy
-                  Let's Encrypt cert is an invitation to spend rate limit. */}
-              {/* Secondary while the alert above is carrying the primary.
-                  Two solid blue buttons on one card compete, and the one that
-                  should win is the instant fix inside the red panel — Reissue
-                  takes a minute and can fail. Without that alert (expired but
-                  not redirecting, or simply not renewable) Reissue IS the way
-                  out and keeps the fill. */}
-              {expired || !cert.renewable ? (
-                <Button
-                  size="sm"
-                  variant={expired && cert.force_https ? "outline" : "default"}
-                  onClick={() => setIssueOpen(true)}
-                >
-                  <RefreshCw className="size-4" />
-                  {t("ssl.reissue")}
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-      </div>
-    );
+          ) : null}
+        </>
+      ),
+      actions: !canManage ? null : expired || !cert.renewable || hasCoverageGap ? (
+        <>
+          <Button variant="ghost" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="size-4" />
+            {t("ssl.remove")}
+          </Button>
+          <Button
+            variant={expired && cert.force_https ? "outline" : "default"}
+            onClick={() => setIssueOpen(true)}
+          >
+            <RefreshCw className="size-4" />
+            {t("ssl.reissue")}
+          </Button>
+        </>
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost">
+              <MoreHorizontal className="size-4" />
+              {t("ssl.moreActions")}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-48">
+            <DropdownMenuItem onSelect={() => setIssueOpen(true)}>
+              <RefreshCw className="size-4" />
+              {t("ssl.reissue")}
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+              <Trash2 className="size-4" />
+              {t("ssl.remove")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    };
   }
+
+  const { content, actions } = view();
 
   return (
     <Card>
@@ -732,7 +605,8 @@ export function SslSection({
         </CardTitle>
         <CardDescription>{t("ssl.sectionSubtitle")}</CardDescription>
       </CardHeader>
-      <CardContent>{body()}</CardContent>
+      <CardContent className="space-y-3">{content}</CardContent>
+      {actions ? <CardFooter className="justify-end gap-2">{actions}</CardFooter> : null}
 
       <IssueCertDialog
         appId={appId}

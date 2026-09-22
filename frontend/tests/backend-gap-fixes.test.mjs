@@ -51,8 +51,16 @@ test("the stale-certificate banner renders only on a definite yes", () => {
   // red box holding a red box holding red text beside a red button, which is
   // the same failure one layer up. Neutral withdraws the green claim; the
   // alert inside stays the only coloured panel.
-  assert.match(ssl, /const tone = expired \|\| servingStale \? "neutral" : "good"/);
-  assert.doesNotMatch(ssl, /tone === "bad"/, "no state may repaint the whole frame red");
+  /*
+   * The withdrawal of the green claim happens where the claim is made: the
+   * status icon and the accent on its tile. What must NOT happen is the whole
+   * card turning red — a tinted alert inside a tinted frame is what made this
+   * read as boxes inside boxes, and a wall of red says nothing because every
+   * part of it shouts equally.
+   */
+  assert.match(ssl, /const healthy = !expired && !servingStale && !hasCoverageGap;/);
+  assert.match(ssl, /icon=\{healthy \? ShieldCheck : ShieldAlert\}/);
+  assert.match(ssl, /<Card>/, "the outer frame takes no state class in any state");
   /*
    * Neutral, not red. Making it use the expired tone turned the frame, the
    * alert and the Remove button all red at once, and a wall of red says
@@ -121,7 +129,13 @@ test("every new string is translated in all active locales", () => {
   for (const locale of locales) {
     const m = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8"));
 
-    for (const key of ["servingStale", "servingStaleDetail", "reloadWebServer", "reloaded", "reloadFailed", "staleDomains"]) {
+    /*
+     * `staleDomains` is gone, and so is `missingDomains`. Both were panels
+     * naming the same thing the certificate's own list now says per-row, each
+     * with its own Reissue button — which is where the two Reissue buttons on
+     * one card came from. `nameStale` replaces it as a per-row label.
+     */
+    for (const key of ["servingStale", "servingStaleDetail", "reloadWebServer", "reloaded", "reloadFailed", "nameStale"]) {
       assert.ok(m.applications.domains.ssl[key], `${locale} is missing ssl.${key}`);
     }
     for (const key of ["missing", "install", "installing", "installFailed"]) {

@@ -249,8 +249,11 @@ test("a healthy certificate does not lead with a destructive button", () => {
    * affordance on a healthy panel was "destroy this", and it was the loudest
    * thing in a green box.
    */
-  assert.match(ssl, /\{expired \|\| !cert\.renewable \? \(\s*<Button\s+size="sm"\s+variant="destructive"/);
-  assert.match(ssl, /ssl\.moreActions/, "the healthy card hides it behind a menu");
+  // The footer splits: something wrong → both buttons out in the open;
+  // nothing wrong → a menu, so the card's only affordance is not "destroy
+  // this" sitting under the cursor in a green panel.
+  assert.match(ssl, /expired \|\| !cert\.renewable \|\| hasCoverageGap \? \(/);
+  assert.match(ssl, /ssl\.moreActions/, "the healthy card hides them behind a menu");
 });
 
 test("only one button per card carries the fill", () => {
@@ -296,3 +299,89 @@ test("a per-domain refusal lists the names and offers the force only where it he
   assert.match(dialog, /setRefusals\(domainErrors\)/);
   assert.match(dialog, /dryRun\?\.status === "failed" && dryRun\?\.stage === "reachability"/);
 });
+
+/* ---------------------------------------------------------------------------
+ * Reported from the live panel: "why it shows covers", "structure is not
+ * attractive", "whose renew date is this?"
+ * ------------------------------------------------------------------------ */
+
+test("one Reissue per card, never two", () => {
+  /*
+   * A certificate that cannot auto-renew AND has a missing name rendered TWO
+   * Reissue buttons — one inside the missing-names panel, one in the footer,
+   * the second of them blue. Seen on the live panel.
+   *
+   * I missed it because I tested "uploaded certificate" and "missing domains"
+   * as separate fixtures and never combined them. The real data had both.
+   */
+  const panels = (ssl.match(/onClick=\{\(\) => setIssueOpen\(true\)\}/g) ?? []).length;
+  assert.equal(panels, 3, "enable card, failed card, and ONE footer button");
+  // The two per-warning copies are gone.
+  assert.doesNotMatch(ssl, /ssl\.staleDomains/);
+  assert.doesNotMatch(ssl, /ssl\.missingDomains/);
+});
+
+test("every name is in one list, each saying where it stands", () => {
+  /*
+   * Three sources answering one question — "which of my names does this
+   * secure?" — were rendered in three places: a "Covers" list, a missing-names
+   * panel and a stale-names panel. Merged into one list with per-row state.
+   */
+  assert.match(ssl, /const names = \[/);
+  assert.match(ssl, /state: "covered"/);
+  assert.match(ssl, /state: "missing"/);
+  assert.match(ssl, /state: "stale"/);
+  assert.match(ssl, /ssl\.nameMissing/);
+  assert.match(ssl, /ssl\.nameStale/);
+
+  // No heading above it. "Covers" was a label over a single line on the common
+  // certificate, and a count read as wrong ("Secures 1 name" above two rows).
+  assert.doesNotMatch(ssl, /coversLabel|coversNames/);
+});
+
+test("a coverage gap withdraws the green claim", () => {
+  /*
+   * Renewal is going to fail for every name on the certificate, so a green
+   * tick beside "HTTPS is active" is a claim the panel cannot support.
+   *
+   * It used to be a tinted FRAME, which is a claim about the whole card and
+   * put a coloured box round a coloured box. The tint is gone; the state now
+   * lives in the one place that is about state — the status icon — and the
+   * frame stays neutral in every case.
+   */
+  // `healthy` is the single predicate: only a certificate with nothing wrong
+  // with it gets the green tick. Everything else gets the alert shield.
+  assert.match(ssl, /const healthy = !expired && !servingStale && !hasCoverageGap;/);
+  assert.match(ssl, /icon=\{healthy \? ShieldCheck : ShieldAlert\}/, "the tick is for healthy alone");
+
+  /*
+   * Tone reaches the icon chip and a 2px edge — never a fill.
+   *
+   * Every rejected version of this card made the same mistake at a different
+   * scale: a red panel inside a red frame beside a red button. The one wash
+   * any state is allowed is destructive's 2%, which is below the threshold at
+   * which it reads as "a red box" and above the one at which it reads as
+   * nothing at all.
+   */
+  const fills = [...ssl.matchAll(/tint: "([^"]*)"/g)].map((m) => m[1]).filter(Boolean);
+  assert.deepEqual(fills, ["bg-destructive/[0.02]"], "only one state may wash its tile at all");
+  assert.doesNotMatch(ssl, /bg-success\/5\b/, "and none may fill anything green");
+
+  // `hasCoverageGap` must still be declared before anything reads it: `const`
+  // is not hoisted, and when it was declared after, two of three states
+  // crashed with "Cannot access before initialization" while the third
+  // survived only because `expired ||` short-circuits past it. Build and lint
+  // both passed.
+  const declared = ssl.indexOf("const hasCoverageGap =");
+  const firstUse = ssl.indexOf("const healthy =");
+  assert.ok(declared !== -1 && firstUse !== -1);
+  assert.ok(declared < firstUse, "hasCoverageGap must be declared before it is read");
+});
+
+test("a gap surfaces the way to fix it", () => {
+  // A renewing certificate with a name missing has something to do, and the
+  // warning tells you to reissue — so hiding the only Reissue in a menu is the
+  // same mistake as showing two, from the other side.
+  assert.match(ssl, /expired \|\| !cert\.renewable \|\| hasCoverageGap \? \(/);
+});
+

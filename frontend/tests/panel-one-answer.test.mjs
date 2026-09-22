@@ -103,7 +103,10 @@ test("a certificate that cannot renew itself offers Reissue before it lapses", (
    * once the outage has begun.
    */
   const ssl = read("components/applications/domains/ssl-section.jsx");
-  assert.match(ssl, /\{expired \|\| !cert\.renewable \? \(/);
+  // `hasCoverageGap` joined the condition later — a renewing certificate with
+  // a name missing also has something to do — but `!cert.renewable` is still
+  // what this test is about.
+  assert.match(ssl, /expired \|\| !cert\.renewable \|\| hasCoverageGap \? \(/);
 
   // The same flag the "renew this yourself" copy keys on — one source of truth
   // for whether this certificate looks after itself.
