@@ -782,3 +782,72 @@ it('keeps a filter applied when the search matches a service name', function () 
     expect($response->json('rules'))->toBe([])
         ->and($response->json('meta.total'))->toBe(0);
 });
+
+/*
+|--------------------------------------------------------------------------
+| The port range a rule may name
+|--------------------------------------------------------------------------
+|
+| Creating a rule capped both ends at 65534 while editing one allowed
+| `port_to` up to 65535, so "allow everything from 9000 up" — the natural way
+| to write an open upper range — was refused on the way in and accepted on the
+| way through the edit screen.
+|
+| Nothing justified 65534. Every other port field in this application uses
+| 65535, and it was measured against the real thing:
+|
+|   ufw --dry-run allow 9000:65535/tcp  ->  Rules updated
+|   ufw --dry-run allow 0/tcp           ->  ERROR: Bad port
+*/
+
+it('accepts the highest real port, which ufw takes and this refused', function () {
+    fakeUfw();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', [
+            'port_from' => 9000, 'port_to' => FirewallRule::PORT_MAX,
+            'protocol' => 'tcp', 'action' => 'allow',
+        ])
+        ->assertCreated();
+
+    expect(FirewallRule::where('port_to', 65535)->exists())->toBeTrue();
+});
+
+it('still refuses a port above the range and a port of zero', function () {
+    // The other side of the boundary. Widening a limit is the moment to pin
+    // that it is still a limit — and 0 is refused here so the user is told
+    // why, rather than having ufw refuse it later where nobody is watching.
+    fakeUfw();
+
+    foreach ([FirewallRule::PORT_MAX + 1, 0] as $port) {
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/firewall/rules', ['port_from' => $port, 'protocol' => 'tcp', 'action' => 'allow'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('port_from');
+    }
+});
+
+it('lets create and update agree on the range, so neither can drift', function () {
+    // 🔴 The guard that would have caught this. The two requests disagreed for
+    // three commits and nothing noticed, because every test only ever asked
+    // one of them. This asks both the same question and compares the answers.
+    fakeUfw();
+
+    $rule = FirewallRule::create([
+        'port_from' => 9000, 'port_to' => 9100,
+        'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user',
+    ]);
+
+    // The boundary the create path accepts, the update path must accept too…
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$rule->id}", ['port_to' => FirewallRule::PORT_MAX])
+        ->assertOk();
+
+    expect($rule->fresh()->port_to)->toBe(FirewallRule::PORT_MAX);
+
+    // …and the one it refuses, the update path must refuse.
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$rule->id}", ['port_from' => FirewallRule::PORT_MAX + 1])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('port_from');
+});

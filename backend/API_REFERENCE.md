@@ -4435,6 +4435,8 @@ Inbound rule presets for the UI.
 
 A rule is `action` (`allow` / `deny`) over a port **range** — `port_from` plus optional `port_to` — not `type` + `port`. The source is `source_ip` (IP or CIDR, null meaning anywhere), and the note is `description`, not `label`. `protocol` is `all` · `tcp` · `udp`.
 
+Ports are **1–65535** on both create and edit. 65535 is a real port and ufw accepts it; 0 is not one and is refused with a `422` rather than stored and failed later against ufw.
+
 `summary` is the whole rule as one localised sentence ("Allow 443/tcp from Anywhere") — use it for the row rather than reassembling the parts in the frontend.
 
 `enabled: false` means kept but not applied; disabling is not deleting.
