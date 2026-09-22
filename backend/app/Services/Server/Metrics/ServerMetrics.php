@@ -4,6 +4,7 @@ namespace App\Services\Server\Metrics;
 
 use App\Services\Server\Applications\DnsVerifier;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerPublicIp;
 use App\Support\Bytes;
@@ -33,6 +34,7 @@ class ServerMetrics
         private DnsVerifier $dns,
         private ServerPublicIp $publicIp,
         private ServerCapabilities $capabilities,
+        private DatabaseManager $databases,
     ) {}
 
     /**
@@ -546,9 +548,43 @@ class ServerMetrics
             'php' => $this->version(['php', '-r', 'echo PHP_VERSION;']),
             'node' => $this->version([(string) config('server.node_binary', 'node'), '-v']),
             'redis' => $this->version(['redis-server', '--version']),
-            'mysql' => $this->version(['mysql', '--version']),
+            ...$this->databaseVersion(),
             ...$this->webServerVersion(),
         ];
+    }
+
+    /**
+     * The version of the database engine this box actually runs, keyed by its
+     * name — the same shape, and for the same reason, as
+     * {@see webServerVersion()} below.
+     *
+     * This read `mysql --version` under a hardcoded `mysql` key. On a MariaDB
+     * server that is the **client** tool reporting its own protocol version,
+     * so a box with no MySQL on it showed "MySQL 15.2" on the dashboard while
+     * `GET /databases/engines` — asking each engine `SELECT VERSION()` —
+     * correctly reported MariaDB 11.8.6 on the same request cycle. Two screens,
+     * one server, two answers, and the confident one wrong.
+     *
+     * Exactly the mistake the web-server version had and had fixed: assuming
+     * one product and naming the key after the assumption. Asking the engine
+     * rather than a client binary also means the version is the server's, not
+     * whatever happens to be installed to talk to it.
+     *
+     * @return array<string, string>
+     */
+    private function databaseVersion(): array
+    {
+        // The engines that answered, in catalogue order. A server with none
+        // installed contributes no key rather than a null one: omitting it is
+        // honest, and a dashboard row reading "MySQL —" invites the question
+        // of why MySQL is listed at all.
+        foreach ($this->databases->detectedVersions() as $engine => $version) {
+            if ($version !== null) {
+                return [$engine => $version];
+            }
+        }
+
+        return [];
     }
 
     /**
