@@ -3426,6 +3426,7 @@
       "deleting": "Excluindo…",
       "done": "{name} foi excluído.",
       "failed": "Não foi possível excluir esta aplicação.",
+      "alreadyGone": "{name} já tinha sido excluída.",
       "cancel": "Cancelar",
       "copyDomain": "Copiar domínio",
       "removeDatabases": "{count, plural, one {Excluir também o banco de dados desta aplicação} other {Excluir também os # bancos de dados desta aplicação}}",

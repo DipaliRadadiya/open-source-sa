@@ -3426,6 +3426,7 @@
       "deleting": "Deleting…",
       "done": "{name} was deleted.",
       "failed": "We could not delete this application.",
+      "alreadyGone": "{name} had already been deleted.",
       "cancel": "Cancel",
       "copyDomain": "Copy domain",
       "removeDatabases": "{count, plural, one {Also delete this application's database} other {Also delete this application's # databases}}",

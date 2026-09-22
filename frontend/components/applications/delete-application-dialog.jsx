@@ -119,6 +119,26 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       if (redirectTo) router.push(redirectTo);
       else router.refresh();
     } catch (error) {
+      /*
+       * 404 means somebody already deleted it — another tab, another person,
+       * or this same dialog after a click that did land. The reader's goal is
+       * achieved, so a red "we could not delete this application" is wrong
+       * twice over: it denies something that is true, and it leaves the dialog
+       * open over a row that is about to vanish, so they type the domain again
+       * and retry a delete that cannot ever succeed.
+       *
+       * Treated as done, but not silently as a success — they are told the
+       * reason it was already gone is that it was already gone, and the list
+       * is refreshed underneath them so the row actually leaves.
+       */
+      if (error?.response?.status === 404) {
+        toast.info(t("alreadyGone", { name: application.name }));
+        handleOpenChange(false);
+        if (afterDelete) await afterDelete();
+        if (redirectTo) router.push(redirectTo);
+        else router.refresh();
+        return;
+      }
       toast.error(apiMessage(error, t("failed")));
     } finally {
       setPending(false);

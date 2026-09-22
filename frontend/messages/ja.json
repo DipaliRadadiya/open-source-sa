@@ -3426,6 +3426,7 @@
       "deleting": "削除中…",
       "done": "{name} を削除しました。",
       "failed": "アプリケーションを削除できませんでした。",
+      "alreadyGone": "{name} はすでに削除されています。",
       "cancel": "キャンセル",
       "copyDomain": "ドメインをコピー",
       "removeDatabases": "{count, plural, one {このアプリケーションのデータベースも削除する} other {このアプリケーションの # 個のデータベースも削除する}}",

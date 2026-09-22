@@ -3426,6 +3426,7 @@
       "deleting": "Suppression…",
       "done": "{name} a été supprimé.",
       "failed": "Nous n'avons pas pu supprimer cette application.",
+      "alreadyGone": "{name} avait déjà été supprimée.",
       "cancel": "Annuler",
       "copyDomain": "Copier le domaine",
       "removeDatabases": "{count, plural, one {Supprimer aussi la base de données de cette application} other {Supprimer aussi les # bases de données de cette application}}",
