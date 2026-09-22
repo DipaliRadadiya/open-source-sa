@@ -325,9 +325,77 @@ it('refuses to ban an address that is on the ignore list', function () {
         Fail2banManager::MANAGED_HEADER."\n[DEFAULT]\nignoreip = 127.0.0.1/8 ::1 203.0.113.5\n",
     );
 
-    // fail2ban would drop the ban at the next reload, so accepting it here
-    // would be promising something that quietly stops being true.
+    // Refused because the user listed it as trusted — not because it would
+    // fail. This comment used to say fail2ban drops such a ban at the next
+    // reload; measured on a live box, it does not: an address in `ignoreip`
+    // was banned by hand, survived `fail2ban-client reload`, and stayed in the
+    // nftables set. `ignoreip` governs detection, not manual bans.
     f2b('POST', '/api/fail2ban/bans', ['ip' => '203.0.113.5', 'jail' => 'sshd'])->assertUnprocessable();
+});
+
+/*
+ * The server's own address is never bannable.
+ *
+ * `POST /fail2ban/bans {"ip":"127.0.0.1"}` returned 200 and fail2ban carried
+ * it out — verified on a live box. The guard consulted `ignoreIps()`, which
+ * subtracts ALWAYS_IGNORED on purpose (it is the user's own entries, for a UI
+ * that must not offer to delete something it will re-add), so loopback was
+ * never covered by it.
+ *
+ * Worst on `recidive`, whose rule is `meta l4proto tcp ... reject` — every
+ * port, not just 22. The server would reject its own traffic to MariaDB and
+ * Redis, and unbanning runs through the API that had just become unreachable.
+ */
+it('refuses to ban the loopback address, whatever the jail', function (string $ip, string $jail) {
+    fakeFail2ban(bans: ['sshd' => [], 'recidive' => []]);
+
+    f2b('POST', '/api/fail2ban/bans', ['ip' => $ip, 'jail' => $jail])
+        ->assertUnprocessable()
+        ->assertJsonPath('message', __('errors/fail2ban.ip_own_address'));
+
+    Process::assertNotRan(fn ($p) => in_array('banip', $p->command, true));
+})->with([
+    'IPv4 loopback' => ['127.0.0.1', 'sshd'],
+    'IPv6 loopback' => ['::1', 'sshd'],
+    // The all-ports jail is the one that takes the panel down.
+    'recidive bans every port' => ['127.0.0.1', 'recidive'],
+]);
+
+it('refuses any address inside the loopback range, not just the literal one', function () {
+    // ALWAYS_IGNORED holds `127.0.0.1/8` while the address banned in the wild
+    // was `127.0.0.1` — an exact string compare can never match those two, so
+    // the CIDR handling is the fix rather than a refinement of it. A fix that
+    // only special-cased the literal address passes the test above and fails
+    // this one.
+    fakeFail2ban(bans: ['sshd' => []]);
+
+    f2b('POST', '/api/fail2ban/bans', ['ip' => '127.0.0.5', 'jail' => 'sshd'])
+        ->assertUnprocessable()
+        ->assertJsonPath('message', __('errors/fail2ban.ip_own_address'));
+});
+
+it('still bans an ordinary address, so the guard is not simply refusing everything', function () {
+    // The counterweight. A guard that refuses real bans is a worse bug than
+    // the one it replaced, and nothing else here would notice.
+    fakeFail2ban(bans: ['sshd' => []]);
+
+    f2b('POST', '/api/fail2ban/bans', ['ip' => '198.51.100.9', 'jail' => 'sshd'])->assertOk();
+
+    Process::assertRan(fn ($p) => in_array('banip', $p->command, true)
+        && in_array('198.51.100.9', $p->command, true));
+});
+
+it('no longer claims a ban on an ignored address would not hold', function () {
+    // It does hold. Advice that is confidently wrong is worse than none: a
+    // user reading it would conclude the feature is broken rather than that
+    // they had asked for something the panel declines to do.
+    foreach (['en', 'de', 'es', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
+        $message = __('errors/fail2ban.ip_ignored', [], $locale);
+
+        expect($message)->not->toBe('errors/fail2ban.ip_ignored')
+            ->and($message)->not->toMatch('/would not hold|nicht greifen|no se mantendr|ne tiendrait|não se manteria|維持されません|не сохранится|टिकेगा नहीं/u')
+            ->and(__('errors/fail2ban.ip_own_address', [], $locale))->not->toBe('errors/fail2ban.ip_own_address');
+    }
 });
 
 it('rejects a malformed address or an unknown jail', function () {

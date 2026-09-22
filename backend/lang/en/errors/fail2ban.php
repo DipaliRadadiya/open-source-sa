@@ -8,7 +8,8 @@ return [
     'jail_not_active' => 'The :jail jail is not active.',
     'not_banned' => 'That IP address is not currently banned.',
     'lockout_risk' => 'Enabling the SSH jail can lock you out of this server. Add your IP address to the ignore list, or confirm that you accept the risk.',
-    'ip_ignored' => 'That IP address is on the ignore list, so a ban would not hold.',
+    'ip_ignored' => 'That IP address is on your ignore list. Remove it there first if you really want to ban it.',
+    'ip_own_address' => 'That is this server\'s own address. Blocking it can cut the panel off from its database and leave it unreachable, so it cannot be banned.',
     'operation_failed' => 'The fail2ban operation failed.',
     'bantime_too_short' => 'Ban time must be at least 60 seconds, or -1 for a permanent ban.',
 ];

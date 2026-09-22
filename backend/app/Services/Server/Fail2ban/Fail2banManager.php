@@ -6,16 +6,26 @@ use App\Exceptions\Server\Fail2ban\Fail2banException;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Support\SshPort;
+use Symfony\Component\HttpFoundation\IpUtils;
 
 /**
  * fail2ban: watches logs for repeated failures and bans the source IP.
  *
  * No DB. Live state (which jails run, who is banned) comes from
- * `fail2ban-client`, and the settings we manage live in a drop-in under
- * `jail.d/` — never in `jail.local`, which a server migrated from another
- * panel is likely to already own. Ours is one file among several; the
- * effective configuration is whatever fail2ban makes of all of them, which is
- * why live state is read back rather than assumed.
+ * `fail2ban-client`, and the settings we manage live in `jail.local`
+ * ({@see dropInPath()}) — which fail2ban loads *after* `jail.d/*.conf`, so the
+ * panel's values win over the distribution's. That is load-bearing: Ubuntu
+ * ships `jail.d/defaults-debian.conf` with `[sshd] enabled = true`, and
+ * without the later file, installing fail2ban through the panel would start
+ * banning SSH immediately — which the panel deliberately does not do.
+ *
+ * `jail.local` is also a file an administrator may have written by hand, and
+ * this class replaces it wholesale, hence {@see MANAGED_HEADER}: before
+ * overwriting, it checks whose file it is.
+ *
+ * Ours is one file among several; the effective configuration is whatever
+ * fail2ban makes of all of them, which is why live state is read back rather
+ * than assumed.
  *
  * The recurring hazard is that this feature's entire job is locking people
  * out, and it cannot tell an attacker from an administrator having a bad
@@ -237,6 +247,38 @@ class Fail2banManager
             array_filter(preg_split('/\s+/', trim($raw)) ?: []),
             self::ALWAYS_IGNORED,
         ));
+    }
+
+    /**
+     * Is this the machine's own address — one the panel never lets you ban?
+     *
+     * 🔴 A ban on loopback holds. That is the whole reason this exists, and it
+     * was measured rather than assumed: an address sitting in fail2ban's own
+     * `ignoreip` was banned by hand, survived `fail2ban-client reload`, and
+     * stayed in the nftables set. `ignoreip` governs *detection*; a manual ban
+     * is carried out regardless.
+     *
+     * What that costs depends on the jail, and the worst case is not the SSH
+     * one. `sshd` bans `tcp dport 22`, so loopback SSH breaks and little else.
+     * `recidive` uses `banaction_allports` — `meta l4proto tcp ... reject`,
+     * every port — so banning 127.0.0.1 there rejects all TCP from the server
+     * to itself: MariaDB on 127.0.0.1:3306, Redis, the panel's own loopback.
+     * The panel goes down, and it cannot unban itself, because unbanning runs
+     * through the API that just became unreachable. Recovery is SSH only.
+     *
+     * Matched with `IpUtils` rather than string equality: {@see ALWAYS_IGNORED}
+     * holds `127.0.0.1/8`, and the address that was actually banned was
+     * `127.0.0.1`. An exact comparison can never match those two, which is
+     * precisely how the hole existed — the CIDR handling *is* the fix, not a
+     * refinement of it.
+     *
+     * Deliberately not applied to the user's own ignore entries. Since bans do
+     * hold, blocking one host inside a range you generally trust is a coherent
+     * thing to want, and taking that away would fix nothing anyone reported.
+     */
+    public function isOwnAddress(string $ip): bool
+    {
+        return IpUtils::checkIp($ip, self::ALWAYS_IGNORED);
     }
 
     /**
