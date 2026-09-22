@@ -4,6 +4,8 @@ namespace App\Services\Server\Applications;
 
 use App\Models\Application;
 use App\Services\Server\ServerOps;
+use App\Services\Server\WebServers\WebServerManager;
+use Throwable;
 
 /**
  * The one directory every log for a site lands in: `{appRoot}/logs`.
@@ -41,7 +43,10 @@ use App\Services\Server\ServerOps;
  */
 class ApplicationLogDirectory
 {
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private WebServerManager $webServers,
+    ) {}
 
     /**
      * Ensure the directory exists with the right owner, group and mode.
@@ -73,5 +78,60 @@ class ApplicationLogDirectory
                 timeout: 15,
             );
         }
+
+        $this->admitLogWriter($application, $group);
+    }
+
+    /**
+     * Let the web server's own account into the group, when it is the thing
+     * that opens the log files.
+     *
+     * Null for nginx and Apache, whose root master process opens the log and
+     * hands the descriptor down — so on those stacks this grants nothing and
+     * the directory stays exactly as it was. Only OpenLiteSpeed answers, and
+     * only because its workers run as `nobody` and open the vhost's logs
+     * themselves.
+     *
+     * Group membership rather than `chmod o+x`, which was the cheaper fix and
+     * the wrong one: traversal for "other" lets *every* local account read
+     * every site's access log — IPs, URLs, whatever is in a query string — on
+     * a panel whose whole point is that sites are separate tenants. This
+     * admits one named account and leaves the mode alone, so the site user
+     * still cannot unlink what a privileged process is appending to.
+     *
+     * 🔴 The ordering is the correctness of this, not a detail. Supplementary
+     * groups are read when a process starts, so a membership added after the
+     * web server has started does nothing at all until it restarts. This runs
+     * from `ensureDirectories()`, inside `apply()`, before the restart that
+     * publishes the vhost — measured on a live box: the grant alone left
+     * access.log at zero bytes, and `lswsctrl restart` made the next request
+     * appear in it.
+     *
+     * Best-effort like every other step here. A server running a web server
+     * the panel cannot configure has no driver to ask, and that must not stop
+     * a log directory being created.
+     */
+    private function admitLogWriter(Application $application, string $group): void
+    {
+        try {
+            $user = $this->webServers->driver()->logWriterUser();
+        } catch (Throwable) {
+            return;
+        }
+
+        if ($user === null || $user === $group) {
+            return;
+        }
+
+        $this->serverOps->run(
+            ['gpasswd', '-a', $user, $group],
+            [
+                'feature' => 'application',
+                'op' => 'log_dir_writer',
+                'application' => $application->id,
+                'user' => $user,
+            ],
+            timeout: 15,
+        );
     }
 }

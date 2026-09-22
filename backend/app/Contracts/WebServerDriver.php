@@ -78,4 +78,26 @@ interface WebServerDriver
      * @return array<string, string> keyed `access` and `error`
      */
     public function logPaths(Application $application): array;
+
+    /**
+     * The OS account that opens the per-site log files, or null when they are
+     * opened by a root master process before privileges are dropped.
+     *
+     * On the contract because {@see ApplicationLogDirectory} is built on the
+     * answer and cannot ask the question itself. That directory is
+     * `root:{site user} 0750` for a reason its own docblock states -- the site
+     * can read its logs but cannot unlink and replace a file a root process is
+     * appending to -- and the reason rests on a premise: "every writer here is
+     * a root master process handing a descriptor down". nginx and Apache do
+     * that. OpenLiteSpeed does not, and so wrote nothing at all: its workers
+     * run as `nobody`, which is neither the owner nor in the group, and could
+     * not traverse the directory to open the file. Measured on a live box --
+     * two requests answered 200 and access.log stayed at zero bytes, and the
+     * per-site fail2ban jail watching that file could therefore never ban
+     * anyone.
+     *
+     * Null is the safe answer and the default, because it grants nothing. A
+     * driver returning a user is asking for that account to be let in.
+     */
+    public function logWriterUser(): ?string;
 }

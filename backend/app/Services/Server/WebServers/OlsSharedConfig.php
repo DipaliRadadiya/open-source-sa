@@ -57,6 +57,11 @@ class OlsSharedConfig
 
     private const END_SSL_MAPS = '  ### END panel-managed SSL maps';
 
+    /** @see serverUser() — memoised, including a failed read. */
+    private ?string $serverUser = null;
+
+    private bool $serverUserRead = false;
+
     public function __construct(
         private ServerOps $serverOps,
         private ManagedFile $files,
@@ -157,6 +162,49 @@ class OlsSharedConfig
         $quoted = preg_quote($name, '/');
 
         return preg_match('/^\s*(virtualHost\s+'.$quoted.'\s*\{|map\s+'.$quoted.'\s)/m', $read->output()) === 1;
+    }
+
+    /**
+     * The account lsws drops its workers to — the top-level `user` directive.
+     *
+     * Here rather than in the driver because this class owns the file: it
+     * already knows the path, already reads it, and is the only place that
+     * should know its shape. A second reader elsewhere is a second thing to
+     * update the day the format moves.
+     *
+     * Anchored to column zero deliberately. A vhost's `extUser` is the
+     * *site's* account, not the server's, and matching it would hand back an
+     * answer that looks right and is not. Measured on a live box: the real
+     * file has exactly one `^user` line, unindented, and no `extUser` at all.
+     *
+     * Null when the file cannot be read or names no user — the caller decides
+     * what to do without one, and the honest answer is "we were not told".
+     */
+    public function serverUser(): ?string
+    {
+        if ($this->serverUserRead) {
+            return $this->serverUser;
+        }
+
+        // Memoised including the failures: `ensure()` runs per site on a
+        // resync, and a box whose config is unreadable should not be asked
+        // once per site to say so again.
+        $this->serverUserRead = true;
+
+        $read = $this->serverOps->run(
+            ['cat', $this->path()],
+            ['feature' => 'application', 'op' => 'ols_read_user'],
+        );
+
+        if (! $read->ok) {
+            return $this->serverUser = null;
+        }
+
+        if (preg_match('/^user\s+(\S+)/m', $read->output(), $matches) !== 1) {
+            return $this->serverUser = null;
+        }
+
+        return $this->serverUser = $matches[1];
     }
 
     /**

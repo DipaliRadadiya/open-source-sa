@@ -502,17 +502,27 @@ describe('the driver', function () {
 
         app(OlsDriver::class)->apply($this->app_, '/home/shopuser/shop.test');
 
-        $order = collect($runs)->pluck('command')->map(fn ($c) => $c[0] ?? '')->values()->all();
-        $mkdir = array_search('mkdir', $order, true);
-        $tee = array_search('tee', $order, true);
-        $cat = array_search('cat', $order, true);
+        // Found by the path each step touches, not by the binary it runs.
+        // `apply()` issues several `mkdir`s, several `tee`s and more than one
+        // `cat`, so "the first tee" named the PHP ini file and "the first cat"
+        // named whichever read happened to come first — neither of which is
+        // the step this test is about. Identify the file, and the assertion
+        // keeps meaning what its name says however many reads get added.
+        $commands = collect($runs)->pluck('command')->map(fn ($c) => implode(' ', $c))->values();
+
+        $siteDir = $commands->search(fn (string $c) => str_starts_with($c, 'mkdir') && str_contains($c, '/vhosts/shop'));
+        $vhost = $commands->search(fn (string $c) => str_starts_with($c, 'tee') && str_contains($c, 'vhconf.conf'));
+        $register = $commands->search(fn (string $c) => str_starts_with($c, 'tee') && str_contains($c, 'httpd_config.conf'));
 
         // The fallback-certificate existence check may safely happen first.
         // The site directory and vhost still have to exist before the shared
         // virtualHost block can point at them — reversing that strands the
         // whole server, not just this site.
-        expect($mkdir)->toBeLessThan($tee)
-            ->and($tee)->toBeLessThan($cat);
+        expect($siteDir)->not->toBeFalse()
+            ->and($vhost)->not->toBeFalse()
+            ->and($register)->not->toBeFalse()
+            ->and($siteDir)->toBeLessThan($vhost)
+            ->and($vhost)->toBeLessThan($register);
     });
 
     it("writes the site's PHP settings as an ini file of its own", function () {

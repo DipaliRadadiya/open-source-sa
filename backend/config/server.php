@@ -692,6 +692,22 @@ return [
             */
             'lsapi_max_requests' => (int) env('SERVER_OLS_LSAPI_MAX_REQUESTS', 5000),
             'shared_config' => env('SERVER_OLS_CONFIG', '/usr/local/lsws/conf/httpd_config.conf'),
+
+            /*
+            | The account lsws drops to, used only as a fallback: the real
+            | value is read from the `user` directive in `shared_config`
+            | above, because that file is what actually decides it.
+            |
+            | Deliberately NOT `server.web_server_user`. That one defaults to
+            | `www-data`, install.sh never writes it, and every path that
+            | reads it is skipped on this stack — so it has been quietly
+            | wrong on every OpenLiteSpeed server without costing anything
+            | yet. Reusing it here would have been the first time it cost
+            | something, and the failure would have been silent: a grant to
+            | an account that does not run the web server looks exactly like
+            | a grant that worked.
+            */
+            'user' => env('SERVER_OLS_USER', 'nobody'),
             // A `map` is only legal inside a listener, and this names which.
             'listener' => env('SERVER_OLS_LISTENER', 'Default'),
 

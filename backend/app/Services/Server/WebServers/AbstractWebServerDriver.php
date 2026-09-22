@@ -135,6 +135,20 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     }
 
     /**
+     * Nothing, by default: nginx and Apache open a site's access log in the
+     * root master process and hand the descriptor to a worker, so no
+     * unprivileged account ever needs to reach the log directory.
+     *
+     * Stated here rather than left to each driver so that adding a fourth web
+     * server inherits the answer that grants nothing, and has to say so
+     * deliberately if its workers open their own logs.
+     */
+    public function logWriterUser(): ?string
+    {
+        return null;
+    }
+
+    /**
      * The rendered config can name files inside `.panel/` — the WAF detect
      * log, the Basic Auth credential — and nginx refuses to start when a log
      * directory does not exist. Nothing created this at provision time, so
