@@ -6,7 +6,7 @@ import { installEngine } from "@/lib/api/databases";
 import { installPhpVersion } from "@/lib/api/php";
 import { installNodeVersion } from "@/lib/api/node";
 import { apiMessage } from "@/lib/api/error-message";
-import { lowestInRange, rangeLabel } from "@/lib/runtime/version-range";
+import { installTarget, rangeLabel } from "@/lib/runtime/version-range";
 import { RequiredServicesPanel } from "@/components/applications/required-services-panel";
 
 /**
@@ -90,7 +90,10 @@ function servicesFor(type, { phpInstallable, nodeInstallable }) {
      * there is no range to satisfy and no `suggest`, and taking the newest on
      * offer is how n8n came to demand Node 26.9.0 when it asks for 24.
      */
-    const version = blocker.suggest ?? lowestInRange(installable[runtime], blocker.range ?? null);
+    const target = blocker.suggest
+      ? { version: blocker.suggest, eol: Boolean(blocker.suggestEol) }
+      : installTarget(installable[runtime], blocker.range ?? null);
+    const version = target?.version ?? null;
     const label = RUNTIME_NAMES[runtime] ?? runtime;
 
     return [
@@ -102,6 +105,10 @@ function servicesFor(type, { phpInstallable, nodeInstallable }) {
         // does not read as the requirement. "Node 24.12.0" alone looks like
         // n8n needs that build; it needs 24 or newer.
         requirement: blocker.range ? rangeLabel(blocker.range) : null,
+        // True when the only version this type can use is one PHP no longer
+        // patches. Saying "we will install PHP 8.1" without that is the panel
+        // knowing something about the reader's security and not mentioning it.
+        eol: Boolean(target?.eol),
         // Never the bare runtime name: "PHP — Not installed" is false on a
         // server running PHP 8.4. It is the wrong LINE, not absent.
         name: version ? `${label} ${version}` : blocker.label ? `${label} ${blocker.label}` : label,

@@ -1,4 +1,4 @@
-import { lowestInRange, rangeLabel, rangeUnsatisfied } from "../runtime/version-range.js";
+import { installTarget, rangeLabel, rangeUnsatisfied } from "../runtime/version-range.js";
 
 /**
  * Whether this server's installed runtimes can actually run a site type.
@@ -79,18 +79,19 @@ export function runtimeBlocks({
          * end-of-life and the install list deliberately hides those. They gave
          * up and reported that n8n could not be installed at all.
          *
-         * So the answer comes from `installable`, which is the list the Node
-         * page will actually show them. Null when nothing on offer fits, and
-         * that is worth saying out loud rather than papering over — it means
-         * the range and this server genuinely cannot be reconciled today.
+         * So the answer comes from `installable`, the list the runtime page
+         * will actually show them, and `installTarget` picks the lowest
+         * SUPPORTED entry in range — see its docblock for why "lowest" and why
+         * "supported" (PrestaShop was being answered with PHP 7.2).
          *
-         * LOWEST of those, not highest. n8n asks for `>=24` and the panel was
-         * naming Node 26.9.0 simply because it was the newest thing on offer —
-         * a requirement n8n does not have, on the least-tested major, for an
-         * application that names 24 as its floor. The install list already
-         * hides end-of-life lines, so the lowest offered is still supported.
+         * Null when nothing on offer fits, and that is worth saying out loud
+         * rather than papering over: the range and this server genuinely
+         * cannot be reconciled today.
          */
-        suggest: lowestInRange(available[runtime.installableField], range),
+        ...(() => {
+          const target = installTarget(available[runtime.installableField], range);
+          return { suggest: target?.version ?? null, suggestEol: target?.eol ?? false };
+        })(),
       },
     ];
   });

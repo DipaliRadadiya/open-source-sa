@@ -5102,6 +5102,10 @@
       "needs": {
         "node": "{app} को Node {requirement} चाहिए — हम यही इंस्टॉल करेंगे",
         "php": "{app} को PHP {requirement} चाहिए — हम यही इंस्टॉल करेंगे"
+      },
+      "needsEol": {
+        "node": "{app} को Node {requirement} चाहिए। यह शृंखला अब समर्थित नहीं है, लेकिन {app} इसी पर चलने वाली सबसे नई है।",
+        "php": "{app} को PHP {requirement} चाहिए। यह शृंखला अब समर्थित नहीं है, लेकिन {app} इसी पर चलने वाली सबसे नई है।"
       }
     },
     "phpFact": "PHP {version}",

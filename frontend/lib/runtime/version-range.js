@@ -111,7 +111,7 @@ export function highestInRange(versions, range) {
 }
 
 /**
- * The LOWEST offered version that satisfies a range — what to install.
+ * The version to install for a type that declares a range.
  *
  * Krishna, about n8n on a fresh server: "the requirement should be based on
  * n8n's actual runtime/dependency requirement, not simply whether the
@@ -121,14 +121,43 @@ export function highestInRange(versions, range) {
  * the newest thing it could install. Nothing was *wrong* — 26 satisfies the
  * range — but the row read "Node 26.9.0 — the runtime n8n runs on", which
  * states a requirement n8n does not have, and it installs the least-tested
- * major for an application that names 24 as its floor.
+ * major for an application that names 24 as its floor. So: the LOWEST that
+ * fits, not the newest.
  *
- * NOT the bottom of the declared range, which is the bug this replaced: n8n
- * once declared a floor of 20.19, the card printed it, and a reporter went
- * looking for a Node 20 that the install list deliberately hides because the
- * line is end-of-life. Both functions filter the OFFERED list first, so
- * whatever comes back is a version the Node page will actually show.
+ * NOT the bottom of the declared range, either: n8n once declared a floor of
+ * 20.19, the card printed it, and a reporter went looking for a Node 20 the
+ * install list deliberately hides. The answer comes from `installable`, the
+ * list the runtime page will actually show.
+ *
+ * The part this replaced got PHP wrong. It assumed the offered list hides
+ * end-of-life lines — true of Node, false of PHP, which offers everything back
+ * to 5.6 and labels each one. So PrestaShop (7.2 – 8.1, every version in that
+ * window now EOL) was answered with **PHP 7.2**, unsupported since November
+ * 2020, under the words "this is what we will install". The lifecycle was in
+ * the same payload the whole time.
+ *
+ * Lowest SUPPORTED, then. And when a range contains nothing supported — which
+ * is PrestaShop's situation and will be more types' every year — the highest
+ * in range instead: the least-stale option, and for PrestaShop it is 8.1,
+ * which is the version their own requirements recommend.
+ *
+ * Returns `{ version, eol }` rather than a string, because "we will install
+ * PHP 8.1" and "we will install PHP 8.1, which PHP no longer supports" are
+ * different sentences and only the caller can write them.
  */
+export function installTarget(versions, range) {
+  const candidates = versionsInRange(Array.isArray(versions) ? versions : [], range)
+    .filter((item) => typeof item?.version === "string" && item.version !== "")
+    .sort((a, b) => compareVersions(a.version, b.version));
+  if (candidates.length === 0) return null;
+
+  const supported = candidates.filter((item) => item?.lifecycle?.status !== "eol");
+  const chosen = supported[0] ?? candidates[candidates.length - 1];
+
+  return { version: chosen.version, eol: chosen?.lifecycle?.status === "eol" };
+}
+
+/** The lowest offered version in range, as a bare string. */
 export function lowestInRange(versions, range) {
   return sortedInRange(versions, range)[0] ?? null;
 }

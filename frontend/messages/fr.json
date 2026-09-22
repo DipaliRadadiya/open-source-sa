@@ -5102,6 +5102,10 @@
       "needs": {
         "node": "{app} a besoin de Node {requirement} — voici ce que nous allons installer",
         "php": "{app} a besoin de PHP {requirement} — voici ce que nous allons installer"
+      },
+      "needsEol": {
+        "node": "{app} nécessite Node {requirement}. Cette série n'est plus prise en charge, mais c'est la plus récente sur laquelle {app} fonctionne.",
+        "php": "{app} nécessite PHP {requirement}. Cette série n'est plus prise en charge, mais c'est la plus récente sur laquelle {app} fonctionne."
       }
     },
     "phpFact": "PHP {version}",
