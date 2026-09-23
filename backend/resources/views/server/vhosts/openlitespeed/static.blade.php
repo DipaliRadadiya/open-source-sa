@@ -44,9 +44,14 @@ context /.well-known/acme-challenge {
 }
 
 @if ($basicAuth)
-{{-- Best-effort: OLS's realm/userDB syntax has not been exercised against
-     real hardware, unlike the nginx and Apache blocks above (see the
-     project's other OLS notes on this same gap). `context /` is declared
+{{-- Verified against OpenLiteSpeed 1.9.2 on a real server (2026-09-23):
+     401 without a password, 200 with it, bcrypt hashes accepted, and the
+     ACME challenge path still reachable without one. The earlier untested block carried a
+     `userNameSeparator` line OLS rejects outright ("Not support
+     [usernameseparator :]"), so every attempt to switch protection on
+     failed its config test. `authName` unquoted — OLS adds the quotes,
+     and quoting it here gave a prompt reading ""Restricted"".
+     `context /` is declared
      explicitly only when protection is on, so an unprotected site's config
      is byte-for-byte what it always was — the ACME context above is more
      specific and matches first, so it is never affected either way. --}}
@@ -54,12 +59,12 @@ context / {
   location                {{ $documentRoot }}
   allowBrowse             1
   realm                   {{ $basicAuth['realm'] }}
+  authName                Restricted
 }
 
 realm {{ $basicAuth['realm'] }} {
   userDB {
     location               {{ $basicAuth['htpasswdPath'] }}
-    userNameSeparator      :
   }
 }
 @endif

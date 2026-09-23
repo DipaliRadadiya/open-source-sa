@@ -83,18 +83,22 @@ context / {
   addDefaultCharset       off
 @if ($basicAuth)
   realm                   {{ $basicAuth['realm'] }}
+  authName                Restricted
 @endif
 }
 
 @if ($basicAuth)
-{{-- Best-effort: OLS's realm/userDB syntax has not been exercised against
-     real hardware, unlike the nginx and Apache blocks above (see the
-     project's other OLS notes on this same gap). The ACME context above is
+{{-- Verified against OpenLiteSpeed 1.9.2 on a real server (2026-09-23):
+     401 without a password, 200 with it, bcrypt hashes accepted, and the
+     ACME challenge path still reachable without one. The earlier untested block carried a
+     `userNameSeparator` line OLS rejects outright ("Not support
+     [usernameseparator :]"), so every attempt to switch protection on
+     failed its config test. `authName` unquoted — OLS adds the quotes,
+     and quoting it here gave a prompt reading ""Restricted"". The ACME context above is
      more specific and matches first, so it is unaffected either way. --}}
 realm {{ $basicAuth['realm'] }} {
   userDB {
     location               {{ $basicAuth['htpasswdPath'] }}
-    userNameSeparator      :
   }
 }
 @endif

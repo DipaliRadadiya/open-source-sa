@@ -488,6 +488,34 @@ describe('the driver', function () {
         ]);
     });
 
+    it('writes Basic Auth in the syntax OpenLiteSpeed accepts', function (string $profile) {
+        // Verified on OpenLiteSpeed 1.9.2 (2026-09-23). The earlier block had a
+        // `userNameSeparator` line OLS rejects ("Not support
+        // [usernameseparator :]"), so every attempt to switch protection on
+        // failed its config test and was rolled back — on all three profiles.
+        $this->app_->forceFill([
+            'serving_profile' => $profile,
+            'site_type' => $profile === 'node' ? 'n8n' : 'wordpress',
+            'app_port' => $profile === 'node' ? 5678 : null,
+            'basic_auth_enabled' => true,
+            'basic_auth_username' => 'qa',
+        ])->save();
+
+        $runs = fakeOls(olsConfig());
+
+        app(OlsDriver::class)->apply($this->app_->fresh('systemUser'), '/home/shopuser/shop/public_html');
+
+        $vhost = collect($runs)->last(fn (array $run) => $run['command'][0] === 'tee'
+            && str_contains($run['command'][1], 'vhosts/shop/vhconf.conf'))['input'];
+
+        $realm = 'sv-app-'.$this->app_->id;
+
+        expect($vhost)->not->toMatch('/^\s*userNameSeparator/mi')
+            ->and($vhost)->toMatch('/^\s*realm\s+'.$realm.'$/m')
+            ->and($vhost)->toMatch('/^\s*authName\s+Restricted$/m')
+            ->and($vhost)->toMatch('/^realm '.$realm.' \{\n  userDB \{\n    location\s+\/home\/shopuser\/shop\/\.panel\/\.htpasswd\n  \}\n\}/m');
+    })->with(['php', 'static', 'node']);
+
     it('is resolved for a server running OpenLiteSpeed', function () {
         expect(app(WebServerManager::class)->driver())->toBeInstanceOf(OlsDriver::class);
     });
