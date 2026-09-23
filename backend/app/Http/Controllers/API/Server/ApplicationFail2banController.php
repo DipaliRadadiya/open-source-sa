@@ -117,12 +117,14 @@ class ApplicationFail2banController extends Controller
             ], 422);
         }
 
+        // Applied first, recorded after. Saved before, a reload that failed
+        // left the database describing a config the server had rolled back.
+        $manager->enableForApp($application, $jailContent, $filterContent);
+
         $application->fail2ban_jail_name = $manager->jailName($application);
         $application->fail2ban_jail_content = $jailContent;
         $application->fail2ban_filter_content = $filterContent;
         $application->save();
-
-        $manager->enableForApp($application, $jailContent, $filterContent);
 
         $log->log('application.fail2ban_enabled', $application, ['name' => $application->name]);
 

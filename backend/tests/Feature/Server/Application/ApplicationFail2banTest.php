@@ -77,17 +77,42 @@ function appFail2banHeaders(): array
  *
  * @param  array<string, string>  $writes  jail/filter path => written content
  */
-function fakeAppFail2ban(bool $testOk = true, array &$writes = []): void
-{
-    Process::fake(function ($process) use ($testOk, &$writes) {
+/**
+ * fail2ban as the panel meets it on a real server.
+ *
+ * `-t` with no `-c` tests the LIVE tree, which is valid — so it passes
+ * whatever was submitted. That is exactly what the old testConfigs() ran, and
+ * why `[broken` reached /etc/fail2ban on a real server (2026-09-23): the fake
+ * here answered `-t` without asking which config it was pointed at, so the
+ * suite passed the broken code too. Now `-c <stage>` is judged by what was
+ * written into that stage, and anything containing `[broken` fails as the
+ * real client does (exit 255).
+ *
+ * @param  array<string, string>  $writes  path => content, every `tee`
+ */
+function fakeAppFail2ban(
+    bool $testOk = true,
+    array &$writes = [],
+    bool $reloadOk = true,
+    bool $existing = true,
+    ?ArrayObject $runs = null,
+): void {
+    Process::fake(function ($process) use ($testOk, &$writes, $reloadOk, $existing, $runs) {
         $args = $process->command[0] === 'sudo'
             ? array_slice($process->command, 2)
             : $process->command;
+
+        $runs?->append($args);
 
         if (($args[0] ?? '') === 'tee') {
             $writes[$args[1] ?? ''] = (string) $process->input;
 
             return Process::result(exitCode: 0);
+        }
+
+        // Whether a jail/filter is already on disk, for the backup step.
+        if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-f') {
+            return Process::result(exitCode: $existing ? 0 : 1);
         }
 
         // `rm -f <path>` is what disableForApp() runs. Process::fake does
@@ -103,13 +128,26 @@ function fakeAppFail2ban(bool $testOk = true, array &$writes = []): void
         }
 
         if (($args[0] ?? '') === 'fail2ban-client') {
+            if (in_array('-t', $args, true)) {
+                $c = array_search('-c', $args, true);
+
+                // No -c: the live tree, which is fine — so it passes.
+                if ($c === false) {
+                    return Process::result(output: "OK: configuration test is successful\n");
+                }
+
+                $stage = $args[$c + 1] ?? '';
+                $staged = array_filter($writes, fn (string $content, string $path) => str_starts_with($path, $stage.'/'), ARRAY_FILTER_USE_BOTH);
+                $broken = ! $testOk || collect($staged)->contains(fn (string $content) => str_contains($content, '[broken'));
+
+                return $broken
+                    ? Process::result(errorOutput: "ERROR: test configuration failed\n", exitCode: 255)
+                    : Process::result(output: "OK: configuration test is successful\n");
+            }
+
             return match ($args[1] ?? '') {
                 'ping' => Process::result(output: 'Server replied: pong'),
-                '-t' => Process::result(
-                    output: $testOk ? "OK: configuration test successful\n" : "ERROR: Invalid config\n",
-                    exitCode: $testOk ? 0 : 1,
-                ),
-                'reload' => Process::result(exitCode: 0),
+                'reload' => Process::result(exitCode: $reloadOk ? 0 : 255),
                 default => Process::result(exitCode: 0),
             };
         }
@@ -268,6 +306,83 @@ it('saves INI, tests it, and applies the configuration on success', function () 
     // placeholder string.
     expect($writes[$this->jailD.'/shop.conf'])->toContain('logpath  = ')
         ->not->toContain('{logpath}');
+});
+
+/*
+ * The incident itself (2026-09-23, real server): `[broken` passed the test,
+ * was written over the live jail and filter, and only the reload failed.
+ * No `testOk: false` here — the fake judges what was staged, as the real
+ * client does, so this fails if the test ever stops pointing at the stage.
+ */
+it('refuses a broken config because it tests the config it was given', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test');
+    $writes = [];
+    $runs = new ArrayObject;
+    fakeAppFail2ban(writes: $writes, runs: $runs);
+
+    $this->withHeaders(appFail2banHeaders())
+        ->postJson(appFail2banUrl(), ['jail_config_content' => '[broken', 'filter_config_content' => '[broken'])
+        ->assertStatus(422)
+        ->assertJsonPath('testOk', false);
+
+    $commands = collect($runs->getArrayCopy());
+    $test = $commands->first(fn (array $c) => ($c[0] ?? '') === 'fail2ban-client' && in_array('-t', $c, true));
+    $stage = $test[array_search('-c', $test, true) + 1];
+
+    // The whole live tree copied into the stage, and the stage removed.
+    expect($commands)->toContain(['cp', '-a', dirname($this->jailD).'/.', $stage.'/'])
+        ->toContain(['rm', '-rf', $stage]);
+
+    // Nothing reached the live files, nothing was reloaded, nothing saved.
+    expect(collect(array_keys($writes))->filter(fn (string $p) => ! str_starts_with($p, $stage.'/')))->toBeEmpty()
+        ->and($commands->contains(fn (array $c) => ($c[1] ?? '') === 'reload'))->toBeFalse()
+        ->and($this->application->fresh()->fail2ban_jail_content)->toBeNull();
+});
+
+it('puts the previous jail back and reloads again when the reload fails', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test');
+    $runs = new ArrayObject;
+    fakeAppFail2ban(reloadOk: false, existing: true, runs: $runs);
+
+    $jail = "[{name}]\nenabled = true\nfilter = {filter}\nlogpath = {logpath}\n";
+
+    $this->withHeaders(appFail2banHeaders())
+        ->postJson(appFail2banUrl(), ['jail_config_content' => $jail, 'filter_config_content' => "[Definition]\nfailregex = ^<HOST>\n"])
+        ->assertStatus(500);
+
+    $commands = collect($runs->getArrayCopy());
+    $jailPath = $this->jailD.'/shop.conf';
+
+    expect($commands)->toContain(['cp', '-p', $jailPath, $jailPath.'.panel-bak'])
+        ->toContain(['mv', '-f', $jailPath.'.panel-bak', $jailPath])
+        ->and($commands->filter(fn (array $c) => ($c[1] ?? '') === 'reload'))->toHaveCount(2)
+        // Applied first, recorded after: a rolled-back config is not saved.
+        ->and($this->application->fresh()->fail2ban_jail_content)->toBeNull();
+});
+
+it('removes a first-time jail again when its reload fails', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test');
+    $runs = new ArrayObject;
+    fakeAppFail2ban(reloadOk: false, existing: false, runs: $runs);
+
+    $this->withHeaders(appFail2banHeaders())
+        ->postJson(appFail2banUrl(), ['jail_config_content' => "[{name}]\nenabled = true\n", 'filter_config_content' => "[Definition]\nfailregex = ^<HOST>\n"])
+        ->assertStatus(500);
+
+    expect(collect($runs->getArrayCopy()))->toContain(['rm', '-f', $this->jailD.'/shop.conf']);
+});
+
+it('drops the backup once the new jail is live', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test');
+    $runs = new ArrayObject;
+    fakeAppFail2ban(existing: true, runs: $runs);
+
+    $this->withHeaders(appFail2banHeaders())
+        ->postJson(appFail2banUrl(), ['jail_config_content' => "[{name}]\nenabled = true\n", 'filter_config_content' => "[Definition]\nfailregex = ^<HOST>\n"])
+        ->assertOk();
+
+    expect(collect($runs->getArrayCopy()))->toContain(['rm', '-f', $this->jailD.'/shop.conf.panel-bak'])
+        ->and($this->application->fresh()->fail2ban_jail_content)->toContain('enabled = true');
 });
 
 it('refuses to save when fail2ban-client -t reports a bad configuration', function () {

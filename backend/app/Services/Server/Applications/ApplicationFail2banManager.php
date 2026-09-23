@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
+use Illuminate\Support\Str;
 
 /**
  * Per-application fail2ban.
@@ -189,92 +190,104 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Run `fail2ban-client -t` against the rendered config and return the
-     * result. fail2ban-client accepts a config directory on `-t` and validates
-     * every jail in it without touching the live daemon, which is the
-     * only way to verify a custom jail INI before letting it anywhere near
-     * the running service.
+     * Test the rendered config the way fail2ban will actually load it.
      *
-     * The rendered config is staged to a temp directory so `-t` sees only
-     * this one jail — fail2ban's own test mode would otherwise pick up every
-     * jail already on the box and report their failures as ours.
+     * 🔴 This staged the two files in a temp directory and then ran a bare
+     * `fail2ban-client -t` — which tests `/etc/fail2ban`, not the stage. The
+     * live config was valid, so *every* submission passed: `[broken` was
+     * accepted, written over the live jail and filter, and only the reload
+     * after it failed. Reproduced on a real server (2026-09-23). And once the
+     * live files were broken, every later save failed the "test" — including
+     * the correct one that would have fixed them.
+     *
+     * Now the whole config tree is copied, the site's two files replaced in
+     * the copy, and fail2ban pointed at it with `-c`. Measured on the same
+     * server: a broken jail exits 255, the real one 0, and a jail whose log
+     * file does not exist fails too — while the live tree is never touched.
+     * Root copies it (the tree is root's), and the copy is removed however
+     * the test ends.
      *
      * @return array{testOk: bool, output: string}
      */
     public function testConfigs(Application $application, string $jailContent, string $filterContent): array
     {
         $configs = $this->renderConfigs($application, $jailContent, $filterContent);
+        $root = $this->configRoot();
+        $stage = sys_get_temp_dir().'/panel-f2b-test-'.Str::uuid();
+        $context = ['feature' => 'application', 'application' => $application->id];
 
-        $stage = sys_get_temp_dir().'/sv-oss-f2b-test-'.getmypid().'-'.$application->id;
-        $jailDir = $stage.'/jail.d';
-        $filterDir = $stage.'/filter.d';
-        @mkdir($jailDir, 0755, true);
-        @mkdir($filterDir, 0755, true);
+        try {
+            // Plain `mkdir`, not `-p`: it fails if the path already exists,
+            // so nothing planted there in advance can be reused as the stage.
+            $this->must($this->serverOps->run(['mkdir', $stage], $context + ['op' => 'fail2ban_stage']));
+            $this->must($this->serverOps->run(['cp', '-a', $root.'/.', $stage.'/'], $context + ['op' => 'fail2ban_stage_copy']));
 
-        $jailFile = $jailDir.'/'.$this->jailName($application).'.local';
-        $filterFile = $filterDir.'/'.$this->jailName($application).'.conf';
+            $this->must($this->serverOps->run(
+                ['tee', $this->staged($stage, $this->getJailPath($application))],
+                $context + ['op' => 'fail2ban_stage_jail'],
+                input: $configs['jail'],
+            ));
+            $this->must($this->serverOps->run(
+                ['tee', $this->staged($stage, $this->getFilterPath($application))],
+                $context + ['op' => 'fail2ban_stage_filter'],
+                input: $configs['filter'],
+            ));
 
-        file_put_contents($jailFile, $configs['jail']);
-        file_put_contents($filterFile, $configs['filter']);
+            $result = $this->serverOps->run(
+                [(string) config('server.fail2ban.client', 'fail2ban-client'), '-c', $stage, '-t'],
+                $context + ['op' => 'fail2ban_test'],
+                timeout: 30,
+            );
 
-        $result = $this->serverOps->run(
-            [(string) config('server.fail2ban.client', 'fail2ban-client'), '-t'],
-            ['feature' => 'application', 'op' => 'fail2ban_test', 'application' => $application->id],
-            timeout: 15,
-        );
-
-        // Stage directory is throwaway — owned by the php-fpm worker, never
-        // visible to another request. Clean up before returning so a long
-        // uptime does not accumulate temp dirs.
-        @unlink($jailFile);
-        @unlink($filterFile);
-        @rmdir($jailDir);
-        @rmdir($filterDir);
-        @rmdir($stage);
-
-        return [
-            'testOk' => $result->ok,
-            'output' => trim($result->output()."\n".$result->errorOutput()),
-        ];
+            return [
+                'testOk' => $result->ok,
+                // The stage is an implementation detail; the user should read
+                // the paths their config will really live at.
+                'output' => str_replace($stage, $root, trim($result->output()."\n".$result->errorOutput())),
+            ];
+        } finally {
+            $this->serverOps->run(['rm', '-rf', $stage], $context + ['op' => 'fail2ban_stage_cleanup']);
+        }
     }
 
     /**
      * Write the rendered jail + filter to their final paths and reload
-     * fail2ban. Called only after testConfigs() passed — never on a config
-     * that has not been validated, because there is no `-t` for the live
-     * daemon and a broken reload would take down the running service.
+     * fail2ban. Called only after testConfigs() passed.
+     *
+     * The previous files are kept until the reload has succeeded, and put
+     * back — with a second reload — if it does not: a jail file fail2ban
+     * cannot load is one restart away from fail2ban not starting at all,
+     * and with it the sshd jail every other site relies on.
      */
     public function enableForApp(Application $application, string $jailContent, string $filterContent): void
     {
         $configs = $this->renderConfigs($application, $jailContent, $filterContent);
+        $files = [
+            $this->getJailPath($application) => $configs['jail'],
+            $this->getFilterPath($application) => $configs['filter'],
+        ];
+        $context = ['feature' => 'application', 'application' => $application->id];
 
-        $jailPath = $this->getJailPath($application);
-        $filterPath = $this->getFilterPath($application);
-
-        $jailWrite = $this->serverOps->run(
-            ['tee', $jailPath],
-            ['feature' => 'application', 'op' => 'fail2ban_write_jail', 'application' => $application->id],
-            input: $configs['jail'],
-        );
-
-        if ($jailWrite->failed()) {
-            throw new Fail2banOperationException($jailWrite->reference);
+        $backups = [];
+        foreach (array_keys($files) as $path) {
+            $backups[$path] = $this->backup($path, $context);
         }
 
-        $filterWrite = $this->serverOps->run(
-            ['tee', $filterPath],
-            ['feature' => 'application', 'op' => 'fail2ban_write_filter', 'application' => $application->id],
-            input: $configs['filter'],
-        );
+        try {
+            foreach ($files as $path => $content) {
+                $this->must($this->serverOps->run(['tee', $path], $context + ['op' => 'fail2ban_write'], input: $content));
+            }
 
-        if ($filterWrite->failed()) {
-            throw new Fail2banOperationException($filterWrite->reference);
+            $this->must($this->client(['reload']));
+        } catch (Fail2banOperationException $e) {
+            $this->restore($backups, $context);
+            $this->client(['reload']);
+
+            throw $e;
         }
 
-        $reload = $this->client(['reload']);
-
-        if ($reload->failed()) {
-            throw new Fail2banOperationException($reload->reference);
+        foreach (array_filter($backups) as $backup) {
+            $this->serverOps->run(['rm', '-f', $backup], $context + ['op' => 'fail2ban_discard_backup']);
         }
     }
 
@@ -303,6 +316,68 @@ class ApplicationFail2banManager
 
         if ($reload->failed()) {
             throw new Fail2banOperationException($reload->reference);
+        }
+    }
+
+    /** `/etc/fail2ban` — the tree `jail.d` sits in. */
+    private function configRoot(): string
+    {
+        return dirname(rtrim((string) config('server.fail2ban_apps.jail_d', '/etc/fail2ban/jail.d'), '/'));
+    }
+
+    /** The same file inside the stage: `/etc/fail2ban/jail.d/x.conf` → `{stage}/jail.d/x.conf`. */
+    private function staged(string $stage, string $path): string
+    {
+        return $stage.'/'.basename(dirname($path)).'/'.basename($path);
+    }
+
+    /**
+     * Copy a file aside before it is overwritten; null when there was none.
+     *
+     * `.panel-bak` because fail2ban only reads `*.conf` and `*.local`, so the
+     * copy sitting beside the original is never loaded as a second jail.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function backup(string $path, array $context): ?string
+    {
+        $exists = $this->serverOps->probe(['test', '-f', $path], $context + ['op' => 'fail2ban_backup_check']);
+
+        if (! $exists->answered) {
+            throw new Fail2banOperationException($exists->reference);
+        }
+
+        if (! $exists->ok) {
+            return null;
+        }
+
+        $backup = $path.'.panel-bak';
+        $this->must($this->serverOps->run(['cp', '-p', $path, $backup], $context + ['op' => 'fail2ban_backup']));
+
+        return $backup;
+    }
+
+    /**
+     * Put every file back as it was: the old one where there was one, none
+     * where there was not.
+     *
+     * @param  array<string, ?string>  $backups
+     * @param  array<string, mixed>  $context
+     */
+    private function restore(array $backups, array $context): void
+    {
+        foreach ($backups as $path => $backup) {
+            $this->serverOps->run(
+                $backup === null ? ['rm', '-f', $path] : ['mv', '-f', $backup, $path],
+                $context + ['op' => 'fail2ban_restore'],
+            );
+        }
+    }
+
+    private function must(ServerOpsResult $result): void
+    {
+        if ($result->failed()) {
+            throw new Fail2banOperationException($result->reference);
         }
     }
 
