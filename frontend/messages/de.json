@@ -2048,7 +2048,8 @@
       "builtinBody": "Fest einkompiliert und immer verfügbar. Es gibt nichts umzuschalten, und PHP kann ohne sie nicht laufen.",
       "noMatchesBuiltin": "{name} ist in PHP integriert – sie ist immer verfügbar. Siehe die Liste unten.",
       "enabling": "Wird aktiviert…",
-      "disabling": "Wird deaktiviert…"
+      "disabling": "Wird deaktiviert…",
+      "waitForOther": "Warten Sie, bis {name} fertig ist."
     },
     "install": {
       "action": "Version installieren",
@@ -3812,7 +3813,8 @@
         "logFailed": "Das Build-Protokoll konnte nicht geladen werden.",
         "noPermission": "Ihre Rolle enthält nicht „Deployment“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "title": "Deploy-Verlauf",
-        "subtitle": "Jedes Deployment, neueste zuerst. Öffnen Sie eines, um sein Build-Protokoll zu lesen."
+        "subtitle": "Jedes Deployment, neueste zuerst. Öffnen Sie eines, um sein Build-Protokoll zu lesen.",
+        "busy": "Es läuft bereits ein Deployment. Warten Sie, bis es fertig ist."
       },
       "tabs": {
         "history": "Verlauf",

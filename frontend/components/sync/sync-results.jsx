@@ -43,7 +43,7 @@ export function SyncResults({
   canManage,
   onIgnore,
   onUnignore,
-  pendingKey,
+  pendingKeys = [],
 }) {
   const t = useTranslations("sync");
   const tc = useTranslations("common");
@@ -226,7 +226,7 @@ export function SyncResults({
                                 variant="ghost"
                                 size="icon"
                                 className="size-7"
-                                disabled={pendingKey === key}
+                                disabled={pendingKeys.includes(key)}
                                 aria-label={
                                   ignored
                                     ? t("results.restore", { name: item.resource_key })
@@ -237,7 +237,7 @@ export function SyncResults({
                                 {/* The button was disabled while the write was
                                     in flight and nothing else changed, so a
                                     click looked like it had done nothing. */}
-                                {pendingKey === key ? (
+                                {pendingKeys.includes(key) ? (
                                   <Loader2 className="size-4 animate-spin" aria-hidden />
                                 ) : ignored ? (
                                   <Undo2 className="size-4" aria-hidden />
@@ -248,7 +248,7 @@ export function SyncResults({
                             </span>
                           </TooltipTrigger>
                           <TooltipContent>
-                            {pendingKey === key
+                            {pendingKeys.includes(key)
                               ? t("results.working")
                               : ignored
                                 ? t("results.restoreShort")

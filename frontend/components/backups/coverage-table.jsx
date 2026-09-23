@@ -226,7 +226,7 @@ function BackupStatusDot({ status, label }) {
 function ActionsCell({ row, table }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
-  const { canManage, onSetUp, onBackUpNow, busyId } = table.options.meta;
+  const { canManage, onSetUp, onBackUpNow, busyIds = [] } = table.options.meta;
   const { application, target, state } = row.original;
 
   if (state === "unprotected") {
@@ -251,15 +251,15 @@ function ActionsCell({ row, table }) {
     <div className="flex items-center justify-end gap-1">
       {canManage ? (
         <ReasonTooltip
-          reason={!target && busyId !== application.id ? tc("needsBackupTarget") : null}
+          reason={!target && !busyIds.includes(application.id) ? tc("needsBackupTarget") : null}
         >
           <Button
             size="sm"
             variant="outline"
             onClick={() => onBackUpNow(application.id, application.name)}
-            disabled={busyId === application.id || !target}
+            disabled={busyIds.includes(application.id) || !target}
           >
-            <ActionIcon icon={PlayCircle} pending={busyId === application.id} className="size-4" />
+            <ActionIcon icon={PlayCircle} pending={busyIds.includes(application.id)} className="size-4" />
             {t("runBackup")}
           </Button>
         </ReasonTooltip>
@@ -289,7 +289,7 @@ function ActionsCell({ row, table }) {
   );
 }
 
-export function CoverageTable({ rows, canManage, onSetUp, onBackUpNow, busyId }) {
+export function CoverageTable({ rows, canManage, onSetUp, onBackUpNow, busyIds = [] }) {
   const t = useTranslations("backups.coverage");
 
   const columns = [
@@ -324,7 +324,7 @@ export function CoverageTable({ rows, canManage, onSetUp, onBackUpNow, busyId })
         columns: ["type", "schedule", "storage", "runs"],
         render: (row) => (row.target ? null : <NotSetUp />),
       }}
-      meta={{ canManage, onSetUp, onBackUpNow, busyId }}
+      meta={{ canManage, onSetUp, onBackUpNow, busyIds }}
     />
   );
 }

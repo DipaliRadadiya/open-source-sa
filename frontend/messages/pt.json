@@ -2048,7 +2048,8 @@
       "builtinBody": "Já vêm compiladas e estão sempre disponíveis. Não há nada para alternar, e o PHP não roda sem elas.",
       "noMatchesBuiltin": "{name} é compilada no PHP — está sempre disponível. Veja a lista abaixo.",
       "enabling": "Ativando…",
-      "disabling": "Desativando…"
+      "disabling": "Desativando…",
+      "waitForOther": "Aguarde {name} terminar primeiro."
     },
     "install": {
       "action": "Instalar versão",
@@ -3812,7 +3813,8 @@
         "logFailed": "O log de build não pôde ser carregado.",
         "noPermission": "Seu papel não inclui Deploy para esta aplicação com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
         "title": "Histórico de deploy",
-        "subtitle": "Cada deploy, mais recente primeiro. Abra um para ler seu log de build."
+        "subtitle": "Cada deploy, mais recente primeiro. Abra um para ler seu log de build.",
+        "busy": "Já há uma implantação em andamento. Aguarde terminar."
       },
       "tabs": {
         "history": "Histórico",

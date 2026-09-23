@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePendingKeys } from "@/hooks/use-pending-keys";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -45,7 +46,9 @@ export function CoverageCard({
   const router = useRouter();
   const [setupFor, setSetupFor] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [busyId, setBusyId] = useState(null);
+  // Several applications can be started at once — the runs are queued — so
+  // each row keeps its own spinner.
+  const starting = usePendingKeys();
   // Set when "Run backup" is pressed, so the poller can cover the gap between
   // accepting the run and the row showing it. A timer clears it rather than a
   // comparison against `Date.now()`, which would make the render impure.
@@ -85,7 +88,8 @@ export function CoverageCard({
   }
 
   async function backUpNow(applicationId, name) {
-    setBusyId(applicationId);
+    if (starting.isPending(applicationId)) return;
+    starting.start(applicationId);
     try {
       await runBackupNow(applicationId);
       toast.success(t("started", { name }));
@@ -97,7 +101,7 @@ export function CoverageCard({
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
     } finally {
-      setBusyId(null);
+      starting.finish(applicationId);
     }
   }
 
@@ -109,7 +113,7 @@ export function CoverageCard({
     return () => clearTimeout(id);
   }, [justStarted]);
 
-  const listProps = { rows, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyId };
+  const listProps = { rows, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys };
 
   /*
    * The clock the Schedule column's hours are in.

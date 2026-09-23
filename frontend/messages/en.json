@@ -2048,7 +2048,8 @@
       "builtinBody": "Compiled in and always available. There is nothing to switch, and PHP cannot run without them.",
       "noMatchesBuiltin": "{name} is built into PHP — it is always available. See the list below.",
       "enabling": "Enabling…",
-      "disabling": "Disabling…"
+      "disabling": "Disabling…",
+      "waitForOther": "Wait for {name} to finish first."
     },
     "install": {
       "action": "Install version",
@@ -3812,7 +3813,8 @@
         "logFailed": "The build log could not be loaded.",
         "noPermission": "Your role does not include Deployment for this application with Manage access. Ask an administrator to grant it.",
         "title": "Deploy history",
-        "subtitle": "Every deploy, newest first. Open one to read its build log."
+        "subtitle": "Every deploy, newest first. Open one to read its build log.",
+        "busy": "A deployment is already running. Wait for it to finish."
       },
       "tabs": {
         "history": "History",

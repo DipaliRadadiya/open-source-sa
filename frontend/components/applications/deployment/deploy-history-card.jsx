@@ -92,6 +92,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
   useImperativeHandle(ref, () => ({ show }), [show]);
 
   async function redeploy(deployment) {
+    if (busyId !== null) return;
     setBusyId(deployment.id);
     try {
       await redeployDeployment(applicationId, deployment.id);
@@ -171,12 +172,24 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
                   </span>
                 </button>
 
-                <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                {/* One deploy at a time: while any Redeploy is starting, or a
+                    deploy is running, every row waits and says why. Only the
+                    clicked row used to lock, so a second click took its
+                    spinner and raced the first on the server. */}
+                <ReasonTooltip
+                  reason={
+                    !canManage
+                      ? t("noPermission")
+                      : running || (busyId !== null && busyId !== deployment.id)
+                        ? t("busy")
+                        : null
+                  }
+                >
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={!canManage || busyId === deployment.id || running}
+                    disabled={!canManage || busyId !== null || running}
                     onClick={() => redeploy(deployment)}
                   >
                     {busyId === deployment.id ? (

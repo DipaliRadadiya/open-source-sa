@@ -22,7 +22,7 @@ import {
  * so a mis-click removes a site from the panel's view for good with nothing on
  * screen to say why. This is the only place that state is visible.
  */
-export function IgnoredSheet({ ignores, canManage, pendingKey, onUnignore }) {
+export function IgnoredSheet({ ignores, canManage, pendingKeys = [], onUnignore }) {
   const t = useTranslations("sync");
 
   return (
@@ -67,14 +67,14 @@ export function IgnoredSheet({ ignores, canManage, pendingKey, onUnignore }) {
                             variant="ghost"
                             size="icon"
                             className="size-8 shrink-0"
-                            disabled={pendingKey === ignoreKey(ignore)}
+                            disabled={pendingKeys.includes(ignoreKey(ignore))}
                             aria-label={t("ignored.restore", { name: ignore.resource_key })}
                             onClick={() => onUnignore(ignore)}
                           >
                             {/* Same gap as the results table: disabling on its
                                 own is not feedback, because nothing on screen
                                 changes. */}
-                            {pendingKey === ignoreKey(ignore) ? (
+                            {pendingKeys.includes(ignoreKey(ignore)) ? (
                               <Loader2 className="size-4 animate-spin" aria-hidden />
                             ) : (
                               <Undo2 className="size-4" aria-hidden />
@@ -83,7 +83,7 @@ export function IgnoredSheet({ ignores, canManage, pendingKey, onUnignore }) {
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {pendingKey === ignoreKey(ignore)
+                        {pendingKeys.includes(ignoreKey(ignore))
                           ? t("results.working")
                           : t("results.restoreShort")}
                       </TooltipContent>

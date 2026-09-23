@@ -24,7 +24,7 @@ export function RulesCards({
   rules,
   enabled,
   canManage,
-  pending,
+  pending = [],
   onDelete,
   onToggle,
   shownEnabled,
@@ -61,7 +61,7 @@ export function RulesCards({
               >
                 <PendingSwitch
                   checked={shownEnabled(rule)}
-                  pending={pending === rule.id}
+                  pending={pending.includes(rule.id)}
                   onCheckedChange={() => onToggle(rule)}
                   disabled={Boolean(
                     protectedReasonFor({
@@ -79,7 +79,7 @@ export function RulesCards({
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled={!canManage || pending === rule.id}
+                  disabled={!canManage || pending.includes(rule.id)}
                   onClick={() => onRename(rule)}
                   aria-label={labels.rename}
                 >
@@ -90,7 +90,7 @@ export function RulesCards({
                 rule={rule}
                 enabled={enabled}
                 canManage={canManage}
-                pending={pending === rule.id}
+                pending={pending.includes(rule.id)}
                 onDelete={onDelete}
                 labels={labels}
               />

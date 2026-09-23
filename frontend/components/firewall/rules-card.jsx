@@ -8,6 +8,7 @@ import { SearchX, ShieldX, Trash2, Pencil } from "lucide-react";
 import { deleteFirewallRule, updateFirewallRule } from "@/lib/api/firewall";
 import { unreachablePorts } from "@/lib/firewall/listening";
 import { PendingSwitch } from "@/components/ui/pending-switch";
+import { usePendingKeys } from "@/hooks/use-pending-keys";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -66,7 +67,7 @@ function ActionsCell({ row, table }) {
   const { enabled, canManage, pending, onDelete, onToggle, onRename, shownEnabled, labels } =
     table.options.meta;
   const rule = row.original;
-  const busy = pending === rule.id;
+  const busy = pending.includes(rule.id);
   // Same guard the API applies. Switching a seeded rule off is, to ufw, the
   // delete this row already refuses — so offering it only bought a 422.
   // `turningOff` is what the switch would DO, not what the rule is: a
@@ -136,7 +137,11 @@ export function RulesCard({
   const tc = useTranslations("common");
   const setQuery = useSetQuery();
   const hasFilters = ["search", "enabled", "action", "origin", "sort"].some((key) => searchParams.has(key));
-  const [pending, setPending] = useState(null);
+  // Switches can be flipped on several rules at once, so each keeps its own
+  // in-flight state; delete runs from a dialog that stays open until it is done.
+  const toggling = usePendingKeys();
+  const [deletingId, setDeletingId] = useState(null);
+  const pending = deletingId === null ? toggling.pendingKeys : [...toggling.pendingKeys, deletingId];
   const [confirming, setConfirming] = useState(null);
   const [editing, setEditing] = useState(null);
   // The state the user asked for, held until the server catches up — stored
@@ -184,8 +189,9 @@ export function RulesCard({
     // `router.refresh()` lands — so a second click in that window read the
     // stale server value, re-sent the value it had just sent, and toasted
     // "switched off" for a click that meant on.
+    if (toggling.isPending(rule.id)) return;
     const next = !shownEnabled(rule);
-    setPending(rule.id);
+    toggling.start(rule.id);
     setAsked((current) => ({ ...current, [rule.id]: { value: next, from: rule.enabled !== false } }));
     try {
       await updateFirewallRule(rule.id, { enabled: next });
@@ -202,7 +208,7 @@ export function RulesCard({
         apiMessage(error, t("rules.toggleFailed")),
       );
     } finally {
-      setPending(null);
+      toggling.finish(rule.id);
     }
   }
 
@@ -220,7 +226,7 @@ export function RulesCard({
 
   async function confirmDelete() {
     const rule = confirming;
-    setPending(rule.id);
+    setDeletingId(rule.id);
     try {
       await deleteFirewallRule(rule.id);
       toast.success(t("rules.deleted"));
@@ -231,7 +237,7 @@ export function RulesCard({
         apiMessage(error, t("rules.deleteFailed")),
       );
     } finally {
-      setPending(null);
+      setDeletingId(null);
     }
   }
 
@@ -444,7 +450,7 @@ export function RulesCard({
 
       <ConfirmDialog
         open={confirming !== null}
-        onOpenChange={(open) => !pending && setConfirming(open ? confirming : null)}
+        onOpenChange={(open) => deletingId === null && setConfirming(open ? confirming : null)}
         icon={Trash2}
         tone="destructive"
         title={t("rules.confirmTitle")}
@@ -457,7 +463,7 @@ export function RulesCard({
         }
         cancelLabel={t("common.cancel")}
         confirmLabel={t("rules.delete")}
-        pending={pending !== null}
+        pending={deletingId !== null}
         onConfirm={confirmDelete}
       />
     </Card>

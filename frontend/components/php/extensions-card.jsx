@@ -105,6 +105,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
     : null;
 
   async function toggle(extension) {
+    if (pending) return;
     const next = !extension.enabled;
     setPending({ name: extension.name, on: next });
     try {
@@ -205,11 +206,16 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
               <TableBody>
                 {shown.map((extension) => {
                   const required = panelRequired.includes(extension.name);
+                  // One at a time: each switch installs packages and restarts
+                  // PHP, and a second apt run while the first holds the lock
+                  // fails. The others wait, and say for what.
                   const reason = !canManage
                     ? t("noPermission")
                     : required
                       ? t("extensions.panelNeeds")
-                      : null;
+                      : pending && pending.name !== extension.name
+                        ? t("extensions.waitForOther", { name: pending.name })
+                        : null;
 
                   return (
                     <TableRow key={extension.name}>

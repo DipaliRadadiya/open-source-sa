@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePendingKeys } from "@/hooks/use-pending-keys";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -55,7 +56,8 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
   const [editing, setEditing] = useState(null);
   const [replacing, setReplacing] = useState(null);
   const [disconnecting, setDisconnecting] = useState(null);
-  const [testingId, setTestingId] = useState(null);
+  // Tests can run side by side, one spinner each.
+  const testing = usePendingKeys();
 
   // No setState before the first await: called straight from an effect, a
   // synchronous one cascades an extra render on every mount.
@@ -91,7 +93,8 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
   }, [accounts.length, load]);
 
   async function check(account) {
-    setTestingId(account.id);
+    if (testing.isPending(account.id)) return;
+    testing.start(account.id);
     try {
       await testAccount(account.id);
       toast.success(t("actions.checked", { label: account.label }));
@@ -102,7 +105,7 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
     } catch (error) {
       toast.error(apiMessage(error, t("actions.checkFailed")));
     } finally {
-      setTestingId(null);
+      testing.finish(account.id);
     }
   }
 
@@ -265,7 +268,7 @@ export function AccountsCard({ accounts = [], providers = [], canManage, provide
                     status={statusFor(account.id)}
                     loading={statuses === null}
                     canManage={canManage}
-                    testing={testingId === account.id}
+                    testing={testing.isPending(account.id)}
                     onTest={() => check(account)}
                     onEdit={() => setEditing(account)}
                     onReplace={() => setReplacing(account)}

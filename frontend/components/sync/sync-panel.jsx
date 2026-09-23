@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePendingKeys } from "@/hooks/use-pending-keys";
 import { DownloadCloud, Loader2, RefreshCw, ScanSearch } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -41,7 +42,8 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
   const [ignores, setIgnores] = useState(initialIgnores ?? []);
   const [starting, setStarting] = useState(false);
   const [adoptOpen, setAdoptOpen] = useState(false);
-  const [pendingKey, setPendingKey] = useState(null);
+  // Ignoring or restoring several rows at once, each with its own spinner.
+  const ignoring = usePendingKeys();
   // Set when the poll gives up: the run never reported finishing.
   const [stalled, setStalled] = useState(false);
 
@@ -172,7 +174,8 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
 
   async function onIgnore(item) {
     const key = ignoreKey(item);
-    setPendingKey(key);
+    if (ignoring.isPending(key)) return;
+    ignoring.start(key);
     try {
       const { data } = await ignoreSyncItem({
         resourceType: item.resource_type,
@@ -189,7 +192,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
     } catch (error) {
       toast.error(apiMessage(error, t("errors.ignoreFailed")));
     } finally {
-      setPendingKey(null);
+      ignoring.finish(key);
     }
   }
 
@@ -198,14 +201,15 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
     const entry = ignores.find((ignore) => ignoreKey(ignore) === key);
     if (!entry) return;
 
-    setPendingKey(key);
+    if (ignoring.isPending(key)) return;
+    ignoring.start(key);
     try {
       await unignoreSyncItem(entry.id);
       setIgnores((current) => current.filter((ignore) => ignore.id !== entry.id));
     } catch (error) {
       toast.error(apiMessage(error, t("errors.unignoreFailed")));
     } finally {
-      setPendingKey(null);
+      ignoring.finish(key);
     }
   }
 
@@ -236,7 +240,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
         <IgnoredSheet
           ignores={ignores}
           canManage={canManage}
-          pendingKey={pendingKey}
+          pendingKeys={ignoring.pendingKeys}
           onUnignore={onUnignore}
         />
 
@@ -290,7 +294,7 @@ export function SyncPanel({ run: initialRun, items: initialItems, ignores: initi
           canManage={canManage}
           onIgnore={onIgnore}
           onUnignore={onUnignore}
-          pendingKey={pendingKey}
+          pendingKeys={ignoring.pendingKeys}
         />
       )}
 

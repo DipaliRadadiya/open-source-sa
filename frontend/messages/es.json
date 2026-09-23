@@ -2048,7 +2048,8 @@
       "builtinBody": "Vienen compiladas y siempre están disponibles. No hay nada que activar, y PHP no puede funcionar sin ellas.",
       "noMatchesBuiltin": "{name} viene incluida en PHP: siempre está disponible. Mira la lista de abajo.",
       "enabling": "Activando…",
-      "disabling": "Desactivando…"
+      "disabling": "Desactivando…",
+      "waitForOther": "Espera a que termine {name}."
     },
     "install": {
       "action": "Instalar versión",
@@ -3812,7 +3813,8 @@
         "logFailed": "No se pudo cargar el registro de compilación.",
         "noPermission": "Tu rol no incluye Despliegue de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
         "title": "Historial de despliegues",
-        "subtitle": "Todos los despliegues, del más reciente al más antiguo. Abre uno para leer su registro."
+        "subtitle": "Todos los despliegues, del más reciente al más antiguo. Abre uno para leer su registro.",
+        "busy": "Ya hay un despliegue en curso. Espera a que termine."
       },
       "tabs": {
         "history": "Historial",

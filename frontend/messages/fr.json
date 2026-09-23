@@ -2048,7 +2048,8 @@
       "builtinBody": "Compilées et toujours disponibles. Rien à activer : PHP ne peut pas fonctionner sans elles.",
       "noMatchesBuiltin": "{name} est intégrée à PHP — elle est toujours disponible. Voir la liste ci-dessous.",
       "enabling": "Activation…",
-      "disabling": "Désactivation…"
+      "disabling": "Désactivation…",
+      "waitForOther": "Attendez que {name} ait terminé."
     },
     "install": {
       "action": "Installer une version",
@@ -3812,7 +3813,8 @@
         "logFailed": "Le journal de build n'a pas pu être chargé.",
         "noPermission": "Votre rôle n'inclut pas Déploiement pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
         "title": "Historique des déploiements",
-        "subtitle": "Chaque déploiement, du plus récent au plus ancien. Ouvrez-en un pour lire son journal de build."
+        "subtitle": "Chaque déploiement, du plus récent au plus ancien. Ouvrez-en un pour lire son journal de build.",
+        "busy": "Un déploiement est déjà en cours. Attendez qu'il se termine."
       },
       "tabs": {
         "history": "Historique",

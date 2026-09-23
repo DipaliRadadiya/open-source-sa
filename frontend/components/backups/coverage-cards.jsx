@@ -20,7 +20,7 @@ import { COVERAGE_STATE } from "@/components/backups/status-meta";
  * a card layout below `lg`.
  */
 
-export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId }) {
+export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyIds = [] }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
   const format = useFormatter();
@@ -135,14 +135,14 @@ export function CoverageCards({ rows, canManage, onSetUp, onBackUpNow, busyId })
                 ) : (
                   <>
                     {canManage ? (
-                      <ReasonTooltip reason={!target && busyId !== application.id ? tc("needsBackupTarget") : null}>
+                      <ReasonTooltip reason={!target && !busyIds.includes(application.id) ? tc("needsBackupTarget") : null}>
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={busyId === application.id || !target}
+                          disabled={busyIds.includes(application.id) || !target}
                           onClick={() => onBackUpNow(application.id, application.name)}
                         >
-                          <ActionIcon icon={PlayCircle} pending={busyId === application.id} className="size-4" />
+                          <ActionIcon icon={PlayCircle} pending={busyIds.includes(application.id)} className="size-4" />
                           {t("runBackup")}
                         </Button>
                       </ReasonTooltip>
