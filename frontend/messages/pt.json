@@ -217,7 +217,11 @@
       "loadFailed": "As chaves desta conta não puderam ser carregadas. Isso não é o mesmo que não ter nenhuma.",
       "retryLoad": "Tentar novamente"
     },
-    "loadFailed": "Seus usuários de sistema não puderam ser carregados. Eles não foram alterados nem removidos."
+    "loadFailed": "Seus usuários de sistema não puderam ser carregados. Eles não foram alterados nem removidos.",
+    "sshNotEnforced": {
+      "body": "As chaves de login SSH ainda não são aplicadas: um usuário desligado aqui ainda consegue fazer login via SSH. Elas passam a valer quando você salvar Configurações → Acesso e segurança. Depois disso, só fazem login os usuários ligados aqui, os usuários com sudo e o root.",
+      "action": "Abrir Acesso e segurança"
+    }
   },
   "dashboard": {
     "title": "Painel",

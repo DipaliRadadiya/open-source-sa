@@ -217,7 +217,11 @@
       "loadFailed": "The keys for this account could not be loaded. This is not the same as having none.",
       "retryLoad": "Try again"
     },
-    "loadFailed": "Your system users could not be loaded. They have not been changed or removed."
+    "loadFailed": "Your system users could not be loaded. They have not been changed or removed.",
+    "sshNotEnforced": {
+      "body": "The SSH login switches aren't enforced yet — a user switched off here can still sign in over SSH. They take effect once you save Settings → Access & security. After that, only users switched on here, sudo users and root can sign in.",
+      "action": "Open Access & security"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

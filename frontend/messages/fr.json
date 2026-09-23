@@ -217,7 +217,11 @@
       "loadFailed": "Les clés de ce compte n'ont pas pu être chargées. Ce n'est pas la même chose que d'en avoir aucune.",
       "retryLoad": "Réessayer"
     },
-    "loadFailed": "Vos utilisateurs système n'ont pas pu être chargés. Ils n'ont pas été modifiés ni supprimés."
+    "loadFailed": "Vos utilisateurs système n'ont pas pu être chargés. Ils n'ont pas été modifiés ni supprimés.",
+    "sshNotEnforced": {
+      "body": "Les interrupteurs de connexion SSH ne sont pas encore appliqués : un utilisateur désactivé ici peut toujours se connecter en SSH. Ils prennent effet dès que vous enregistrez Paramètres → Accès et sécurité. Ensuite, seuls les utilisateurs activés ici, les utilisateurs sudo et root peuvent se connecter.",
+      "action": "Ouvrir Accès et sécurité"
+    }
   },
   "dashboard": {
     "title": "Tableau de bord",

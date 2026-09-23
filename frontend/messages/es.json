@@ -763,7 +763,11 @@
       "loadFailed": "No se pudieron cargar las claves de esta cuenta. Eso no es lo mismo que no tener ninguna.",
       "retryLoad": "Reintentar"
     },
-    "loadFailed": "No se pudieron cargar tus usuarios del sistema. No se han modificado ni eliminado."
+    "loadFailed": "No se pudieron cargar tus usuarios del sistema. No se han modificado ni eliminado.",
+    "sshNotEnforced": {
+      "body": "Los interruptores de inicio de sesión SSH aún no se aplican: un usuario desactivado aquí todavía puede entrar por SSH. Se aplican cuando guardas Ajustes → Acceso y seguridad. A partir de entonces, solo pueden entrar los usuarios activados aquí, los usuarios con sudo y root.",
+      "action": "Abrir Acceso y seguridad"
+    }
   },
   "serverDashboard": {
     "title": "Panel",

@@ -217,7 +217,11 @@
       "loadFailed": "Die Schlüssel für dieses Konto konnten nicht geladen werden. Das bedeutet nicht, dass keine vorhanden sind.",
       "retryLoad": "Erneut versuchen"
     },
-    "loadFailed": "Ihre Systembenutzer konnten nicht geladen werden. Sie wurden nicht geändert oder entfernt."
+    "loadFailed": "Ihre Systembenutzer konnten nicht geladen werden. Sie wurden nicht geändert oder entfernt.",
+    "sshNotEnforced": {
+      "body": "Die Schalter für die SSH-Anmeldung werden noch nicht durchgesetzt – ein hier ausgeschalteter Benutzer kann sich weiterhin über SSH anmelden. Sie greifen, sobald Sie Einstellungen → Zugang & Sicherheit speichern. Danach können sich nur hier eingeschaltete Benutzer, sudo-Benutzer und root anmelden.",
+      "action": "Zugang & Sicherheit öffnen"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
