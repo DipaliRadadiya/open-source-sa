@@ -3581,7 +3581,6 @@
         "rateLimited": "Let's Encrypt a limité le débit pour ce domaine. Attendez environ une semaine avant de réessayer — réessayer maintenant ne servira à rien.",
         "reissue": "Réémettre",
         "remove": "Retirer le certificat",
-        "moreActions": "Options du certificat",
         "active": "HTTPS est actif",
         "namesTitle": "Domaines de ce certificat",
         "namesCount": "{secured} sur {total} sécurisés",

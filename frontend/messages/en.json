@@ -3581,7 +3581,6 @@
         "rateLimited": "Let's Encrypt has rate-limited this domain. Wait about a week before trying again — retrying now won't help.",
         "reissue": "Reissue",
         "remove": "Remove certificate",
-        "moreActions": "Certificate options",
         "active": "HTTPS is active",
         "namesTitle": "Domains on this certificate",
         "namesCount": "{secured} of {total} secured",

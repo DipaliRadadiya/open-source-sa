@@ -106,14 +106,15 @@ test("a certificate that cannot renew itself offers Reissue before it lapses", (
   // `hasCoverageGap` joined the condition later — a renewing certificate with
   // a name missing also has something to do — but `!cert.renewable` is still
   // what this test is about.
-  assert.match(ssl, /expired \|\| !cert\.renewable \|\| hasCoverageGap \? \(/);
+  // Reissue is now shown in every state, so it is certainly there for these.
+  assert.doesNotMatch(ssl, /DropdownMenu/);
 
   // The same flag the "renew this yourself" copy keys on — one source of truth
   // for whether this certificate looks after itself.
   assert.match(ssl, /cert\.renewable \? "ssl\.expiresRenew" : "ssl\.expiresManual"/);
 
-  // A renewing certificate must NOT get the button: nothing to do, and it
-  // invites spending Let's Encrypt rate limit for no reason.
+  // Krishna chose (2026-09-23) to show Reissue on a renewing certificate too,
+  // the same button as everywhere else, rather than behind a menu.
   const code = strip(ssl);
   assert.doesNotMatch(code, /\{true \? \(\s*<Button size="sm" onClick=\{\(\) => setIssueOpen\(true\)\}/);
 });

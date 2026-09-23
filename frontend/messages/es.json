@@ -3581,7 +3581,6 @@
         "rateLimited": "Let's Encrypt ha limitado este dominio. Espera alrededor de una semana antes de volver a intentarlo: reintentar ahora no ayudará.",
         "reissue": "Reemitir",
         "remove": "Eliminar certificado",
-        "moreActions": "Opciones del certificado",
         "active": "HTTPS está activo",
         "namesTitle": "Dominios en este certificado",
         "namesCount": "{secured} de {total} protegidos",

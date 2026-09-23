@@ -3581,7 +3581,6 @@
         "rateLimited": "Let's Encrypt hat diese Domain gedrosselt. Warten Sie etwa eine Woche — ein Versuch jetzt hilft nicht.",
         "reissue": "Neu ausstellen",
         "remove": "Zertifikat entfernen",
-        "moreActions": "Zertifikatsoptionen",
         "active": "HTTPS ist aktiv",
         "namesTitle": "Domains auf diesem Zertifikat",
         "namesCount": "{secured} von {total} gesichert",

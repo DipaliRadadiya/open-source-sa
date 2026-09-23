@@ -3581,7 +3581,6 @@
         "rateLimited": "Let's Encrypt からこのドメインに対してレート制限を受けています。再試行は約 1 週間待ってください。今の時点で再試行しても解決しません。",
         "reissue": "再発行",
         "remove": "証明書を削除",
-        "moreActions": "証明書のオプション",
         "active": "HTTPS は有効です",
         "namesTitle": "この証明書に含まれるドメイン",
         "namesCount": "{total} 件中 {secured} 件を保護",
