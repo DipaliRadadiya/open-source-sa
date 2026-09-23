@@ -355,3 +355,41 @@ it('translates every failure reason in every locale the panel ships', function (
             ->not->toBe('errors/server.operation_timed_out', "missing in {$locale}");
     }
 });
+
+it('reports bytes written while a compress is still running', function () {
+    // The banner's only real content. `tar` reports nothing about its own
+    // progress and the worker is inside one blocking call for the whole run,
+    // so the size is read at poll time from the file being written.
+    $app = archiveApplication();
+
+    $job = FileArchiveJob::create([
+        'application_id' => $app->id, 'operation' => 'compress',
+        'sources' => ['wp-content'], 'target' => 'out.tar.gz',
+        'status' => FileArchiveStatus::Running, 'started_at' => now(),
+    ]);
+
+    $seen = [];
+    $ops = archiveOps($seen, [
+        'file_stat' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: archiveFakeProcess("f\t5961270368"), answered: true,
+        ),
+    ]);
+
+    expect(archiveBrowser($ops)->archiveSize($job->fresh()))->toBe(5961270368);
+});
+
+it('does not claim a size for an extract', function () {
+    // There is no single artefact to measure — extraction writes a tree into
+    // a directory that already had contents. Reporting the target directory's
+    // size would be a number that starts non-zero and means nothing.
+    $app = archiveApplication();
+
+    $job = FileArchiveJob::create([
+        'application_id' => $app->id, 'operation' => 'extract',
+        'sources' => ['site.tar.gz'], 'target' => '', 'status' => FileArchiveStatus::Running,
+    ]);
+
+    $seen = [];
+
+    expect(archiveBrowser(archiveOps($seen))->archiveSize($job->fresh()))->toBe(0);
+});

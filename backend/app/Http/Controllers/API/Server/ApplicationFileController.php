@@ -185,7 +185,7 @@ class ApplicationFileController extends Controller
      * in-flight rows would have a job vanish between two polls, and the panel
      * could never tell "finished" from "the page was reloaded".
      */
-    public function archiveJobs(Application $application): JsonResponse
+    public function archiveJobs(Application $application, FileBrowser $files): JsonResponse
     {
         $jobs = FileArchiveJob::query()
             ->where('application_id', $application->id)
@@ -198,13 +198,29 @@ class ApplicationFileController extends Controller
             // will not resolve. Settled on read rather than by a scheduled
             // reaper: the poll is the only thing that cares, and a stale row
             // nobody is looking at costs nothing.
-            ->each(function (FileArchiveJob $job) {
+            ->each(function (FileArchiveJob $job) use ($files) {
                 if ($job->isStale()) {
                     $job->update([
                         'status' => FileArchiveStatus::Failed,
                         'reason' => 'worker',
                         'finished_at' => now(),
                     ]);
+
+                    return;
+                }
+
+                // Progress, for a compress that is still writing. Read here
+                // rather than written by the worker because the worker is
+                // inside one blocking `tar` for the whole run and has nowhere
+                // to report from — and tar itself says nothing about how far
+                // it has got.
+                //
+                // Not persisted: this is one `find` per poll on a value that
+                // is stale the instant it is read, and a write per poll per
+                // viewer would be a row update every two seconds for the
+                // length of a fifteen-minute archive.
+                if ($job->status === FileArchiveStatus::Running && $job->operation === 'compress') {
+                    $job->size_bytes = $files->archiveSize($job);
                 }
             });
 
