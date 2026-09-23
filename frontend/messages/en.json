@@ -3922,7 +3922,9 @@
         "stop": "Stop",
         "stopped": "Upload stopped. {done} of {count} files were uploaded.",
         "waiting": "Paused by the server's upload limit. Continuing in {seconds, plural, one {# second} other {# seconds}}.",
-        "rateLimited": "The server is refusing more uploads right now. Press Upload again in a minute."
+        "rateLimited": "The server is refusing more uploads right now. Press Upload again in a minute.",
+        "skipped": "{done} uploaded, {skipped} skipped — a file with that name is already here.",
+        "partialSkipped": "{done} uploaded, {skipped} skipped, {failed} failed."
       },
       "editor": {
         "subtitle": "Changes are backed up automatically before each save.",

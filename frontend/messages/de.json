@@ -3922,7 +3922,9 @@
         "stop": "Stoppen",
         "stopped": "Hochladen gestoppt. {done} von {count} Dateien wurden hochgeladen.",
         "waiting": "Pausiert wegen des Upload-Limits des Servers. Weiter in {seconds, plural, one {# Sekunde} other {# Sekunden}}.",
-        "rateLimited": "Der Server nimmt gerade keine weiteren Uploads an. Klicken Sie in einer Minute erneut auf Hochladen."
+        "rateLimited": "Der Server nimmt gerade keine weiteren Uploads an. Klicken Sie in einer Minute erneut auf Hochladen.",
+        "skipped": "{done} hochgeladen, {skipped} übersprungen – eine Datei mit diesem Namen gibt es hier schon.",
+        "partialSkipped": "{done} hochgeladen, {skipped} übersprungen, {failed} fehlgeschlagen."
       },
       "editor": {
         "subtitle": "Änderungen werden vor jedem Speichern automatisch gesichert.",

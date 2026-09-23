@@ -132,6 +132,7 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
         err.response?.data?.errors?.mode?.[0] ??
         err.response?.data?.errors?.paths?.[0];
       if (field) setError(field);
+      else if ([404, 409, 422].includes(err.response?.status)) setError(apiMessage(err, t("bulk.failed")));
       else toast.error(apiMessage(err, t("bulk.failed")));
     } finally {
       setBusy(false);

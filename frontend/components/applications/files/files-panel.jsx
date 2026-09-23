@@ -33,6 +33,8 @@ import { SelectionBar } from "@/components/applications/files/selection-bar";
 import { BulkDialogs } from "@/components/applications/files/bulk-dialogs";
 import { BulkResultPanel } from "@/components/applications/files/bulk-result-panel";
 import { joinPath } from "@/lib/files/path-helpers";
+import { canOpenFile } from "@/lib/files/openable";
+import { isImageFile } from "@/lib/files/file-icon";
 import { hiddenToggleHref } from "@/lib/files/hidden-href";
 import { folderSize } from "@/lib/api/files";
 import { apiMessage } from "@/lib/api/error-message";
@@ -46,9 +48,21 @@ export function FilesPanel({
   canManage,
   breakdown = null,
   siteType = null,
+  // A file named in the link (`?open=`), opened on arrival.
+  openName = null,
 }) {
   const t = useTranslations("applications.files");
-  const [action, setAction] = useState(null); // { type, file }
+  const opened = openName
+    ? (initialFiles ?? []).find((f) => f.name === openName && f.type !== "dir")
+    : null;
+  const openedFile = opened ? { ...opened, path: joinPath(initialPath ?? "", opened.name) } : null;
+  // An image opens in the preview, text in the editor; anything else (an
+  // archive, a binary) has nowhere to open, so its row is highlighted instead.
+  const [action, setAction] = useState(() =>
+    openedFile && canOpenFile(openedFile.name)
+      ? { type: isImageFile(openedFile.name) ? "preview" : "edit", file: openedFile }
+      : null,
+  ); // { type, file }
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFileOpen, setNewFileOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -66,9 +80,19 @@ export function FilesPanel({
   // the list re-sorts on refresh, so without this the result could be
   // anywhere and there's no visual answer to "did that work, and where did
   // it go."
-  const [highlightPath, setHighlightPath] = useState(null);
+  const [highlightPath, setHighlightPath] = useState(openedFile?.path ?? null);
   const highlightTimeout = useRef(null);
   useEffect(() => () => clearTimeout(highlightTimeout.current), []);
+
+  // `open` has done its job once the file is on screen. Dropped from the
+  // address without a navigation, so a refresh or Back does not reopen it.
+  useEffect(() => {
+    if (!openName) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("open");
+    window.history.replaceState(window.history.state, "", url);
+    highlightTimeout.current = setTimeout(() => setHighlightPath(null), 2000);
+  }, [openName]);
   function flashPath(target) {
     if (!target) return;
     clearTimeout(highlightTimeout.current);
@@ -135,6 +159,17 @@ export function FilesPanel({
     const needle = query.trim().toLowerCase();
     return needle ? files.filter((f) => f.name.toLowerCase().includes(needle)) : files;
   }, [files, query]);
+  /*
+   * Only what is on screen is selected. Hiding hidden files, or typing in the
+   * search box, took rows off screen but left them ticked — so "Permissions
+   * for 3 items" could quietly include a .htaccess nobody could see any more.
+   * Derived, not pruned: clearing the filter brings the ticks back with the
+   * rows, which is what the reader expects.
+   */
+  const shownSelection = useMemo(() => {
+    const onScreen = new Set(filtered.map((f) => f.path));
+    return selected.filter((entry) => onScreen.has(entry));
+  }, [selected, filtered]);
   const canWrite = canManage;
   const writeReason = canWrite ? null : t("noPermission");
 
@@ -144,17 +179,21 @@ export function FilesPanel({
   // as long as the listing is on screen — asking twice for the same folder
   // makes the backend walk the tree twice for an answer we already have.
   const [folderSizes, setFolderSizes] = useState({});
-  const [sizingPath, setSizingPath] = useState(null);
+  // Every folder being measured, not just the last one clicked: with one slot,
+  // a second Calculate took the spinner off the first, and whichever finished
+  // first cleared the other's spinner too.
+  const [sizingPaths, setSizingPaths] = useState([]);
 
   async function measure(file) {
-    setSizingPath(file.path);
+    if (sizingPaths.includes(file.path)) return;
+    setSizingPaths((current) => [...current, file.path]);
     try {
       const { data } = await folderSize(appId, file.path);
       setFolderSizes((current) => ({ ...current, [file.path]: data?.size_human ?? null }));
     } catch (error) {
       toast.error(apiMessage(error, t("size.failed")));
     } finally {
-      setSizingPath(null);
+      setSizingPaths((current) => current.filter((entry) => entry !== file.path));
     }
   }
 
@@ -400,7 +439,7 @@ export function FilesPanel({
       <BulkResultPanel result={bulkOutcome} onDismiss={() => setBulkOutcome(null)} />
       {siteSearch ? null : (
         <SelectionBar
-          selected={selected}
+          selected={shownSelection}
           canManage={canManage}
           onClear={() => setSelected([])}
           onAction={setBulkAction}
@@ -489,12 +528,12 @@ export function FilesPanel({
               canManage={canManage}
               onAction={onAction}
               highlightPath={highlightPath}
-              selected={selected}
+              selected={shownSelection}
               onToggle={toggleSelected}
               // Same state the table gets — "Folder size" is in the card menu
               // too, and without these it had nowhere to put its answer.
               folderSizes={folderSizes}
-              sizingPath={sizingPath}
+              sizingPaths={sizingPaths}
             />
           </div>
           <div className="hidden lg:block">
@@ -505,11 +544,11 @@ export function FilesPanel({
               canManage={canManage}
               onAction={onAction}
               highlightPath={highlightPath}
-              selected={selected}
+              selected={shownSelection}
               onToggle={toggleSelected}
               onToggleAll={toggleAll}
               folderSizes={folderSizes}
-              sizingPath={sizingPath}
+              sizingPaths={sizingPaths}
             />
           </div>
           {/* The drop target has always been this whole panel; nothing said
@@ -558,7 +597,7 @@ export function FilesPanel({
         <BulkDialogs
           appId={appId}
           action={bulkAction}
-          paths={selected}
+          paths={shownSelection}
           // The rows themselves, not just their paths: the Permissions dialog
           // has to start from what is actually set, and a path cannot say.
           files={files}

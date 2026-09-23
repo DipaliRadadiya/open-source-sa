@@ -198,6 +198,9 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     // Counted here rather than read back off `items` afterwards, for the same
     // reason: the closure is the snapshot from before the run.
     let failedCount = 0;
+    // A taken name is skipped on purpose, not a failure — the toast said
+    // "1 failed" for a file the dialog had already said it would not send.
+    let skippedCount = 0;
     for (const item of items) {
       if (item.status === "done") {
         anySucceeded = true;
@@ -206,7 +209,11 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
       }
       // Known not to fit. Sending it anyway would fill the disk that every
       // hosted site shares, only to be refused at the last chunk.
-      if (item.spaceBlocked || item.nameTaken) {
+      if (item.nameTaken) {
+        skippedCount += 1;
+        continue;
+      }
+      if (item.spaceBlocked) {
         failedCount += 1;
         continue;
       }
@@ -274,7 +281,10 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
       return;
     }
 
-    if (!failedCount && uploaded) {
+    if (!failedCount && uploaded && skippedCount) {
+      // Stays open: the skipped rows say which files, and why.
+      toast.success(t("uploadDialog.skipped", { done: uploaded, skipped: skippedCount }));
+    } else if (!failedCount && uploaded) {
       toast.success(
         uploaded === 1
           ? t("uploadDialog.uploadedOne", { name: succeededNames[0] })
@@ -285,7 +295,11 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
       // stay on screen, since the per-file reason is only shown here.
       setTimeout(() => handleOpenChange(false), 700);
     } else if (uploaded) {
-      toast.warning(t("uploadDialog.partial", { done: uploaded, failed: failedCount }));
+      toast.warning(
+        skippedCount
+          ? t("uploadDialog.partialSkipped", { done: uploaded, skipped: skippedCount, failed: failedCount })
+          : t("uploadDialog.partial", { done: uploaded, failed: failedCount }),
+      );
     } else if (failedCount) {
       toast.error(t("uploadDialog.allFailed"));
     }

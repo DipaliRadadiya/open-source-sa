@@ -136,12 +136,12 @@ test("folder size reaches the phone layout, not just the table", () => {
   // The panel hands both pieces of state to the card list.
   const cardsBlock = panel.slice(panel.indexOf("<FilesCards"), panel.indexOf("<FilesTable"));
   assert.match(cardsBlock, /folderSizes=\{folderSizes\}/);
-  assert.match(cardsBlock, /sizingPath=\{sizingPath\}/);
+  assert.match(cardsBlock, /sizingPaths=\{sizingPaths\}/);
 
   // And the card renders it, with in-progress feedback.
   assert.match(cards, /folderSizes = \{\},/);
-  assert.match(cards, /sizingPath = null,/);
-  assert.match(cards, /const measuring = sizingPath === file\.path/);
+  assert.match(cards, /sizingPaths = \[\],/);
+  assert.match(cards, /const measuring = sizingPaths\.includes\(file\.path\)/);
   assert.match(cards, /measuring \? \(\s*tSize\("measuring"\)/);
   assert.match(cards, /file\.type === "dir" \? folderSizes\[file\.path\] : file\.size_human/);
 });

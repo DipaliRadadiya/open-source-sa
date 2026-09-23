@@ -76,7 +76,7 @@ test("upload says what the server does with a name that is already taken", () =>
   assert.match(panel, /existingNames=\{files\.map\(\(f\) => f\.name\)\}/);
   assert.match(upload, /const taken = existing\.has\(file\.name\);/);
   assert.match(upload, /error: taken \? t\("uploadDialog\.exists"\) : null/);
-  assert.match(upload, /if \(item\.spaceBlocked \|\| item\.nameTaken\) \{/, "a taken name is never sent");
+  assert.match(upload, /if \(item\.nameTaken\) \{\s*skippedCount \+= 1;\s*continue;/, "a taken name is never sent");
 });
 
 test("an upload in progress can be stopped", () => {
@@ -248,4 +248,67 @@ test("saved versions are listed by when, not by backup file name", async () => {
   assert.equal(parseApiWallClock("notes.txt.bak-20260923-085023"), null);
   assert.match(restoreSrc, /format\.dateTime\(when, \{ dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" \}\)/);
   assert.doesNotMatch(restoreSrc, /font-mono text-xs">\{backup\.name\}/);
+});
+
+test("a file skipped for its name is counted as skipped, not failed", () => {
+  // "13 uploaded, 1 failed" for a file the dialog had already said it would
+  // not send.
+  assert.match(upload, /if \(item\.nameTaken\) \{\s*skippedCount \+= 1;/);
+  assert.match(upload, /t\("uploadDialog\.skipped", \{ done: uploaded, skipped: skippedCount \}\)/);
+  assert.match(upload, /t\("uploadDialog\.partialSkipped"/);
+});
+
+// ---- Files leftovers (2026-09-23) ----
+
+test("the Modified hover gives a readable date in the server's clock", () => {
+  const cell = tableSrc.slice(tableSrc.indexOf("function ModifiedCell"), tableSrc.indexOf("function OwnerCell"));
+  assert.match(cell, /parseApiWallClock\(file\.modified_at\)/);
+  assert.match(cell, /timeZone: "UTC"/);
+  assert.match(cell, /<TooltipContent>\{exact\}<\/TooltipContent>/);
+});
+
+test("a link to a file opens its folder with the file open, not 'folder is gone'", () => {
+  const page = read("app/(app)/applications/[application]/files/page.jsx");
+  // The listing answers 404 for a file path; look in the parent first.
+  assert.match(page, /if \(filesResult\.notFound && path\) \{/);
+  assert.match(page, /entry\.name === name && entry\.type !== "dir"/);
+  assert.match(page, /open: name/);
+  assert.match(panel, /openName = null,/);
+  // Dropped from the address once used, so a refresh does not reopen it.
+  assert.match(panel, /url\.searchParams\.delete\("open"\)/);
+});
+
+test("a refusal about the typed path shows under the field, not in a toast", () => {
+  const target = read("components/applications/files/target-path-dialog.jsx");
+  assert.match(target, /const REFUSED_HERE = new Set\(\[404, 409, 422\]\);/);
+  assert.match(target, /REFUSED_HERE\.has\(err\.response\?\.status\)\) \{[\s\S]*?setError\(apiMessage\(err, failureMessage\)\)/);
+  for (const f of ["new-folder-dialog.jsx", "new-file-dialog.jsx"]) {
+    assert.match(read(`components/applications/files/${f}`), /\[404, 409, 422\]\.includes\(error\.response\?\.status\)/, f);
+  }
+  assert.match(read("components/applications/files/bulk-dialogs.jsx"), /\[404, 409, 422\]\.includes\(err\.response\?\.status\)\) setError/);
+});
+
+test("a bulk action only touches what is on screen", () => {
+  // A hidden .htaccess stayed ticked after "Hide hidden files" or a search.
+  assert.match(panel, /const shownSelection = useMemo\(/);
+  assert.match(panel, /paths=\{shownSelection\}/);
+  assert.match(panel, /<SelectionBar\s+selected=\{shownSelection\}/);
+  assert.doesNotMatch(panel, /paths=\{selected\}/);
+});
+
+test("the chart library loads when Storage opens, not with every folder", () => {
+  const sheet = read("components/applications/files/size-breakdown-sheet.jsx");
+  assert.doesNotMatch(sheet, /from "@\/components\/ui\/echart"/);
+  assert.match(sheet, /dynamic\(\s*\(\) => import\("@\/components\/applications\/files\/size-breakdown-donut"\)/);
+  assert.match(read("components/applications/files/size-breakdown-donut.jsx"), /from "@\/components\/ui\/echart"/);
+});
+
+test("two folders measured at once each keep their own spinner", () => {
+  // One `sizingPath` slot: a second Calculate took the spinner off the first,
+  // and whichever finished first cleared the other's too.
+  assert.match(panel, /const \[sizingPaths, setSizingPaths\] = useState\(\[\]\);/);
+  assert.match(panel, /setSizingPaths\(\(current\) => current\.filter\(\(entry\) => entry !== file\.path\)\)/);
+  assert.match(tableSrc, /sizingPaths\.includes\(file\.path\)/);
+  assert.match(cards, /sizingPaths\.includes\(file\.path\)/);
+  assert.doesNotMatch(panel + tableSrc + cards, /\bsizingPath\b/);
 });

@@ -7,6 +7,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getFiles } from "@/lib/applications/get-files";
+import { basename, dirname } from "@/lib/files/path-helpers";
 import { getTrash } from "@/lib/applications/get-trash";
 import { getBreakdown } from "@/lib/applications/get-breakdown";
 import { FilesPanel } from "@/components/applications/files/files-panel";
@@ -38,8 +39,9 @@ export async function generateMetadata({ params }) {
 
 export default async function ApplicationFilesPage({ params, searchParams }) {
   const { application: id } = await params;
-  const { path: rawPath, trash: rawTrash, hidden: rawHidden } = await searchParams;
+  const { path: rawPath, trash: rawTrash, hidden: rawHidden, open: rawOpen } = await searchParams;
   const path = typeof rawPath === "string" ? rawPath : "";
+  const openName = typeof rawOpen === "string" ? rawOpen : null;
   // The trash is a view of this same screen, not a route of its own — see
   // memory/research-file-trash.md. Every panel that has one reaches it from the
   // file manager's toolbar.
@@ -84,6 +86,23 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
     settled && !showTrash ? getBreakdown(id, path) : Promise.resolve(null),
   ]);
   const trashResult = settled && showTrash ? await getTrash(id) : null;
+
+  /*
+   * A link to a FILE — a path copied from the row, a bookmark — used to land
+   * on "This folder is gone": the listing endpoint answers 404 for anything
+   * that is not a folder, the same as for something deleted. Look in the
+   * parent before saying so, and if the name is a file there, open that
+   * folder with the file already open.
+   */
+  if (filesResult.notFound && path) {
+    const parent = dirname(path);
+    const name = basename(path);
+    const parentResult = await getFiles(id, parent, true);
+    if (parentResult.files?.some((entry) => entry.name === name && entry.type !== "dir")) {
+      const query = new URLSearchParams({ ...(parent ? { path: parent } : {}), open: name });
+      redirect(`/applications/${id}/files?${query}`);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -175,6 +194,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
             canManage={canManage}
             breakdown={breakdown}
             siteType={application.site_type}
+            openName={openName}
           />
       )}
     </div>

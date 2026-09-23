@@ -3922,7 +3922,9 @@
         "stop": "Arrêter",
         "stopped": "Téléversement arrêté. {done} fichiers sur {count} ont été téléversés.",
         "waiting": "En pause à cause de la limite de téléversement du serveur. Reprise dans {seconds, plural, one {# seconde} other {# secondes}}.",
-        "rateLimited": "Le serveur refuse d'autres téléversements pour le moment. Cliquez à nouveau sur Téléverser dans une minute."
+        "rateLimited": "Le serveur refuse d'autres téléversements pour le moment. Cliquez à nouveau sur Téléverser dans une minute.",
+        "skipped": "{done} téléversé(s), {skipped} ignoré(s) : un fichier de ce nom existe déjà.",
+        "partialSkipped": "{done} téléversé(s), {skipped} ignoré(s), {failed} échec(s)."
       },
       "editor": {
         "subtitle": "Une sauvegarde est créée automatiquement avant chaque enregistrement.",

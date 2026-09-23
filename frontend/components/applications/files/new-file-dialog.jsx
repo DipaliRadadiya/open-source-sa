@@ -42,6 +42,10 @@ export function NewFileDialog({ appId, path, open, onOpenChange, onSuccess }) {
       const pathError = error.response?.data?.errors?.path?.[0];
       if (pathError) {
         form.setError("name", { message: pathError });
+      } else if ([404, 409, 422].includes(error.response?.status)) {
+        // A refusal with no field key (a name that is taken) still belongs
+        // on the field, not in a toast beside a dialog that stays open.
+        form.setError("name", { message: apiMessage(error, t("newFile.failed")) });
       } else {
         toast.error(apiMessage(error, t("newFile.failed")));
       }

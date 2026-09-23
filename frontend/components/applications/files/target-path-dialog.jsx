@@ -21,6 +21,10 @@ import { FormModal } from "@/components/ui/form-modal";
  * (Rename selects just the filename, so typing replaces the name without
  * touching the directory — the same trick OS file pickers use for "rename").
  */
+// Refusals about what was typed, so they belong under the field. A 403, a
+// rate limit or a server fault is not about the path and stays a toast.
+const REFUSED_HERE = new Set([404, 409, 422]);
+
 export function TargetPathDialog({
   appId,
   file,
@@ -137,6 +141,11 @@ export function TargetPathDialog({
       const targetError = err.response?.data?.errors?.target?.[0];
       if (targetError) {
         setError(targetError);
+      } else if (REFUSED_HERE.has(err.response?.status)) {
+        // "Something already exists at that path", "could not be found": the
+        // API sends these with no field key, and a toast fading out beside a
+        // dialog that stays open looked like nothing had been said.
+        setError(apiMessage(err, failureMessage));
       } else {
         toast.error(apiMessage(err, failureMessage));
       }
