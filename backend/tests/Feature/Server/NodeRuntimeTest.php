@@ -586,10 +586,23 @@ describe('found on a real server, 2026-09-23', function () {
         lifecycleNode('0.12', 'eol');
         lifecycleNode('0.10', 'eol');
         Process::fake(fn ($process) => str_ends_with((string) $process->command[0], 'fnm') && in_array('list-remote', $process->command, true)
-            ? Process::result(output: "v0.10.48\nv0.12.18\nv22.11.0\n")
+            ? Process::result(output: "v0.7.12\nv0.9.12\nv0.10.48\nv0.11.16\nv0.12.18\nv22.11.0\n")
             : Process::result(output: "/usr/local/bin/fnm\n"));
 
+        // The odd dev lines (0.7, 0.9, 0.11) are not in Node's schedule at
+        // all; they are dead because a line after them is.
         expect(app(NodeRuntime::class)->installable())->toBe(['22.11.0']);
+    });
+
+    it('still offers a line newer than anything the catalog knows', function () {
+        // A release the catalog has not caught up with is not dead.
+        lifecycleNode('24', 'lts');
+        lifecycleNode('20', 'eol');
+        Process::fake(fn ($process) => str_ends_with((string) $process->command[0], 'fnm') && in_array('list-remote', $process->command, true)
+            ? Process::result(output: "v20.19.1\nv24.1.0\nv26.0.0\n")
+            : Process::result(output: "/usr/local/bin/fnm\n"));
+
+        expect(app(NodeRuntime::class)->installable())->toBe(['26.0.0', '24.1.0']);
     });
 
     it('hands a newly installed version to whoever owns the fnm directory', function () {
