@@ -2286,6 +2286,8 @@ The shared `www-data` pool is **no longer a choice**: asking for it answers `405
 
 **`managed: false` means the pool file on disk no longer matches what the panel would write** — someone edited it by hand. Warn *before* the user presses save, not after their edits are gone.
 
+**`managed: null` means the panel could not check** (the pool file could not be probed or read). Say "could not verify the pool file" — do not treat it as `true` (a save may overwrite hand edits) or as `false` (there may be none).
+
 **`open_basedir` has three answers on purpose, and they are all different questions.** `additional_directives` is appended to the pool config raw, so a directive a user writes there lands *after* the panel's and wins.
 
 | field | question it answers |
@@ -5266,6 +5268,8 @@ Sequence: back up → write → config test (`php-fpm -t`, or `lsphp -c php.ini 
 
 `on, not installed` → `202` (apt queued). `off` → `200` (unlinked, never purged). Built-in / panel-required → `422`.
 
+`500` with a `reference` when the change was made but PHP could not be reloaded — it is **not active yet**, and the message says so. A queued install that ends that way fails with `reason: "reload_failed"` (distinct from `enable_failed`, where the module was not switched on at all).
+
 ---
 
 ### GET `/php/versions/{version}/ioncube`
@@ -5277,7 +5281,7 @@ Sequence: back up → write → config test (`php-fpm -t`, or `lsphp -c php.ini 
   "loader_version": "15.5.0",
   "sha256": "e2193a63a87e2388a71854b0114de4fc71e2e40bcf0794faf74bb562691e5b62",
   "path": "/usr/lib/php/20240924/ioncube_loader_lin_8.4.so",
-  "status": "idle", "reason": null, "reference": null
+  "status": "idle", "reason": null, "message": null, "reference": null
 }}
 ```
 
@@ -5286,6 +5290,8 @@ The ionCube Loader, which commercial PHP applications (WHMCS and most licensed s
 **`supported: false` is a real state, not an error.** ionCube publishes no loader for **PHP 8.0**, and the panel still offers 8.0. Render an explanation, not an Install button. A PHP version that is not installed at all is a `404` — there is no card for a PHP that is not there.
 
 `loader_version` is read out of PHP itself, so it is the version actually loaded rather than the one that was requested; `null` while `installed` is `true` means the ini is in place and the loader did not load. `status` / `reason` / `reference` follow the same pattern as PHP extension installs.
+
+**Show `message`, never `reason`.** On a failed install, `message` is the sentence in the viewer's locale; `reason` is a code to branch on — the actual cause (`ioncube_download_failed`, `ioncube_invalid_loader`, `ioncube_config_test_failed`, `ioncube_reload_failed`, `ioncube_rollback_failed`, …, or `worker` if the job died), no longer always `install_failed`. `message` is `null` whenever the last run did not fail.
 
 ### POST `/php/versions/{version}/ioncube`
 **Permission:** `php` (manage)

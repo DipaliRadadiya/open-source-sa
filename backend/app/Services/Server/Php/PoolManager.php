@@ -284,15 +284,35 @@ class PoolManager
      * be told their changes will be overwritten *before* they press save, not
      * discover it afterwards.
      */
-    public function managed(Application $application, ApplicationPhpSettings $settings): bool
+    public function managed(Application $application, ApplicationPhpSettings $settings): ?bool
     {
         $path = $this->poolPath($application);
 
-        if ($path === null || ! $this->exists($application)) {
+        if ($path === null) {
             return true;
         }
 
-        return trim((string) $this->read($path)) === trim($this->render($application, $settings));
+        // Null when it could not be checked. Both "unknown"s used to become a
+        // confident answer: a probe that failed read as "managed" (no warning
+        // before a save that overwrites hand edits), and a `cat` that failed
+        // read as "hand-edited" (a warning about edits nobody made).
+        $exists = $this->exists($application);
+
+        if ($exists === null) {
+            return null;
+        }
+
+        if ($exists === false) {
+            return true;
+        }
+
+        $contents = $this->read($path);
+
+        if ($contents === null) {
+            return null;
+        }
+
+        return trim($contents) === trim($this->render($application, $settings));
     }
 
     public function render(Application $application, ApplicationPhpSettings $settings): string

@@ -13,6 +13,7 @@ return [
     'unknown_version' => 'PHP :version ist auf diesem Server nicht installiert.',
     'unreadable' => 'Die Konfiguration von PHP :version konnte nicht gelesen werden.',
     'invalid_ini' => 'PHP hat diese Konfiguration abgelehnt, daher wurde die vorherige wiederhergestellt. Es wurde nichts neu geladen.',
+    'reload_failed' => 'Die Änderung wurde vorgenommen, aber PHP :version konnte nicht neu geladen werden und ist daher noch nicht aktiv. Nennen Sie dem Support die Referenz.',
     'operation_failed' => 'Die Konfiguration von PHP :version konnte nicht aktualisiert werden.',
     'version_in_use' => 'PHP :version wird von :apps verwendet. Ändern Sie zuerst diese Seiten.',
     'version_is_default' => 'Dies ist die Standardversion. Wählen Sie zuerst eine andere.',

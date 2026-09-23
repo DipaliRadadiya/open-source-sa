@@ -49,6 +49,7 @@ return [
         'no_space' => 'The server has run out of disk space.',
         'worker' => 'Installing :extension stopped unexpectedly. It may have timed out — try again.',
         'unknown' => 'Installing :extension failed. Quote the reference below to support.',
+        'reload_failed' => ':extension was installed, but PHP could not be reloaded, so it is not active yet. Quote the reference below to support.',
         'enable_failed' => ':extension was installed but could not be switched on. Try the toggle again.',
     ],
 

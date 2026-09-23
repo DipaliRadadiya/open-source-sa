@@ -13,6 +13,7 @@ return [
     'unknown_version' => 'PHP :version はこのサーバーにインストールされていません。',
     'unreadable' => 'PHP :version の設定を読み取れませんでした。',
     'invalid_ini' => 'PHP がこの設定を拒否したため、以前の設定に戻しました。再読み込みは行われていません。',
+    'reload_failed' => '変更は適用されましたが、PHP :version を再読み込みできなかったため、まだ有効になっていません。サポートに参照番号をお伝えください。',
     'operation_failed' => 'PHP :version の設定を更新できませんでした。',
     'version_in_use' => 'PHP :version は :apps が使用しています。先にそれらのサイトを変更してください。',
     'version_is_default' => 'これは既定のバージョンです。先に別のものを選んでください。',

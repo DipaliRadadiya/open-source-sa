@@ -13,6 +13,7 @@ return [
     'unknown_version' => 'PHP :version n\'est pas installé sur ce serveur.',
     'unreadable' => 'Impossible de lire la configuration de PHP :version.',
     'invalid_ini' => 'PHP a rejeté cette configuration : la précédente a été restaurée. Rien n\'a été rechargé.',
+    'reload_failed' => 'La modification a été faite, mais PHP :version n\'a pas pu être rechargé : elle n\'est donc pas encore active. Communiquez la référence au support.',
     'operation_failed' => 'La configuration de PHP :version n\'a pas pu être mise à jour.',
     'version_in_use' => 'PHP :version est utilisé par :apps. Modifiez d\'abord ces sites.',
     'version_is_default' => 'C\'est la version par défaut. Choisissez-en une autre d\'abord.',

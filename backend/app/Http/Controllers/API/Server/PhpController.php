@@ -272,6 +272,9 @@ class PhpController extends Controller
                 ...$loader->status($version),
                 'status' => $run?->status->value ?? 'idle',
                 'reason' => $run?->reason,
+                // What to show. `reason` is a code for the frontend to branch
+                // on, never text for the user.
+                'message' => $loader->failureMessage($run, $version),
                 'reference' => $run?->reference,
             ],
         ]);

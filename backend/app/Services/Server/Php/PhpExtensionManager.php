@@ -180,7 +180,11 @@ class PhpExtensionManager
         // running processes to restart. Calling enable() here would refuse and
         // report a failed install for an apt run that succeeded.
         if (! $this->stack->togglesExtensions()) {
-            $this->reload($version);
+            try {
+                $this->reload($version);
+            } catch (PhpConfigException $e) {
+                throw new RuntimeInstallException((string) $e->reference, 'reload_failed');
+            }
 
             return;
         }
@@ -196,7 +200,12 @@ class PhpExtensionManager
             // Installed but not switched on is its own outcome, and worth
             // saying so — "the install failed" would be wrong, and the user
             // would retry an apt run that already succeeded.
-            throw new RuntimeInstallException((string) $e->reference, 'enable_failed');
+            // Switched on and not reloaded is not "could not be switched on" —
+            // pressing the toggle again would not be the fix.
+            throw new RuntimeInstallException(
+                (string) $e->reference,
+                $e->reason() === 'reload_failed' ? 'reload_failed' : 'enable_failed',
+            );
         }
     }
 
@@ -289,7 +298,14 @@ class PhpExtensionManager
         // Every stack implements reload() -- it is on the contract, described
         // as "apply a configuration change for a version" -- so there is no
         // stack this is unsafe to call for.
-        $this->stack->reload($version);
+        //
+        // And its result is read. Ignored, a failed reload answered the toggle
+        // with success while every running worker went on without the change.
+        $result = $this->stack->reload($version);
+
+        if ($result->failed()) {
+            throw PhpConfigException::reloadFailed($version, $result->reference);
+        }
     }
 
     /**

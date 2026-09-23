@@ -1,9 +1,11 @@
 <?php
 
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Jobs\InstallPhpExtension;
 use App\Models\User;
 use App\Services\Server\Php\PhpExtensionManager;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Process\FakeProcessResult;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -51,13 +53,18 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->phpDir));
 
-function fakeExtensions(): ArrayObject
+/** @param  (callable(array<int, string>): ?FakeProcessResult)|null  $override */
+function fakeExtensions(?callable $override = null): ArrayObject
 {
     $runs = new ArrayObject;
     $soDir = test()->soDir;
 
-    Process::fake(function ($process) use ($runs, $soDir) {
+    Process::fake(function ($process) use ($runs, $soDir, $override) {
         $runs[] = $process->command;
+
+        if ($override !== null && ($result = $override($process->command)) !== null) {
+            return $result;
+        }
         $command = $process->command;
         $first = $command[0] ?? '';
 
@@ -298,6 +305,37 @@ it('never purges a package', function () {
     // Disabling unlinks and stops. `apt purge php8.4-*` is how a server loses
     // php8.4-common and every site with it.
     expect(collect($runs)->filter(fn ($c) => in_array('purge', $c, true)))->toBeEmpty();
+});
+
+/*
+ * The reload after a toggle or install used to be fire-and-forget: phpenmod
+ * succeeded, the reload failed, and the screen said the extension was on
+ * while every running worker went on without it.
+ */
+it('reports a failed reload after a toggle instead of success', function () {
+    fakeExtensions(fn (array $command) => ($command[0] ?? '') === 'systemctl'
+        ? Process::result(exitCode: 1, errorOutput: 'Job for php-fpm failed')
+        : null);
+
+    extCall('PUT', "/api/php/versions/{$this->other}/extensions/redis", ['enabled' => false])
+        ->assertStatus(500)
+        ->assertJsonPath('message', __('errors/php.reload_failed', ['version' => $this->other]))
+        ->assertJsonStructure(['reference']);
+
+    $this->assertDatabaseMissing('activity_logs', ['action' => 'extension_disabled']);
+});
+
+it('records an install whose reload failed as reload_failed, not enable_failed', function () {
+    // Pressing the toggle again is what `enable_failed` tells the user to do,
+    // and it is not the fix when the module is on and PHP was not reloaded.
+    fakeExtensions(fn (array $command) => ($command[0] ?? '') === 'systemctl' ? Process::result(exitCode: 1) : null);
+
+    try {
+        app(PhpExtensionManager::class)->install($this->other, 'xdebug');
+        $this->fail('expected the install to fail');
+    } catch (RuntimeInstallException $e) {
+        expect($e->reason)->toBe('reload_failed');
+    }
 });
 
 it('installs with --no-install-recommends and no prompt', function () {

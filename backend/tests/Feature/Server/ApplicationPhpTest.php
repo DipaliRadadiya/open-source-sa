@@ -36,6 +36,12 @@ class PoolFake
     /** Whether the site's Linux account resolves in `getent passwd`. */
     public static bool $accountExists = true;
 
+    /** When set, `test -f` gets no answer: sudo refused, so exit 1 with stderr. */
+    public static bool $probeRefused = false;
+
+    /** When set, `cat` fails even though the file is there. */
+    public static bool $catFails = false;
+
     public static function reset(): void
     {
         self::$files = [];
@@ -43,6 +49,8 @@ class PoolFake
         self::$configValid = true;
         self::$reloadOk = true;
         self::$accountExists = true;
+        self::$probeRefused = false;
+        self::$catFails = false;
     }
 }
 
@@ -99,12 +107,20 @@ function fakePhpServer(): void
         if ($binary === 'cat') {
             $path = $args[1] ?? '';
 
+            if (PoolFake::$catFails) {
+                return Process::result(errorOutput: 'Permission denied', exitCode: 1);
+            }
+
             return array_key_exists($path, PoolFake::$files)
                 ? Process::result(output: PoolFake::$files[$path])
                 : Process::result(errorOutput: 'No such file', exitCode: 1);
         }
 
         if ($binary === 'test') {
+            if (PoolFake::$probeRefused) {
+                return Process::result(errorOutput: 'sudo: a password is required', exitCode: 1);
+            }
+
             return Process::result(exitCode: array_key_exists($args[2] ?? '', PoolFake::$files) ? 0 : 1);
         }
 
@@ -652,6 +668,30 @@ it('says so when the pool has been edited by hand', function () {
 
     // Said before they press save, not after their changes have gone.
     expect($this->actingAs($this->admin)->getJson(phpUrl())->json('php.managed'))->toBeFalse();
+});
+
+/*
+ * Both "could not check" cases used to become a confident answer: a refused
+ * probe read as "managed" (no warning before a save that overwrites hand
+ * edits), and a failed `cat` read as "hand-edited" (a warning about edits
+ * nobody made).
+ */
+it('says it could not check the pool, rather than guessing', function (string $failure) {
+    fakePhpServer();
+    $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+    PoolFake::${$failure} = true;
+
+    expect($this->actingAs($this->admin)->getJson(phpUrl())->assertOk()->json('php'))
+        ->toHaveKey('managed')
+        ->and($this->actingAs($this->admin)->getJson(phpUrl())->json('php.managed'))->toBeNull();
+})->with(['probeRefused', 'catFails']);
+
+it('still calls an untouched pool managed', function () {
+    fakePhpServer();
+    $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+    expect($this->actingAs($this->admin)->getJson(phpUrl())->json('php.managed'))->toBeTrue();
 });
 
 describe('permissions', function () {

@@ -4,10 +4,12 @@ namespace App\Services\Server\Php;
 
 use App\Contracts\PhpStack;
 use App\Exceptions\Server\Php\PhpConfigException;
+use App\Models\RuntimeInstall;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -98,6 +100,32 @@ class IonCubeLoader
             'sha256' => $installed ? $this->installedHash($version) : null,
             'path' => $installed ? $this->loaderPath($version) : null,
         ];
+    }
+
+    /**
+     * The sentence for a failed install run, in the viewer's locale.
+     *
+     * The run stores the exception's own cause (`ioncube_download_failed`),
+     * and every one of those already has a sentence under `errors/php`. A
+     * cause without one — the worker dying (`worker`), or a row written before
+     * causes were kept (`install_failed`) — falls back to the shared install
+     * messages rather than showing a code.
+     */
+    public function failureMessage(?RuntimeInstall $run, string $version): ?string
+    {
+        // A run that has not failed has no reason — the tracker clears it on
+        // every start — so it falls through to message(), which says nothing.
+        if ($run === null) {
+            return null;
+        }
+
+        $key = 'errors/php.'.$run->reason;
+
+        if ($run->reason !== null && Lang::has($key)) {
+            return __($key, ['version' => $version, 'architecture' => php_uname('m')]);
+        }
+
+        return $run->message();
     }
 
     /**

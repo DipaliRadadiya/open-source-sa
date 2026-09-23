@@ -387,6 +387,51 @@ it('records a failed reload as a failed install and retains recovery files', fun
     $this->assertDatabaseMissing('activity_logs', ['type' => 'php', 'action' => 'ioncube_installed']);
 });
 
+it('keeps the real cause of a failed install and says it in words', function () {
+    // The job recorded every failure as `install_failed` and the card
+    // returned only that code — a failed download and a failed config test
+    // read the same, and the frontend showed the raw word.
+    fakeIonCube(['existing' => true, 'fail' => fn ($args) => ($args[0] ?? '') === 'systemctl']);
+    $tracker = app(InstallTracker::class);
+    $tracker->start(InstallIonCubeLoader::RUNTIME, $this->version);
+    app()->call([new InstallIonCubeLoader($this->version, $this->admin->id), 'handle']);
+
+    expect($tracker->current(InstallIonCubeLoader::RUNTIME, $this->version)->reason)->toBe('ioncube_reload_failed');
+
+    $this->withToken($this->token)->getJson("/api/php/versions/{$this->version}/ioncube")
+        ->assertOk()
+        ->assertJsonPath('ioncube.status', 'failed')
+        ->assertJsonPath('ioncube.reason', 'ioncube_reload_failed')
+        ->assertJsonPath('ioncube.message', 'PHP could not be reloaded. The changes may not yet be active. Any recovery copies have been retained.');
+});
+
+it('gives a sentence, not a code, for a cause with no ionCube wording', function (string $reason) {
+    // `worker` (the job died) and `install_failed` (rows from before causes
+    // were kept) have no errors/php sentence of their own.
+    fakeIonCube(['existing' => true]);
+    $tracker = app(InstallTracker::class);
+    $tracker->start(InstallIonCubeLoader::RUNTIME, $this->version);
+    $tracker->fail(InstallIonCubeLoader::RUNTIME, $this->version, null, $reason, 'ref-1');
+
+    $message = $this->withToken($this->token)->getJson("/api/php/versions/{$this->version}/ioncube")
+        ->assertOk()->json('ioncube.message');
+
+    expect($message)->toBeString()->not->toBe('')->not->toContain($reason)->not->toContain('errors/php');
+})->with(['worker', 'install_failed']);
+
+it('says nothing when the last run did not fail', function () {
+    fakeIonCube(['existing' => true]);
+
+    // A retry: failed once, running again. The old failure is not the news.
+    $tracker = app(InstallTracker::class);
+    $tracker->start(InstallIonCubeLoader::RUNTIME, $this->version);
+    $tracker->fail(InstallIonCubeLoader::RUNTIME, $this->version, null, 'ioncube_download_failed', 'ref-1');
+    $tracker->start(InstallIonCubeLoader::RUNTIME, $this->version);
+
+    $this->withToken($this->token)->getJson("/api/php/versions/{$this->version}/ioncube")
+        ->assertOk()->assertJsonPath('ioncube.message', null);
+});
+
 it('fails removal on reload error instead of returning success', function () {
     fakeIonCube(['existing' => true, 'fail' => fn ($args) => ($args[0] ?? '') === 'systemctl']);
     $this->withToken($this->token)->deleteJson("/api/php/versions/{$this->version}/ioncube")

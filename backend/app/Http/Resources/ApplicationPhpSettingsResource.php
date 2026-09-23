@@ -63,9 +63,11 @@ class ApplicationPhpSettingsResource extends JsonResource
 
             // False when the pool file no longer matches what the panel would
             // write — someone edited it by hand. Said before they press save,
-            // not after their changes have gone.
+            // not after their changes have gone. Null when it could not be
+            // checked, which is not the same as either answer.
             'managed' => $application->isolated_at === null
-                || $pools->managed($application, $settings),
+                ? true
+                : $pools->managed($application, $settings),
 
             'settings' => [
                 'memory_limit' => $effective['memory_limit'],
