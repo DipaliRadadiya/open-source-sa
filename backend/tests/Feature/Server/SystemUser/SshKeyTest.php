@@ -180,3 +180,38 @@ it('refuses a key whose blob is not the type it claims to be', function () {
         ->assertUnprocessable()
         ->assertJsonValidationErrors('public_key');
 });
+
+it('does not keep a key row when writing authorized_keys fails', function () {
+    // Seen live: a refused write left the panel listing a key the server
+    // never received.
+    Process::fake(fn ($p) => in_array('tee', $p->command, true)
+        ? Process::result(exitCode: 1, errorOutput: 'Permission denied')
+        : Process::result());
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson("/api/system-users/{$this->su->id}/ssh-keys", ['name' => 'laptop', 'public_key' => TEST_KEY])
+        ->assertStatus(500)
+        ->assertJsonStructure(['reference']);
+
+    expect($this->su->sshKeys()->count())->toBe(0);
+});
+
+it('keeps the key row when rewriting authorized_keys after a removal fails', function () {
+    // The key is still on the server and still grants access; the panel must
+    // not say it is gone.
+    $key = $this->su->sshKeys()->create([
+        'name' => 'laptop',
+        'public_key' => TEST_KEY,
+        'fingerprint' => app(SshKeyManager::class)->fingerprint(TEST_KEY),
+    ]);
+
+    Process::fake(fn ($p) => in_array('tee', $p->command, true)
+        ? Process::result(exitCode: 1, errorOutput: 'Permission denied')
+        : Process::result());
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson("/api/system-users/{$this->su->id}/ssh-keys/{$key->id}")
+        ->assertStatus(500);
+
+    expect(SshKey::find($key->id))->not->toBeNull();
+});
