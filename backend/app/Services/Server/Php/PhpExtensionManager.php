@@ -317,6 +317,10 @@ class PhpExtensionManager
         return collect($matches[1] ?? [])
             ->unique()
             ->reject(fn (string $name) => in_array($name, $excluded, true))
+            // LiteSpeed's repository carries `lsphp84-ioncube`. Installing it
+            // beside the loader the ionCube card manages is two loaders in one
+            // PHP — so ionCube has one control, and it is not this list.
+            ->reject(fn (string $name) => $this->isIonCube($name))
             ->sort()
             ->values()
             ->all();
@@ -456,10 +460,8 @@ class PhpExtensionManager
 
         $lowerInstalled = array_map([$this, 'normaliseModule'], $installedModules);
 
-        // `[PHP Modules]` only. `[Zend Modules]` repeats OPcache and adds the
-        // zend_extensions — ionCube lists itself there as "the ionCube PHP
-        // Loader", which no normalising turns into a module name, so it came
-        // out as a built-in row for something the ionCube card manages.
+        // `[PHP Modules]` only: `[Zend Modules]` repeats what is already
+        // listed above it, under display names ("the ionCube PHP Loader").
         $section = preg_split('/^\[Zend Modules\]\s*$/m', $output)[0] ?? $output;
 
         return collect(preg_split('/\r?\n/', trim($section)) ?: [])
@@ -467,6 +469,9 @@ class PhpExtensionManager
             ->filter(fn (string $line) => $line !== '' && ! str_starts_with($line, '['))
             ->map(fn (string $line) => $this->normaliseModule($line))
             ->reject(fn (string $module) => in_array($module, $lowerInstalled, true))
+            // "ionCube Loader" in [PHP Modules] (measured on lsphp 8.4 with
+            // loader 15.5) — the ionCube card's, not a built-in.
+            ->reject(fn (string $module) => $this->isIonCube($module))
             ->unique()
             ->sort()
             ->values()
@@ -489,6 +494,12 @@ class PhpExtensionManager
         $dir = trim($result->output());
 
         return $result->ok && $dir !== '' && is_dir($dir) ? $dir : null;
+    }
+
+    /** ionCube has its own card ({@see IonCubeLoader}); never a row here. */
+    private function isIonCube(string $name): bool
+    {
+        return str_contains(strtolower($name), 'ioncube');
     }
 
     /** `20-curl.ini` -> `curl`, `curl.ini` -> `curl`. */

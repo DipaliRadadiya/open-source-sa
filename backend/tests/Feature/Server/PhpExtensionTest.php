@@ -68,7 +68,7 @@ function fakeExtensions(): ArrayObject
             $version = preg_replace('/-$/', '', (string) preg_replace('/^\^php/', '', (string) end($command)));
 
             return Process::result(output: collect([
-                'curl', 'mysql', 'redis', 'mbstring', 'xdebug', 'imagick', 'opcache',
+                'curl', 'mysql', 'redis', 'mbstring', 'xdebug', 'imagick', 'opcache', 'ioncube',
                 'fpm', 'cli', 'common', 'dev', 'phpdbg',
             ])->map(fn ($n) => "php{$version}-{$n} - a php module")->join("\n"));
         }
@@ -94,7 +94,7 @@ function fakeExtensions(): ArrayObject
 
         // `php -m` — the loaded set, including things compiled in.
         if (in_array('-m', $command, true)) {
-            return Process::result(output: "[PHP Modules]\nCore\ncurl\njson\nmbstring\nmysqli\npcre\nredis\nstandard\n\n[Zend Modules]\nthe ionCube PHP Loader + ionCube24\nZend OPcache\n");
+            return Process::result(output: "[PHP Modules]\nCore\ncurl\nionCube Loader\njson\nmbstring\nmysqli\npcre\nredis\nstandard\n\n[Zend Modules]\nthe ionCube PHP Loader\nZend OPcache\n");
         }
 
         return Process::result(exitCode: 0);
@@ -168,10 +168,11 @@ it('lists compiled-in extensions without a control', function () {
         ->and($catalog['curl']['builtin'])->toBeFalse();
 });
 
-it('does not list a zend_extension such as ionCube as a built-in', function () {
-    // `php -m` names ionCube only under [Zend Modules], as "the ionCube PHP
-    // Loader + ionCube24" — read as a module it became a built-in row for
-    // something the ionCube card manages.
+it('leaves ionCube to its own card', function () {
+    // Measured on OpenLiteSpeed with loader 15.5: `php -m` lists "ionCube
+    // Loader" under [PHP Modules] (a bogus built-in row), and LiteSpeed's
+    // repository offers `lsphp84-ioncube` (an Install button for a second
+    // loader beside the one the ionCube card manages).
     fakeExtensions();
 
     $names = collect(extCall('GET', "/api/php/versions/{$this->panel}/extensions")->json('extensions'))->pluck('name');
