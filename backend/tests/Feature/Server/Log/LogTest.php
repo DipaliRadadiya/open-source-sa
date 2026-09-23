@@ -753,3 +753,47 @@ it('ships a registry whose clear policy matches what the panel documents', funct
     // not a file, so there is nothing to truncate.
     expect($registry->firstWhere('key', 'journal')['clearable'] ?? false)->toBeFalse();
 });
+
+describe('sources the panel account cannot see, as configured for real', function () {
+    /** The shipped catalog entries, not a fixture — these tests guard the config itself. */
+    function shippedLogs(array $keys): array
+    {
+        return array_values(array_filter(
+            (require base_path('config/server.php'))['logs'],
+            fn (array $source) => in_array($source['key'], $keys, true),
+        ));
+    }
+
+    it("lists OpenLiteSpeed's own logs, which live in a root-only directory", function () {
+        // /usr/local/lsws/logs is root:nogroup 0750. As plain files the panel
+        // could not see them exist and dropped both from every OLS server's
+        // list (found 2026-09-23). Asked through sudo, they are there.
+        config(['server.logs' => shippedLogs(['openlitespeed_access', 'openlitespeed_error'])]);
+        Process::fake(fn () => Process::result(output: "1072583\n"));
+
+        $keys = collect($this->withHeader('Authorization', "Bearer {$this->token}")->getJson('/api/logs')->assertOk()->json('logs'))->pluck('key');
+
+        expect($keys->all())->toContain('openlitespeed_access', 'openlitespeed_error');
+    });
+
+    it("shows MariaDB's journal log once MariaDB has written to it", function () {
+        config(['server.logs' => shippedLogs(['mariadb'])]);
+        Process::fake(fn ($p) => in_array('mariadbd', $p->command, true)
+            ? Process::result(output: "Sep 23 10:49:06 host mariadbd[1096]: [Warning] Access denied\n")
+            : Process::result());
+
+        $keys = collect($this->withHeader('Authorization', "Bearer {$this->token}")->getJson('/api/logs')->assertOk()->json('logs'))->pluck('key');
+
+        expect($keys->all())->toContain('mariadb');
+    });
+
+    it('does not list an empty MariaDB log on a server without MariaDB', function () {
+        // journalctl answers "no such program" with exit 0 and this line.
+        config(['server.logs' => shippedLogs(['mariadb'])]);
+        Process::fake(fn () => Process::result(output: "-- No entries --\n"));
+
+        $keys = collect($this->withHeader('Authorization', "Bearer {$this->token}")->getJson('/api/logs')->assertOk()->json('logs'))->pluck('key');
+
+        expect($keys->all())->not->toContain('mariadb');
+    });
+});

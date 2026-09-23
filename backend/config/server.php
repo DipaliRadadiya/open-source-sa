@@ -1894,11 +1894,21 @@ return [
         // so the Logs screen offered no access log on that stack at all. The
         // shipped httpd_config.conf writes `accessLog logs/access.log`, which
         // resolves against $SERVER_ROOT.
-        ['key' => 'openlitespeed_access', 'label' => 'OpenLiteSpeed — Access', 'group' => 'web', 'path' => '/usr/local/lsws/logs/access.log', 'clearable' => true],
-        ['key' => 'openlitespeed_error', 'label' => 'OpenLiteSpeed — Error', 'group' => 'web', 'path' => '/usr/local/lsws/logs/error.log', 'clearable' => true],
+        // `privileged`: /usr/local/lsws/logs is root:nogroup 0750, so the panel
+        // account cannot even see these files exist — as plain `file` sources
+        // both were silently dropped from the list on every OpenLiteSpeed
+        // server (found 2026-09-23). Read through sudo, like Let's Encrypt's.
+        ['key' => 'openlitespeed_access', 'label' => 'OpenLiteSpeed — Access', 'group' => 'web', 'kind' => 'privileged', 'path' => '/usr/local/lsws/logs/access.log', 'clearable' => true],
+        ['key' => 'openlitespeed_error', 'label' => 'OpenLiteSpeed — Error', 'group' => 'web', 'kind' => 'privileged', 'path' => '/usr/local/lsws/logs/error.log', 'clearable' => true],
         // Database (installed engine)
         ['key' => 'mysql_error', 'label' => 'MySQL — Error', 'group' => 'database', 'path' => '/var/log/mysql/error.log', 'clearable' => true],
         ['key' => 'mysql_slow', 'label' => 'MySQL — Slow Query', 'group' => 'database', 'path' => '/var/log/mysql/mariadb-slow.log', 'clearable' => true],
+        // MariaDB on Debian/Ubuntu logs to the journal, not /var/log/mysql —
+        // so on those servers the file entry above never appears and there was
+        // no database log at all. Tagged `mariadbd` by the unit itself; shown
+        // only once it has written something, so a server without MariaDB
+        // does not list an empty log.
+        ['key' => 'mariadb', 'label' => 'MariaDB', 'group' => 'database', 'kind' => 'journal', 'identifier' => 'mariadbd', 'path' => '', 'hide_when_empty' => true],
         ['key' => 'mongodb', 'label' => 'MongoDB', 'group' => 'database', 'path' => '/var/log/mongodb/mongod.log', 'clearable' => true],
         // Cache
         ['key' => 'redis', 'label' => 'Redis', 'group' => 'cache', 'path' => '/var/log/redis/redis-server.log', 'clearable' => true],
