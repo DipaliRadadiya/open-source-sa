@@ -2,6 +2,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { Eye, FileQuestion, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 
 /**
  * What watching mode caught — read here rather than sending someone to the file
@@ -32,11 +33,14 @@ export async function DetectLogCard({ rows = [], failed = false }) {
             <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
           </div>
         </div>
-        {rows.length ? (
-          <Badge variant="secondary" className="shrink-0 font-normal">
-            {t("count", { count: rows.length })}
-          </Badge>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-2">
+          {rows.length ? (
+            <Badge variant="secondary" className="shrink-0 font-normal">
+              {t("count", { count: rows.length })}
+            </Badge>
+          ) : null}
+          <RefreshButton className="size-8" />
+        </div>
       </div>
 
       <CardContent className="p-3 sm:p-5">

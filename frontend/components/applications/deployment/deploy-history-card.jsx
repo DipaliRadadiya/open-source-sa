@@ -14,6 +14,7 @@ import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Card, CardContent } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Dialog,
@@ -123,6 +124,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
           <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         </div>
+        <RefreshButton />
       </div>
 
       <CardContent className="p-0">

@@ -21,6 +21,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Card, CardContent } from "@/components/ui/card";
 import { BackupsCards } from "@/components/backups/backups-cards";
 import { FacetSelect } from "@/components/data-table/facet-select";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
@@ -284,6 +285,9 @@ export function BackupsHistory({
           options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
           className="w-full sm:w-48"
         />
+        <div className="sm:ml-auto">
+          <RefreshButton />
+        </div>
       </div>
 
       {backups.length === 0 ? (

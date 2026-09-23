@@ -4,6 +4,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { Table2 } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
 import { Card, CardContent } from "@/components/ui/card";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 
 /**
  * What is inside the database.
@@ -50,6 +51,7 @@ export function DatabaseTables({ database, tables = [] }) {
             </p>
           </div>
         </div>
+        <RefreshButton />
       </div>
 
       <CardContent className="px-5 py-0">

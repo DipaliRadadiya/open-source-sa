@@ -11,6 +11,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FilterSelect } from "@/components/data-table/filter-select";
@@ -219,6 +220,7 @@ export function CoverageCard({
           <span className="text-xs tabular-nums text-muted-foreground sm:ml-auto">
             {t("showing", { shown: rows.length, total: coverage.total })}
           </span>
+          <RefreshButton />
         </div>
 
         {/* Three filters live here and none of them is in the URL, so a

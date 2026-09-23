@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 
 /**
  * What is recoverable, and the two ways out of it.
@@ -120,6 +121,7 @@ export function TrashPanel({
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <RefreshButton className="size-8" />
             <Button variant="outline" size="sm" asChild>
               <Link href={backHref} prefetch={false}>
                 <ArrowLeft className="size-3.5" />

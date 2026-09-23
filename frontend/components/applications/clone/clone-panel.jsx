@@ -42,12 +42,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { DomainText } from "@/components/ui/domain-text";
@@ -736,6 +738,9 @@ function ExistingCopies({ copies }) {
           <CardMark icon={CopyCheck} />
           {t("title", { count: copies.length })}
         </CardTitle>
+        <CardAction>
+          <RefreshButton className="size-8" />
+        </CardAction>
       </CardHeader>
 
       <CardContent className="border-t p-0!">

@@ -6,6 +6,7 @@ import { filterToggleClass } from "@/lib/theme/filter-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // The ranges the backend accepts (it caps at 90). Kept short: this is a
@@ -50,7 +51,8 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
         </div>
         {/* Plain links, so the range is in the URL and the server component
             re-runs — no client state for something a page reload should keep. */}
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
+          <RefreshButton className="me-1 size-8" />
           {TRAFFIC_RANGES.map((range) => (
             <Button
               key={range}

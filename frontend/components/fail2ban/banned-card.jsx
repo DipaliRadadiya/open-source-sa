@@ -30,6 +30,7 @@ import {
 import { BanIpDialog } from "@/components/fail2ban/ban-ip-dialog";
 import { BannedCards } from "@/components/fail2ban/banned-cards";
 import { useNavTransition } from "@/components/data-table/nav-transition";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { apiMessage } from "@/lib/api/error-message";
 
 // 10, not 25: on a phone each ban is a card, and 25 of them is a wall of
@@ -219,6 +220,7 @@ export function BannedCard({ banned, jails, canManage, logHref, yourIp = null })
           <CardDescription>{t("banned.description")}</CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <RefreshButton />
           {/* A ban tells you an address was blocked, never what it did. The
               lines that triggered it are in the log, so the page says where. */}
           {logHref ? (
