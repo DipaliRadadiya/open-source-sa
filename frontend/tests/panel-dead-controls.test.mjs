@@ -25,7 +25,8 @@ test("move and copy do not pre-fill the folder the files are already in", () => 
    * destination".
    */
   const bulk = read("components/applications/files/bulk-dialogs.jsx");
-  assert.match(bulk, /action === "compress" \? joinPath\(path, "archive\.zip"\) : ""/);
+  // Beside its contents, under a name nothing there already has.
+  assert.match(bulk, /action === "compress" \? compressSuggestion\(joinPath\(path, "archive"\), "\.zip", new Set\(files\.map\(\(f\) => f\.path\)\)\) : ""/);
 
   const code = strip(bulk);
   assert.doesNotMatch(
@@ -135,12 +136,12 @@ test("folder size reaches the phone layout, not just the table", () => {
   // The panel hands both pieces of state to the card list.
   const cardsBlock = panel.slice(panel.indexOf("<FilesCards"), panel.indexOf("<FilesTable"));
   assert.match(cardsBlock, /folderSizes=\{folderSizes\}/);
-  assert.match(cardsBlock, /sizingPath=\{sizingPath\}/);
+  assert.match(cardsBlock, /sizingPaths=\{sizingPaths\}/);
 
   // And the card renders it, with in-progress feedback.
   assert.match(cards, /folderSizes = \{\},/);
-  assert.match(cards, /sizingPath = null,/);
-  assert.match(cards, /const measuring = sizingPath === file\.path/);
+  assert.match(cards, /sizingPaths = \[\],/);
+  assert.match(cards, /const measuring = sizingPaths\.includes\(file\.path\)/);
   assert.match(cards, /measuring \? \(\s*tSize\("measuring"\)/);
   assert.match(cards, /file\.type === "dir" \? folderSizes\[file\.path\] : file\.size_human/);
 });

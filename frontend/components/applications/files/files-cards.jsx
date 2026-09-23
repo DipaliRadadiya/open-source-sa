@@ -11,7 +11,7 @@ import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 import { FILE_NAME } from "@/lib/files/name-style";
 
 /*
- * `folderSizes` and `sizingPath` are the same two pieces of state the desktop
+ * `folderSizes` and `sizingPaths` are the same two pieces of state the desktop
  * table's SizeCell reads. Without them the ⋯ → "Folder size" action on a phone
  * ran, measured, stored the answer — and had nowhere to show it, so the menu
  * closed and nothing ever happened. The action was only ever wired into the
@@ -27,7 +27,7 @@ export function FilesCards({
   selected = [],
   onToggle,
   folderSizes = {},
-  sizingPath = null,
+  sizingPaths = [],
 }) {
   const t = useTranslations("applications.files");
   // "Measuring…" already exists one namespace up, shared with the dashboard.
@@ -37,7 +37,7 @@ export function FilesCards({
     <ul className="space-y-2">
       {data.map((file) => {
         const busy = busyPath === file.path;
-        const measuring = sizingPath === file.path;
+        const measuring = sizingPaths.includes(file.path);
         return (
           <li
             key={file.path}

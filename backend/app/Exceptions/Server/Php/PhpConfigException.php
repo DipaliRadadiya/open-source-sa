@@ -37,6 +37,16 @@ class PhpConfigException extends Exception
         return new self('errors/php.invalid_ini', 422, replace: ['version' => $version]);
     }
 
+    /**
+     * The change is on disk but PHP was not told to pick it up, so it is not
+     * active yet. Its own message: "could not be updated" would send someone
+     * to redo a change that already happened.
+     */
+    public static function reloadFailed(string $version, string $reference): self
+    {
+        return new self('errors/php.reload_failed', 500, $reference, ['version' => $version]);
+    }
+
     public static function operationFailed(string $version, string $reference): self
     {
         return new self('errors/php.operation_failed', 500, $reference, ['version' => $version]);
@@ -67,6 +77,16 @@ class PhpConfigException extends Exception
     public static function ionCubeUnsupportedArchitecture(string $architecture): self
     {
         return new self('errors/php.ioncube_unsupported_architecture', 422, replace: ['architecture' => $architecture]);
+    }
+
+    /**
+     * Installed outside the panel — v7's php.ini line, or LiteSpeed's
+     * package. 422: nothing failed, the panel declines to manage what it did
+     * not put there.
+     */
+    public static function ionCubeExternal(string $version): self
+    {
+        return new self('errors/php.ioncube_external', 422, replace: ['version' => $version]);
     }
 
     public static function ionCubeDownloadFailed(string $reference): self
@@ -141,6 +161,16 @@ class PhpConfigException extends Exception
     public static function ionCubeRollbackFailed(string $reference): self
     {
         return new self('errors/php.ioncube_rollback_failed', 500, $reference);
+    }
+
+    /**
+     * What went wrong, as a stable code — `ioncube_download_failed`,
+     * `reload_failed` — for a caller that records the failure instead of
+     * rendering it, so the cause survives into the row the screen reads.
+     */
+    public function reason(): string
+    {
+        return str_replace('errors/php.', '', $this->messageKey);
     }
 
     public function render(Request $request): JsonResponse

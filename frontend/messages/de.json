@@ -217,7 +217,11 @@
       "loadFailed": "Die Schlüssel für dieses Konto konnten nicht geladen werden. Das bedeutet nicht, dass keine vorhanden sind.",
       "retryLoad": "Erneut versuchen"
     },
-    "loadFailed": "Ihre Systembenutzer konnten nicht geladen werden. Sie wurden nicht geändert oder entfernt."
+    "loadFailed": "Ihre Systembenutzer konnten nicht geladen werden. Sie wurden nicht geändert oder entfernt.",
+    "sshNotEnforced": {
+      "body": "Die Schalter für die SSH-Anmeldung werden noch nicht durchgesetzt – ein hier ausgeschalteter Benutzer kann sich weiterhin über SSH anmelden. Sie greifen, sobald Sie Einstellungen → Zugang & Sicherheit speichern. Danach können sich nur hier eingeschaltete Benutzer, sudo-Benutzer und root anmelden.",
+      "action": "Zugang & Sicherheit öffnen"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -2044,7 +2048,11 @@
       "builtinBody": "Fest einkompiliert und immer verfügbar. Es gibt nichts umzuschalten, und PHP kann ohne sie nicht laufen.",
       "noMatchesBuiltin": "{name} ist in PHP integriert – sie ist immer verfügbar. Siehe die Liste unten.",
       "enabling": "Wird aktiviert…",
-      "disabling": "Wird deaktiviert…"
+      "disabling": "Wird deaktiviert…",
+      "waitForOther": "Warten Sie, bis {name} fertig ist.",
+      "install": "Installieren",
+      "installingNow": "Wird installiert…",
+      "noToggleNote": "Unter OpenLiteSpeed ist eine installierte Erweiterung immer aktiv. Sie können sie hier installieren, aber nicht ausschalten."
     },
     "install": {
       "action": "Version installieren",
@@ -3581,7 +3589,6 @@
         "rateLimited": "Let's Encrypt hat diese Domain gedrosselt. Warten Sie etwa eine Woche — ein Versuch jetzt hilft nicht.",
         "reissue": "Neu ausstellen",
         "remove": "Zertifikat entfernen",
-        "moreActions": "Zertifikatsoptionen",
         "active": "HTTPS ist aktiv",
         "namesTitle": "Domains auf diesem Zertifikat",
         "namesCount": "{secured} von {total} gesichert",
@@ -3809,7 +3816,8 @@
         "logFailed": "Das Build-Protokoll konnte nicht geladen werden.",
         "noPermission": "Ihre Rolle enthält nicht „Deployment“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "title": "Deploy-Verlauf",
-        "subtitle": "Jedes Deployment, neueste zuerst. Öffnen Sie eines, um sein Build-Protokoll zu lesen."
+        "subtitle": "Jedes Deployment, neueste zuerst. Öffnen Sie eines, um sein Build-Protokoll zu lesen.",
+        "busy": "Es läuft bereits ein Deployment. Warten Sie, bis es fertig ist."
       },
       "tabs": {
         "history": "Verlauf",
@@ -3917,7 +3925,11 @@
         "allFailed": "Keine dieser Dateien konnte hochgeladen werden.",
         "exists": "In diesem Ordner gibt es bereits eine Datei mit diesem Namen. Benennen Sie sie um oder löschen Sie sie zuerst.",
         "stop": "Stoppen",
-        "stopped": "Hochladen gestoppt. {done} von {count} Dateien wurden hochgeladen."
+        "stopped": "Hochladen gestoppt. {done} von {count} Dateien wurden hochgeladen.",
+        "waiting": "Pausiert wegen des Upload-Limits des Servers. Weiter in {seconds, plural, one {# Sekunde} other {# Sekunden}}.",
+        "rateLimited": "Der Server nimmt gerade keine weiteren Uploads an. Klicken Sie in einer Minute erneut auf Hochladen.",
+        "skipped": "{done} hochgeladen, {skipped} übersprungen – eine Datei mit diesem Namen gibt es hier schon.",
+        "partialSkipped": "{done} hochgeladen, {skipped} übersprungen, {failed} fehlgeschlagen."
       },
       "editor": {
         "subtitle": "Änderungen werden vor jedem Speichern automatisch gesichert.",

@@ -1,9 +1,11 @@
 <?php
 
+use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Jobs\InstallPhpExtension;
 use App\Models\User;
 use App\Services\Server\Php\PhpExtensionManager;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Process\FakeProcessResult;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -51,13 +53,18 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->phpDir));
 
-function fakeExtensions(): ArrayObject
+/** @param  (callable(array<int, string>): ?FakeProcessResult)|null  $override */
+function fakeExtensions(?callable $override = null): ArrayObject
 {
     $runs = new ArrayObject;
     $soDir = test()->soDir;
 
-    Process::fake(function ($process) use ($runs, $soDir) {
+    Process::fake(function ($process) use ($runs, $soDir, $override) {
         $runs[] = $process->command;
+
+        if ($override !== null && ($result = $override($process->command)) !== null) {
+            return $result;
+        }
         $command = $process->command;
         $first = $command[0] ?? '';
 
@@ -68,7 +75,7 @@ function fakeExtensions(): ArrayObject
             $version = preg_replace('/-$/', '', (string) preg_replace('/^\^php/', '', (string) end($command)));
 
             return Process::result(output: collect([
-                'curl', 'mysql', 'redis', 'mbstring', 'xdebug', 'imagick', 'opcache',
+                'curl', 'mysql', 'redis', 'mbstring', 'xdebug', 'imagick', 'opcache', 'ioncube',
                 'fpm', 'cli', 'common', 'dev', 'phpdbg',
             ])->map(fn ($n) => "php{$version}-{$n} - a php module")->join("\n"));
         }
@@ -94,7 +101,7 @@ function fakeExtensions(): ArrayObject
 
         // `php -m` — the loaded set, including things compiled in.
         if (in_array('-m', $command, true)) {
-            return Process::result(output: "[PHP Modules]\nCore\ncurl\njson\nmbstring\nmysqli\npcre\nredis\nstandard\n\n[Zend Modules]\nZend OPcache\n");
+            return Process::result(output: "[PHP Modules]\nCore\ncurl\nionCube Loader\njson\nmbstring\nmysqli\npcre\nredis\nstandard\n\n[Zend Modules]\nthe ionCube PHP Loader\nZend OPcache\n");
         }
 
         return Process::result(exitCode: 0);
@@ -166,6 +173,48 @@ it('lists compiled-in extensions without a control', function () {
     expect($catalog['json']['builtin'])->toBeTrue()
         ->and($catalog['json']['package'])->toBeNull()
         ->and($catalog['curl']['builtin'])->toBeFalse();
+});
+
+it('leaves ionCube to its own card', function () {
+    // Measured on OpenLiteSpeed with loader 15.5: `php -m` lists "ionCube
+    // Loader" under [PHP Modules] (a bogus built-in row), and LiteSpeed's
+    // repository offers `lsphp84-ioncube` (an Install button for a second
+    // loader beside the one the ionCube card manages).
+    fakeExtensions();
+
+    $names = collect(extCall('GET', "/api/php/versions/{$this->panel}/extensions")->json('extensions'))->pluck('name');
+
+    expect($names->filter(fn (string $n) => str_contains(strtolower($n), 'ioncube')))->toBeEmpty();
+});
+
+/*
+ * LiteSpeed's PECL packages number their ini — `50-redis.ini`, `40-apcu.ini`
+ * (seen on a real OLS box, 2026-09-23). Read as-is the module was `50-redis`:
+ * the package row said "not installed" and a second `redis` row turned up as a
+ * built-in, for an extension that was loaded.
+ */
+it('reads a numbered ini in mods-available as the module it loads', function () {
+    File::move(
+        "{$this->phpDir}/{$this->panel}/mods-available/redis.ini",
+        "{$this->phpDir}/{$this->panel}/mods-available/50-redis.ini",
+    );
+    fakeExtensions();
+
+    $rows = collect(extCall('GET', "/api/php/versions/{$this->panel}/extensions")->json('extensions'));
+    $redis = $rows->where('name', 'redis');
+
+    expect($redis)->toHaveCount(1)
+        ->and($redis->first()['installed'])->toBeTrue()
+        ->and($redis->first()['builtin'])->toBeFalse()
+        ->and($rows->pluck('name'))->not->toContain('50-redis');
+});
+
+it('says whether installed extensions can be switched off', function () {
+    fakeExtensions();
+
+    extCall('GET', "/api/php/versions/{$this->panel}/extensions")
+        ->assertOk()
+        ->assertJsonPath('toggle_supported', true);
 });
 
 it('refuses to turn off a compiled-in extension', function () {
@@ -256,6 +305,37 @@ it('never purges a package', function () {
     // Disabling unlinks and stops. `apt purge php8.4-*` is how a server loses
     // php8.4-common and every site with it.
     expect(collect($runs)->filter(fn ($c) => in_array('purge', $c, true)))->toBeEmpty();
+});
+
+/*
+ * The reload after a toggle or install used to be fire-and-forget: phpenmod
+ * succeeded, the reload failed, and the screen said the extension was on
+ * while every running worker went on without it.
+ */
+it('reports a failed reload after a toggle instead of success', function () {
+    fakeExtensions(fn (array $command) => ($command[0] ?? '') === 'systemctl'
+        ? Process::result(exitCode: 1, errorOutput: 'Job for php-fpm failed')
+        : null);
+
+    extCall('PUT', "/api/php/versions/{$this->other}/extensions/redis", ['enabled' => false])
+        ->assertStatus(500)
+        ->assertJsonPath('message', __('errors/php.reload_failed', ['version' => $this->other]))
+        ->assertJsonStructure(['reference']);
+
+    $this->assertDatabaseMissing('activity_logs', ['action' => 'extension_disabled']);
+});
+
+it('records an install whose reload failed as reload_failed, not enable_failed', function () {
+    // Pressing the toggle again is what `enable_failed` tells the user to do,
+    // and it is not the fix when the module is on and PHP was not reloaded.
+    fakeExtensions(fn (array $command) => ($command[0] ?? '') === 'systemctl' ? Process::result(exitCode: 1) : null);
+
+    try {
+        app(PhpExtensionManager::class)->install($this->other, 'xdebug');
+        $this->fail('expected the install to fail');
+    } catch (RuntimeInstallException $e) {
+        expect($e->reason)->toBe('reload_failed');
+    }
 });
 
 it('installs with --no-install-recommends and no prompt', function () {

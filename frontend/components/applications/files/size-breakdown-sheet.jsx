@@ -1,13 +1,9 @@
 import { useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { PieChart } from "lucide-react";
-import { EChart, useChartTokens } from "@/components/ui/echart";
-import {
-  OTHER_TOKEN,
-  SERIES_TOKENS,
-  breakdownOption,
-  foldCategories,
-} from "@/lib/charts/breakdown-option";
+import { OTHER_TOKEN, SERIES_TOKENS, foldCategories } from "@/lib/charts/breakdown-option";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,14 +14,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-const TOKENS = [
-  ...SERIES_TOKENS,
-  OTHER_TOKEN,
-  "card",
-  "border",
-  "popover",
-  "popover-foreground",
-];
+// The chart library was part of every Files visit for a sheet most visits never
+// open. Fetched when the sheet's content first renders — Radix mounts it only
+// on open — with a placeholder the donut's own height, so nothing jumps.
+const SizeBreakdownDonut = dynamic(
+  () => import("@/components/applications/files/size-breakdown-donut").then((m) => m.SizeBreakdownDonut),
+  { ssr: false, loading: () => <Skeleton className="h-56 w-full rounded-lg" /> },
+);
 
 /**
  * What is using this folder's space — on demand, from the file manager toolbar.
@@ -46,7 +41,6 @@ const TOKENS = [
  */
 export function SizeBreakdownSheet({ breakdown }) {
   const t = useTranslations("applications.files.breakdown");
-  const tokens = useChartTokens(TOKENS);
 
   // Memoised so a null breakdown does not hand a fresh [] to every render
   // below it, which would rebuild the fold and the option each time.
@@ -54,11 +48,6 @@ export function SizeBreakdownSheet({ breakdown }) {
   const { slices } = useMemo(() => foldCategories(categories), [categories]);
 
   const label = useCallback((key) => t(`types.${key}`), [t]);
-
-  const option = useMemo(
-    () => (slices.length ? breakdownOption({ slices, tokens, label }) : null),
-    [slices, tokens, label],
-  );
 
   /*
    * Not measurable and empty are different answers. "This folder holds no
@@ -97,7 +86,7 @@ export function SizeBreakdownSheet({ breakdown }) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="[&_svg]:text-muted-foreground">
+        <Button variant="outline" size="sm">
           <PieChart className="size-4" aria-hidden />
           {t("trigger")}
         </Button>
@@ -129,9 +118,9 @@ export function SizeBreakdownSheet({ breakdown }) {
                 what to delete. It is not a fallback for the chart — they answer
                 different questions. The sheet has the height for both, which
                 the 340px rail this replaced did not. */}
-            <EChart
-              option={option}
-              height="h-56"
+            <SizeBreakdownDonut
+              slices={slices}
+              label={label}
               dataTable={{
                 caption: t("title"),
                 columns: [t("columnType"), t("columnSize"), t("columnFiles")],

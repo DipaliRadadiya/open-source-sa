@@ -45,6 +45,10 @@
              never appears in it, so it resolves the same for any version.
              FpmPhpStackDetectionTest overrides this to assert the real rule. -->
         <env name="SERVER_PHP_FPM_BINARY_PATTERN" value="/bin/sh"/>
+        <!-- The PHP screen's default reads /usr/local/bin/php before
+             update-alternatives. Off here, so a machine that happens to have
+             one cannot decide what the default-version tests see. -->
+        <env name="SERVER_PHP_PATH_LINK" value=""/>
         <!-- Keep test runs out of the real operations log. Left alone the
              suite appended ~570k lines to it. `single` (not daily) so a test
              that reads the file knows its exact name. -->

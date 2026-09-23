@@ -763,7 +763,11 @@
       "loadFailed": "No se pudieron cargar las claves de esta cuenta. Eso no es lo mismo que no tener ninguna.",
       "retryLoad": "Reintentar"
     },
-    "loadFailed": "No se pudieron cargar tus usuarios del sistema. No se han modificado ni eliminado."
+    "loadFailed": "No se pudieron cargar tus usuarios del sistema. No se han modificado ni eliminado.",
+    "sshNotEnforced": {
+      "body": "Los interruptores de inicio de sesión SSH aún no se aplican: un usuario desactivado aquí todavía puede entrar por SSH. Se aplican cuando guardas Ajustes → Acceso y seguridad. A partir de entonces, solo pueden entrar los usuarios activados aquí, los usuarios con sudo y root.",
+      "action": "Abrir Acceso y seguridad"
+    }
   },
   "serverDashboard": {
     "title": "Panel",
@@ -2044,7 +2048,11 @@
       "builtinBody": "Vienen compiladas y siempre están disponibles. No hay nada que activar, y PHP no puede funcionar sin ellas.",
       "noMatchesBuiltin": "{name} viene incluida en PHP: siempre está disponible. Mira la lista de abajo.",
       "enabling": "Activando…",
-      "disabling": "Desactivando…"
+      "disabling": "Desactivando…",
+      "waitForOther": "Espera a que termine {name}.",
+      "install": "Instalar",
+      "installingNow": "Instalando…",
+      "noToggleNote": "En OpenLiteSpeed una extensión instalada siempre está activa. Puedes instalarla aquí, pero no desactivarla."
     },
     "install": {
       "action": "Instalar versión",
@@ -3581,7 +3589,6 @@
         "rateLimited": "Let's Encrypt ha limitado este dominio. Espera alrededor de una semana antes de volver a intentarlo: reintentar ahora no ayudará.",
         "reissue": "Reemitir",
         "remove": "Eliminar certificado",
-        "moreActions": "Opciones del certificado",
         "active": "HTTPS está activo",
         "namesTitle": "Dominios en este certificado",
         "namesCount": "{secured} de {total} protegidos",
@@ -3809,7 +3816,8 @@
         "logFailed": "No se pudo cargar el registro de compilación.",
         "noPermission": "Tu rol no incluye Despliegue de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
         "title": "Historial de despliegues",
-        "subtitle": "Todos los despliegues, del más reciente al más antiguo. Abre uno para leer su registro."
+        "subtitle": "Todos los despliegues, del más reciente al más antiguo. Abre uno para leer su registro.",
+        "busy": "Ya hay un despliegue en curso. Espera a que termine."
       },
       "tabs": {
         "history": "Historial",
@@ -3917,7 +3925,11 @@
         "allFailed": "No se pudo subir ninguno de estos archivos.",
         "exists": "Ya hay un archivo con este nombre en esta carpeta. Cámbiale el nombre o elimínalo primero.",
         "stop": "Detener",
-        "stopped": "Subida detenida. Se subieron {done} de {count} archivos."
+        "stopped": "Subida detenida. Se subieron {done} de {count} archivos.",
+        "waiting": "En pausa por el límite de subidas del servidor. Continúa en {seconds, plural, one {# segundo} other {# segundos}}.",
+        "rateLimited": "El servidor no acepta más subidas ahora mismo. Haz clic en Subir de nuevo dentro de un minuto.",
+        "skipped": "{done} subidos, {skipped} omitidos: ya hay un archivo con ese nombre.",
+        "partialSkipped": "{done} subidos, {skipped} omitidos, {failed} fallidos."
       },
       "editor": {
         "subtitle": "Los cambios se respaldan automáticamente antes de cada guardado.",

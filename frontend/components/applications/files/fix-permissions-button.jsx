@@ -41,15 +41,14 @@ export function FixPermissionsButton({ appId, canManage }) {
   return (
     <>
       <ReasonTooltip reason={canFix ? null : t("noPermission")}>
-        {/* Outlined like everything else in the toolbar, full-strength text
-            with a muted icon. Muted TEXT was tried and reverted — on the
-            tinted strip it read as disabled ("storage and hide hidden files
-            button looks like disabled"). Ghost was tried before that: with no
-            surface at all it read as a caption, not a control. */}
+        {/* Outlined and styled exactly like New folder / New file. Muted text
+            read as disabled on the tinted strip, and a muted icon beside
+            full-strength text read as a styling bug; ghost, tried before that,
+            had no surface at all and read as a caption. */}
         <Button
           variant="outline"
           size="sm"
-          className="[&_svg]:text-muted-foreground"
+         
           disabled={!canFix}
           onClick={() => setOpen(true)}
         >

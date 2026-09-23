@@ -4,6 +4,7 @@ use App\Models\DatabaseConnection;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Process\FakeProcessResult;
 use Illuminate\Support\Facades\Process;
@@ -255,3 +256,44 @@ function systemctlShowOutput(array $command, array $units = [], ?array $default 
 | to assert different things. Of course, you may extend the Expectation API at any time.
 |
 */
+
+/**
+ * Answer a disk-cleaner `find <dir> -maxdepth 1 -type f -name <pattern>
+ * -printf "%s\t%p\n"` from the real filesystem, the way the command would.
+ *
+ * The log cleaners list files through the server rather than with PHP's
+ * glob() (the directories that matter are root-only), so a test that puts
+ * real files in a temp directory needs its Process fake to list them. Null
+ * for any other command, so a fake can fall through to its own answers.
+ */
+function answerFind($process): ?ProcessResult
+{
+    $cmd = (array) $process->command;
+
+    if (($cmd[0] ?? null) === 'sudo' && ($cmd[1] ?? null) === '-n') {
+        $cmd = array_slice($cmd, 2);
+    }
+
+    // Only the log cleaners' listing — the journal target runs its own
+    // recursive find, which its tests fake themselves.
+    if (($cmd[0] ?? null) !== 'find' || ! in_array("%s\t%p\n", $cmd, true)) {
+        return null;
+    }
+
+    $directory = $cmd[1];
+    $pattern = $cmd[array_search('-name', $cmd, true) + 1];
+
+    if (! is_dir($directory)) {
+        return Process::result(errorOutput: "find: '{$directory}': No such file or directory", exitCode: 1);
+    }
+
+    $lines = [];
+
+    foreach (glob(rtrim($directory, '/').'/'.$pattern) ?: [] as $path) {
+        if (is_file($path) && ! is_link($path)) {
+            $lines[] = filesize($path)."\t".$path;
+        }
+    }
+
+    return Process::result(output: implode("\n", $lines).($lines ? "\n" : ''));
+}

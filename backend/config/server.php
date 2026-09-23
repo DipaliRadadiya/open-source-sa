@@ -51,6 +51,7 @@ use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
 use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
+use App\Services\Server\DiskCleaner\Targets\SiteLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\TmpTarget;
 use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
@@ -916,6 +917,11 @@ return [
     ],
 
     'default_php_version' => env('SERVER_DEFAULT_PHP_VERSION', '8.4'),
+
+    // What bare `php` resolves through when it exists (install.sh creates it
+    // on OpenLiteSpeed). Read as the PHP screen's default before the
+    // update-alternatives group.
+    'php_path_link' => env('SERVER_PHP_PATH_LINK', '/usr/local/bin/php'),
 
     /*
     | Where PHP-FPM puts its sockets, and the account the web server runs as.
@@ -1934,11 +1940,21 @@ return [
         // so the Logs screen offered no access log on that stack at all. The
         // shipped httpd_config.conf writes `accessLog logs/access.log`, which
         // resolves against $SERVER_ROOT.
-        ['key' => 'openlitespeed_access', 'label' => 'OpenLiteSpeed — Access', 'group' => 'web', 'path' => '/usr/local/lsws/logs/access.log', 'clearable' => true],
-        ['key' => 'openlitespeed_error', 'label' => 'OpenLiteSpeed — Error', 'group' => 'web', 'path' => '/usr/local/lsws/logs/error.log', 'clearable' => true],
+        // `privileged`: /usr/local/lsws/logs is root:nogroup 0750, so the panel
+        // account cannot even see these files exist — as plain `file` sources
+        // both were silently dropped from the list on every OpenLiteSpeed
+        // server (found 2026-09-23). Read through sudo, like Let's Encrypt's.
+        ['key' => 'openlitespeed_access', 'label' => 'OpenLiteSpeed — Access', 'group' => 'web', 'kind' => 'privileged', 'path' => '/usr/local/lsws/logs/access.log', 'clearable' => true],
+        ['key' => 'openlitespeed_error', 'label' => 'OpenLiteSpeed — Error', 'group' => 'web', 'kind' => 'privileged', 'path' => '/usr/local/lsws/logs/error.log', 'clearable' => true],
         // Database (installed engine)
         ['key' => 'mysql_error', 'label' => 'MySQL — Error', 'group' => 'database', 'path' => '/var/log/mysql/error.log', 'clearable' => true],
         ['key' => 'mysql_slow', 'label' => 'MySQL — Slow Query', 'group' => 'database', 'path' => '/var/log/mysql/mariadb-slow.log', 'clearable' => true],
+        // MariaDB on Debian/Ubuntu logs to the journal, not /var/log/mysql —
+        // so on those servers the file entry above never appears and there was
+        // no database log at all. Tagged `mariadbd` by the unit itself; shown
+        // only once it has written something, so a server without MariaDB
+        // does not list an empty log.
+        ['key' => 'mariadb', 'label' => 'MariaDB', 'group' => 'database', 'kind' => 'journal', 'identifier' => 'mariadbd', 'path' => '', 'hide_when_empty' => true],
         ['key' => 'mongodb', 'label' => 'MongoDB', 'group' => 'database', 'path' => '/var/log/mongodb/mongod.log', 'clearable' => true],
         // Cache
         ['key' => 'redis', 'label' => 'Redis', 'group' => 'cache', 'path' => '/var/log/redis/redis-server.log', 'clearable' => true],
@@ -2002,6 +2018,7 @@ return [
             JournalTarget::class,
             RotatedLogsTarget::class,
             ServiceLogsTarget::class,
+            SiteLogsTarget::class,
             TmpTarget::class,
         ],
 
@@ -2011,11 +2028,9 @@ return [
             '/var/log/nginx/*.log',
             '/var/log/apache2/*.log',
             '/usr/local/lsws/logs/*.log',
-            // Per-site logs, which OpenLiteSpeed keeps under the vhost's own
-            // directory rather than in one shared place the way nginx and
-            // Apache do. Without this line every hosted site's logs on this
-            // stack were invisible to the cleaner.
-            '/usr/local/lsws/conf/vhosts/*/logs/*.log',
+            // Sites' own logs are not listed here: they live in each site's
+            // `logs/` directory on every stack and have their own category,
+            // SiteLogsTarget.
             '/var/log/mysql/*.log',
             '/var/log/mongodb/*.log',
             '/var/log/redis/*.log',
@@ -2345,6 +2360,16 @@ return [
     'swap_file' => env('SERVER_SWAP_FILE', '/swapfile-panel'),
 
     'swap_max_mb' => (int) env('SERVER_SWAP_MAX_MB', 65536), // 64 GB ceiling
+
+    // Disk left free after a swap file is created or resized. The new file is
+
+    // built while the old one still exists, so its size is not counted as
+
+    // free. A request that would leave less than this is refused — asking for
+
+    // more than the disk held once filled it completely (2026-09-23).
+
+    'swap_reserve_mb' => (int) env('SERVER_SWAP_RESERVE_MB', 1024),
 
     'fstab' => env('SERVER_FSTAB', '/etc/fstab'),
 

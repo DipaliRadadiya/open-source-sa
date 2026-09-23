@@ -30,7 +30,9 @@
  * internet, and pool files under /etc/php are 0644 — so elevating them would
  * widen the sudoers grant to buy nothing.
  */
-const RUNS_UNPRIVILEGED = ['ip', 'grep'];
+// `apt-config` reads apt.conf.d, which is world-readable: reporting what apt
+// will do needs no root, so it is not granted any.
+const RUNS_UNPRIVILEGED = ['ip', 'grep', 'apt-config'];
 
 it('elevates every binary the code actually runs', function () {
     $allowed = array_merge(

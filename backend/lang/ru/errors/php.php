@@ -8,6 +8,13 @@
 
 return [
     'not_installed' => 'PHP :version не установлен.',
+
+    // Version lookup, the ini editor and its rollback.
+    'unknown_version' => 'PHP :version не установлен на этом сервере.',
+    'unreadable' => 'Не удалось прочитать конфигурацию PHP :version.',
+    'invalid_ini' => 'PHP отклонил эту конфигурацию, предыдущая восстановлена. Перезагрузка не выполнялась.',
+    'reload_failed' => 'Изменение внесено, но PHP :version не удалось перезагрузить, поэтому оно ещё не действует. Сообщите номер обращения в поддержку.',
+    'operation_failed' => 'Не удалось обновить конфигурацию PHP :version.',
     'version_in_use' => 'PHP :version используется: :apps. Сначала измените эти сайты.',
     'version_is_default' => 'Это версия по умолчанию. Сначала выберите другую.',
     'version_runs_panel' => 'Удаление PHP :version отключит панель — именно на этой версии она работает.',
@@ -20,6 +27,7 @@ return [
 
     'ioncube_unsupported_version' => 'ionCube не выпускает Loader для PHP :version.',
     'ioncube_unsupported_architecture' => 'ionCube не выпускает Loader для архитектуры этого сервера (:architecture).',
+    'ioncube_external' => 'ionCube для PHP :version установлен вне панели (более ранней версией панели или системным пакетом), поэтому панель не будет его изменять. Он удаляется вместе с PHP :version.',
     'ioncube_download_failed' => 'Не удалось скачать ionCube Loader. Проверьте доступ сервера в интернет и повторите попытку.',
     'ioncube_invalid_loader' => 'Скачанный файл не является корректным ionCube Loader для этого сервера. Ничего не установлено.',
     'ioncube_install_failed' => 'Не удалось установить ionCube Loader.',

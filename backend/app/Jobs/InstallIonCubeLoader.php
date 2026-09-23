@@ -50,7 +50,10 @@ class InstallIonCubeLoader implements ShouldQueue
             // Recorded, not just logged. `installed` is read from disk, so a
             // failed install is otherwise indistinguishable from one still
             // running — for ten minutes, and then forever.
-            $installs->fail(self::RUNTIME, $this->version, null, 'install_failed', $e->reference);
+            // The exception's own cause, not a generic `install_failed`: a
+            // download that failed and a config test that failed are fixed in
+            // different ways, and the card is the only place the user reads it.
+            $installs->fail(self::RUNTIME, $this->version, null, $e->reason(), $e->reference);
 
             $log->log('php.ioncube_install_failed', null, [
                 'version' => $this->version,

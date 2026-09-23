@@ -188,7 +188,26 @@ class NodeRuntime implements Runtime
      */
     private function isEndOfLife(string $version, array $lifecycle): bool
     {
-        return ($lifecycle[$this->line($version)]['status'] ?? null) === 'eol';
+        $line = $this->line($version);
+
+        if (isset($lifecycle[$line]['status'])) {
+            return $lifecycle[$line]['status'] === 'eol';
+        }
+
+        // Unknown, but older than a line the catalog says is dead: dead too.
+        // Node never revives an old line, and the schedule does not list the
+        // odd pre-1.0 development lines (0.7, 0.9, 0.11) at all — keyed only
+        // by what the catalog names, they came back as "unknown" and were
+        // offered (seen 2026-09-23). A line NEWER than everything dead — a
+        // release the catalog has not caught up with — is still kept, which
+        // is what "unknown is not dead" was protecting.
+        foreach ($lifecycle as $known => $entry) {
+            if (($entry['status'] ?? null) === 'eol' && version_compare($line, (string) $known, '<')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

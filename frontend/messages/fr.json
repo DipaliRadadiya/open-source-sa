@@ -217,7 +217,11 @@
       "loadFailed": "Les clés de ce compte n'ont pas pu être chargées. Ce n'est pas la même chose que d'en avoir aucune.",
       "retryLoad": "Réessayer"
     },
-    "loadFailed": "Vos utilisateurs système n'ont pas pu être chargés. Ils n'ont pas été modifiés ni supprimés."
+    "loadFailed": "Vos utilisateurs système n'ont pas pu être chargés. Ils n'ont pas été modifiés ni supprimés.",
+    "sshNotEnforced": {
+      "body": "Les interrupteurs de connexion SSH ne sont pas encore appliqués : un utilisateur désactivé ici peut toujours se connecter en SSH. Ils prennent effet dès que vous enregistrez Paramètres → Accès et sécurité. Ensuite, seuls les utilisateurs activés ici, les utilisateurs sudo et root peuvent se connecter.",
+      "action": "Ouvrir Accès et sécurité"
+    }
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -2044,7 +2048,11 @@
       "builtinBody": "Compilées et toujours disponibles. Rien à activer : PHP ne peut pas fonctionner sans elles.",
       "noMatchesBuiltin": "{name} est intégrée à PHP — elle est toujours disponible. Voir la liste ci-dessous.",
       "enabling": "Activation…",
-      "disabling": "Désactivation…"
+      "disabling": "Désactivation…",
+      "waitForOther": "Attendez que {name} ait terminé.",
+      "install": "Installer",
+      "installingNow": "Installation…",
+      "noToggleNote": "Sous OpenLiteSpeed, une extension installée est toujours active. Vous pouvez l'installer ici, mais pas la désactiver."
     },
     "install": {
       "action": "Installer une version",
@@ -3581,7 +3589,6 @@
         "rateLimited": "Let's Encrypt a limité le débit pour ce domaine. Attendez environ une semaine avant de réessayer — réessayer maintenant ne servira à rien.",
         "reissue": "Réémettre",
         "remove": "Retirer le certificat",
-        "moreActions": "Options du certificat",
         "active": "HTTPS est actif",
         "namesTitle": "Domaines de ce certificat",
         "namesCount": "{secured} sur {total} sécurisés",
@@ -3809,7 +3816,8 @@
         "logFailed": "Le journal de build n'a pas pu être chargé.",
         "noPermission": "Votre rôle n'inclut pas Déploiement pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
         "title": "Historique des déploiements",
-        "subtitle": "Chaque déploiement, du plus récent au plus ancien. Ouvrez-en un pour lire son journal de build."
+        "subtitle": "Chaque déploiement, du plus récent au plus ancien. Ouvrez-en un pour lire son journal de build.",
+        "busy": "Un déploiement est déjà en cours. Attendez qu'il se termine."
       },
       "tabs": {
         "history": "Historique",
@@ -3917,7 +3925,11 @@
         "allFailed": "Impossible de téléverser ces fichiers.",
         "exists": "Un fichier de ce nom existe déjà dans ce dossier. Renommez-le ou supprimez-le d'abord.",
         "stop": "Arrêter",
-        "stopped": "Téléversement arrêté. {done} fichiers sur {count} ont été téléversés."
+        "stopped": "Téléversement arrêté. {done} fichiers sur {count} ont été téléversés.",
+        "waiting": "En pause à cause de la limite de téléversement du serveur. Reprise dans {seconds, plural, one {# seconde} other {# secondes}}.",
+        "rateLimited": "Le serveur refuse d'autres téléversements pour le moment. Cliquez à nouveau sur Téléverser dans une minute.",
+        "skipped": "{done} téléversé(s), {skipped} ignoré(s) : un fichier de ce nom existe déjà.",
+        "partialSkipped": "{done} téléversé(s), {skipped} ignoré(s), {failed} échec(s)."
       },
       "editor": {
         "subtitle": "Une sauvegarde est créée automatiquement avant chaque enregistrement.",

@@ -140,6 +140,14 @@ class PhpExtensionManager
     }
 
     /**
+     * Whether an installed extension can be switched off on this stack.
+     */
+    public function togglesExtensions(): bool
+    {
+        return $this->stack->togglesExtensions();
+    }
+
+    /**
      * Install the package behind an extension. Slow — apt — so this is called
      * from a job, never from a request.
      */
@@ -172,7 +180,11 @@ class PhpExtensionManager
         // running processes to restart. Calling enable() here would refuse and
         // report a failed install for an apt run that succeeded.
         if (! $this->stack->togglesExtensions()) {
-            $this->reload($version);
+            try {
+                $this->reload($version);
+            } catch (PhpConfigException $e) {
+                throw new RuntimeInstallException((string) $e->reference, 'reload_failed');
+            }
 
             return;
         }
@@ -188,7 +200,12 @@ class PhpExtensionManager
             // Installed but not switched on is its own outcome, and worth
             // saying so — "the install failed" would be wrong, and the user
             // would retry an apt run that already succeeded.
-            throw new RuntimeInstallException((string) $e->reference, 'enable_failed');
+            // Switched on and not reloaded is not "could not be switched on" —
+            // pressing the toggle again would not be the fix.
+            throw new RuntimeInstallException(
+                (string) $e->reference,
+                $e->reason() === 'reload_failed' ? 'reload_failed' : 'enable_failed',
+            );
         }
     }
 
@@ -281,7 +298,14 @@ class PhpExtensionManager
         // Every stack implements reload() -- it is on the contract, described
         // as "apply a configuration change for a version" -- so there is no
         // stack this is unsafe to call for.
-        $this->stack->reload($version);
+        //
+        // And its result is read. Ignored, a failed reload answered the toggle
+        // with success while every running worker went on without the change.
+        $result = $this->stack->reload($version);
+
+        if ($result->failed()) {
+            throw PhpConfigException::reloadFailed($version, $result->reference);
+        }
     }
 
     /**
@@ -309,6 +333,10 @@ class PhpExtensionManager
         return collect($matches[1] ?? [])
             ->unique()
             ->reject(fn (string $name) => in_array($name, $excluded, true))
+            // LiteSpeed's repository carries `lsphp84-ioncube`. Installing it
+            // beside the loader the ionCube card manages is two loaders in one
+            // PHP — so ionCube has one control, and it is not this list.
+            ->reject(fn (string $name) => $this->isIonCube($name))
             ->sort()
             ->values()
             ->all();
@@ -324,8 +352,12 @@ class PhpExtensionManager
     {
         $dir = $this->stack->modsDir($version);
 
+        // LiteSpeed's PECL packages number their ini — `50-redis.ini`,
+        // `40-apcu.ini` — where Debian's are bare. Read as-is, the module was
+        // `50-redis`: the package row said "not installed" and a second
+        // `redis` row turned up as a built-in, for an extension that was on.
         return collect(glob($dir.'/*.ini') ?: [])
-            ->map(fn (string $path) => basename($path, '.ini'))
+            ->map(fn (string $path) => $this->moduleName($path))
             ->sort()
             ->values()
             ->all();
@@ -408,7 +440,7 @@ class PhpExtensionManager
 
             // 20-curl.ini -> curl
             $enabled[$sapi] = collect(glob($dir.'/conf.d/*.ini') ?: [])
-                ->map(fn (string $path) => preg_replace('/^\d+-/', '', basename($path, '.ini')))
+                ->map(fn (string $path) => $this->moduleName($path))
                 ->values()
                 ->all();
         }
@@ -444,11 +476,18 @@ class PhpExtensionManager
 
         $lowerInstalled = array_map([$this, 'normaliseModule'], $installedModules);
 
-        return collect(preg_split('/\r?\n/', trim($output)) ?: [])
+        // `[PHP Modules]` only: `[Zend Modules]` repeats what is already
+        // listed above it, under display names ("the ionCube PHP Loader").
+        $section = preg_split('/^\[Zend Modules\]\s*$/m', $output)[0] ?? $output;
+
+        return collect(preg_split('/\r?\n/', trim($section)) ?: [])
             ->map(fn (string $line) => trim($line))
             ->filter(fn (string $line) => $line !== '' && ! str_starts_with($line, '['))
             ->map(fn (string $line) => $this->normaliseModule($line))
             ->reject(fn (string $module) => in_array($module, $lowerInstalled, true))
+            // "ionCube Loader" in [PHP Modules] (measured on lsphp 8.4 with
+            // loader 15.5) — the ionCube card's, not a built-in.
+            ->reject(fn (string $module) => $this->isIonCube($module))
             ->unique()
             ->sort()
             ->values()
@@ -471,6 +510,18 @@ class PhpExtensionManager
         $dir = trim($result->output());
 
         return $result->ok && $dir !== '' && is_dir($dir) ? $dir : null;
+    }
+
+    /** ionCube has its own card ({@see IonCubeLoader}); never a row here. */
+    private function isIonCube(string $name): bool
+    {
+        return str_contains(strtolower($name), 'ioncube');
+    }
+
+    /** `20-curl.ini` -> `curl`, `curl.ini` -> `curl`. */
+    private function moduleName(string $iniPath): string
+    {
+        return (string) preg_replace('/^\d+-/', '', basename($iniPath, '.ini'));
     }
 
     /**

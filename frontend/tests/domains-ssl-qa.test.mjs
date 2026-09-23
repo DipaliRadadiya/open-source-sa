@@ -249,11 +249,10 @@ test("a healthy certificate does not lead with a destructive button", () => {
    * affordance on a healthy panel was "destroy this", and it was the loudest
    * thing in a green box.
    */
-  // The footer splits: something wrong → both buttons out in the open;
-  // nothing wrong → a menu, so the card's only affordance is not "destroy
-  // this" sitting under the cursor in a green panel.
-  assert.match(ssl, /expired \|\| !cert\.renewable \|\| hasCoverageGap \? \(/);
-  assert.match(ssl, /ssl\.moreActions/, "the healthy card hides them behind a menu");
+  // Both actions are always out in the open (Krishna, 2026-09-23: no menu).
+  // Remove is red text, not a red fill, so the green panel's loudest control
+  // is Reissue, not "destroy this".
+  assert.doesNotMatch(ssl, /ssl\.moreActions|DropdownMenu/);
 });
 
 test("only one button per card carries the fill", () => {
@@ -382,6 +381,15 @@ test("a gap surfaces the way to fix it", () => {
   // A renewing certificate with a name missing has something to do, and the
   // warning tells you to reissue — so hiding the only Reissue in a menu is the
   // same mistake as showing two, from the other side.
-  assert.match(ssl, /expired \|\| !cert\.renewable \|\| hasCoverageGap \? \(/);
+  // Reissue is never behind a menu any more, in any state.
+  assert.doesNotMatch(ssl, /DropdownMenu/);
+  assert.match(ssl, /onClick=\{\(\) => setIssueOpen\(true\)\}\s*>\s*<RefreshCw/);
 });
 
+
+test("Remove certificate reads as red text, readable on its hover tint", () => {
+  const src = fs.readFileSync(path.join(import.meta.dirname, "..", "components/applications/domains/ssl-section.jsx"), "utf8");
+  // Both places it appears (active and failed certificate).
+  const red = /variant="ghost"\s+className="\[--destructive-ink:color-mix\(in_oklch,var\(--destructive\),var\(--foreground\)_22%\)\] text-\(--destructive-ink\) hover:bg-destructive\/10/g;
+  assert.equal((src.match(red) ?? []).length, 2);
+});

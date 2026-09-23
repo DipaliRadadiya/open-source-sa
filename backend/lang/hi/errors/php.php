@@ -8,6 +8,13 @@
 
 return [
     'not_installed' => 'PHP :version स्थापित नहीं है।',
+
+    // Version lookup, the ini editor and its rollback.
+    'unknown_version' => 'PHP :version इस सर्वर पर इंस्टॉल नहीं है।',
+    'unreadable' => 'PHP :version की कॉन्फ़िगरेशन पढ़ी नहीं जा सकी।',
+    'invalid_ini' => 'PHP ने वह कॉन्फ़िगरेशन अस्वीकार कर दी, इसलिए पिछली बहाल कर दी गई। कुछ भी रीलोड नहीं हुआ।',
+    'reload_failed' => 'बदलाव कर दिया गया, लेकिन PHP :version रीलोड नहीं हो सका, इसलिए यह अभी सक्रिय नहीं है। सपोर्ट को रेफ़रेंस बताएं।',
+    'operation_failed' => 'PHP :version की कॉन्फ़िगरेशन अपडेट नहीं हो सकी।',
     'version_in_use' => 'PHP :version का उपयोग :apps कर रहे हैं। पहले उन साइटों को बदलें।',
     'version_is_default' => 'यह डिफ़ॉल्ट संस्करण है। पहले कोई अन्य चुनें।',
     'version_runs_panel' => 'PHP :version हटाने से पैनल बंद हो जाएगा — पैनल स्वयं इसी संस्करण पर चलता है।',
@@ -20,6 +27,7 @@ return [
 
     'ioncube_unsupported_version' => 'ionCube, PHP :version के लिए Loader प्रकाशित नहीं करता।',
     'ioncube_unsupported_architecture' => 'ionCube इस सर्वर की आर्किटेक्चर (:architecture) के लिए Loader प्रकाशित नहीं करता।',
+    'ioncube_external' => 'PHP :version के लिए ionCube पैनल के बाहर (पैनल के पुराने वर्ज़न या सिस्टम पैकेज से) इंस्टॉल किया गया था, इसलिए पैनल इसे नहीं बदलेगा। यह PHP :version के साथ ही हटाया जाता है।',
     'ioncube_download_failed' => 'ionCube Loader डाउनलोड नहीं हो सका। सर्वर की इंटरनेट पहुँच जाँचें और पुनः प्रयास करें।',
     'ioncube_invalid_loader' => 'डाउनलोड की गई फ़ाइल इस सर्वर के लिए वैध ionCube Loader नहीं है। कुछ भी इंस्टॉल नहीं किया गया।',
     'ioncube_install_failed' => 'ionCube Loader इंस्टॉल नहीं हो सका।',

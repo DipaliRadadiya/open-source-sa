@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useFormatter } from "next-intl";
 import { toast } from "sonner";
 import { History, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { restoreFileContent } from "@/lib/api/files";
 import { apiMessage } from "@/lib/api/error-message";
+import { parseApiWallClock } from "@/lib/format/api-date";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // Same shape as the .env editor's restore dialog, scoped to one file's own
@@ -17,6 +18,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 // free to drift from the other fifty confirmations in the panel.
 export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpenChange, onRestored }) {
   const t = useTranslations("applications.files");
+  const format = useFormatter();
   const [selected, setSelected] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -54,12 +56,13 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
       confirmDisabled={!selected}
       pending={busy}
       onConfirm={onRestore}
-      // Wider than a yes/no confirmation: the body is a list of filenames.
+      // Wider than a yes/no confirmation: the body is a list to pick from.
       className="sm:!max-w-lg"
     >
       <div className="space-y-2">
         {backups.map((backup) => {
           const active = selected === backup.name;
+          const when = parseApiWallClock(backup.created_at);
           return (
             <button
               key={backup.name}
@@ -70,13 +73,11 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
                 active ? "border-primary bg-primary/5" : "hover:bg-muted/50",
               )}
             >
-              <span className="min-w-0">
-                <span className="block truncate font-mono text-xs">{backup.name}</span>
-                {backup.created_at_human ?? backup.created_at ? (
-                  <span className="block text-xs text-muted-foreground">
-                    {backup.created_at_human ?? backup.created_at}
-                  </span>
-                ) : null}
+              {/* When it was saved is what tells two versions apart; the
+                  `.bak-20260923-085023` file name said the same thing in a
+                  form nobody reads, so it is only kept for hover. */}
+              <span className="min-w-0 text-sm" title={backup.name}>
+                {when ? format.dateTime(when, { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" }) : backup.name}
               </span>
               {active ? <Check className="size-4 shrink-0 text-primary" /> : null}
             </button>

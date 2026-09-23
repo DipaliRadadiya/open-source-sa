@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\ActivityLog;
+use App\Models\Application;
+use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use Database\Seeders\PermissionSeeder;
@@ -32,6 +34,10 @@ afterEach(function () {
 function fakeDisk(): void
 {
     Process::fake(function ($process) {
+        if ($found = answerFind($process)) {
+            return $found;
+        }
+
         return match ($process->command[0] ?? '') {
             'df' => Process::result(output: "Filesystem 1B-blocks Used Available Capacity Mounted\n/dev/vda1 100000000000 60000000000 40000000000 60% /\n"),
             'du' => Process::result(output: "1048576\t/path"),
@@ -96,6 +102,10 @@ it('requires at least one category', function () {
 
 it('returns a translated error with reference when the clean fails', function () {
     Process::fake(function ($process) {
+        if ($found = answerFind($process)) {
+            return $found;
+        }
+
         return match ($process->command[0] ?? '') {
             'df' => Process::result(output: "fs 1B-blocks Used Avail Cap Mount\n/dev/vda1 100 60 40 60% /\n"),
             'truncate' => Process::result(output: '', errorOutput: 'boom', exitCode: 1),
@@ -167,6 +177,10 @@ it('never deletes a database binary log when clearing rotated logs', function ()
 
     $argv = null;
     Process::fake(function ($process) use (&$argv) {
+        if ($found = answerFind($process)) {
+            return $found;
+        }
+
         if (is_array($process->command) && $process->command[0] === 'find' && in_array('-delete', $process->command, true)) {
             $argv = $process->command;
         }
@@ -222,6 +236,10 @@ describe('the journal estimate', function () {
         $ran = [];
 
         Process::fake(function ($process) use (&$ran) {
+            if ($found = answerFind($process)) {
+                return $found;
+            }
+
             $args = ($process->command[0] ?? '') === 'sudo'
                 ? array_slice($process->command, 2)
                 : $process->command;
@@ -258,6 +276,10 @@ describe('the journal estimate', function () {
         $ran = [];
 
         Process::fake(function ($process) use (&$ran) {
+            if ($found = answerFind($process)) {
+                return $found;
+            }
+
             $ran[] = ($process->command[0] ?? '') === 'sudo'
                 ? array_slice($process->command, 2)
                 : $process->command;
@@ -273,5 +295,83 @@ describe('the journal estimate', function () {
         expect(collect($ran)->first(fn (array $c) => ($c[0] ?? '') === 'find'))->toContain('+30')
             ->and(collect($ran)->first(fn (array $c) => ($c[0] ?? '') === 'journalctl'))
             ->toContain('--vacuum-time=30d');
+    });
+});
+
+describe('found on a live OpenLiteSpeed server, 2026-09-23', function () {
+    /**
+     * The server's answer for root-only directories the test process cannot
+     * list itself — which is the whole point: PHP's glob() saw nothing there.
+     *
+     * @param  array<string, string>  $listings  directory => find output
+     */
+    function fakeRootOnly(array $listings, ?ArrayObject $ran = null): void
+    {
+        Process::fake(function ($process) use ($listings, $ran) {
+            $ran?->append($process->command);
+            $cmd = $process->command;
+
+            if ($cmd[0] === 'find' && isset($listings[$cmd[1]])) {
+                return Process::result(output: $listings[$cmd[1]]);
+            }
+
+            if ($found = answerFind($process)) {
+                return $found;
+            }
+
+            return $cmd[0] === 'df'
+                ? Process::result(output: "Filesystem 1B-blocks Used Available Capacity Mounted\n/dev/vda1 100000000000 60000000000 40000000000 60% /\n")
+                : Process::result();
+        });
+    }
+
+    it("includes OpenLiteSpeed's logs, which the panel account cannot list", function () {
+        // /usr/local/lsws/logs is root:nogroup 0750. With glob() the scan
+        // offered Redis and UFW and none of OpenLiteSpeed's 4 MB.
+        config(['server.disk_cleaner.service_log_globs' => ['/usr/local/lsws/logs/*.log']]);
+        fakeRootOnly(['/usr/local/lsws/logs' => "1088468\t/usr/local/lsws/logs/error.log\n3082438\t/usr/local/lsws/logs/access.log\n"]);
+
+        $service = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/disk-cleaner')->assertOk()->json('categories'))->firstWhere('key', 'service_logs');
+
+        expect($service['paths'])->toBe(['/usr/local/lsws/logs/access.log', '/usr/local/lsws/logs/error.log'])
+            ->and($service['reclaimable'])->toBe(1088468 + 3082438);
+    });
+
+    it("cleans every site's own logs, as its own category, only when asked", function () {
+        // The cleaner looked in /usr/local/lsws/conf/vhosts/*/logs, where no
+        // site's logs have lived since they moved into {home}/{slug}/logs.
+        $user = SystemUser::create(['username' => 'shopuser', 'home_path' => '/home/shopuser', 'shell' => '/bin/bash']);
+        Application::forceCreate([
+            'system_user_id' => $user->id, 'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test',
+            'site_type' => 'wordpress', 'serving_profile' => 'php', 'php_version' => '8.4', 'status' => 'active', 'web_root' => '/',
+        ]);
+        $ran = new ArrayObject;
+        fakeRootOnly(['/home/shopuser/shop/logs' => "70541\t/home/shopuser/shop/logs/access.log\n"], $ran);
+
+        $site = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/disk-cleaner')->assertOk()->json('categories'))->firstWhere('key', 'site_logs');
+
+        expect($site['paths'])->toBe(['/home/shopuser/shop/logs/access.log'])
+            ->and($site['safe'])->toBeFalse();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/disk-cleaner/clean', ['categories' => ['site_logs']])->assertOk();
+
+        expect(collect($ran)->map(fn ($c) => implode(' ', $c)))
+            ->toContain('truncate --no-create -s 0 /home/shopuser/shop/logs/access.log');
+    });
+
+    it('never puts site logs on a schedule — that is visitor history', function () {
+        $user = SystemUser::create(['username' => 'shopuser', 'home_path' => '/home/shopuser', 'shell' => '/bin/bash']);
+        Application::forceCreate([
+            'system_user_id' => $user->id, 'name' => 'Shop', 'slug' => 'shop', 'domain' => 'shop.test',
+            'site_type' => 'wordpress', 'serving_profile' => 'php', 'php_version' => '8.4', 'status' => 'active', 'web_root' => '/',
+        ]);
+        fakeRootOnly(['/home/shopuser/shop/logs' => "70541\t/home/shopuser/shop/logs/access.log\n"]);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/disk-cleaner/schedule', ['enabled' => true, 'frequency' => 'weekly', 'categories' => ['site_logs']])
+            ->assertUnprocessable();
     });
 });

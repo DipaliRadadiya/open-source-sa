@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { SearchX, Server, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Caution } from "@/components/ui/caution";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -120,7 +122,7 @@ export function SystemUsersTable(props) {
   );
 }
 
-function SystemUsersList({ data, meta, shells = [], canManage = false }) {
+function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSecurity = false }) {
   const t = useTranslations("systemUsers");
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
@@ -199,6 +201,26 @@ function SystemUsersList({ data, meta, shells = [], canManage = false }) {
           </ReasonTooltip>
         </div>
       </div>
+
+      {/*
+        * Said above the rows, beside the switches it is about. Until Settings →
+        * Access & security is saved, sshd has no AllowGroups line, so "SSH
+        * login: off" keeps nobody out — a switch that looks like a control and
+        * is not one. Only `false`: `null` means sshd could not be asked, and a
+        * failed read is not a fact.
+        */}
+      {meta?.ssh_access_enforced === false && data.length ? (
+        <Caution size="md">
+          <p>{t("sshNotEnforced.body")}</p>
+          {canOpenSecurity ? (
+            <Button asChild size="sm" variant="outline">
+              <Link href="/settings/security" prefetch={false}>
+                {t("sshNotEnforced.action")}
+              </Link>
+            </Button>
+          ) : null}
+        </Caution>
+      ) : null}
 
       {filtered.length === 0 ? (
         isFiltered ? (

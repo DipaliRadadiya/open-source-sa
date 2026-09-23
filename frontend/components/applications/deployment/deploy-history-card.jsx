@@ -14,6 +14,7 @@ import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { Card, CardContent } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { EmptyState } from "@/components/data-table/empty-state";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Dialog,
@@ -91,6 +92,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
   useImperativeHandle(ref, () => ({ show }), [show]);
 
   async function redeploy(deployment) {
+    if (busyId !== null) return;
     setBusyId(deployment.id);
     try {
       await redeployDeployment(applicationId, deployment.id);
@@ -123,6 +125,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
           <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         </div>
+        <RefreshButton />
       </div>
 
       <CardContent className="p-0">
@@ -169,12 +172,24 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
                   </span>
                 </button>
 
-                <ReasonTooltip reason={canManage ? null : t("noPermission")}>
+                {/* One deploy at a time: while any Redeploy is starting, or a
+                    deploy is running, every row waits and says why. Only the
+                    clicked row used to lock, so a second click took its
+                    spinner and raced the first on the server. */}
+                <ReasonTooltip
+                  reason={
+                    !canManage
+                      ? t("noPermission")
+                      : running || (busyId !== null && busyId !== deployment.id)
+                        ? t("busy")
+                        : null
+                  }
+                >
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={!canManage || busyId === deployment.id || running}
+                    disabled={!canManage || busyId !== null || running}
                     onClick={() => redeploy(deployment)}
                   >
                     {busyId === deployment.id ? (

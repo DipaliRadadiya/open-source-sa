@@ -42,3 +42,8 @@ function extensionOf(name) {
 export function canOpenFile(name) {
   return !UNOPENABLE.has(extensionOf(name));
 }
+
+// The editor's ceiling, the same number as the backend's FileBrowser::MAX_BYTES.
+// Known from the listing, so a file past it goes straight to the Download
+// screen instead of asking the server to refuse it.
+export const EDITOR_MAX_BYTES = 5 * 1024 * 1024;

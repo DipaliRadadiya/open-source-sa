@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import {
   AlertCircle,
   CheckCircle2,
-  MoreHorizontal,
   ShieldCheck,
   ShieldOff,
   ShieldAlert,
@@ -39,12 +38,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Caution } from "@/components/ui/caution";
 import { Switch } from "@/components/ui/switch";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { IssueCertDialog } from "@/components/applications/domains/issue-cert-dialog";
@@ -358,7 +351,13 @@ export function SslSection({
         actions:
           canManage && !noRetry ? (
             <>
-              <Button variant="ghost" onClick={() => setDeleteOpen(true)}>
+              {/* Red text, the ink deepened in light mode: plain destructive
+                  on the hover tint measured 3.82:1 (the Files Trash fix). */}
+              <Button
+                variant="ghost"
+                className="[--destructive-ink:color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] text-(--destructive-ink) hover:bg-destructive/10 hover:text-(--destructive-ink) dark:text-destructive dark:hover:text-destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
                 <Trash2 className="size-4" />
                 {t("ssl.remove")}
               </Button>
@@ -540,9 +539,15 @@ export function SslSection({
           ) : null}
         </>
       ),
-      actions: !canManage ? null : expired || !cert.renewable || hasCoverageGap ? (
+      // Both actions out in the open, in every state — a healthy certificate
+      // used to hide them behind a "Certificate options" menu.
+      actions: !canManage ? null : (
         <>
-          <Button variant="ghost" onClick={() => setDeleteOpen(true)}>
+          <Button
+            variant="ghost"
+            className="[--destructive-ink:color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] text-(--destructive-ink) hover:bg-destructive/10 hover:text-(--destructive-ink) dark:text-destructive dark:hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
             <Trash2 className="size-4" />
             {t("ssl.remove")}
           </Button>
@@ -554,25 +559,6 @@ export function SslSection({
             {t("ssl.reissue")}
           </Button>
         </>
-      ) : (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost">
-              <MoreHorizontal className="size-4" />
-              {t("ssl.moreActions")}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-48">
-            <DropdownMenuItem onSelect={() => setIssueOpen(true)}>
-              <RefreshCw className="size-4" />
-              {t("ssl.reissue")}
-            </DropdownMenuItem>
-            <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
-              <Trash2 className="size-4" />
-              {t("ssl.remove")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       ),
     };
   }

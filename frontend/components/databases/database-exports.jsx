@@ -19,6 +19,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
@@ -218,27 +219,30 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
             </div>
           </div>
 
-          <ReasonTooltip
-            reason={
-              !canManage ? t("noPermission") : inFlight ? t("alreadyRunning") : null
-            }
-          >
-            {/* The button says what is happening rather than just going grey.
-                A dump runs for minutes and the only other sign of it was a
-                small badge at the bottom of the card, which is not where
-                anyone is looking after pressing this. */}
-            <Button
-              disabled={!canManage || inFlight || starting}
-              onClick={big ? ask : start}
+          <div className="flex items-center gap-2">
+            <RefreshButton />
+            <ReasonTooltip
+              reason={
+                !canManage ? t("noPermission") : inFlight ? t("alreadyRunning") : null
+              }
             >
-              {starting || inFlight ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <HardDriveDownload className="size-4" />
-              )}
-              {inFlight ? t("inProgress") : t("action")}
-            </Button>
-          </ReasonTooltip>
+              {/* The button says what is happening rather than just going grey.
+                  A dump runs for minutes and the only other sign of it was a
+                  small badge at the bottom of the card, which is not where
+                  anyone is looking after pressing this. */}
+              <Button
+                disabled={!canManage || inFlight || starting}
+                onClick={big ? ask : start}
+              >
+                {starting || inFlight ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <HardDriveDownload className="size-4" />
+                )}
+                {inFlight ? t("inProgress") : t("action")}
+              </Button>
+            </ReasonTooltip>
+          </div>
         </div>
 
         <CardContent className="px-5 py-0">

@@ -2,88 +2,40 @@
 
 namespace App\Services\Server\DiskCleaner\Targets;
 
-use App\Services\Server\DiskCleaner\AbstractCleanupTarget;
-use App\Services\Server\ServerOpsResult;
-use Illuminate\Support\Str;
+use App\Services\Server\DiskCleaner\TruncateLogsTarget;
 
 /**
- * Empties (truncates, never deletes) the active current log files of running
- * services — the big growers like nginx/apache access logs. The set is a
- * config-driven glob list (`server.disk_cleaner.service_log_globs`) covering
- * our supported services; only files that exist are touched.
+ * The current log files of the services the panel runs — web servers,
+ * databases, Redis, supervisor, the firewall. Locations come from
+ * `server.disk_cleaner.service_log_globs`; see TruncateLogsTarget for how
+ * they are found and why.
  *
- * Truncate (not delete) because an open log file that is unlinked keeps its
- * space until the writer restarts and breaks its file handle; truncating
- * reclaims the space safely while the service keeps appending.
+ * A site's own logs are not here: they are visitor history, not service
+ * housekeeping, and they have their own category — SiteLogsTarget.
  */
-class ServiceLogsTarget extends AbstractCleanupTarget
+class ServiceLogsTarget extends TruncateLogsTarget
 {
     public function key(): string
     {
         return 'service_logs';
     }
 
-    public function group(): string
+    protected function locations(): array
     {
-        return 'logs';
-    }
+        $locations = [];
 
-    public function method(): string
-    {
-        return 'truncate';
-    }
-
-    public function available(): bool
-    {
-        return count($this->files()) > 0;
-    }
-
-    public function paths(): array
-    {
-        return $this->files();
-    }
-
-    public function estimate(): int
-    {
-        $sum = 0;
-        foreach ($this->files() as $file) {
-            $sum += (int) (filesize($file) ?: 0);
-        }
-
-        return $sum;
-    }
-
-    public function clean(): ServerOpsResult
-    {
-        $files = $this->files();
-
-        if (empty($files)) {
-            return new ServerOpsResult(true, (string) Str::uuid());
-        }
-
-        return $this->serverOps->run(
-            ['truncate', '-s', '0', ...$files],
-            ['feature' => 'disk_cleaner', 'op' => 'clean', 'target' => $this->key()],
-            60,
-        );
-    }
-
-    /**
-     * Existing active log files matched by the configured globs.
-     *
-     * @return array<int, string>
-     */
-    private function files(): array
-    {
-        $files = [];
         foreach ((array) config('server.disk_cleaner.service_log_globs', []) as $glob) {
-            foreach (glob($glob) ?: [] as $match) {
-                if (is_file($match)) {
-                    $files[] = $match;
-                }
+            $directory = dirname((string) $glob);
+
+            // A wildcard in the directory part cannot be one `find` location;
+            // the configured globs keep wildcards to the file name.
+            if (strpbrk($directory, '*?[') !== false) {
+                continue;
             }
+
+            $locations[] = [$directory, basename((string) $glob)];
         }
 
-        return array_values(array_unique($files));
+        return $locations;
     }
 }

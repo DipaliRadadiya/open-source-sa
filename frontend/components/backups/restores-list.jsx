@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { FacetSelect } from "@/components/data-table/facet-select";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
@@ -102,6 +103,9 @@ export function RestoresList({ restores, applications = [], hasFilters = false }
           options={BACKUP_TYPES.map((value) => ({ value, label: t(`types.${value}`) }))}
           className="w-full sm:w-48"
         />
+        <div className="sm:ml-auto">
+          <RefreshButton />
+        </div>
       </div>
 
       {restores.length === 0 ? (

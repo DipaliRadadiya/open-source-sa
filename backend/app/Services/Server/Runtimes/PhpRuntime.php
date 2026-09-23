@@ -7,6 +7,8 @@ use App\Contracts\Runtime;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Runtime\InstallFailureClassifier;
+use App\Services\Server\ManagedFile;
+use App\Services\Server\Php\IonCubeLoader;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -36,6 +38,8 @@ class PhpRuntime implements Runtime
         private PhpVersionManager $versions,
         private PhpStack $stack,
         private InstallFailureClassifier $classifier,
+        private IonCubeLoader $ionCube,
+        private ManagedFile $files,
     ) {}
 
     public function key(): string
@@ -68,7 +72,7 @@ class PhpRuntime implements Runtime
     }
 
     /**
-     * What bare `php` resolves to, according to update-alternatives.
+     * What bare `php` resolves to: the PATH link, else update-alternatives.
      *
      * The path is matched against the stack's own `binaryPath()` per installed
      * version rather than having a version read out of it by pattern. The
@@ -80,6 +84,19 @@ class PhpRuntime implements Runtime
      */
     public function default(): ?string
     {
+        // `/usr/local/bin/php` first: where it exists it precedes /usr/bin on
+        // PATH, so it — not the alternative — is what `php` runs. install.sh
+        // creates it on OpenLiteSpeed and registers no alternative at all, so
+        // reading only the group left every fresh OLS server with no default
+        // on the PHP screen until someone pressed "make default". Only trusted
+        // when it names a version listed here; anything else falls through.
+        $link = (string) config('server.php_path_link', '/usr/local/bin/php');
+
+        if ($link !== '' && is_link($link) && ($target = readlink($link)) !== false
+            && ($version = $this->versionAt($target)) !== null) {
+            return $version;
+        }
+
         $output = $this->serverOps->run(
             ['update-alternatives', '--query', 'php'],
             ['feature' => 'runtime', 'op' => 'php_default'],
@@ -89,18 +106,22 @@ class PhpRuntime implements Runtime
             return null;
         }
 
-        $value = $matches[1];
-
-        foreach ($this->versions->versions() as $version) {
-            if ($this->binaryPath($version) === $value) {
-                return $version;
-            }
-        }
-
         // A selected path the panel does not recognise — a hand-built symlink,
         // or a version removed while it was still the default. Null says "this
         // is not one of the versions listed above", which is the truth; naming
         // one of them anyway would mark the wrong row as default.
+        return $this->versionAt($matches[1]);
+    }
+
+    /** The installed version whose interpreter is exactly this path. */
+    private function versionAt(string $binary): ?string
+    {
+        foreach ($this->versions->versions() as $version) {
+            if ($this->binaryPath($version) === $binary) {
+                return $version;
+            }
+        }
+
         return null;
     }
 
@@ -473,6 +494,10 @@ class PhpRuntime implements Runtime
      */
     public function uninstall(string $version, ?callable $onOutput = null): void
     {
+        // Asked before the purge, while this version's PHP can still say where
+        // its loader lives. Deleted only after the purge succeeds.
+        $ionCube = $this->ionCube->panelFiles($version);
+
         $this->must($this->serverOps->apt(
             ['apt-get', 'purge', '-y', $this->stack->packagePrefix($version).'*'],
             ['feature' => 'runtime', 'op' => 'php_uninstall', 'version' => $version],
@@ -499,6 +524,16 @@ class PhpRuntime implements Runtime
                 ['rm', '-rf', $residual],
                 ['feature' => 'runtime', 'op' => 'php_uninstall_residual', 'version' => $version],
             );
+        }
+
+        // The panel's ionCube loader and ini, which dpkg never owned and so
+        // outlive the purge. On OpenLiteSpeed the ini sits in the version's
+        // scan dir: left there, reinstalling this version would load ionCube
+        // again with nothing on screen saying so. An ionCube that came from
+        // LiteSpeed's package went with the purge (`lsphpNN-*`), and v7's
+        // php.ini line with the FPM version's directory.
+        foreach ($ionCube as $path) {
+            $this->files->delete($path, ['feature' => 'runtime', 'op' => 'php_uninstall_ioncube', 'version' => $version]);
         }
     }
 

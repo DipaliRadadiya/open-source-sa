@@ -76,7 +76,7 @@ test("upload says what the server does with a name that is already taken", () =>
   assert.match(panel, /existingNames=\{files\.map\(\(f\) => f\.name\)\}/);
   assert.match(upload, /const taken = existing\.has\(file\.name\);/);
   assert.match(upload, /error: taken \? t\("uploadDialog\.exists"\) : null/);
-  assert.match(upload, /if \(item\.spaceBlocked \|\| item\.nameTaken\) \{/, "a taken name is never sent");
+  assert.match(upload, /if \(item\.nameTaken\) \{\s*skippedCount \+= 1;\s*continue;/, "a taken name is never sent");
 });
 
 test("an upload in progress can be stopped", () => {
@@ -178,4 +178,137 @@ test("an empty folder explains itself and offers the way in, without a second bl
 test("the phone card never splits a permission string across lines", () => {
   assert.match(cards, /className=\{cn\("whitespace-nowrap", isWorldWritable/);
   assert.match(cards, /flex flex-wrap gap-x-2 font-mono/);
+});
+
+// ---- Write-flow tests on a live panel (2026-09-23) ----
+
+const editorSrc = read("components/applications/files/file-editor-dialog.jsx");
+const archiveField = read("components/applications/files/archive-format-field.jsx");
+const bulkSrc = read("components/applications/files/bulk-dialogs.jsx");
+const restoreSrc = read("components/applications/files/restore-file-backup-dialog.jsx");
+
+test("an upload refused by the rate limit waits and carries on", () => {
+  // Twelve files: eight went up, four rows read "Too Many Attempts."
+  assert.match(upload, /error\?\.response\?\.status === 429 && waits < RATE_LIMIT_MAX_WAITS/);
+  assert.match(upload, /await countDown\(retryAfterSeconds\(error\), update, controller\.signal\);/);
+  // Stop must end a wait, not sit it out.
+  assert.match(upload, /signal\.addEventListener\("abort", finish\);/);
+  assert.match(upload, /t\("uploadDialog\.waiting", \{ seconds: item\.waitSeconds \}\)/);
+  // Past the last wait it says so in our words, not the server's English.
+  assert.match(upload, /\? t\("uploadDialog\.rateLimited"\)/);
+});
+
+test("a failed file does not count towards the bar", () => {
+  // Four refused files and the bar still read 100%.
+  assert.match(upload, /i\.status === "error" \? 0 :/);
+});
+
+test("a file the editor refuses gets the Download screen, not an empty editor that closes", async () => {
+  const { EDITOR_MAX_BYTES } = await import("../lib/files/openable.js");
+  assert.equal(EDITOR_MAX_BYTES, 5 * 1024 * 1024, "the backend's FileBrowser::MAX_BYTES");
+  // Known too large from the listing: no request at all.
+  assert.match(editorSrc, /const tooLarge = file\.size > EDITOR_MAX_BYTES;/);
+  assert.match(editorSrc, /if \(tooLarge\) return;/);
+  // The refusal is a bare 422 — the error keys this used to wait for never come.
+  assert.match(editorSrc, /response\?\.status === 422 && !response\.data\?\.errors\?\.path/);
+  assert.doesNotMatch(editorSrc, /errors\?\.\["application\.file_too_large"\]/);
+});
+
+test("copy and compress suggest a name that is not already taken", async () => {
+  const { copySuggestion, compressSuggestion } = await import("../lib/files/path-helpers.js");
+  assert.equal(copySuggestion("qa/config.json"), "qa/config-copy.json");
+  assert.equal(copySuggestion("qa/config.json", new Set(["qa/config-copy.json"])), "qa/config-copy-2.json");
+  assert.equal(
+    copySuggestion("qa/config.json", new Set(["qa/config-copy.json", "qa/config-copy-2.json"])),
+    "qa/config-copy-3.json",
+  );
+  assert.equal(copySuggestion("site.tar.gz", new Set(["site-copy.tar.gz"])), "site-copy-2.tar.gz");
+  assert.equal(compressSuggestion("qa/sub", ".zip", new Set(["qa/sub.zip"])), "qa/sub-2.zip");
+  assert.equal(compressSuggestion("qa/archive", ".zip", new Set()), "qa/archive.zip");
+  assert.match(panel, /<CopyDialog\s+appId=\{appId\}\s+file=\{action\.file\}\s+existingPaths=\{files\.map\(\(f\) => f\.path\)\}/);
+  assert.match(panel, /<CompressDialog\s+appId=\{appId\}\s+file=\{action\.file\}\s+existingPaths=\{files\.map\(\(f\) => f\.path\)\}/);
+  assert.match(bulkSrc, /compressSuggestion\(joinPath\(path, "archive"\), "\.zip", new Set\(files\.map/);
+});
+
+test("an archive name typed without an extension gets the format picked above it", () => {
+  // The placeholder itself — "application-backup" — used to be refused.
+  assert.match(archiveField, /const \[chosen, setChosen\] = useState\(ARCHIVE_FORMATS\[0\]\);/);
+  assert.match(archiveField, /complete: \(value\) => \(!value \|\| value\.endsWith\("\/"\) \|\| archiveFormatOf\(value\) \? value : `\$\{value\}\$\{chosen\}`\)/);
+  assert.match(bulkSrc, /compressFiles\(appId, paths, archiveFormat\.complete\(target\.trim\(\)\)\)/);
+  assert.match(read("components/applications/files/compress-dialog.jsx"), /normalize=\{format\.complete\}/);
+  assert.match(read("components/applications/files/target-path-dialog.jsx"), /const trimmed = normalize\(value\.trim\(\)\);/);
+});
+
+test("saved versions are listed by when, not by backup file name", async () => {
+  const { parseApiWallClock } = await import("../lib/format/api-date.js");
+  const when = parseApiWallClock("23-09-2026 08:50:23");
+  // Written back in UTC it is the server's own wall-clock time, whatever zone
+  // the browser is in.
+  assert.equal(when.toISOString(), "2026-09-23T08:50:23.000Z");
+  assert.equal(parseApiWallClock("notes.txt.bak-20260923-085023"), null);
+  assert.match(restoreSrc, /format\.dateTime\(when, \{ dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" \}\)/);
+  assert.doesNotMatch(restoreSrc, /font-mono text-xs">\{backup\.name\}/);
+});
+
+test("a file skipped for its name is counted as skipped, not failed", () => {
+  // "13 uploaded, 1 failed" for a file the dialog had already said it would
+  // not send.
+  assert.match(upload, /if \(item\.nameTaken\) \{\s*skippedCount \+= 1;/);
+  assert.match(upload, /t\("uploadDialog\.skipped", \{ done: uploaded, skipped: skippedCount \}\)/);
+  assert.match(upload, /t\("uploadDialog\.partialSkipped"/);
+});
+
+// ---- Files leftovers (2026-09-23) ----
+
+test("the Modified hover gives a readable date in the server's clock", () => {
+  const cell = tableSrc.slice(tableSrc.indexOf("function ModifiedCell"), tableSrc.indexOf("function OwnerCell"));
+  assert.match(cell, /parseApiWallClock\(file\.modified_at\)/);
+  assert.match(cell, /timeZone: "UTC"/);
+  assert.match(cell, /<TooltipContent>\{exact\}<\/TooltipContent>/);
+});
+
+test("a link to a file opens its folder with the file open, not 'folder is gone'", () => {
+  const page = read("app/(app)/applications/[application]/files/page.jsx");
+  // The listing answers 404 for a file path; look in the parent first.
+  assert.match(page, /if \(filesResult\.notFound && path\) \{/);
+  assert.match(page, /entry\.name === name && entry\.type !== "dir"/);
+  assert.match(page, /open: name/);
+  assert.match(panel, /openName = null,/);
+  // Dropped from the address once used, so a refresh does not reopen it.
+  assert.match(panel, /url\.searchParams\.delete\("open"\)/);
+});
+
+test("a refusal about the typed path shows under the field, not in a toast", () => {
+  const target = read("components/applications/files/target-path-dialog.jsx");
+  assert.match(target, /const REFUSED_HERE = new Set\(\[404, 409, 422\]\);/);
+  assert.match(target, /REFUSED_HERE\.has\(err\.response\?\.status\)\) \{[\s\S]*?setError\(apiMessage\(err, failureMessage\)\)/);
+  for (const f of ["new-folder-dialog.jsx", "new-file-dialog.jsx"]) {
+    assert.match(read(`components/applications/files/${f}`), /\[404, 409, 422\]\.includes\(error\.response\?\.status\)/, f);
+  }
+  assert.match(read("components/applications/files/bulk-dialogs.jsx"), /\[404, 409, 422\]\.includes\(err\.response\?\.status\)\) setError/);
+});
+
+test("a bulk action only touches what is on screen", () => {
+  // A hidden .htaccess stayed ticked after "Hide hidden files" or a search.
+  assert.match(panel, /const shownSelection = useMemo\(/);
+  assert.match(panel, /paths=\{shownSelection\}/);
+  assert.match(panel, /<SelectionBar\s+selected=\{shownSelection\}/);
+  assert.doesNotMatch(panel, /paths=\{selected\}/);
+});
+
+test("the chart library loads when Storage opens, not with every folder", () => {
+  const sheet = read("components/applications/files/size-breakdown-sheet.jsx");
+  assert.doesNotMatch(sheet, /from "@\/components\/ui\/echart"/);
+  assert.match(sheet, /dynamic\(\s*\(\) => import\("@\/components\/applications\/files\/size-breakdown-donut"\)/);
+  assert.match(read("components/applications/files/size-breakdown-donut.jsx"), /from "@\/components\/ui\/echart"/);
+});
+
+test("two folders measured at once each keep their own spinner", () => {
+  // One `sizingPath` slot: a second Calculate took the spinner off the first,
+  // and whichever finished first cleared the other's too.
+  assert.match(panel, /const \[sizingPaths, setSizingPaths\] = useState\(\[\]\);/);
+  assert.match(panel, /setSizingPaths\(\(current\) => current\.filter\(\(entry\) => entry !== file\.path\)\)/);
+  assert.match(tableSrc, /sizingPaths\.includes\(file\.path\)/);
+  assert.match(cards, /sizingPaths\.includes\(file\.path\)/);
+  assert.doesNotMatch(panel + tableSrc + cards, /\bsizingPath\b/);
 });

@@ -124,15 +124,24 @@ class RebootScheduleSettings implements SettingGroup
      * that `shutdown` works; only this half drops privileges.
      *
      * The PHP binary is named explicitly rather than taken from PHP_BINARY,
-     * which under FPM is the FPM binary and cannot run artisan.
+     * which under FPM is the FPM binary and cannot run artisan. The panel's
+     * own, as install.sh recorded it (PANEL_PHP_BIN), before the distro
+     * pattern: on OpenLiteSpeed there is no /usr/bin/php8.4 at all — PHP is
+     * /usr/local/lsws/lsphp84/bin/php — so the log half of the cron line
+     * failed on every scheduled reboot and the reboot happened unrecorded
+     * (seen 2026-09-23; the `;` let `shutdown` run regardless).
      */
     private function logCommand(): string
     {
-        $php = str_replace(
-            '{version}',
-            PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION,
-            (string) config('server.php_binary_pattern', '/usr/bin/php{version}'),
-        );
+        $php = (string) config('panel_update.php_binary', '');
+
+        if ($php === '') {
+            $php = str_replace(
+                '{version}',
+                PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION,
+                (string) config('server.php_binary_pattern', '/usr/bin/php{version}'),
+            );
+        }
 
         return sprintf(
             'runuser -u %s -- %s %s server:log-scheduled-reboot',

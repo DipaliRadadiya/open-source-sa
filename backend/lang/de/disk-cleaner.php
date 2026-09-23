@@ -6,5 +6,6 @@ return [
     'journal' => ['label' => 'System-Journal', 'description' => 'systemd-Journal-Einträge, die älter als der Aufbewahrungszeitraum sind.', 'note' => 'Kürzt alte Journal-Historie über den Aufbewahrungszeitraum hinaus; aktuelle Einträge bleiben erhalten.'],
     'rotated_logs' => ['label' => 'Rotierte Protokolle', 'description' => 'Alte komprimierte und rotierte Protokollarchive unter /var/log.', 'note' => 'Löscht bereits rotierte Archive (.gz / .1 / .old) unter /var/log; aktuelle Protokolle bleiben unberührt.'],
     'service_logs' => ['label' => 'Dienstprotokolle', 'description' => 'Leert die aktuellen Protokolldateien laufender Dienste (werden geleert, nicht gelöscht).', 'note' => 'Leert die aktuellen Protokolldateien (auf 0 Byte gekürzt) — Dienste schreiben weiter hinein, nichts wird gelöscht.'],
+    'site_logs' => ['label' => 'Site-Logs', 'description' => 'Leert die aktuellen Zugriffs- und Fehler-Logs jeder gehosteten Site (bleiben erhalten, werden nicht gelöscht).', 'note' => 'Entfernt den Besucher- und Fehlerverlauf jeder Site – nur eine manuelle Bereinigung kann das, nie ein Zeitplan.'],
     'tmp' => ['label' => 'Temporäre Dateien', 'description' => 'Alte Dateien in /tmp und /var/tmp.', 'note' => 'Löscht Dateien in /tmp und /var/tmp, die älter als der Aufbewahrungszeitraum sind.'],
 ];

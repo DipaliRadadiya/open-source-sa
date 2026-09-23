@@ -177,6 +177,9 @@ class PhpController extends Controller
 
         return response()->json([
             'extensions' => $extensions->catalog($version),
+            // False on OpenLiteSpeed: an installed extension is simply on, and
+            // switching one off is refused. Install still works either way.
+            'toggle_supported' => $extensions->togglesExtensions(),
             'panel_required' => $version === $php->panelVersion() ? $extensions->panelRequired() : [],
         ]);
     }
@@ -269,6 +272,9 @@ class PhpController extends Controller
                 ...$loader->status($version),
                 'status' => $run?->status->value ?? 'idle',
                 'reason' => $run?->reason,
+                // What to show. `reason` is a code for the frontend to branch
+                // on, never text for the user.
+                'message' => $loader->failureMessage($run, $version),
                 'reference' => $run?->reference,
             ],
         ]);
@@ -288,6 +294,15 @@ class PhpController extends Controller
         if (! $loader->supports($version)) {
             return response()->json([
                 'message' => __('errors/php.ioncube_unsupported_version', ['version' => $version]),
+            ], 422);
+        }
+
+        // Refused here too, not only in the job: a queued install that can
+        // only fail would show a spinner and then an error for something the
+        // card already knew.
+        if ($loader->source($version) === IonCubeLoader::SOURCE_EXTERNAL) {
+            return response()->json([
+                'message' => __('errors/php.ioncube_external', ['version' => $version]),
             ], 422);
         }
 

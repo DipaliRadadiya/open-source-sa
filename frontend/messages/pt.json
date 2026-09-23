@@ -217,7 +217,11 @@
       "loadFailed": "As chaves desta conta não puderam ser carregadas. Isso não é o mesmo que não ter nenhuma.",
       "retryLoad": "Tentar novamente"
     },
-    "loadFailed": "Seus usuários de sistema não puderam ser carregados. Eles não foram alterados nem removidos."
+    "loadFailed": "Seus usuários de sistema não puderam ser carregados. Eles não foram alterados nem removidos.",
+    "sshNotEnforced": {
+      "body": "As chaves de login SSH ainda não são aplicadas: um usuário desligado aqui ainda consegue fazer login via SSH. Elas passam a valer quando você salvar Configurações → Acesso e segurança. Depois disso, só fazem login os usuários ligados aqui, os usuários com sudo e o root.",
+      "action": "Abrir Acesso e segurança"
+    }
   },
   "dashboard": {
     "title": "Painel",
@@ -2044,7 +2048,11 @@
       "builtinBody": "Já vêm compiladas e estão sempre disponíveis. Não há nada para alternar, e o PHP não roda sem elas.",
       "noMatchesBuiltin": "{name} é compilada no PHP — está sempre disponível. Veja a lista abaixo.",
       "enabling": "Ativando…",
-      "disabling": "Desativando…"
+      "disabling": "Desativando…",
+      "waitForOther": "Aguarde {name} terminar primeiro.",
+      "install": "Instalar",
+      "installingNow": "Instalando…",
+      "noToggleNote": "No OpenLiteSpeed, uma extensão instalada fica sempre ativa. Você pode instalá-la aqui, mas não desativá-la."
     },
     "install": {
       "action": "Instalar versão",
@@ -3581,7 +3589,6 @@
         "rateLimited": "A Let's Encrypt limitou este domínio. Aguarde cerca de uma semana antes de tentar novamente — tentar agora não vai ajudar.",
         "reissue": "Reemitir",
         "remove": "Remover certificado",
-        "moreActions": "Opções do certificado",
         "active": "HTTPS está ativo",
         "namesTitle": "Domínios neste certificado",
         "namesCount": "{secured} de {total} protegidos",
@@ -3809,7 +3816,8 @@
         "logFailed": "O log de build não pôde ser carregado.",
         "noPermission": "Seu papel não inclui Deploy para esta aplicação com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
         "title": "Histórico de deploy",
-        "subtitle": "Cada deploy, mais recente primeiro. Abra um para ler seu log de build."
+        "subtitle": "Cada deploy, mais recente primeiro. Abra um para ler seu log de build.",
+        "busy": "Já há uma implantação em andamento. Aguarde terminar."
       },
       "tabs": {
         "history": "Histórico",
@@ -3917,7 +3925,11 @@
         "allFailed": "Não foi possível enviar nenhum destes arquivos.",
         "exists": "Já existe um arquivo com este nome nesta pasta. Renomeie-o ou exclua-o primeiro.",
         "stop": "Parar",
-        "stopped": "Envio interrompido. {done} de {count} arquivos foram enviados."
+        "stopped": "Envio interrompido. {done} de {count} arquivos foram enviados.",
+        "waiting": "Em pausa pelo limite de envios do servidor. Continua em {seconds, plural, one {# segundo} other {# segundos}}.",
+        "rateLimited": "O servidor está recusando mais envios agora. Clique em Enviar de novo daqui a um minuto.",
+        "skipped": "{done} enviados, {skipped} ignorados: já existe um arquivo com esse nome.",
+        "partialSkipped": "{done} enviados, {skipped} ignorados, {failed} falharam."
       },
       "editor": {
         "subtitle": "As alterações são salvas em backup automaticamente antes de cada salvamento.",

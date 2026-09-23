@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePendingKeys } from "@/hooks/use-pending-keys";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -39,17 +40,19 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
   // refuses when a backup target still points here, and that sentence is
   // the whole answer.
   const removal = useConfirmAction();
-  const [testingId, setTestingId] = useState(null);
+  // Tests can run side by side, one spinner each.
+  const testing = usePendingKeys();
   // Keyed by id, cleared on a fresh test. Never persisted — see DestinationRow.
   const [results, setResults] = useState({});
 
   async function test(destination) {
-    setTestingId(destination.id);
+    if (testing.isPending(destination.id)) return;
+    testing.start(destination.id);
     setResults((prev) => ({ ...prev, [destination.id]: null }));
     // 200 does NOT mean the connection works — the verdict is in the body.
     const verdict = await probeDestination(destination.id, t("row.testFailed"));
     setResults((prev) => ({ ...prev, [destination.id]: verdict }));
-    setTestingId(null);
+    testing.finish(destination.id);
   }
 
   async function remove() {
@@ -164,7 +167,7 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
                 key={destination.id}
                 destination={destination}
                 canManage={canManage}
-                testing={testingId === destination.id}
+                testing={testing.isPending(destination.id)}
                 result={results[destination.id]}
                 onTest={() => test(destination)}
                 onEdit={() => setEditing(destination)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePendingKeys } from "@/hooks/use-pending-keys";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -16,6 +17,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 
 /**
  * What is recoverable, and the two ways out of it.
@@ -47,7 +49,10 @@ export function TrashPanel({
 }) {
   const t = useTranslations("applications.files.trash");
   const router = useRouter();
+  // Emptying (one batch or all) goes through a dialog that stays open until it
+  // is done; restores are per row and can overlap, so they are tracked apart.
   const [pending, setPending] = useState(null);
+  const restoring = usePendingKeys();
   const [confirming, setConfirming] = useState(null);
 
   const manageReason = canManage ? null : t("noPermission");
@@ -61,7 +66,9 @@ export function TrashPanel({
   }
 
   async function restore(entry) {
-    setPending(`${entry.batch}:${entry.path}`);
+    const key = `${entry.batch}:${entry.path}`;
+    if (restoring.isPending(key)) return;
+    restoring.start(key);
     try {
       await restoreTrashed(appId, entry.batch, entry.path);
       toast.success(t("restored", { name: entry.path }));
@@ -72,7 +79,7 @@ export function TrashPanel({
       // full rather than as "couldn't restore".
       toast.error(apiMessage(error, t("restoreFailed")));
     } finally {
-      setPending(null);
+      restoring.finish(key);
     }
   }
 
@@ -120,6 +127,7 @@ export function TrashPanel({
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <RefreshButton className="size-8" />
             <Button variant="outline" size="sm" asChild>
               <Link href={backHref} prefetch={false}>
                 <ArrowLeft className="size-3.5" />
@@ -187,7 +195,7 @@ export function TrashPanel({
 
               <ul className="divide-y">
                 {entries.map((entry) => {
-                  const busy = pending === `${entry.batch}:${entry.path}`;
+                  const busy = restoring.isPending(`${entry.batch}:${entry.path}`);
                   return (
                     <li
                       key={`${entry.batch}:${entry.path}`}

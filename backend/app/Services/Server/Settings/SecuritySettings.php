@@ -70,7 +70,7 @@ class SecuritySettings implements SettingGroup
             // key-only login up front instead of accepting the choice and then
             // refusing it — and because there is one function, the greyed-out
             // control and the 422 can never disagree about why.
-            'has_ssh_key' => $this->hasSshKey(),
+            'has_ssh_key' => $this->hasSshKey($effective['permitrootlogin'] ?? 'prohibit-password'),
         ];
     }
 
@@ -81,7 +81,10 @@ class SecuritySettings implements SettingGroup
     {
         // Lockout guard: don't let the user turn off password auth unless there
         // is at least one SSH key to get back in with.
-        if (! $data['password_authentication'] && ! $this->hasSshKey()) {
+        // Asked about the root-login setting being SAVED, not the current one:
+        // switching root login off in the same save takes root's key out of
+        // the ways back in.
+        if (! $data['password_authentication'] && ! $this->hasSshKey((string) $data['permit_root_login'])) {
             throw ValidationException::withMessages([
                 'password_authentication' => [__('errors/setting.no_ssh_key')],
             ]);
@@ -267,9 +270,54 @@ class SecuritySettings implements SettingGroup
         return $config;
     }
 
-    private function hasSshKey(): bool
+    /**
+     * Is there a key someone who administers this server can get back in with?
+     *
+     * It used to read /root/.ssh/authorized_keys with PHP's own `is_file()` —
+     * as the panel account, which cannot see into /root — and look at nothing
+     * else. So on an ordinary cloud server (password login already off, root's
+     * key in place, the admin logging in as `ubuntu` with a key) it answered
+     * "no key", and the Security screen could not be saved at all, not even
+     * with the values it already had (reproduced 2026-09-23).
+     *
+     * Now, through ServerOps so the answer is root's:
+     *  - a key the panel itself recorded;
+     *  - a key for any member of `sudo` — the account a cloud image hands you;
+     *  - root's own key, but only while root login is allowed, because a key
+     *    for an account sshd refuses is no way back in.
+     */
+    private function hasSshKey(string $permitRootLogin): bool
     {
-        return SshKey::query()->exists()
-            || (is_file('/root/.ssh/authorized_keys') && trim((string) @file_get_contents('/root/.ssh/authorized_keys')) !== '');
+        if (SshKey::query()->exists()) {
+            return true;
+        }
+
+        $homes = $permitRootLogin === 'no' ? [] : ['/root'];
+
+        $group = $this->serverOps->run(['getent', 'group', 'sudo'], ['feature' => 'setting', 'group' => 'security', 'op' => 'sudo_members']);
+        $members = array_filter(explode(',', trim((string) (explode(':', trim($group->output()))[3] ?? ''))));
+
+        foreach ($members as $member) {
+            $entry = explode(':', trim($this->serverOps->run(
+                ['getent', 'passwd', $member],
+                ['feature' => 'setting', 'group' => 'security', 'op' => 'sudo_member_home'],
+            )->output()));
+
+            if (($entry[5] ?? '') !== '') {
+                $homes[] = $entry[5];
+            }
+        }
+
+        foreach ($homes as $home) {
+            if ($this->serverOps->run(
+                ['test', '-s', rtrim($home, '/').'/.ssh/authorized_keys'],
+                ['feature' => 'setting', 'group' => 'security', 'op' => 'key_present'],
+                expectedExitCodes: [1],
+            )->ok) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

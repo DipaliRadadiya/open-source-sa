@@ -2286,6 +2286,8 @@ The shared `www-data` pool is **no longer a choice**: asking for it answers `405
 
 **`managed: false` means the pool file on disk no longer matches what the panel would write** — someone edited it by hand. Warn *before* the user presses save, not after their edits are gone.
 
+**`managed: null` means the panel could not check** (the pool file could not be probed or read). Say "could not verify the pool file" — do not treat it as `true` (a save may overwrite hand edits) or as `false` (there may be none).
+
 **`open_basedir` has three answers on purpose, and they are all different questions.** `additional_directives` is appended to the pool config raw, so a directive a user writes there lands *after* the panel's and wins.
 
 | field | question it answers |
@@ -4814,11 +4816,15 @@ See also `DELETE /applications/{application}/logs/{key}` for a site's own logs, 
 
 `method`: `delete | truncate | command`. `note` (localised) explains what each category does and what it keeps.
 
-**`safe: false` means the category may be cleaned manually but never on a schedule.** Today that is `apt_orphans`: everything else here removes files that come back, while that one removes *packages*, on the strength of apt's auto-installed flags — which are routinely wrong on a migrated or script-built server — and `--purge` takes their configuration too. Show it in the manual list, and hide or disable it in the schedule form; `PUT /disk-cleaner/schedule` refuses it with a `422` on `categories.*`.
+**`safe: false` means the category may be cleaned manually but never on a schedule.** Today that is `apt_orphans` and `site_logs`: everything else here removes files that come back, while that one removes *packages*, on the strength of apt's auto-installed flags — which are routinely wrong on a migrated or script-built server — and `--purge` takes their configuration too. Show it in the manual list, and hide or disable it in the schedule form; `PUT /disk-cleaner/schedule` refuses it with a `422` on `categories.*`.
 
 `paths` is display-only and may include an exclusion note rather than a pattern — `rotated_logs` lists `"excluding /var/log/mysql"`, because database binary logs live there and are removed with `PURGE BINARY LOGS`, never by deleting files.
 
 ---
+
+**`site_logs`** (2026-09-23) empties every hosted site's current `*.log` files in `{home}/{slug}/logs`, on every web server — truncated, never deleted. It is its own category, not part of `service_logs`, because it removes the site owner's visitor and error history, so it is `safe: false`. Before this, the cleaner looked for site logs under `/usr/local/lsws/conf/vhosts/*/logs`, where they no longer live, and cleaned none. **Both log categories now list their files through the server**, so root-only directories such as `/usr/local/lsws/logs` are included — with PHP's own `glob()` they were silently missing.
+
+**A new schedule first runs at its first slot after being saved** (2026-09-23). It used to run within a minute of saving, whatever slot was chosen, while `next_run_at` said otherwise.
 
 ### POST `/disk-cleaner/clean`
 **Permission:** `disk_cleaner` (manage)
@@ -5230,9 +5236,11 @@ Replace the entire ini file. Requires `acknowledged: true`.
 
 **Request:** `{"contents": "; PHP config\n…", "acknowledged": true}`
 
-Sequence: back up → write → `php-fpm -t` → reload. On validation failure, previous file restored, no reload.
+Sequence: back up → write → config test (`php-fpm -t`, or `lsphp -c php.ini -v` on OpenLiteSpeed) → reload. On validation failure, previous file restored, no reload.
 
-`422` on invalid ini.
+`contents` is stored exactly as sent — not trimmed, so the file keeps its final newline.
+
+`422` on invalid ini — including a **syntax error**, which PHP itself only warns about (exit 0) while ignoring every line after it.
 
 ---
 
@@ -5246,8 +5254,10 @@ Sequence: back up → write → `php-fpm -t` → reload. On validation failure, 
   {"name": "mysql", "package": "php8.4-mysql", "modules": ["mysqli","mysqlnd","pdo_mysql"],
    "installed": true, "enabled": true, "builtin": false,
    "sapis": {"cli": true, "fpm": true}, "status": "ready"}
-], "panel_required": ["curl", "mbstring"]}
+], "toggle_supported": true, "panel_required": ["curl", "mbstring"]}
 ```
+
+**`toggle_supported`** — `false` on OpenLiteSpeed: an installed extension is always on and cannot be switched off (`PUT … {"enabled": false}` returns `422`). Show installed extensions without an on/off switch; **Install** (`enabled: true` on a not-installed row) still works.
 
 ---
 
@@ -5258,6 +5268,8 @@ Sequence: back up → write → `php-fpm -t` → reload. On validation failure, 
 
 `on, not installed` → `202` (apt queued). `off` → `200` (unlinked, never purged). Built-in / panel-required → `422`.
 
+`500` with a `reference` when the change was made but PHP could not be reloaded — it is **not active yet**, and the message says so. A queued install that ends that way fails with `reason: "reload_failed"` (distinct from `enable_failed`, where the module was not switched on at all).
+
 ---
 
 ### GET `/php/versions/{version}/ioncube`
@@ -5265,11 +5277,11 @@ Sequence: back up → write → `php-fpm -t` → reload. On validation failure, 
 
 ```json
 {"ioncube": {
-  "supported": true, "installed": true, "php_version": "8.4",
+  "supported": true, "installed": true, "source": "panel", "php_version": "8.4",
   "loader_version": "15.5.0",
   "sha256": "e2193a63a87e2388a71854b0114de4fc71e2e40bcf0794faf74bb562691e5b62",
   "path": "/usr/lib/php/20240924/ioncube_loader_lin_8.4.so",
-  "status": "idle", "reason": null, "reference": null
+  "status": "idle", "reason": null, "message": null, "reference": null
 }}
 ```
 
@@ -5279,6 +5291,10 @@ The ionCube Loader, which commercial PHP applications (WHMCS and most licensed s
 
 `loader_version` is read out of PHP itself, so it is the version actually loaded rather than the one that was requested; `null` while `installed` is `true` means the ini is in place and the loader did not load. `status` / `reason` / `reference` follow the same pattern as PHP extension installs.
 
+**`source`** — who installed it: `"panel"`, `"external"`, or `null` when not installed. **`external`** = installed outside this panel (an earlier ServerAvatar version added a `zend_extension` line to php.ini, or LiteSpeed's `lsphpNN-ioncube` package on OpenLiteSpeed). Show it as installed with its `loader_version`, and **disable Install and Remove** with a note ("installed outside the panel"): both answer `422` for it, because installing over it loads ionCube twice and removing the package's file is undone by the next upgrade. `sha256` and `path` are `null` for an external loader. It goes away when that PHP version is removed.
+
+**Show `message`, never `reason`.** On a failed install, `message` is the sentence in the viewer's locale; `reason` is a code to branch on — the actual cause (`ioncube_download_failed`, `ioncube_invalid_loader`, `ioncube_config_test_failed`, `ioncube_reload_failed`, `ioncube_rollback_failed`, …, or `worker` if the job died), no longer always `install_failed`. `message` is `null` whenever the last run did not fail.
+
 ### POST `/php/versions/{version}/ioncube`
 **Permission:** `php` (manage)
 
@@ -5287,7 +5303,9 @@ The ionCube Loader, which commercial PHP applications (WHMCS and most licensed s
 ### DELETE `/php/versions/{version}/ioncube`
 **Permission:** `php` (manage)
 
-`200`, synchronous — two files removed and a reload, nothing to download.
+`200`, synchronous — two files removed and a reload, nothing to download. `422` when `source` is `external`.
+
+**Removing a PHP version removes its ionCube too** — the panel's own loader and ini are deleted after the version's packages are purged (an external one goes with the purge / the version's config directory).
 
 **Applies to every site on that PHP version.** There is no per-application toggle, and the loader does not carry over between versions: installing it on 8.4 does nothing for 8.3. Each version has its own card and its own binary.
 

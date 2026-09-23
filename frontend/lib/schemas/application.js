@@ -69,7 +69,9 @@ export const systemUserOptionSchema = z.object({
 
 export const systemUsersResponseSchema = z.object({
   system_users: z.array(systemUserOptionSchema).default([]),
-  meta: listMetaSchema,
+  // `ssh_access_enforced`: whether the SSH switch keeps anyone out yet. Null
+  // when sshd could not be asked, which is not the same as "no".
+  meta: listMetaSchema.extend({ ssh_access_enforced: z.boolean().nullable().optional() }),
 });
 
 // Read live from systemd on every request, so it is never stale — and absent

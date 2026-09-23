@@ -8,6 +8,13 @@
 
 return [
     'not_installed' => 'PHP :version n\'est pas installé.',
+
+    // Version lookup, the ini editor and its rollback.
+    'unknown_version' => 'PHP :version n\'est pas installé sur ce serveur.',
+    'unreadable' => 'Impossible de lire la configuration de PHP :version.',
+    'invalid_ini' => 'PHP a rejeté cette configuration : la précédente a été restaurée. Rien n\'a été rechargé.',
+    'reload_failed' => 'La modification a été faite, mais PHP :version n\'a pas pu être rechargé : elle n\'est donc pas encore active. Communiquez la référence au support.',
+    'operation_failed' => 'La configuration de PHP :version n\'a pas pu être mise à jour.',
     'version_in_use' => 'PHP :version est utilisé par :apps. Modifiez d\'abord ces sites.',
     'version_is_default' => 'C\'est la version par défaut. Choisissez-en une autre d\'abord.',
     'version_runs_panel' => 'Supprimer PHP :version mettrait le panneau hors ligne : c\'est la version sur laquelle il fonctionne.',
@@ -20,6 +27,7 @@ return [
 
     'ioncube_unsupported_version' => 'ionCube ne publie pas de Loader pour PHP :version.',
     'ioncube_unsupported_architecture' => 'ionCube ne publie pas de Loader pour l\'architecture de ce serveur (:architecture).',
+    'ioncube_external' => 'ionCube pour PHP :version a été installé en dehors du panneau (par une version antérieure du panneau ou un paquet système) : le panneau ne le modifiera donc pas. Il est supprimé avec PHP :version.',
     'ioncube_download_failed' => 'Le Loader ionCube n\'a pas pu être téléchargé. Vérifiez l\'accès Internet du serveur et réessayez.',
     'ioncube_invalid_loader' => 'Le fichier téléchargé n\'est pas un Loader ionCube valide pour ce serveur. Rien n\'a été installé.',
     'ioncube_install_failed' => 'Le Loader ionCube n\'a pas pu être installé.',

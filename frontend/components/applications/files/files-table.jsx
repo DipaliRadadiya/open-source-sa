@@ -1,7 +1,8 @@
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import { Folder, Link2, Loader2, TriangleAlert, Unlink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { parseApiWallClock } from "@/lib/format/api-date";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable } from "@/components/ui/data-table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -180,12 +181,12 @@ function NameCell({ row, table }) {
 function SizeCell({ row, table }) {
   const file = row.original;
   const t = useTranslations("applications.files");
-  const { folderSizes = {}, sizingPath, onAction } = table.options.meta;
+  const { folderSizes = {}, sizingPaths = [], onAction } = table.options.meta;
 
   // A folder has no size until someone asks: the backend walks the tree to
   // work one out, so the listing does not carry it and the dash is honest
   // rather than a gap.
-  if (sizingPath === file.path) {
+  if (sizingPaths.includes(file.path)) {
     return <Loader2 className="ml-auto size-3.5 animate-spin text-muted-foreground" />;
   }
 
@@ -215,8 +216,16 @@ function SizeCell({ row, table }) {
 }
 
 function ModifiedCell({ row }) {
+  const format = useFormatter();
   const file = row.original;
   if (!file.modified_at) return <span className="text-muted-foreground">—</span>;
+  // The exact time on hover, in words: the API's "23-09-2026 11:28:55" is
+  // day-first and reads as a US date to half the people hovering it. Read as
+  // a wall-clock time so it stays in the server's own clock.
+  const when = parseApiWallClock(file.modified_at);
+  const exact = when
+    ? format.dateTime(when, { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" })
+    : file.modified_at;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -224,7 +233,7 @@ function ModifiedCell({ row }) {
           {file.modified_at_human ?? file.modified_at}
         </span>
       </TooltipTrigger>
-      <TooltipContent>{file.modified_at}</TooltipContent>
+      <TooltipContent>{exact}</TooltipContent>
     </Tooltip>
   );
 }
@@ -340,7 +349,7 @@ export function FilesTable({
   onToggle,
   onToggleAll,
   folderSizes = {},
-  sizingPath = null,
+  sizingPaths = [],
 }) {
   const t = useTranslations("applications.files");
 
@@ -443,7 +452,7 @@ export function FilesTable({
         onToggle,
         onToggleAll,
         folderSizes,
-        sizingPath,
+        sizingPaths,
       }}
       emptyMessage={t("empty.title")}
       rowClassName={(file) =>

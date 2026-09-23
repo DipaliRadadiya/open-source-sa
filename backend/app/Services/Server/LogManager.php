@@ -242,6 +242,16 @@ class LogManager
                 timeout: 15,
             );
 
+        // A journal source for one program exists as soon as journalctl does;
+        // "has this program ever logged" is the question that decides whether
+        // there is anything to show. journalctl answers an empty match with
+        // exit 0 and `-- No entries --`.
+        if ($kind === 'journal' && ($source['hide_when_empty'] ?? false) === true && $result->ok) {
+            $output = trim($result->output());
+
+            return $output === '' || str_contains($output, '-- No entries --') ? self::ABSENT : self::PRESENT;
+        }
+
         return match (true) {
             $result->ok => self::PRESENT,
             // The command ran and said no. Anything else — a refusal, a

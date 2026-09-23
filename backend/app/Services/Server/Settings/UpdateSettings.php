@@ -480,6 +480,44 @@ class UpdateSettings implements SettingGroup
     }
 
     /**
+     * The configuration apt will actually act on.
+     *
+     * Parsing only the panel's own file answered a different question — "what
+     * did the panel write" — and on a server where it had written nothing
+     * (every fresh install) that answer was "all off", while Ubuntu's own
+     * 20auto-upgrades had security updates ON and running daily. The screen
+     * said off for a server that was patching itself (seen 2026-09-23).
+     * `apt-config dump` merges every file in apt.conf.d in apt's own order,
+     * so the panel's override and the distribution's default are weighed the
+     * way apt weighs them.
+     *
+     * Falls back to reading the panel's file when apt-config cannot answer.
+     *
+     * @return array<string, string>
+     */
+    private function currentConfig(): array
+    {
+        $dump = $this->serverOps->run(
+            ['apt-config', 'dump'],
+            ['feature' => 'setting', 'group' => 'updates', 'op' => 'apt_config'],
+        );
+
+        if ($dump->ok && trim($dump->output()) !== '') {
+            $config = [];
+
+            foreach (preg_split('/\r?\n/', $dump->output()) ?: [] as $line) {
+                if (preg_match('/^\s*([\w:-]+)\s+"([^"]*)"\s*;/', $line, $m)) {
+                    $config[$m[1]] = $m[2];
+                }
+            }
+
+            return $config;
+        }
+
+        return $this->panelFileConfig();
+    }
+
+    /**
      * Parse our managed drop-in (`key "value";`) into a map.
      *
      * The hyphen in the key class is load-bearing, not tidying: `\w` does not
@@ -492,7 +530,7 @@ class UpdateSettings implements SettingGroup
      *
      * @return array<string, string>
      */
-    private function currentConfig(): array
+    private function panelFileConfig(): array
     {
         $path = (string) config('server.unattended_upgrades_file');
 

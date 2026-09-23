@@ -4,10 +4,12 @@ namespace App\Services\Server\Php;
 
 use App\Contracts\PhpStack;
 use App\Exceptions\Server\Php\PhpConfigException;
+use App\Models\RuntimeInstall;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -21,9 +23,11 @@ use Throwable;
  *
  * Deliberately NOT part of {@see PhpExtensionManager}. That class's whole
  * model is "apt package → modules → ini in mods-available → phpenmod per
- * SAPI", and every operation it performs is `apt-get` or `phpenmod`. ionCube
- * has no package and no repository: it is a `zend_extension` pointing at an
- * absolute path to a closed-source `.so` downloaded from the vendor. Putting
+ * SAPI", and every operation it performs is `apt-get` or `phpenmod`. Here
+ * ionCube is a `zend_extension` pointing at an absolute path to a
+ * closed-source `.so` downloaded from the vendor — the same way on both
+ * stacks. (LiteSpeed's repository does carry `lsphpNN-ioncube`; one installed
+ * by v7 is reported as {@see SOURCE_EXTERNAL} and left alone.) Putting
  * it in that catalog would give the screen one row whose Install button means
  * something entirely different from every other row's.
  *
@@ -58,6 +62,20 @@ class IonCubeLoader
      */
     private const ELF_MACHINES = ['x86_64' => 0x3E, 'aarch64' => 0xB7];
 
+    /** Installed by this panel: every ini it writes starts with this line. */
+    public const SOURCE_PANEL = 'panel';
+
+    /**
+     * Loaded, but not by this panel: v7 appended a `zend_extension` line to
+     * php.ini, and on OpenLiteSpeed it installed LiteSpeed's
+     * `lsphpXX-ioncube` package — which writes the same `01-ioncube.ini` name
+     * this panel uses. Shown, never touched: installing over it loads ionCube
+     * twice, and removing the package's file is undone by the next upgrade.
+     */
+    public const SOURCE_EXTERNAL = 'external';
+
+    private const PANEL_MARKER = '; Managed by the panel.';
+
     public function __construct(
         private ServerOps $serverOps,
         private ManagedFile $files,
@@ -71,7 +89,7 @@ class IonCubeLoader
      * panel: the loader is a file on disk, and a stored flag would go on
      * claiming it was there after somebody removed the PHP version.
      *
-     * @return array{supported: bool, installed: bool, php_version: string, loader_version: ?string, sha256: ?string, path: ?string}
+     * @return array{supported: bool, installed: bool, source: ?string, php_version: string, loader_version: ?string, sha256: ?string, path: ?string}
      */
     public function status(string $version): array
     {
@@ -79,6 +97,7 @@ class IonCubeLoader
             return [
                 'supported' => false,
                 'installed' => false,
+                'source' => null,
                 'php_version' => $version,
                 'loader_version' => null,
                 'sha256' => null,
@@ -86,18 +105,100 @@ class IonCubeLoader
             ];
         }
 
-        $installed = $this->iniInstalled($version);
+        $source = $this->source($version);
+        $panel = $source === self::SOURCE_PANEL;
 
         return [
             'supported' => true,
-            'installed' => $installed,
+            'installed' => $source !== null,
+            // `external`: installed outside the panel. Install and Remove are
+            // refused for it; the card should say so instead of offering them.
+            'source' => $source,
             'php_version' => $version,
             // Read out of PHP itself rather than from the filename, so it is
             // the version actually loaded and not the one we meant to install.
-            'loader_version' => $installed ? $this->loadedVersion($version) : null,
-            'sha256' => $installed ? $this->installedHash($version) : null,
-            'path' => $installed ? $this->loaderPath($version) : null,
+            'loader_version' => $source !== null ? $this->loadedVersion($version) : null,
+            'sha256' => $panel ? $this->installedHash($version) : null,
+            'path' => $panel ? $this->loaderPath($version) : null,
         ];
+    }
+
+    /**
+     * Who installed the loader for this version, or null when there is none.
+     *
+     * The panel's own ini carries {@see PANEL_MARKER}. An ini under the same
+     * name without it is LiteSpeed's package; a loader PHP reports with no ini
+     * of ours is v7's php.ini line. Either is external.
+     */
+    public function source(string $version): ?string
+    {
+        if ($this->iniInstalled($version)) {
+            return $this->panelWroteIni($version) ? self::SOURCE_PANEL : self::SOURCE_EXTERNAL;
+        }
+
+        if ($this->anyIniPresent($version) || $this->loadedVersion($version) !== null) {
+            return self::SOURCE_EXTERNAL;
+        }
+
+        return null;
+    }
+
+    /**
+     * The panel's own files for a version, for a PHP removal to delete once
+     * the purge has succeeded — the purge leaves them, because dpkg never
+     * owned them, and a leftover ini would load ionCube again the day that
+     * version is reinstalled. Empty when the panel did not install it, or
+     * when the version can no longer answer where its loader lives.
+     *
+     * @return array<int, string>
+     */
+    public function panelFiles(string $version): array
+    {
+        try {
+            if (! $this->supports($version) || $this->source($version) !== self::SOURCE_PANEL) {
+                return [];
+            }
+
+            $paths = [];
+            foreach ($this->stack->sapis($version) as $sapi) {
+                $paths[] = $this->iniPath($version, $sapi);
+            }
+
+            return [...array_unique($paths), $this->loaderPath($version)];
+        } catch (Throwable $e) {
+            Log::warning('ionCube files could not be listed for a PHP removal', [
+                'version' => $version,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * The sentence for a failed install run, in the viewer's locale.
+     *
+     * The run stores the exception's own cause (`ioncube_download_failed`),
+     * and every one of those already has a sentence under `errors/php`. A
+     * cause without one — the worker dying (`worker`), or a row written before
+     * causes were kept (`install_failed`) — falls back to the shared install
+     * messages rather than showing a code.
+     */
+    public function failureMessage(?RuntimeInstall $run, string $version): ?string
+    {
+        // A run that has not failed has no reason — the tracker clears it on
+        // every start — so it falls through to message(), which says nothing.
+        if ($run === null) {
+            return null;
+        }
+
+        $key = 'errors/php.'.$run->reason;
+
+        if ($run->reason !== null && Lang::has($key)) {
+            return __($key, ['version' => $version, 'architecture' => php_uname('m')]);
+        }
+
+        return $run->message();
     }
 
     /**
@@ -124,6 +225,8 @@ class IonCubeLoader
         if (! $this->supports($version)) {
             throw PhpConfigException::ionCubeUnsupportedVersion($version);
         }
+
+        $this->refuseExternal($version);
 
         $loader = $this->loaderPath($version);
         $member = 'ioncube/'.basename($loader);
@@ -167,6 +270,8 @@ class IonCubeLoader
      */
     public function remove(string $version): void
     {
+        $this->refuseExternal($version);
+
         $loader = $this->loaderPath($version);
         $backups = $this->snapshot($version, $loader);
         try {
@@ -509,6 +614,44 @@ class IonCubeLoader
     {
         return $this->stack->scanDir($version, $sapi).'/'
             .(string) config('server.ioncube.ini_name', '01-ioncube.ini');
+    }
+
+    /** @throws PhpConfigException */
+    private function refuseExternal(string $version): void
+    {
+        if ($this->source($version) === self::SOURCE_EXTERNAL) {
+            throw PhpConfigException::ionCubeExternal($version);
+        }
+    }
+
+    private function panelWroteIni(string $version): bool
+    {
+        foreach ($this->stack->sapis($version) as $sapi) {
+            $read = $this->serverOps->run(
+                ['cat', $this->iniPath($version, $sapi)],
+                $this->context($version, 'ioncube_read_ini'),
+            );
+
+            if ($read->failed() || ! str_starts_with($read->output(), self::PANEL_MARKER)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function anyIniPresent(string $version): bool
+    {
+        foreach ($this->stack->sapis($version) as $sapi) {
+            if ($this->serverOps->probe(
+                ['test', '-f', $this->iniPath($version, $sapi)],
+                $this->context($version, 'ioncube_status'),
+            )->ok) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function iniInstalled(string $version): bool

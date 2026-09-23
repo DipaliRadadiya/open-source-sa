@@ -2,11 +2,13 @@ import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 
 /**
  * What cleaning has actually done lately.
@@ -31,6 +33,9 @@ export async function RunsCard({ runs }) {
       <CardHeader>
         <CardTitle className="text-base font-semibold">{t("runs.title")}</CardTitle>
         <CardDescription>{t("runs.subtitle")}</CardDescription>
+        <CardAction>
+          <RefreshButton />
+        </CardAction>
       </CardHeader>
 
       <CardContent>

@@ -72,6 +72,7 @@ export default async function SystemUsersPage({ searchParams }) {
           meta={usersPage.meta}
           shells={shells}
           canManage={canManage}
+          canOpenSecurity={can(permissions, "setting", "manage")}
         />
       )}
     </div>
