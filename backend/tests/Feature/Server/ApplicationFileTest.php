@@ -6,11 +6,13 @@ use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\FileBrowser;
+use App\Services\Server\CommandPipe;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Tests\Support\FakeCommandPipe;
 
 /**
  * Fake server state, held statically for the same reason ApplicationPhpTest
@@ -248,6 +250,23 @@ class FileBrowserFake
 function fakeFileBrowserServer(): void
 {
     $root = '/home/siteowner/shop/public_html';
+
+    // Downloads and previews stream through `proc_open`, which `Process::fake()`
+    // cannot intercept — without this they would run `sudo runuser … cat`
+    // against the machine running the suite. Pointed at the same `$fs` the
+    // Process fake below uses, so a fixture is described once.
+    FakeCommandPipe::reset();
+    FakeCommandPipe::$resolver = function (array $command) use ($root): array {
+        $target = $command[array_key_last($command)];
+        $relative = ltrim(str_replace($root, '', $target), '/');
+        $entry = FileBrowserFake::$fs[$relative] ?? null;
+
+        return $entry === null
+            ? ['', 1]
+            : [(string) ($entry['content'] ?? ''), 0];
+    };
+
+    app()->instance(CommandPipe::class, new FakeCommandPipe);
 
     Process::fake(function ($process) use ($root) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
@@ -1041,7 +1060,13 @@ describe('browsing', function () {
             ->and($response->headers->get('Content-Disposition'))->toContain('index.php')
             // Streamed, so the body is produced by the callback rather than
             // held on the response — `getContent()` is false here by design.
-            ->and($response->streamedContent())->toBe("<?php echo \"hi\";\n");
+            //
+            // Byte-exact, with no trailing newline. This used to expect one,
+            // which came from Laravel's process fake normalising output rather
+            // than from the file: `cat` emits the bytes it is given and adds
+            // nothing. Asserting the fake's habit meant a download could gain
+            // a byte the file never had and the test would agree.
+            ->and($response->streamedContent())->toBe('<?php echo "hi";');
     });
 
     it('does not cap a download at the size a file has to be to fit in the editor', function () {

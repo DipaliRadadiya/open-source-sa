@@ -56,6 +56,7 @@ use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
 use App\Services\Server\Doctor\Checks\DriverContentionCheck;
+use App\Services\Server\Doctor\Checks\DynamicResponseLimitCheck;
 use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
 use App\Services\Server\Doctor\Checks\HealthEndpointCheck;
 use App\Services\Server\Doctor\Checks\PhpIsolationCheck;
@@ -519,6 +520,7 @@ return [
             AccountLocksCheck::class,
             ServicesCheck::class,
             WebServerCheck::class,
+            DynamicResponseLimitCheck::class,
             FrontendBuildCheck::class,
             WritablePathsCheck::class,
             DatabaseCheck::class,

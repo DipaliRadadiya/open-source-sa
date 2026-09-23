@@ -1821,6 +1821,7 @@ PANELINI
     run mkdir -p "$vhost_dir" "/usr/local/lsws/conf/vhosts" "${vhost_dir}/logs"
 
     ensure_ols_context_paths
+    ensure_ols_dynamic_response_limit "$conf"
 
     write_ols_vhost "$vhost_dir"
 
@@ -1911,6 +1912,42 @@ ensure_ols_context_paths() {
     run chown -R "${APP_USER}:${APP_USER}" \
         "${APP_DIR}/backend/public/.well-known" \
         "${APP_DIR}/frontend/.next"
+}
+
+# Lift OpenLiteSpeed's cap on dynamically generated responses.
+#
+# `maxDynRespSize` bounds the body of anything PHP produces, and it ships at
+# 2047M. The panel serves file downloads through PHP — it must, because the
+# bytes belong to the site's own Linux user and only the panel holds the
+# sudoers grant to read them — so that cap is a hard ceiling on the size of any
+# file the file manager can hand back. A 6.5 GB download is refused with a bare
+# 413 before PHP runs at all, which reaches the browser as "this site can't be
+# reached".
+#
+# OpenLiteSpeed only. nginx and Apache have no equivalent limit on a proxied or
+# FastCGI response body, so this is one of the places the three genuinely
+# differ rather than one where the config merely looks different.
+#
+# 1024G rather than 0: tested on a real server, `0` is read as zero and every
+# download over a few hundred bytes 413s. There is no "unlimited" value.
+ensure_ols_dynamic_response_limit() {
+    local conf="$1"
+    local want="1024G"
+
+    if grep -qE "^[[:space:]]*maxDynRespSize[[:space:]]+${want}[[:space:]]*$" "$conf"; then
+        skip "OpenLiteSpeed maxDynRespSize already ${want}"
+        return 0
+    fi
+
+    if grep -qE "^[[:space:]]*maxDynRespSize" "$conf"; then
+        run sed -i -E "s|^([[:space:]]*)maxDynRespSize[[:space:]]+\\S+[[:space:]]*$|\\1maxDynRespSize               ${want}|" "$conf"
+    else
+        # Absent rather than wrong: append inside the top-level block, which is
+        # where every other server-wide directive in this file lives.
+        printf 'maxDynRespSize               %s\n' "$want" >>"$conf"
+    fi
+
+    ok "OpenLiteSpeed maxDynRespSize set to ${want}"
 }
 
 # The LiteSpeed apt repository, pinned rather than bootstrapped.

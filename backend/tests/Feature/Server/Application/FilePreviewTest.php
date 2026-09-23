@@ -4,8 +4,10 @@ use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\CommandPipe;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
+use Tests\Support\FakeCommandPipe;
 
 /**
  * The file manager can show an image.
@@ -87,6 +89,15 @@ beforeEach(function () {
  */
 function fakePreviewServer(): void
 {
+    // The `cat` that produces the image streams through `proc_open`, which
+    // `Process::fake()` cannot intercept — without this it would run
+    // `sudo runuser … cat` against the machine running the suite. Same bytes
+    // as the Process fake below, from the same place.
+    FakeCommandPipe::reset();
+    FakeCommandPipe::$resolver = fn (): array => [PreviewFake::$content, 0];
+
+    app()->instance(CommandPipe::class, new FakeCommandPipe);
+
     Process::fake(function ($process) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 

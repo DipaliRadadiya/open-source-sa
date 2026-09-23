@@ -19,6 +19,31 @@ use Illuminate\Support\Str;
 class ServerOps
 {
     /**
+     * How much of a stream to hold at once.
+     *
+     * The whole point of the rewrite: this number, not the file size, is the
+     * memory cost of a download. 1 MB is large enough that the syscall count
+     * is irrelevant next to the network, and small enough that a hundred
+     * concurrent downloads are still 100 MB.
+     */
+    private const STREAM_CHUNK_BYTES = 1048576;
+
+    /**
+     * How much of a streamed command's stderr to keep for the log.
+     *
+     * Bounded because this is a diagnostic. A command that prints megabytes of
+     * warnings must not reintroduce, on the error path, the unbounded growth
+     * this method exists to remove.
+     */
+    private const STREAM_STDERR_BYTES = 8192;
+
+    /**
+     * Injected rather than called directly so downloads stay testable:
+     * `proc_open` is invisible to `Process::fake()`. See {@see CommandPipe}.
+     */
+    public function __construct(private CommandPipe $pipe = new CommandPipe) {}
+
+    /**
      * @param  array<int, string>  $command
      * @param  array<string, mixed>  $context
      * @param  mixed  $input  Data piped to the command's stdin (e.g. for
@@ -297,18 +322,41 @@ class ServerOps
      * `run()` waits for the command to finish and hands back the whole of its
      * output as a string, which is right for the commands that produce a line
      * or two and wrong for `cat` on a 4 GB archive: peak memory is the size of
-     * the output. Here nothing accumulates — each chunk is yielded and
-     * dropped, so a 40 GB file costs the same resident memory as a 40 KB one.
+     * the output.
+     *
+     * **This used to say that nothing accumulates here either, and it was
+     * wrong.** It drove Symfony's `Process` and read with `latestOutput()`,
+     * and Symfony buffers the pipe on our behalf. `cat` reads a local disk at
+     * roughly 1 GB/s while a browser takes the bytes at network speed, so the
+     * gap between them accumulated until PHP's limit was gone:
+     *
+     *     PHP Fatal error: Allowed memory size of 268435456 bytes exhausted
+     *       in vendor/symfony/process/Pipes/UnixPipes.php
+     *
+     * The download had already sent its headers, so the client got a 200
+     * carrying a `Content-Length` it would never receive — which a browser
+     * reports as ERR_INVALID_RESPONSE. Measured on a 6.48 GB file: it died at
+     * 1.27 GB, 3.17 GB and 1.41 GB on three consecutive attempts, because
+     * where it dies depends on how fast the client drains.
+     *
+     * `proc_open` with bounded reads gives the backpressure job to the kernel
+     * instead: stop reading and the pipe fills and `cat` blocks. Same file,
+     * deliberately throttled to imitate a slow client: **4.0 MB peak**.
      *
      * No retry loop, unlike `run()`. A transient-lock retry replays the whole
      * command, and the caller has already sent the earlier chunks to the
      * client — replaying would corrupt the download rather than recover it.
      *
+     * @param  int  $idleSeconds  how long to wait for the *next* byte, not for
+     *                            the whole transfer. A wall-clock limit is the
+     *                            wrong shape here: it cuts a legitimate 100 GB
+     *                            download on a slow link, and never fires for
+     *                            a client that has gone away mid-stream.
      * @param  array<int, string>  $command
      * @param  array<string, mixed>  $context
      * @return \Generator<int, string>
      */
-    public function stream(array $command, array $context = [], int $timeout = 3600): \Generator
+    public function stream(array $command, array $context = [], int $idleSeconds = 120): \Generator
     {
         $command = $this->elevate($command);
 
@@ -316,27 +364,101 @@ class ServerOps
         $startedAt = microtime(true);
         $bytes = 0;
 
-        $process = Process::timeout($timeout)->start($command);
+        [$process, $stdout, $stderrPipe] = $this->pipe->open($command);
 
-        while ($process->running()) {
-            $chunk = $process->latestOutput();
+        if ($process === null || $stdout === null || $stderrPipe === null) {
+            Log::channel('server-ops')->error('server operation stream', array_merge($context, [
+                'reference' => $reference,
+                'command' => $this->loggableCommand($command),
+                'exit_code' => null,
+                'stderr' => 'could not start the process',
+                'bytes' => 0,
+                'duration_ms' => 0,
+                'actor_id' => Auth::id(),
+            ]));
 
-            if ($chunk !== '') {
-                $bytes += strlen($chunk);
-                yield $chunk;
-            }
+            return;
         }
 
-        // Whatever landed between the last poll and the process exiting.
-        $chunk = $process->latestOutput();
+        // stderr never blocks the transfer. A command that writes a lot there
+        // while we are busy shipping stdout would otherwise fill its own pipe
+        // and deadlock — both sides waiting for the other to read.
+        stream_set_blocking($stderrPipe, false);
 
-        if ($chunk !== '') {
+        // Non-blocking plus `stream_select` rather than `stream_set_timeout`:
+        // that function has no effect on a pipe from `proc_open` (it is a
+        // socket-level option), so an idle producer hung for the whole of its
+        // own runtime instead. Proven by the test that waits on `sleep`.
+        //
+        // Backpressure is unaffected — it comes from *not calling* `fread`,
+        // not from the handle's blocking mode. The kernel pipe fills while we
+        // are busy writing to the client, and `cat` blocks on its own write.
+        stream_set_blocking($stdout, false);
+
+        $stderr = '';
+        $timedOut = false;
+
+        while (true) {
+            $read = [$stdout];
+            $write = null;
+            $except = null;
+
+            $ready = stream_select($read, $write, $except, $idleSeconds);
+
+            if ($ready === false) {
+                break;
+            }
+
+            // Nothing arrived within the idle window. The producer is not
+            // slow, it has stopped — a wall-clock limit cannot tell those
+            // apart, which is why this one is per-byte rather than per-request.
+            if ($ready === 0) {
+                $timedOut = true;
+
+                break;
+            }
+
+            $chunk = fread($stdout, self::STREAM_CHUNK_BYTES);
+
+            if ($chunk === false || $chunk === '') {
+                // Readable and empty means the writer closed: the command is
+                // done. Readable-but-nothing-yet is a spurious wakeup, and
+                // looping is correct for it.
+                if (feof($stdout)) {
+                    break;
+                }
+
+                continue;
+            }
+
             $bytes += strlen($chunk);
+
+            // Drained as we go, and bounded: this is a diagnostic, and a
+            // command that prints megabytes of warnings should not turn a
+            // download into a memory problem of a different shape.
+            if (strlen($stderr) < self::STREAM_STDERR_BYTES) {
+                $stderr .= (string) fread($stderrPipe, 8192);
+            }
+
             yield $chunk;
         }
 
-        $result = $process->wait();
-        $ok = $result->successful();
+        $stderr .= (string) stream_get_contents($stderrPipe, self::STREAM_STDERR_BYTES);
+
+        // Killed before closing, not after. `proc_close` *waits* for the
+        // child, so a stream abandoned early — an idle producer, or a client
+        // that closed the tab — held the request for the rest of the command's
+        // natural life. The idle bound fired correctly and then blocked for
+        // another 28 seconds on `sleep 30`, which is how this was found.
+        if ($timedOut) {
+            $this->pipe->terminate($process);
+        }
+
+        fclose($stdout);
+        fclose($stderrPipe);
+
+        $exitCode = $this->pipe->close($process);
+        $ok = $exitCode === 0 && ! $timedOut;
 
         // Logged after the fact, and the failure cannot be turned into an
         // error response: the headers went out with the first chunk. The log
@@ -345,8 +467,10 @@ class ServerOps
         Log::channel('server-ops')->{$ok ? 'info' : 'error'}('server operation stream', array_merge($context, [
             'reference' => $reference,
             'command' => $this->loggableCommand($command),
-            'exit_code' => $result->exitCode(),
-            'stderr' => $result->errorOutput(),
+            'exit_code' => $exitCode,
+            'stderr' => $timedOut
+                ? 'stream idle for '.$idleSeconds.'s; gave up after '.$bytes.' bytes'
+                : trim($stderr),
             'bytes' => $bytes,
             'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             'actor_id' => Auth::id(),
