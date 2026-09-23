@@ -7,6 +7,7 @@ use App\Enums\ApplicationStatus;
 use App\Enums\DomainType;
 use App\Enums\WafCategory;
 use App\Enums\WafMode;
+use App\Exceptions\Server\Application\SystemUserMissingException;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -423,6 +424,14 @@ class Application extends Model
     public function rootPath(): string
     {
         $home = rtrim((string) $this->systemUser?->home_path, '/');
+
+        // No home, no path. This used to fall through to `/{slug}` — a
+        // directory at the top of the filesystem, which "delete with files"
+        // then passed to `rm -rf` as root. A site named `etc` has the slug
+        // `etc`.
+        if ($home === '') {
+            throw new SystemUserMissingException((string) $this->name);
+        }
 
         // A row from before the slug column would otherwise produce
         // `{home}/`, which resolves to the system user's home — the directory

@@ -23,6 +23,7 @@ return [
     'no_database_engine' => 'No database engine is available. Install and configure MySQL or MariaDB before creating this application.',
     'no_process' => '\":name\" does not run a process of its own.',
     'process_failed' => 'Could not :action the application. Quote the reference to support.',
+    'system_user_missing' => 'The system user for :name is missing, so the panel cannot work on this application\'s files. You can still delete the application.',
     'no_port_available' => 'No free port between :from and :to. Free one or widen the range.',
 
     'webhook_not_a_git_application' => 'Deploy-on-push is only available for applications deployed from a git repository.',

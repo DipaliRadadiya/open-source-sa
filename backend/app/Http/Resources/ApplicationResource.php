@@ -35,8 +35,11 @@ class ApplicationResource extends JsonResource
             // somebody. `path` is where the application's own CLI runs, which
             // is the value a `{path}` placeholder in a cron command or a deploy
             // script expands to.
-            'document_root' => $this->resource->documentRoot(),
-            'path' => $this->resource->codePath(),
+            //
+            // Null when the system user is missing: there is no path to show,
+            // and the site must still be listable so it can be deleted.
+            'document_root' => $this->resource->systemUser ? $this->resource->documentRoot() : null,
+            'path' => $this->resource->systemUser ? $this->resource->codePath() : null,
             'site_type' => $this->site_type,
             'site_type_title' => __("application.types.{$this->site_type}.title"),
             // What the last Detect found, and whether there is anything to

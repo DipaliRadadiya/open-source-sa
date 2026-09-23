@@ -523,7 +523,9 @@ class ApplicationProvisioner
 
         $driver->remove($application);
 
-        if ($removeFiles) {
+        // Not without a system user: the files' location is the user's home,
+        // and without one it is unknown — see Application::rootPath().
+        if ($removeFiles && $application->systemUser !== null) {
             // Use slug, not domain — slug is unique and stable, domain is not.
             $this->serverOps->run(
                 ['rm', '-rf', $application->rootPath()],

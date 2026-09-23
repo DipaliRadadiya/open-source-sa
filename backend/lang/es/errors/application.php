@@ -23,6 +23,7 @@ return [
     'no_database_engine' => 'No hay ningún motor de base de datos disponible. Instala y configura MySQL o MariaDB antes de crear esta aplicación.',
     'no_process' => '\":name\" no ejecuta un proceso propio.',
     'process_failed' => 'No se pudo :action la aplicación. Indica la referencia al soporte.',
+    'system_user_missing' => 'Falta el usuario del sistema de :name, así que el panel no puede trabajar con los archivos de esta aplicación. Aún puedes eliminar la aplicación.',
     'no_port_available' => 'No hay puertos libres entre :from y :to. Libera uno o amplía el rango.',
 
     'webhook_not_a_git_application' => 'El despliegue automático solo está disponible para aplicaciones desplegadas desde un repositorio git.',

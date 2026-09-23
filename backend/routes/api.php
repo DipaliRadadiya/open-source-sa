@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureApplicationHasSystemUser;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,7 +29,7 @@ Route::middleware(['auth:sanctum', 'can:access-admin'])
 
 // Server-panel routes: authenticated; each route additionally gates on its
 // own feature permission via the `permission:<name>[,manage]` middleware.
-Route::middleware('auth:sanctum')
+Route::middleware(['auth:sanctum', EnsureApplicationHasSystemUser::class])
     ->group(function (): void {
         foreach (glob(__DIR__.'/api/server/*.php') as $serverRoutes) {
             require $serverRoutes;

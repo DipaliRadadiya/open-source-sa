@@ -23,6 +23,7 @@ return [
     'no_database_engine' => 'Keine Datenbank-Engine verfügbar. Installiere und konfiguriere MySQL oder MariaDB, bevor du diese Anwendung anlegst.',
     'no_process' => '„:name“ führt keinen eigenen Prozess aus.',
     'process_failed' => 'Die Anwendung konnte nicht :action werden. Nenne dem Support die Referenz.',
+    'system_user_missing' => 'Der Systembenutzer von :name fehlt, daher kann das Panel nicht mit den Dateien dieser Anwendung arbeiten. Sie können die Anwendung weiterhin löschen.',
     'no_port_available' => 'Kein freier Port zwischen :from und :to. Gib einen frei oder erweitere den Bereich.',
 
     'webhook_not_a_git_application' => 'Deploy-on-Push ist nur für Anwendungen verfügbar, die aus einem Git-Repository bereitgestellt werden.',

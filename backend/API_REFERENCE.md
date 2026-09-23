@@ -749,6 +749,8 @@ Never send the raw field list — `GET /site-types` publishes the fields for eac
 ### GET `/applications/{application}`
 **Permission:** `application` (view)
 
+**A site whose system user is missing** (its `system_user_id` points at nothing — imported data, or a database without enforced foreign keys): this endpoint and `DELETE` still work, with `system_user: null`, `document_root: null` and `path: null`. **Every other `/applications/{application}/…` route answers `409`** with a `message` saying so, instead of a 500. Show that message; offer Delete. `remove_files` is ignored for such a site — without the user's home, the files' location is unknown.
+
 Full application record. Poll this while `status` is `provisioning` or `deploying`.
 
 **Link to `url`, never build one from `domain`.** `url` is `http://…` until the site has a servable certificate and `https://…` afterwards. Assembling `https://${domain}` in the client — which three screens used to do — produces a dead link for every site that has not been issued a certificate yet, which is every site for the first few minutes of its life.

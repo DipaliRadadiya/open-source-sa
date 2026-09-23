@@ -209,9 +209,14 @@ class SiteRootLock
     private function path(Application $application): ?string
     {
         $home = rtrim((string) $application->systemUser?->home_path, '/');
+
+        if ($home === '') {
+            return null;
+        }
+
         $root = rtrim($application->rootPath(), '/');
 
-        if ($home === '' || $root === '' || $root === $home) {
+        if ($root === '' || $root === $home) {
             return null;
         }
 
