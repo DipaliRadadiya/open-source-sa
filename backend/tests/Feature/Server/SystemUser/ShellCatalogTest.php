@@ -2,6 +2,7 @@
 
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\SystemUsers\InstalledShells;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -19,6 +20,17 @@ beforeEach(function () {
     $this->token = $this->admin->createToken('t')->plainTextToken;
 
     Process::fake(fn () => Process::result(exitCode: 0));
+
+    // The catalog is filtered by what the machine has; pin "everything is
+    // installed" so these tests do not depend on whether the box running the
+    // suite happens to have zsh.
+    $this->app->instance(InstalledShells::class, new class extends InstalledShells
+    {
+        public function isInstalled(string $path): bool
+        {
+            return true;
+        }
+    });
 });
 
 it('publishes the shells with a label and a description, not just paths', function () {
@@ -112,4 +124,22 @@ describe('a system user in the API', function () {
             ->assertJsonPath('system_user.shell_title', '/usr/bin/fish')
             ->assertJsonPath('system_user.shell_allows_login', null);
     });
+});
+
+it('does not offer a shell this server does not have', function () {
+    // Offered and accepted, zsh left a user unable to log in on a stock
+    // Ubuntu (2026-09-23). Hidden rather than flagged, so a picker that
+    // renders the list as-is cannot offer it.
+    $this->app->instance(InstalledShells::class, new class extends InstalledShells
+    {
+        public function isInstalled(string $path): bool
+        {
+            return $path !== '/usr/bin/zsh';
+        }
+    });
+
+    $values = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/system-users/shells')->assertOk()->json('shells'))->pluck('value');
+
+    expect($values->all())->toBe(['/bin/bash', '/bin/sh', '/usr/sbin/nologin', '/bin/false']);
 });

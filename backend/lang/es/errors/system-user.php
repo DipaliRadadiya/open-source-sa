@@ -16,4 +16,9 @@ return [
     // authenticates, then a non-login shell exits and the session closes.
     'ssh_needs_login_shell' => 'El acceso SSH necesita un shell con el que el usuario pueda iniciar sesión. El shell de este usuario rechaza el inicio de sesión, así que SSH se conectaría y se desconectaría de inmediato. Elige primero un shell de inicio de sesión.',
     'shell_needs_ssh_off' => 'Este usuario tiene acceso SSH y el shell elegido rechaza el inicio de sesión: SSH se conectaría y se desconectaría de inmediato. Desactiva primero el acceso SSH o elige un shell de inicio de sesión.',
+
+    'password_control_characters' => 'La contraseña no puede contener saltos de línea ni otros caracteres de control.',
+    'shell_not_installed' => 'El shell :shell no está instalado en este servidor. Instálalo primero o elige otro shell.',
+    'username_taken_on_server' => 'Ya existe en el servidor un usuario o grupo con este nombre. Elige otro nombre de usuario.',
+    'has_processes' => 'Este usuario todavía tiene procesos en ejecución (por ejemplo, una sesión SSH abierta o una tarea en curso). Finalízalos y vuelve a intentarlo.',
 ];

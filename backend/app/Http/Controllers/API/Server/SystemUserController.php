@@ -9,13 +9,14 @@ use App\Http\Requests\Server\SystemUser\IndexSystemUsersRequest;
 use App\Http\Requests\Server\SystemUser\StoreSystemUserRequest;
 use App\Http\Resources\SystemUserResource;
 use App\Models\SystemUser;
+use App\Services\Server\Settings\SecuritySettings;
 use App\Support\ListSearch;
 use App\Support\ListSort;
 use Illuminate\Http\JsonResponse;
 
 class SystemUserController extends Controller
 {
-    public function index(IndexSystemUsersRequest $request): JsonResponse
+    public function index(IndexSystemUsersRequest $request, SecuritySettings $security): JsonResponse
     {
         $search = trim((string) $request->validated('search', ''));
 
@@ -35,6 +36,10 @@ class SystemUserController extends Controller
                 'per_page' => $users->perPage(),
                 'total' => $users->total(),
                 'last_page' => $users->lastPage(),
+                // Server-wide, so here rather than on every row: whether the
+                // `ssh_access` toggle is enforced at all — see
+                // SecuritySettings::sshAccessEnforced(). Null = unknown.
+                'ssh_access_enforced' => $security->sshAccessEnforced(),
             ],
         ]);
     }
@@ -48,10 +53,11 @@ class SystemUserController extends Controller
         ], 201);
     }
 
-    public function show(SystemUser $systemUser): JsonResponse
+    public function show(SystemUser $systemUser, SecuritySettings $security): JsonResponse
     {
         return response()->json([
             'system_user' => SystemUserResource::make($systemUser->load('applications'))->resolve(),
+            'meta' => ['ssh_access_enforced' => $security->sshAccessEnforced()],
         ]);
     }
 

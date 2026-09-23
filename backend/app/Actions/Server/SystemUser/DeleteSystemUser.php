@@ -35,6 +35,15 @@ class DeleteSystemUser
                 ['feature' => 'system_user', 'op' => 'delete', 'system_user' => $systemUser->username],
             );
 
+            // Exit 8 is userdel refusing because the account still has a
+            // process — an SSH session, a worker, a cron run. Nothing is
+            // broken and nothing was removed; the person can end it and retry.
+            if ($result->exitCode() === 8) {
+                throw ValidationException::withMessages([
+                    'system_user' => [__('errors/system-user.has_processes')],
+                ]);
+            }
+
             if ($result->failed()) {
                 $this->activityLogger->log('system_user.delete_failed', $systemUser, ['username' => $systemUser->username]);
                 throw new SystemUserDeleteFailedException($result->reference);

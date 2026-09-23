@@ -20,8 +20,18 @@ beforeEach(function () {
     // File::put, so the fake has to perform the ones that produce state the
     // tests assert on — otherwise authorized_keys never appears and the
     // assertions below would be checking nothing at all.
+    $this->ran = [];
+
     Process::fake(function ($process) {
         $cmd = $process->command;
+        $this->ran[] = $cmd;
+
+        // sync() runs every step as the user; the fake acts on the command
+        // underneath the `runuser -u <user> --` prefix.
+        if (($cmd[0] ?? '') === 'runuser') {
+            $cmd = array_slice($cmd, 4);
+        }
+
         $bin = $cmd[0] ?? '';
 
         if ($bin === 'mkdir') {
@@ -124,4 +134,49 @@ it('removes an SSH key and rewrites authorized_keys', function () {
     expect(SshKey::find($drop->id))->toBeNull();
     $content = File::get($this->su->home_path.'/.ssh/authorized_keys');
     expect($content)->toContain(TEST_KEY)->not->toContain(TEST_KEY_2);
+});
+
+it('writes authorized_keys as the user, never as root', function () {
+    // The user owns ~/.ssh and decides what every name in it points at. As
+    // root, a planted `authorized_keys -> /root/.ssh/authorized_keys` had the
+    // panel write the user's keys into root's file — reproduced 2026-09-23.
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson("/api/system-users/{$this->su->id}/ssh-keys", ['name' => 'laptop', 'public_key' => TEST_KEY])
+        ->assertCreated();
+
+    $ran = collect($this->ran);
+
+    expect($ran)->not->toBeEmpty();
+
+    foreach ($ran as $command) {
+        expect(array_slice($command, 0, 4))->toBe(['runuser', '-u', 'deploy', '--']);
+    }
+
+    // And no ownership fix-up over a tree the user controls.
+    expect($ran->contains(fn ($command) => in_array('chown', $command, true)))->toBeFalse();
+});
+
+it('refuses a public key that carries a second line', function () {
+    // authorized_keys is line-oriented: the panel would list one key and
+    // fingerprint while sshd honoured two — reproduced 2026-09-23.
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson("/api/system-users/{$this->su->id}/ssh-keys", [
+            'name' => 'laptop',
+            'public_key' => TEST_KEY."\n".TEST_KEY_2,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('public_key');
+
+    expect($this->su->sshKeys()->count())->toBe(0);
+    Process::assertNothingRan();
+});
+
+it('refuses a key whose blob is not the type it claims to be', function () {
+    // Valid base64, but the blob names ssh-ed25519 and the line says ssh-rsa.
+    $mislabelled = preg_replace('/^ssh-ed25519/', 'ssh-rsa', TEST_KEY);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson("/api/system-users/{$this->su->id}/ssh-keys", ['name' => 'x', 'public_key' => $mislabelled])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('public_key');
 });

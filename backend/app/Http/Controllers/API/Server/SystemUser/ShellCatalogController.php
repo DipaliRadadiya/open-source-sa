@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\API\Server\SystemUser;
 
-use App\Enums\LoginShell;
 use App\Http\Controllers\Controller;
+use App\Services\Server\SystemUsers\InstalledShells;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -13,11 +13,13 @@ use Illuminate\Http\JsonResponse;
  * only way the frontend could learn it was to hardcode the same five strings
  * and hope they stayed in step — and the labels beside them would have been
  * English in all eight locales.
+ *
+ * Only the ones this server has installed — see InstalledShells.
  */
 class ShellCatalogController extends Controller
 {
-    public function __invoke(): JsonResponse
+    public function __invoke(InstalledShells $shells): JsonResponse
     {
-        return response()->json(['shells' => LoginShell::catalog()]);
+        return response()->json(['shells' => $shells->catalog()]);
     }
 }

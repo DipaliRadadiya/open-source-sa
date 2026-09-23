@@ -9,6 +9,7 @@ use App\Models\FirewallRule;
 use App\Models\SshKey;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
+use App\Services\Server\SystemUsers\SshUsersGroup;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -20,6 +21,9 @@ use Illuminate\Validation\ValidationException;
 class SecuritySettings implements SettingGroup
 {
     private const ROOT_LOGIN = ['yes', 'no', 'prohibit-password'];
+
+    // Keywords `sshd -T` prints once per entry — see parseEffective().
+    private const LIST_KEYWORDS = ['allowgroups', 'allowusers', 'denygroups', 'denyusers'];
 
     // sshd's Include takes the FIRST value seen for each keyword — the
     // opposite of systemd-style drop-ins, where the last file wins. Cloud
@@ -192,20 +196,72 @@ class SecuritySettings implements SettingGroup
     }
 
     /**
+     * Whether the System User "SSH access" toggle actually decides anything.
+     *
+     * Membership of `ssh-users` only keeps someone out once sshd carries an
+     * `AllowGroups` naming it, and the only thing that writes one is saving
+     * this screen. So on a fresh server the toggle reads "off" while the
+     * person logs in regardless — reproduced 2026-09-23. Not fixed by writing
+     * the line automatically: `AllowGroups` is a whitelist over every account,
+     * and applying it unasked is how a server locks out whoever the panel
+     * did not know about. Reported instead, so the screen can say so.
+     *
+     * Null when sshd could not be asked — "unknown" is not "no".
+     */
+    public function sshAccessEnforced(): ?bool
+    {
+        $result = $this->serverOps->run(['sshd', '-T'], ['feature' => 'setting', 'group' => 'security', 'op' => 'read']);
+
+        if ($result->failed()) {
+            return null;
+        }
+
+        $groups = preg_split('/\s+/', $this->parseEffective($result->output())['allowgroups'] ?? '') ?: [];
+
+        return in_array(SshUsersGroup::NAME, $groups, true);
+    }
+
+    /**
      * Parse the effective sshd config (`sshd -T`) into a lowercase key map.
      *
      * @return array<string, string>
      */
     private function effectiveConfig(): array
     {
-        $output = $this->serverOps->run(['sshd', '-T'], ['feature' => 'setting', 'group' => 'security', 'op' => 'read'])->output();
+        return $this->parseEffective(
+            $this->serverOps->run(['sshd', '-T'], ['feature' => 'setting', 'group' => 'security', 'op' => 'read'])->output(),
+        );
+    }
 
+    /**
+     * `sshd -T` prints a list keyword once PER ENTRY — `AllowGroups admins
+     * devs ops` comes out as three `allowgroups` lines (measured on OpenSSH
+     * 10.2). Keeping the last value per key therefore kept only `ops`, and
+     * `allowGroupsLine()`, whose whole promise is "widened by us and never
+     * narrowed", wrote `AllowGroups ssh-users sudo root ops` into a drop-in
+     * that wins — locking out everyone in `admins` and `devs`. The list
+     * keywords are joined back into the one space-separated value they were
+     * written as.
+     *
+     * @return array<string, string>
+     */
+    private function parseEffective(string $output): array
+    {
         $config = [];
+
         foreach (preg_split('/\r?\n/', trim($output)) ?: [] as $line) {
             $parts = preg_split('/\s+/', trim($line), 2);
-            if (count($parts) === 2) {
-                $config[strtolower($parts[0])] = trim($parts[1]);
+
+            if (count($parts) !== 2) {
+                continue;
             }
+
+            $key = strtolower($parts[0]);
+            $value = trim($parts[1]);
+
+            $config[$key] = in_array($key, self::LIST_KEYWORDS, true) && isset($config[$key])
+                ? $config[$key].' '.$value
+                : $value;
         }
 
         return $config;

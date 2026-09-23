@@ -470,6 +470,20 @@ describe('the ssh whitelist cannot lock the administrator out', function () {
         expect(File::get($this->dir.'/00-panel.conf'))->toContain('devops');
     });
 
+    it('keeps every group sshd reports, not just the last one', function () {
+        // `sshd -T` prints a list keyword once PER ENTRY — measured on
+        // OpenSSH 10.2 with `AllowGroups admins devs ops`. Keeping the last
+        // line wrote `AllowGroups ssh-users sudo root ops` into a drop-in
+        // that wins, locking out `admins` and `devs`.
+        fakeSshdPolicy("allowgroups admins\nallowgroups devs\nallowgroups ops\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        expect(File::get($this->dir.'/00-panel.conf'))->toContain('AllowGroups ssh-users sudo root admins devs ops');
+    });
+
     it('writes no group whitelist at all when the server restricts by user', function () {
         fakeSshdPolicy("allowusers deployer\n");
 
@@ -889,5 +903,36 @@ describe('the Redis password in the settings response', function () {
             ->getJson('/api/settings')->assertOk()
             ->assertJsonPath('settings.redis.has_password', false)
             ->assertJsonPath('settings.redis.password', null);
+    });
+});
+
+describe('whether the SSH-access toggle is enforced', function () {
+    it('says not enforced until an AllowGroups names ssh-users', function () {
+        // A fresh server: the toggle reads off and the person logs in anyway
+        // (reproduced 2026-09-23). The list says so instead of implying it.
+        fakeSshdPolicy('');
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/system-users')
+            ->assertOk()
+            ->assertJsonPath('meta.ssh_access_enforced', false);
+    });
+
+    it('says enforced once ssh-users is whitelisted, wherever it falls in the list', function () {
+        fakeSshdPolicy("allowgroups admins\nallowgroups ssh-users\nallowgroups sudo\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/system-users')
+            ->assertOk()
+            ->assertJsonPath('meta.ssh_access_enforced', true);
+    });
+
+    it('says unknown, not no, when sshd cannot be asked', function () {
+        Process::fake(fn () => Process::result(exitCode: 1, errorOutput: 'sudo: a password is required'));
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/system-users')
+            ->assertOk()
+            ->assertJsonPath('meta.ssh_access_enforced', null);
     });
 });

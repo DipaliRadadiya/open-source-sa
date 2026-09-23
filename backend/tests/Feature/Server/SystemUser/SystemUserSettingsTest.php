@@ -1,7 +1,9 @@
 <?php
 
+use App\Actions\Server\SystemUser\SetSystemUserPassword;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\SystemUsers\InstalledShells;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -155,4 +157,49 @@ it('denies a viewer (no manage permission) from changing settings', function () 
     $this->withHeader('Authorization', "Bearer {$token}")
         ->putJson("/api/system-users/{$this->su->id}/sudo", ['sudo' => true])
         ->assertForbidden();
+});
+
+it('refuses a password with a line break, and never runs chpasswd', function () {
+    // `Password123\nqa-bob:BobHijacked999` changed ANOTHER user's password on
+    // a real server (2026-09-23): chpasswd reads one account per line.
+    Process::fake();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/system-users/{$this->su->id}/password", ['password' => "Password123\nroot:Hijacked999"])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.password.0', __('errors/system-user.password_control_characters'));
+
+    Process::assertNothingRan();
+    expect($this->su->fresh()->password)->toBeNull();
+});
+
+it('will not build a second chpasswd line even when validation is skipped', function () {
+    // The action is not only reachable from the FormRequest.
+    Process::fake();
+
+    expect(fn () => app(SetSystemUserPassword::class)->execute($this->su, "Password123\nroot:Hijacked999"))
+        ->toThrow(InvalidArgumentException::class);
+
+    Process::assertNotRan(fn ($p) => in_array('chpasswd', $p->command, true));
+});
+
+it('refuses a shell this server does not have installed', function () {
+    // usermod -s accepts a path that does not exist, and the user can then
+    // never log in — zsh on a stock Ubuntu, reproduced 2026-09-23.
+    Process::fake();
+    $this->app->instance(InstalledShells::class, new class extends InstalledShells
+    {
+        public function isInstalled(string $path): bool
+        {
+            return $path !== '/usr/bin/zsh';
+        }
+    });
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/system-users/{$this->su->id}/shell", ['shell' => '/usr/bin/zsh'])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.shell.0', __('errors/system-user.shell_not_installed', ['shell' => '/usr/bin/zsh']));
+
+    Process::assertNothingRan();
+    expect($this->su->fresh()->shell)->toBe('/bin/bash');
 });

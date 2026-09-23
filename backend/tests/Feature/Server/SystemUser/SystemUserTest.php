@@ -156,7 +156,7 @@ it('removes the OS account and panel row when SSH-key setup fails', function () 
     $this->withHeader('Authorization', "Bearer {$token}")
         ->postJson('/api/system-users', [
             'username' => 'deploy',
-            'public_key' => 'ssh-ed25519 AQIDBA== test',
+            'public_key' => 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC2jl2RaIM4z9e4xdFQkCOWCbJkF8PqwX5IaDLbPbIGW test',
         ])
         ->assertStatus(500);
 
@@ -252,4 +252,52 @@ it('allows a non-admin with the system_user permission (pure role-based)', funct
     $this->withHeader('Authorization', "Bearer {$token}")
         ->postJson('/api/system-users', ['username' => 'deploy'])
         ->assertCreated();
+});
+
+it('refuses a password that would give chpasswd a second line, before anything runs', function () {
+    // chpasswd reads one account per line: this changed qa-bob's password
+    // on a real server (2026-09-23).
+    Process::fake();
+    $admin = User::factory()->admin()->create();
+
+    $this->withHeader('Authorization', 'Bearer '.$admin->createToken('t')->plainTextToken)
+        ->postJson('/api/system-users', ['username' => 'deploy', 'password' => "Password123\nroot:Hijacked999"])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('password');
+
+    Process::assertNothingRan();
+    expect(SystemUser::count())->toBe(0);
+});
+
+it('says the name is taken on the server when useradd exits 9, not a 500', function () {
+    // The name is unique in the panel's table only; the server has accounts
+    // and groups the panel never made (`lsadm`, `ssh-users`, `panel`).
+    Process::fake(fn ($p) => in_array('useradd', $p->command, true)
+        ? Process::result(errorOutput: "useradd: user 'lsadm' already exists", exitCode: 9)
+        : Process::result());
+    $admin = User::factory()->admin()->create();
+
+    $this->withHeader('Authorization', 'Bearer '.$admin->createToken('t')->plainTextToken)
+        ->postJson('/api/system-users', ['username' => 'lsadm'])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.username.0', __('errors/system-user.username_taken_on_server'));
+
+    expect(SystemUser::count())->toBe(0);
+    // Not a failed create to clean up after: nothing was created.
+    Process::assertNotRan(fn ($p) => in_array('userdel', $p->command, true));
+});
+
+it('says the user still has processes when userdel exits 8, and keeps the row', function () {
+    Process::fake(fn ($p) => in_array('userdel', $p->command, true)
+        ? Process::result(errorOutput: 'userdel: user deploy is currently used by process 23458', exitCode: 8)
+        : Process::result());
+    $admin = User::factory()->admin()->create();
+    $su = SystemUser::create(['username' => 'deploy', 'home_path' => '/home/deploy', 'shell' => '/bin/bash']);
+
+    $this->withHeader('Authorization', 'Bearer '.$admin->createToken('t')->plainTextToken)
+        ->deleteJson("/api/system-users/{$su->id}")
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.system_user.0', __('errors/system-user.has_processes'));
+
+    expect(SystemUser::find($su->id))->not->toBeNull();
 });

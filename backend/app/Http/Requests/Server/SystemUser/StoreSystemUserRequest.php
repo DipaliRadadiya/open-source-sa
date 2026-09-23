@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Server\SystemUser;
 
 use App\Enums\LoginShell;
+use App\Rules\InstalledShell;
 use App\Services\Server\SshKeyManager;
+use App\Services\Server\SystemUsers\ChpasswdLine;
 use Closure;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,9 +14,6 @@ use Illuminate\Validation\Rules\Password;
 
 class StoreSystemUserRequest extends FormRequest
 {
-    /**
-     * Linux system accounts that must never be created/managed by the panel.
-     */
     /**
      * Names the panel refuses to create — and, read from the sync discoverer,
      * names it refuses to adopt. Shared rather than copied so the two lists
@@ -57,10 +56,10 @@ class StoreSystemUserRequest extends FormRequest
             // All optional, defaulting to the same values CreateSystemUser
             // already used before these existed — the fast path (username
             // only) stays exactly as fast.
-            'shell' => ['sometimes', 'string', Rule::in(ChangeShellRequest::shells())],
+            'shell' => ['sometimes', 'string', new InstalledShell],
             'sudo' => ['sometimes', 'boolean'],
             'ssh_access' => ['sometimes', 'boolean'],
-            'password' => ['sometimes', 'string', Password::defaults()],
+            'password' => ['sometimes', 'string', Password::defaults(), 'not_regex:'.ChpasswdLine::FORBIDDEN],
         ];
     }
 
@@ -93,6 +92,8 @@ class StoreSystemUserRequest extends FormRequest
     {
         return [
             'username.not_in' => __('errors/system-user.reserved_username'),
+            // chpasswd reads one account per line — see ChpasswdLine.
+            'password.not_regex' => __('errors/system-user.password_control_characters'),
         ];
     }
 }

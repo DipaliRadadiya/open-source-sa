@@ -16,4 +16,9 @@ return [
     // authenticates, then a non-login shell exits and the session closes.
     'ssh_needs_login_shell' => 'SSH アクセスにはログインできるシェルが必要です。このユーザーのシェルはログインを拒否するため、SSH は接続後すぐに切断されます。先にログイン可能なシェルを選んでください。',
     'shell_needs_ssh_off' => 'このユーザーには SSH アクセスがあり、選択したシェルはログインを拒否します — SSH は接続後すぐに切断されます。先に SSH アクセスを無効にするか、ログイン可能なシェルを選んでください。',
+
+    'password_control_characters' => 'パスワードに改行やその他の制御文字を含めることはできません。',
+    'shell_not_installed' => 'シェル :shell はこのサーバーにインストールされていません。先にインストールするか、別のシェルを選択してください。',
+    'username_taken_on_server' => 'この名前のユーザーまたはグループはサーバー上に既に存在します。別のユーザー名を選択してください。',
+    'has_processes' => 'このユーザーにはまだ実行中のプロセスがあります（例: 開いている SSH セッションや実行中のジョブ）。終了してから再試行してください。',
 ];

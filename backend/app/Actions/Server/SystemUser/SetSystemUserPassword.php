@@ -7,6 +7,7 @@ use App\Models\SystemUser;
 use App\Services\ActivityLogger;
 use App\Services\Server\AccountLock;
 use App\Services\Server\ServerOps;
+use App\Services\Server\SystemUsers\ChpasswdLine;
 
 class SetSystemUserPassword
 {
@@ -27,7 +28,7 @@ class SetSystemUserPassword
             $result = $this->serverOps->run(
                 ['chpasswd'],
                 ['feature' => 'system_user', 'op' => 'password', 'system_user' => $systemUser->username],
-                input: $systemUser->username.':'.$password,
+                input: ChpasswdLine::for($systemUser->username, $password),
             );
 
             if ($result->failed()) {

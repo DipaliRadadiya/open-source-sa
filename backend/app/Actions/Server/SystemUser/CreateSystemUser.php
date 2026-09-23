@@ -9,8 +9,10 @@ use App\Services\ActivityLogger;
 use App\Services\Server\AccountLock;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\SystemUsers\ChpasswdLine;
 use App\Services\Server\SystemUsers\SshUsersGroup;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class CreateSystemUser
@@ -195,6 +197,17 @@ class CreateSystemUser
             ['feature' => 'system_user', 'op' => 'create', 'system_user' => $username],
         );
 
+        // Exit 9 is useradd's "name already in use" — by a user OR a group
+        // (`ssh-users`, `lsadm`, the panel's own `panel`). The name is only
+        // unique in the panel's table, and the server has accounts the panel
+        // never made; that is the person's input to change, not a fault to
+        // file a reference for.
+        if ($result->exitCode() === 9) {
+            throw ValidationException::withMessages([
+                'username' => [__('errors/system-user.username_taken_on_server')],
+            ]);
+        }
+
         if ($result->failed()) {
             $this->activityLogger->log('system_user.create_failed', null, ['username' => $username]);
             throw new SystemUserCreateFailedException(
@@ -226,7 +239,7 @@ class CreateSystemUser
         $result = $this->serverOps->run(
             ['chpasswd'],
             ['feature' => 'system_user', 'op' => 'password', 'system_user' => $systemUser->username],
-            input: $systemUser->username.':'.$password,
+            input: ChpasswdLine::for($systemUser->username, $password),
         );
 
         if ($result->failed()) {

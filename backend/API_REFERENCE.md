@@ -94,7 +94,7 @@ Auth-gated. Change own password.
 
 **Request:** `{"current_password": "…", "password": "…", "password_confirmation": "…"}`
 
-**Response `200`:** `{"message": "Password updated."}`
+**Response `204`.** `422` when the password contains a line break or other control character — `chpasswd` reads one account per line.
 
 ---
 
@@ -3919,7 +3919,9 @@ Today: `slow_queries` is `null` on **PostgreSQL** (no counter without `pg_stat_s
 ### GET `/system-users`
 **Permission:** `system_user` (view)
 
-Paged. `?search=` case-insensitively matches the username; `?sort=created_at|username`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page}`.
+Paged. `?search=` case-insensitively matches the username; `?sort=created_at|username`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page, ssh_access_enforced}`.
+
+`meta.ssh_access_enforced` — whether the `ssh_access` toggle actually keeps anyone out on this server: `true` once sshd's `AllowGroups` names `ssh-users` (written by saving **Settings → Security**), `false` before that, `null` if sshd could not be asked. **When it is `false`, users with `ssh_access: false` can still log in** — show that next to the toggle rather than presenting it as a control.
 
 ```json
 {"system_users": [{
@@ -3947,6 +3949,10 @@ Everything but `username` is optional. `shell` defaults to `/bin/bash`; `sudo` a
 
 **`422` on `ssh_access`** when it is `true` alongside a shell with `allows_login: false`.
 
+**`422` on `username`** when a user **or group** of that name already exists on the server (e.g. `lsadm`, `ssh-users`, the panel's own account) — the name is only unique among the panel's rows.
+
+**`422` on `password`** when it contains a line break or any other control character. **`422` on `public_key`** when it is more than one line, or its key data is not the type it claims to be.
+
 ---
 
 ### GET `/system-users/{systemUser}`
@@ -3958,7 +3964,7 @@ Everything but `username` is optional. `shell` defaults to `/bin/bash`; `sudo` a
   "shell": "/bin/bash", "sudo_access": false, "ssh_access": true,
   "applications": [{"id": 1, "name": "shop"}, {"id": 2, "name": "blog"}],
   "created_at": "23-07-2026 10:00:00"
-}}
+}, "meta": {"ssh_access_enforced": false}}
 ```
 
 ---
@@ -3966,7 +3972,7 @@ Everything but `username` is optional. `shell` defaults to `/bin/bash`; `sudo` a
 ### DELETE `/system-users/{systemUser}`
 **Permission:** `system_user` (manage)
 
-`422` if the user owns any applications.
+`422` if the user owns any applications, or still has running processes (an open SSH session, a running job) — nothing is removed; end them and retry.
 
 **Response `204`:**
 
@@ -3993,7 +3999,7 @@ Everything but `username` is optional. `shell` defaults to `/bin/bash`; `sudo` a
 ### GET `/system-users/shells`
 **Permission:** `system_user` (view)
 
-The shells that may be assigned, in words. Build the picker from this — do not hardcode the paths or invent labels for them.
+The shells that may be assigned **and are installed on this server**, in words. Build the picker from this — do not hardcode the paths or invent labels for them. A shell the panel knows but the server lacks (zsh on a stock Ubuntu) is left out, so the list can be shorter than below.
 
 ```json
 {"shells": [
@@ -4005,7 +4011,7 @@ The shells that may be assigned, in words. Build the picker from this — do not
 ]}
 ```
 
-`title` and `description` are localised. Anything outside this list is rejected with `422`.
+`title` and `description` are localised. Anything outside this list is rejected with `422` — a known shell that is not installed gets its own message saying so.
 
 ---
 
@@ -4027,7 +4033,7 @@ Enable/disable SSH login for this system user.
 
 **`422` on `ssh_access`** when enabling it for a user whose shell has `allows_login: false` — the same contradiction from the other side.
 
-> **Known limitation.** This records intent. Enforcement needs `AllowGroups ssh-users` in `sshd_config`, which the panel does not write yet, so a user with a password and a login shell can still connect while this reads `false`. Do not present it as a hard security control until that lands.
+> **Enforced only when `meta.ssh_access_enforced` is `true`.** Enforcement needs `AllowGroups ssh-users` in sshd's config, which the panel writes when **Settings → Security** is saved — not automatically, because a whitelist applied unasked can lock out accounts the panel does not know about. Until then a user with a key or password and a login shell can still connect while this reads `false`.
 
 **Request:** `{"ssh_access": false}`
 
