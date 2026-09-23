@@ -11,6 +11,8 @@ import { FileActionItems } from "@/components/applications/files/file-actions-me
 import { FileThumb } from "@/components/applications/files/file-thumb";
 import { isImageFile } from "@/lib/files/file-icon";
 import { canOpenFile } from "@/lib/files/openable";
+import { FILE_NAME } from "@/lib/files/name-style";
+import { useModeSentence } from "@/components/applications/files/use-mode-sentence";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
 
 // Cells are module-level so flexRender's identity stays stable across
@@ -96,7 +98,7 @@ function NameCell({ row, table }) {
         className="flex min-w-0 items-center gap-2 rounded font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Folder className="size-4 shrink-0 text-primary" />
-        <span className="truncate" title={file.name}>
+        <span className={FILE_NAME} title={file.name}>
           {file.name}
         </span>
       </Link>
@@ -119,7 +121,7 @@ function NameCell({ row, table }) {
             ) : (
               <Link2 className="size-4 shrink-0" />
             )}
-            <span className="truncate" title={file.name}>
+            <span className={FILE_NAME} title={file.name}>
               {file.name}
             </span>
             {/* Where it points, inline rather than only on hover: a link is
@@ -148,7 +150,7 @@ function NameCell({ row, table }) {
     return (
       <span className="flex w-full min-w-0 items-center gap-2 font-medium">
         <FileThumb file={file} appId={appId} className="size-5" />
-        <span className="truncate" title={file.name}>
+        <span className={FILE_NAME} title={file.name}>
           {file.name}
         </span>
       </span>
@@ -168,7 +170,7 @@ function NameCell({ row, table }) {
       className="flex w-full min-w-0 items-center gap-2 rounded text-left font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <FileThumb file={file} appId={appId} className="size-5" />
-      <span className="truncate" title={file.name}>
+      <span className={FILE_NAME} title={file.name}>
         {file.name}
       </span>
     </button>
@@ -177,7 +179,8 @@ function NameCell({ row, table }) {
 
 function SizeCell({ row, table }) {
   const file = row.original;
-  const { folderSizes = {}, sizingPath } = table.options.meta;
+  const t = useTranslations("applications.files");
+  const { folderSizes = {}, sizingPath, onAction } = table.options.meta;
 
   // A folder has no size until someone asks: the backend walks the tree to
   // work one out, so the listing does not carry it and the dash is honest
@@ -186,10 +189,27 @@ function SizeCell({ row, table }) {
     return <Loader2 className="ml-auto size-3.5 animate-spin text-muted-foreground" />;
   }
 
-  const measured = folderSizes[file.path];
+  // A folder shows only a MEASURED size. The listing's `size_human` for a
+  // directory is the 4 KB of the directory entry itself — every folder read
+  // "4.0 KB" while the Storage panel put the same tree at 100 MB. "Folder
+  // size" on the row's menu measures the real one and it lands here.
+  const shown = file.type === "dir" ? folderSizes[file.path] : file.size_human;
+  // Asked for where the answer will appear. It was only in the ⋯ menu, which
+  // is where nobody looks for a number that has its own column.
+  if (file.type === "dir" && !shown) {
+    return (
+      <button
+        type="button"
+        onClick={() => onAction?.("size", file)}
+        className="text-xs text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        {t("size.calculate")}
+      </button>
+    );
+  }
   return (
     <span className="tabular-nums text-muted-foreground">
-      {measured ?? file.size_human ?? "—"}
+      {shown ?? "—"}
     </span>
   );
 }
@@ -225,36 +245,33 @@ function OwnerCell({ row }) {
   // — the same reason its mode is omitted.
   if (!file.owner) return <span className="text-muted-foreground">—</span>;
 
-  // `min-w-0` on the row and on each name: a flex child defaults to
-  // min-width:auto, so `truncate` never engages and the text runs straight out
-  // of the cell instead. Under `table-fixed` that overflow lands on top of the
-  // next column, which is exactly how `deploy:www-data` ended up sitting over
-  // Permissions.
-  //
-  // `title` because truncation hides characters, and a truncated owner with no
-  // way to read the rest is a worse answer than a wide column.
+  // Stacked, owner over group — the same shape as Permissions beside it.
+  // On one line `my-blog-ngkx:my-blog-ngkx` needs ~180px and was cut to
+  // "my-blo…:my-blo…", which answers nothing; stacked it needs the width of
+  // the longer name alone. `truncate` stays as the last resort for a truly
+  // long account name, with the whole value on hover.
   return (
     <span
-      className="flex min-w-0 items-center font-mono text-xs text-muted-foreground"
+      className="flex min-w-0 flex-col gap-0.5 font-mono text-xs text-muted-foreground"
       title={file.group ? `${file.owner}:${file.group}` : file.owner}
     >
       <span className="min-w-0 truncate">{file.owner}</span>
-      {file.group ? (
-        <>
-          <span className="shrink-0 text-muted-foreground/50">:</span>
-          <span className="min-w-0 truncate">{file.group}</span>
-        </>
-      ) : null}
+      {file.group ? <span className="min-w-0 truncate text-muted-foreground/70">{file.group}</span> : null}
     </span>
   );
 }
 
 function PermissionsCell({ row }) {
   const t = useTranslations("applications.files");
+  const sentenceFor = useModeSentence();
   const file = row.original;
   if (!file.mode) return <span className="text-muted-foreground">—</span>;
   const worldWritable = isWorldWritable(file.mode);
   const symbolic = symbolicMode(file.mode, file.type);
+  // "Owner: read and write. Everyone else: read." — the same sentence the
+  // permission picker and Fix permissions use, on hover, the way Modified
+  // keeps its exact date. `-rw-r--r--` is exact but has to be decoded.
+  const sentence = sentenceFor(file.mode);
   return (
     /*
      * Both notations, stacked, because they are one value.
@@ -270,26 +287,30 @@ function PermissionsCell({ row }) {
      * 1280, and the table only renders at all from 1024 up. Two lines need the
      * width of the longer string alone, which already fit.
      */
-    <span className="flex flex-col gap-0.5 whitespace-nowrap font-mono text-xs text-muted-foreground">
-      <span className="flex items-center gap-1.5">
-        <span className={worldWritable ? "font-medium text-destructive" : undefined}>
-          {symbolic ?? file.mode}
+    // One tooltip for the whole cell: the sentence, plus the world-writable
+    // warning when it applies — which used to be a second, icon-only tooltip.
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          className="flex flex-col gap-0.5 whitespace-nowrap font-mono text-xs w-fit cursor-help rounded text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <span className="flex items-center gap-1.5">
+            <span className={worldWritable ? "font-medium text-destructive" : undefined}>
+              {symbolic ?? file.mode}
+            </span>
+            {worldWritable ? <TriangleAlert className="size-3.5 shrink-0 text-destructive" aria-hidden /> : null}
+          </span>
+          {/* Omitted when the mode could not be read symbolically — the line
+              above is then already the octal, and repeating it says nothing. */}
+          {symbolic ? <span className="text-muted-foreground/70">{file.mode}</span> : null}
         </span>
-        {worldWritable ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0}>
-                <TriangleAlert className="size-3.5 shrink-0 text-destructive" />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-60">{t("columns.worldWritableHint")}</TooltipContent>
-          </Tooltip>
-        ) : null}
-      </span>
-      {/* Omitted when the mode could not be read symbolically — the line above
-          is then already the octal, and repeating it says nothing. */}
-      {symbolic ? <span className="text-muted-foreground/70">{file.mode}</span> : null}
-    </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-64">
+        {sentence ?? file.mode}
+        {worldWritable ? <p className="mt-1 font-medium">{t("columns.worldWritableHint")}</p> : null}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -328,47 +349,51 @@ export function FilesTable({
   // bounded, instead of `auto` layout treating a width as a hint and still
   // handing Name whatever's left over.
   //
-  // Rebalanced once the breakdown rail took 340px off this table. A percentage
-  // divides whatever is there, so the same split that was comfortable at full
-  // width gave Owner and Permissions less than their own content needs, and
-  // `table-fixed` spills a cell that does not fit onto its neighbour rather
-  // than growing it. Owner and Permissions are the two whose content has a
-  // floor — `deploy:www-data` and `drwxr-xr-x` are as short as they get — so
-  // they take from Actions, which is three icon buttons and was the widest
-  // column in the table for no reason.
+  // Rebalanced for the width the table actually has. The last split was tuned
+  // for a Storage side-rail that took 340px off it; Storage is a sheet now, so
+  // the table has its full width back and was still dividing it as if it
+  // didn't. With `px-6` on all seven columns, a third of the row was padding,
+  // and Name — the one column whose content has no ceiling — got 22% of the
+  // rest: every name in wp-admin/images was cut at "about-header-cre…".
   //
-  // Every column also gets the same `px-6` (the base cell's default is
-  // `px-4`) — a column's percentage width only controls where its own text
-  // sits within itself, not the gap to its neighbor, since two adjacent
-  // cells' padding is what actually separates their text. Sizing every
-  // column's padding identically is what makes every boundary read as the
-  // same gap instead of some feeling tighter than others.
+  // Name now takes a third and wraps to two lines (`FILE_NAME`). Inner cells
+  // use the base cell's `px-4`, the same gap at every boundary; only the two
+  // outer edges keep 24px to line up with the card. Owner is the column
+  // people consult least, so it gives way below `xl` rather than squeezing
+  // the others — the same trade the applications table makes.
+  //
+  // The checkbox column is a fixed 48px, not a share: its content is a 16px box
+  // behind a 24px edge at every width, and as a percentage it came out 28px at
+  // 1024 and spilled into Name. The shares below therefore sum to 92–93, leaving
+  // room for it on the narrowest table (704px) instead of overflowing it —
+  // once without Owner (below `xl`) and once with it, because a hidden
+  // column's share is not handed back to the others.
   const columns = [
     {
       id: "select",
       header: SelectAllHeader,
-      meta: { className: "w-[5%] pl-6 pr-0" },
+      meta: { className: "w-12 pl-6 pr-0" },
       cell: SelectCell,
       enableSorting: false,
     },
     {
       accessorKey: "name",
       header: t("columns.name"),
-      meta: { className: "w-[22%] px-6" },
+      meta: { className: "w-[32%] px-4 xl:w-[29%]" },
       cell: NameCell,
       sortingFn: sortByName,
     },
     {
       accessorKey: "size",
       header: () => <span className="block text-right">{t("columns.size")}</span>,
-      meta: { className: "text-right w-[9%] whitespace-nowrap px-6" },
+      meta: { className: "text-right w-[14%] whitespace-nowrap px-3 xl:w-[10%]" },
       cell: SizeCell,
       sortingFn: sortBySize,
     },
     {
       accessorKey: "modified_at",
       header: t("columns.modified"),
-      meta: { className: "w-[14%] whitespace-nowrap px-6" },
+      meta: { className: "w-[16%] px-4 xl:w-[13%]" },
       cell: ModifiedCell,
       sortingFn: sortByModified,
     },
@@ -384,21 +409,21 @@ export function FilesTable({
       // the search box already narrows on the text.
       accessorKey: "owner",
       header: t("columns.owner"),
-      meta: { className: "w-[16%] px-6" },
+      meta: { className: "hidden w-[14%] px-4 whitespace-normal hyphens-auto xl:table-cell" },
       cell: OwnerCell,
       enableSorting: false,
     },
     {
       id: "permissions",
       header: t("columns.permissions"),
-      meta: { className: "w-[15%] px-6" },
+      meta: { className: "w-[16%] px-4 whitespace-normal hyphens-auto xl:w-[14%]" },
       cell: PermissionsCell,
       enableSorting: false,
     },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("actions.label")}</span>,
-      meta: { className: "w-[19%] px-6" },
+      meta: { className: "w-[14%] pr-6 pl-4 xl:w-[13%]" },
       cell: ActionsCell,
       enableSorting: false,
     },

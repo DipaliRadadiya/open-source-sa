@@ -174,6 +174,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
             showHidden={showHidden}
             canManage={canManage}
             breakdown={breakdown}
+            siteType={application.site_type}
           />
       )}
     </div>

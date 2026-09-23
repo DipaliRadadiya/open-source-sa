@@ -63,6 +63,37 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
 
+  /*
+   * After a restore, read the file again rather than trusting the reply.
+   *
+   * The restore endpoint answers `{restored: true}` and nothing else, and this
+   * used to wait for a `file.content` that never came — so the editor kept the
+   * pre-restore text on screen, and the next Save wrote it straight back over
+   * the version the reader had just chosen to restore. The backup list changes
+   * too (the restore itself makes one), which only a re-read picks up.
+   *
+   * If the re-read fails the editor closes: the text in it is known to be
+   * stale, and leaving it open with a Save button is how the restore is lost.
+   */
+  async function reloadAfterRestore() {
+    setLoading(true);
+    setSaveError(null);
+    try {
+      const { data } = await getFileContent(appId, file.path);
+      const parsed = fileContentSchema.safeParse(data);
+      if (!parsed.success) throw new Error("unreadable");
+      setLoaded(parsed.data);
+      setContents(parsed.data.content);
+    } catch (error) {
+      // Our sentence leads, the server's reason follows: "Could not read the
+      // file." on its own, next to "Restored.", reads as "did it work?".
+      toast.error(t("restore.reloadFailed"), { description: apiMessage(error, null) ?? undefined });
+      onOpenChange?.(false);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     let active = true;
     getFileContent(appId, file.path)
@@ -274,11 +305,8 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
           backups={loaded.backups}
           open={restoreOpen}
           onOpenChange={setRestoreOpen}
-          onRestored={(next) => {
-            if (next?.content !== undefined) {
-              setContents(next.content);
-              setLoaded((prev) => ({ ...prev, content: next.content }));
-            }
+          onRestored={() => {
+            reloadAfterRestore();
             router.refresh();
           }}
         />

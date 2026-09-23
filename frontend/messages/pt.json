@@ -3864,7 +3864,9 @@
         "description": "Envie um arquivo ou crie um novo arquivo ou pasta para começar.",
         "filteredTitle": "Nenhum arquivo correspondente",
         "hiddenOnlyTitle": "{count, plural, one {Aqui só há # ficheiro oculto} other {Aqui só há # ficheiros ocultos}}",
-        "hiddenOnlyDescription": "Os nomes começados por um ponto ficam ocultos por predefinição."
+        "hiddenOnlyDescription": "Os nomes começados por um ponto ficam ocultos por predefinição.",
+        "descriptionWrite": "Arraste arquivos do seu computador para cá ou comece com uma destas opções.",
+        "descriptionReadOnly": "Esta pasta ainda não tem nada."
       },
       "searchPlaceholder": "Buscar nesta pasta…",
       "itemCount": "{count, plural, =0 {Nenhum item} one {# item} other {# itens}}",
@@ -3901,7 +3903,7 @@
       "uploadDialog": {
         "action": "Enviar",
         "title": "Enviar arquivos",
-        "subtitle": "Enviados para a pasta que você está visualizando. Um arquivo existente com o mesmo nome será sobrescrito.",
+        "subtitle": "Enviados para a pasta que você está visualizando. Um arquivo cujo nome já existe aqui é ignorado — renomeie ou exclua o existente primeiro.",
         "dropHint": "Arraste arquivos aqui ou clique para procurar",
         "dropOverlay": "Solte para enviar aqui",
         "remove": "Remover",
@@ -3912,7 +3914,10 @@
         "uploadedOne": "{name} enviado.",
         "uploadedMany": "{count} arquivos enviados.",
         "partial": "{done} enviados, {failed} falharam.",
-        "allFailed": "Não foi possível enviar nenhum destes arquivos."
+        "allFailed": "Não foi possível enviar nenhum destes arquivos.",
+        "exists": "Já existe um arquivo com este nome nesta pasta. Renomeie-o ou exclua-o primeiro.",
+        "stop": "Parar",
+        "stopped": "Envio interrompido. {done} de {count} arquivos foram enviados."
       },
       "editor": {
         "subtitle": "As alterações são salvas em backup automaticamente antes de cada salvamento.",
@@ -3934,7 +3939,8 @@
         "title": "Restaurar uma versão anterior",
         "subtitle": "Restaurar faz um backup do conteúdo atual antes, então escolher a versão errada também é reversível.",
         "done": "Restaurado.",
-        "failed": "Não foi possível restaurar essa versão."
+        "failed": "Não foi possível restaurar essa versão.",
+        "reloadFailed": "Restaurado, mas o editor não conseguiu recarregar o arquivo. Abra-o novamente para ver a versão restaurada."
       },
       "targetDialog": {
         "pathLabel": "Caminho",
@@ -4083,7 +4089,8 @@
         "permissionsChooseMode": "Escolha as permissões a aplicar."
       },
       "size": {
-        "failed": "Não foi possível medir essa pasta."
+        "failed": "Não foi possível medir essa pasta.",
+        "calculate": "Calcular"
       },
       "archiveFormat": {
         "legend": "Formato do arquivo",
@@ -4164,7 +4171,15 @@
         },
         "trigger": "Armazenamento",
         "measureFailed": "Não foi possível medir esta pasta neste momento. Tente novamente daqui a pouco."
-      }
+      },
+      "shortcuts": {
+        "label": "Ir para",
+        "uploads": "Uploads",
+        "themes": "Temas",
+        "plugins": "Plugins",
+        "config": "wp-config.php"
+      },
+      "dropHint": "Dica: arraste arquivos do seu computador para esta lista para enviá-los aqui."
     },
     "workers": {
       "pageTitle": "Workers",

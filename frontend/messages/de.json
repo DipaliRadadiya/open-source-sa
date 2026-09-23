@@ -3864,7 +3864,9 @@
         "description": "Laden Sie eine Datei hoch oder erstellen Sie eine neue Datei oder einen Ordner, um zu beginnen.",
         "filteredTitle": "Keine passenden Dateien",
         "hiddenOnlyTitle": "{count, plural, one {Hier ist nur # ausgeblendete Datei} other {Hier sind nur # ausgeblendete Dateien}}",
-        "hiddenOnlyDescription": "Namen, die mit einem Punkt beginnen, sind standardmäßig ausgeblendet."
+        "hiddenOnlyDescription": "Namen, die mit einem Punkt beginnen, sind standardmäßig ausgeblendet.",
+        "descriptionWrite": "Ziehen Sie Dateien von Ihrem Computer hierher oder beginnen Sie mit einer dieser Optionen.",
+        "descriptionReadOnly": "In diesem Ordner ist noch nichts."
       },
       "searchPlaceholder": "In diesem Ordner suchen…",
       "itemCount": "{count, plural, =0 {Keine Einträge} one {# Eintrag} other {# Einträge}}",
@@ -3901,7 +3903,7 @@
       "uploadDialog": {
         "action": "Hochladen",
         "title": "Dateien hochladen",
-        "subtitle": "Werden in den Ordner geladen, den Sie gerade ansehen. Eine bestehende Datei mit gleichem Namen wird überschrieben.",
+        "subtitle": "Werden in den Ordner geladen, den Sie gerade ansehen. Gibt es hier schon eine Datei mit gleichem Namen, wird sie übersprungen – benennen Sie die vorhandene um oder löschen Sie sie zuerst.",
         "dropHint": "Dateien hierher ziehen oder klicken zum Auswählen",
         "dropOverlay": "Zum Hochladen hier ablegen",
         "remove": "Entfernen",
@@ -3912,7 +3914,10 @@
         "uploadedOne": "{name} hochgeladen.",
         "uploadedMany": "{count} Dateien hochgeladen.",
         "partial": "{done} hochgeladen, {failed} fehlgeschlagen.",
-        "allFailed": "Keine dieser Dateien konnte hochgeladen werden."
+        "allFailed": "Keine dieser Dateien konnte hochgeladen werden.",
+        "exists": "In diesem Ordner gibt es bereits eine Datei mit diesem Namen. Benennen Sie sie um oder löschen Sie sie zuerst.",
+        "stop": "Stoppen",
+        "stopped": "Hochladen gestoppt. {done} von {count} Dateien wurden hochgeladen."
       },
       "editor": {
         "subtitle": "Änderungen werden vor jedem Speichern automatisch gesichert.",
@@ -3934,7 +3939,8 @@
         "title": "Frühere Version wiederherstellen",
         "subtitle": "Beim Wiederherstellen wird der aktuelle Inhalt zuerst gesichert — die falsche Version zu wählen ist also selbst umkehrbar.",
         "done": "Wiederhergestellt.",
-        "failed": "Diese Version konnte nicht wiederhergestellt werden."
+        "failed": "Diese Version konnte nicht wiederhergestellt werden.",
+        "reloadFailed": "Wiederhergestellt, aber der Editor konnte die Datei nicht neu laden. Öffnen Sie sie erneut, um die wiederhergestellte Version zu sehen."
       },
       "targetDialog": {
         "pathLabel": "Pfad",
@@ -4083,7 +4089,8 @@
         "permissionsChooseMode": "Wählen Sie die anzuwendenden Berechtigungen."
       },
       "size": {
-        "failed": "Dieser Ordner konnte nicht gemessen werden."
+        "failed": "Dieser Ordner konnte nicht gemessen werden.",
+        "calculate": "Berechnen"
       },
       "archiveFormat": {
         "legend": "Archivformat",
@@ -4164,7 +4171,15 @@
         },
         "trigger": "Speicher",
         "measureFailed": "Dieser Ordner konnte gerade nicht gemessen werden. Versuchen Sie es gleich noch einmal."
-      }
+      },
+      "shortcuts": {
+        "label": "Springen zu",
+        "uploads": "Uploads",
+        "themes": "Themes",
+        "plugins": "Plugins",
+        "config": "wp-config.php"
+      },
+      "dropHint": "Tipp: Ziehen Sie Dateien von Ihrem Computer auf diese Liste, um sie hierher hochzuladen."
     },
     "workers": {
       "pageTitle": "Worker",

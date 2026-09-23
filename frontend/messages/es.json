@@ -3864,7 +3864,9 @@
         "description": "Sube un archivo, o crea un archivo o carpeta nuevos para empezar.",
         "filteredTitle": "Sin archivos coincidentes",
         "hiddenOnlyTitle": "{count, plural, one {Aquí solo hay # archivo oculto} other {Aquí solo hay # archivos ocultos}}",
-        "hiddenOnlyDescription": "Los nombres que empiezan por un punto están ocultos de forma predeterminada."
+        "hiddenOnlyDescription": "Los nombres que empiezan por un punto están ocultos de forma predeterminada.",
+        "descriptionWrite": "Arrastra aquí archivos desde tu equipo o empieza con una de estas opciones.",
+        "descriptionReadOnly": "Esta carpeta todavía no tiene nada."
       },
       "searchPlaceholder": "Buscar en esta carpeta…",
       "itemCount": "{count, plural, =0 {Sin elementos} one {# elemento} other {# elementos}}",
@@ -3901,7 +3903,7 @@
       "uploadDialog": {
         "action": "Subir",
         "title": "Subir archivos",
-        "subtitle": "Se suben a la carpeta que estás viendo actualmente. Un archivo existente con el mismo nombre se sobrescribe.",
+        "subtitle": "Se suben a la carpeta que estás viendo actualmente. Si ya hay un archivo con el mismo nombre, se omite: cambia el nombre del existente o elimínalo primero.",
         "dropHint": "Arrastra archivos aquí, o haz clic para buscarlos",
         "dropOverlay": "Suelta aquí para subir",
         "remove": "Quitar",
@@ -3912,7 +3914,10 @@
         "uploadedOne": "{name} se ha subido.",
         "uploadedMany": "Se han subido {count} archivos.",
         "partial": "{done} subidos, {failed} fallidos.",
-        "allFailed": "No se pudo subir ninguno de estos archivos."
+        "allFailed": "No se pudo subir ninguno de estos archivos.",
+        "exists": "Ya hay un archivo con este nombre en esta carpeta. Cámbiale el nombre o elimínalo primero.",
+        "stop": "Detener",
+        "stopped": "Subida detenida. Se subieron {done} de {count} archivos."
       },
       "editor": {
         "subtitle": "Los cambios se respaldan automáticamente antes de cada guardado.",
@@ -3934,7 +3939,8 @@
         "title": "Restaurar una versión anterior",
         "subtitle": "Restaurar respalda primero el contenido actual, así que elegir la versión equivocada también se puede deshacer.",
         "done": "Restaurado.",
-        "failed": "No se pudo restaurar esa versión."
+        "failed": "No se pudo restaurar esa versión.",
+        "reloadFailed": "Restaurado, pero el editor no pudo volver a cargar el archivo. Ábrelo de nuevo para ver la versión restaurada."
       },
       "targetDialog": {
         "pathLabel": "Ruta",
@@ -4083,7 +4089,8 @@
         "permissionsChooseMode": "Elige los permisos que se aplicarán."
       },
       "size": {
-        "failed": "No se pudo medir esa carpeta."
+        "failed": "No se pudo medir esa carpeta.",
+        "calculate": "Calcular"
       },
       "archiveFormat": {
         "legend": "Formato del archivo comprimido",
@@ -4164,7 +4171,15 @@
         },
         "trigger": "Almacenamiento",
         "measureFailed": "No pudimos medir esta carpeta en este momento. Inténtalo de nuevo en un momento."
-      }
+      },
+      "shortcuts": {
+        "label": "Ir a",
+        "uploads": "Subidas",
+        "themes": "Temas",
+        "plugins": "Plugins",
+        "config": "wp-config.php"
+      },
+      "dropHint": "Consejo: arrastra archivos desde tu equipo a esta lista para subirlos aquí."
     },
     "workers": {
       "pageTitle": "Workers",

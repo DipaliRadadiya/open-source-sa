@@ -3864,7 +3864,9 @@
         "description": "Upload a file, or create a new file or folder to get started.",
         "filteredTitle": "No matching files",
         "hiddenOnlyTitle": "{count, plural, one {Nothing here but # hidden file} other {Nothing here but # hidden files}}",
-        "hiddenOnlyDescription": "Names beginning with a dot are hidden by default."
+        "hiddenOnlyDescription": "Names beginning with a dot are hidden by default.",
+        "descriptionWrite": "Drag files here from your computer, or start with one of these.",
+        "descriptionReadOnly": "There is nothing in this folder yet."
       },
       "searchPlaceholder": "Search this folder…",
       "itemCount": "{count, plural, =0 {No items} one {# item} other {# items}}",
@@ -3901,7 +3903,7 @@
       "uploadDialog": {
         "action": "Upload",
         "title": "Upload files",
-        "subtitle": "Uploaded into the folder you're currently viewing. An existing file at the same name is overwritten.",
+        "subtitle": "Uploaded into the folder you're currently viewing. A file whose name is already taken here is skipped — rename or delete the existing one first.",
         "dropHint": "Drag files here, or click to browse",
         "dropOverlay": "Drop to upload here",
         "remove": "Remove",
@@ -3912,7 +3914,10 @@
         "uploadedOne": "{name} uploaded.",
         "uploadedMany": "{count} files uploaded.",
         "partial": "{done} uploaded, {failed} failed.",
-        "allFailed": "Couldn't upload any of these files."
+        "allFailed": "Couldn't upload any of these files.",
+        "exists": "A file with this name is already in this folder. Rename or delete it first.",
+        "stop": "Stop",
+        "stopped": "Upload stopped. {done} of {count} files were uploaded."
       },
       "editor": {
         "subtitle": "Changes are backed up automatically before each save.",
@@ -3934,7 +3939,8 @@
         "title": "Restore a previous version",
         "subtitle": "Restoring backs up the current content first, so picking the wrong version is itself undoable.",
         "done": "Restored.",
-        "failed": "Couldn't restore that version."
+        "failed": "Couldn't restore that version.",
+        "reloadFailed": "Restored, but the editor couldn't reload the file. Open it again to see the restored version."
       },
       "targetDialog": {
         "pathLabel": "Path",
@@ -4083,7 +4089,8 @@
         "permissionsChooseMode": "Choose the permissions to apply."
       },
       "size": {
-        "failed": "That folder could not be measured."
+        "failed": "That folder could not be measured.",
+        "calculate": "Calculate"
       },
       "archiveFormat": {
         "legend": "Archive format",
@@ -4164,7 +4171,15 @@
         },
         "trigger": "Storage",
         "measureFailed": "We could not measure this folder just now. Try again in a moment."
-      }
+      },
+      "shortcuts": {
+        "label": "Jump to",
+        "uploads": "Uploads",
+        "themes": "Themes",
+        "plugins": "Plugins",
+        "config": "wp-config.php"
+      },
+      "dropHint": "Tip: drag files from your computer onto this list to upload them here."
     },
     "workers": {
       "pageTitle": "Workers",

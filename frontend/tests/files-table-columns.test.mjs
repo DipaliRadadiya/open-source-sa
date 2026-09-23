@@ -9,39 +9,74 @@ const table = fs.readFileSync(
   "utf8",
 );
 
-/** Every `w-[N%]` in the column definitions, in order. */
-function columnWidths() {
-  return [...table.matchAll(/className: "(?:text-right )?w-\[(\d+)%\]/g)].map(
-    ([, value]) => Number(value),
+/**
+ * Every column's share, per breakpoint: `base` applies below `xl`, `xl` from
+ * `xl` up (falling back to `base` when a column has no override). `hidden`
+ * columns drop out below `xl`.
+ */
+function columns() {
+  const block = table.slice(table.indexOf("const columns = ["), table.indexOf("\n  ];"));
+  return [...block.matchAll(/(?:id|accessorKey): "(\w+)"[\s\S]*?meta: \{ className: "([^"]*)" \}/g)].map(
+    ([, id, cls]) => {
+      const base = cls.match(/(?:^|\s)w-\[(\d+)%\]/);
+      const xl = cls.match(/xl:w-\[(\d+)%\]/);
+      return {
+        id,
+        cls,
+        hidden: /(?:^|\s)hidden(?:\s|$)/.test(cls),
+        base: base ? Number(base[1]) : null,
+        xl: xl ? Number(xl[1]) : base ? Number(base[1]) : null,
+      };
+    },
   );
 }
 
-test("the column widths still divide the table exactly", () => {
-  // Under `fixedLayout` these are the whole layout. Summing to less leaves a
-  // gap the browser fills arbitrarily; summing to more overflows every row.
-  const widths = columnWidths();
+test("the shares leave room for the fixed checkbox column at every size", () => {
+  /*
+   * The checkbox column is a fixed 48px — a 16px box behind a 24px edge. As a
+   * percentage it came out 28px on the narrowest table and spilled into Name.
+   * Under `table-fixed` the rest are shares of the whole table, so they must
+   * leave that 48px free on a 704px table (1024 viewport, sidebar open):
+   * 48 + 0.93 × 704 = 703. Measured after the change: 0px spill in en/de/ru at
+   * 1024, 1152, 1280 and 1440.
+   */
+  const cols = columns();
+  assert.equal(cols.length, 7, "expected seven sized columns");
 
-  assert.equal(widths.length, 7, "expected seven sized columns");
-  assert.equal(
-    widths.reduce((sum, w) => sum + w, 0),
-    100,
-  );
+  const select = cols.find((c) => c.id === "select");
+  assert.match(select.cls, /(?:^|\s)w-12(?:\s|$)/, "the checkbox column is a fixed width");
+  assert.equal(select.base, null, "…not a share");
+
+  const shared = cols.filter((c) => c.id !== "select");
+  const below = shared.filter((c) => !c.hidden).reduce((sum, c) => sum + c.base, 0);
+  const above = shared.reduce((sum, c) => sum + c.xl, 0);
+  assert.ok(below <= 93, `below xl the shares sum to ${below}% — no room for the checkbox`);
+  assert.ok(above <= 93, `from xl the shares sum to ${above}% — no room for the checkbox`);
+  // And not so little that the table stops filling its card.
+  assert.ok(below >= 90 && above >= 90, `shares ${below}/${above}% leave a gap`);
 });
 
-test("owner and permissions are wider than the actions column they took from", () => {
-  // The overlap this fixes: Owner and Permissions have a content floor
-  // (`deploy:www-data`, `drwxr-xr-x`) while Actions is three icon buttons.
-  const [, , , , owner, permissions, actions] = columnWidths();
+test("name is the widest column at every size", () => {
+  /*
+   * The last split gave Name 22% and every column px-6, so every name in
+   * wp-admin/images read "about-header-cre…" — ten identical rows in a list
+   * whose only job is telling them apart. The one column whose content has no
+   * ceiling gets the most room, at both breakpoints.
+   */
+  const cols = columns();
+  const name = cols.find((c) => c.id === "name");
+  for (const c of cols.filter((c) => c.id !== "name" && c.id !== "select")) {
+    assert.ok(name.base > (c.hidden ? 0 : c.base), `name ${name.base}% ≤ ${c.id} ${c.base}% below xl`);
+    assert.ok(name.xl > c.xl, `name ${name.xl}% ≤ ${c.id} ${c.xl}% from xl`);
+  }
+});
 
-  assert.ok(owner >= 16, `owner is ${owner}%, too narrow for owner:group`);
-  assert.ok(
-    permissions >= 15,
-    `permissions is ${permissions}%, too narrow for a symbolic mode`,
-  );
-  assert.ok(
-    actions <= 19,
-    `actions is ${actions}%, wider than three icon buttons need`,
-  );
+test("owner gives way below xl instead of squeezing the others", () => {
+  // The column people consult least, and the same trade the applications table
+  // makes — hidden rather than truncated to "my-blo…:my-blo…".
+  const owner = columns().find((c) => c.id === "owner");
+  assert.ok(owner.hidden, "owner is hidden below xl");
+  assert.match(owner.cls, /xl:table-cell/, "…and comes back from xl");
 });
 
 test("the owner cell can actually truncate", () => {

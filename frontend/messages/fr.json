@@ -3864,7 +3864,9 @@
         "description": "Téléversez un fichier, ou créez un nouveau fichier ou dossier pour commencer.",
         "filteredTitle": "Aucun fichier correspondant",
         "hiddenOnlyTitle": "{count, plural, one {Il n’y a ici que # fichier masqué} other {Il n’y a ici que # fichiers masqués}}",
-        "hiddenOnlyDescription": "Les noms commençant par un point sont masqués par défaut."
+        "hiddenOnlyDescription": "Les noms commençant par un point sont masqués par défaut.",
+        "descriptionWrite": "Faites glisser des fichiers depuis votre ordinateur, ou commencez par l'une de ces options.",
+        "descriptionReadOnly": "Ce dossier ne contient encore rien."
       },
       "searchPlaceholder": "Rechercher dans ce dossier…",
       "itemCount": "{count, plural, =0 {Aucun élément} one {# élément} other {# éléments}}",
@@ -3901,7 +3903,7 @@
       "uploadDialog": {
         "action": "Téléverser",
         "title": "Téléverser des fichiers",
-        "subtitle": "Téléversés dans le dossier que vous consultez actuellement. Un fichier existant du même nom est écrasé.",
+        "subtitle": "Téléversés dans le dossier que vous consultez actuellement. Un fichier dont le nom existe déjà ici est ignoré : renommez ou supprimez d'abord le fichier existant.",
         "dropHint": "Glissez les fichiers ici, ou cliquez pour parcourir",
         "dropOverlay": "Déposez pour téléverser ici",
         "remove": "Retirer",
@@ -3912,7 +3914,10 @@
         "uploadedOne": "{name} téléversé.",
         "uploadedMany": "{count} fichiers téléversés.",
         "partial": "{done} téléversé(s), {failed} échec(s).",
-        "allFailed": "Impossible de téléverser ces fichiers."
+        "allFailed": "Impossible de téléverser ces fichiers.",
+        "exists": "Un fichier de ce nom existe déjà dans ce dossier. Renommez-le ou supprimez-le d'abord.",
+        "stop": "Arrêter",
+        "stopped": "Téléversement arrêté. {done} fichiers sur {count} ont été téléversés."
       },
       "editor": {
         "subtitle": "Une sauvegarde est créée automatiquement avant chaque enregistrement.",
@@ -3934,7 +3939,8 @@
         "title": "Restaurer une version précédente",
         "subtitle": "La restauration sauvegarde d'abord le contenu actuel, donc même un mauvais choix est annulable.",
         "done": "Restauré.",
-        "failed": "Impossible de restaurer cette version."
+        "failed": "Impossible de restaurer cette version.",
+        "reloadFailed": "Restauré, mais l'éditeur n'a pas pu recharger le fichier. Rouvrez-le pour voir la version restaurée."
       },
       "targetDialog": {
         "pathLabel": "Chemin",
@@ -4083,7 +4089,8 @@
         "permissionsChooseMode": "Choisissez les permissions à appliquer."
       },
       "size": {
-        "failed": "Ce dossier n'a pas pu être mesuré."
+        "failed": "Ce dossier n'a pas pu être mesuré.",
+        "calculate": "Calculer"
       },
       "archiveFormat": {
         "legend": "Format d'archive",
@@ -4164,7 +4171,15 @@
         },
         "trigger": "Stockage",
         "measureFailed": "Nous n’avons pas pu mesurer ce dossier pour l’instant. Réessayez dans un instant."
-      }
+      },
+      "shortcuts": {
+        "label": "Aller à",
+        "uploads": "Téléversements",
+        "themes": "Thèmes",
+        "plugins": "Extensions",
+        "config": "wp-config.php"
+      },
+      "dropHint": "Astuce : faites glisser des fichiers depuis votre ordinateur sur cette liste pour les téléverser ici."
     },
     "workers": {
       "pageTitle": "Workers",

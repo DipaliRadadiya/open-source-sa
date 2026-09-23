@@ -30,9 +30,10 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
     if (!selected) return;
     setBusy(true);
     try {
-      const { data } = await restoreFileContent(appId, path, selected);
+      await restoreFileContent(appId, path, selected);
       toast.success(t("restore.done"));
-      onRestored?.(data?.file ?? null);
+      // The editor re-reads the file itself — this endpoint returns no content.
+      onRestored?.();
       handleOpenChange(false);
     } catch (error) {
       toast.error(apiMessage(error, t("restore.failed")));

@@ -141,7 +141,8 @@ test("folder size reaches the phone layout, not just the table", () => {
   assert.match(cards, /folderSizes = \{\},/);
   assert.match(cards, /sizingPath = null,/);
   assert.match(cards, /const measuring = sizingPath === file\.path/);
-  assert.match(cards, /measuring \? tSize\("measuring"\) : folderSizes\[file\.path\] \?\? file\.size_human/);
+  assert.match(cards, /measuring \? \(\s*tSize\("measuring"\)/);
+  assert.match(cards, /file\.type === "dir" \? folderSizes\[file\.path\] : file\.size_human/);
 });
 
 test("the measuring label reuses the string that already existed", () => {

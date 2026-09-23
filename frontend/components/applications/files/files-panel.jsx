@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import Link from "next/link";
-import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe, Trash2, Eye, EyeOff } from "lucide-react";
+import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe, Trash2, Eye, EyeOff, MousePointerClick } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -26,6 +26,7 @@ import { CompressDialog } from "@/components/applications/files/compress-dialog"
 import { ExtractDialog } from "@/components/applications/files/extract-dialog";
 import { PermissionsDialog } from "@/components/applications/files/permissions-dialog";
 import { DeleteFileDialog } from "@/components/applications/files/delete-file-dialog";
+import { FileShortcuts } from "@/components/applications/files/file-shortcuts";
 import { FixPermissionsButton } from "@/components/applications/files/fix-permissions-button";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { SelectionBar } from "@/components/applications/files/selection-bar";
@@ -44,6 +45,7 @@ export function FilesPanel({
   showHidden = true,
   canManage,
   breakdown = null,
+  siteType = null,
 }) {
   const t = useTranslations("applications.files");
   const [action, setAction] = useState(null); // { type, file }
@@ -258,20 +260,32 @@ export function FilesPanel({
         </Button>
       </ReasonTooltip>
       {/* Neither of these is part of adding a file: one repairs the folder,
-          one leaves it for another view. Separated and stepped down a weight
-          so the three buttons above keep the eye. */}
+          one leaves it for another view. Separated from the three above; the
+          rank comes from Upload being the one filled button, not from greying
+          these — grey text on this strip read as disabled. */}
       <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center" />
       <FixPermissionsButton appId={appId} canManage={canManage} />
       {/* Every panel that has a trash reaches it from this toolbar — cPanel and
           Plesk both use a button here that swaps the list. Nobody gives it its
           own page, and a tab would compete with the breadcrumb.
 
-          Deliberately NOT destructive-coloured: this opens the trash, it does
-          not delete anything. Red is spent on the controls that actually
-          destroy — Delete in the selection bar, and the permanent-delete
-          confirm — and spending it on a safe navigation button is how people
-          learn to click past red. The icon already says which view it is. */}
-      <Button variant="outline" size="sm" className="text-muted-foreground" asChild>
+          Light red, by Krishna's call (2026-09-23), after the grey version
+          read as disabled. It is only a tint — outline, 5% fill, red text —
+          so it still sits below the solid red of the controls that actually
+          destroy: Delete in the selection bar and the permanent-delete
+          confirm. The trade-off was raised and chosen knowingly: a red
+          control that is safe to press slightly dulls what red means.
+
+          The text is the destructive red mixed 22% toward the foreground in
+          light mode: plain `text-destructive` on this tint measured 4.24:1
+          from the rendered pixels, under the 4.5:1 floor for 14px text. Dark
+          mode already measured 5.78:1 and keeps the plain token. */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="border-destructive/30 bg-destructive/5 text-destructive [--destructive-ink:color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] text-(--destructive-ink) hover:bg-destructive/10 hover:text-(--destructive-ink) dark:border-destructive/40 dark:bg-destructive/10 dark:text-destructive dark:hover:bg-destructive/15 dark:hover:text-destructive"
+        asChild
+      >
         <Link href={`/applications/${appId}/files?trash=1`} prefetch={false}>
           <Trash2 className="size-3.5" />
           {t("trash.action")}
@@ -310,6 +324,8 @@ export function FilesPanel({
           </span>
         ) : null}
       </div>
+
+      <FileShortcuts appId={appId} siteType={siteType} path={path} onAction={onAction} />
 
       {/*
         One toolbar on one surface, instead of eight controls floating on the
@@ -358,7 +374,7 @@ export function FilesPanel({
               the choice has to be in the URL to change what comes back. It
               also makes the view shareable and survives a reload. */}
           {files.length > 0 || hiddenCount > 0 ? (
-            <Button asChild variant="outline" size="sm" className="text-muted-foreground">
+            <Button asChild variant="outline" size="sm" className="[&_svg]:text-muted-foreground">
               <Link
                 href={hiddenHref}
                 aria-pressed={!showHidden}
@@ -420,7 +436,39 @@ export function FilesPanel({
           }
         />
       ) : files.length === 0 ? (
-        <EmptyState icon={Folder} title={t("empty.title")} description={t("empty.description")} />
+        /*
+         * Explain, then offer the way out. "Upload a file, or create a new
+         * file or folder" with no buttons sent the reader back up to the
+         * toolbar to find them — and told a read-only viewer to do things
+         * they cannot. Drag-and-drop was the other undiscovered half: it
+         * worked on this very area and nothing said so.
+         */
+        <EmptyState
+          icon={Folder}
+          title={t("empty.title")}
+          description={canWrite ? t("empty.descriptionWrite") : t("empty.descriptionReadOnly")}
+          action={
+            canWrite ? (
+              <div className="flex flex-wrap justify-center gap-2">
+                {/* Outlined, not the filled primary: the toolbar's Upload is
+                    already on screen, and two blue buttons would stop "the blue
+                    one" meaning anything. */}
+                <Button variant="outline" size="sm" onClick={() => setUploadOpen(true)}>
+                  <UploadCloud className="size-3.5" />
+                  {t("uploadDialog.action")}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setNewFolderOpen(true)}>
+                  <FolderPlus className="size-3.5" />
+                  {t("newFolder.action")}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setNewFileOpen(true)}>
+                  <FilePlus className="size-3.5" />
+                  {t("newFile.action")}
+                </Button>
+              </div>
+            ) : null
+          }
+        />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={SearchX}
@@ -464,6 +512,15 @@ export function FilesPanel({
               sizingPath={sizingPath}
             />
           </div>
+          {/* The drop target has always been this whole panel; nothing said
+              so until something was already being dragged over it. Desktop
+              only — a phone has nothing to drag from. */}
+          {canWrite ? (
+            <p className="hidden items-center gap-1.5 text-xs text-muted-foreground lg:flex">
+              <MousePointerClick className="size-3.5" aria-hidden />
+              {t("dropHint")}
+            </p>
+          ) : null}
         </>
       )}
 
@@ -490,6 +547,7 @@ export function FilesPanel({
           if (!next) setDroppedFiles(null);
         }}
         initialFiles={droppedFiles}
+        existingNames={files.map((f) => f.name)}
         onSuccess={flashPath}
       />
 

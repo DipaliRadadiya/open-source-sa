@@ -8,6 +8,7 @@ import { FileThumb } from "@/components/applications/files/file-thumb";
 import { isImageFile } from "@/lib/files/file-icon";
 import { canOpenFile } from "@/lib/files/openable";
 import { isWorldWritable, symbolicMode } from "@/lib/files/describe-mode";
+import { FILE_NAME } from "@/lib/files/name-style";
 
 /*
  * `folderSizes` and `sizingPath` are the same two pieces of state the desktop
@@ -71,7 +72,7 @@ export function FilesCards({
                 {file.type === "dir" ? (
                   <Link
                     href={`/applications/${appId}/files?path=${encodeURIComponent(file.path)}`}
-                    className="block truncate font-medium hover:underline"
+                    className={cn("block font-medium hover:underline", FILE_NAME)}
                     title={file.name}
                   >
                     {file.name}
@@ -99,53 +100,68 @@ export function FilesCards({
                   // the row's action icons instead of ellipsing.
                   // Nothing to open — see the note in files-table.
                   !canOpenFile(file.name) ? (
-                    <span className="block w-full truncate font-medium" title={file.name}>
+                    <span className={cn("block w-full font-medium", FILE_NAME)} title={file.name}>
                       {file.name}
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => onAction(isImageFile(file.name) ? "preview" : "edit", file)}
-                      className="block w-full truncate text-left font-medium hover:underline"
+                      className={cn("block w-full text-left font-medium hover:underline", FILE_NAME)}
+                      title={file.name}
                     >
                       {file.name}
                     </button>
                   )
                 )}
+                {/* Two lines, not one run. The card is the phone view of the
+                    same row, so it keeps every fact the table has — owner and
+                    mode included, since a file owned by the wrong account is
+                    exactly what people come here to check. But as one
+                    `·`-joined line it wrapped wherever it ran out, which split
+                    `-rw-r--r--` itself in half. Now: what it is (size, age),
+                    then who may touch it, each token unbreakable. */}
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  {/* The card is the narrow-screen view of the same row, so it
-                      carries the same facts — user and group included, since a
-                      file owned by the wrong one is exactly what someone
-                      reaches for this screen to check.
-
-                      Wraps rather than truncating, which is the only way that
-                      sentence is true. At 390px this line has 202px and needs
-                      290px, so `truncate` cut it at "nextcloud:nextc…" — the
-                      owner unreadable, and the mode after it never rendered at
-                      all. That mode is not decoration: a world-writable file
-                      is printed in red right here, and the one screen where
-                      you would go looking for it was hiding it. */}
-                  {[
-                    // A measured folder size wins over the listing's own,
-                    // which is null for a directory until someone asks.
-                    measuring ? tSize("measuring") : folderSizes[file.path] ?? file.size_human,
-                    file.modified_at_human,
-                    file.owner ? [file.owner, file.group].filter(Boolean).join(":") : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                  {file.mode ? (
+                  {measuring ? (
+                    tSize("measuring")
+                  ) : file.type === "dir" && !folderSizes[file.path] ? (
+                    <button
+                      type="button"
+                      onClick={() => onAction("size", file)}
+                      className="underline decoration-dotted underline-offset-2 hover:text-foreground"
+                    >
+                      {t("size.calculate")}
+                    </button>
+                  ) : (
+                    <span className="whitespace-nowrap tabular-nums">
+                      {file.type === "dir" ? folderSizes[file.path] : file.size_human}
+                    </span>
+                  )}
+                  {file.modified_at_human ? (
                     <>
-                      {file.size_human || file.modified_at_human || file.owner ? " · " : ""}
+                      {" · "}
+                      <span className="whitespace-nowrap">{file.modified_at_human}</span>
+                    </>
+                  ) : null}
+                </p>
+                {/* Spaced, not `·`-joined: when the two do not fit on one
+                    line the second wraps whole, and a dot left at the start
+                    of the new line read as a stray mark. */}
+                {file.owner || file.mode ? (
+                  <p className="flex flex-wrap gap-x-2 font-mono text-xs leading-relaxed text-muted-foreground/80">
+                    {file.owner ? (
+                      <span className="whitespace-nowrap">{[file.owner, file.group].filter(Boolean).join(":")}</span>
+                    ) : null}
+                    {file.mode ? (
                       <span
-                        className={isWorldWritable(file.mode) ? "font-medium text-destructive" : undefined}
+                        className={cn("whitespace-nowrap", isWorldWritable(file.mode) && "font-medium text-destructive")}
                         title={file.mode}
                       >
                         {symbolicMode(file.mode, file.type) ?? file.mode}
                       </span>
-                    </>
-                  ) : null}
-                </p>
+                    ) : null}
+                  </p>
+                ) : null}
               </div>
             </div>
             {busy ? (

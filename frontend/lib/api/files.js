@@ -43,6 +43,21 @@ export function fileDownloadUrl(appId, path) {
   return `${base}/api/applications/${appId}/files/download?path=${encodeURIComponent(path)}`;
 }
 
+/*
+ * `preview` as a plain `<img src>`, for list thumbnails.
+ *
+ * Not `download`: that answers octet-stream + `nosniff` + attachment, which an
+ * <img> will not draw for SVG at all, and it is throttled at 20/min because it
+ * is meant for a few large transfers. The route file says in as many words
+ * that thumbnails belong on `preview` (60/min, real image content type). A
+ * thumbnail that is refused just falls back to the file icon, so the reason
+ * `fetchFilePreview` below goes to the trouble of reading does not matter here.
+ */
+export function fileThumbnailUrl(appId, path) {
+  const base = process.env.NEXT_PUBLIC_API_URL;
+  return `${base}/api/applications/${appId}/files/preview?path=${encodeURIComponent(path)}`;
+}
+
 /**
  * Fetch an image for display, as a blob URL.
  *

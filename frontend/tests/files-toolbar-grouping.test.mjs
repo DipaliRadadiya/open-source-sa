@@ -48,9 +48,25 @@ test("every control in the strip still looks like a control", () => {
   // meaning anything.
   assert.equal(panel.match(/<Button size="sm"/g)?.length ?? 0, 1);
 
-  // The utility pair keeps its lower rank through text colour.
-  assert.match(panel, /<Button variant="outline" size="sm" className="text-muted-foreground" asChild>/);
-  assert.match(fix, /className="text-muted-foreground"/);
+  /*
+   * Rank no longer comes from greying the lesser controls: grey TEXT on this
+   * tinted strip read as disabled ("storage and hide hidden files button looks
+   * like disabled"). Their text is full strength; only the icon is muted.
+   */
+  const storage = read("components/applications/files/size-breakdown-sheet.jsx");
+  for (const [name, src] of [["panel", strip], ["fix permissions", fix], ["storage", storage]]) {
+    assert.doesNotMatch(src, /<Button[^>]*className="text-muted-foreground"/, `${name}: a control's text must not be greyed`);
+  }
+  assert.match(fix, /className="\[&_svg\]:text-muted-foreground"/);
+
+  /*
+   * Trash is a light-red TINT (Krishna, 2026-09-23) — outline with a 5% fill
+   * and red text, never the solid `destructive` variant. Solid red stays
+   * reserved for the controls that actually delete.
+   */
+  const trash = panel.slice(panel.indexOf("files?trash=1") - 600, panel.indexOf("files?trash=1"));
+  assert.match(trash, /bg-destructive\/5 text-destructive/);
+  assert.doesNotMatch(trash, /variant="destructive"/);
 });
 
 test("nothing was hidden behind a menu to tidy the row", () => {
