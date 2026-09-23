@@ -2,6 +2,7 @@
 
 namespace App\Actions\Server\Application;
 
+use App\Contracts\SiteType;
 use App\Enums\ApplicationStatus;
 use App\Enums\DomainOrigin;
 use App\Enums\DomainType;
@@ -9,10 +10,12 @@ use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
 use App\Models\SystemUser;
+use App\Rules\SupportedNodeVersion;
 use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\PortAllocator;
+use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\SystemUsers\SystemUsernameGenerator;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +37,7 @@ class CreateApplication
         private ActivityLogger $activityLogger,
         private PortAllocator $ports,
         private SystemUsernameGenerator $usernames,
+        private NodeRuntime $node,
     ) {}
 
     /**
@@ -55,6 +59,9 @@ class CreateApplication
         $generatedUsername = ($data['generate_system_user'] ?? false)
             ? $this->usernames->forApplication((string) $data['name'])
             : null;
+
+        // Before the transaction for the same reason: it asks fnm.
+        $data['node_version'] = $this->nodeVersion($data, $type, $servingProfile);
 
         try {
             // The application and its primary hostname are one record from the
@@ -203,6 +210,48 @@ class CreateApplication
         }
 
         return $settings;
+    }
+
+    /**
+     * The Node a site served by Node runs on — the one asked for, or, when
+     * none was, one chosen now and recorded on the site.
+     *
+     * Leaving it blank handed the installer a PATH with no Node at all:
+     * the installer resolves Node through the site's pinned version, and on a
+     * server where nothing had linked a system-wide `node` into
+     * /usr/local/bin, a Node-RED created without one died on
+     * `npm: No such file or directory` (reproduced 2026-09-23). Recording it
+     * also keeps the site where it was installed: changing the server default
+     * later must not move a running site to another Node, which is what
+     * {@see NodeRuntime::setDefault()} already promises for pinned sites.
+     *
+     * The server default when it fits the type's own range, else the newest
+     * installed version that does. Null when nothing fits — validation has
+     * already accepted the request, and the installer reports that case
+     * rather than this guessing past it.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function nodeVersion(array $data, ?SiteType $type, string $servingProfile): ?string
+    {
+        if (filled($data['node_version'] ?? null) || $servingProfile !== 'node') {
+            return $data['node_version'] ?? null;
+        }
+
+        $range = $type?->supportedNodeRange() ?? [];
+        $fits = fn (?string $version): bool => $version !== null
+            && SupportedNodeVersion::admits($range['min'] ?? null, $range['max'] ?? null, $version);
+
+        $default = $this->node->default();
+
+        if ($fits($default)) {
+            return $default;
+        }
+
+        return collect($this->node->versions())
+            ->pluck('version')
+            ->sort(fn (string $a, string $b) => version_compare($b, $a))
+            ->first($fits);
     }
 
     /**

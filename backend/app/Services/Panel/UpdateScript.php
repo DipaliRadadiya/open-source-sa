@@ -40,6 +40,7 @@ class UpdateScript
         'resync_fail2ban',
         'refresh_npm_catalogue',
         'refresh_lifecycle_catalogue',
+        'repair_node_runtime',
         'optimize',
         'frontend_build',
         'sync_privileges',
@@ -347,6 +348,14 @@ class UpdateScript
         # Non-fatal, same `||`, same reason: github is a third party.
         note refresh_lifecycle_catalogue
         {$asUser}{$php} {$backend}/artisan runtimes:refresh-lifecycle || echo "WARNING: runtime lifecycle catalogue not refreshed; end-of-life Node versions may be offered until the daily refresh runs"
+
+        # install.sh used to set fnm's default without linking node/npm/npx into
+        # /usr/local/bin, and versions added from the Node screen came out
+        # root-owned while npm updates run as the panel account. This puts an
+        # existing server where a fresh install now starts. Non-fatal: Node is
+        # not a reason to fail a panel update.
+        note repair_node_runtime
+        {$asUser}{$php} {$backend}/artisan runtimes:repair-node || echo "WARNING: Node runtime not repaired; run php artisan runtimes:repair-node"
 
         note optimize
         {$asUser}{$php} {$backend}/artisan optimize:clear

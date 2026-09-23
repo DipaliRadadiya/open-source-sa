@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Server\Application\CreateApplication;
 use App\Jobs\InstallNodeVersion;
 use App\Models\Application;
 use App\Models\NpmRelease;
@@ -575,4 +576,123 @@ it('records that the server now has Node, so the create screen stops denying it'
     // request, and asserting through the same one would pass on the cache
     // rather than on what was written.
     expect(app()->make(ServerCapabilities::class, [])->supports('node'))->toBeTrue();
+});
+
+describe('found on a real server, 2026-09-23', function () {
+    it('does not offer a pre-1.0 line the catalog says is dead', function () {
+        // Node files 0.x by minor — `0.12`, not `0`. Keyed by the major alone,
+        // 0.12.18 looked up `0`, found nothing, read "unknown" as "keep", and
+        // a release dead since 2016 sat in the install list.
+        lifecycleNode('0.12', 'eol');
+        lifecycleNode('0.10', 'eol');
+        Process::fake(fn ($process) => str_ends_with((string) $process->command[0], 'fnm') && in_array('list-remote', $process->command, true)
+            ? Process::result(output: "v0.10.48\nv0.12.18\nv22.11.0\n")
+            : Process::result(output: "/usr/local/bin/fnm\n"));
+
+        expect(app(NodeRuntime::class)->installable())->toBe(['22.11.0']);
+    });
+
+    it('hands a newly installed version to whoever owns the fnm directory', function () {
+        // install.sh gives /opt/fnm to the panel account; fnm runs elevated,
+        // so a version added from the Node screen came out root-owned and its
+        // npm update — which runs as the panel account — failed with EACCES.
+        $runs = new ArrayObject;
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = $process->command;
+
+            return $process->command[0] === 'stat'
+                ? Process::result(output: "panel:panel\n")
+                : Process::result();
+        });
+
+        app(NodeRuntime::class)->install('22.11.0');
+
+        $commands = collect($runs)->map(fn ($c) => implode(' ', $c));
+
+        expect($commands->search(fn ($c) => str_contains($c, 'install 22.11.0')))
+            ->toBeLessThan($commands->search(fn ($c) => $c === 'chown -R panel:panel /opt/fnm/node-versions/v22.11.0'))
+            ->and($commands)->toContain('chown -R panel:panel /opt/fnm/node-versions/v22.11.0');
+    });
+
+    it('leaves ownership alone when root owns the fnm directory', function () {
+        Process::fake(fn ($process) => $process->command[0] === 'stat'
+            ? Process::result(output: "root:root\n")
+            : Process::result());
+
+        app(NodeRuntime::class)->install('22.11.0');
+
+        Process::assertNotRan(fn ($process) => $process->command[0] === 'chown');
+    });
+
+    it('repairs an existing server: links the default and adopts every version', function () {
+        $runs = fakeNode(installed: ['22.11.0', '24.1.0'], default: '24.1.0');
+        Process::fake(function ($process) use ($runs) {
+            $runs[] = ['command' => $process->command];
+            $command = $process->command;
+
+            if ($command[0] === 'stat') {
+                return Process::result(output: "panel:panel\n");
+            }
+
+            if (str_ends_with((string) $command[0], 'fnm')) {
+                return in_array('list', $command, true)
+                    ? Process::result(output: "* v22.11.0\n* v24.1.0 default\n")
+                    : Process::result();
+            }
+
+            return Process::result(output: "/usr/local/bin/fnm\n");
+        });
+
+        $this->artisan('runtimes:repair-node')
+            ->expectsOutputToContain('node, npm and npx point at 24.1.0')
+            ->assertSuccessful();
+
+        $commands = collect($runs)->map(fn ($r) => implode(' ', $r['command']));
+
+        foreach (['node', 'npm', 'npx'] as $bin) {
+            expect($commands)->toContain("ln -sfn /opt/fnm/node-versions/v24.1.0/installation/bin/{$bin} /usr/local/bin/{$bin}");
+        }
+
+        expect($commands)->toContain('chown -R panel:panel /opt/fnm/node-versions/v22.11.0')
+            ->and($commands)->toContain('chown -R panel:panel /opt/fnm/node-versions/v24.1.0');
+    });
+});
+
+describe('a Node site created without a version', function () {
+    beforeEach(function () {
+        Queue::fake();
+        $this->owner = SystemUser::create([
+            'username' => 'nodeowner', 'home_path' => '/home/nodeowner', 'shell' => '/bin/bash', 'sudo' => false,
+        ]);
+        fakeNode(installed: ['22.11.0', '24.1.0'], default: '22.11.0');
+    });
+
+    function createNodeSite(string $type, array $extra = []): Application
+    {
+        return app(CreateApplication::class)->execute(array_merge([
+            'name' => 'qa-'.$type,
+            'domain' => $type.'.example.test',
+            'domain_type' => 'custom',
+            'site_type' => $type,
+            'system_user_id' => test()->owner->id,
+            'admin_username' => 'admin',
+            'admin_password' => 'Secret12345!',
+        ], $extra));
+    }
+
+    it('is pinned to the server default', function () {
+        // Left blank, the installer had no Node on its PATH: a Node-RED on a
+        // fresh server died on `npm: No such file or directory`.
+        expect(createNodeSite('nodered')->node_version)->toBe('22.11.0');
+    });
+
+    it('is pinned to a version the type can run when the default is outside its range', function () {
+        // n8n needs 24+. Pinning the 22 default would reproduce the n8n
+        // install that died on a Node it cannot run.
+        expect(createNodeSite('n8n')->node_version)->toBe('24.1.0');
+    });
+
+    it('keeps the version it was asked for', function () {
+        expect(createNodeSite('nodered', ['node_version' => '24.1.0'])->node_version)->toBe('24.1.0');
+    });
 });

@@ -1101,6 +1101,19 @@ install_node() {
     NODE_BIN=$(find "${FNM_DIR}/node-versions" -maxdepth 5 -type f -name node -path "*v${NODE_VERSION}.*" -print -quit 2>/dev/null)
     [[ -x "${NODE_BIN:-}" ]] || die "installed Node ${NODE_VERSION} but cannot find its binary under ${FNM_DIR}"
 
+    # Bare node/npm/npx for everything that is not the panel: an SSH user, a
+    # cron job, and any Node app installed without a pinned version. The
+    # Node screen's "set default" makes exactly these links; setting fnm's
+    # alias alone did not, so a fresh server had a default Node and no `npm`
+    # on anyone's PATH, and a Node-RED install died on
+    # `npm: No such file or directory`. Re-run safe: -sfn replaces a link.
+    local node_bin_dir
+    node_bin_dir=$(dirname "$NODE_BIN")
+    for bin in node npm npx; do
+        run ln -sfn "${node_bin_dir}/${bin}" "/usr/local/bin/${bin}"
+    done
+    ok "node, npm and npx linked into /usr/local/bin"
+
     # The installer runs as root under umask 077, but the frontend build and
     # the panel's runtime manager execute Node as the panel account. Without
     # this ownership hand-off, `env npm` finds the binary but cannot traverse

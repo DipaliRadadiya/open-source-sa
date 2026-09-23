@@ -41,23 +41,33 @@ class SupportedNodeVersion implements ValidationRule
             return;
         }
 
-        $version = (string) $value;
-
-        if ($this->min !== null && version_compare($version, $this->min, '<')) {
-            $fail($this->message());
-
-            return;
-        }
-
-        // The ceiling is a major series, not a point release: `24` must admit
-        // `24.7.0`. Comparing the majors alone is what makes that true without
-        // pinning a ceiling that goes stale on every patch release.
-        if ($this->max !== null && $this->major($version) > $this->major($this->max)) {
+        if (! self::admits($this->min, $this->max, (string) $value)) {
             $fail($this->message());
         }
     }
 
-    private function major(string $version): int
+    /**
+     * Whether a version falls inside a type's range.
+     *
+     * Static and public because the panel also has to *choose* a version that
+     * fits — a Node site created without one is pinned to one at creation —
+     * and a second copy of this comparison is how the chooser and the refuser
+     * would come to disagree.
+     *
+     * The ceiling is a major series, not a point release: `24` must admit
+     * `24.7.0`. Comparing the majors alone is what makes that true without
+     * pinning a ceiling that goes stale on every patch release.
+     */
+    public static function admits(?string $min, ?string $max, string $version): bool
+    {
+        if ($min !== null && version_compare($version, $min, '<')) {
+            return false;
+        }
+
+        return $max === null || self::major($version) <= self::major($max);
+    }
+
+    private static function major(string $version): int
     {
         return (int) explode('.', $version)[0];
     }

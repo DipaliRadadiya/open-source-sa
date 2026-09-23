@@ -166,7 +166,7 @@ class NodeRuntime implements Runtime
         // Newest patch of each major — a list of every patch release is a
         // dropdown nobody can use.
         return $remote
-            ->groupBy(fn (string $version) => explode('.', $version)[0])
+            ->groupBy(fn (string $version) => $this->line($version))
             ->map(fn ($group) => $group->sortByDesc(fn (string $v) => $this->sortKey($v))->first())
             // Before the take, not after: dropping three dead lines out of a
             // list of six would otherwise leave three, and the picker would
@@ -188,9 +188,23 @@ class NodeRuntime implements Runtime
      */
     private function isEndOfLife(string $version, array $lifecycle): bool
     {
-        $major = explode('.', $version)[0];
+        return ($lifecycle[$this->line($version)]['status'] ?? null) === 'eol';
+    }
 
-        return ($lifecycle[$major]['status'] ?? null) === 'eol';
+    /**
+     * The release line a version belongs to, as Node's own schedule names it.
+     *
+     * The major for 4 onwards, but `0.12`, `0.10`, `0.8` before that — Node's
+     * schedule (and so the lifecycle catalog) files the pre-1.0 lines by
+     * minor. Keyed by the major alone, `0.12.18` looked up `0`, found no
+     * entry, read "unknown" as "keep", and a release dead since 2016 was
+     * offered for install (seen 2026-09-23).
+     */
+    private function line(string $version): string
+    {
+        $parts = explode('.', $version);
+
+        return $parts[0] === '0' ? '0.'.($parts[1] ?? '0') : $parts[0];
     }
 
     public function fnmInstalled(): bool
@@ -238,6 +252,68 @@ class NodeRuntime implements Runtime
                 $this->classifier->classify('node', $result),
             );
         }
+
+        $this->adoptOwnership($version);
+    }
+
+    /**
+     * Give a version's files to whoever owns the fnm directory.
+     *
+     * install.sh hands /opt/fnm to the panel account on purpose — "the panel's
+     * runtime manager executes Node as the panel account". But `fnm` itself
+     * runs elevated, so every version the panel installed afterwards came out
+     * root-owned, and {@see updateNpm()}, which runs as the panel account,
+     * failed with EACCES on exactly those versions: the one install.sh put
+     * down updated fine, every one added from the Node screen did not
+     * (reproduced 2026-09-23).
+     *
+     * The owner is read off the fnm directory rather than configured, so this
+     * follows whatever the installer decided instead of restating it. A root
+     * owned fnm directory means there is nothing to hand over.
+     */
+    public function adoptOwnership(string $version): void
+    {
+        $dir = rtrim((string) config('server.runtimes.node.dir', '/opt/fnm'), '/');
+
+        $owner = trim($this->serverOps->run(
+            ['stat', '-c', '%U:%G', $dir],
+            ['feature' => 'runtime', 'op' => 'fnm_owner'],
+        )->output());
+
+        if ($owner === '' || str_starts_with($owner, 'root:')) {
+            return;
+        }
+
+        $this->serverOps->run(
+            ['chown', '-R', $owner, "{$dir}/node-versions/v{$version}"],
+            ['feature' => 'runtime', 'op' => 'adopt_node_version', 'version' => $version],
+            timeout: 300,
+        );
+    }
+
+    /**
+     * Make bare `node`/`npm`/`npx` point at the default version, if it is set.
+     *
+     * The Node screen's "set default" did this; install.sh only set fnm's own
+     * alias, so a freshly installed server had a default version and no
+     * `node` on anyone's PATH — the SSH user, cron, and any installer run
+     * without a pinned version. Idempotent: `ln -sfn` over a correct link
+     * changes nothing.
+     *
+     * @throws SettingOperationException
+     */
+    public function linkDefault(): ?string
+    {
+        $default = $this->default();
+
+        if ($default === null) {
+            return null;
+        }
+
+        $this->assertBinaries($default);
+        $this->linkBinaries($default);
+
+        return $default;
     }
 
     /**
