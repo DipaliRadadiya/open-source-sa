@@ -27,6 +27,7 @@ return [
 
     'ioncube_unsupported_version' => 'ionCube は PHP :version 向けの Loader を公開していません。',
     'ioncube_unsupported_architecture' => 'ionCube はこのサーバーのアーキテクチャ (:architecture) 向けの Loader を公開していません。',
+    'ioncube_external' => 'PHP :version の ionCube はパネル外で（以前のパネルのバージョンまたはシステムパッケージによって）インストールされたため、パネルでは変更しません。PHP :version を削除すると一緒に削除されます。',
     'ioncube_download_failed' => 'ionCube Loader をダウンロードできませんでした。サーバーのインターネット接続を確認して再試行してください。',
     'ioncube_invalid_loader' => 'ダウンロードしたファイルは、このサーバー用の有効な ionCube Loader ではありません。何もインストールされていません。',
     'ioncube_install_failed' => 'ionCube Loader をインストールできませんでした。',

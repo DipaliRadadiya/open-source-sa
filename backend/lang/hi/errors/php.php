@@ -27,6 +27,7 @@ return [
 
     'ioncube_unsupported_version' => 'ionCube, PHP :version के लिए Loader प्रकाशित नहीं करता।',
     'ioncube_unsupported_architecture' => 'ionCube इस सर्वर की आर्किटेक्चर (:architecture) के लिए Loader प्रकाशित नहीं करता।',
+    'ioncube_external' => 'PHP :version के लिए ionCube पैनल के बाहर (पैनल के पुराने वर्ज़न या सिस्टम पैकेज से) इंस्टॉल किया गया था, इसलिए पैनल इसे नहीं बदलेगा। यह PHP :version के साथ ही हटाया जाता है।',
     'ioncube_download_failed' => 'ionCube Loader डाउनलोड नहीं हो सका। सर्वर की इंटरनेट पहुँच जाँचें और पुनः प्रयास करें।',
     'ioncube_invalid_loader' => 'डाउनलोड की गई फ़ाइल इस सर्वर के लिए वैध ionCube Loader नहीं है। कुछ भी इंस्टॉल नहीं किया गया।',
     'ioncube_install_failed' => 'ionCube Loader इंस्टॉल नहीं हो सका।',

@@ -297,6 +297,15 @@ class PhpController extends Controller
             ], 422);
         }
 
+        // Refused here too, not only in the job: a queued install that can
+        // only fail would show a spinner and then an error for something the
+        // card already knew.
+        if ($loader->source($version) === IonCubeLoader::SOURCE_EXTERNAL) {
+            return response()->json([
+                'message' => __('errors/php.ioncube_external', ['version' => $version]),
+            ], 422);
+        }
+
         // A second click while this is running must not queue a second
         // download over the top of the first.
         if ($installs->current(InstallIonCubeLoader::RUNTIME, $version)?->status === InstallStatus::Installing) {

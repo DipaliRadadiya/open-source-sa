@@ -27,6 +27,7 @@ return [
 
     'ioncube_unsupported_version' => 'ionCube veröffentlicht keinen Loader für PHP :version.',
     'ioncube_unsupported_architecture' => 'ionCube veröffentlicht keinen Loader für die Architektur dieses Servers (:architecture).',
+    'ioncube_external' => 'ionCube für PHP :version wurde außerhalb des Panels installiert (von einer früheren Panel-Version oder einem Systempaket), daher ändert das Panel es nicht. Es wird zusammen mit PHP :version entfernt.',
     'ioncube_download_failed' => 'Der ionCube-Loader konnte nicht heruntergeladen werden. Prüfen Sie den Internetzugang des Servers und versuchen Sie es erneut.',
     'ioncube_invalid_loader' => 'Die heruntergeladene Datei ist kein gültiger ionCube-Loader für diesen Server. Es wurde nichts installiert.',
     'ioncube_install_failed' => 'Der ionCube-Loader konnte nicht installiert werden.',

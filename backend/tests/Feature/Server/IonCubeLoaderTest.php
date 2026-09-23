@@ -109,6 +109,24 @@ function fakeIonCube(array $options = []): ArrayObject
         if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-e') {
             return Process::result(exitCode: ($options['existing'] ?? false) ? 0 : 1);
         }
+        // Whether a loader ini is there, and who wrote it. `existing` is the
+        // panel's own; `external` is LiteSpeed's package under the same name
+        // (its first line, verbatim from lsphp84-ioncube 15.5.0).
+        if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-f' && str_ends_with((string) ($args[2] ?? ''), '01-ioncube.ini')) {
+            return Process::result(exitCode: ($options['existing'] ?? false) || ($options['external'] ?? false) ? 0 : 1);
+        }
+        if (($args[0] ?? '') === 'cat' && str_ends_with((string) ($args[1] ?? ''), '01-ioncube.ini')) {
+            return Process::result(output: ($options['external'] ?? false)
+                ? "; Enable ioncube extension module\nzend_extension = ioncube.so\n"
+                : "; Managed by the panel. ionCube Loader for PHP 8.4.\nzend_extension=/usr/lib/php/20240924/ioncube_loader_lin_8.4.so\n");
+        }
+        if (($args[0] ?? '') === 'openssl') {
+            return Process::result(output: 'SHA2-256('.($args[3] ?? '').')= '.str_repeat('ab', 32)."\n");
+        }
+        // `php -v`: v7's php.ini line loads ionCube with no ini of ours.
+        if (($options['loaded'] ?? false) && str_contains((string) ($args[0] ?? ''), 'php') && ($args[1] ?? '') === '-v') {
+            return Process::result(output: "PHP 8.4.23 (cli) (NTS)\n    with the ionCube PHP Loader v15.5.1, Copyright (c) 2002-2026, by ionCube Ltd.\n");
+        }
         // PHP answering questions about itself: the extension directory and
         // whether this build is thread-safe.
         if (str_contains((string) ($args[0] ?? ''), 'php') && in_array('-r', $args, true)) {
@@ -244,6 +262,83 @@ it('reports a version it cannot support without claiming anything about it', fun
 
     expect(app(IonCubeLoader::class)->status('8.0'))
         ->toMatchArray(['supported' => false, 'installed' => false, 'loader_version' => null]);
+});
+
+/*
+ * Installed outside the panel. v7 appended a zend_extension line to php.ini
+ * (no ini of ours, but PHP reports the loader); on OpenLiteSpeed it installed
+ * LiteSpeed's lsphpNN-ioncube, which writes the same 01-ioncube.ini name
+ * without our marker. Measured: loading ionCube twice is not fatal, but every
+ * CLI run then prints "Cannot load the ionCube PHP Loader - it was already
+ * loaded"; and removing the package's ini is undone by the next upgrade.
+ */
+describe('an ionCube the panel did not install', function () {
+    it('reports it as installed, and external', function (array $options) {
+        fakeIonCube($options);
+
+        $this->withToken($this->token)->getJson("/api/php/versions/{$this->version}/ioncube")
+            ->assertOk()
+            ->assertJsonPath('ioncube.installed', true)
+            ->assertJsonPath('ioncube.source', 'external')
+            ->assertJsonPath('ioncube.loader_version', '15.5.1')
+            // Not ours to fingerprint or point at.
+            ->assertJsonPath('ioncube.sha256', null)
+            ->assertJsonPath('ioncube.path', null);
+    })->with([
+        'v7 php.ini line' => [['loaded' => true]],
+        'LiteSpeed package' => [['external' => true, 'loaded' => true]],
+    ]);
+
+    it('reports the panel\'s own as panel', function () {
+        fakeIonCube(['existing' => true, 'loaded' => true]);
+
+        $this->withToken($this->token)->getJson("/api/php/versions/{$this->version}/ioncube")
+            ->assertOk()->assertJsonPath('ioncube.source', 'panel');
+    });
+
+    it('refuses to install over it, before anything is queued', function () {
+        Queue::fake();
+        fakeIonCube(['loaded' => true]);
+
+        $this->withToken($this->token)->postJson("/api/php/versions/{$this->version}/ioncube")
+            ->assertStatus(422)
+            ->assertJsonPath('message', __('errors/php.ioncube_external', ['version' => $this->version]));
+
+        Queue::assertNothingPushed();
+    });
+
+    it('refuses to install over it in the job too', function () {
+        $runs = fakeIonCube(['loaded' => true]);
+
+        $error = ionCubeError(fn () => app(IonCubeLoader::class)->install($this->version));
+
+        expect($error['message'])->toBe(__('errors/php.ioncube_external', ['version' => $this->version]))
+            ->and(collect($runs)->filter(fn ($c) => str_starts_with($c, 'tee ')))->toBeEmpty();
+    });
+
+    it('refuses to remove it, and deletes nothing', function () {
+        $runs = fakeIonCube(['external' => true, 'loaded' => true]);
+
+        $this->withToken($this->token)->deleteJson("/api/php/versions/{$this->version}/ioncube")
+            ->assertStatus(422);
+
+        expect(collect($runs)->filter(fn ($c) => str_starts_with($c, 'rm ')))->toBeEmpty();
+    });
+
+    it('leaves it out of what a PHP removal deletes', function () {
+        fakeIonCube(['external' => true, 'loaded' => true]);
+
+        expect(app(IonCubeLoader::class)->panelFiles($this->version))->toBe([]);
+    });
+
+    it('lists the panel\'s own files for a PHP removal', function () {
+        fakeIonCube(['existing' => true, 'loaded' => true]);
+
+        $files = app(IonCubeLoader::class)->panelFiles($this->version);
+
+        expect($files)->toContain("{$this->phpDir}/{$this->version}/fpm/conf.d/01-ioncube.ini")
+            ->toContain("/usr/lib/php/20240924/ioncube_loader_lin_{$this->version}.so");
+    });
 });
 
 describe('the endpoints', function () {

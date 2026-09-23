@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Models\RuntimeInstall;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Php\IonCubeLoader;
 use App\Services\Server\Runtimes\PhpRuntime;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
@@ -235,6 +236,41 @@ it('purges and then clears what the purge cannot', function () {
     expect(collect($runs)->pluck('command'))
         ->toContain(['apt-get', 'purge', '-y', 'php8.3-*'])
         ->toContain(['rm', '-rf', config('server.php_dir').'/8.3']);
+});
+
+/*
+ * The panel's ionCube ini and loader are not dpkg's, so they outlived the
+ * purge. On OpenLiteSpeed the ini sits in the version's scan dir, and
+ * reinstalling that version loaded ionCube again with nothing saying so.
+ */
+it('deletes the panel\'s ionCube files once the purge has succeeded', function () {
+    $ionCube = Mockery::mock(IonCubeLoader::class);
+    $ionCube->shouldReceive('panelFiles')->with('8.3')->andReturn(['/scan/01-ioncube.ini', '/ext/ioncube_loader_lin_8.3.so']);
+    app()->instance(IonCubeLoader::class, $ionCube);
+
+    $runs = fakePhp(default: '8.4');
+
+    app(PhpRuntime::class)->uninstall('8.3');
+
+    $commands = collect($runs)->pluck('command')->values();
+    $purge = $commands->search(['apt-get', 'purge', '-y', 'php8.3-*']);
+
+    expect($commands)
+        ->toContain(['rm', '-f', '/scan/01-ioncube.ini'])
+        ->toContain(['rm', '-f', '/ext/ioncube_loader_lin_8.3.so'])
+        ->and($commands->search(['rm', '-f', '/ext/ioncube_loader_lin_8.3.so']))->toBeGreaterThan($purge);
+});
+
+it('leaves ionCube alone when the purge failed', function () {
+    config(['server.apt.lock_attempts' => 2, 'server.apt.lock_delay_ms' => 0]);
+    $ionCube = Mockery::mock(IonCubeLoader::class);
+    $ionCube->shouldReceive('panelFiles')->andReturn(['/ext/ioncube_loader_lin_8.3.so']);
+    app()->instance(IonCubeLoader::class, $ionCube);
+
+    $runs = fakePhp(default: '8.4', ok: false);
+
+    expect(fn () => app(PhpRuntime::class)->uninstall('8.3'))->toThrow(SettingOperationException::class);
+    expect(collect($runs)->pluck('command'))->not->toContain(['rm', '-f', '/ext/ioncube_loader_lin_8.3.so']);
 });
 
 it('does not clear the directory when the purge failed', function () {

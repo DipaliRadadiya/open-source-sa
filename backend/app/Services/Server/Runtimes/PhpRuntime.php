@@ -7,6 +7,8 @@ use App\Contracts\Runtime;
 use App\Exceptions\Server\Runtime\RuntimeInstallException;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Runtime\InstallFailureClassifier;
+use App\Services\Server\ManagedFile;
+use App\Services\Server\Php\IonCubeLoader;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -36,6 +38,8 @@ class PhpRuntime implements Runtime
         private PhpVersionManager $versions,
         private PhpStack $stack,
         private InstallFailureClassifier $classifier,
+        private IonCubeLoader $ionCube,
+        private ManagedFile $files,
     ) {}
 
     public function key(): string
@@ -490,6 +494,10 @@ class PhpRuntime implements Runtime
      */
     public function uninstall(string $version, ?callable $onOutput = null): void
     {
+        // Asked before the purge, while this version's PHP can still say where
+        // its loader lives. Deleted only after the purge succeeds.
+        $ionCube = $this->ionCube->panelFiles($version);
+
         $this->must($this->serverOps->apt(
             ['apt-get', 'purge', '-y', $this->stack->packagePrefix($version).'*'],
             ['feature' => 'runtime', 'op' => 'php_uninstall', 'version' => $version],
@@ -516,6 +524,16 @@ class PhpRuntime implements Runtime
                 ['rm', '-rf', $residual],
                 ['feature' => 'runtime', 'op' => 'php_uninstall_residual', 'version' => $version],
             );
+        }
+
+        // The panel's ionCube loader and ini, which dpkg never owned and so
+        // outlive the purge. On OpenLiteSpeed the ini sits in the version's
+        // scan dir: left there, reinstalling this version would load ionCube
+        // again with nothing on screen saying so. An ionCube that came from
+        // LiteSpeed's package went with the purge (`lsphpNN-*`), and v7's
+        // php.ini line with the FPM version's directory.
+        foreach ($ionCube as $path) {
+            $this->files->delete($path, ['feature' => 'runtime', 'op' => 'php_uninstall_ioncube', 'version' => $version]);
         }
     }
 
