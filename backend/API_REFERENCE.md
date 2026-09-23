@@ -2701,7 +2701,7 @@ Both fields are required, must be strings, and are capped at 65,535 characters.
 {"testOk": true, "message": "Fail2ban configured successfully!"}
 ```
 
-**Response `500`** — test failed, nothing was saved or written to disk:
+**Response `422`** — test failed, nothing was saved or written to disk (was `500` until 2026-09-23; read `testOk`, as before):
 ```json
 {"testOk": false, "message": "Fail2ban configuration test failed.", "output": "ERROR: ..."}
 ```
@@ -2718,7 +2718,7 @@ Remove the jail file from `/etc/fail2ban/jail.d/`, reload the daemon, and clear 
 {"message": "Fail2ban disabled successfully!"}
 ```
 
-**Response `500`** — already disabled (no saved content):
+**Response `422`** — already disabled (no saved content; was `500` until 2026-09-23):
 ```json
 {"message": "Fail2ban is already disabled for this application."}
 ```

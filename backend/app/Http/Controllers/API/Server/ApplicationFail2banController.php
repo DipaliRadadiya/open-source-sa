@@ -107,12 +107,14 @@ class ApplicationFail2banController extends Controller
 
         $test = $manager->testConfigs($application, $jailContent, $filterContent);
 
+        // 422, not 500: the daemon refusing the user's config is a validation
+        // answer about their input, and the output names the line to fix.
         if (! $test['testOk']) {
             return response()->json([
                 'testOk' => false,
                 'message' => __('fail2ban.test_failed'),
                 'output' => $test['output'],
-            ], 500);
+            ], 422);
         }
 
         $application->fail2ban_jail_name = $manager->jailName($application);
@@ -135,7 +137,7 @@ class ApplicationFail2banController extends Controller
         if ($application->fail2ban_jail_content === null) {
             return response()->json([
                 'message' => __('fail2ban.already_disabled'),
-            ], 500);
+            ], 422);
         }
 
         $manager->disableForApp($application);

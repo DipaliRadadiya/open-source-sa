@@ -280,12 +280,13 @@ it('refuses to save when fail2ban-client -t reports a bad configuration', functi
             'jail_config_content' => '[broken',
             'filter_config_content' => '[broken',
         ])
-        ->assertStatus(500)
+        // A refused config is the user's to fix — 422, not a server error.
+        ->assertStatus(422)
         ->assertJsonPath('testOk', false)
         ->assertJsonStructure(['testOk', 'message', 'output']);
 
     // Nothing was persisted: the controller must not save what it could not
-    // validate, otherwise a 500 leaves the database ahead of the daemon.
+    // validate, otherwise a refusal leaves the database ahead of the daemon.
     expect($this->application->fresh()->fail2ban_jail_content)->toBeNull();
 });
 
@@ -322,7 +323,7 @@ it('reports already disabled when DELETE is called on a never-configured app', f
 
     $this->withHeaders(appFail2banHeaders())
         ->deleteJson(appFail2banUrl())
-        ->assertStatus(500)
+        ->assertStatus(422)
         ->assertJsonPath('message', 'Fail2ban is already disabled for this application.');
 });
 
