@@ -15,10 +15,10 @@ import { doctorSchema } from "@/lib/schemas/doctor";
  * Four different problems with four different fixes, collapsed into one word.
  */
 export const getDoctor = cache(async function getDoctor() {
-  const { data, failed, status, failure } = await read(
+  const { data, failed, status, failure, message, debug } = await read(
     "/admin/doctor",
     z.object({ doctor: doctorSchema }),
   );
 
-  return { doctor: data?.doctor ?? null, failed, status, failure };
+  return { doctor: data?.doctor ?? null, failed, status, failure, message, debug };
 });

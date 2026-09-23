@@ -58,7 +58,7 @@ function ConnectionAnnouncement({ failed }) {
   );
 }
 
-function LiveStatus({ failed, updatedAt, timeZone }) {
+function LiveStatus({ failed, reason, updatedAt, timeZone }) {
   const t = useTranslations("serverDashboard");
   const format = useFormatter();
   // timeZoneName here only — the axes stay uncluttered, but the "Updated" label
@@ -97,6 +97,13 @@ function LiveStatus({ failed, updatedAt, timeZone }) {
       {failed && updatedAt ? (
         <span className="text-xs text-muted-foreground">{t("staleHint")}</span>
       ) : null}
+      {/* The server's own sentence, beside the category rather than behind a
+          hover. "Live metrics unavailable" says a thing failed; "Metrics
+          collector is not running." says what to go and fix. The row already
+          wraps, so a long one drops to its own line instead of crowding. */}
+      {failed && reason ? (
+        <span className="text-xs text-destructive">{reason}</span>
+      ) : null}
     </div>
   );
 }
@@ -125,7 +132,7 @@ function SectionHeading({ icon: Icon, title, children }) {
 
 export function LiveMetricsSection({ timeZone, history = [] }) {
   const t = useTranslations("serverDashboard");
-  const { metrics, series, failed, updatedAt, ratesReady } = useLiveMetrics();
+  const { metrics, series, failed, reason, updatedAt, ratesReady } = useLiveMetrics();
   // Everything on screen is last-known, not current — the charts have to say
   // so as loudly as the stat cards do.
   const stale = failed && Boolean(metrics);
@@ -145,7 +152,7 @@ export function LiveMetricsSection({ timeZone, history = [] }) {
             this section's status, and as a floating row it belonged to nothing
             in particular. */}
         <SectionHeading icon={Radio} title={t("liveLabel")}>
-          <LiveStatus failed={failed} updatedAt={updatedAt} timeZone={timeZone} />
+          <LiveStatus failed={failed} reason={reason} updatedAt={updatedAt} timeZone={timeZone} />
         </SectionHeading>
         <StatCards metrics={metrics} stale={stale} ratesReady={ratesReady} />
         <div className="grid gap-4 lg:grid-cols-2">

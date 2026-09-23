@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations, getFormatter } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -21,6 +20,7 @@ import { DatabasesTable } from "@/components/databases/databases-table";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -41,19 +41,19 @@ export default async function DatabasesPage({ searchParams }) {
     getFormatter(),
     getEngines(),
   ]);
-  const { engines, failed, status, failure } = live;
+  const { engines, failed, status, failure, message } = live;
 
-  if (!can(permissions, "database", "view")) redirect("/dashboard");
+  if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
 
-  if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
+  if (failed) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   // Only a REACHABLE engine can hold databases. An install that is queued or
   // failed has none, so asking for a list would spend a request to render a
   // table that then invites you to create a database nothing could store.
   const usable = engines.some((engine) => engine.running);
 
-  const [{ databases, meta: dbMeta, failed: dbFailed, status: dbStatus, failure: dbFailure }, untracked, connections, exportList, phpmyadmin, appList, dbCounts, unlinkedCount, catalogue] = await Promise.all([
+  const [{ databases, meta: dbMeta, failed: dbFailed, status: dbStatus, failure: dbFailure, message: dbMessage }, untracked, connections, exportList, phpmyadmin, appList, dbCounts, unlinkedCount, catalogue] = await Promise.all([
     usable ? getDatabases(query) : Promise.resolve({ databases: [], failed: false }),
     usable && canManage ? getUntracked(engines) : Promise.resolve([]),
     // Needed most when nothing is reachable — that is when someone has to look
@@ -77,7 +77,7 @@ export default async function DatabasesPage({ searchParams }) {
       : Promise.resolve({ siteTypes: [] }),
   ]);
 
-  if (dbFailed) return <LoadFailed description={t("loadFailed")} status={dbStatus} failure={dbFailure} />;
+  if (dbFailed) return <LoadFailed description={t("loadFailed")} status={dbStatus} failure={dbFailure} message={dbMessage} />;
 
   // The newest dump per database that you could actually restore from:
   // finished, and its file still on disk. A completed export whose file was

@@ -5,6 +5,7 @@ import { LiveChartCard } from "@/components/dashboard/live-chart-card";
 import { EChart, useChartTokens } from "@/components/ui/echart";
 import {
   axisMax,
+  niceCeiling,
   seriesDataTable,
   timeSeriesOption,
 } from "@/lib/charts/time-series-option";
@@ -61,7 +62,9 @@ export function ServerLoadChart({ history = [], metrics, timeZone }) {
     // lines hugging the floor under a high ceiling is the message.
     axes: [
       {
-        max: axisMax(history, ["load_5", "load_15"], { floor: cores * 1.05 }),
+        // Rounded, because a forced ceiling gets a label of its own: the raw
+        // `cores * 1.05` printed "4.2" hard against the "4" tick below it.
+        max: axisMax(history, ["load_5", "load_15"], { floor: niceCeiling(cores * 1.05) }),
         formatter: decimal,
       },
     ],

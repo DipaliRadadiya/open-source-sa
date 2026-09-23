@@ -8,7 +8,8 @@ return [
     'jail_not_active' => 'La prison :jail n\'est pas active.',
     'not_banned' => 'Cette adresse IP n\'est pas actuellement bannie.',
     'lockout_risk' => 'Activer la prison SSH peut vous bloquer l\'accès à ce serveur. Ajoutez votre adresse IP à la liste d\'exclusion ou confirmez que vous acceptez le risque.',
-    'ip_ignored' => 'Cette adresse IP figure sur la liste d\'exclusion ; le bannissement ne tiendrait pas.',
+    'ip_ignored' => 'Cette adresse IP figure sur votre liste d\'exclusion. Retirez-l\'en d\'abord si vous voulez vraiment la bannir.',
+    'ip_own_address' => 'Il s\'agit de l\'adresse propre de ce serveur. La bloquer peut couper le panneau de sa base de données et le rendre inaccessible ; c\'est donc refusé.',
     'operation_failed' => 'L\'opération fail2ban a échoué.',
     'bantime_too_short' => 'La durée de bannissement doit être d\'au moins 60 secondes, ou -1 pour un bannissement permanent.',
 ];

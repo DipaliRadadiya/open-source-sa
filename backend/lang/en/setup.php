@@ -29,6 +29,10 @@ return [
             'title' => 'fail2ban',
             'description' => 'Blocks repeated failed logins against SSH and your sites.',
         ],
+        'build_tools' => [
+            'title' => 'Build tools',
+            'description' => 'Lets the server compile app components that don\'t ship ready-built. Some Node apps need this to install.',
+        ],
     ],
 
 ];

@@ -236,7 +236,15 @@ export function RequiredServicesPanel({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{service.name}</span>
-                <span className="block truncate text-xs text-muted-foreground">
+                {/* Wraps, not truncates.
+                
+                    `truncate` was fine while every line here was "PrestaShop
+                    needs PHP 7.2 – 8.1". The end-of-life sentence is longer
+                    and its second half is the part that matters — it cut off
+                    at "That line is no longer supported, but it is t…", which
+                    leaves a warning with no resolution. A row that is one
+                    pixel taller is cheaper than a half-read one. */}
+                <span className="block text-xs text-pretty text-muted-foreground">
                   {service.state === "failed" && service.error
                     ? service.error
                     : /*
@@ -250,7 +258,19 @@ export function RequiredServicesPanel({
                        * good enough.
                        */
                       service.requirement
-                      ? t(`needs.${service.kind}`, { app: typeTitle, requirement: service.requirement })
+                      ? t(
+                          /*
+                           * A separate sentence when the only version this
+                           * type can run on is one the language no longer
+                           * patches. PrestaShop's whole window (7.2 – 8.1) is
+                           * end-of-life; "this is what we will install" on its
+                           * own hands someone an unsupported PHP without
+                           * mentioning it, and the lifecycle was in the same
+                           * payload all along.
+                           */
+                          service.eol ? `needsEol.${service.kind}` : `needs.${service.kind}`,
+                          { app: typeTitle, requirement: service.requirement },
+                        )
                       : t(`purpose.${service.kind}`, { app: typeTitle })}
                 </span>
               </span>

@@ -41,6 +41,7 @@ export function TrashPanel({
   failed,
   status = null,
   failure = null,
+  message = null,
   canManage,
   backHref,
 }) {
@@ -149,7 +150,7 @@ export function TrashPanel({
       <CardContent>
 
       {failed ? (
-        <LoadFailed description={t("loadFailed")} status={status} failure={failure} />
+        <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : trash.length === 0 ? (
         // An empty trash is a normal answer, not a problem to solve — so this
         // says what the feature does rather than offering an action.

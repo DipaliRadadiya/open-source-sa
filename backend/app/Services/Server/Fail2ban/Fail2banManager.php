@@ -6,16 +6,26 @@ use App\Exceptions\Server\Fail2ban\Fail2banException;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Support\SshPort;
+use Symfony\Component\HttpFoundation\IpUtils;
 
 /**
  * fail2ban: watches logs for repeated failures and bans the source IP.
  *
  * No DB. Live state (which jails run, who is banned) comes from
- * `fail2ban-client`, and the settings we manage live in a drop-in under
- * `jail.d/` — never in `jail.local`, which a server migrated from another
- * panel is likely to already own. Ours is one file among several; the
- * effective configuration is whatever fail2ban makes of all of them, which is
- * why live state is read back rather than assumed.
+ * `fail2ban-client`, and the settings we manage live in `jail.local`
+ * ({@see dropInPath()}) — which fail2ban loads *after* `jail.d/*.conf`, so the
+ * panel's values win over the distribution's. That is load-bearing: Ubuntu
+ * ships `jail.d/defaults-debian.conf` with `[sshd] enabled = true`, and
+ * without the later file, installing fail2ban through the panel would start
+ * banning SSH immediately — which the panel deliberately does not do.
+ *
+ * `jail.local` is also a file an administrator may have written by hand, and
+ * this class replaces it wholesale, hence {@see MANAGED_HEADER}: before
+ * overwriting, it checks whose file it is.
+ *
+ * Ours is one file among several; the effective configuration is whatever
+ * fail2ban makes of all of them, which is why live state is read back rather
+ * than assumed.
  *
  * The recurring hazard is that this feature's entire job is locking people
  * out, and it cannot tell an attacker from an administrator having a bad
@@ -240,6 +250,38 @@ class Fail2banManager
     }
 
     /**
+     * Is this the machine's own address — one the panel never lets you ban?
+     *
+     * 🔴 A ban on loopback holds. That is the whole reason this exists, and it
+     * was measured rather than assumed: an address sitting in fail2ban's own
+     * `ignoreip` was banned by hand, survived `fail2ban-client reload`, and
+     * stayed in the nftables set. `ignoreip` governs *detection*; a manual ban
+     * is carried out regardless.
+     *
+     * What that costs depends on the jail, and the worst case is not the SSH
+     * one. `sshd` bans `tcp dport 22`, so loopback SSH breaks and little else.
+     * `recidive` uses `banaction_allports` — `meta l4proto tcp ... reject`,
+     * every port — so banning 127.0.0.1 there rejects all TCP from the server
+     * to itself: MariaDB on 127.0.0.1:3306, Redis, the panel's own loopback.
+     * The panel goes down, and it cannot unban itself, because unbanning runs
+     * through the API that just became unreachable. Recovery is SSH only.
+     *
+     * Matched with `IpUtils` rather than string equality: {@see ALWAYS_IGNORED}
+     * holds `127.0.0.1/8`, and the address that was actually banned was
+     * `127.0.0.1`. An exact comparison can never match those two, which is
+     * precisely how the hole existed — the CIDR handling *is* the fix, not a
+     * refinement of it.
+     *
+     * Deliberately not applied to the user's own ignore entries. Since bans do
+     * hold, blocking one host inside a range you generally trust is a coherent
+     * thing to want, and taking that away would fix nothing anyone reported.
+     */
+    public function isOwnAddress(string $ip): bool
+    {
+        return IpUtils::checkIp($ip, self::ALWAYS_IGNORED);
+    }
+
+    /**
      * Rewrite the drop-in and reload.
      *
      * @param  array<string, mixed>  $settings
@@ -255,10 +297,13 @@ class Fail2banManager
             ."bantime = {$settings['bantime']}\n"
             ."findtime = {$settings['findtime']}\n"
             ."maxretry = {$settings['maxretry']}\n"
-            ."ignoreip = {$ignore}\n"
-            // systemd's journal is the reliable source on a modern Ubuntu;
-            // /var/log/auth.log is not guaranteed to exist or be written to.
-            ."backend = systemd\n";
+            // No `backend` here, deliberately. `[DEFAULT]` applies to every
+            // jail, and the systemd backend makes fail2ban ignore `logpath`
+            // and read the journal instead — so a `backend = systemd` here
+            // silently disabled every file-watching jail this panel writes.
+            // It is set on the `sshd` jail instead, where it is wanted; see
+            // `server.fail2ban.jails` for the full reasoning.
+            ."ignoreip = {$ignore}\n";
 
         foreach ((array) config('server.fail2ban.jails', []) as $jail) {
             $body .= "\n[{$jail['name']}]\n"
@@ -448,6 +493,62 @@ class Fail2banManager
     /**
      * @return array<int, string>
      */
+    /**
+     * Which jails the *file* has enabled — not which ones are running.
+     *
+     * {@see activeJails()} asks the daemon, and answers `[]` when it is not
+     * running. That is the right answer for a status screen and a dangerous
+     * one for anything that rewrites the file: a resync run while fail2ban
+     * happened to be down would persist "nothing is enabled" and switch off
+     * the operator's SSH protection. The file is what `write()` is about to
+     * replace, so the file is what it reads.
+     *
+     * Returns an empty array when the panel does not own the file, which the
+     * caller must treat as "do not write" rather than "disable everything" —
+     * there is no panel configuration to preserve.
+     *
+     * @return array<string, bool> jail name => enabled
+     */
+    public function configuredJails(): array
+    {
+        try {
+            $contents = $this->currentDropIn($this->dropInPath());
+        } catch (Fail2banException) {
+            // `currentDropIn()` refuses a file the panel did not write, which
+            // is right for the save path — there, somebody is asking to
+            // replace it and deserves to be told no. Here the answer is just
+            // "there is no panel configuration to read", and this runs
+            // unattended from a deploy where an exception is an aborted
+            // update rather than something anyone can act on.
+            return [];
+        }
+
+        if ($contents === null) {
+            return [];
+        }
+
+        $enabled = [];
+        $section = null;
+
+        foreach (preg_split('/\r?\n/', $contents) ?: [] as $line) {
+            if (preg_match('/^\s*\[([^\]]+)\]/', $line, $matches) === 1) {
+                $section = trim($matches[1]);
+
+                continue;
+            }
+
+            if ($section === null || $section === 'DEFAULT') {
+                continue;
+            }
+
+            if (preg_match('/^\s*enabled\s*=\s*(\S+)/i', $line, $matches) === 1) {
+                $enabled[$section] = filter_var($matches[1], FILTER_VALIDATE_BOOL);
+            }
+        }
+
+        return $enabled;
+    }
+
     public function activeJails(): array
     {
         if (! $this->running()) {

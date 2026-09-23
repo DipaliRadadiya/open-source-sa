@@ -4,6 +4,8 @@ namespace App\Services\Server\Applications;
 
 use App\Models\Application;
 use App\Services\Server\ServerOps;
+use App\Services\Server\WebServers\WebServerManager;
+use Throwable;
 
 /**
  * The one directory every log for a site lands in: `{appRoot}/logs`.
@@ -41,7 +43,10 @@ use App\Services\Server\ServerOps;
  */
 class ApplicationLogDirectory
 {
-    public function __construct(private ServerOps $serverOps) {}
+    public function __construct(
+        private ServerOps $serverOps,
+        private WebServerManager $webServers,
+    ) {}
 
     /**
      * Ensure the directory exists with the right owner, group and mode.
@@ -50,8 +55,13 @@ class ApplicationLogDirectory
      * only on creation: a server that provisioned sites before this existed
      * has a user-owned `logs/`, and it repairs itself on the next provision or
      * `sites:resync` without anyone running anything by hand.
+     *
+     * Returns whether anything was actually granted, which the caller needs in
+     * order to know whether the web server has to be restarted — see
+     * {@see admitLogWriter()}. False is the normal answer: on nginx and Apache
+     * always, and on OpenLiteSpeed every run after the first.
      */
-    public function ensure(Application $application): void
+    public function ensure(Application $application): bool
     {
         $directory = $application->logsPath();
         $group = $application->systemUser->username;
@@ -73,5 +83,81 @@ class ApplicationLogDirectory
                 timeout: 15,
             );
         }
+
+        return $this->admitLogWriter($application, $group);
+    }
+
+    /**
+     * Let the web server's own account into the group, when it is the thing
+     * that opens the log files.
+     *
+     * Null for nginx and Apache, whose root master process opens the log and
+     * hands the descriptor down — so on those stacks this grants nothing and
+     * the directory stays exactly as it was. Only OpenLiteSpeed answers, and
+     * only because its workers run as `nobody` and open the vhost's logs
+     * themselves.
+     *
+     * Group membership rather than `chmod o+x`, which was the cheaper fix and
+     * the wrong one: traversal for "other" lets *every* local account read
+     * every site's access log — IPs, URLs, whatever is in a query string — on
+     * a panel whose whole point is that sites are separate tenants. This
+     * admits one named account and leaves the mode alone, so the site user
+     * still cannot unlink what a privileged process is appending to.
+     *
+     * 🔴 The ordering is the correctness of this, not a detail. Supplementary
+     * groups are read when a process starts, so a membership added after the
+     * web server has started does nothing at all until it restarts. This runs
+     * from `ensureDirectories()`, inside `apply()`, before the restart that
+     * publishes the vhost — measured on a live box: the grant alone left
+     * access.log at zero bytes, and `lswsctrl restart` made the next request
+     * appear in it.
+     *
+     * Best-effort like every other step here. A server running a web server
+     * the panel cannot configure has no driver to ask, and that must not stop
+     * a log directory being created.
+     *
+     * Returns true only when the membership was actually added. That is what
+     * makes the restart decidable: `sites:resync` reloads the web server when
+     * a site's config text changed, and this grant changes no text at all — so
+     * on a server whose sites were all already current, the grant landed and
+     * sat inert until something else happened to restart the web server.
+     * Measured on a live box: `1 already current, 0 updated`, no reload, and
+     * the site went on logging nothing.
+     *
+     * Asking first, rather than granting unconditionally and reporting true,
+     * is the whole point. `gpasswd -a` succeeds just as happily on an account
+     * that is already a member, so an unconditional grant can only answer "I
+     * ran something", and a resync that restarts the web server on every run
+     * would be a worse bug than the one this fixes.
+     */
+    private function admitLogWriter(Application $application, string $group): bool
+    {
+        try {
+            $user = $this->webServers->driver()->logWriterUser();
+        } catch (Throwable) {
+            return false;
+        }
+
+        if ($user === null || $user === $group) {
+            return false;
+        }
+
+        $context = [
+            'feature' => 'application',
+            'op' => 'log_dir_writer',
+            'application' => $application->id,
+            'user' => $user,
+        ];
+
+        // `id -nG` lists the account's groups by name. An unreadable answer is
+        // treated as "not a member", which costs one redundant `gpasswd` and a
+        // restart; the opposite default would skip a grant the site needs.
+        $groups = $this->serverOps->run(['id', '-nG', $user], $context, timeout: 15);
+
+        if ($groups->ok && in_array($group, preg_split('/\s+/', trim($groups->output())) ?: [], true)) {
+            return false;
+        }
+
+        return $this->serverOps->run(['gpasswd', '-a', $user, $group], $context, timeout: 15)->ok;
     }
 }

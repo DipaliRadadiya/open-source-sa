@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Square, TriangleAlert } from "lucide-react";
+import { CircleStop, TriangleAlert } from "lucide-react";
 import { killProcess } from "@/lib/api/server-metrics";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -107,7 +107,11 @@ export function KillProcessButton({ process, canManage }) {
               }}
               aria-label={t("kill.action")}
             >
-              <Square className="size-4" />
+              {/* A circle around the square. A bare outlined square at 16px is
+                  the same glyph as an unticked checkbox, and in destructive red
+                  on a table row it read as a rendering fault rather than a
+                  control. */}
+              <CircleStop className="size-4" />
             </Button>
           </span>
         </TooltipTrigger>

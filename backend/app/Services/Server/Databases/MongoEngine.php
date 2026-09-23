@@ -154,6 +154,23 @@ class MongoEngine implements DatabaseEngine
         return $result->ok ? (int) trim($result->output()) : 0;
     }
 
+    /**
+     * Nothing to describe: MongoDB has no database-level character set or
+     * collation. Encoding is UTF-8 by definition of BSON, and a collation is a
+     * property of an index or a query, not of a database.
+     *
+     * Null rather than inventing "UTF8" to fill the column — the field means
+     * "what this database was created with", and for Mongo that question has
+     * no answer. `createDatabase()` above ignores both arguments for the same
+     * reason.
+     *
+     * @return array{charset: ?string, collation: ?string}
+     */
+    public function describeDatabase(string $name): array
+    {
+        return ['charset' => null, 'collation' => null];
+    }
+
     public function createUser(string $username, string $host, string $password, string $database): void
     {
         $this->must(

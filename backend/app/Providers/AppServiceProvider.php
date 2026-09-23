@@ -13,6 +13,7 @@ use App\Services\Server\Backups\Storage\GoogleOauthTokens;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Firewall\UfwFirewall;
 use App\Services\Server\Php\PhpStackManager;
+use App\Services\Server\Setup\Components\BuildToolsComponent;
 use App\Services\Server\Setup\Components\DatabaseComponent;
 use App\Services\Server\Setup\Components\Fail2banComponent;
 use App\Services\Server\Setup\Components\NodeComponent;
@@ -100,6 +101,9 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(DatabaseComponent::class),
                 $app->make(PhpComponent::class),
                 $app->make(NodeComponent::class),
+                // Directly after Node: it exists for npm, and a user who has
+                // just installed Node is exactly who needs it.
+                $app->make(BuildToolsComponent::class),
                 $app->make(RedisComponent::class),
                 $app->make(Fail2banComponent::class),
             ],

@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -132,5 +133,31 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response()->json(['message' => __('errors/http.method_not_allowed')], 405);
+        });
+
+        // A refusal that says nothing is a refusal the client has to guess at.
+        //
+        // `abort(403)` and a FormRequest `authorize()` returning false both
+        // produce an empty message, and there are 115 of the latter — so the
+        // panel received `{"message": ""}` for most refusals and had to write
+        // its own wording without knowing what had been refused.
+        //
+        // Only fills a message that is missing. CheckPermission names the
+        // permission it wanted, and several requests explain a specific
+        // refusal; overwriting either with a generic line would trade a good
+        // sentence for a safe one.
+        //
+        // Typed on HttpException and filtered by status, not on
+        // AccessDeniedHttpException: `abort(403)` throws a plain HttpException,
+        // so a callback on the narrower class reads correctly and never fires.
+        // It was written that way first, and the test that caught it is the one
+        // that drives a real route — the version asserting on the translation
+        // file passed against a hook that did nothing.
+        $exceptions->render(function (HttpException $e, Request $request): ?JsonResponse {
+            if ($e->getStatusCode() !== 403 || ! $request->is('api/*') || trim($e->getMessage()) !== '') {
+                return null;
+            }
+
+            return response()->json(['message' => __('errors/http.forbidden')], 403);
         });
     })->create();

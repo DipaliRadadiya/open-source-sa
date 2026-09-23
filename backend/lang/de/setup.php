@@ -29,6 +29,10 @@ return [
             'title' => 'fail2ban',
             'description' => 'Blockiert wiederholte fehlgeschlagene Anmeldungen an SSH und Ihren Websites.',
         ],
+        'build_tools' => [
+            'title' => 'Build-Tools',
+            'description' => 'Ermöglicht dem Server, App-Komponenten zu kompilieren, die nicht vorgebaut ausgeliefert werden. Manche Node-Apps benötigen dies zur Installation.',
+        ],
     ],
 
 ];

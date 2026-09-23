@@ -9,6 +9,7 @@ return [
     ],
     'steps' => [
         'record_firewall_defaults' => 'Registrando las reglas por defecto del firewall',
+        'resync_fail2ban' => 'Resincronizando la configuración de fail2ban',
         'refresh_npm_catalogue' => 'Actualizando el catálogo de npm',
         'refresh_lifecycle_catalogue' => 'Actualizando el catálogo de ciclo de vida de los runtimes',
         'preflight_git' => 'Comprobando el repositorio del panel',
@@ -44,6 +45,7 @@ return [
         'prune' => 'No se pudieron eliminar las versiones antiguas.',
         'sync_privileges' => 'No se pudieron actualizar los privilegios del panel.',
         'record_firewall_defaults' => 'No se pudieron registrar las reglas por defecto del firewall.',
+        'resync_fail2ban' => 'No se pudo resincronizar la configuración de fail2ban.',
         'refresh_npm_catalogue' => 'No se pudo actualizar el catálogo de npm.',
         'refresh_lifecycle_catalogue' => 'No se pudo actualizar el catálogo de ciclo de vida de los runtimes.',
         'launch' => 'No se pudo iniciar la actualización.',

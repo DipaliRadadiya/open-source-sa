@@ -22,7 +22,16 @@ export default async function SetupLayout({ children }) {
   if (!user) redirect(await signedOutPath());
 
   const permissions = await getPermissions();
-  if (!can(permissions, "setting", "view")) redirect("/dashboard");
+  /*
+   * Home, not /dashboard.
+   *
+   * The other 34 gates now refuse in place and name the screen that was
+   * refused. These two cannot: a layout IS the shell, so there is no shell
+   * left to render the refusal inside. A redirect is right here — it just has
+   * to go somewhere the caller can actually open, which /dashboard is not for
+   * every role. `app/page.js` picks that from their own permissions.
+   */
+  if (!can(permissions, "setting", "view")) redirect("/");
 
   return (
     <TooltipProvider delayDuration={300}>

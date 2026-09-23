@@ -49,7 +49,6 @@
     "unsavedDescription": "Vos modifications sur cette page n'ont pas été enregistrées. Elles seront perdues.",
     "unsavedStay": "Rester sur cette page",
     "unsavedLeave": "Quitter et perdre les modifications",
-    "sortBy": "Trier par cette colonne",
     "navTitles": {
       "app_firewall": "Pare-feu web"
     },
@@ -57,7 +56,17 @@
       "stopped": "Le panneau a arrêté de vérifier les mises à jour sur cette page.",
       "checkAgain": "Vérifier à nouveau"
     },
-    "whatIsThis": "Qu’est-ce que c’est ?"
+    "whatIsThis": "Qu’est-ce que c’est ?",
+    "theme": {
+      "label": "Changer de thème",
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
+    },
+    "permissionDenied": {
+      "title": "Vous n'avez pas accès à {feature}",
+      "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur."
+    }
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -671,7 +680,9 @@
     "required_name": "Le nom est obligatoire",
     "domainRequired": "Saisissez un nom de domaine",
     "hostnameInvalid": "Saisissez un nom d'hôte valide (par ex. exemple.com)",
+    "hostnameTooLong": "Un nom de domaine ne peut pas dépasser 253 caractères.",
     "redirectTargetRequired": "Indiquez la cible de redirection de ce domaine",
+    "redirectTargetUrl": "Saisissez une adresse complète commençant par http:// ou https://",
     "required_username": "Saisissez un nom d'utilisateur.",
     "required_password": "Saisissez un mot de passe.",
     "required_currentPassword": "Le mot de passe actuel est obligatoire",
@@ -841,10 +852,6 @@
     "ofCores": "sur {count} cœurs",
     "breakdown": "{used} utilisé · {free} libre · {total} total",
     "loadFailed": "Impossible de charger ces données. Essayez de rafraîchir la page.",
-    "noPermission": {
-      "title": "Vous n'avez pas accès au tableau de bord",
-      "description": "Votre rôle n'inclut pas la permission de voir les métriques du serveur. Demandez à un administrateur d'accorder l'accès au tableau de bord."
-    },
     "staleHint": "Affichage des dernières valeurs reçues.",
     "kill": {
       "action": "Arrêter ce processus",
@@ -882,6 +889,16 @@
         "chip": "{site} n’a pas fini son installation",
         "detail": "L'installation de cette application s'est arrêtée en cours de route, elle n'est donc pas encore servie.",
         "action": "Voir l’échec"
+      },
+      "deployFailed": {
+        "chip": "Le dernier déploiement de {site} a échoué",
+        "detail": "L'application sert toujours sa version précédente, et le prochain envoi échouera de la même façon tant que ce n'est pas corrigé.",
+        "action": "Voir le journal de déploiement"
+      },
+      "processDown": {
+        "chip": "{site} ne fonctionne plus",
+        "detail": "Son processus ne tourne pas, donc les visiteurs obtiennent une erreur même si l'application n'est pas en pause.",
+        "action": "Vérifier le processus"
       },
       "git": {
         "chip": "{site} a perdu son compte Git",
@@ -3195,7 +3212,6 @@
       "title": "Votre serveur est prêt pour sa première application",
       "description": "Créez une application ou un service via un parcours guidé. {brand} le provisionnera, puis affichera son état en direct ici.",
       "filteredTitle": "Aucune application correspondante",
-      "clearSearch": "Effacer la recherche",
       "guideTitle": "De l'idée à l'application en cours d'exécution",
       "steps": {
         "choose": {
@@ -3406,11 +3422,13 @@
       "removeFiles": "Supprimer aussi les fichiers et sauvegardes de l'application",
       "removeFilesOn": "Le répertoire de l'application, ainsi que toutes ses sauvegardes — y compris les archives dans votre stockage — sont supprimés.",
       "removeFilesOff": "Les fichiers restent sur le serveur. Les sauvegardes de l'application quittent le panneau avec elle, mais leurs archives restent dans votre stockage — supprimez-les là-bas si vous n'en voulez plus.",
+      "systemUserStays": "L'utilisateur système {username} n'est pas supprimé. Si aucune autre application ne l'utilise, vous pouvez le supprimer dans Utilisateurs système.",
       "confirmLabel": "Tapez <code>{domain}</code> pour confirmer",
       "submit": "Supprimer l'application",
       "deleting": "Suppression…",
       "done": "{name} a été supprimé.",
       "failed": "Nous n'avons pas pu supprimer cette application.",
+      "alreadyGone": "{name} avait déjà été supprimée.",
       "cancel": "Annuler",
       "copyDomain": "Copier le domaine",
       "removeDatabases": "{count, plural, one {Supprimer aussi la base de données de cette application} other {Supprimer aussi les # bases de données de cette application}}",
@@ -3452,9 +3470,6 @@
       "loadFailed": "Nous n'avons pas pu charger les domaines de cette application.",
       "pageTitle": "Domaines & SSL",
       "pageSubtitle": "Gérez les noms auxquels cette application répond et son certificat HTTPS.",
-      "provisioning": "Les domaines et le SSL seront disponibles une fois le provisionnement de l'application terminé.",
-      "sectionTitle": "Domaines",
-      "sectionSubtitle": "Tous les noms auxquels cette application répond.",
       "tabs": {
         "domains": "Domaines",
         "ssl": "SSL",
@@ -3462,9 +3477,17 @@
         "notSecured": "Non sécurisé",
         "sslUnknown": "État du certificat inconnu"
       },
+      "provisioning": "Les domaines et le SSL seront disponibles une fois le provisionnement de l'application terminé.",
+      "sectionTitle": "Domaines",
+      "sectionSubtitle": "Tous les noms auxquels cette application répond.",
       "emptyTitle": "Aucun domaine pour l'instant",
       "emptyBody": "Ajoutez un domaine pour le pointer vers cette application. Vous pouvez ajouter d'autres noms et alias à tout moment.",
       "testDomain": "Domaine de test",
+      "sslRow": {
+        "secured": "Sécurisé",
+        "notCovered": "Absent du certificat",
+        "none": "Aucun certificat SSL"
+      },
       "rowActions": "Actions",
       "makePrimary": "Définir comme principal",
       "remove": "Retirer",
@@ -3521,11 +3544,13 @@
         "afterLabel": "Après",
         "keepsServing": "{domain} reste attaché en tant qu'alias et continue de servir cette application.",
         "renamesFiles": "Les fichiers de configuration et de logs de l'application sont renommés.",
-        "cmsWarning": "WordPress a encore l'ancienne adresse enregistrée, donc les visiteurs peuvent être redirigés tant que vous ne la modifiez pas dans l'application."
+        "cmsWarning": "WordPress a encore l'ancienne adresse enregistrée, donc les visiteurs peuvent être redirigés tant que vous ne la modifiez pas dans l'application.",
+        "notOnCertificate": "Le certificat SSL ne couvre pas {domain}. Les visiteurs dirigés vers la nouvelle adresse verront un avertissement de sécurité jusqu’à ce que vous le réémettiez."
       },
       "removeConfirm": {
         "title": "Retirer {domain} ?",
-        "body": "L'application ne répondra plus sur ce nom. Ceci est irréversible."
+        "body": "L'application ne répondra plus sur ce nom. Ceci est irréversible.",
+        "onCertificate": "Le certificat SSL couvre ce nom. Tant que vous ne l’aurez pas réémis, il cessera de se renouveler automatiquement — y compris pour tous les autres noms qu’il porte."
       },
       "toast": {
         "added": "Domaine ajouté.",
@@ -3537,7 +3562,9 @@
         "promoted": "{domain} est désormais le domaine principal.",
         "promoteFailed": "Impossible de modifier le domaine principal.",
         "removed": "{domain} retiré.",
-        "removeFailed": "Impossible de retirer le domaine."
+        "removeFailed": "Impossible de retirer le domaine.",
+        "removedAlready": "{domain} avait déjà été supprimé.",
+        "updated": "{domain} mis à jour."
       },
       "ssl": {
         "sectionTitle": "Certificat SSL",
@@ -3548,17 +3575,25 @@
         "enable": "Activer HTTPS",
         "issuing": "Émission du certificat…",
         "issuingBody": "Ceci implique un aller-retour vers Let's Encrypt et peut prendre une minute.",
+        "issuingStuck": "Toujours là après quelques minutes ? Supprimez-le et réessayez.",
         "failed": "Le certificat n'a pas pu être émis",
         "reference": "Référence : {reference}",
         "rateLimited": "Let's Encrypt a limité le débit pour ce domaine. Attendez environ une semaine avant de réessayer — réessayer maintenant ne servira à rien.",
         "reissue": "Réémettre",
         "remove": "Retirer le certificat",
+        "moreActions": "Options du certificat",
         "active": "HTTPS est actif",
+        "namesTitle": "Domaines de ce certificat",
+        "namesCount": "{secured} sur {total} sécurisés",
+        "nameMissing": "absent de ce certificat",
+        "nameStale": "plus rattaché à cette application",
+        "coverageGap": "Tant que tous les noms ne correspondent pas, ce certificat cessera de se renouveler automatiquement — y compris pour ceux qui vont bien. Réémettez-le pour les remettre en accord.",
         "expired": "Ce certificat a expiré.",
+        "expiredForcedHttps": "Tous les visiteurs sont redirigés vers HTTPS, et le certificat qu’ils trouvent a expiré — personne ne peut donc accéder à cette application. Désactivez la redirection pour repasser en HTTP simple le temps de régler le certificat.",
+        "turnOffForceHttps": "Désactiver la redirection HTTPS",
         "expiredTitle": "HTTPS ne fonctionne pas",
         "expiresRenew": "Renouvellement automatique · expire {when} ({days} jours)",
         "expiresManual": "Expire {when} ({days} jours) — ne se renouvellera pas automatiquement",
-        "missingDomains": "Ces noms ne sont pas encore sur le certificat : {domains}. Réémettez pour les couvrir.",
         "forceHttps": "Forcer HTTPS",
         "forceHttpsHint": "Rediriger chaque visiteur de HTTP vers HTTPS.",
         "forceHttpsEnabled": "Les visiteurs sont désormais redirigés vers HTTPS.",
@@ -3603,8 +3638,9 @@
         "reloadWebServer": "Recharger {service}",
         "reloaded": "Le serveur web a été rechargé.",
         "reloadFailed": "Le serveur web n'a pas pu être rechargé.",
-        "staleDomains": "{domains} figure sur ce certificat mais n'appartient plus à cette application. Le renouvellement échoue pour l'ensemble du certificat tant qu'il n'est pas réémis.",
-        "uploadNeedsBoth": "Collez à la fois le certificat et sa clé privée."
+        "uploadNeedsBoth": "Collez à la fois le certificat et sa clé privée.",
+        "removed": "Le certificat a été supprimé. Cette application repasse en HTTP simple.",
+        "removedAlready": "Le certificat avait déjà été supprimé."
       },
       "issueCertificate": "Configurer le SSL",
       "description": "Noms qui atteignent cette application, et son certificat.",
@@ -3614,7 +3650,17 @@
         "alias": "Alias",
         "redirect": "Redirection"
       },
-      "openNamed": "Ouvrir {domain} dans un nouvel onglet"
+      "openNamed": "Ouvrir {domain} dans un nouvel onglet",
+      "edit": {
+        "action": "Modifier",
+        "title": "Modifier le domaine",
+        "subtitle": "Changez ce que fait ce nom. Le nom lui-même ne peut pas être modifié ici.",
+        "domain": "Domaine",
+        "domainLocked": "Pour utiliser un autre nom, supprimez celui-ci et ajoutez le nouveau. Un renommage laisserait l'ancien nom sur le certificat et empêcherait son renouvellement.",
+        "submit": "Enregistrer les modifications",
+        "submitting": "Enregistrement…",
+        "clearsTarget": "Passer en alias efface la cible de redirection ({target}). Un alias sert l'application elle-même."
+      }
     },
     "magicLogin": {
       "action": "Connexion directe",
@@ -4771,7 +4817,7 @@
         "jailHint": "Quand bannir — combien de tentatives, sur quelle durée, pour combien de temps.",
         "filterHint": "Ce qui compte comme mauvaise tentative — comparé à chaque ligne du journal."
       },
-      "placeholderNote": "{name}, {filter}, {logpath} et {slug} sont remplis à l'écriture des fichiers. Laissez-les tels quels.",
+      "placeholderNote": "Le nom du jail, le chemin du journal et le filtre sont renseignés à partir de cette application. Laissez la ligne filter telle quelle : elle doit correspondre au fichier Filtre, toujours nommé d'après cette application.",
       "placeholderLost": "{count, plural, one {{tokens} n'est plus dans le fichier — la valeur qu'il remplaçait ne sera pas insérée. C'est correct uniquement si vous l'avez remplacé volontairement.} other {{tokens} ne sont plus dans le fichier — les valeurs qu'ils remplaçaient ne seront pas insérées. C'est correct uniquement si vous les avez remplacés volontairement.}}",
       "unsavedHere": "Modifications non enregistrées dans ce fichier",
       "saveAction": "Enregistrer et recharger fail2ban",
@@ -4896,6 +4942,7 @@
     "size": {
       "notMeasured": "Non mesuré",
       "measuring": "Mesure…",
+      "measured": "Taille mesurée.",
       "measureFailed": "La taille n'a pas pu être mesurée.",
       "measureHint": "Mesurer cette application sur disque maintenant"
     },
@@ -4950,8 +4997,6 @@
       "setUpBackups": "Configurer les sauvegardes",
       "noCertificate": "SSL non configuré",
       "issueCertificate": "Configurer le SSL",
-      "reviewSecurity": "Vérifier la sécurité",
-      "protectionsOff": "{count, plural, one {# protection désactivée} other {# protections désactivées}}",
       "noDatabase": "Cette application n'a pas de base de données, ses sauvegardes n'en contiendront donc pas",
       "attachDatabase": "Associer une base de données",
       "issueAction": {
@@ -5096,6 +5141,10 @@
       "needs": {
         "node": "{app} a besoin de Node {requirement} — voici ce que nous allons installer",
         "php": "{app} a besoin de PHP {requirement} — voici ce que nous allons installer"
+      },
+      "needsEol": {
+        "node": "{app} nécessite Node {requirement}. Cette série n'est plus prise en charge, mais c'est la plus récente sur laquelle {app} fonctionne.",
+        "php": "{app} nécessite PHP {requirement}. Cette série n'est plus prise en charge, mais c'est la plus récente sur laquelle {app} fonctionne."
       }
     },
     "phpFact": "PHP {version}",
@@ -5106,6 +5155,12 @@
       "looksLike": "Ressemble à {type}",
       "looksLikeBecause": "Ressemble à {type} — {file} trouvé",
       "nothingFound": "Rien de reconnaissable trouvé lors de la dernière vérification",
+      "checkedFound": "La dernière vérification a trouvé {type}",
+      "checkedFoundFile": "La dernière vérification a trouvé {type} — {file} présent",
+      "detectedSuggestion": "Ressemble à {type}. Examinez le changement suggéré.",
+      "detected": "{type} trouvé dans le répertoire de cette application.",
+      "detectedFile": "{type} trouvé — {file} est présent.",
+      "detectedNothing": "Rien de reconnaissable trouvé dans le répertoire de cette application.",
       "confirmTitle": "Traiter cette application comme {type} ?",
       "confirmFound": "{file} est présent dans le répertoire de cette application.",
       "confirmNarrow": "Le panneau cessera de proposer les écrans spécifiques au type de cette application.",
@@ -5119,7 +5174,7 @@
       "reversible": "Vous pouvez revenir à {from} à tout moment.",
       "reviewAction": "Examiner",
       "detectAction": "Vérifier ce qui est installé",
-      "changeTo": "Changer le type en {type}",
+      "changeTo": "Traiter plutôt comme {type}",
       "menuHint": "Options du type d'application"
     }
   },

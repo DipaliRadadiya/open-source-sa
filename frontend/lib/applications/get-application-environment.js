@@ -1,15 +1,11 @@
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { environmentResponseSchema } from "@/lib/schemas/environment";
 
 export async function getApplicationEnvironment(id) {
-  try {
-    const res = await serverFetch(`/applications/${id}/environment`);
-    if (!res.ok) return { environment: null, failed: true };
-    const parsed = environmentResponseSchema.safeParse(await res.json());
-    return parsed.success
-      ? { environment: parsed.data.environment, failed: false }
-      : { environment: null, failed: true };
-  } catch {
-    return { environment: null, failed: true };
-  }
+  const result = await read(`/applications/${id}/environment`, environmentResponseSchema);
+
+  // WHICH failure, not just that there was one: without the status and the
+  // kind, the error box on this screen printed the same sentence whether the
+  // API refused, crashed, or was not there at all.
+  return { environment: result.failed ? null : (result.data?.environment ?? null), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }

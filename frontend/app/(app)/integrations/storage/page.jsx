@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -6,6 +5,7 @@ import { getStorageDestinations } from "@/lib/storage/get-storage";
 import { DestinationsCard } from "@/components/integrations/storage/destinations-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +21,10 @@ export default async function StorageIntegrationsPage() {
     getStorageDestinations(),
   ]);
 
-  if (!can(permissions, "storage", "view")) redirect("/dashboard");
+  if (!can(permissions, "storage", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "storage", "manage");
 
-  if (list.failed) return <LoadFailed description={t("loadFailed")} status={list.status} failure={list.failure} />;
+  if (list.failed) return <LoadFailed description={t("loadFailed")} status={list.status} failure={list.failure} message={list.message} debug={list.debug} />;
 
   return (
     <div className="space-y-6">

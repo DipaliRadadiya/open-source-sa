@@ -188,6 +188,29 @@ it('hands the form a filled-in template, not one full of placeholders', function
         ->and($filter)->not->toContain('{name}');
 });
 
+it('states the backend, so the jail reads its log file whatever [DEFAULT] says', function () {
+    // A jail that names a `logpath` and inherits its backend is one edit away
+    // from reading the journal instead — and that is not hypothetical: this
+    // panel shipped `backend = systemd` in `[DEFAULT]` of jail.local, which
+    // applies to every jail, so every jail generated here watched a file
+    // fail2ban never opened. It matched nothing and banned nobody while the
+    // panel reported it enabled — the same symptom as the `[Definition]` bug
+    // below, from a completely different cause.
+    //
+    // Proven on a live server both ways: as shipped the jail reported
+    // `Total failed: 0` against a log full of matching requests; with the
+    // backend stated it reported `File list: …/access.log`, four failures and
+    // a ban.
+    $this->application = createFail2banApp('Shop', 'shop.test');
+
+    $jail = $this->withHeaders(appFail2banHeaders())
+        ->getJson(appFail2banUrl())
+        ->assertOk()
+        ->json('jail_template');
+
+    expect($jail)->toContain('backend  = auto');
+});
+
 it('generates a filter fail2ban can actually read', function () {
     // A fail2ban *filter* names its section `Definition`; only a *jail* is
     // named after itself. This emitted `[{name}]`, so the file had no

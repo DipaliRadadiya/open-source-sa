@@ -1,4 +1,4 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -23,6 +23,7 @@ import { DatabaseExports } from "@/components/databases/database-exports";
 import { DeleteDatabaseCard } from "@/components/databases/delete-database-card";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -75,9 +76,9 @@ export default async function DatabasePage({ params, searchParams }) {
      */
     getEngines().catch(() => ({ engines: [] })),
   ]);
-  const { data, failed, status, failure } = live;
+  const { data, failed, status, failure, message } = live;
 
-  if (!can(permissions, "database", "view")) redirect("/dashboard");
+  if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
 
   // A database that was dropped in another tab is gone, not broken — the 404
@@ -88,7 +89,7 @@ export default async function DatabasePage({ params, searchParams }) {
       <LoadFailed
         description={t("loadFailed")}
         status={status}
-        failure={failure}
+        failure={failure} message={message}
       />
     );
 

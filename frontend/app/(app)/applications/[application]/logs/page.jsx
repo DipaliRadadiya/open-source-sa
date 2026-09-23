@@ -12,6 +12,7 @@ import {
 import { ApplicationLogsPanel } from "@/components/applications/logs/application-logs-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -36,25 +37,25 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
     getApplication(id),
   ]);
 
-  if (!can(permissions, "application", "view")) redirect("/dashboard");
+  if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
-    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
   // app_log is its own grant — a site's access log and the machine's auth.log
   // are different things to be trusted with.
   if (!can(appPermissions, "app_log", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
 
   // Emptying a log is a different trust from reading one.
   const canManage = can(appPermissions, "app_log", "manage", "application");
   const settled = application.status === "active";
 
-  const { logs: sources, failed, status: logsStatus, failure: logsFailure } = settled
+  const { logs: sources, failed, status: logsStatus, failure: logsFailure, message: logsMessage } = settled
     ? await getApplicationLogs(id)
     : { logs: [], failed: false, status: null, failure: null };
 
@@ -82,7 +83,7 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
           {t("provisioning")}
         </div>
       ) : failed ? (
-        <LoadFailed description={t("loadFailed")} status={logsStatus} failure={logsFailure} />
+        <LoadFailed description={t("loadFailed")} status={logsStatus} failure={logsFailure} message={logsMessage} />
       ) : sources.length === 0 ? (
         <EmptyState
           icon={ScrollText}

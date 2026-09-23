@@ -18,11 +18,11 @@ export const getEngines = cache(async function getEngines() {
   // `status` and `failure` ride along so a caller can say WHICH failure it hit
   // rather than "something went wrong" — the monitor page told people their
   // database was down when the read was a 403.
-  const { data, failed, status, failure } = await read(
+  const { data, failed, status, failure, message, debug } = await read(
     "/databases/engines",
     enginesResponseSchema,
   );
-  return { engines: data?.engines ?? [], failed, status, failure };
+  return { engines: data?.engines ?? [], failed, status, failure, message, debug };
 });
 
 /**
@@ -31,14 +31,14 @@ export const getEngines = cache(async function getEngines() {
  * happen to hold.
  */
 export const getDatabases = cache(async function getDatabases(query = "") {
-  const { data, failed, status, failure } = await read("/databases", databasesResponseSchema, {
+  const { data, failed, status, failure, message, debug } = await read("/databases", databasesResponseSchema, {
     // `attached` rides the same map, and the URL carries 0/1 rather than the
     // words: Laravel's `boolean` rule 422s the strings "true"/"false", so
     // `?attached=false` would have made the banner's own link break the page
     // it links to.
     searchParams: listQuery(query, { filters: { engine: "engine", attached: "attached" } }),
   });
-  return { databases: data?.databases ?? [], meta: data?.meta ?? EMPTY_LIST_META, failed, status, failure };
+  return { databases: data?.databases ?? [], meta: data?.meta ?? EMPTY_LIST_META, failed, status, failure, message, debug };
 });
 
 /**

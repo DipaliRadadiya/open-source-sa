@@ -75,6 +75,24 @@ interface DatabaseEngine
     /** Size in bytes (0 when unknown). */
     public function databaseSize(string $name): int;
 
+    /**
+     * The character set and collation a database was created with.
+     *
+     * For adoption. The panel records both when it creates a database and,
+     * until this existed, recorded neither when it adopted one — so every
+     * database brought over from another panel showed a blank charset forever,
+     * beside panel-created ones that showed theirs. The engine knows; it was
+     * simply never asked.
+     *
+     * Nulls where the concept does not apply or cannot be read, rather than a
+     * guessed default: a wrong charset displayed confidently is worse than an
+     * absent one, and nothing downstream reads this — it is only consumed when
+     * *creating* a database, which an adopted one has already been through.
+     *
+     * @return array{charset: ?string, collation: ?string}
+     */
+    public function describeDatabase(string $name): array;
+
     /** Create the user + grant it full access to its one database. */
     public function createUser(string $username, string $host, string $password, string $database): void;
 

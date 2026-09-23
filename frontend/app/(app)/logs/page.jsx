@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ScrollText } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
@@ -11,6 +10,7 @@ import { LogsPanel } from "@/components/logs/logs-panel";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +34,11 @@ export default async function LogsPage({ searchParams }) {
   // is meant to remove.
   const followPreference = cookieStore.get(FOLLOW_COOKIE)?.value ?? null;
 
-  if (!can(permissions, "logs", "view")) redirect("/dashboard");
+  if (!can(permissions, "logs", "view")) return <PermissionDenied title={t("title")} />;
   // Emptying a log is a different trust from reading one.
   const canManage = can(permissions, "logs", "manage");
 
-  const { logs: sources, failed, status, failure } = await getLogSources();
+  const { logs: sources, failed, status, failure, message } = await getLogSources();
   // Default to the first source the panel can actually open, so a box where
   // most logs need elevated access still lands on something useful.
   const selected =
@@ -67,7 +67,7 @@ export default async function LogsPage({ searchParams }) {
       {/* "We couldn't ask" before "there are none": an unanswered request must
           never render as a claim about what's on the server. */}
       {failed ? (
-        <LoadFailed description={t("loadFailedSources")} status={status} failure={failure} />
+        <LoadFailed description={t("loadFailedSources")} status={status} failure={failure} message={message} />
       ) : sources.length === 0 ? (
         <EmptyState
           icon={ScrollText}

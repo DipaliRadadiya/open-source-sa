@@ -11,7 +11,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPerformancePage() {
-  const [permissions, t, { data, lastChanged, failed, status, failure }] = await Promise.all([
+  const [permissions, t, { data, lastChanged, failed, status, failure, message }] = await Promise.all([
     getPermissions(),
     getTranslations("settings"),
     getSettings(),
@@ -25,7 +25,7 @@ export default async function SettingsPerformancePage() {
     ? await getMemoryTotal()
     : null;
 
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
+  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   return (
     <div className="space-y-4">

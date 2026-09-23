@@ -349,7 +349,9 @@ test("the row says what was required, so the exact build is not read as the requ
 
   assert.match(services, /requirement: blocker\.range \? rangeLabel\(blocker\.range\) : null/);
   assert.match(panel, /service\.requirement/);
-  assert.match(panel, /t\(`needs\.\$\{service\.kind\}`/);
+  // Two sentences now: the plain one, and the one for a type whose whole
+  // window is end-of-life. Both are chosen from `service.eol` in one call.
+  assert.match(panel, /service\.eol \? `needsEol\.\$\{service\.kind\}` : `needs\.\$\{service\.kind\}`/);
 
   const routing = fs.readFileSync("i18n/routing.js", "utf8");
   const locales = routing
@@ -358,11 +360,13 @@ test("the row says what was required, so the exact build is not read as the requ
     .map((c) => c.trim().replace(/['"]/g, ""))
     .filter(Boolean);
   for (const locale of locales) {
-    const ns = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8"))
-      .applications.requiredServices.needs;
-    for (const kind of ["node", "php"]) {
-      assert.match(ns?.[kind] ?? "", /\{requirement\}/, `${locale} needs.${kind}`);
-      assert.match(ns[kind], /\{app\}/, `${locale} needs.${kind}`);
+    const rs = JSON.parse(fs.readFileSync(`messages/${locale}.json`, "utf8"))
+      .applications.requiredServices;
+    for (const key of ["needs", "needsEol"]) {
+      for (const kind of ["node", "php"]) {
+        assert.match(rs?.[key]?.[kind] ?? "", /\{requirement\}/, `${locale} ${key}.${kind}`);
+        assert.match(rs[key][kind], /\{app\}/, `${locale} ${key}.${kind}`);
+      }
     }
   }
 });
@@ -536,4 +540,61 @@ test("a failed PostgreSQL install lands on the databases page like the others", 
   for (const key of ["mysql", "mariadb", "mongodb", "postgresql"]) {
     assert.equal(installHome(key)?.href, "/databases", `${key} has a screen that handles its failure`);
   }
+});
+
+test("the version offered to install is one the language still supports", async () => {
+  /*
+   * Found on the live create form: choosing PrestaShop announced
+   *
+   *     PHP 7.2 — PrestaShop needs PHP 7.2 – 8.1 — this is what we will install
+   *
+   * PHP 7.2 has been unsupported since November 2020. The old rule took the
+   * lowest version in range from the OFFERED list, on the documented
+   * assumption that the offered list hides end-of-life lines. Node's does.
+   * PHP's does not — it offers 5.6 upward and labels every one of them, so
+   * the lifecycle was in the same payload the whole time.
+   */
+  const { installTarget } = await import("../lib/runtime/version-range.js");
+  const php = [
+    { version: "8.3", lifecycle: { status: "security" } },
+    { version: "8.2", lifecycle: { status: "security" } },
+    { version: "8.1", lifecycle: { status: "eol" } },
+    { version: "8.0", lifecycle: { status: "eol" } },
+    { version: "7.4", lifecycle: { status: "eol" } },
+    { version: "7.2", lifecycle: { status: "eol" } },
+  ];
+
+  // PrestaShop: every version in its window is dead, so the NEWEST of them —
+  // which is also the one PrestaShop's own requirements recommend.
+  assert.deepEqual(installTarget(php, { min: "7.2", max: "8.1" }), { version: "8.1", eol: true });
+
+  // Craft: a supported version exists in range, so the lowest supported one.
+  assert.deepEqual(installTarget(php, { min: "8.2", max: null }), { version: "8.2", eol: false });
+
+  // n8n, unchanged: lowest that satisfies `>=24`, not the newest on offer.
+  // Krishna: "the requirement should be based on n8n's actual runtime
+  // requirement, not simply whether the default/latest is installed."
+  const node = [
+    { version: "24.20.0", lifecycle: { status: "active" } },
+    { version: "26.9.0", lifecycle: { status: "current" } },
+  ];
+  assert.deepEqual(installTarget(node, { min: "24", max: null }), { version: "24.20.0", eol: false });
+
+  // Nothing on offer fits: null, so the caller shows no install button rather
+  // than one that cannot work.
+  assert.equal(installTarget(php, { min: "9.0", max: null }), null);
+
+  // A list with no lifecycle at all must not be treated as all-dead.
+  assert.deepEqual(
+    installTarget([{ version: "8.4" }, { version: "8.3" }], { min: "8.3", max: null }),
+    { version: "8.3", eol: false },
+  );
+});
+
+test("the readiness blocker carries the lifecycle, not just the number", async () => {
+  const fs = await import("node:fs");
+  const src = fs.readFileSync("lib/applications/runtime-readiness.js", "utf8");
+  assert.match(src, /installTarget\(available\[runtime\.installableField\], range\)/);
+  assert.match(src, /suggestEol: target\?\.eol \?\? false/);
+  assert.doesNotMatch(src, /lowestInRange/, "the unsupported-blind rule is gone from here");
 });

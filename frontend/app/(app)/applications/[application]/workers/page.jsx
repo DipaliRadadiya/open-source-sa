@@ -8,6 +8,7 @@ import { getWorkers } from "@/lib/applications/get-workers";
 import { getServices } from "@/lib/services/get-services";
 import { WorkersPanel } from "@/components/applications/workers/workers-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -29,19 +30,19 @@ export default async function ApplicationWorkersPage({ params }) {
     getApplication(id),
   ]);
 
-  if (!can(permissions, "application", "view")) redirect("/dashboard");
+  if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
-    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
   // Granted only for site types that keep something to supervise (git, Node,
   // Craft, Statamic, blank PHP) — a missing grant here means the screen
   // shouldn't exist for this site, the same contract as Environment/Deployment.
   if (!can(appPermissions, "app_worker", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_worker", "manage", "application");
   const settled = application.status === "active";
@@ -80,7 +81,7 @@ export default async function ApplicationWorkersPage({ params }) {
           {t("provisioning")}
         </div>
       ) : workersResult.failed ? (
-        <LoadFailed description={t("loadFailed")} status={workersResult.status} failure={workersResult.failure} />
+        <LoadFailed description={t("loadFailed")} status={workersResult.status} failure={workersResult.failure} message={workersResult.message} debug={workersResult.debug} />
       ) : (
         <WorkersPanel
           appId={id}

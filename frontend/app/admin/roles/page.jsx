@@ -30,7 +30,7 @@ export default async function AdminRolesPage({ searchParams }) {
         <LoadFailed
           description={t("loadFailed")}
           status={rolesPage.status}
-          failure={rolesPage.failure}
+          failure={rolesPage.failure} message={rolesPage.message} debug={rolesPage.debug}
         />
       ) : (
         <RolesTable data={rolesPage.roles} meta={rolesPage.meta} />

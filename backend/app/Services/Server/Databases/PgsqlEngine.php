@@ -278,6 +278,37 @@ class PgsqlEngine implements DatabaseEngine
     }
 
     /**
+     * PostgreSQL's equivalents, which are not called charset and collation.
+     *
+     * `encoding` is a numeric oid in the catalogue, so it goes through
+     * `pg_encoding_to_char()` to come back as the name the create form uses.
+     * `datcollate` is LC_COLLATE — the same value {@see createDatabase()}
+     * passes as `LC_COLLATE`, so what is read back matches what would be
+     * written.
+     *
+     * @return array{charset: ?string, collation: ?string}
+     */
+    public function describeDatabase(string $name): array
+    {
+        $result = $this->run(sprintf(
+            'SELECT pg_encoding_to_char(encoding), datcollate FROM pg_database WHERE datname = %s;',
+            $this->literal($name),
+        ));
+
+        if (! $result->ok) {
+            return ['charset' => null, 'collation' => null];
+        }
+
+        // `-A -F'\t'` above: unaligned, tab-separated, no header.
+        $columns = preg_split('/\t/', trim($result->output())) ?: [];
+
+        return [
+            'charset' => ($columns[0] ?? '') !== '' ? $columns[0] : null,
+            'collation' => ($columns[1] ?? '') !== '' ? $columns[1] : null,
+        ];
+    }
+
+    /**
      * Create the role and give it ownership of its one database.
      *
      * Ownership, not `GRANT ALL PRIVILEGES ON DATABASE`. That grant was

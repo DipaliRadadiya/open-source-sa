@@ -49,7 +49,6 @@
     "unsavedDescription": "Your changes on this page have not been saved. They will be lost.",
     "unsavedStay": "Stay on this page",
     "unsavedLeave": "Leave and lose changes",
-    "sortBy": "Sort by this column",
     "navTitles": {
       "app_firewall": "Web Firewall"
     },
@@ -57,7 +56,17 @@
       "stopped": "The panel has stopped checking for updates on this page.",
       "checkAgain": "Check again"
     },
-    "whatIsThis": "What is this?"
+    "whatIsThis": "What is this?",
+    "theme": {
+      "label": "Change theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "permissionDenied": {
+      "title": "You don't have access to {feature}",
+      "description": "Your role doesn't include permission to view this. Ask an administrator to grant it."
+    }
   },
   "systemUsers": {
     "title": "System Users",
@@ -583,7 +592,7 @@
     }
   },
   "activity": {
-    "title": "Activity log",
+    "title": "Activity Log",
     "subtitle": "Every action taken across the panel.",
     "searchPlaceholder": "Search action or user…",
     "empty": {
@@ -671,7 +680,9 @@
     "required_name": "Name is required",
     "domainRequired": "Enter a domain name",
     "hostnameInvalid": "Enter a valid hostname (e.g. example.com)",
+    "hostnameTooLong": "A domain name can be at most 253 characters.",
     "redirectTargetRequired": "Enter where this domain should redirect to",
+    "redirectTargetUrl": "Enter a full address starting with http:// or https://",
     "required_username": "Enter a username.",
     "required_password": "Enter a password.",
     "required_currentPassword": "Current password is required",
@@ -841,10 +852,6 @@
     "ofCores": "of {count} cores",
     "breakdown": "{used} used · {free} free · {total} total",
     "loadFailed": "Could not load this data. Try refreshing the page.",
-    "noPermission": {
-      "title": "You don't have access to the dashboard",
-      "description": "Your role doesn't include permission to view server metrics. Ask an administrator to grant dashboard access."
-    },
     "staleHint": "Showing the last values received.",
     "kill": {
       "action": "Stop this process",
@@ -882,6 +889,16 @@
         "chip": "{site} did not finish setting up",
         "detail": "Setting this application up stopped partway, so it is not serving yet.",
         "action": "See what failed"
+      },
+      "deployFailed": {
+        "chip": "{site}'s last deploy failed",
+        "detail": "The application is still serving its previous version, and the next push will fail the same way until this is fixed.",
+        "action": "See the deploy log"
+      },
+      "processDown": {
+        "chip": "{site} has stopped running",
+        "detail": "Its process is not running, so visitors get an error even though the application is not paused.",
+        "action": "Check the process"
       },
       "git": {
         "chip": "{site} lost its Git account",
@@ -3195,7 +3212,6 @@
       "title": "Your server is ready for its first application",
       "description": "Create an application or service in a guided flow. {brand} will provision it, then show its live status here.",
       "filteredTitle": "No matching applications",
-      "clearSearch": "Clear search",
       "guideTitle": "From idea to a running application",
       "steps": {
         "choose": {
@@ -3406,11 +3422,13 @@
       "removeFiles": "Also delete the application’s files and backups",
       "removeFilesOn": "The application’s directory, and every backup it has — including the archives in your storage — are deleted.",
       "removeFilesOff": "The files stay on the server. The application’s backups leave the panel with it, but their archives stay in your storage — delete them there if you no longer want them.",
+      "systemUserStays": "The system user {username} is not removed. If no other application uses it, you can delete it from System Users.",
       "confirmLabel": "Type <code>{domain}</code> to confirm",
       "submit": "Delete application",
       "deleting": "Deleting…",
       "done": "{name} was deleted.",
       "failed": "We could not delete this application.",
+      "alreadyGone": "{name} had already been deleted.",
       "cancel": "Cancel",
       "copyDomain": "Copy domain",
       "removeDatabases": "{count, plural, one {Also delete this application's database} other {Also delete this application's # databases}}",
@@ -3452,9 +3470,6 @@
       "loadFailed": "We could not load the domains for this application.",
       "pageTitle": "Domains & SSL",
       "pageSubtitle": "Manage the names this application answers to and its HTTPS certificate.",
-      "provisioning": "Domains and SSL become available once the application finishes provisioning.",
-      "sectionTitle": "Domains",
-      "sectionSubtitle": "Every name this application answers to.",
       "tabs": {
         "domains": "Domains",
         "ssl": "SSL",
@@ -3462,9 +3477,17 @@
         "notSecured": "Not secured",
         "sslUnknown": "Certificate status unknown"
       },
+      "provisioning": "Domains and SSL become available once the application finishes provisioning.",
+      "sectionTitle": "Domains",
+      "sectionSubtitle": "Every name this application answers to.",
       "emptyTitle": "No domains yet",
       "emptyBody": "Add a domain to point it at this application. You can add more names and aliases at any time.",
       "testDomain": "Test domain",
+      "sslRow": {
+        "secured": "Secured",
+        "notCovered": "Not on the certificate",
+        "none": "No SSL certificate"
+      },
       "rowActions": "Actions",
       "makePrimary": "Make primary",
       "remove": "Remove",
@@ -3521,11 +3544,13 @@
         "afterLabel": "After",
         "keepsServing": "{domain} stays attached as an alias and keeps serving this application.",
         "renamesFiles": "The application's config and log files are renamed.",
-        "cmsWarning": "WordPress still has the old address saved, so visitors may be redirected back until you change it in the application."
+        "cmsWarning": "WordPress still has the old address saved, so visitors may be redirected back until you change it in the application.",
+        "notOnCertificate": "The SSL certificate does not cover {domain}. Visitors sent to the new address will get a security warning until you reissue it."
       },
       "removeConfirm": {
         "title": "Remove {domain}?",
-        "body": "The application will stop answering on this name. This cannot be undone."
+        "body": "The application will stop answering on this name. This cannot be undone.",
+        "onCertificate": "The SSL certificate covers this name. Until you reissue it, the certificate will stop renewing itself — for every other name on it too."
       },
       "toast": {
         "added": "Domain added.",
@@ -3537,7 +3562,9 @@
         "promoted": "{domain} is now the primary domain.",
         "promoteFailed": "Couldn't change the primary domain.",
         "removed": "{domain} removed.",
-        "removeFailed": "Couldn't remove the domain."
+        "removeFailed": "Couldn't remove the domain.",
+        "removedAlready": "{domain} had already been removed.",
+        "updated": "{domain} updated."
       },
       "ssl": {
         "sectionTitle": "SSL certificate",
@@ -3548,17 +3575,25 @@
         "enable": "Enable HTTPS",
         "issuing": "Issuing certificate…",
         "issuingBody": "This involves a round trip to Let's Encrypt and can take a minute.",
+        "issuingStuck": "Still here after a few minutes? Remove it and try again.",
         "failed": "Certificate could not be issued",
         "reference": "Reference: {reference}",
         "rateLimited": "Let's Encrypt has rate-limited this domain. Wait about a week before trying again — retrying now won't help.",
         "reissue": "Reissue",
         "remove": "Remove certificate",
+        "moreActions": "Certificate options",
         "active": "HTTPS is active",
+        "namesTitle": "Domains on this certificate",
+        "namesCount": "{secured} of {total} secured",
+        "nameMissing": "not on this certificate",
+        "nameStale": "no longer on this application",
+        "coverageGap": "Until every name matches, this certificate will stop renewing itself — including for the names that are fine. Reissue to bring them back in line.",
         "expired": "This certificate has expired.",
+        "expiredForcedHttps": "Every visitor is being redirected to HTTPS, and the certificate they arrive at has expired — so nobody can reach this application at all. Turn the redirect off to put it back on plain HTTP while you sort the certificate out.",
+        "turnOffForceHttps": "Turn off the HTTPS redirect",
         "expiredTitle": "HTTPS is not working",
         "expiresRenew": "Renews automatically · expires {when} ({days} days)",
         "expiresManual": "Expires {when} ({days} days) — won't renew automatically",
-        "missingDomains": "These names aren't on the certificate yet: {domains}. Reissue to cover them.",
         "forceHttps": "Force HTTPS",
         "forceHttpsHint": "Redirect every visitor from HTTP to HTTPS.",
         "forceHttpsEnabled": "Visitors are now redirected to HTTPS.",
@@ -3603,8 +3638,9 @@
         "reloadWebServer": "Reload {service}",
         "reloaded": "The web server was reloaded.",
         "reloadFailed": "The web server could not be reloaded.",
-        "staleDomains": "{domains} is on this certificate but no longer on this application. Renewal fails for the whole certificate until it is reissued.",
-        "uploadNeedsBoth": "Paste both the certificate and its private key."
+        "uploadNeedsBoth": "Paste both the certificate and its private key.",
+        "removed": "The certificate was removed. This application is back on plain HTTP.",
+        "removedAlready": "The certificate had already been removed."
       },
       "issueCertificate": "Set up SSL",
       "description": "Names that reach this application, and its certificate.",
@@ -3614,7 +3650,17 @@
         "alias": "Alias",
         "redirect": "Redirect"
       },
-      "openNamed": "Open {domain} in a new tab"
+      "openNamed": "Open {domain} in a new tab",
+      "edit": {
+        "action": "Edit",
+        "title": "Edit domain",
+        "subtitle": "Change what this name does. The name itself cannot be changed here.",
+        "domain": "Domain",
+        "domainLocked": "To use a different name, remove this one and add the new one. Renaming in place would leave the old name on the certificate and stop it renewing.",
+        "submit": "Save changes",
+        "submitting": "Saving…",
+        "clearsTarget": "Switching to an alias clears the redirect target ({target}). An alias serves the application itself."
+      }
     },
     "magicLogin": {
       "action": "Magic Login",
@@ -4771,7 +4817,7 @@
         "jailHint": "When to ban — how many tries, over how long, for how long.",
         "filterHint": "What counts as a bad try — matched against each log line."
       },
-      "placeholderNote": "{name}, {filter}, {logpath} and {slug} are filled in when the files are written. Leave them as they are.",
+      "placeholderNote": "The jail name, log path and filter are filled in from this application. Leave the filter line as it is — it must match the Filter file, which is always named after this application.",
       "placeholderLost": "{count, plural, one {{tokens} is no longer in the file — the value it stood for will not be filled in. That is only correct if you replaced it on purpose.} other {{tokens} are no longer in the file — the values they stood for will not be filled in. That is only correct if you replaced them on purpose.}}",
       "unsavedHere": "Unsaved changes in this file",
       "saveAction": "Save and reload fail2ban",
@@ -4896,6 +4942,7 @@
     "size": {
       "notMeasured": "Not measured",
       "measuring": "Measuring…",
+      "measured": "Size measured.",
       "measureFailed": "The size could not be measured.",
       "measureHint": "Measure this application on disk now"
     },
@@ -4950,8 +4997,6 @@
       "setUpBackups": "Set up backups",
       "noCertificate": "SSL not set up",
       "issueCertificate": "Set up SSL",
-      "reviewSecurity": "Review security",
-      "protectionsOff": "{count, plural, one {# protection off} other {# protections off}}",
       "noDatabase": "This application has no database, so its backups will not contain one",
       "attachDatabase": "Attach a database",
       "issueAction": {
@@ -5096,6 +5141,10 @@
       "needs": {
         "node": "{app} needs Node {requirement} — this is what we will install",
         "php": "{app} needs PHP {requirement} — this is what we will install"
+      },
+      "needsEol": {
+        "node": "{app} needs Node {requirement}. That line is no longer supported, but it is the newest {app} runs on.",
+        "php": "{app} needs PHP {requirement}. That line is no longer supported, but it is the newest {app} runs on."
       }
     },
     "phpFact": "PHP {version}",
@@ -5106,6 +5155,12 @@
       "looksLike": "Looks like {type}",
       "looksLikeBecause": "Looks like {type} — {file} found",
       "nothingFound": "Nothing recognisable found on the last check",
+      "checkedFound": "Last check found {type}",
+      "checkedFoundFile": "Last check found {type} — {file} present",
+      "detectedSuggestion": "Looks like {type}. Review the suggested change.",
+      "detected": "Found {type} in this application’s directory.",
+      "detectedFile": "Found {type} — {file} is present.",
+      "detectedNothing": "Nothing recognisable found in this application’s directory.",
       "confirmTitle": "Treat this application as {type}?",
       "confirmFound": "{file} is present in this application’s directory.",
       "confirmNarrow": "The panel will stop offering this application’s type-specific screens.",
@@ -5119,7 +5174,7 @@
       "reversible": "You can set it back to {from} at any time.",
       "reviewAction": "Review",
       "detectAction": "Check what is installed",
-      "changeTo": "Change type to {type}",
+      "changeTo": "Treat as {type} instead",
       "menuHint": "Application type options"
     }
   },

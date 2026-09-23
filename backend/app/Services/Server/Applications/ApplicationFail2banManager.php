@@ -135,12 +135,23 @@ class ApplicationFail2banManager
      * Default jail INI for new applications. Matches the convention the
      * commercial API exposes — WordPress-friendly logpath and the
      * slug-based filter reference.
+     *
+     * **`backend = auto` is stated, not inherited.** A jail that names a
+     * `logpath` and takes its backend from `[DEFAULT]` is one edit away from
+     * reading the journal instead, at which point it matches nothing and bans
+     * nobody while the panel reports it enabled. That is exactly what happened
+     * — `jail.local` carried `backend = systemd` in `[DEFAULT]`, so every jail
+     * generated here watched a file fail2ban never opened. Removing that line
+     * fixed it; saying `auto` here means a future `[DEFAULT]` cannot break it
+     * again. This is the second time this file has shipped a jail that looked
+     * enabled and banned nobody; see `defaultFilterContent()` for the first.
      */
     public function defaultJailContent(): string
     {
         return <<<'INI'
             [{name}]
             enabled  = true
+            backend  = auto
             port     = http,https
             filter   = {filter}
             logpath  = {logpath}

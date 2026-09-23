@@ -1222,6 +1222,25 @@ Check if a port is available before creating an app.
 
 **Response `201`:** `{"domain": {…}}` — the full domain object above.
 
+A name is unique across the **whole server**, not per application. When it is already taken the `422` message names the application holding it, so the user can go and detach it rather than guess.
+
+---
+
+### PUT `/applications/{application}/domains/{domain}`
+**Permission:** `app_domain` (manage)
+
+Change what an attached name **does**. Accepts `type` (`alias` | `redirect`), `redirect_to` and `redirect_status`.
+
+**Request:** `{"redirect_to": "https://example.com"}`
+
+**Response `200`:** `{"domain": {…}}` — the full domain object above.
+
+Switching `type` to `alias` clears `redirect_to`, because an alias serves the site itself. Switching to `redirect` without a target — in the request or already stored — is a `422` on `redirect_to`.
+
+**The name itself cannot be changed here, deliberately.** A rename would leave the old name in the certificate's lineage, and `certbot renew` re-validates every name in a lineage and fails the whole renewal when one of them cannot be validated — so it would silently stop the certificate covering the site's remaining, perfectly good names from ever renewing, and the first anyone hears of it is a browser warning up to ninety days later. Renaming stays a `DELETE` plus a `POST`, which is visibly two decisions. See `stale_domains` on the certificate object.
+
+The **primary** domain is refused with `422`: it names the vhost file and both log files, so changing it is what `POST …/domains/{domain}/primary` is for.
+
 ---
 
 ### POST `/applications/{application}/domains/{domain}/verify`
@@ -1300,6 +1319,8 @@ Read over loopback with SNI, once a day, so it costs nothing and works on a serv
 `renewable` is a property of the type — nothing can renew an uploaded or self-signed certificate — while `auto_renew` is the user's setting. Show a renewal date only when `renewable` is true.
 
 `expiring_soon` is its own flag rather than something the frontend computes from `days_remaining`, so the threshold is one decision in one place (and can move when certificate lifetimes shrink).
+
+**Use `days_remaining`, not `expires_at_human`, for anything a decision hangs on.** `expires_at_human` is `diffForHumans()`, which reports a single unit — so on a ninety-day Let's Encrypt certificate 45, 59 and 60 days out all render as "1 month from now", and 89 and 90 both as "2 months". `days_remaining` is a signed integer (negative once expired, null when there is no expiry date) and is the field to render from.
 
 `message` is always present: a sentence in the *viewer's* locale. `reason` (a classified code) and `reference` appear **only when `status` is `failed`** — the keys are absent otherwise. Neither ever carries certbot's own output, which contains paths, order URLs and occasionally the account key location.
 
@@ -4414,6 +4435,8 @@ Inbound rule presets for the UI.
 
 A rule is `action` (`allow` / `deny`) over a port **range** — `port_from` plus optional `port_to` — not `type` + `port`. The source is `source_ip` (IP or CIDR, null meaning anywhere), and the note is `description`, not `label`. `protocol` is `all` · `tcp` · `udp`.
 
+Ports are **1–65535** on both create and edit. 65535 is a real port and ufw accepts it; 0 is not one and is refused with a `422` rather than stored and failed later against ufw.
+
 `summary` is the whole rule as one localised sentence ("Allow 443/tcp from Anywhere") — use it for the row rather than reassembling the parts in the frontend.
 
 `enabled: false` means kept but not applied; disabling is not deleting.
@@ -4444,6 +4467,8 @@ The rules on their own, paged — use this for the rules table rather than readi
 Separate endpoint on purpose: `GET /firewall` also reports live UFW status and the listening ports, and building `listening[]` shells out to `ss`. Turning a page should not re-run that. `GET /firewall` still returns its full `rules` array unchanged, so nothing breaks before the frontend migrates.
 
 `?search=` case-insensitively matches port, source IP and description (text match, so `80` finds both 80 and 8080); `?filter[enabled]=0|1`, `?filter[action]=allow|deny`, `?filter[origin]=user|default|db_user`; `?sort=created_at|port_from|action|protocol`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10.
+
+`search` also accepts a **service name** — `ssh`, `http`, `https`, `mysql`, `postgresql`, `redis`, `ftp`, `smtp`, `dns` (the `GET /firewall/presets` keys, minus `custom`, which has no port and falls through to the text match). The name resolves to its port and matches any rule on that port, including a range covering it: `search=ssh` finds the rule for 22 and a rule for 20:30. This exists because the rules the panel seeds itself carry **no description**, so searching for a service by name previously returned nothing while the row was on screen. Matching is on the name, not the rule's origin — a rule someone opened on 3306 for their own reasons is returned by `search=mysql`.
 
 ```json
 {"rules": [{"id": 1, "port_from": 443, "…": "…"}],

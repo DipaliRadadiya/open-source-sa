@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useFormatter, useTranslations } from "next-intl";
@@ -71,7 +71,7 @@ function factColumns(count) {
   return FACT_COLUMNS[4];
 }
 
-function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action, note, menu, menuLabel }) {
+function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action, note, menu, menuLabel, menuBusy = false }) {
   return (
     // min-w-0: a grid item keeps min-width:auto, so without it the tile grows to
     // its longest word and `truncate` never fires.
@@ -102,12 +102,20 @@ function Fact({ icon: Icon, label, value, mono, copy, onEdit, editLabel, action,
               type="button"
               variant="ghost"
               size="icon-sm"
-              disabled={action?.busy}
+              /*
+               * `menuBusy` as well as `action.busy`, because the two are not
+               * the same thing. `action` is the Review button, which exists
+               * only once there is a suggestion to review — so an action
+               * STARTED FROM THIS MENU had nowhere to show that it was
+               * running, and on the common case (no suggestion) the menu
+               * simply closed and the tile sat still for two seconds.
+               */
+              disabled={menuBusy || action?.busy}
               aria-label={menuLabel}
               title={menuLabel}
               className="shrink-0"
             >
-              {action?.busy ? (
+              {menuBusy || action?.busy ? (
                 <Loader2 className="size-3.5 animate-spin" />
               ) : (
                 <MoreHorizontal className="size-3.5" />
@@ -194,6 +202,10 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
   const [editingWebRoot, setEditingWebRoot] = useState(false);
   const [measuring, setMeasuring] = useState(false);
   const [detecting, setDetecting] = useState(false);
+  const [refreshing, startRefresh] = useTransition();
+  // One flag for "the probe is still happening as far as the reader is
+  // concerned" — the request AND the re-read that makes its result visible.
+  const probing = detecting || refreshing;
   const [relabelTo, setRelabelTo] = useState(null);
   const router = useRouter();
 
@@ -213,10 +225,46 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
   async function detect() {
     setDetecting(true);
     try {
-      await detectApplicationSiteType(application.id);
-      // Re-read rather than merging the response: the verdict is stored on the
-      // application, and the page's own fetch is the one source for it.
-      router.refresh();
+      const { data } = await detectApplicationSiteType(application.id);
+
+      /*
+       * Say what came back, from the response itself.
+       *
+       * The probe takes about a second and the re-read takes another, and for
+       * that time the menu had closed over a button that did nothing — then a
+       * line of small grey text changed somewhere on the card. Reported as
+       * "nothing appears to happen, so it looks broken", which is a fair
+       * reading of a control that produces no acknowledgement.
+       *
+       * The verdict is in the response, so there is nothing to wait for before
+       * saying it. The card still re-reads for the stored copy.
+       */
+      const found = data?.site_type_detection;
+      const type = found?.detected_title ?? found?.detected;
+      if (found?.suggested) {
+        toast.success(t("siteTypeDetection.detectedSuggestion", { type }));
+      } else if (type) {
+        toast.success(
+          found.matched
+            ? t("siteTypeDetection.detectedFile", { type, file: found.matched })
+            : t("siteTypeDetection.detected", { type }),
+        );
+      } else {
+        // Not an error: looking and finding nothing is a real answer, and the
+        // directory of a site somebody has not uploaded to yet is empty.
+        toast.info(t("siteTypeDetection.detectedNothing"));
+      }
+
+      /*
+       * Re-read rather than merging the response: the verdict is stored on the
+       * application, and the page's own fetch is the one source for it.
+       *
+       * In a transition, so `refreshing` stays true until the new data is on
+       * screen. `router.refresh()` returns void and cannot be awaited, so the
+       * old code switched the spinner off at the moment the request came back
+       * — a second before anything visibly changed.
+       */
+      startRefresh(() => router.refresh());
     } catch (err) {
       toast.error(apiMessage(err, t("siteTypeDetection.detectFailed")));
     } finally {
@@ -251,6 +299,23 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
         : t("siteTypeDetection.looksLike", {
             type: detection.detected_title ?? suggestion,
           });
+    }
+    /*
+     * Recognised something, with nothing to offer. Almost always because the
+     * label is already right — which is the single most common outcome of
+     * pressing the button, and used to render as "Nothing recognisable found".
+     *
+     * Says what it saw rather than judging it, so the one sentence is true
+     * whether the find agrees with the current type (a WordPress site with
+     * wp-config.php) or not (a Custom PHP site with an `artisan` in it, which
+     * is git and can never be relabelled). The reader compares it against the
+     * type shown directly above.
+     */
+    if (detectionState === "recognised") {
+      const type = detection?.detected_title ?? detection?.detected;
+      return detection?.matched
+        ? t("siteTypeDetection.checkedFoundFile", { type, file: detection.matched })
+        : t("siteTypeDetection.checkedFound", { type });
     }
     if (detectionState === "found") return t("siteTypeDetection.nothingFound");
     return null;
@@ -311,6 +376,14 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
     setMeasuring(true);
     try {
       await measureApplicationSize(application.id);
+      /*
+       * Say so. Walking every inode can finish with the SAME number — a site
+       * that has not changed since the last measure — so the button spun, the
+       * value stayed put and the only readable outcome was "nothing happened".
+       * The failure path has always had a toast; the success path had none,
+       * which is the one asymmetry that makes a working control look broken.
+       */
+      toast.success(t("size.measured"));
       router.refresh();
     } catch (error) {
       // Throttled, and it refuses outright for a site with no directory on
@@ -353,7 +426,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
         canManage && suggestion
           ? {
               onClick: () => setRelabelTo(suggestion),
-              busy: detecting,
+              busy: probing,
               label: t("siteTypeDetection.reviewHint"),
               // Labelled because it is an invitation. A 32px transparent icon
               // beside "Looks like WordPress" asked for a decision and hid the
@@ -364,6 +437,7 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
           : null,
       menuLabel: t("siteTypeDetection.menuHint"),
       menu: typeMenu,
+      menuBusy: probing,
     },
     { icon: User, label: t("columns.owner"), value: application.system_user?.username, mono: true },
     {

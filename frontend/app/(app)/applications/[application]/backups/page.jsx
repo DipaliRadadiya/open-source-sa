@@ -10,6 +10,7 @@ import { getDatabaseCounts, getApplicationDatabases, getEngines, getUnattachedDa
 import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { BackupsPanel } from "@/components/applications/backups/backups-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -31,17 +32,17 @@ export default async function ApplicationBackupsPage({ params }) {
     getApplication(id),
   ]);
 
-  if (!can(permissions, "application", "view")) redirect("/dashboard");
+  if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
   if (result.failed || !result.application)
-    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+    return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   // Granted per site type, the same contract as the other application screens:
   // no grant here means this screen should not exist for this site.
   if (!can(appPermissions, "app_backup", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const application = result.application;

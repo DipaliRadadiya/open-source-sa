@@ -1,4 +1,4 @@
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { webhookProvidersResponseSchema } from "@/lib/schemas/deployment";
 
 /**
@@ -8,14 +8,10 @@ import { webhookProvidersResponseSchema } from "@/lib/schemas/deployment";
  * status; only the enable form needs the list.
  */
 export async function getWebhookProviders() {
-  try {
-    const res = await serverFetch("/webhook-providers");
-    if (!res.ok) return { providers: [], failed: true };
-    const parsed = webhookProvidersResponseSchema.safeParse(await res.json());
-    return parsed.success
-      ? { providers: parsed.data.webhook_providers, failed: false }
-      : { providers: [], failed: true };
-  } catch {
-    return { providers: [], failed: true };
-  }
+  const result = await read("/webhook-providers", webhookProvidersResponseSchema);
+
+  // WHICH failure, not just that there was one: without the status and the
+  // kind, the error box on this screen printed the same sentence whether the
+  // API refused, crashed, or was not there at all.
+  return { providers: result.failed ? [] : (result.data?.providers ?? []), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }

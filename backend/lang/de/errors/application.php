@@ -13,6 +13,9 @@ return [
     'databases_not_removed' => 'Die Website wurde gelöscht, aber diese Datenbanken sind noch auf dem Server: :databases. Entferne sie auf der Datenbank-Seite oder nenne dem Support die Referenz.',
 
     'primary_domain_not_removable' => 'Die primäre Domain kann nicht entfernt werden. Machen Sie zuerst eine andere Domain zur primären.',
+    'primary_domain_not_editable' => 'Eine primäre Domain kann nicht bearbeitet werden. Mache zuerst eine andere Domain zur primären.',
+    'domain_taken' => 'Diese Domain wird auf diesem Server bereits verwendet.',
+    'domain_taken_by' => 'Diese Domain wird bereits von der Anwendung „:application“ verwendet.',
     'unsupported_web_server' => 'Das Panel kann für :web_server keine Website-Konfiguration schreiben.',
     'no_web_server' => 'kein Webserver erkannt',
     'provision_failed' => 'Die Einrichtung der Website ist im Schritt „:step" fehlgeschlagen.',

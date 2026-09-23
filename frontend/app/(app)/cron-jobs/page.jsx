@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -16,6 +15,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { redirectOutOfRange } from "@/lib/tables/redirect-out-of-range";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +31,9 @@ export default async function CronjobsPage({ searchParams }) {
     getTranslations("cronJobs"),
   ]);
 
-  if (!can(permissions, "cronjob", "view")) redirect("/dashboard");
-
+  if (!can(permissions, "cronjob", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "cronjob", "manage");
-  const [{ cronjobs, meta, failed, status, failure }, runAs, schedulePresets, commandPresets, facts, sites] =
+  const [{ cronjobs, meta, failed, status, failure, message }, runAs, schedulePresets, commandPresets, facts, sites] =
     await Promise.all([
       getCronjobs(sp),
       // Not gated on `canManage`: the "Runs as" FILTER is part of the toolbar,
@@ -75,7 +74,7 @@ export default async function CronjobsPage({ searchParams }) {
       {/* The list failed, so we can't say what jobs exist — but the heading and
           the shell are still true. Only the list says it's broken. */}
       {failed ? (
-        <LoadFailed description={t("loadFailed")} status={status} failure={failure} />
+        <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : (
         <NavTransitionProvider>
           <CronjobsPanel

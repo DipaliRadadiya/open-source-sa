@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
 import { useSetQuery } from "@/hooks/use-set-query";
 import { FacetSelect } from "@/components/data-table/facet-select";
+import { RefreshButton } from "@/components/data-table/refresh-button";
 import {
   Card,
   CardContent,
@@ -278,6 +279,7 @@ export function RulesCard({
           </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <RefreshButton />
           <HistoryDialog isAdmin={isAdmin} />
           <AddRuleDialog
             presets={presets}

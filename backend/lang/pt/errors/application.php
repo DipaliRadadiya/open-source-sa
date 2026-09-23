@@ -13,6 +13,9 @@ return [
     'databases_not_removed' => 'O site foi excluído, mas estes bancos de dados continuam no servidor: :databases. Remova-os na tela de bancos de dados ou informe a referência ao suporte.',
 
     'primary_domain_not_removable' => 'O domínio principal não pode ser removido. Defina outro domínio como principal primeiro.',
+    'primary_domain_not_editable' => 'Um domínio principal não pode ser editado. Torne outro domínio principal primeiro.',
+    'domain_taken' => 'Este domínio já está a ser utilizado neste servidor.',
+    'domain_taken_by' => 'Este domínio já é utilizado pela aplicação «:application».',
     'unsupported_web_server' => 'O painel não consegue gravar a configuração do site para :web_server.',
     'no_web_server' => 'nenhum servidor web detectado',
     'provision_failed' => 'A configuração do site falhou na etapa ":step".',

@@ -38,8 +38,23 @@ export function NavTransitionProvider({ children }) {
       }
       if (resetPage) params.delete("page");
       const qs = params.toString();
+      /*
+       * `push` the FIRST time the URL gains a query, `replace` after that.
+       *
+       * Replacing on every keystroke is right — "moodle x" would otherwise
+       * leave eight history entries and Back would walk the reader letter by
+       * letter out of their own search. But replacing on the first one too
+       * means the UNFILTERED list never enters history at all, so Back from a
+       * filtered table left the screen entirely: /applications -> type -> Back
+       * landed on /dashboard.
+       *
+       * One push at the empty -> set boundary gives Back exactly one job:
+       * clear the filters and stay. Every later keystroke still replaces.
+       */
+      const hadQuery = searchParams.toString() !== "";
+      const navigate = hadQuery || !qs ? router.replace : router.push;
       startTransition(() =>
-        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false }),
+        navigate.call(router, qs ? `${pathname}?${qs}` : pathname, { scroll: false }),
       );
     },
     [router, pathname, searchParams],

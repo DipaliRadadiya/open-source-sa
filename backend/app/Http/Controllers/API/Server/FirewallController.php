@@ -21,6 +21,7 @@ use App\Support\FirewallPresets;
 use App\Support\ListSearch;
 use App\Support\ListSort;
 use App\Support\SshPort;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -113,10 +114,12 @@ class FirewallController extends Controller
                 fn ($query) => $query->where('enabled', (bool) $filter['enabled']))
             ->when($filter['action'] ?? null, fn ($query, $action) => $query->where('action', $action))
             ->when($filter['origin'] ?? null, fn ($query, $origin) => $query->where('origin', $origin))
-            ->when($search !== '', fn ($query) => ListSearch::apply(
-                $query,
-                $search,
-                ['port_from', 'port_to', 'source_ip', 'description'],
+            // Grouped, because the service-name match is an OR and the filters
+            // above are an AND. Without the outer where() the OR would escape
+            // its bracket and `filter[action]=deny&search=ssh` would answer
+            // with every rule on port 22, refused filter included.
+            ->when($search !== '', fn ($query) => $query->where(
+                fn ($query) => $this->applyRuleSearch($query, $search)
             ));
 
         $rules = ListSort::apply($rules, $request->validated('sort'), IndexFirewallRulesRequest::SORTS)
@@ -131,6 +134,40 @@ class FirewallController extends Controller
                 'last_page' => $rules->lastPage(),
             ],
         ]);
+    }
+
+    /**
+     * Free text across a rule's own fields, plus the service name for its port.
+     *
+     * The text half is unchanged. The addition is that a preset name resolves
+     * to its port, because the rules the panel seeds itself — SSH and the web
+     * ports — carry no description at all, so searching "ssh" matched nothing
+     * on a freshly installed server while the row sat in plain sight.
+     *
+     * Deliberately a query-time mapping rather than a description written onto
+     * those rows: `description` is the user's own field, a stored label would
+     * need backfilling onto every server already installed, and neither would
+     * find a hand-made rule someone opened on 22 without describing it.
+     *
+     * A range covering the port matches too. A rule for 20:30 visibly covers
+     * SSH, and a search that hides it is harder to trust than one that does not
+     * answer at all.
+     */
+    private function applyRuleSearch(Builder $query, string $search): Builder
+    {
+        ListSearch::apply($query, $search, ['port_from', 'port_to', 'source_ip', 'description']);
+
+        $port = FirewallPresets::portFor($search);
+
+        if ($port === null) {
+            return $query;
+        }
+
+        return $query
+            ->orWhere('port_from', $port)
+            ->orWhere(fn (Builder $query) => $query
+                ->where('port_from', '<=', $port)
+                ->where('port_to', '>=', $port));
     }
 
     public function store(StoreFirewallRuleRequest $request, CreateFirewallRule $action): JsonResponse

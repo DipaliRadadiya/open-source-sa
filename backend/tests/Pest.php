@@ -186,6 +186,28 @@ function grantPermission(User $user, string $permissionName, bool $view = true, 
 }
 
 /**
+ * `install.sh`, for the tests that assert on it as source text.
+ *
+ * Shared because two test files needed it and the second one redeclaring it
+ * was a fatal error that took the whole suite down — not a failing test, a
+ * parse-time death with no test names in the output.
+ *
+ * Skips rather than fails when the file is absent: the backend is also checked
+ * out on its own, and a test that cannot see the installer has nothing to say
+ * about it.
+ */
+function installerSource(): string
+{
+    $path = base_path('../install.sh');
+
+    if (! is_file($path)) {
+        test()->markTestSkipped('install.sh is not in this checkout');
+    }
+
+    return (string) file_get_contents($path);
+}
+
+/**
  * What `systemctl show` replies for the units named in $command.
  *
  * One blank-line separated block per unit asked about, in the order asked —

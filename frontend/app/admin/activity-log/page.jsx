@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminActivityLogPage({ searchParams }) {
   const sp = await searchParams;
-  const [{ activity_log: entries, meta, failed, status, failure }, filters, t] = await Promise.all([
+  const [{ activity_log: entries, meta, failed, status, failure, message }, filters, t] = await Promise.all([
     getActivityLog(sp),
     getActivityFilters(),
     getTranslations("activity"),
@@ -28,7 +28,7 @@ export default async function AdminActivityLogPage({ searchParams }) {
     // status + failure let the panel name the cause — a 403 is the reader's
     // situation, a 500 is ours. The description is the fallback for the
     // failures it has no specific words for.
-    return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
+    return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
   }
 
   redirectOutOfRange("/admin/activity-log", sp, meta, failed);

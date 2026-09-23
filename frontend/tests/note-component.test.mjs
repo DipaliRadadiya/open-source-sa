@@ -28,7 +28,48 @@ test("Note is built to the same grammar as Caution", () => {
   // siblings: amber for "be careful", accent for "here is what this is".
   assert.match(note, /rounded-lg border border-primary\/20 bg-primary\/5 p-3 text-sm/);
   assert.match(note, /className="mt-0\.5 size-4 shrink-0 text-primary"/);
-  assert.match(caution, /rounded-lg border border-warning\/40 bg-warning\/10/);
+  assert.match(caution, /rounded-lg border/);
+  // Amber is unchanged by the arrival of a second tone.
+  assert.match(caution, /warning: "border-warning\/40 bg-warning\/10"/);
+});
+
+test("Caution's red is lighter than its amber", () => {
+  /*
+   * Not a style nit — the same opacity in the two hues does not read the same.
+   * At 10% the red block shouts where the amber one informs, and that is
+   * literally the complaint that came back: "keeping this much red bg looks
+   * very bad". 5% red sits at about the amber's apparent weight.
+   *
+   * Encoded as a comparison rather than as a magic number so that changing
+   * amber forces a decision about red instead of silently un-pairing them.
+   */
+  const pct = (tone) =>
+    Number(caution.match(new RegExp(`${tone}: "border-${tone}\\/\\d+ bg-${tone}\\/(?:\\[0\\.(\\d+)\\]|(\\d+))"`))?.slice(1).find(Boolean));
+  const amber = pct("warning");      // bg-warning/10  -> 10
+  const red = pct("destructive");    // bg-destructive/[0.05] -> 05
+  assert.ok(Number.isFinite(amber) && Number.isFinite(red), "both tones must declare a surface");
+  assert.ok(red < amber, `red (${red}) must sit below amber (${amber})`);
+});
+
+test("the SSL surfaces use the shared note, not a private copy", () => {
+  /*
+   * There were four: `ui/caution`, `ui/note`, a local one in `ssl-section`,
+   * and three hand-rolled blocks in `issue-cert-dialog` that each put the
+   * WHOLE sentence in `text-destructive`. The card and the dialog are one
+   * click apart, so drift between them is visible in a single flow.
+   */
+  const ssl = read("components/applications/domains/ssl-section.jsx");
+  const dialog = read("components/applications/domains/issue-cert-dialog.jsx");
+  assert.match(ssl, /const Note = \(props\) => <Caution size="md" \{\.\.\.props\} \/>;/);
+  for (const [name, src] of [["ssl-section", ssl], ["issue-cert-dialog", dialog]]) {
+    assert.doesNotMatch(
+      src,
+      /bg-(warning|destructive)\/\d+ px-3 py-2 text-sm text-(warning|destructive)/,
+      `${name} must not hand-roll a note`,
+    );
+    // The prose stays readable. A coloured paragraph is not more urgent.
+    assert.doesNotMatch(src, /text-sm text-destructive">\{/, `${name} must not colour a whole sentence`);
+  }
 });
 
 test("the body is a div, so a note can hold more than one sentence", () => {

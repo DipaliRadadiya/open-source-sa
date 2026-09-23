@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { signedOutPath } from "@/lib/auth/signed-out-path";
+import { RememberPath } from "@/components/remember-path";
 import { AuthProvider } from "@/components/auth-provider";
 import { AdminSidebar } from "@/components/sections/admin-sidebar";
 import { AdminBreadcrumb } from "@/components/sections/admin-breadcrumb";
@@ -36,12 +37,22 @@ export default async function AdminLayout({ children }) {
     throw error;
   }
   if (!user) redirect(await signedOutPath());
-  if (!user.is_admin) redirect("/dashboard");
+  /*
+   * Home, not /dashboard.
+   *
+   * The other 34 gates now refuse in place and name the screen that was
+   * refused. These two cannot: a layout IS the shell, so there is no shell
+   * left to render the refusal inside. A redirect is right here — it just has
+   * to go somewhere the caller can actually open, which /dashboard is not for
+   * every role. `app/page.js` picks that from their own permissions.
+   */
+  if (!user.is_admin) redirect("/");
 
   return (
     <AuthProvider user={user}>
       <TooltipProvider delayDuration={300}>
       <ErrorCopy />
+      <RememberPath />
         <UnsavedProvider>
         <PanelFocus />
         <SidebarProvider style={{ "--sidebar-width-icon": "3.5rem" }}>

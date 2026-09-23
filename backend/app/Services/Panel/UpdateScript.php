@@ -37,6 +37,7 @@ class UpdateScript
         'configure_services',
         'resync_site_configs',
         'record_firewall_defaults',
+        'resync_fail2ban',
         'refresh_npm_catalogue',
         'refresh_lifecycle_catalogue',
         'optimize',
@@ -297,6 +298,23 @@ class UpdateScript
         # one command, the second is not recoverable by the user at all.
         note record_firewall_defaults
         {$asUser}{$php} {$backend}/artisan firewall:record-defaults || echo "WARNING: firewall defaults not recorded; run 'artisan firewall:record-defaults' if the firewall screen shows no rules"
+
+        # jail.local is written at install and when the settings screen is
+        # saved, and nowhere else -- so a release that corrects how it renders
+        # reaches new installs only. It shipped with `backend = systemd` in
+        # `[DEFAULT]`, which applies to every jail and makes fail2ban ignore
+        # `logpath`, so `recidive` and every per-site application jail watched
+        # a file that was never opened and banned nobody while the panel
+        # reported them enabled. This is what carries the corrected render to a
+        # server that already exists.
+        #
+        # Non-fatal, and the `||` matters more here than above: the command
+        # writes a config the box validates with `fail2ban-client -t` and
+        # restores on failure, so the worst case is the configuration the
+        # server already had. Failing the update over it would take a panel
+        # down to fix a jail.
+        note resync_fail2ban
+        {$asUser}{$php} {$backend}/artisan fail2ban:resync || echo "WARNING: fail2ban config not resynced; run 'artisan fail2ban:resync' if site jails are not banning"
 
         # The npm catalogue is what `npm_latest` is read from, and until it has
         # a row the Node screen cannot tell "npm is current" from "we do not

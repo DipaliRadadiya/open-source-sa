@@ -12,7 +12,7 @@ import { setupResponseSchema } from "@/lib/schemas/setup";
  * able to afford an unexplained error.
  */
 export async function getSetup() {
-  const { data, failed, status, failure } = await read("/setup", setupResponseSchema);
+  const { data, failed, status, failure, message, debug } = await read("/setup", setupResponseSchema);
 
-  return { setup: data?.setup ?? null, failed, status, failure };
+  return { setup: data?.setup ?? null, failed, status, failure, message, debug };
 }

@@ -11,6 +11,7 @@ import { FormModal } from "@/components/ui/form-modal";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { Pager } from "@/components/data-table/pager";
 import { PerPageSelect } from "@/components/data-table/per-page-select";
+import { apiMessage } from "@/lib/api/error-message";
 
 /**
  * What changed on this firewall, and when.
@@ -67,6 +68,10 @@ export function HistoryDialog({ isAdmin }) {
         entries: [],
         meta: null,
         status: error?.response?.status ?? null,
+        // The API's own sentence, like every other failed read. This dialog
+        // fetches from the client rather than through `read()`, so it has to
+        // pull the message out of the axios error itself.
+        message: apiMessage(error, null),
       });
     }
   }
@@ -119,6 +124,7 @@ export function HistoryDialog({ isAdmin }) {
             description={t("history.failed")}
             status={state.status}
             failure={state.failure ?? null}
+            message={state.message ?? null}
           />
         ) : state.entries.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">

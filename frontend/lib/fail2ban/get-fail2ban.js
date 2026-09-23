@@ -1,4 +1,4 @@
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { fail2banResponseSchema } from "@/lib/schemas/fail2ban";
 
 /**
@@ -9,15 +9,17 @@ import { fail2banResponseSchema } from "@/lib/schemas/fail2ban";
  * "we couldn't ask" must never be drawn as "your server has no protection".
  */
 export async function getFail2ban() {
-  try {
-    const res = await serverFetch("/fail2ban");
-    if (!res.ok) return { data: null, failed: true };
+  const result = await read("/fail2ban", fail2banResponseSchema);
 
-    const parsed = fail2banResponseSchema.safeParse(await res.json());
-    return parsed.success
-      ? { data: parsed.data.fail2ban, failed: false }
-      : { data: null, failed: true };
-  } catch {
-    return { data: null, failed: true };
-  }
+  // Every field `read()` knows, not just whether it worked: without the
+  // status and the kind, the failure box on this screen could not tell a
+  // 403 from a 500 and printed the same unfalsifiable sentence for both.
+  return {
+    data: result.failed ? null : (result.data.fail2ban ?? null),
+    failed: result.failed,
+    status: result.status,
+    failure: result.failure,
+    message: result.message,
+    debug: result.debug,
+  };
 }

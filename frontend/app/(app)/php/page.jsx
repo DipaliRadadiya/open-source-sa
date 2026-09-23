@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -19,6 +18,7 @@ import { RuntimeStatusNotice } from "@/components/runtime/version-status";
 import { anyInFlight, RUNTIME_POLL_MS, RUNTIME_POLL_STOP_MS } from "@/lib/runtime/in-flight";
 import { FileCode2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -29,17 +29,17 @@ export async function generateMetadata() {
 
 export default async function PhpPage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, { data, failed, status, failure }] = await Promise.all([
+  const [permissions, t, { data, failed, status, failure, message }] = await Promise.all([
     getPermissions(),
     getTranslations("php"),
     getPhp(),
   ]);
 
   // Runtimes are gated by the same permission as the rest of the server config.
-  if (!can(permissions, "php", "view")) redirect("/dashboard");
+  if (!can(permissions, "php", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "php", "manage");
 
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} />;
+  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
 
   const php = data;
   const versions = php?.versions ?? [];

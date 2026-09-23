@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Firewall;
 
+use App\Models\FirewallRule;
 use App\Rules\IpOrCidr;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -43,8 +44,8 @@ class UpdateFirewallRuleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'port_from' => ['sometimes', 'integer', 'min:1', 'max:65534'],
-            'port_to' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:65535', 'gte:port_from'],
+            'port_from' => ['sometimes', 'integer', 'min:'.FirewallRule::PORT_MIN, 'max:'.FirewallRule::PORT_MAX],
+            'port_to' => ['sometimes', 'nullable', 'integer', 'min:'.FirewallRule::PORT_MIN, 'max:'.FirewallRule::PORT_MAX, 'gte:port_from'],
             'protocol' => ['sometimes', Rule::in(['all', 'tcp', 'udp'])],
             'action' => ['sometimes', Rule::in(['allow', 'deny'])],
             'source_ip' => ['sometimes', 'nullable', 'string', new IpOrCidr],

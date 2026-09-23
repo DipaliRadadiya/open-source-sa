@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Firewall;
 
+use App\Models\FirewallRule;
 use App\Rules\IpOrCidr;
 use App\Rules\SingleLine;
 use Illuminate\Foundation\Http\FormRequest;
@@ -20,8 +21,8 @@ class StoreFirewallRuleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'port_from' => ['required', 'integer', 'between:1,65534'],
-            'port_to' => ['nullable', 'integer', 'between:1,65534', 'gte:port_from'],
+            'port_from' => ['required', 'integer', 'between:'.FirewallRule::PORT_MIN.','.FirewallRule::PORT_MAX],
+            'port_to' => ['nullable', 'integer', 'between:'.FirewallRule::PORT_MIN.','.FirewallRule::PORT_MAX, 'gte:port_from'],
             'protocol' => ['required', Rule::in(['all', 'tcp', 'udp'])],
             'action' => ['required', Rule::in(['allow', 'deny'])],
             'source_ip' => ['nullable', 'string', new IpOrCidr],

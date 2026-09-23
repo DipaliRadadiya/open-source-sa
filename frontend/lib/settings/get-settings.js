@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { settingsResponseSchema } from "@/lib/schemas/settings";
 
 /**
@@ -14,26 +14,32 @@ import { settingsResponseSchema } from "@/lib/schemas/settings";
  * wrong. `lastChanged` is keyed by the same group names.
  */
 export const getSettings = cache(async function getSettings() {
-  try {
-    const res = await serverFetch("/settings");
-    if (!res.ok) {
-      console.error("getSettings: /settings failed", res.status, await res.text());
-      return { data: null, lastChanged: null, failed: true };
-    }
+  const result = await read("/settings", settingsResponseSchema);
 
-    const parsed = settingsResponseSchema.safeParse(await res.json());
-    if (!parsed.success) {
-      console.error("getSettings: response failed schema validation", parsed.error);
-      return { data: null, lastChanged: null, failed: true };
-    }
-
+  // WHICH failure, not just that there was one. `read()` also reports each one
+  // centrally, which is what the three console.error calls here were doing by
+  // hand — and it carries the API's own sentence, which they discarded after
+  // printing it to a log nobody reading the screen can see.
+  if (result.failed) {
     return {
-      data: parsed.data.settings,
-      lastChanged: parsed.data.last_changed ?? null,
-      failed: false,
+      data: null,
+      lastChanged: null,
+      failed: true,
+      status: result.status,
+      failure: result.failure,
+      message: result.message,
+      debug: result.debug,
     };
-  } catch (error) {
-    console.error("getSettings: request threw", error);
-    return { data: null, lastChanged: null, failed: true };
   }
+
+  return {
+    data: result.data.settings,
+    lastChanged: result.data.last_changed ?? null,
+    failed: false,
+    status: result.status,
+    failure: null,
+    message: null,
+    debug: false,
+  };
 });
+

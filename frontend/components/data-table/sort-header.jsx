@@ -1,7 +1,7 @@
 import { useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { useSetQuery } from "@/hooks/use-set-query";
+import { sortDirection } from "@/lib/data-table/sort-direction";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,13 +24,15 @@ import { cn } from "@/lib/utils";
  * column to find their smallest database.
  */
 export function SortHeader({ col, children, descFirst = false, className }) {
-  const t = useTranslations("common");
   const setQuery = useSetQuery();
   const params = useSearchParams();
   const current = params.get("sort");
 
-  const asc = current === col;
-  const desc = current === `-${col}`;
+  // Same reading of `?sort=` the `<th>` uses for `aria-sort`, so the arrow and
+  // what a screen reader is told can never disagree.
+  const direction = sortDirection(current, col);
+  const asc = direction === "ascending";
+  const desc = direction === "descending";
   const Icon = asc ? ArrowUp : desc ? ArrowDown : ArrowUpDown;
 
   // Sorting has to reset the page: page 4 of the old order holds nothing a
@@ -46,7 +48,21 @@ export function SortHeader({ col, children, descFirst = false, className }) {
     <button
       type="button"
       onClick={onClick}
-      aria-label={t("sortBy")}
+      /*
+       * No `aria-label` here, deliberately. It used to carry "Sort by this
+       * column", which is the one thing this button must not be called: an
+       * `aria-label` REPLACES the element's text, so all four buttons
+       * announced identically and the column names vanished — the header row
+       * read out as "Sort by this column, PHP, Sort by this column, System
+       * user, Sort by this column, Sort by this column". It also named the
+       * `<th>`, so every cell beneath was announced as "Sort by this column:
+       * 4.2 GB" instead of "Size: 4.2 GB".
+       *
+       * The column name is the correct accessible name, and a button inside a
+       * `columnheader` already implies sorting. Which way it is sorted is
+       * `aria-sort` on the `<th>`, which DataTable sets from the same
+       * `sortDirection` reading of the URL this component uses.
+       */
       data-state={asc ? "asc" : desc ? "desc" : "none"}
       className={cn(
         /*

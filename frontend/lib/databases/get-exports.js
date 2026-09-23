@@ -1,6 +1,5 @@
 import { cache } from "react";
-import { parsedOr } from "@/lib/api/parse-response";
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { exportsResponseSchema } from "@/lib/schemas/database";
 
 /**
@@ -11,17 +10,10 @@ import { exportsResponseSchema } from "@/lib/schemas/database";
  * is most likely hunting for. Callers filter.
  */
 export const getExports = cache(async function getExports() {
-  try {
-    const res = await serverFetch("/databases/exports");
-    if (!res.ok) return { exports: [], failed: true };
+  const result = await read("/databases/exports", exportsResponseSchema);
 
-    // This is where `requested_by` was declared a string and arrives as an
-    // object: the list silently stayed empty for hours with nothing in the
-    // console to say why. The warning is the point.
-    const parsed = parsedOr(exportsResponseSchema, await res.json(), "getExports");
-
-    return parsed ? { exports: parsed.exports, failed: false } : { exports: [], failed: true };
-  } catch {
-    return { exports: [], failed: true };
-  }
+  // WHICH failure, not just that there was one: without the status and the
+  // kind, the error box on this screen printed the same sentence whether the
+  // API refused, crashed, or was not there at all.
+  return { exports: result.failed ? [] : (result.data?.exports ?? []), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 });

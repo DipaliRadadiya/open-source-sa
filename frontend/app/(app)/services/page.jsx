@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations, getFormatter } from "next-intl/server";
 import { Cog } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
@@ -10,6 +9,7 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { NavTransitionProvider } from "@/components/data-table/nav-transition";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -24,15 +24,14 @@ export default async function ServicesPage() {
     getTranslations("services"),
   ]);
 
-  if (!can(permissions, "service", "view")) redirect("/dashboard");
-
+  if (!can(permissions, "service", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "service", "manage");
 
   // PHP moved to its own feature behind its own permission. The link from an
   // FPM row is only offered to someone who can actually open that page —
   // otherwise it lands on a redirect back to the dashboard.
   const canSeePhp = can(permissions, "php", "view");
-  const [{ services, failed, status, failure }, php] = await Promise.all([
+  const [{ services, failed, status, failure, message }, php] = await Promise.all([
     getServices(),
     canSeePhp ? getPhp() : Promise.resolve({ data: null }),
   ]);
@@ -48,7 +47,7 @@ export default async function ServicesPage() {
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {failed ? (
-        <LoadFailed description={t("loadFailed")} status={status} failure={failure} />
+        <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
       ) : services.length === 0 ? (
         <EmptyState
           icon={Cog}

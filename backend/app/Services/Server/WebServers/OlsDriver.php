@@ -412,4 +412,28 @@ class OlsDriver extends AbstractWebServerDriver
             'error' => "{$dir}/error.log",
         ];
     }
+
+    /**
+     * OpenLiteSpeed's workers open the vhost's own access and error logs, so
+     * the account they run as has to be able to reach the directory.
+     *
+     * Asked of `httpd_config.conf` rather than taken from
+     * `server.web_server_user`, and the difference is not pedantry: that
+     * setting defaults to `www-data`, install.sh never writes it, and lsws
+     * runs as `nobody` -- so the config value is wrong on every OpenLiteSpeed
+     * server, and granting the account it names would grant nothing useful
+     * while looking like it had worked. The file is the thing that decides,
+     * so the file is what gets asked.
+     *
+     * The reading itself belongs to {@see OlsSharedConfig}, which owns that
+     * file. Only the fallback is decided here, because only this driver knows
+     * what a missing answer should mean for a grant: `nobody` is what every
+     * stock OpenLiteSpeed install runs as, and admitting it to one site's log
+     * group is no wider than the grant this method exists to make.
+     */
+    public function logWriterUser(): ?string
+    {
+        return $this->shared->serverUser()
+            ?? (string) config('server.web_server_drivers.openlitespeed.user', 'nobody');
+    }
 }

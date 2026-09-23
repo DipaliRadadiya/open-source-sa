@@ -129,8 +129,26 @@ class Fail2banController extends Controller
         $ip = (string) $request->validated('ip');
         $jail = (string) $request->validated('jail');
 
-        // Banning an address on the ignore list would be undone at the next
-        // reload, so it is refused rather than quietly accepted.
+        // The machine's own address, which the panel never lets you ban.
+        //
+        // Checked separately from the list below because the two are different
+        // questions with different answers. `ignoreIps()` is the *user's*
+        // entries — it subtracts the always-ignored ones on purpose, so the UI
+        // does not offer to delete something it will re-add. Using it as the
+        // safety check meant loopback was never covered: banning 127.0.0.1
+        // returned 200 and fail2ban carried it out.
+        //
+        // Worst on `recidive`, which bans every TCP port: the server would
+        // reject its own traffic to MariaDB and Redis, the panel would go down,
+        // and unbanning runs through the API that just became unreachable.
+        if ($fail2ban->isOwnAddress($ip)) {
+            return response()->json(['message' => __('errors/fail2ban.ip_own_address')], 422);
+        }
+
+        // An address the user listed as trusted. Refused because they said so,
+        // not because it would fail — a manual ban on an ignored address does
+        // hold, verified on a live box across a fail2ban reload. The message
+        // used to claim otherwise.
         if (in_array($ip, $fail2ban->ignoreIps(), true)) {
             return response()->json(['message' => __('errors/fail2ban.ip_ignored')], 422);
         }

@@ -31,6 +31,7 @@ import { MagicLoginLauncher } from "@/components/applications/magic-login-launch
 import { CopyButton } from "@/components/ui/copy-button";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -51,11 +52,11 @@ export default async function ApplicationDetailPage({ params }) {
     getApplication(id),
   ]);
 
-  if (!can(permissions, "application", "view")) redirect("/dashboard");
+  if (!can(permissions, "application", "view")) return <PermissionDenied title={t("title")} />;
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
-  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
   const canManage = can(permissions, "application", "manage");
@@ -214,15 +215,13 @@ export default async function ApplicationDetailPage({ params }) {
     application.url ?? `${secured ? "https" : "http"}://${application.domain}`;
 
   /*
-   * The three risks worth interrupting for, in the order a site is usually
-   * lost: no way back (no backup), traffic in the clear (no certificate), then
-   * nothing turned on to guard it.
+   * The risks worth interrupting for, in the order a site is usually lost: no
+   * way back (no backup), then traffic in the clear (no certificate).
    *
    * Each is only claimed when we actually know it. A failed backup read or a
    * missing domain permission says nothing here rather than accusing a site of
    * being unprotected on the strength of a request that did not come back.
    */
-  const protectionsOff = protectionItems.filter((item) => !item.on);
 
   /*
    * The server's own findings, ahead of the ones this page works out.
@@ -265,23 +264,29 @@ export default async function ApplicationDetailPage({ params }) {
       action: t("attention.setUpBackups"),
       href: `/applications/${id}/backups`,
     },
-    // Counted, not all-or-nothing. Firing only when every protection is off
-    // meant a site with three of four switched off said nothing at all — the
-    // exact case somebody needs telling about.
-    protectionsOff.length > 0 && {
-      key: "protection",
-      label: t("attention.protectionsOff", { count: protectionsOff.length }),
-      action: t("attention.reviewSecurity"),
-      /*
-       * The Security card below, not the first screen that happens to be off.
-       * "3 protections off" followed by a jump into Password Protection told
-       * the reader they were reviewing security and then showed them one
-       * setting — the other two were never mentioned again. There is no
-       * security overview screen to link to because that card IS the overview,
-       * and each of its rows already routes to its own screen.
-       */
-      href: "#security",
-    },
+    /*
+     * NOT a finding: a protection that is switched off.
+     *
+     * It used to be one — counted, so "3 protections off" fired rather than
+     * only the all-four case. The count was the right call for a warning; the
+     * warning was the wrong thing.
+     *
+     * Every application starts with all four off, and for most of them that is
+     * correct: password protection on a public blog would lock out its
+     * readers, and the WAF, fail2ban and the bot policy are each a decision
+     * about that specific site. So this fired on every application, forever,
+     * about settings nobody had got wrong — while the strip's own rule is that
+     * these are risks to attend to, and the dashboard's is that alerting on
+     * something somebody chose teaches them to ignore the chip.
+     *
+     * `backups` above stays, because "nothing is being backed up" is a gap
+     * rather than a preference, and so does `ssl`.
+     *
+     * Nothing is lost by removing it: the Security card sits immediately below
+     * this strip, reads "0 of 4 on", names each protection with its state, and
+     * routes each row to its own screen. It answers the same question without
+     * calling a default a problem.
+     */
   ]
     .filter(Boolean)
     // The server can see the certificate; this page is inferring from what a

@@ -3,11 +3,13 @@
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { loginSchema } from "@/lib/schemas/auth";
 import { login } from "@/lib/auth/auth-actions";
+import { safeNext } from "@/lib/auth/safe-next";
+import { takeRememberedPath } from "@/lib/auth/last-path";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,7 @@ import {
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useTranslations("auth");
   // `router.push` returns void, so awaiting it is impossible and
   // `formState.isSubmitting` goes false the moment the credentials come back —
@@ -43,7 +46,23 @@ export function LoginForm() {
     try {
       await login(values);
       startNavigation(() => {
-        router.push("/dashboard");
+        /*
+         * Back to the screen the session died on, when there is one.
+         *
+         * `?next=` first, because it is explicit — a link someone was sent, or
+         * a redirect that knew where it was going. Then the path this tab
+         * recorded on its way out (see `RememberPath`), which is what covers
+         * the ordinary case of a session quietly expiring.
+         *
+         * Both are re-checked rather than trusted. `?next=` has been through
+         * the address bar and the stored value through sessionStorage, and
+         * anything on the origin can write either; `safeNext` drops whatever
+         * is not a single-slash in-panel path.
+         *
+         * Otherwise "/" — NOT "/dashboard": the landing page depends on what
+         * this role can open, which only the server knows. app/page.js decides.
+         */
+        router.push(safeNext(searchParams.get("next")) ?? takeRememberedPath() ?? "/");
         router.refresh();
       });
     } catch (error) {

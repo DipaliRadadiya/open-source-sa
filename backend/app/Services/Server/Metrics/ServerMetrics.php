@@ -4,6 +4,7 @@ namespace App\Services\Server\Metrics;
 
 use App\Services\Server\Applications\DnsVerifier;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerPublicIp;
 use App\Support\Bytes;
@@ -33,6 +34,7 @@ class ServerMetrics
         private DnsVerifier $dns,
         private ServerPublicIp $publicIp,
         private ServerCapabilities $capabilities,
+        private DatabaseManager $databases,
     ) {}
 
     /**
@@ -543,12 +545,70 @@ class ServerMetrics
     private function runtimes(): array
     {
         return [
-            'php' => $this->version(['php', '-r', 'echo PHP_VERSION;']),
+            // Read from the running process, not by shelling out to `php`.
+            //
+            // That probe resolved `php` from PATH, and the web process does not
+            // have the one the CLI does. Measured on an OpenLiteSpeed box:
+            // lshttpd runs with `PATH=/bin:/usr/bin`, while install.sh puts the
+            // panel's interpreter at `/usr/local/bin/php` — so the dashboard
+            // reported PHP as blank while `php -r` from a shell answered
+            // 8.4.25. The queue worker has the fuller PATH, which is why every
+            // other PHP-dependent feature was unaffected.
+            //
+            // Asking PHP itself cannot be wrong and cannot depend on PATH,
+            // which retires the failure rather than moving it. It also removes
+            // a subprocess from a dashboard that polls.
+            //
+            // The limitation, stated rather than hidden: on a server with
+            // several versions this is the interpreter the *panel* runs, not
+            // whichever version a given site uses. Per-site versions are the
+            // PHP screen's job, and a single number on a facts card could never
+            // have carried them.
+            'php' => PHP_VERSION,
             'node' => $this->version([(string) config('server.node_binary', 'node'), '-v']),
             'redis' => $this->version(['redis-server', '--version']),
-            'mysql' => $this->version(['mysql', '--version']),
+            ...$this->databaseVersion(),
             ...$this->webServerVersion(),
         ];
+    }
+
+    /**
+     * The version of the database engine this box actually runs, keyed by its
+     * name — the same shape, and for the same reason, as
+     * {@see webServerVersion()} below.
+     *
+     * This read `mysql --version` under a hardcoded `mysql` key. On a MariaDB
+     * server that is the **client** tool reporting its own protocol version,
+     * so a box with no MySQL on it showed "MySQL 15.2" on the dashboard while
+     * `GET /databases/engines` — asking each engine `SELECT VERSION()` —
+     * correctly reported MariaDB 11.8.6 on the same request cycle. Two screens,
+     * one server, two answers, and the confident one wrong.
+     *
+     * Exactly the mistake the web-server version had and had fixed: assuming
+     * one product and naming the key after the assumption. Asking the engine
+     * rather than a client binary also means the version is the server's, not
+     * whatever happens to be installed to talk to it.
+     *
+     * @return array<string, string>
+     */
+    private function databaseVersion(): array
+    {
+        // Every engine that answered, not the first.
+        //
+        // This returned only the first, copied from webServerVersion() below —
+        // where one-only is correct, because a single web server owns port 80.
+        // Databases do not work that way: a server can run MariaDB and
+        // PostgreSQL at once, and on the box this was written against it does.
+        // So PostgreSQL was installed, running, correct on the Databases screen
+        // and absent from the dashboard.
+        //
+        // A server with no engine installed contributes no key rather than a
+        // null one: omitting it is honest, and a row reading "MySQL —" invites
+        // the question of why MySQL is listed at all.
+        return array_filter(
+            $this->databases->detectedVersions(),
+            fn (?string $version): bool => $version !== null,
+        );
     }
 
     /**

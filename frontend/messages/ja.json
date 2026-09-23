@@ -49,7 +49,6 @@
     "unsavedDescription": "このページの変更は保存されていません。変更は失われます。",
     "unsavedStay": "このページに留まる",
     "unsavedLeave": "離れて変更を失う",
-    "sortBy": "この列で並べ替え",
     "navTitles": {
       "app_firewall": "Web ファイアウォール"
     },
@@ -57,7 +56,17 @@
       "stopped": "このページでの更新確認を停止しました。",
       "checkAgain": "再確認"
     },
-    "whatIsThis": "これは何ですか？"
+    "whatIsThis": "これは何ですか？",
+    "theme": {
+      "label": "テーマを変更",
+      "light": "ライト",
+      "dark": "ダーク",
+      "system": "システム"
+    },
+    "permissionDenied": {
+      "title": "{feature} にアクセスする権限がありません",
+      "description": "このロールにはこれを表示する権限が含まれていません。管理者に権限の付与を依頼してください。"
+    }
   },
   "systemUsers": {
     "title": "システムユーザー",
@@ -671,7 +680,9 @@
     "required_name": "名前は必須です",
     "domainRequired": "ドメイン名を入力してください",
     "hostnameInvalid": "有効なホスト名を入力してください（例: example.com）",
+    "hostnameTooLong": "ドメイン名は最大 253 文字です。",
     "redirectTargetRequired": "このドメインのリダイレクト先を入力してください",
+    "redirectTargetUrl": "http:// または https:// で始まる完全なアドレスを入力してください。",
     "required_username": "ユーザー名を入力してください。",
     "required_password": "パスワードを入力してください。",
     "required_currentPassword": "現在のパスワードは必須です",
@@ -841,10 +852,6 @@
     "ofCores": "/ {count} コア",
     "breakdown": "使用 {used} · 空き {free} · 合計 {total}",
     "loadFailed": "データを読み込めませんでした。ページを再読み込みしてください。",
-    "noPermission": {
-      "title": "ダッシュボードにアクセスする権限がありません",
-      "description": "現在のロールにはサーバーメトリクスを表示する権限が含まれていません。管理者にダッシュボードへのアクセス権を依頼してください。"
-    },
     "staleHint": "最後に受信した値を表示しています。",
     "kill": {
       "action": "このプロセスを停止",
@@ -882,6 +889,16 @@
         "chip": "{site} のセットアップが完了しませんでした",
         "detail": "このアプリケーションのセットアップが途中で停止したため、まだ配信されていません。",
         "action": "失敗の内容を見る"
+      },
+      "deployFailed": {
+        "chip": "{site} の前回のデプロイが失敗しました",
+        "detail": "アプリケーションは以前のバージョンを配信し続けており、修正するまで次のプッシュも同じように失敗します。",
+        "action": "デプロイログを見る"
+      },
+      "processDown": {
+        "chip": "{site} が停止しています",
+        "detail": "プロセスが動作していないため、アプリケーションは一時停止していないのに訪問者にエラーが表示されます。",
+        "action": "プロセスを確認"
       },
       "git": {
         "chip": "{site} の Git アカウントが失われました",
@@ -3195,7 +3212,6 @@
       "title": "サーバーは最初のアプリケーションの準備ができています",
       "description": "ガイド付きフローでアプリケーションやサービスを作成します。{brand} がプロビジョニングを行い、ここに稼働状況を表示します。",
       "filteredTitle": "一致するアプリケーションがありません",
-      "clearSearch": "検索をクリア",
       "guideTitle": "アイデアから稼働中のアプリケーションまで",
       "steps": {
         "choose": {
@@ -3406,11 +3422,13 @@
       "removeFiles": "アプリケーションのファイルとバックアップも削除する",
       "removeFilesOn": "アプリケーションのディレクトリとすべてのバックアップが削除されます。ストレージ内のアーカイブも含みます。",
       "removeFilesOff": "ファイルはサーバーに残ります。アプリケーションのバックアップはパネルから削除されますが、アーカイブはストレージに残ります。不要になった場合はストレージ側で削除してください。",
+      "systemUserStays": "システムユーザー {username} は削除されません。他のアプリケーションが使用していなければ、「システムユーザー」から削除できます。",
       "confirmLabel": "確認のため <code>{domain}</code> と入力してください",
       "submit": "アプリケーションを削除",
       "deleting": "削除中…",
       "done": "{name} を削除しました。",
       "failed": "アプリケーションを削除できませんでした。",
+      "alreadyGone": "{name} はすでに削除されています。",
       "cancel": "キャンセル",
       "copyDomain": "ドメインをコピー",
       "removeDatabases": "{count, plural, one {このアプリケーションのデータベースも削除する} other {このアプリケーションの # 個のデータベースも削除する}}",
@@ -3452,9 +3470,6 @@
       "loadFailed": "このアプリケーションのドメインを読み込めませんでした。",
       "pageTitle": "ドメインと SSL",
       "pageSubtitle": "このアプリケーションが応答する名前と HTTPS 証明書を管理します。",
-      "provisioning": "ドメインと SSL はアプリケーションのプロビジョニングが完了すると利用可能になります。",
-      "sectionTitle": "ドメイン",
-      "sectionSubtitle": "このアプリケーションが応答するすべての名前。",
       "tabs": {
         "domains": "ドメイン",
         "ssl": "SSL",
@@ -3462,9 +3477,17 @@
         "notSecured": "保護なし",
         "sslUnknown": "証明書の状態が不明です"
       },
+      "provisioning": "ドメインと SSL はアプリケーションのプロビジョニングが完了すると利用可能になります。",
+      "sectionTitle": "ドメイン",
+      "sectionSubtitle": "このアプリケーションが応答するすべての名前。",
       "emptyTitle": "ドメインがまだありません",
       "emptyBody": "このアプリケーションに向けてドメインを追加してください。後から名前や別名を追加することもできます。",
       "testDomain": "テストドメイン",
+      "sslRow": {
+        "secured": "保護済み",
+        "notCovered": "証明書に含まれていません",
+        "none": "SSL 証明書なし"
+      },
       "rowActions": "操作",
       "makePrimary": "プライマリにする",
       "remove": "解除",
@@ -3521,11 +3544,13 @@
         "afterLabel": "後",
         "keepsServing": "{domain} は別名として残り、このアプリケーションの配信を継続します。",
         "renamesFiles": "アプリケーションの設定ファイルとログファイルがリネームされます。",
-        "cmsWarning": "WordPress には古いアドレスが保存されたままになっているため、アプリケーション内で変更するまで訪問者が元のアドレスへリダイレクトされる場合があります。"
+        "cmsWarning": "WordPress には古いアドレスが保存されたままになっているため、アプリケーション内で変更するまで訪問者が元のアドレスへリダイレクトされる場合があります。",
+        "notOnCertificate": "SSL 証明書は {domain} を含んでいません。再発行するまで、新しいアドレスを訪れた人にはセキュリティ警告が表示されます。"
       },
       "removeConfirm": {
         "title": "{domain} を削除しますか？",
-        "body": "この名前でのアプリケーションの応答が停止します。これは元に戻せません。"
+        "body": "この名前でのアプリケーションの応答が停止します。これは元に戻せません。",
+        "onCertificate": "SSL 証明書はこの名前を含んでいます。再発行するまで、証明書は自動更新されなくなります — 証明書に含まれる他のすべての名前についても同様です。"
       },
       "toast": {
         "added": "ドメインを追加しました。",
@@ -3537,7 +3562,9 @@
         "promoted": "{domain} がプライマリドメインになりました。",
         "promoteFailed": "プライマリドメインを変更できませんでした。",
         "removed": "{domain} を削除しました。",
-        "removeFailed": "ドメインを削除できませんでした。"
+        "removeFailed": "ドメインを削除できませんでした。",
+        "removedAlready": "{domain} はすでに削除されています。",
+        "updated": "{domain} を更新しました。"
       },
       "ssl": {
         "sectionTitle": "SSL 証明書",
@@ -3548,17 +3575,25 @@
         "enable": "HTTPS を有効化",
         "issuing": "証明書を発行中…",
         "issuingBody": "Let's Encrypt との通信を伴うため、最大 1 分かかる場合があります。",
+        "issuingStuck": "数分経ってもこのままですか？ 削除してもう一度お試しください。",
         "failed": "証明書を発行できませんでした",
         "reference": "参照: {reference}",
         "rateLimited": "Let's Encrypt からこのドメインに対してレート制限を受けています。再試行は約 1 週間待ってください。今の時点で再試行しても解決しません。",
         "reissue": "再発行",
         "remove": "証明書を削除",
+        "moreActions": "証明書のオプション",
         "active": "HTTPS は有効です",
+        "namesTitle": "この証明書に含まれるドメイン",
+        "namesCount": "{total} 件中 {secured} 件を保護",
+        "nameMissing": "この証明書に含まれていません",
+        "nameStale": "このアプリケーションにはもうありません",
+        "coverageGap": "すべての名前が一致するまで、この証明書は自動更新されなくなります — 問題のない名前についても同様です。再発行して揃えてください。",
         "expired": "この証明書の有効期限が切れています。",
+        "expiredForcedHttps": "すべての訪問者が HTTPS にリダイレクトされますが、その先の証明書は期限切れです — つまり誰もこのアプリケーションにアクセスできません。証明書を直すあいだ、リダイレクトをオフにして通常の HTTP に戻してください。",
+        "turnOffForceHttps": "HTTPS リダイレクトをオフにする",
         "expiredTitle": "HTTPS が機能していません",
         "expiresRenew": "自動更新 · {when} に期限切れ（{days} 日）",
         "expiresManual": "{when} に期限切れ（{days} 日） — 自動更新されません",
-        "missingDomains": "これらの名前は証明書にまだ含まれていません: {domains}。再発行してカバーしてください。",
         "forceHttps": "HTTPS を強制",
         "forceHttpsHint": "すべての訪問者を HTTP から HTTPS へリダイレクトします。",
         "forceHttpsEnabled": "すべての訪問者が HTTPS へリダイレクトされるようになりました。",
@@ -3603,8 +3638,9 @@
         "reloadWebServer": "{service} を再読み込み",
         "reloaded": "ウェブサーバーを再読み込みしました。",
         "reloadFailed": "ウェブサーバーを再読み込みできませんでした。",
-        "staleDomains": "{domains} はこの証明書に含まれていますが、このアプリケーションのドメインではなくなりました。再発行するまで、証明書全体の更新が失敗します。",
-        "uploadNeedsBoth": "証明書と対応する秘密鍵の両方を貼り付けてください。"
+        "uploadNeedsBoth": "証明書と対応する秘密鍵の両方を貼り付けてください。",
+        "removed": "証明書を削除しました。このアプリケーションは通常の HTTP に戻ります。",
+        "removedAlready": "証明書はすでに削除されています。"
       },
       "issueCertificate": "SSL を設定",
       "description": "このアプリケーションに到達する名前と証明書。",
@@ -3614,7 +3650,17 @@
         "alias": "別名",
         "redirect": "リダイレクト"
       },
-      "openNamed": "{domain} を新しいタブで開く"
+      "openNamed": "{domain} を新しいタブで開く",
+      "edit": {
+        "action": "編集",
+        "title": "ドメインを編集",
+        "subtitle": "この名前の動作を変更します。名前そのものはここでは変更できません。",
+        "domain": "ドメイン",
+        "domainLocked": "別の名前を使うには、これを削除して新しい名前を追加してください。ここで改名すると古い名前が証明書に残り、更新が止まります。",
+        "submit": "変更を保存",
+        "submitting": "保存中…",
+        "clearsTarget": "エイリアスに変更すると、リダイレクト先 ({target}) は削除されます。エイリアスはアプリケーション自体を配信します。"
+      }
     },
     "magicLogin": {
       "action": "ワンクリックログイン",
@@ -4771,7 +4817,7 @@
         "jailHint": "ブロックの判定 — 試行回数、期間、ブロック時間。",
         "filterHint": "不正な試行の定義 — 各ログ行と照合されます。"
       },
-      "placeholderNote": "{name}, {filter}, {logpath}, {slug} はファイル書き込み時に自動で埋められます。変更しないでください。",
+      "placeholderNote": "Jail 名、ログのパス、フィルターはこのアプリケーションから自動で入ります。filter の行はそのままにしてください — 常にこのアプリケーション名で保存されるフィルターファイルと一致する必要があります。",
       "placeholderLost": "{count, plural, other {{tokens} はもうファイルに含まれていません。埋め込まれる値もそれに伴いません。意図的に置き換えた場合のみ正しい挙動です。}}",
       "unsavedHere": "このファイルに未保存の変更があります",
       "saveAction": "保存して fail2ban を再読込",
@@ -4896,6 +4942,7 @@
     "size": {
       "notMeasured": "未計測",
       "measuring": "計測中…",
+      "measured": "サイズを測定しました。",
       "measureFailed": "サイズを測定できませんでした。",
       "measureHint": "このアプリケーションのディスク使用量を今すぐ測定"
     },
@@ -4950,8 +4997,6 @@
       "setUpBackups": "バックアップを設定",
       "noCertificate": "SSL 未設定",
       "issueCertificate": "SSL を設定",
-      "reviewSecurity": "セキュリティを確認",
-      "protectionsOff": "{count, plural, other {# 件の保護がオフです}}",
       "noDatabase": "このアプリケーションにはデータベースがないため、バックアップにも含まれません",
       "attachDatabase": "データベースを関連付ける",
       "issueAction": {
@@ -5096,6 +5141,10 @@
       "needs": {
         "node": "{app} には Node {requirement} が必要です。これをインストールします",
         "php": "{app} には PHP {requirement} が必要です。これをインストールします"
+      },
+      "needsEol": {
+        "node": "{app} には Node {requirement} が必要です。このラインはサポートが終了していますが、{app} が動作する最新のものです。",
+        "php": "{app} には PHP {requirement} が必要です。このラインはサポートが終了していますが、{app} が動作する最新のものです。"
       }
     },
     "phpFact": "PHP {version}",
@@ -5106,6 +5155,12 @@
       "looksLike": "{type} のようです",
       "looksLikeBecause": "{type} のようです — {file} が見つかりました",
       "nothingFound": "前回の確認では認識できるものが見つかりませんでした",
+      "checkedFound": "前回の確認で {type} が見つかりました",
+      "checkedFoundFile": "前回の確認で {type} が見つかりました — {file} があります",
+      "detectedSuggestion": "{type} のようです。提案された変更を確認してください。",
+      "detected": "このアプリケーションのディレクトリで {type} が見つかりました。",
+      "detectedFile": "{type} が見つかりました — {file} があります。",
+      "detectedNothing": "このアプリケーションのディレクトリで認識できるものが見つかりませんでした。",
       "confirmTitle": "このアプリケーションを {type} として扱いますか？",
       "confirmFound": "このアプリケーションのディレクトリに {file} があります。",
       "confirmNarrow": "パネルはこのアプリケーションの種類固有の画面を表示しなくなります。",
@@ -5119,7 +5174,7 @@
       "reversible": "いつでも {from} に戻せます。",
       "reviewAction": "確認",
       "detectAction": "インストール内容を確認",
-      "changeTo": "種類を {type} に変更",
+      "changeTo": "代わりに {type} として扱う",
       "menuHint": "アプリケーション種類のオプション"
     }
   },

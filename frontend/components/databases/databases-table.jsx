@@ -251,9 +251,9 @@ function DatabasesList({
   const showEngine = engines.length > 1;
 
   const columns = [
-    { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, cell: NameCell },
+    { accessorKey: "name", header: () => <SortHeader col="name">{t("columns.name")}</SortHeader>, meta: { sortKey: "name" }, cell: NameCell },
     ...(showEngine
-      ? [{ accessorKey: "engine", header: () => <SortHeader col="engine">{t("columns.engine")}</SortHeader>, cell: EngineCell }]
+      ? [{ accessorKey: "engine", header: () => <SortHeader col="engine">{t("columns.engine")}</SortHeader>, meta: { sortKey: "engine" }, cell: EngineCell }]
       : []),
     {
       // The link that decides what gets backed up, which had no column at all —
@@ -293,6 +293,7 @@ function DatabasesList({
     {
       accessorKey: "users_count",
       header: () => <SortHeader col="users_count" descFirst>{t("columns.users")}</SortHeader>,
+      meta: { sortKey: "users_count" },
       cell: UsersCell,
     },
     {
@@ -323,7 +324,7 @@ function DatabasesList({
       // scrollbar nothing pointed at. Age is the one column here no operational
       // decision turns on, and it is still on the database's own page — the
       // actions are not recoverable anywhere else.
-      meta: { className: "hidden 2xl:table-cell" },
+      meta: { className: "hidden 2xl:table-cell", sortKey: "created_at" },
       id: "created",
       header: () => <SortHeader col="created_at" descFirst>{t("columns.created")}</SortHeader>,
       cell: CreatedCell,

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, getImpersonator } from "@/lib/auth/get-current-user";
 import { signedOutPath } from "@/lib/auth/signed-out-path";
+import { RememberPath } from "@/components/remember-path";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { AuthProvider } from "@/components/auth-provider";
 import { AppSidebar } from "@/components/sections/app-sidebar";
@@ -68,6 +69,7 @@ export default async function AppLayout({ children }) {
     <AuthProvider user={user}>
       <TooltipProvider delayDuration={300}>
       <ErrorCopy />
+      <RememberPath />
         {/* Panel-wide, not settings-only. Any screen with its own Save can
             lose an edit to a sidebar click, and every one of them did. */}
         <UnsavedProvider>

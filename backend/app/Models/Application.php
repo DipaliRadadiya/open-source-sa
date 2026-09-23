@@ -141,6 +141,29 @@ class Application extends Model
     }
 
     /**
+     * The longest a name may be before the paths derived from it stop fitting.
+     *
+     * The name becomes a slug ({@see uniqueSlug()}), and the slug names a file
+     * the web server reads. A filename is capped at 255 bytes, and the panel
+     * appends to the slug: `.conf`, and `-tls.conf` for the TLS variant.
+     *
+     * Measured rather than reasoned from the constant: a 255-character slug
+     * plus `.conf` fails to create, 250 plus `.conf` succeeds — so the ceiling
+     * is real and sits between them.
+     *
+     * 240 = 255 − 9 (`-tls.conf`) − 6, the last being room for the collision
+     * suffix `uniqueSlug()` appends: a name capped exactly at the limit would
+     * still overflow the moment it became `-2`.
+     *
+     * A cap rather than truncation, because the name is the user's own word
+     * for their site and quietly shortening it would leave the panel calling
+     * it something they did not choose. {@see \App\Services\Server\WebServers\
+     * OlsDriver} truncates instead where it has no choice — a socket path is
+     * capped at 108 bytes and no user-facing name survives that.
+     */
+    public const MAX_NAME_LENGTH = 240;
+
+    /**
      * A stable, unique, filesystem-safe slug from the name — the key for the
      * web-server config filename. Suffixes `-2`, `-3`, … on collision.
      *

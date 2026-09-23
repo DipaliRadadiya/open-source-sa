@@ -9,7 +9,7 @@ import Link from "next/link";
 import { ChevronDown, Download, Loader2, TableProperties } from "lucide-react";
 import { phpmyadminSso } from "@/lib/api/databases";
 import { phpmyadminState, userCount } from "@/lib/databases/phpmyadmin-state";
-import { placeholderDocument } from "@/lib/databases/phpmyadmin-placeholder";
+import { openBlankTab, paintPlaceholder } from "@/lib/browser/new-tab";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,17 +19,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-/**
- * `document.write` rather than DOM building: the handle is an `about:blank`
- * that has never navigated, and this is the one API that reliably replaces its
- * document before `location.replace` follows. It inherits this page's origin,
- * so writing to it is permitted — severing `opener` does not change that.
- */
-function paintPlaceholder(tab, message) {
-  tab.document.write(placeholderDocument(message));
-  tab.document.close();
-}
 
 /**
  * Open this database in phpMyAdmin, already logged in.
@@ -147,13 +136,8 @@ export function PhpmyadminButton({
     // Opened synchronously off the click, then pointed somewhere once the
     // token arrives. Opening it after the await is a popup the browser did
     // not see the user ask for.
-    const tab = window.open("", "_blank");
+    const tab = openBlankTab();
     try {
-      // Same protection `noopener` would have given, applied where it does not
-      // cost the handle: the new tab cannot reach back through `window.opener`.
-      // Inside the try because it is a setter on a window the browser may have
-      // already disowned — a throw here used to take the whole click with it.
-      if (tab) tab.opener = null;
 
       // Give the placeholder something to say.
       //
@@ -165,7 +149,7 @@ export function PhpmyadminButton({
       // Same reason as the line above for being inside the try: this touches a
       // document in a window the browser may already have disowned, and a
       // throw here would cost the click that is fetching a 60-second token.
-      if (tab) paintPlaceholder(tab, t("signingIn"));
+      paintPlaceholder(tab, t("signingIn"), "phpMyAdmin");
 
       const { data } = await phpmyadminSso(
         database.id,

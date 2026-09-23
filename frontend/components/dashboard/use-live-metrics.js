@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getLiveMetrics } from "@/lib/api/server-metrics";
+import { apiMessage } from "@/lib/api/error-message";
 
 const POLL_MS = 3000;
 const SLOW_POLL_MS = 15000;
@@ -23,6 +24,16 @@ export function useLiveMetrics(initial = null) {
   const [metrics, setMetrics] = useState(initial);
   const [series, setSeries] = useState([]);
   const [failed, setFailed] = useState(false);
+  /*
+   * The API's own sentence for WHY the poll is failing.
+   *
+   * `failed` alone renders "Live metrics unavailable", which is the category,
+   * not the reason — and the server sends a real one ("Metrics collector is
+   * not running."). Keeping only the boolean meant the panel knew why and
+   * showed a shrug, which is the same fault as reporting a failed read as a
+   * fact.
+   */
+  const [reason, setReason] = useState(null);
   // `cpu.percent`, `network` and `disk_io` are rates measured against the
   // PREVIOUS poll, so the first sample after any gap comes back as 0 — there is
   // nothing to measure against yet. That 0 is "not measured", not "idle", and
@@ -70,6 +81,7 @@ export function useLiveMetrics(initial = null) {
         if (!active || !data) return;
         setMetrics(data);
         setFailed(false);
+        setReason(null);
         setUpdatedAt(new Date());
         failures = 0;
         applyBackoff(failures);
@@ -114,6 +126,7 @@ export function useLiveMetrics(initial = null) {
       } catch (error) {
         if (active && error?.name !== "CanceledError" && error?.code !== "ERR_CANCELED") {
           setFailed(true);
+          setReason(apiMessage(error, null));
           failures += 1;
           // The next success is measuring across the outage, not across a tick.
           needsBaseline = true;
@@ -135,5 +148,5 @@ export function useLiveMetrics(initial = null) {
     };
   }, []);
 
-  return { metrics, series, failed, updatedAt, ratesReady };
+  return { metrics, series, failed, reason, updatedAt, ratesReady };
 }

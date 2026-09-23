@@ -829,6 +829,22 @@ return [
             */
             'lsapi_max_requests' => (int) env('SERVER_OLS_LSAPI_MAX_REQUESTS', 5000),
             'shared_config' => env('SERVER_OLS_CONFIG', '/usr/local/lsws/conf/httpd_config.conf'),
+
+            /*
+            | The account lsws drops to, used only as a fallback: the real
+            | value is read from the `user` directive in `shared_config`
+            | above, because that file is what actually decides it.
+            |
+            | Deliberately NOT `server.web_server_user`. That one defaults to
+            | `www-data`, install.sh never writes it, and every path that
+            | reads it is skipped on this stack — so it has been quietly
+            | wrong on every OpenLiteSpeed server without costing anything
+            | yet. Reusing it here would have been the first time it cost
+            | something, and the failure would have been silent: a grant to
+            | an account that does not run the web server looks exactly like
+            | a grant that worked.
+            */
+            'user' => env('SERVER_OLS_USER', 'nobody'),
             // A `map` is only legal inside a listener, and this names which.
             'listener' => env('SERVER_OLS_LISTENER', 'Default'),
 
@@ -1516,7 +1532,26 @@ return [
                 // Left as fail2ban's default it would resolve to 22, so on a
                 // server whose SSH was moved — via this very panel — the ban
                 // would land on a port nobody uses.
-                'options' => ['mode' => 'aggressive', 'port' => '{ssh_port}'],
+                //
+                // `backend` belongs HERE, on the one jail that wants the
+                // journal, and not in `[DEFAULT]` where it used to be. A
+                // backend in `[DEFAULT]` applies to every jail, and the
+                // systemd backend makes fail2ban ignore `logpath` entirely —
+                // so every file-watching jail the panel writes was reading the
+                // journal instead of the file it named, matching nothing. That
+                // silently disabled `recidive` and every per-site application
+                // jail while the panel reported them enabled.
+                //
+                // `%(sshd_backend)s` rather than a literal `systemd`: it is
+                // fail2ban's own variable and resolves to whatever is correct
+                // for the distribution, so this stays right on a box whose
+                // sshd does not log to the journal. Taken from v7, which has
+                // always put it here.
+                'options' => [
+                    'mode' => 'aggressive',
+                    'port' => '{ssh_port}',
+                    'backend' => '%(sshd_backend)s',
+                ],
             ],
             [
                 'name' => 'recidive',

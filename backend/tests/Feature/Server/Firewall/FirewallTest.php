@@ -637,3 +637,217 @@ it('denies a viewer without manage from adding a rule', function () {
         ->postJson('/api/firewall/rules', ['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow'])
         ->assertForbidden();
 });
+
+/*
+ * A newly created rule must not report itself as off.
+ *
+ * `enabled` defaults to true in the database, and a model built by `create()`
+ * never learns a database default — so the 201 body said `enabled: false`
+ * while ufw already had the port open. Every later read said true. A client
+ * rendering the create response, which is the natural thing to do, showed the
+ * user a disabled rule for an open port.
+ *
+ * Found by driving the real API on a live box. The existing create test above
+ * asserts origin, protected and summary — everything except the field that was
+ * wrong, which is why this survived to be found by hand.
+ */
+it('reports a newly created rule as enabled, because ufw has already applied it', function () {
+    fakeUfw();
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', ['port_from' => 8081, 'protocol' => 'tcp', 'action' => 'allow'])
+        ->assertCreated()
+        ->assertJsonPath('rule.enabled', true);
+
+    // The response and the row have to agree. Asserting only the response
+    // would pass against a model that lies in both places.
+    expect(FirewallRule::find($response->json('rule.id'))->enabled)->toBeTrue();
+
+    Process::assertRan(fn ($p) => $p->command === ['ufw', 'allow', '8081/tcp']);
+});
+
+it('keeps the model default and the column default saying the same thing', function () {
+    // Read as source text rather than through the schema: the point is that
+    // the two declarations agree, and a test that asked the database would be
+    // asking the very default the model is supposed to mirror.
+    $migration = file_get_contents(
+        collect(glob(database_path('migrations/*_create_firewall_rules_table.php')))->firstOrFail()
+    );
+
+    expect($migration)->toContain("boolean('enabled')->default(true)")
+        ->and((new FirewallRule)->enabled)->toBeTrue();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Searching the rules list by service name
+|--------------------------------------------------------------------------
+|
+| The rules the panel seeds itself carry no description — measured on a live
+| OpenLiteSpeed box, where 22, 80 and 443 all had `description: null`. So
+| searching "ssh" matched nothing while the row sat in plain sight, and the
+| list showed a readable summary that is built at read time and therefore
+| exists nowhere the database can search.
+|
+| A service name now resolves to its port. The text search is unchanged, and
+| the regression tests below are what say so.
+*/
+
+/** The rules list as the API returns it, for `?search=$term`. */
+function searchRules(string $term): array
+{
+    return test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/firewall/rules?search='.urlencode($term))
+        ->assertOk()
+        ->json('rules');
+}
+
+it('finds a seeded rule by its service name, though it has no description', function () {
+    $rule = FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    // The precondition is the whole point: nothing on this row contains "ssh".
+    expect($rule->description)->toBeNull();
+
+    expect(collect(searchRules('ssh'))->pluck('id'))->toContain($rule->id);
+});
+
+it('matches a service name whatever case it is typed in', function () {
+    FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    foreach (['SSH', 'Ssh', ' ssh '] as $term) {
+        expect(searchRules($term))->toHaveCount(1, "search({$term}) found nothing");
+    }
+});
+
+it('does not return every web rule when asked for https', function () {
+    FirewallRule::create(['port_from' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+    $https = FirewallRule::create(['port_from' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    // A negative control. A mapping that resolved loosely, or a LIKE over the
+    // port digits, would hand back 80 as well and still look like it worked.
+    expect(collect(searchRules('https'))->pluck('id')->all())->toBe([$https->id]);
+});
+
+it('finds a port range that covers the service', function () {
+    $range = FirewallRule::create(['port_from' => 20, 'port_to' => 30, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+
+    expect(collect(searchRules('ssh'))->pluck('id'))->toContain($range->id);
+});
+
+it('treats custom as a word, not a port, because it names no service', function () {
+    FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+    $described = FirewallRule::create(['port_from' => 9000, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user', 'description' => 'Custom app']);
+
+    // `custom` is the UI's "let me type a port" entry and has none of its own.
+    // It must fall through to the text search rather than resolve to null and
+    // quietly match everything.
+    expect(collect(searchRules('custom'))->pluck('id')->all())->toBe([$described->id]);
+});
+
+it('still searches port, source and description as text', function () {
+    $high = FirewallRule::create(['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+    $office = FirewallRule::create(['port_from' => 9001, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user', 'source_ip' => '203.0.113.7']);
+    $named = FirewallRule::create(['port_from' => 9002, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user', 'description' => 'Plesk panel']);
+
+    expect(collect(searchRules('8080'))->pluck('id'))->toContain($high->id)
+        ->and(collect(searchRules('203.0.113'))->pluck('id'))->toContain($office->id)
+        ->and(collect(searchRules('plesk'))->pluck('id'))->toContain($named->id);
+});
+
+it('keeps a text port match partial, so 80 still finds 8080', function () {
+    $http = FirewallRule::create(['port_from' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+    $alt = FirewallRule::create(['port_from' => 8080, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+
+    // Documented behaviour, not an accident: someone scanning for rules about
+    // the web server wants both. The service-name mapping must not narrow it.
+    expect(collect(searchRules('80'))->pluck('id')->all())
+        ->toEqualCanonicalizing([$http->id, $alt->id]);
+});
+
+/**
+ * The guard that matters.
+ *
+ * The service-name match is an OR and the filters are an AND. Unbracketed,
+ * the OR escapes its group and the filter stops applying — the request asks
+ * for denied rules and is answered with an allowed one. That failure reads
+ * as "search works" in every other test here.
+ */
+it('keeps a filter applied when the search matches a service name', function () {
+    FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/firewall/rules?search=ssh&filter[action]=deny')
+        ->assertOk();
+
+    expect($response->json('rules'))->toBe([])
+        ->and($response->json('meta.total'))->toBe(0);
+});
+
+/*
+|--------------------------------------------------------------------------
+| The port range a rule may name
+|--------------------------------------------------------------------------
+|
+| Creating a rule capped both ends at 65534 while editing one allowed
+| `port_to` up to 65535, so "allow everything from 9000 up" — the natural way
+| to write an open upper range — was refused on the way in and accepted on the
+| way through the edit screen.
+|
+| Nothing justified 65534. Every other port field in this application uses
+| 65535, and it was measured against the real thing:
+|
+|   ufw --dry-run allow 9000:65535/tcp  ->  Rules updated
+|   ufw --dry-run allow 0/tcp           ->  ERROR: Bad port
+*/
+
+it('accepts the highest real port, which ufw takes and this refused', function () {
+    fakeUfw();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/firewall/rules', [
+            'port_from' => 9000, 'port_to' => FirewallRule::PORT_MAX,
+            'protocol' => 'tcp', 'action' => 'allow',
+        ])
+        ->assertCreated();
+
+    expect(FirewallRule::where('port_to', 65535)->exists())->toBeTrue();
+});
+
+it('still refuses a port above the range and a port of zero', function () {
+    // The other side of the boundary. Widening a limit is the moment to pin
+    // that it is still a limit — and 0 is refused here so the user is told
+    // why, rather than having ufw refuse it later where nobody is watching.
+    fakeUfw();
+
+    foreach ([FirewallRule::PORT_MAX + 1, 0] as $port) {
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->postJson('/api/firewall/rules', ['port_from' => $port, 'protocol' => 'tcp', 'action' => 'allow'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('port_from');
+    }
+});
+
+it('lets create and update agree on the range, so neither can drift', function () {
+    // 🔴 The guard that would have caught this. The two requests disagreed for
+    // three commits and nothing noticed, because every test only ever asked
+    // one of them. This asks both the same question and compares the answers.
+    fakeUfw();
+
+    $rule = FirewallRule::create([
+        'port_from' => 9000, 'port_to' => 9100,
+        'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user',
+    ]);
+
+    // The boundary the create path accepts, the update path must accept too…
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$rule->id}", ['port_to' => FirewallRule::PORT_MAX])
+        ->assertOk();
+
+    expect($rule->fresh()->port_to)->toBe(FirewallRule::PORT_MAX);
+
+    // …and the one it refuses, the update path must refuse.
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/firewall/rules/{$rule->id}", ['port_from' => FirewallRule::PORT_MAX + 1])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('port_from');
+});

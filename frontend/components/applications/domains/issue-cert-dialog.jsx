@@ -9,6 +9,7 @@ import {
 } from "@/lib/api/domains";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
+import { Caution } from "@/components/ui/caution";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FormModal } from "@/components/ui/form-modal";
@@ -282,14 +283,11 @@ export function IssueCertDialog({
           cannot be re-issued from this panel, so swapping method throws away
           something the user may not be able to get back. */}
       {swapsMethod ? (
-        <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-          <span>
-            {t("ssl.replacesCurrent", {
-              current: current.type_title ?? t(`ssl.method_${current.type}`),
-            })}
-          </span>
-        </p>
+        <Caution size="md">
+          {t("ssl.replacesCurrent", {
+            current: current.type_title ?? t(`ssl.method_${current.type}`),
+          })}
+        </Caution>
       ) : null}
 
       {/* The server's own words about the selected method. On an available type
@@ -297,16 +295,9 @@ export function IssueCertDialog({
           about it — so it is toned by `available`, never by having a reason at
           all. Branching on the reason would refuse a method that works. */}
       {selected?.reason ? (
-        <p
-          className={
-            selected.available
-              ? "flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning"
-              : "flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-          }
-        >
-          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-          <span>{selected.reason}</span>
-        </p>
+        <Caution size="md" tone={selected.available ? "warning" : "destructive"}>
+          {selected.reason}
+        </Caution>
       ) : (
         <p className="text-xs text-muted-foreground">{t(`ssl.methodHint_${type}`)}</p>
       )}
@@ -376,7 +367,11 @@ export function IssueCertDialog({
                       ) : (
                         <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
                       )}
-                      <span className={entry.ok ? "text-muted-foreground" : "text-destructive"}>
+                      {/* The icon carries the verdict; the sentence stays
+                          readable. A failure message is the instruction for
+                          fixing it, and a paragraph of red reads as alarm
+                          rather than as the thing to go and do. */}
+                      <span className={entry.ok ? "text-muted-foreground" : undefined}>
                         {entry.message}
                       </span>
                     </li>
@@ -387,9 +382,7 @@ export function IssueCertDialog({
               {/* Only ever set when the CA stage is what failed. The list above
                   already explains a reachability failure, and repeating a
                   summary over it would say "something is wrong" twice. */}
-              {dryRun.message ? (
-                <p className="text-sm text-destructive">{dryRun.message}</p>
-              ) : null}
+              {dryRun.message ? <p className="text-sm">{dryRun.message}</p> : null}
               {dryRun.reference ? (
                 <p className="font-mono text-xs text-muted-foreground">
                   {t("ssl.reference", { reference: dryRun.reference })}
@@ -472,18 +465,19 @@ export function IssueCertDialog({
 
       {/* Reachability refusals — one message per domain, each a distinct fix. */}
       {refusals.length ? (
-        <div className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <p className="flex items-center gap-2 text-sm font-medium text-destructive">
-            <TriangleAlert className="size-4" />
-            {t("ssl.refusedTitle")}
-          </p>
-          <ul className="space-y-1 text-sm text-destructive">
+        <Caution size="md" tone="destructive">
+          <p className="font-medium">{t("ssl.refusedTitle")}</p>
+          {/* The refusals themselves are ordinary text, not red. They are the
+              instructions — one distinct fix per domain — and a list rendered
+              entirely in `text-destructive` reads as alarm rather than as the
+              thing you are supposed to go and do. */}
+          <ul className="list-disc space-y-1 pl-4">
             {refusals.map((msg, i) => (
               <li key={i}>{msg}</li>
             ))}
           </ul>
-          {canForce ? <p className="text-xs text-destructive/80">{t("ssl.forceHint")}</p> : null}
-        </div>
+          {canForce ? <p className="text-xs text-muted-foreground">{t("ssl.forceHint")}</p> : null}
+        </Caution>
       ) : null}
     </FormModal>
   );

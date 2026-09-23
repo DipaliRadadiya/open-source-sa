@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -7,6 +6,7 @@ import { SyncPanel } from "@/components/sync/sync-panel";
 import { serverSnapshot } from "@/lib/sync/server-snapshot";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +18,7 @@ export async function generateMetadata() {
 export default async function SyncPage() {
   const [permissions, t] = await Promise.all([getPermissions(), getTranslations("sync")]);
 
-  if (!can(permissions, "sync", "view")) redirect("/dashboard");
-
+  if (!can(permissions, "sync", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "sync", "manage");
 
   const [latest, ignoreList] = await Promise.all([getLatestSyncRun(), getSyncIgnores()]);
@@ -28,7 +27,7 @@ export default async function SyncPage() {
     return (
       <div className="space-y-6">
         <Header t={t} />
-        <LoadFailed status={latest.status} failure={latest.failure} />
+        <LoadFailed status={latest.status} failure={latest.failure} message={latest.message} debug={latest.debug} />
       </div>
     );
   }

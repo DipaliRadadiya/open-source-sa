@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
@@ -20,6 +19,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { Activity } from "lucide-react";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { PageHeader } from "@/components/ui/page-header";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +35,9 @@ export default async function DatabaseMonitorPage({ searchParams }) {
     getTranslations("databases.monitor"),
     getEngines(),
   ]);
-  const { engines, failed: enginesFailed, status: enginesStatus, failure: enginesFailure } = live;
+  const { engines, failed: enginesFailed, status: enginesStatus, failure: enginesFailure, message: enginesMessage } = live;
 
-  if (!can(permissions, "database", "view")) redirect("/dashboard");
+  if (!can(permissions, "database", "view")) return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "database", "manage");
 
   // Only a reachable engine has anything to report. With two running, the
@@ -59,7 +59,7 @@ export default async function DatabaseMonitorPage({ searchParams }) {
           always done this correctly; this one dropped it.
         */}
         {enginesFailed ? (
-          <LoadFailed status={enginesStatus} failure={enginesFailure} />
+          <LoadFailed status={enginesStatus} failure={enginesFailure} message={enginesMessage} />
         ) : (
           <EmptyState
             icon={Activity}

@@ -13,6 +13,9 @@ return [
     'databases_not_removed' => 'The site was deleted, but these databases are still on the server: :databases. Remove them from the Databases screen, or quote the reference to support.',
 
     'primary_domain_not_removable' => 'A primary domain cannot be removed. Make another domain primary first.',
+    'primary_domain_not_editable' => 'A primary domain cannot be edited. Make another domain primary first.',
+    'domain_taken' => 'This domain is already in use on this server.',
+    'domain_taken_by' => 'This domain is already in use by the application “:application”.',
     'unsupported_web_server' => 'The panel cannot write site configuration for :web_server.',
     'no_web_server' => 'no detected web server',
     'provision_failed' => 'Setting up the site failed at the ":step" step.',

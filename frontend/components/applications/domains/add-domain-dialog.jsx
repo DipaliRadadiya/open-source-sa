@@ -3,12 +3,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2, Globe, Info, TriangleAlert } from "lucide-react";
+import { Loader2, Globe, Info } from "lucide-react";
 import { addDomainFormSchema, REDIRECT_STATUSES } from "@/lib/schemas/domain";
 import { addDomain } from "@/lib/api/domains";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
+import { Caution } from "@/components/ui/caution";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Input } from "@/components/ui/input";
 import { FormModal } from "@/components/ui/form-modal";
@@ -231,22 +232,19 @@ export function AddDomainDialog({ appId, open, onOpenChange, serverIp = null, ce
             issued for somebody else's name, and the browser refuses the page
             outright. That is a harder failure than plain HTTP would be. */}
         {active ? (
-          <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-warning">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-            <div className="space-y-1">
-              <p>
-                {t(uploaded ? "add.certUploadedNotice" : "add.certNotice", {
-                  current: active.type_title ?? "",
-                })}
-              </p>
-              {/* The sharp edge, and only when it is actually sharp. With the
-                  redirect off, the new name still answers on plain HTTP, so a
-                  visitor sees the site and no warning. With it on, port 80
-                  sends them to the certificate error and there is no way
-                  through. */}
-              {active.force_https ? <p>{t("add.certNoticeForceHttps")}</p> : null}
-            </div>
-          </div>
+          <Caution size="md">
+            <p>
+              {t(uploaded ? "add.certUploadedNotice" : "add.certNotice", {
+                current: active.type_title ?? "",
+              })}
+            </p>
+            {/* The sharp edge, and only when it is actually sharp. With the
+                redirect off, the new name still answers on plain HTTP, so a
+                visitor sees the site and no warning. With it on, port 80
+                sends them to the certificate error and there is no way
+                through. */}
+            {active.force_https ? <p>{t("add.certNoticeForceHttps")}</p> : null}
+          </Caution>
         ) : null}
       </FormModal>
     </Form>

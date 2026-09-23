@@ -204,6 +204,10 @@ export function timeSeriesOption({
       axisLabel: {
         color: muted,
         fontSize: 11,
+        // Same rule the x-axis already uses. A forced `max` lands a label
+        // wherever the ceiling happens to be, so the load chart printed "4.2"
+        // and "4" touching each other — two readings of one gridline.
+        hideOverlap: true,
         ...(axis.formatter ? { formatter: axis.formatter } : {}),
       },
     })),
@@ -291,4 +295,28 @@ export function axisMax(data, keys, { floor = 0, headroom = 1.2 } = {}) {
   }
 
   return Math.max(floor, peak * headroom, 1);
+}
+
+/**
+ * Round a ceiling up to a number the tick sequence would have chosen anyway
+ * (1, 2, 2.5 or 5 x 10^n).
+ *
+ * A forced `max` always gets its own label, so an arbitrary ceiling prints one
+ * nobody asked for right beside a real tick: the load chart's floor is
+ * `cores * 1.05`, which on a four-core box drew "4.2" and "4" touching each
+ * other — two readings of the same gridline, and the smaller number was the
+ * meaningful one. Rounding 4.2 up to 5 puts the capacity line on an ordinary
+ * tick with room above it, which is what the 5% headroom was for.
+ *
+ * Applied by the caller, not inside `axisMax`. The two I/O charts floor at
+ * 65536 — 64 KB/s, already round in the units their axis is labelled in — and
+ * this would push them to 100000, i.e. "97.7 KB/s".
+ */
+export function niceCeiling(value) {
+  if (!Number.isFinite(value) || value <= 0) return 1;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  const scaled = value / magnitude;
+  const step = [1, 2, 2.5, 5, 10].find((candidate) => scaled <= candidate + 1e-9) ?? 10;
+
+  return step * magnitude;
 }

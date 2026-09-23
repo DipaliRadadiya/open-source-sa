@@ -12,6 +12,7 @@ import { DomainsSection } from "@/components/applications/domains/domains-sectio
 import { SslSection } from "@/components/applications/domains/ssl-section";
 import { DomainsSslTabs } from "@/components/applications/domains/domains-ssl-tabs";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -33,14 +34,16 @@ export default async function ApplicationDomainsPage({ params }) {
     getApplication(id),
   ]);
 
-  if (!can(permissions, "application", "view")) redirect("/dashboard");
+  if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
-  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
-  if (!can(appPermissions, "app_domain", "view", "application")) redirect(`/applications/${id}`);
+  if (!can(appPermissions, "app_domain", "view", "application")) {
+    return <PermissionDenied title={t("pageTitle")} />;
+  }
   const canManage = can(appPermissions, "app_domain", "manage", "application");
   const settled = application.status === "active";
 
@@ -96,7 +99,7 @@ export default async function ApplicationDomainsPage({ params }) {
           {t("provisioning")}
         </div>
       ) : domainList.failed ? (
-        <LoadFailed description={t("loadFailed")} status={domainList.status} failure={domainList.failure} />
+        <LoadFailed description={t("loadFailed")} status={domainList.status} failure={domainList.failure} message={domainList.message} debug={domainList.debug} />
       ) : (
         <DomainsSslTabs
           sslStatus={sslStatus}
@@ -120,7 +123,7 @@ export default async function ApplicationDomainsPage({ params }) {
             certificate.failed ? (
               <LoadFailed
                 status={certificate.status}
-                failure={certificate.failure}
+                failure={certificate.failure} message={certificate.message} debug={certificate.debug}
               />
             ) : (
               <SslSection

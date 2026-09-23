@@ -38,8 +38,17 @@ interface WebServerDriver
      * On the contract because `apply()` is not the only writer: `sites:resync`
      * renders and writes the same file itself, and used to do so without any
      * of this preparation.
+     *
+     * Returns whether preparation changed anything the running web server
+     * would only notice on a restart. Creating a directory is not such a
+     * change — the config test reads the filesystem when it runs. Adding the
+     * web server's account to a site's log group is: supplementary groups are
+     * read at process start, so until the workers restart the grant does
+     * nothing at all. `sites:resync` decides whether to reload on this,
+     * because a site whose config text is unchanged still needs the restart
+     * when this answers true.
      */
-    public function ensureDirectories(Application $application): void;
+    public function ensureDirectories(Application $application): bool;
 
     /**
      * Take it back out again — the inverse of `apply()`, and the rollback when
@@ -78,4 +87,26 @@ interface WebServerDriver
      * @return array<string, string> keyed `access` and `error`
      */
     public function logPaths(Application $application): array;
+
+    /**
+     * The OS account that opens the per-site log files, or null when they are
+     * opened by a root master process before privileges are dropped.
+     *
+     * On the contract because {@see ApplicationLogDirectory} is built on the
+     * answer and cannot ask the question itself. That directory is
+     * `root:{site user} 0750` for a reason its own docblock states -- the site
+     * can read its logs but cannot unlink and replace a file a root process is
+     * appending to -- and the reason rests on a premise: "every writer here is
+     * a root master process handing a descriptor down". nginx and Apache do
+     * that. OpenLiteSpeed does not, and so wrote nothing at all: its workers
+     * run as `nobody`, which is neither the owner nor in the group, and could
+     * not traverse the directory to open the file. Measured on a live box --
+     * two requests answered 200 and access.log stayed at zero bytes, and the
+     * per-site fail2ban jail watching that file could therefore never ban
+     * anyone.
+     *
+     * Null is the safe answer and the default, because it grants nothing. A
+     * driver returning a user is asking for that account to be let in.
+     */
+    public function logWriterUser(): ?string;
 }

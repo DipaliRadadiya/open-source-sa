@@ -49,7 +49,6 @@
     "unsavedDescription": "Suas alterações nesta página não foram salvas. Elas serão perdidas.",
     "unsavedStay": "Permanecer nesta página",
     "unsavedLeave": "Sair e perder as alterações",
-    "sortBy": "Ordenar por esta coluna",
     "navTitles": {
       "app_firewall": "Web Firewall"
     },
@@ -57,7 +56,17 @@
       "stopped": "O painel parou de verificar atualizações nesta página.",
       "checkAgain": "Verificar novamente"
     },
-    "whatIsThis": "O que é isso?"
+    "whatIsThis": "O que é isso?",
+    "theme": {
+      "label": "Alterar tema",
+      "light": "Claro",
+      "dark": "Escuro",
+      "system": "Sistema"
+    },
+    "permissionDenied": {
+      "title": "Você não tem acesso a {feature}",
+      "description": "Sua função não inclui permissão para ver isto. Peça a um administrador para conceder."
+    }
   },
   "systemUsers": {
     "title": "Usuários do sistema",
@@ -671,7 +680,9 @@
     "required_name": "O nome é obrigatório",
     "domainRequired": "Informe um domínio",
     "hostnameInvalid": "Informe um hostname válido (ex.: example.com)",
+    "hostnameTooLong": "Um nome de domínio pode ter no máximo 253 caracteres.",
     "redirectTargetRequired": "Informe para onde este domínio deve redirecionar",
+    "redirectTargetUrl": "Introduza um endereço completo começado por http:// ou https://",
     "required_username": "Informe um nome de usuário.",
     "required_password": "Informe uma senha.",
     "required_currentPassword": "A senha atual é obrigatória",
@@ -841,10 +852,6 @@
     "ofCores": "de {count} núcleos",
     "breakdown": "{used} usado · {free} livre · {total} total",
     "loadFailed": "Não foi possível carregar estes dados. Tente atualizar a página.",
-    "noPermission": {
-      "title": "Você não tem acesso ao painel",
-      "description": "Seu papel não inclui permissão para visualizar métricas do servidor. Peça a um administrador para conceder acesso ao painel."
-    },
     "staleHint": "Exibindo os últimos valores recebidos.",
     "kill": {
       "action": "Parar este processo",
@@ -882,6 +889,16 @@
         "chip": "{site} não terminou de ser configurado",
         "detail": "A configuração desta aplicação parou no meio, então ela ainda não está sendo servida.",
         "action": "Ver o que falhou"
+      },
+      "deployFailed": {
+        "chip": "A última implantação de {site} falhou",
+        "detail": "O aplicativo continua servindo a versão anterior, e o próximo push falhará da mesma forma até que isso seja corrigido.",
+        "action": "Ver o log de implantação"
+      },
+      "processDown": {
+        "chip": "{site} parou de funcionar",
+        "detail": "Seu processo não está em execução, então os visitantes recebem um erro mesmo que o aplicativo não esteja pausado.",
+        "action": "Verificar o processo"
       },
       "git": {
         "chip": "{site} perdeu sua conta do Git",
@@ -3195,7 +3212,6 @@
       "title": "Seu servidor está pronto para a primeira aplicação",
       "description": "Crie uma aplicação ou serviço em um fluxo guiado. {brand} fará o provisionamento e mostrará o status aqui.",
       "filteredTitle": "Nenhuma aplicação corresponde",
-      "clearSearch": "Limpar busca",
       "guideTitle": "Da ideia à aplicação rodando",
       "steps": {
         "choose": {
@@ -3406,11 +3422,13 @@
       "removeFiles": "Excluir também os arquivos e backups da aplicação",
       "removeFilesOn": "O diretório da aplicação e todos os backups dela — incluindo os arquivos no seu storage — serão excluídos.",
       "removeFilesOff": "Os arquivos permanecem no servidor. Os backups da aplicação saem do painel junto com ela, mas os arquivos ficam no seu storage — exclua-os lá se não quiser mais mantê-los.",
+      "systemUserStays": "O usuário do sistema {username} não é removido. Se nenhum outro aplicativo o usa, você pode excluí-lo em Usuários do sistema.",
       "confirmLabel": "Digite <code>{domain}</code> para confirmar",
       "submit": "Excluir aplicação",
       "deleting": "Excluindo…",
       "done": "{name} foi excluído.",
       "failed": "Não foi possível excluir esta aplicação.",
+      "alreadyGone": "{name} já tinha sido excluída.",
       "cancel": "Cancelar",
       "copyDomain": "Copiar domínio",
       "removeDatabases": "{count, plural, one {Excluir também o banco de dados desta aplicação} other {Excluir também os # bancos de dados desta aplicação}}",
@@ -3452,9 +3470,6 @@
       "loadFailed": "Não foi possível carregar os domínios desta aplicação.",
       "pageTitle": "Domínios e SSL",
       "pageSubtitle": "Gerencie os nomes para os quais esta aplicação responde e seu certificado HTTPS.",
-      "provisioning": "Domínios e SSL ficam disponíveis quando a aplicação termina o provisionamento.",
-      "sectionTitle": "Domínios",
-      "sectionSubtitle": "Todos os nomes para os quais esta aplicação responde.",
       "tabs": {
         "domains": "Domínios",
         "ssl": "SSL",
@@ -3462,9 +3477,17 @@
         "notSecured": "Não protegido",
         "sslUnknown": "Estado do certificado desconhecido"
       },
+      "provisioning": "Domínios e SSL ficam disponíveis quando a aplicação termina o provisionamento.",
+      "sectionTitle": "Domínios",
+      "sectionSubtitle": "Todos os nomes para os quais esta aplicação responde.",
       "emptyTitle": "Ainda sem domínios",
       "emptyBody": "Adicione um domínio para apontá-lo a esta aplicação. Você pode adicionar mais nomes e aliases a qualquer momento.",
       "testDomain": "Domínio de teste",
+      "sslRow": {
+        "secured": "Protegido",
+        "notCovered": "Não está no certificado",
+        "none": "Sem certificado SSL"
+      },
       "rowActions": "Ações",
       "makePrimary": "Tornar principal",
       "remove": "Remover",
@@ -3521,11 +3544,13 @@
         "afterLabel": "Depois",
         "keepsServing": "{domain} permanece anexado como alias e continua servindo esta aplicação.",
         "renamesFiles": "Os arquivos de configuração e de log da aplicação são renomeados.",
-        "cmsWarning": "O WordPress ainda tem o endereço antigo salvo, então os visitantes podem ser redirecionados de volta até você alterá-lo na aplicação."
+        "cmsWarning": "O WordPress ainda tem o endereço antigo salvo, então os visitantes podem ser redirecionados de volta até você alterá-lo na aplicação.",
+        "notOnCertificate": "O certificado SSL não abrange {domain}. Quem visitar o novo endereço verá um aviso de segurança até o reemitir."
       },
       "removeConfirm": {
         "title": "Remover {domain}?",
-        "body": "A aplicação deixará de responder por este nome. Isso não pode ser desfeito."
+        "body": "A aplicação deixará de responder por este nome. Isso não pode ser desfeito.",
+        "onCertificate": "O certificado SSL abrange este nome. Até o reemitir, o certificado deixará de se renovar automaticamente — também para todos os outros nomes que contém."
       },
       "toast": {
         "added": "Domínio adicionado.",
@@ -3537,7 +3562,9 @@
         "promoted": "{domain} agora é o domínio principal.",
         "promoteFailed": "Não foi possível alterar o domínio principal.",
         "removed": "{domain} removido.",
-        "removeFailed": "Não foi possível remover o domínio."
+        "removeFailed": "Não foi possível remover o domínio.",
+        "removedAlready": "{domain} já tinha sido removido.",
+        "updated": "{domain} atualizado."
       },
       "ssl": {
         "sectionTitle": "Certificado SSL",
@@ -3548,17 +3575,25 @@
         "enable": "Ativar HTTPS",
         "issuing": "Emitindo certificado…",
         "issuingBody": "Isso envolve uma ida até a Let's Encrypt e pode levar um minuto.",
+        "issuingStuck": "Continua assim ao fim de alguns minutos? Remova-o e tente de novo.",
         "failed": "Não foi possível emitir o certificado",
         "reference": "Referência: {reference}",
         "rateLimited": "A Let's Encrypt limitou este domínio. Aguarde cerca de uma semana antes de tentar novamente — tentar agora não vai ajudar.",
         "reissue": "Reemitir",
         "remove": "Remover certificado",
+        "moreActions": "Opções do certificado",
         "active": "HTTPS está ativo",
+        "namesTitle": "Domínios neste certificado",
+        "namesCount": "{secured} de {total} protegidos",
+        "nameMissing": "não está neste certificado",
+        "nameStale": "já não está nesta aplicação",
+        "coverageGap": "Enquanto os nomes não coincidirem, este certificado deixará de se renovar automaticamente — incluindo para os que estão bem. Reemita-o para os alinhar.",
         "expired": "Este certificado expirou.",
+        "expiredForcedHttps": "Todos os visitantes são redirecionados para HTTPS e o certificado que encontram expirou — por isso ninguém consegue aceder a esta aplicação. Desligue o redirecionamento para voltar a HTTP simples enquanto resolve o certificado.",
+        "turnOffForceHttps": "Desligar o redirecionamento HTTPS",
         "expiredTitle": "HTTPS não está funcionando",
         "expiresRenew": "Renova automaticamente · expira em {when} ({days} dias)",
         "expiresManual": "Expira em {when} ({days} dias) — não será renovado automaticamente",
-        "missingDomains": "Estes nomes ainda não estão no certificado: {domains}. Reemita para incluí-los.",
         "forceHttps": "Forçar HTTPS",
         "forceHttpsHint": "Redireciona todos os visitantes de HTTP para HTTPS.",
         "forceHttpsEnabled": "Os visitantes agora são redirecionados para HTTPS.",
@@ -3603,8 +3638,9 @@
         "reloadWebServer": "Recarregar {service}",
         "reloaded": "O servidor web foi recarregado.",
         "reloadFailed": "Não foi possível recarregar o servidor web.",
-        "staleDomains": "{domains} está neste certificado mas já não pertence a esta aplicação. A renovação falha para todo o certificado até que seja reemitido.",
-        "uploadNeedsBoth": "Cole o certificado e a respetiva chave privada."
+        "uploadNeedsBoth": "Cole o certificado e a respetiva chave privada.",
+        "removed": "O certificado foi removido. Esta aplicação voltou a HTTP simples.",
+        "removedAlready": "O certificado já tinha sido removido."
       },
       "issueCertificate": "Configurar SSL",
       "description": "Nomes que acessam esta aplicação e seu certificado.",
@@ -3614,7 +3650,17 @@
         "alias": "Alias",
         "redirect": "Redirect"
       },
-      "openNamed": "Abrir {domain} em uma nova aba"
+      "openNamed": "Abrir {domain} em uma nova aba",
+      "edit": {
+        "action": "Editar",
+        "title": "Editar domínio",
+        "subtitle": "Altere o que este nome faz. O nome em si não pode ser alterado aqui.",
+        "domain": "Domínio",
+        "domainLocked": "Para usar outro nome, remova este e adicione o novo. Renomear aqui deixaria o nome antigo no certificado e impediria a renovação.",
+        "submit": "Salvar alterações",
+        "submitting": "Salvando…",
+        "clearsTarget": "Mudar para alias limpa o destino do redirecionamento ({target}). Um alias serve a própria aplicação."
+      }
     },
     "magicLogin": {
       "action": "Início de sessão direto",
@@ -4771,7 +4817,7 @@
         "jailHint": "Quando banir — quantas tentativas, em quanto tempo, por quanto tempo.",
         "filterHint": "O que conta como tentativa ruim — comparado com cada linha do log."
       },
-      "placeholderNote": "{name}, {filter}, {logpath} e {slug} são preenchidos quando os arquivos são gravados. Deixe-os como estão.",
+      "placeholderNote": "O nome do jail, o caminho do log e o filtro são preenchidos a partir desta aplicação. Deixe a linha do filtro como está — ela precisa corresponder ao arquivo Filtro, que recebe sempre o nome desta aplicação.",
       "placeholderLost": "{count, plural, one {{tokens} não está mais no arquivo — o valor que ele representava não será preenchido. Isso só é correto se você o substituiu de propósito.} other {{tokens} não estão mais no arquivo — os valores que eles representavam não serão preenchidos. Isso só é correto se você os substituiu de propósito.}}",
       "unsavedHere": "Alterações não salvas neste arquivo",
       "saveAction": "Salvar e recarregar o fail2ban",
@@ -4896,6 +4942,7 @@
     "size": {
       "notMeasured": "Não medido",
       "measuring": "Medindo…",
+      "measured": "Tamanho medido.",
       "measureFailed": "Não foi possível medir o tamanho.",
       "measureHint": "Medir esta aplicação em disco agora"
     },
@@ -4950,8 +4997,6 @@
       "setUpBackups": "Configurar backups",
       "noCertificate": "SSL não configurado",
       "issueCertificate": "Configurar SSL",
-      "reviewSecurity": "Revisar segurança",
-      "protectionsOff": "{count, plural, one {# proteção desligada} other {# proteções desligadas}}",
       "noDatabase": "Esta aplicação não tem banco de dados, então seus backups não conterão um",
       "attachDatabase": "Vincular um banco de dados",
       "issueAction": {
@@ -5096,6 +5141,10 @@
       "needs": {
         "node": "{app} precisa do Node {requirement} — é isto que vamos instalar",
         "php": "{app} precisa do PHP {requirement} — é isto que vamos instalar"
+      },
+      "needsEol": {
+        "node": "{app} precisa do Node {requirement}. Essa linha não tem mais suporte, mas é a mais recente em que o {app} funciona.",
+        "php": "{app} precisa do PHP {requirement}. Essa linha não tem mais suporte, mas é a mais recente em que o {app} funciona."
       }
     },
     "phpFact": "PHP {version}",
@@ -5106,6 +5155,12 @@
       "looksLike": "Parece {type}",
       "looksLikeBecause": "Parece {type} — {file} encontrado",
       "nothingFound": "Nada reconhecível encontrado na última verificação",
+      "checkedFound": "A última verificação encontrou {type}",
+      "checkedFoundFile": "A última verificação encontrou {type} — {file} presente",
+      "detectedSuggestion": "Parece {type}. Reveja a alteração sugerida.",
+      "detected": "{type} encontrado no diretório desta aplicação.",
+      "detectedFile": "{type} encontrado — {file} está presente.",
+      "detectedNothing": "Nada reconhecível encontrado no diretório desta aplicação.",
       "confirmTitle": "Tratar esta aplicação como {type}?",
       "confirmFound": "{file} está presente no diretório desta aplicação.",
       "confirmNarrow": "O painel deixará de oferecer as telas específicas do tipo desta aplicação.",
@@ -5119,7 +5174,7 @@
       "reversible": "Você pode voltar para {from} a qualquer momento.",
       "reviewAction": "Revisar",
       "detectAction": "Verificar o que está instalado",
-      "changeTo": "Alterar o tipo para {type}",
+      "changeTo": "Tratar antes como {type}",
       "menuHint": "Opções do tipo de aplicação"
     }
   },

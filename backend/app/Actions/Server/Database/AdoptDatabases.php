@@ -33,9 +33,19 @@ class AdoptDatabases
             ->filter(fn (string $name) => in_array($name, $existingOnServer, true))
             ->reject(fn (string $name) => Database::query()->where('engine', $engineName)->where('name', $name)->exists())
             ->map(function (string $name) use ($engineName, $engine) {
+                // Asked, not guessed. The panel records charset and collation
+                // when it *creates* a database and recorded neither when it
+                // adopted one, so every database brought over from another
+                // panel showed a blank charset forever beside panel-created
+                // ones that showed theirs — on the screen that exists for
+                // migrated servers. The engine knew all along.
+                $described = $engine->describeDatabase($name);
+
                 $database = Database::create([
                     'name' => $name,
                     'engine' => $engineName,
+                    'charset' => $described['charset'],
+                    'collation' => $described['collation'],
                     'size_bytes' => $engine->databaseSize($name),
                 ]);
 

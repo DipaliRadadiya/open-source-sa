@@ -6,6 +6,7 @@ import { can } from "@/lib/permissions/can";
 import { getApplication, getApplicationStaging } from "@/lib/applications/get-applications";
 import { StagingPanel } from "@/components/applications/staging/staging-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
+import { PermissionDenied } from "@/components/sections/permission-denied";
 
 export const dynamic = "force-dynamic";
 
@@ -27,15 +28,15 @@ export default async function ApplicationStagingPage({ params }) {
     getApplication(id),
   ]);
 
-  if (!can(permissions, "application", "view")) redirect("/dashboard");
+  if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
-  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} />;
+  if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
   if (!can(appPermissions, "app_staging", "view", "application")) {
-    redirect(`/applications/${id}`);
+    return <PermissionDenied title={t("pageTitle")} />;
   }
 
   const canManage = can(appPermissions, "app_staging", "manage", "application");
@@ -62,7 +63,7 @@ export default async function ApplicationStagingPage({ params }) {
           {t("unsupported", { type: application.site_type_title ?? application.site_type })}
         </div>
       ) : staging.failed ? (
-        <LoadFailed description={t("loadFailed")} status={staging.status} failure={staging.failure} />
+        <LoadFailed description={t("loadFailed")} status={staging.status} failure={staging.failure} message={staging.message} debug={staging.debug} />
       ) : (
         <StagingPanel
           appId={id}

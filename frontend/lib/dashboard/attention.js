@@ -18,15 +18,65 @@
  * first few minutes of its life. Alerting on either teaches people to ignore
  * the chip, which costs you the one time it matters.
  *
+ * Nor is a protection setting that is off. No password, no WAF and no fail2ban
+ * are all normal for a public site; a chip about any of them would be nagging
+ * somebody about a decision they made, which is the same mistake by a
+ * different route. Missing TLS is the exception, and it is here.
+ *
  * Order is severity: a site that could be losing traffic now sits above one
  * that is merely untidy.
  */
 const KINDS = [
   {
     key: "failed",
-    matches: (a) => a.status === "failed" || Boolean(a.failed_step),
+    /*
+     * Provisioning only — NOT `failed_step`.
+     *
+     * `failed_step` is also set on a healthy running application whose last
+     * DEPLOY failed, and this rule used to catch both, so a site that was
+     * serving traffic was announced as "Setting this application up stopped
+     * partway, so it is not serving yet". Both halves false, and the reader is
+     * sent hunting for a provisioning failure that never happened.
+     *
+     * The applications list has always drawn the distinction — red "Failed"
+     * against amber "Last deploy failed". The dashboard now does too.
+     */
+    matches: (a) => a.status === "failed",
     // Its own page: that is where the failure reason and the retry live.
     href: (a) => `/applications/${a.id}`,
+  },
+  {
+    /*
+     * The application is up, its last deploy is not. Old code keeps serving,
+     * so this is not an outage — but every later push inherits the failure
+     * until someone looks, and nothing outside the applications list said so.
+     */
+    key: "deployFailed",
+    matches: (a) =>
+      a.status === "active" &&
+      Boolean(a.failed_step) &&
+      Boolean(a.repository || a.repository_url),
+    href: (a) => `/applications/${a.id}/deployment`,
+  },
+  {
+    /*
+     * A process application whose process is not running. This IS an outage:
+     * nginx is proxying to something that is not there.
+     *
+     * Same condition the row badge uses, promoted to the server view — it was
+     * computed one screen away and never mentioned on the first screen anyone
+     * opens. `deployed` guards a site that has never started.
+     */
+    key: "processDown",
+    matches: (a) =>
+      a.status === "active" &&
+      !a.is_disabled &&
+      Boolean(a.has_process) &&
+      Boolean(a.deployed) &&
+      Boolean(a.process) &&
+      a.process.state !== "active" &&
+      a.process.state !== "activating",
+    href: (a) => `/applications/${a.id}/workers`,
   },
   {
     key: "insecure",

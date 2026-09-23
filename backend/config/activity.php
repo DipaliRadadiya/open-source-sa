@@ -26,6 +26,10 @@ return [
         'server' => [
             'application',
             'backup',
+            // The compiler toolchain. A fact about what this machine can
+            // build, so it belongs beside the runtimes rather than beside the
+            // people administering the panel.
+            'build_tools',
             'cronjob',
             'database',
             'disk_cleaner',

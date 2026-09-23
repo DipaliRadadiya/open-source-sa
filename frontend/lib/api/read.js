@@ -1,4 +1,5 @@
 import { serverFetch } from "@/lib/api/server-fetch";
+import { readErrorBody } from "@/lib/api/error-body";
 
 /**
  * Why a read failed, in one word.
@@ -55,7 +56,25 @@ export async function read(path, schema, options) {
     const res = await serverFetch(path, options);
     if (!res.ok) {
       report(path, "http", String(res.status));
-      return { data: null, failed: true, status: res.status, failure: "http" };
+      /*
+       * The API's own sentence, carried out with the status.
+       *
+       * It was read, logged and dropped, so every failed section rendered our
+       * category — "The server had a problem" — while the server had said
+       * "The application list could not be read from disk." Krishna, this
+       * morning, about the whole-page version of the same thing: "why we
+       * cannot see actual message instead of showing just Your server
+       * returned an error".
+       */
+      const body = await readErrorBody(res);
+      return {
+        data: null,
+        failed: true,
+        status: res.status,
+        failure: "http",
+        message: body.message,
+        debug: body.debug,
+      };
     }
 
     const parsed = schema.safeParse(await res.json());
@@ -64,14 +83,14 @@ export async function read(path, schema, options) {
       // in fifty places, and fifty lines of it buries the one that matters.
       const issue = parsed.error.issues?.[0];
       report(path, "shape", issue ? `${issue.path?.join(".") || "(root)"} — ${issue.message}` : null);
-      return { data: null, failed: true, status: res.status, failure: "shape" };
+      return { data: null, failed: true, status: res.status, failure: "shape", message: null, debug: false };
     }
 
-    return { data: parsed.data, failed: false, status: res.status, failure: null };
+    return { data: parsed.data, failed: false, status: res.status, failure: null, message: null, debug: false };
   } catch (error) {
     // Network-level failure: there is no status to report.
     report(path, "network", error?.message);
-    return { data: null, failed: true, status: null, failure: "network" };
+    return { data: null, failed: true, status: null, failure: "network", message: null, debug: false };
   }
 }
 

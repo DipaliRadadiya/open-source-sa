@@ -47,7 +47,7 @@ export default async function LoginPage() {
     throw error;
   }
 
-  if (user) redirect("/dashboard");
+  if (user) redirect("/");
 
   return (
     <Card className="w-full gap-0 shadow-xl shadow-black/5">

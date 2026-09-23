@@ -119,6 +119,26 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       if (redirectTo) router.push(redirectTo);
       else router.refresh();
     } catch (error) {
+      /*
+       * 404 means somebody already deleted it — another tab, another person,
+       * or this same dialog after a click that did land. The reader's goal is
+       * achieved, so a red "we could not delete this application" is wrong
+       * twice over: it denies something that is true, and it leaves the dialog
+       * open over a row that is about to vanish, so they type the domain again
+       * and retry a delete that cannot ever succeed.
+       *
+       * Treated as done, but not silently as a success — they are told the
+       * reason it was already gone is that it was already gone, and the list
+       * is refreshed underneath them so the row actually leaves.
+       */
+      if (error?.response?.status === 404) {
+        toast.info(t("alreadyGone", { name: application.name }));
+        handleOpenChange(false);
+        if (afterDelete) await afterDelete();
+        if (redirectTo) router.push(redirectTo);
+        else router.refresh();
+        return;
+      }
       toast.error(apiMessage(error, t("failed")));
     } finally {
       setPending(false);
@@ -184,6 +204,22 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
               </p>
             </div>
           </div>
+        ) : null}
+
+        {/* The Linux account this application generated.
+        
+            `POST /applications/{id}` accepts `remove_files` and
+            `remove_databases` and nothing else, so there is no checkbox to
+            offer — the account cannot be removed from here. What it CAN do is
+            stop being silent about it: the dialog listed configuration, files
+            and databases and never mentioned the user, so deleting a
+            test application left a Linux account owning nothing and nothing on
+            screen said so. Found on this server, twice: `qa-throwaway` and
+            `prestashop`, both with zero applications. */}
+        {application?.system_user?.username ? (
+          <p className="text-xs leading-5 text-muted-foreground">
+            {t("systemUserStays", { username: application.system_user.username })}
+          </p>
         ) : null}
 
         <div className="space-y-2">

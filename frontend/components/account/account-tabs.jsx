@@ -33,6 +33,7 @@ export function AccountTabs({
   activityFailed,
   activityStatus = null,
   activityFailure = null,
+  activityMessage = null,
 }) {
   const t = useTranslations("account");
   const searchParams = useSearchParams();
@@ -111,7 +112,7 @@ export function AccountTabs({
                 would otherwise read as "no matches", which is a wrong answer
                 rather than an error. */}
             {activityFailed ? (
-              <LoadFailed status={activityStatus} failure={activityFailure} />
+              <LoadFailed status={activityStatus} failure={activityFailure} message={activityMessage} />
             ) : entries.length ? (
               <>
                 <AccountActivity data={entries} />

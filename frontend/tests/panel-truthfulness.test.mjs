@@ -140,16 +140,29 @@ test("the two not-measurable reasons say different things", () => {
 test("the open-site link is https only when the certificate covers that name", () => {
   const section = read("components/applications/domains/domains-section.jsx");
 
-  assert.match(section, /function coveredByCertificate\(certificate, domain\)/);
-  assert.match(section, /secured && coveredByCertificate\(certificate, domain\.domain\)/);
+  /*
+   * `coveredByCertificate` is now `certificateCoverage`, returning covered /
+   * uncovered / unknown — a second predicate had grown up beside it answering
+   * the same question with the opposite default, so the two were merged and
+   * "we cannot tell" became a value rather than something each caller
+   * inherited by accident.
+   *
+   * The guarantee this test exists for is unchanged and is the LINK's half of
+   * that choice: only a definite "uncovered" downgrades it.
+   */
+  assert.match(section, /function certificateCoverage\(certificate, domain\)/);
+  assert.match(section, /secured && coverageOf\(domain\.domain\) !== "uncovered"/);
 
   /*
-   * Keyed off `missing_domains`, not the positive `domains` list. If the
-   * backend has not computed coverage, an empty `missing_domains` leaves every
-   * link as it is today; an empty `domains` would downgrade every site to
-   * http. It also avoids re-implementing wildcard matching in the frontend.
+   * Still keyed off `missing_domains` first, for the reason this test was
+   * written: it is the backend's own answer to exactly this question and needs
+   * no wildcard matching here. `domains` is the fallback for a payload that
+   * carries only the positive list, and neither being present is `unknown` —
+   * which the link treats as "leave it alone", so a missing field can never
+   * downgrade a whole panel to http.
    */
-  assert.match(section, /!certificate\?\.missing_domains\?\.includes\(domain\)/);
+  assert.match(section, /if \(certificate\.missing_domains\?\.length\)/);
+  assert.match(section, /return "unknown";/);
 
   const code = strip(section);
   assert.doesNotMatch(

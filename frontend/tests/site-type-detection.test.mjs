@@ -51,7 +51,7 @@ test("detection is never automatic", () => {
 test("the probe button is disabled while in flight", () => {
   // Both endpoints are throttle:10,1. A double-click is the realistic way to
   // spend that, and the Fact action already disables on `busy`.
-  assert.match(cardCode, /busy: detecting/);
+  assert.match(cardCode, /busy: probing/);
   assert.match(cardCode, /setDetecting\(true\)/);
   assert.match(cardCode, /setDetecting\(false\)/);
 });
@@ -121,7 +121,53 @@ test("a probe that found nothing says so", () => {
   // is null both before the first probe and after a fruitless one, so keying
   // on it would tell someone who never pressed the button that nothing was
   // found.
-  assert.match(lib, /if \(application\?\.site_type_detection\?\.checked_at\) return "found";/);
+  assert.match(lib, /if \(!application\?\.site_type_detection\?\.checked_at\) return "idle";/);
+});
+
+test("and a probe that found something does NOT say it found nothing", () => {
+  /*
+   * The same failure with the sign flipped, and the one that actually shipped.
+   * "Recognised something but has nothing to offer" and "saw nothing at all"
+   * were one state, documented as splitting at the call site — and the call
+   * site never split it. So the commonest outcome of pressing the button, a
+   * correctly-labelled WordPress site whose probe reads wp-config.php at
+   * confidence 95, rendered "Nothing recognisable found on the last check"
+   * directly beneath the word WordPress. Seen on the live panel.
+   */
+  assert.match(lib, /return application\.site_type_detection\.detected \? "recognised" : "found";/);
+  assert.match(cardCode, /detectionState === "recognised"/);
+  // It reports what it saw rather than judging it, so one sentence is true
+  // whether the find agrees with the current type or not.
+  assert.match(cardCode, /checkedFoundFile|checkedFound/);
+});
+
+test("pressing it produces an answer, not just a changed line of grey text", () => {
+  /*
+   * ~1.2s for the probe and a full re-read after it, during which the menu had
+   * closed over a control that did nothing. Reported as "nothing appears to
+   * happen, so it looks broken".
+   *
+   * The verdict is in the response, so there is nothing to wait for before
+   * saying it out loud.
+   */
+  assert.match(cardCode, /const \{ data \} = await detectApplicationSiteType/);
+  for (const key of ["detectedSuggestion", "detectedFile", "detected", "detectedNothing"]) {
+    assert.match(cardCode, new RegExp(`siteTypeDetection\\.${key}`), `no toast for ${key}`);
+  }
+  // Finding nothing is an answer, not a failure — it is what an empty
+  // directory looks like, and red would make a working button look broken.
+  assert.match(cardCode, /toast\.info\(t\("siteTypeDetection\.detectedNothing"\)\)/);
+
+  // The spinner has to outlive the request: `router.refresh()` returns void
+  // and cannot be awaited, so switching off in `finally` stopped it a second
+  // before anything on screen changed.
+  assert.match(cardCode, /startRefresh\(\(\) => router\.refresh\(\)\)/);
+  assert.match(cardCode, /const probing = detecting \|\| refreshing;/);
+  // And the menu trigger must show it. `action` is the Review button, which
+  // only exists once there IS a suggestion — so an action started from this
+  // menu had nowhere to report itself in the common case.
+  assert.match(cardCode, /menuBusy: probing/);
+  assert.match(cardCode, /disabled=\{menuBusy \|\| action\?\.busy\}/);
 });
 
 test("the note names the file, not the confidence score", () => {

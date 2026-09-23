@@ -1,4 +1,4 @@
-import { serverFetch } from "@/lib/api/server-fetch";
+import { read } from "@/lib/api/read";
 import { phpExtensionsResponseSchema } from "@/lib/schemas/php";
 
 /**
@@ -10,15 +10,17 @@ import { phpExtensionsResponseSchema } from "@/lib/schemas/php";
 export async function getPhpExtensions(version) {
   if (!version) return { data: null, failed: false };
 
-  try {
-    const res = await serverFetch(
-      `/php/versions/${encodeURIComponent(version)}/extensions`,
-    );
-    if (!res.ok) return { data: null, failed: true };
+  const result = await read(`/php/versions/${encodeURIComponent(version)}/extensions`, phpExtensionsResponseSchema);
 
-    const parsed = phpExtensionsResponseSchema.safeParse(await res.json());
-    return parsed.success ? { data: parsed.data, failed: false } : { data: null, failed: true };
-  } catch {
-    return { data: null, failed: true };
-  }
+  // Every field `read()` knows, not just whether it worked: without the
+  // status and the kind, the failure box on this screen could not tell a
+  // 403 from a 500 and printed the same unfalsifiable sentence for both.
+  return {
+    data: result.failed ? null : (result.data ?? null),
+    failed: result.failed,
+    status: result.status,
+    failure: result.failure,
+    message: result.message,
+    debug: result.debug,
+  };
 }

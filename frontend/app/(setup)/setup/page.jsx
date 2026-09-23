@@ -52,7 +52,7 @@ export default async function SetupPage() {
         <LoadFailed
           description={t("loadFailed")}
           status={result.status}
-          failure={result.failure}
+          failure={result.failure} message={result.message} debug={result.debug}
         />
       ) : (
         <SetupChecklist key={locale} initialSetup={result.setup} versions={versions} />

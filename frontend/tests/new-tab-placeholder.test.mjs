@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   escapeHtml,
   placeholderDocument,
-} from "../lib/databases/phpmyadmin-placeholder.js";
+} from "../lib/browser/new-tab.js";
 
 test("escapes the characters that would end the paragraph early", () => {
   assert.equal(
@@ -28,25 +28,33 @@ test("survives a missing or empty message rather than printing undefined", () =>
 });
 
 test("puts the translated message in the document", () => {
-  const html = placeholderDocument("Signing you in to phpMyAdmin…");
+  const html = placeholderDocument("Signing you in to phpMyAdmin…", "phpMyAdmin");
 
   assert.ok(html.includes("Signing you in to phpMyAdmin…"));
 });
 
 test("titles the tab, so it is not labelled about:blank", () => {
   // The visible symptom being fixed: a tab with no title and no content.
-  assert.ok(placeholderDocument("x").includes("<title>phpMyAdmin</title>"));
+  assert.ok(placeholderDocument("x", "phpMyAdmin").includes("<title>phpMyAdmin</title>"));
+  // Shared with Magic Login now, so the title is the caller's, not a constant.
+  assert.ok(placeholderDocument("x", "Magic Login").includes("<title>Magic Login</title>"));
+});
+
+test("escapes the title too, not only the message", () => {
+  // Both are translated text, and one of them used to be a literal — which is
+  // exactly the kind of difference that stops being true after a move.
+  assert.ok(placeholderDocument("x", "<b>&").includes("<title>&lt;b&gt;&amp;</title>"));
 });
 
 test("carries a dark-scheme rule, since it opens over a dark panel", () => {
-  assert.ok(placeholderDocument("x").includes("prefers-color-scheme:dark"));
+  assert.ok(placeholderDocument("x", "t").includes("prefers-color-scheme:dark"));
 });
 
 test("requests nothing over the network", () => {
   // It is replaced within a second. Anything it fetched would still be in
   // flight when the document went away — and a blocked request is a slower
   // blank tab than no request at all.
-  const html = placeholderDocument("x");
+  const html = placeholderDocument("x", "t");
 
   for (const attribute of ["<img", "<script", "<link", "url("]) {
     assert.ok(

@@ -26,9 +26,17 @@ const table = fs.readFileSync(
  * 1024px the cards render instead of this table.
  */
 
-/** The `meta.className` of every column, in definition order. */
+/**
+ * The `meta.className` of every column, in definition order.
+ *
+ * Matches the property, not the whole `meta` object: `meta` also carries
+ * `sortKey` now, and a pattern anchored on the closing brace silently found
+ * three columns instead of six — reporting a width bug in a table nobody had
+ * touched. A column that gains any second meta key must not look like a
+ * column that lost its width.
+ */
 function columnClasses() {
-  return [...table.matchAll(/meta: \{ className: "([^"]+)" \}/g)].map(([, value]) => value);
+  return [...table.matchAll(/meta: \{[^}]*\bclassName: "([^"]+)"/g)].map(([, value]) => value);
 }
 
 /** Widths at one breakpoint. `prefix` is "" for the base, "xl:" above it. */

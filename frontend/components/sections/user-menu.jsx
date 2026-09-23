@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useUser } from "@/hooks/use-user";
 import { logout, stopImpersonating } from "@/lib/auth/auth-actions";
+import { forgetRememberedPath } from "@/lib/auth/last-path";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -36,6 +37,14 @@ export function UserMenu({ extraItems, impersonating = false }) {
     try {
       await logout();
     } finally {
+      /*
+       * Leaving on purpose is not the same as being thrown out, so the screen
+       * you were on stops being somewhere to return to. Left in place, the
+       * next person to sign in on this browser would land on the last one's
+       * page — refused by the permission check if it is not theirs, which is
+       * a confusing first screen and tells them where their colleague was.
+       */
+      forgetRememberedPath();
       // Deliberately not cleared: the menu should keep saying "signing out"
       // right up until the login page replaces it, rather than flicking back
       // to "Log out" for the length of the navigation.

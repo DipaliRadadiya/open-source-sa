@@ -8,7 +8,8 @@ return [
     'jail_not_active' => 'La cárcel :jail no está activa.',
     'not_banned' => 'Esa dirección IP no está bloqueada actualmente.',
     'lockout_risk' => 'Activar la cárcel SSH puede dejarle sin acceso a este servidor. Añada su dirección IP a la lista de exclusión o confirme que acepta el riesgo.',
-    'ip_ignored' => 'Esa dirección IP está en la lista de exclusión, por lo que el bloqueo no se mantendría.',
+    'ip_ignored' => 'Esa dirección IP está en su lista de exclusión. Quítela de allí primero si realmente quiere bloquearla.',
+    'ip_own_address' => 'Esa es la propia dirección de este servidor. Bloquearla puede aislar el panel de su base de datos y dejarlo inaccesible, por lo que no se permite.',
     'operation_failed' => 'La operación de fail2ban falló.',
     'bantime_too_short' => 'El tiempo de bloqueo debe ser de al menos 60 segundos, o -1 para un bloqueo permanente.',
 ];
