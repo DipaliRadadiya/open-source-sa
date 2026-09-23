@@ -10,6 +10,7 @@ use App\Services\Server\ServerOpsResult;
 use App\Support\Bytes;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Swap file management — create, resize, or disable ONE managed swap file.
@@ -82,19 +83,48 @@ class SwapSettings implements SettingGroup
     private function createOrResize(int $sizeMb): void
     {
         $file = $this->path();
+        $staging = $file.'.new';
 
-        // Take an existing managed swap file offline before resizing it.
+        // Before anything is written. Asked for more than the disk could
+        // hold, `fallocate` filled it — 54 GB of a 60 GB request on a server
+        // with 51 GB free — and the file was left there: a full root
+        // filesystem, which stops the database, the logs and every site
+        // writing at all (reproduced 2026-09-23).
+        $this->assertRoom($file, $sizeMb);
+
+        // Built beside the old one, WHILE THE OLD ONE IS STILL ON, and moved
+        // into place.
+        //
+        // Resizing cannot be done in place — `fallocate` only ever allocates,
+        // so asking 2 GB down to 1.5 GB succeeded and changed nothing. And the
+        // old file used to be taken offline first: when building the new one
+        // then failed, the server was left with no swap and a half-built file,
+        // the opposite of "the replacement exists before the original stops"
+        // that the firewall and cron writers follow. Building a separate file
+        // needs nothing from the old one, so nothing about it has to stop yet.
+        try {
+            $this->run(['rm', '-f', $staging]);
+            $this->run(['fallocate', '-l', "{$sizeMb}M", $staging]);
+            $this->run(['chmod', '600', $staging]);
+            $this->run(['mkswap', $staging]);
+        } catch (SettingOperationException $e) {
+            // A failed fallocate can still leave a partly allocated file.
+            $this->discard($staging);
+
+            throw $e;
+        }
+
+        // Only now does the old file have to come offline.
         //
         // A failure here used to be ignored. It cannot be: `swapoff` reads
         // every swapped-out page back into RAM first, and refuses when there
         // is not enough free memory to hold them — which is exactly the state
-        // a server is in when someone decides to change its swap. Carrying on
-        // meant running `mkswap` over a file the kernel was still swapping to,
-        // rewriting the header underneath it.
+        // a server is in when someone decides to change its swap.
         //
         // 422 with a reason of its own, not the generic "settings change
         // failed": this one is not a fault, it is the server saying it needs
-        // that swap right now, and the answer is to free memory first.
+        // that swap right now, and the answer is to free memory first. The
+        // replacement is thrown away and the old swap stays exactly as it was.
         if ($this->isActive()) {
             $off = $this->serverOps->run(
                 ['swapoff', $file],
@@ -104,37 +134,70 @@ class SwapSettings implements SettingGroup
                 timeout: 300,
             );
 
-            abort_if($off->failed(), 422, __('errors/setting.swap_in_use'));
+            if ($off->failed()) {
+                $this->discard($staging);
+                abort(422, __('errors/setting.swap_in_use'));
+            }
         }
 
-        // Built beside the old one and moved into place, never over it.
-        //
-        // Resizing cannot be done in place — `fallocate` only ever allocates,
-        // so asking 2 GB down to 1.5 GB succeeded and changed nothing, and the
-        // screen showed the old number back. Growing worked, which is why this
-        // only ever looked broken in one direction.
-        //
-        // But removing first meant that when the allocation then failed the
-        // server was left with no swap at all, and an /etc/fstab line pointing
-        // at a file that no longer exists. The likely reason for that failure
-        // is a full disk — which is the state that has someone resizing swap in
-        // the first place. Same ordering rule the firewall and cron writers
-        // follow: the replacement exists before the original stops.
-        $staging = $file.'.new';
-
-        $this->run(['rm', '-f', $staging]);
-        $this->run(['fallocate', '-l', "{$sizeMb}M", $staging]);
-        $this->run(['chmod', '600', $staging]);
-        $this->run(['mkswap', $staging]);
-
-        // Only now is the old file expendable. `mv` within a directory is a
-        // rename, so there is no moment where neither file is there.
+        // `mv` within a directory is a rename, so there is no moment where
+        // neither file is there.
         $this->run(['rm', '-f', $file]);
         $this->run(['mv', $staging, $file]);
 
         $this->run(['swapon', $file]);
 
         $this->ensureFstab($file);
+    }
+
+    /**
+     * Refuse a size the disk cannot hold, with room left over.
+     *
+     * The new file is built while the old one still exists, so the old one's
+     * space does not count as free. The margin is what the rest of the server
+     * needs to go on working — a database, logs, a site's uploads — and a swap
+     * file that leaves none is worse than no swap.
+     *
+     * When `df` cannot answer, the request goes ahead: the allocation itself is
+     * still cleaned up on failure, and refusing every resize because the
+     * question could not be asked would be a worse failure than the one this
+     * guards against.
+     */
+    private function assertRoom(string $file, int $sizeMb): void
+    {
+        $result = $this->serverOps->run(
+            ['df', '-B1', '--output=avail', dirname($file)],
+            ['feature' => 'setting', 'group' => 'swap', 'op' => 'disk_free'],
+        );
+
+        $lines = preg_split('/\r?\n/', trim($result->output())) ?: [];
+        $available = trim((string) end($lines));
+
+        if ($result->failed() || ! ctype_digit($available)) {
+            return;
+        }
+
+        $reserveMb = (int) config('server.swap_reserve_mb', 1024);
+        $needed = ($sizeMb + $reserveMb) * 1024 * 1024;
+
+        if ((int) $available < $needed) {
+            throw ValidationException::withMessages([
+                'size_mb' => [__('errors/setting.swap_no_space', [
+                    'size' => Bytes::human($sizeMb * 1024 * 1024),
+                    'available' => Bytes::human((int) $available),
+                    'reserve' => Bytes::human($reserveMb * 1024 * 1024),
+                ])],
+            ]);
+        }
+    }
+
+    /** Best effort: the caller is already failing, and says why. */
+    private function discard(string $staging): void
+    {
+        $this->serverOps->run(
+            ['rm', '-f', $staging],
+            ['feature' => 'setting', 'group' => 'swap', 'op' => 'discard_staging'],
+        );
     }
 
     private function disable(): void

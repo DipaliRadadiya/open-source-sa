@@ -2306,6 +2306,16 @@ return [
 
     'swap_max_mb' => (int) env('SERVER_SWAP_MAX_MB', 65536), // 64 GB ceiling
 
+    // Disk left free after a swap file is created or resized. The new file is
+
+    // built while the old one still exists, so its size is not counted as
+
+    // free. A request that would leave less than this is refused — asking for
+
+    // more than the disk held once filled it completely (2026-09-23).
+
+    'swap_reserve_mb' => (int) env('SERVER_SWAP_RESERVE_MB', 1024),
+
     'fstab' => env('SERVER_FSTAB', '/etc/fstab'),
 
     /*

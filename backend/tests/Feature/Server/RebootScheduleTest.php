@@ -271,3 +271,16 @@ it('does not reboot under a logged-in administrator unless asked', function () {
 
     File::delete($path);
 });
+
+it("logs the reboot with the panel's own PHP, not a distro path that may not exist", function () {
+    // On OpenLiteSpeed there is no /usr/bin/php8.4; PHP is under lsws. The
+    // log half of the line failed on every scheduled reboot and the reboot
+    // went unrecorded (seen live 2026-09-23).
+    config(['panel_update.php_binary' => '/usr/local/lsws/lsphp84/bin/php']);
+
+    schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 3])->assertOk();
+
+    expect(cronLine())
+        ->toContain("'/usr/local/lsws/lsphp84/bin/php'")
+        ->not->toContain('/usr/bin/php');
+});

@@ -47,6 +47,14 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true): void
         }
         $bin = $cmd[0] ?? '';
 
+        // No authorized_keys on disk unless a test says otherwise — the key
+        // check now asks the server (SecuritySettings::hasSshKey()), and a
+        // catch-all success would read as a key for root and every sudoer.
+        if ($bin === 'test' && ($cmd[1] ?? '') === '-s' && str_ends_with((string) end($cmd), '/.ssh/authorized_keys')) {
+            return Process::result(exitCode: 1);
+        }
+
+
         // Checked before the `swapon` case below, which is the activation
         // call rather than the query and shares its binary.
         if ($bin === 'swapon' && ($cmd[1] ?? '') === '--show=NAME') {
