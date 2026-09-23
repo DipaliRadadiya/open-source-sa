@@ -7,6 +7,7 @@ use App\Services\Server\Applications\ApplicationEnvironment;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\Doctor\Checks\SiteRootLockCheck;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -347,4 +348,18 @@ describe('a missing top-level directory', function () {
         expect($result->ok)->toBeTrue()
             ->and($this->fs->locked)->toBeTrue();
     });
+});
+
+it('does not log a new site\'s missing root as an error', function () {
+    // Provisioning lifts the lock before it creates anything, so on a brand
+    // new site the root is not there yet and `stat` exits 1. That is the
+    // normal answer, and it was landing on the admin error dashboard as an
+    // ERROR on every site creation (seen live, 2026-09-23).
+    $logger = Mockery::spy();
+    Log::shouldReceive('channel')->with('server-ops')->andReturn($logger);
+    Process::fake(['*' => Process::result(errorOutput: "stat: cannot stat '/home/siteowner/shop': No such file or directory", exitCode: 1)]);
+
+    expect(app(SiteRootLock::class)->lock($this->site))->toBe(SiteRootLock::MISSING);
+
+    $logger->shouldNotHaveReceived('error');
 });

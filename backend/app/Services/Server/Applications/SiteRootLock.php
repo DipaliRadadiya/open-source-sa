@@ -230,6 +230,10 @@ class SiteRootLock
             ['stat', '-c', '%F|%U|%i', $path],
             $this->context($application, 'inspect'),
             timeout: 15,
+            // A root that does not exist yet is the normal answer before a new
+            // site's first provision — `stat` exits 1 for it, and without this
+            // every site creation put an ERROR on the admin dashboard.
+            expectedExitCodes: [1],
         );
 
         if ($result->failed()) {
