@@ -96,3 +96,20 @@ test("the running message keeps its target placeholder in every locale", () => {
     }
   }
 });
+
+test("idle polling is slower than active polling", () => {
+  // This polls even with nothing running — it has to, or a job started on
+  // another tab would never appear. At one fixed fast rate that is 30 requests
+  // a minute forever, for a page someone left open on a folder listing, and it
+  // is spent from a budget the rest of the panel shares.
+  const active = Number(banner.match(/POLL_ACTIVE_MS = (\d+)/)?.[1]);
+  const idle = Number(banner.match(/POLL_IDLE_MS = (\d+)/)?.[1]);
+
+  assert.ok(Number.isFinite(active) && Number.isFinite(idle), "both rates must be declared");
+  assert.ok(idle > active, "idle polling must be slower than active polling");
+
+  // And the rate has to actually drive the interval — declaring two constants
+  // and then using one is exactly how this reads as fixed while being fixed.
+  assert.match(banner, /setInterval\(load, rate\)/);
+  assert.match(banner, /\[appId, router, t, rate\]/);
+});

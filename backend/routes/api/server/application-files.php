@@ -159,8 +159,18 @@ Route::post('/applications/{application}/files/compress', [ApplicationFileContro
 // something happen is not changing it, and a viewer looking at the file
 // browser should see that a compress is in progress rather than an
 // unexplained lock.
+//
+// Outside the global limiter and on `throttle:progress`, like every other
+// polling endpoint here. A per-route throttle *stacks* with `throttle:api`
+// rather than replacing it, so the lower always wins — this shipped as
+// `throttle:120,1` and therefore spent 30 of the user's 180 global requests
+// every minute the Files page was open, for as long as it was open. Measured
+// on a real server: 141 of the 172 requests in one six-minute window were this
+// endpoint, and the 429s landed on `/files/size` and `/files/compress`
+// instead, which is the tell — the budget was gone before the click arrived.
 Route::get('/applications/{application}/files/archive-jobs', [ApplicationFileController::class, 'archiveJobs'])
-    ->middleware(['permission:app_file,view', 'throttle:120,1']);
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:app_file,view', 'throttle:progress']);
 
 Route::put('/applications/{application}/files/permissions', [ApplicationFileController::class, 'chmod'])
     ->middleware(['permission:app_file,manage', 'throttle:20,1']);

@@ -10,7 +10,12 @@ import { ARCHIVE_IN_FLIGHT, archiveJobsResponseSchema } from "@/lib/schemas/file
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatBytes } from "@/lib/format/bytes";
 
-const POLL_MS = 2000;
+// Two rates, because this polls even when nothing is happening — it has to,
+// or a job started on another tab or before this page loaded would never
+// appear. At one fixed fast rate that is 30 requests a minute, forever, for a
+// page someone left open on a folder listing.
+const POLL_ACTIVE_MS = 2000;
+const POLL_IDLE_MS = 15000;
 
 /**
  * Says that an archive is being built, because nothing else can.
@@ -34,6 +39,11 @@ export function ArchiveJobsBanner({ appId }) {
   // fires on every poll for the five minutes a completed row stays visible.
   const announced = useRef(new Set());
 
+  // Drives the interval below. Held in state rather than derived from `jobs`
+  // so the effect re-runs — and so the switch back to idle happens on the
+  // poll that sees the last job land, not one tick later.
+  const [rate, setRate] = useState(POLL_IDLE_MS);
+
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
@@ -46,6 +56,9 @@ export function ArchiveJobsBanner({ appId }) {
 
         const rows = parsed.data.data;
         setJobs(rows);
+        setRate(rows.some((job) => ARCHIVE_IN_FLIGHT.includes(job.status))
+          ? POLL_ACTIVE_MS
+          : POLL_IDLE_MS);
 
         let landed = false;
 
@@ -75,14 +88,14 @@ export function ArchiveJobsBanner({ appId }) {
     }
 
     load();
-    const id = setInterval(load, POLL_MS);
+    const id = setInterval(load, rate);
 
     return () => {
       active = false;
       controller.abort();
       clearInterval(id);
     };
-  }, [appId, router, t]);
+  }, [appId, router, t, rate]);
 
   const running = jobs.filter((job) => ARCHIVE_IN_FLIGHT.includes(job.status));
 

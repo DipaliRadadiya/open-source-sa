@@ -105,6 +105,13 @@ it('keeps the routes that opted out of the global limiter deliberate', function 
         // install ended in a 429 that read as the install having failed.
         'api/applications/{application}',
         'api/applications/{application}/sidebar',
+        // The file browser's archive banner, polled every 2s while a compress
+        // or extract runs. It shipped inside the global limiter on
+        // `throttle:120,1` — under 180, so the test above had nothing to say
+        // about it — and quietly spent 30 of the user's 180 requests a minute
+        // for as long as the Files page was open. The 429s then landed on
+        // whatever the user clicked next.
+        'api/applications/{application}/files/archive-jobs',
         'api/applications/{application}/deployments/{deployment}',
         'api/server/sync/{run}',
         'api/admin/panel-update/{panelUpdate}',
@@ -204,4 +211,40 @@ it('keys the progress limiter on identity, not on the record being polled', func
         // model stable, this line fails and the test above stops proving
         // anything worth proving.
         ->and('1|'.$application->fresh())->not->toBe($legacyBefore);
+});
+
+it('keeps every progress-limited route outside the global limiter', function () {
+    // `throttle:progress` allows 600/min. `throttle:api` allows 180. Both
+    // buckets must pass, so a progress route still inside the global limiter
+    // is bounded by 180 and its own limiter never engages — the same class of
+    // mistake as declaring a number above the global one, but invisible to
+    // that test because no literal appears in the middleware at all.
+    //
+    // It is also the shape a half-finished fix takes: swapping `throttle:N,1`
+    // for `throttle:progress` and forgetting the `withoutMiddleware` line
+    // looks correct in a diff and changes nothing in production.
+    $offenders = [];
+
+    foreach (Route::getRoutes() as $route) {
+        $middleware = $route->gatherMiddleware();
+
+        if (! in_array('api', $middleware, true)) {
+            continue;
+        }
+
+        if (! in_array('throttle:progress', $middleware, true)) {
+            continue;
+        }
+
+        if (! in_array('throttle:api', $route->excludedMiddleware(), true)) {
+            $offenders[] = implode('|', $route->methods()).' '.$route->uri();
+        }
+    }
+
+    expect($offenders)->toBe([], implode("\n", array_merge(
+        ['These routes ask for the progress budget but are still capped at the'],
+        ['global one, so the progress limiter never applies. Add'],
+        ["->withoutMiddleware('throttle:api'):"],
+        $offenders,
+    )));
 });
