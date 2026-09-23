@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ChevronDown, Loader2, SearchX, TriangleAlert } from "lucide-react";
+import { ChevronDown, Info, Loader2, SearchX, TriangleAlert } from "lucide-react";
 import { setPhpExtension } from "@/lib/api/php";
 import { LocalSearchInput } from "@/components/data-table/local-search-input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
@@ -54,7 +55,7 @@ function driftOf(extension) {
  * rather than a choice. Turning one on installs it if it isn't there — an
  * install control plus a separate enable control is the same trap one level up.
  */
-export function ExtensionsCard({ version, extensions, panelRequired = [], canManage }) {
+export function ExtensionsCard({ version, extensions, panelRequired = [], toggleSupported = true, canManage }) {
   const t = useTranslations("php");
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -137,6 +138,14 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
         <CardDescription>
           {t("extensions.summary", { on: onCount, total: changeable.length })}
         </CardDescription>
+        {/* Said once for the list, not on every row: on OpenLiteSpeed the rows
+            have no switch, and without this that reads as a missing control. */}
+        {!toggleSupported ? (
+          <p className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
+            <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <span>{t("extensions.noToggleNote")}</span>
+          </p>
+        ) : null}
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -277,6 +286,31 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
                             runs for a second or two — and a switch that stops
                             responding without saying anything reads as broken,
                             which is exactly when someone clicks it again. */}
+                        {!toggleSupported && extension.installed ? (
+                          // OpenLiteSpeed: installed means on, and it cannot be
+                          // switched off. No switch, so none can be refused.
+                          <span className="text-xs text-muted-foreground">{t("extensions.alwaysOn")}</span>
+                        ) : !toggleSupported ? (
+                          // Not installed yet: installing still works, but a
+                          // switch would promise an off that does not exist.
+                          <ReasonTooltip reason={reason}>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={Boolean(reason) || pending?.name === extension.name || extension.status === "installing"}
+                              onClick={() => toggle(extension)}
+                              aria-busy={pending?.name === extension.name || undefined}
+                            >
+                              {pending?.name === extension.name || extension.status === "installing" ? (
+                                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                              ) : null}
+                              {pending?.name === extension.name || extension.status === "installing"
+                                ? t("extensions.installingNow")
+                                : t("extensions.install")}
+                            </Button>
+                          </ReasonTooltip>
+                        ) : (
                         <span className="flex items-center justify-end gap-2">
                           {pending?.name === extension.name ? (
                             <span className="flex min-w-0 items-center gap-1.5 text-xs text-foreground">
@@ -304,6 +338,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], canMan
                             />
                           </ReasonTooltip>
                         </span>
+                        )}
 
                         {/* Sits with the switch because it explains the switch:
                             `enabled` is all-or-nothing, so a manual `phpdismod`

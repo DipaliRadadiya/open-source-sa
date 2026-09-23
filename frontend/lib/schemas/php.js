@@ -112,6 +112,15 @@ export const phpExtensionSchema = z.object({
   enabled: z.boolean().optional().default(false),
   // Compiled into PHP — nothing to switch, and the API refuses.
   builtin: z.boolean().optional().default(false),
+  // The last operation on this extension: installing | ready | failed. Without
+  // these the row's "installing…" and failure line never had anything to show
+  // — the schema was dropping every one of them.
+  status: z.string().nullish(),
+  current_step: z.string().nullish(),
+  output: z.string().nullish(),
+  reason: z.string().nullish(),
+  message: z.string().nullish(),
+  reference: z.string().nullish(),
   // PHP's json_encode turns an empty associative array into [], not {}, so a
   // built-in row arrives as `"sapis": []`. Accepting only an object threw away
   // the whole 96-row response over rows that have nothing to report.
@@ -148,6 +157,10 @@ export const phpExtensionsResponseSchema = z.object({
   extensions: z.array(phpExtensionSchema).default([]),
   // Only non-empty for the version the panel runs on.
   panel_required: z.array(z.string()).default([]),
+  // False on OpenLiteSpeed: an installed extension is always on and cannot be
+  // switched off (the API 422s). Installing still works. Absent on an older
+  // API, which always could.
+  toggle_supported: z.boolean().default(true),
 });
 
 export const phpIniResponseSchema = z.object({

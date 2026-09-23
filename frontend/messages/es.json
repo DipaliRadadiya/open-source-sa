@@ -2049,7 +2049,10 @@
       "noMatchesBuiltin": "{name} viene incluida en PHP: siempre está disponible. Mira la lista de abajo.",
       "enabling": "Activando…",
       "disabling": "Desactivando…",
-      "waitForOther": "Espera a que termine {name}."
+      "waitForOther": "Espera a que termine {name}.",
+      "install": "Instalar",
+      "installingNow": "Instalando…",
+      "noToggleNote": "En OpenLiteSpeed una extensión instalada siempre está activa. Puedes instalarla aquí, pero no desactivarla."
     },
     "install": {
       "action": "Instalar versión",

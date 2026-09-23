@@ -2049,7 +2049,10 @@
       "noMatchesBuiltin": "{name} はPHPに組み込まれており、常に利用可能です。以下のリストをご覧ください。",
       "enabling": "有効化中…",
       "disabling": "無効化中…",
-      "waitForOther": "先に {name} の処理が終わるまでお待ちください。"
+      "waitForOther": "先に {name} の処理が終わるまでお待ちください。",
+      "install": "インストール",
+      "installingNow": "インストール中…",
+      "noToggleNote": "OpenLiteSpeed では、インストールした拡張機能は常にオンです。ここでインストールはできますが、オフにはできません。"
     },
     "install": {
       "action": "バージョンをインストール",

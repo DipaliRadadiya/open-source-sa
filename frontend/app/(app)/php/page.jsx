@@ -205,6 +205,7 @@ export default async function PhpPage({ searchParams }) {
                     version={selected}
                     extensions={extensions.extensions}
                     panelRequired={extensions.panel_required}
+                    toggleSupported={extensions.toggle_supported}
                     canManage={canManage}
                   />
                 ) : null

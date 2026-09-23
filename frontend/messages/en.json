@@ -2049,7 +2049,10 @@
       "noMatchesBuiltin": "{name} is built into PHP — it is always available. See the list below.",
       "enabling": "Enabling…",
       "disabling": "Disabling…",
-      "waitForOther": "Wait for {name} to finish first."
+      "waitForOther": "Wait for {name} to finish first.",
+      "install": "Install",
+      "installingNow": "Installing…",
+      "noToggleNote": "On OpenLiteSpeed an installed extension is always on. You can install one here, but not switch it off."
     },
     "install": {
       "action": "Install version",
