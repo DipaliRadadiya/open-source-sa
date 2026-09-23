@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\StorageDestination;
 
 use App\Enums\StorageProvider;
 use App\Rules\SingleLine;
+use App\Services\Server\Backups\Storage\SshPrivateKeyCheck;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -63,6 +64,7 @@ class StoreStorageDestinationRequest extends FormRequest
     {
         $validator->after(function ($validator): void {
             $this->validateSftpHasOneAuthMethod($validator);
+            $this->validateSftpPrivateKey($validator);
         });
     }
 
@@ -90,6 +92,23 @@ class StoreStorageDestinationRequest extends FormRequest
      * answer are filled here rather than in the driver, so validation sees the
      * same values the database will.
      */
+    protected function validateSftpPrivateKey(mixed $validator): void
+    {
+        if (StorageProvider::tryFrom((string) $this->input('provider')) !== StorageProvider::Sftp
+            || ! filled($this->input('config.private_key'))) {
+            return;
+        }
+
+        $problem = SshPrivateKeyCheck::problem(
+            (string) $this->input('config.private_key'),
+            $this->input('config.passphrase'),
+        );
+
+        if ($problem !== null) {
+            $validator->errors()->add('config.private_key', __($problem));
+        }
+    }
+
     protected function prepareForValidation(): void
     {
         $config = $this->input('config');

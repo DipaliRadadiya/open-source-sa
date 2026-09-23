@@ -3,6 +3,7 @@
 use App\Http\Middleware\CentralSystemGuard;
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\ThrottleRequestsPerRoute;
 use App\Services\Admin\ApiErrorLogWriter;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
@@ -83,9 +84,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/admin/panel-update/*',
         ]);
 
+        // One call, not several: alias() replaces the list rather than
+        // adding to it, so a second call silently drops the first.
         $middleware->alias([
             'permission' => CheckPermission::class,
             'central' => CentralSystemGuard::class,
+            // One counter per route for `throttle:N,M`; see the class.
+            'throttle' => ThrottleRequestsPerRoute::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

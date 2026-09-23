@@ -19,6 +19,7 @@ use League\Flysystem\Ftp\UnableToAuthenticate as FtpUnableToAuthenticate;
 use League\Flysystem\Ftp\UnableToResolveConnectionRoot;
 use League\Flysystem\PhpseclibV3\UnableToEstablishAuthenticityOfHost;
 use League\Flysystem\UnableToWriteFile;
+use phpseclib3\Crypt\EC;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -412,14 +413,15 @@ describe('SFTP destinations', function () {
             'config' => [
                 'host' => 'backup.example.com',
                 'username' => 'backups',
-                'private_key' => "-----BEGIN OPENSSH PRIVATE KEY-----\nkey_secret_value\n-----END OPENSSH PRIVATE KEY-----",
+                // A real key: an invented one is refused at save now.
+                'private_key' => $key = EC::createKey('Ed25519')->toString('OpenSSH'),
             ],
         ])->assertCreated()
             ->assertJsonPath('storage_destination.config.auth_method', 'private_key')
             ->assertJsonPath('storage_destination.config.port', 22)
             ->assertJsonPath('storage_destination.has_credentials', true);
 
-        expect(StorageDestination::first()->getRawOriginal('config'))->not->toContain('key_secret_value');
+        expect(StorageDestination::first()->getRawOriginal('config'))->not->toContain(substr($key, 40, 30));
     });
 
     it('passes the key and not an empty password when authenticating by key', function () {
@@ -493,6 +495,13 @@ describe('SFTP destinations', function () {
         $this->app->bind(StorageConnectionProber::class, fn () => makeProber(
             fn (array $config) => new class
             {
+                // The probe's first network call now: it makes the folder
+                // before writing, and a changed key refuses it just the same.
+                public function makeDirectory(string $path): bool
+                {
+                    throw UnableToEstablishAuthenticityOfHost::becauseTheAuthenticityCantBeEstablished('h');
+                }
+
                 public function put(string $key, mixed $contents, array $options = []): bool
                 {
                     throw UnableToEstablishAuthenticityOfHost::becauseTheAuthenticityCantBeEstablished('h');
@@ -530,6 +539,13 @@ describe('SFTP destinations', function () {
         $this->app->bind(StorageConnectionProber::class, fn () => makeProber(
             fn (array $config) => new class
             {
+                // Lets the probe reach the write, which is the wrapped path
+                // this test is about.
+                public function makeDirectory(string $path): bool
+                {
+                    return true;
+                }
+
                 public function put(string $key, mixed $contents, array $options = []): bool
                 {
                     throw UnableToWriteFile::atLocation(

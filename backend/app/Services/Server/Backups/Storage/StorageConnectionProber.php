@@ -105,6 +105,17 @@ class StorageConnectionProber
         try {
             $disk = ($this->diskBuilder)($driver->config($destination));
 
+            // The destination's own folder first, as a real backup has it. A
+            // backup writes into `<domain>/…`, and SFTP creates every parent of
+            // that; the sentinel sits directly in the folder, and SFTP creates
+            // parents only — so a prefix that did not exist yet failed the test
+            // as `unreachable` while backups to it worked. A no-op when it
+            // exists. FTP cannot do this: it must enter its root to connect at
+            // all, which is `root_missing` and is classified as such.
+            if ($destination->provider === StorageProvider::Sftp) {
+                $disk->makeDirectory('');
+            }
+
             $disk->put($key, $payload);
             $read = $disk->get($key);
             $disk->delete($key);

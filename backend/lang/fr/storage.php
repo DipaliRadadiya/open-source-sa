@@ -102,6 +102,10 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'Indiquez soit un mot de passe, soit une clé privée.',
+        'sftp_key_is_public' => 'Il s\'agit d\'une clé publique. Collez la clé privée — le fichier sans .pub.',
+        'sftp_key_needs_passphrase' => 'Cette clé est protégée par une phrase secrète. Saisissez-la également.',
+        'sftp_key_wrong_passphrase' => 'La phrase secrète ne déverrouille pas cette clé.',
+        'sftp_key_invalid' => 'Ce n\'est pas une clé privée que le panneau peut lire. Collez la clé entière, y compris les lignes BEGIN et END.',
     ],
 
     'upload' => [

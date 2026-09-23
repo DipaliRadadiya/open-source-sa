@@ -102,6 +102,10 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'Informe uma senha ou uma chave privada.',
+        'sftp_key_is_public' => 'Esta é uma chave pública. Cole a chave privada — o arquivo sem .pub.',
+        'sftp_key_needs_passphrase' => 'Esta chave é protegida por uma frase secreta. Informe a frase secreta também.',
+        'sftp_key_wrong_passphrase' => 'A frase secreta não desbloqueia esta chave.',
+        'sftp_key_invalid' => 'Esta não é uma chave privada que o painel consiga ler. Cole a chave inteira, incluindo as linhas BEGIN e END.',
     ],
 
     'upload' => [

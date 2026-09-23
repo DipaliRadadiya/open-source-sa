@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Server\StorageDestination;
 
+use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
 use App\Rules\SingleLine;
+use App\Services\Server\Backups\Storage\SshPrivateKeyCheck;
 use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -77,6 +79,26 @@ class UpdateStorageDestinationRequest extends FormRequest
      * @param  array<int, mixed>  $rule
      * @return array<int, mixed>
      */
+    public function withValidator(mixed $validator): void
+    {
+        $validator->after(function ($validator): void {
+            $destination = $this->destination();
+
+            if ($destination?->provider !== StorageProvider::Sftp || ! filled($this->input('config.private_key'))) {
+                return;
+            }
+
+            // A passphrase sent now wins; otherwise the stored one, so
+            // rotating only the key of a protected pair is not refused.
+            $passphrase = $this->input('config.passphrase') ?? $destination->configValue('passphrase');
+            $problem = SshPrivateKeyCheck::problem((string) $this->input('config.private_key'), $passphrase);
+
+            if ($problem !== null) {
+                $validator->errors()->add('config.private_key', __($problem));
+            }
+        });
+    }
+
     private function optional(array $rule): array
     {
         $rule = array_values(array_filter(

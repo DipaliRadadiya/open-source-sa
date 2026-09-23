@@ -66,6 +66,16 @@ class SftpDriver extends RemoteHostDriver
 
             'timeout' => 30,
 
+            // One attempt, not flysystem's default five. Its retry loop also
+            // retries a *refused login*, so one Test with a mistyped password
+            // was five failed logins on the user's server — which is
+            // fail2ban's default `maxretry`, i.e. the backup server banning
+            // this panel. And OpenSSH 10 drops the retries from an address
+            // that just failed ("penalty: failed authentication"), so the last
+            // error was "could not connect" and a wrong key was reported as
+            // `unreachable`. Measured on a real server, 2026-09-23.
+            'maxTries' => 0,
+
             // Same reason as every other driver: a swallowed failure is a
             // backup that reports success over an empty directory.
             'throw' => true,

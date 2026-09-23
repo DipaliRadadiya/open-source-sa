@@ -102,6 +102,10 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'Geben Sie entweder ein Passwort oder einen privaten Schlüssel an.',
+        'sftp_key_is_public' => 'Das ist ein öffentlicher Schlüssel. Fügen Sie den privaten Schlüssel ein – die Datei ohne .pub.',
+        'sftp_key_needs_passphrase' => 'Dieser Schlüssel ist mit einer Passphrase geschützt. Geben Sie die Passphrase ebenfalls ein.',
+        'sftp_key_wrong_passphrase' => 'Die Passphrase entsperrt diesen Schlüssel nicht.',
+        'sftp_key_invalid' => 'Das ist kein privater Schlüssel, den das Panel lesen kann. Fügen Sie den ganzen Schlüssel ein, einschließlich der BEGIN- und END-Zeilen.',
     ],
 
     'upload' => [

@@ -109,6 +109,10 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'Provide either a password or a private key.',
+        'sftp_key_is_public' => 'This is a public key. Paste the private key — the file without .pub.',
+        'sftp_key_needs_passphrase' => 'This key is protected by a passphrase. Enter the passphrase too.',
+        'sftp_key_wrong_passphrase' => 'The passphrase does not unlock this key.',
+        'sftp_key_invalid' => 'This is not a private key the panel can read. Paste the whole key, including its BEGIN and END lines.',
     ],
 
     'upload' => [

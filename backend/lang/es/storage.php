@@ -102,6 +102,10 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'Indica una contraseña o una clave privada.',
+        'sftp_key_is_public' => 'Esta es una clave pública. Pega la clave privada: el archivo sin .pub.',
+        'sftp_key_needs_passphrase' => 'Esta clave está protegida con una frase de contraseña. Introdúcela también.',
+        'sftp_key_wrong_passphrase' => 'La frase de contraseña no desbloquea esta clave.',
+        'sftp_key_invalid' => 'Esta no es una clave privada que el panel pueda leer. Pega la clave completa, incluidas las líneas BEGIN y END.',
     ],
 
     'upload' => [

@@ -26,6 +26,8 @@
 
 **Text matching and ordering:** database-backed `search` parameters are case-insensitive on SQLite, MySQL/MariaDB and PostgreSQL. Human-facing names and labels are also ordered case-insensitively, whether ordering is selected through `?sort=` or fixed by the endpoint. Structured filters remain exact because their values are canonical IDs, enums, booleans or dates. Git-provider repository search is provider-controlled.
 
+**Rate limits:** a per-endpoint limit ("Throttle: 20/min" below) counts **that endpoint only**, per user — `/backups/7` and `/backups/8` are the same endpoint. (Until 2026-09-23 every such limit shared one counter per user, so unrelated actions used up e.g. "Run backup now".) Over the limit: `429`.
+
 **Permissions:** read operations need `view` ability; mutations need `manage`. Middleware notation: `permission:<name>` or `permission:<name>,manage`.
 
 ---
@@ -5534,7 +5536,7 @@ Verify the token is still valid with the provider.
 
 ---
 
-## Integrations — Storage Destinations (S3-compatible, FTP, SFTP, Google Drive, WebDAV)
+## Integrations — Storage Destinations (S3-compatible, FTP, SFTP, Google Drive)
 
 > ⚠️ **Breaking change.** The destination is now **polymorphic**. The read-only `driver` field (always `"s3"`) is replaced by a real **`provider`** column, and the five S3 fields that used to sit at the top level (`endpoint`, `region`, `bucket`, `access_key`, `secret_key`) have moved **inside a `config` object whose shape depends on the provider**. Any client that inferred the provider by matching the endpoint hostname should delete that inference — the API now states it.
 
@@ -5560,7 +5562,9 @@ Rows are ordered by `name` without case bias.
 }]}
 ```
 
-`provider` is one of `s3` · `ftp` · `sftp` · `google_drive` · `webdav`. `provider_title` is the localized label — render that, don't map the code yourself.
+`provider` is one of `s3` · `ftp` · `sftp` · `google_drive` · `google_drive_oauth`. `provider_title` is the localized label — render that, don't map the code yourself. (There is **no** `webdav` provider — earlier versions of this document described one that was never built.)
+
+The list response also carries **`google_oauth_redirect_uri`** at the top level: the address to paste into the Google OAuth client *when creating it*, before any `google_drive_oauth` destination exists.
 
 **`config` on a *response* is addressing detail only, never credentials** — bucket/region/endpoint for S3, host/port/root for FTP and SFTP. It is not the same set of keys you send; secrets are silently absent rather than masked, because reading them would mean decrypting them into the response.
 
@@ -5603,6 +5607,12 @@ Required for every provider: `name` (unique, single-line, max 100) and **`provid
 
 ⚠️ **SFTP needs exactly one auth method and neither field can be `required` on its own.** A request with *neither* a password nor a private key is refused: storing it would move the failure from this form to the first backup.
 
+**A private key is checked when it is saved** (create and PATCH) and refused with a `422` on `config.private_key` saying which problem it is: not a key at all, a **public** key pasted by mistake, a passphrase-protected key sent **without** `config.passphrase`, or a passphrase that does not unlock it. On PATCH, a key rotated without a new passphrase is checked against the stored one.
+
+**One login attempt per connection.** A wrong password or key is answered `invalid_credentials` from a single attempt — the SFTP library's default of five would lock the panel out of a backup server running fail2ban (five failures is its default ban).
+
+**The test creates the destination's folder** (`root` + `prefix`) if it is missing, the same way a backup does; a new prefix no longer fails the test as `unreachable`. FTP cannot do this — it must enter its root to log in — and reports `root_missing` instead.
+
 **Host keys are trust-on-first-use.** The first successful probe records the server's fingerprint on the destination; a later probe against a changed key fails with `host_key_mismatch` rather than connecting. Re-keying a server therefore requires clearing the stored fingerprint deliberately.
 
 **Google Drive** — `{"name": "Drive", "provider": "google_drive", "config": {"service_account_json": "{…}", "folder_id": "1AbC…"}}`
@@ -5615,11 +5625,20 @@ A successful test records `drive_name` (which Shared Drive it is) and `client_em
 
 Drive-specific `last_test_error` categories: `drive_personal` · `drive_not_shared` · `drive_folder_missing` · `drive_not_a_folder` · `drive_bad_key` · `drive_quota` · `drive_incomplete`.
 
-**WebDAV** — `{"name": "Nextcloud", "provider": "webdav", "config": {"base_uri": "https://cloud.example.com/remote.php/dav/files/me/", "username": "me", "password": "…"}}`
+**Google Drive (your own account)** — `{"name": "My Drive", "provider": "google_drive_oauth", "config": {"client_id": "1234-abc.apps.googleusercontent.com", "client_secret": "…"}}`
 
-Covers Nextcloud, ownCloud, Synology and pCloud. `config.base_uri` is a full https URL under the same SSRF guard as the S3 endpoint, and is normalised to exactly one trailing slash — without it the adapter resolves the prefix one directory too high and writes to a real but wrong location. Categories: `dav_full` (507, the server is out of space) and `dav_reset` (the connection closed with no HTTP response).
+Authenticates as the **user** through Google's OAuth consent, so files land in their own Drive and their own storage pays for them — the only way a free Gmail account can use Drive. Different from `google_drive`, which is a *service account* and works with a Workspace Shared Drive only.
 
-⚠️ **pCloud caveat, from pCloud's own documentation:** their WebDAV is intended for *small files* and its stability "may have interruptions", and it stops working entirely when 2FA is enabled on the account — the endpoint resets the connection rather than returning a 401, so `dav_reset` is the most specific answer available. A site archive is not a small file. Offer pCloud as one WebDAV preset with that stated, not as a headline destination.
+| key | required | notes |
+|---|---|---|
+| `config.client_id` | yes | must end in `.apps.googleusercontent.com` |
+| `config.client_secret` | yes | |
+| `config.folder_id` | no | set by the connect flow, not typed |
+
+Create the destination first, then connect it:
+
+1. **`POST /integrations/storage/destinations/{id}/oauth/start`** (`storage` manage, 20/min) → `{"oauth": {"authorize_url": "https://accounts.google.com/…"}}`. Send the browser there.
+2. Google redirects back to `google_oauth_redirect_uri` (from the list response) with `code` and `state`. The page forwards both to **`POST /integrations/storage/oauth/callback`** (`storage` manage, 10/min) → `{"oauth": {"status": "connected" | "failed", "message": null | "<sentence in the viewer's locale>"}, "storage_destination": {…} | null}`. Which destination it was for is sealed inside `state`, not taken from the URL; `storage_destination` is null when `state` did not resolve to one.
 
 **Response `201`:** `{"storage_destination": {...}}`
 

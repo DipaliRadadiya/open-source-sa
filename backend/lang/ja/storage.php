@@ -102,6 +102,10 @@ return [
 
     'validation' => [
         'sftp_auth_required' => 'パスワードか秘密鍵のいずれかを指定してください。',
+        'sftp_key_is_public' => 'これは公開鍵です。秘密鍵（.pub のないファイル）を貼り付けてください。',
+        'sftp_key_needs_passphrase' => 'この鍵はパスフレーズで保護されています。パスフレーズも入力してください。',
+        'sftp_key_wrong_passphrase' => 'このパスフレーズではこの鍵を解除できません。',
+        'sftp_key_invalid' => 'パネルが読み取れる秘密鍵ではありません。BEGIN 行と END 行を含めて鍵全体を貼り付けてください。',
     ],
 
     'upload' => [
