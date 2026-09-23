@@ -6,5 +6,6 @@ return [
     'journal' => ['label' => 'Journal del sistema', 'description' => 'Entradas del journal de systemd más antiguas que el período de retención.', 'note' => 'Recorta el historial antiguo del journal más allá del período de retención; las entradas recientes se conservan.'],
     'rotated_logs' => ['label' => 'Registros rotados', 'description' => 'Archivos de registro comprimidos y rotados antiguos en /var/log.', 'note' => 'Elimina los archivos ya rotados (.gz / .1 / .old) en /var/log; los registros actuales no se tocan.'],
     'service_logs' => ['label' => 'Registros de servicios', 'description' => 'Vacía los archivos de registro actuales de los servicios en ejecución (se conservan, no se eliminan).', 'note' => 'Vacía los archivos de registro actuales (truncados a 0 bytes); los servicios siguen escribiendo en ellos, nada se elimina.'],
+    'site_logs' => ['label' => 'Registros de sitios', 'description' => 'Vacía los registros actuales de acceso y de errores de cada sitio alojado (se conservan, no se eliminan).', 'note' => 'Elimina el historial de visitas y errores de cada sitio: solo una limpieza manual puede hacerlo, nunca una programada.'],
     'tmp' => ['label' => 'Archivos temporales', 'description' => 'Archivos antiguos en /tmp y /var/tmp.', 'note' => 'Elimina archivos en /tmp y /var/tmp más antiguos que el período de retención.'],
 ];

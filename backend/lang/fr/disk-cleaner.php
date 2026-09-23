@@ -6,5 +6,6 @@ return [
     'journal' => ['label' => 'Journal système', 'description' => 'Entrées du journal systemd plus anciennes que la période de rétention.', 'note' => "Élague l'ancien historique du journal au-delà de la période de rétention ; les entrées récentes sont conservées."],
     'rotated_logs' => ['label' => 'Journaux archivés', 'description' => 'Anciennes archives de journaux compressées et pivotées sous /var/log.', 'note' => 'Supprime les archives déjà pivotées (.gz / .1 / .old) sous /var/log ; les journaux actuels ne sont pas touchés.'],
     'service_logs' => ['label' => 'Journaux des services', 'description' => 'Vide les fichiers journaux actuels des services en cours (conservés, non supprimés).', 'note' => 'Vide les fichiers journaux actuels (tronqués à 0 octet) ; les services continuent d’y écrire, rien n’est supprimé.'],
+    'site_logs' => ['label' => 'Journaux des sites', 'description' => 'Vide les journaux d\'accès et d\'erreurs actuels de chaque site hébergé (conservés, pas supprimés).', 'note' => 'Supprime l\'historique des visites et des erreurs de chaque site — seul un nettoyage manuel peut le faire, jamais une planification.'],
     'tmp' => ['label' => 'Fichiers temporaires', 'description' => 'Anciens fichiers dans /tmp et /var/tmp.', 'note' => 'Supprime les fichiers de /tmp et /var/tmp plus anciens que la période de rétention.'],
 ];

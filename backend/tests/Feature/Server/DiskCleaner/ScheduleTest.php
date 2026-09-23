@@ -31,6 +31,10 @@ function fakeDiskAt(int $percent): void
     $total = 100_000_000_000;
     $free = $total - $used;
     Process::fake(function ($process) use ($total, $used, $free, $percent) {
+        if ($found = answerFind($process)) {
+            return $found;
+        }
+
         return match ($process->command[0] ?? '') {
             'df' => Process::result(output: "fs 1B-blocks Used Avail Cap Mount\n/dev/vda1 {$total} {$used} {$free} {$percent}% /\n"),
             default => Process::result(exitCode: 0),
@@ -115,6 +119,10 @@ it('runs the scheduled cleaner when enabled, due and over threshold', function (
         'threshold_percent' => 80, 'last_run_at' => null,
     ]);
 
+    // Saved before the last slot: a schedule saved this minute is not due
+    // until its first slot comes round (see isDue()).
+    DiskCleanerSchedule::query()->update(['updated_at' => now()->subHours(2)]);
+
     $this->artisan('disk-cleaner:run')->assertExitCode(0);
 
     expect(DiskCleanerRun::where('trigger', 'scheduled')->count())->toBe(1);
@@ -129,6 +137,10 @@ it('logs an automatic clean under its own verb, with no actor', function () {
         'enabled' => true, 'frequency' => 'hourly', 'categories' => ['service_logs'],
         'threshold_percent' => 80, 'last_run_at' => null,
     ]);
+
+    // Saved before the last slot: a schedule saved this minute is not due
+    // until its first slot comes round (see isDue()).
+    DiskCleanerSchedule::query()->update(['updated_at' => now()->subHours(2)]);
 
     $this->artisan('disk-cleaner:run')->assertExitCode(0);
 
@@ -166,6 +178,10 @@ it('records a failed automatic clean instead of failing silently', function () {
 
     $total = 100_000_000_000;
     Process::fake(function ($process) use ($total) {
+        if ($found = answerFind($process)) {
+            return $found;
+        }
+
         return match ($process->command[0] ?? '') {
             'df' => Process::result(output: "fs 1B-blocks Used Avail Cap Mount\n/dev/vda1 {$total} 85000000000 15000000000 85% /\n"),
             // The category itself fails. The scheduler swallows the exception
@@ -181,6 +197,10 @@ it('records a failed automatic clean instead of failing silently', function () {
         'enabled' => true, 'frequency' => 'hourly', 'categories' => ['service_logs'],
         'threshold_percent' => 80, 'last_run_at' => null,
     ]);
+
+    // Saved before the last slot: a schedule saved this minute is not due
+    // until its first slot comes round (see isDue()).
+    DiskCleanerSchedule::query()->update(['updated_at' => now()->subHours(2)]);
 
     $this->artisan('disk-cleaner:run')->assertExitCode(0);
 
@@ -272,4 +292,23 @@ it('promises no next run while the cleaner is switched off', function () {
         // Still named. Which clock the schedule is in is a property of the
         // feature, not of this row being switched on.
         ->assertJsonPath('schedule.timezone', 'UTC');
+});
+
+it('does not run a schedule the minute it is saved', function () {
+    // "Never run" used to mean "due now": saved at 11:12 as hourly, shown
+    // "next run 12:00", it ran at 11:13 (seen live 2026-09-23).
+    Carbon::setTestNow(Carbon::parse('2026-07-27 10:30:00'));
+    fakeDiskAt(85);
+    DiskCleanerSchedule::create([
+        'enabled' => true, 'frequency' => 'hourly', 'categories' => ['service_logs'],
+        'threshold_percent' => 80, 'last_run_at' => null,
+    ]);
+
+    $this->artisan('disk-cleaner:run')->assertExitCode(0);
+    expect(DiskCleanerRun::where('trigger', 'scheduled')->count())->toBe(0);
+
+    // The first slot after the save: 11:00.
+    Carbon::setTestNow(Carbon::parse('2026-07-27 11:00:30'));
+    $this->artisan('disk-cleaner:run')->assertExitCode(0);
+    expect(DiskCleanerRun::where('trigger', 'scheduled')->count())->toBe(1);
 });

@@ -4814,11 +4814,15 @@ See also `DELETE /applications/{application}/logs/{key}` for a site's own logs, 
 
 `method`: `delete | truncate | command`. `note` (localised) explains what each category does and what it keeps.
 
-**`safe: false` means the category may be cleaned manually but never on a schedule.** Today that is `apt_orphans`: everything else here removes files that come back, while that one removes *packages*, on the strength of apt's auto-installed flags — which are routinely wrong on a migrated or script-built server — and `--purge` takes their configuration too. Show it in the manual list, and hide or disable it in the schedule form; `PUT /disk-cleaner/schedule` refuses it with a `422` on `categories.*`.
+**`safe: false` means the category may be cleaned manually but never on a schedule.** Today that is `apt_orphans` and `site_logs`: everything else here removes files that come back, while that one removes *packages*, on the strength of apt's auto-installed flags — which are routinely wrong on a migrated or script-built server — and `--purge` takes their configuration too. Show it in the manual list, and hide or disable it in the schedule form; `PUT /disk-cleaner/schedule` refuses it with a `422` on `categories.*`.
 
 `paths` is display-only and may include an exclusion note rather than a pattern — `rotated_logs` lists `"excluding /var/log/mysql"`, because database binary logs live there and are removed with `PURGE BINARY LOGS`, never by deleting files.
 
 ---
+
+**`site_logs`** (2026-09-23) empties every hosted site's current `*.log` files in `{home}/{slug}/logs`, on every web server — truncated, never deleted. It is its own category, not part of `service_logs`, because it removes the site owner's visitor and error history, so it is `safe: false`. Before this, the cleaner looked for site logs under `/usr/local/lsws/conf/vhosts/*/logs`, where they no longer live, and cleaned none. **Both log categories now list their files through the server**, so root-only directories such as `/usr/local/lsws/logs` are included — with PHP's own `glob()` they were silently missing.
+
+**A new schedule first runs at its first slot after being saved** (2026-09-23). It used to run within a minute of saving, whatever slot was chosen, while `next_run_at` said otherwise.
 
 ### POST `/disk-cleaner/clean`
 **Permission:** `disk_cleaner` (manage)

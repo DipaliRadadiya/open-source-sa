@@ -6,5 +6,6 @@ return [
     'journal' => ['label' => 'System journal', 'description' => 'systemd journal entries older than the retention window.', 'note' => 'Trims old journal history beyond the retention window; recent entries are kept.'],
     'rotated_logs' => ['label' => 'Rotated logs', 'description' => 'Old compressed and rotated log archives under /var/log.', 'note' => 'Deletes already-rotated archives (.gz / .1 / .old) under /var/log; current logs are untouched.'],
     'service_logs' => ['label' => 'Service logs', 'description' => 'Empties the current log files of running services (kept, not deleted).', 'note' => 'Empties the current service log files (truncated to 0 bytes) — services keep writing to them, nothing is deleted.'],
+    'site_logs' => ['label' => 'Site logs', 'description' => 'Empties every hosted site\'s current access and error logs (kept, not deleted).', 'note' => 'Removes each site\'s visitor and error history — only a manual clean can do this, never a schedule.'],
     'tmp' => ['label' => 'Temporary files', 'description' => 'Old files in /tmp and /var/tmp.', 'note' => 'Deletes files in /tmp and /var/tmp older than the retention window.'],
 ];

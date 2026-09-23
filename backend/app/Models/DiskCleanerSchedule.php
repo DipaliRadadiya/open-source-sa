@@ -98,6 +98,15 @@ class DiskCleanerSchedule extends Model
         $previousSlot = (new CronExpression($this->cronExpression()))
             ->getPreviousRunDate($now, 0, true);
 
-        return $this->last_run_at === null || $this->last_run_at < $previousSlot;
+        // Never run yet: count from the last save, not from the beginning of
+        // time. "Never run" used to mean "due now", so every new schedule ran
+        // within a minute of being saved, whatever slot was picked, while the
+        // screen said the next run was hours or days away (seen live
+        // 2026-09-23: hourly saved 11:12, shown "next 12:00", ran 11:13). The
+        // first run now lands on the first slot after the save — the time
+        // nextRunAt() already reports.
+        $since = $this->last_run_at ?? $this->updated_at;
+
+        return $since === null || $since < $previousSlot;
     }
 }

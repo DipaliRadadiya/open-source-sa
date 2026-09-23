@@ -51,6 +51,7 @@ use App\Services\Server\DiskCleaner\Targets\AptOrphansTarget;
 use App\Services\Server\DiskCleaner\Targets\JournalTarget;
 use App\Services\Server\DiskCleaner\Targets\RotatedLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\ServiceLogsTarget;
+use App\Services\Server\DiskCleaner\Targets\SiteLogsTarget;
 use App\Services\Server\DiskCleaner\Targets\TmpTarget;
 use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
@@ -1972,6 +1973,7 @@ return [
             JournalTarget::class,
             RotatedLogsTarget::class,
             ServiceLogsTarget::class,
+            SiteLogsTarget::class,
             TmpTarget::class,
         ],
 
@@ -1981,11 +1983,9 @@ return [
             '/var/log/nginx/*.log',
             '/var/log/apache2/*.log',
             '/usr/local/lsws/logs/*.log',
-            // Per-site logs, which OpenLiteSpeed keeps under the vhost's own
-            // directory rather than in one shared place the way nginx and
-            // Apache do. Without this line every hosted site's logs on this
-            // stack were invisible to the cleaner.
-            '/usr/local/lsws/conf/vhosts/*/logs/*.log',
+            // Sites' own logs are not listed here: they live in each site's
+            // `logs/` directory on every stack and have their own category,
+            // SiteLogsTarget.
             '/var/log/mysql/*.log',
             '/var/log/mongodb/*.log',
             '/var/log/redis/*.log',
