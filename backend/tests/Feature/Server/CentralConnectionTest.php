@@ -198,3 +198,13 @@ describe('CentralSystemGuard middleware', function () {
         ])->assertOk()->assertJson(['ok' => true]);
     });
 });
+
+it('records connecting and disconnecting the central panel', function () {
+    grantAdmin($this->user);
+
+    $this->postJson('/api/central/enable')->assertCreated();
+    $this->assertDatabaseHas('activity_logs', ['type' => 'central', 'action' => 'connected', 'user_id' => $this->user->id]);
+
+    $this->deleteJson('/api/central')->assertOk();
+    $this->assertDatabaseHas('activity_logs', ['type' => 'central', 'action' => 'disconnected', 'user_id' => $this->user->id]);
+});

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Server;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\CustomFail2banRequest;
 use App\Models\Application;
+use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationFail2banManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Schema;
@@ -99,6 +100,7 @@ class ApplicationFail2banController extends Controller
         CustomFail2banRequest $request,
         Application $application,
         ApplicationFail2banManager $manager,
+        ActivityLogger $log,
     ): JsonResponse {
         $jailContent = (string) $request->input('jail_config_content');
         $filterContent = (string) $request->input('filter_config_content');
@@ -120,13 +122,15 @@ class ApplicationFail2banController extends Controller
 
         $manager->enableForApp($application, $jailContent, $filterContent);
 
+        $log->log('application.fail2ban_enabled', $application, ['name' => $application->name]);
+
         return response()->json([
             'testOk' => true,
             'message' => __('fail2ban.created_successfully'),
         ]);
     }
 
-    public function destroy(Application $application, ApplicationFail2banManager $manager): JsonResponse
+    public function destroy(Application $application, ApplicationFail2banManager $manager, ActivityLogger $log): JsonResponse
     {
         if ($application->fail2ban_jail_content === null) {
             return response()->json([
@@ -140,6 +144,8 @@ class ApplicationFail2banController extends Controller
         $application->fail2ban_jail_content = null;
         $application->fail2ban_filter_content = null;
         $application->save();
+
+        $log->log('application.fail2ban_disabled', $application, ['name' => $application->name]);
 
         return response()->json([
             'message' => __('fail2ban.disabled_successfully'),

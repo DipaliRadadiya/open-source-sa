@@ -73,7 +73,7 @@ class InstallPhpExtension implements ShouldBeUnique, ShouldQueue
         }
 
         $installs->succeed('php', $this->version, $this->extension);
-        $log->log('php.extension_enabled', null, $properties, actor: $this->actor());
+        $log->log('php.extension_installed', null, $properties, actor: $this->actor());
     }
 
     /**

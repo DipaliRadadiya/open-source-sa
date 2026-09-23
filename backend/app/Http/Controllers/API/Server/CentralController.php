@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CentralStatusResource;
+use App\Services\ActivityLogger;
 use App\Services\Server\CentralTokenManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,9 +25,11 @@ class CentralController extends Controller
     /**
      * Generate and store a new central token, replacing any existing one.
      */
-    public function enable(Request $request): JsonResponse
+    public function enable(Request $request, ActivityLogger $log): JsonResponse
     {
         $result = $this->tokens->enable();
+
+        $log->log('central.connected');
 
         return response()->json([
             'central_token' => $result['central_token'],
@@ -47,9 +50,11 @@ class CentralController extends Controller
     /**
      * Revoke the current token.
      */
-    public function disable(): JsonResponse
+    public function disable(ActivityLogger $log): JsonResponse
     {
         $this->tokens->disable();
+
+        $log->log('central.disconnected');
 
         return response()->json([
             'message' => __('errors/central.disabled'),

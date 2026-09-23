@@ -13,6 +13,20 @@
  */
 
 return [
+    /*
+    | Events no code records any more — the feature is gone. Their sentences
+    | stay in lang/activity.php so old rows still read properly; they are left
+    | out of the admin log's filter options, where they could only ever match
+    | nothing. `database.optimized`/`repaired`: removed 2026-09-08 (see
+    | routes/api/server/databases.php). `application.php_unisolated`: the
+    | shared pool is no longer a choice.
+    */
+    'retired' => [
+        'database.optimized',
+        'database.repaired',
+        'application.php_unisolated',
+    ],
+
     'scopes' => [
         'account' => [
             'user',

@@ -251,6 +251,9 @@ it('saves INI, tests it, and applies the configuration on success', function () 
         ->assertOk()
         ->assertJsonPath('testOk', true);
 
+    // Changes what gets banned on a live site — it has to be on the record.
+    $this->assertDatabaseHas('activity_logs', ['type' => 'application', 'action' => 'fail2ban_enabled', 'subject_id' => $this->application->id]);
+
     $application = $this->application->fresh();
     expect($application->fail2ban_jail_name)->toBe('shop')
         ->and($application->fail2ban_jail_content)->toContain('maxretry = 5')
@@ -308,6 +311,8 @@ it('disables fail2ban and clears the stored content', function () {
         ->and($application->fail2ban_filter_content)->toBeNull();
 
     expect(file_exists($jailFile))->toBeFalse('jail file removed from disk');
+
+    $this->assertDatabaseHas('activity_logs', ['type' => 'application', 'action' => 'fail2ban_disabled', 'subject_id' => $this->application->id]);
 });
 
 it('reports already disabled when DELETE is called on a never-configured app', function () {

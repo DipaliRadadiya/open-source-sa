@@ -3,9 +3,12 @@
 namespace App\Actions\Server\StorageDestination;
 
 use App\Models\StorageDestination;
+use App\Services\ActivityLogger;
 
 class UpdateStorageDestination
 {
+    public function __construct(private ActivityLogger $activityLogger) {}
+
     /**
      * Partial update. The FormRequest is responsible for sending only the
      * keys the caller actually wants to change — a missing credential means
@@ -36,6 +39,8 @@ class UpdateStorageDestination
         if ($this->invalidatesTestResult($config)) {
             $destination->forgetTestResult();
         }
+
+        $this->activityLogger->log('storage_destination.updated', $destination, ['name' => $destination->name]);
 
         return $destination->refresh();
     }

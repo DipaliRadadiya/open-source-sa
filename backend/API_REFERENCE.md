@@ -317,7 +317,7 @@ Twelve checks: `privilege`, `binaries`, `services`, `web_server`, `driver_conten
 ### GET `/admin/activity-log/filters`
 **Permission:** `access-admin` (view)
 
-Returns every `type` and `action` value the system has ever recorded, for building filter dropdowns.
+Returns every `type` and `action` value the system can record, for building filter dropdowns — minus retired ones (`config/activity.php` `retired`: features that are gone, whose old rows still render but can never gain new ones).
 
 ```json
 {"types": ["user", "role", "system_user", "application", "database", …],
@@ -332,7 +332,7 @@ Returns every `type` and `action` value the system has ever recorded, for buildi
 ### GET `/admin/activity-log`
 **Permission:** `access-admin` (view)
 
-Paginated (**`per_page` defaults to 10**, not 20). Filters: `filter[user_id]`, `filter[scope]`, `filter[type]`, `filter[action]`, `search` (free-text on type + action + actor name).
+Paginated (**`per_page` defaults to 10**, not 20). Filters: `filter[user_id]`, `filter[scope]`, `filter[type]`, `filter[action]`, `search` (free-text on type + action + what the event was about — site name, domain, PHP/Node version, IP — + actor name).
 
 **`filter[scope]` is the coarse one** — pass `account` or `server` and the backend expands it to that scope's type list server-side. Do not build it client-side by sending several `filter[type]` values; there is no multi-type filter, and the map lives in `config/activity.php`.
 
@@ -449,7 +449,7 @@ Same `{types, actions, scopes}` shape as `/admin/activity-log/filters`, so one c
 ### GET `/activity-log`
 Auth-gated — no permission needed. Own history only; the self-scope is applied first and no filter combination can widen it to another user's rows.
 
-Paginated, `per_page` defaults to **10**. Filters: `filter[scope]`, `filter[type]`, `filter[action]`, `search` (type + action only — there is no actor to search, every row is yours).
+Paginated, `per_page` defaults to **10**. Filters: `filter[scope]`, `filter[type]`, `filter[action]`, `search` (type + action + what the event was about — site name, domain, version, IP; there is no actor to search, every row is yours).
 
 ```json
 {"activity_log": [{"id": 1, "type": "user", "action": "logged_in", "scope": "account", "description": "Logged in", "is_system": false, "created_at": "12-08-2026 09:00:00", "created_at_human": "2 hours ago"}], "meta": {"current_page": 1, "per_page": 10, "total": 42, "last_page": 5}}
@@ -4675,9 +4675,9 @@ Unban every address from every jail.
 ### GET `/server/activity-log`
 **Permission:** `activity_log` (view)
 
-Server-level events only: cronjob, disk_cleaner, service, fail2ban, firewall, git_account, node, setting, panel_update. Per-app events (application, database, backup) are surfaced through their own feature. Separate from `access-admin` which gates the admin-wide log.
+Every event in the **`server` scope** (`config/activity.php`) — the same set the admin log's `filter[scope]=server` selects: sites, databases, backups, PHP, Node, system users, services, firewall, fail2ban, settings and the rest. (Until 2026-09-23 it had its own list of nine types and silently left out PHP, system users, build tools, sites, databases and backups.) Separate from `access-admin` which gates the admin-wide log.
 
-**Query:** `?filter[type]=cronjob&filter[action]=created&search=something&page=1&per_page=20`
+**Query:** `?filter[type]=cronjob&filter[action]=created&search=something&page=1&per_page=20` — `per_page` ∈ **10, 20, 50, 100** (default 20); anything else is `422`.
 
 ```json
 {"activity_log": [{"id": 1, "type": "cronjob", "action": "created", "scope": "server", "description": "Cronjob created", "user": {"id": 1, "username": "admin"}, "is_system": false, "created_at": "29-07-2026 10:00:00", "created_at_human": "3 hours ago"}], "meta": {"current_page": 1, "per_page": 20, "total": 45, "last_page": 3}}
@@ -4685,7 +4685,7 @@ Server-level events only: cronjob, disk_cleaner, service, fail2ban, firewall, gi
 
 **There is no `properties` field on the row.** The raw properties bag is the *input* to `description` — it is interpolated into the localised sentence server-side and never returned, so do not plan a UI that reads values out of it. Every row here has `scope: "server"` by construction.
 
-`search` matches on `type` and `action` only — unlike the admin-wide log, it does not reach the actor's name.
+`search` matches `type`, `action` and what the event was about (site name, domain, version, IP) — unlike the admin-wide log, it does not reach the actor's name.
 
 ---
 

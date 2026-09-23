@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\StorageProvider;
+use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\BackupTarget;
 use App\Models\StorageDestination;
@@ -1208,4 +1209,30 @@ it('sends GetObject as a streamed request so a large artefact never lands in mem
     // before readStream() returns — DownloadArtifact's stream_copy_to_stream
     // then copies an already-loaded 5+ GB string and OOMs the worker.
     expect($requestOptions[0]['stream'] ?? false)->toBeTrue();
+});
+
+/*
+ * Destinations hold backup credentials, and creating, changing and deleting
+ * them left no trace in the activity log.
+ */
+it('records creating, updating and deleting a destination, without its credentials', function () {
+    $id = $this->withHeaders(storageAdminAuthHeader())
+        ->postJson('/api/integrations/storage/destinations', s3Payload())
+        ->assertCreated()
+        ->json('storage_destination.id');
+
+    $this->withHeaders(storageAdminAuthHeader())
+        ->patchJson("/api/integrations/storage/destinations/{$id}", ['name' => 'Renamed'])
+        ->assertOk();
+
+    $this->withHeaders(storageAdminAuthHeader())
+        ->deleteJson("/api/integrations/storage/destinations/{$id}")
+        ->assertSuccessful();
+
+    $rows = ActivityLog::where('type', 'storage_destination')->orderBy('id')->get();
+
+    expect($rows->pluck('action')->all())->toBe(['created', 'updated', 'deleted'])
+        ->and($rows->first()->properties)->toBe(['name' => 'New S3', 'provider' => 's3'])
+        ->and($rows->last()->properties)->toBe(['name' => 'Renamed'])
+        ->and(json_encode($rows->pluck('properties')))->not->toContain('secret_value');
 });

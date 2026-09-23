@@ -4,6 +4,7 @@ namespace App\Actions\Server\StorageDestination;
 
 use App\Models\Application;
 use App\Models\StorageDestination;
+use App\Services\ActivityLogger;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -26,6 +27,8 @@ class DeleteStorageDestination
      */
     private const NAMED_LIMIT = 5;
 
+    public function __construct(private ActivityLogger $activityLogger) {}
+
     public function execute(StorageDestination $destination): void
     {
         $names = Application::query()
@@ -43,6 +46,8 @@ class DeleteStorageDestination
         }
 
         $destination->delete();
+
+        $this->activityLogger->log('storage_destination.deleted', null, ['name' => $destination->name]);
     }
 
     /**

@@ -23,7 +23,11 @@ class ActivityLogController extends Controller
      */
     public function filters(ActivityScopes $scopes): JsonResponse
     {
-        $keys = collect(Lang::get('activity'))->keys();
+        // Minus the retired ones: their sentences stay so old rows still read
+        // properly, but a feature that is gone can never produce a new row,
+        // and an option that always returns nothing is a broken filter.
+        $keys = collect(Lang::get('activity'))->keys()
+            ->reject(fn (string $key) => in_array($key, (array) config('activity.retired', []), true));
 
         $types = $keys->map(fn (string $key) => Str::before($key, '.'))->unique()->sort()->values();
 
@@ -67,7 +71,7 @@ class ActivityLogController extends Controller
 
         if ($search = $request->string('search')->trim()->value()) {
             $query->where(function ($query) use ($search) {
-                ListSearch::apply($query, $search, ['type', 'action']);
+                ActivityLog::search($query, $search);
                 $query->orWhereHas(
                     'user',
                     fn ($user) => ListSearch::apply($user, $search, ['name', 'username']),

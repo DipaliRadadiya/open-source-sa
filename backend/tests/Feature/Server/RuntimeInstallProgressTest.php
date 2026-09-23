@@ -289,6 +289,19 @@ describe('extensions', function () {
             ->toContain(['/usr/sbin/phpenmod', '-v', '8.4', '-s', 'ALL', 'redis']);
     });
 
+    it('logs an extension install as installed, not as enabled', function () {
+        // It logged `extension_enabled` — "Enabled the redis extension" for
+        // something the user had just installed.
+        Process::fake(fn ($process) => Process::result(output: ($process->command[0] ?? '') === 'apt-cache'
+            ? "php8.4-redis - Redis\n"
+            : ''));
+
+        app()->call([new InstallPhpExtension('8.4', 'redis'), 'handle']);
+
+        $this->assertDatabaseHas('activity_logs', ['type' => 'php', 'action' => 'extension_installed']);
+        $this->assertDatabaseMissing('activity_logs', ['type' => 'php', 'action' => 'extension_enabled']);
+    });
+
     it('reports installed-but-not-enabled as its own reason, not as a failed install', function () {
         Process::fake(function ($process) {
             $command = $process->command;

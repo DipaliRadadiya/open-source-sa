@@ -4,12 +4,11 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ListMyActivityLogRequest;
+use App\Http\Requests\ListServerActivityLogRequest;
 use App\Http\Resources\ActivityLogResource;
 use App\Models\ActivityLog;
 use App\Services\ActivityScopes;
-use App\Support\ListSearch;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 /**
  * Handles three scopes of activity log, each behind its own permission:
@@ -88,10 +87,10 @@ class ActivityLogController extends Controller
             $query->where('action', $action);
         }
 
-        // Free-text over type + action only. Unlike the admin log there is no
-        // actor to search — every row here belongs to the caller.
+        // Unlike the admin log there is no actor to search — every row here
+        // belongs to the caller.
         if ($search = $request->string('search')->trim()->value()) {
-            ListSearch::apply($query, $search, ['type', 'action']);
+            ActivityLog::search($query, $search);
         }
 
         $perPage = (int) $request->input('per_page', 10);
@@ -109,21 +108,22 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * Server-level events only: cronjob, disk_cleaner, service, fail2ban,
-     * firewall, git_account, node, setting, panel_update. Per-app events
-     * (application, database, backup) are surfaced through their own feature
-     * and excluded here.
+     * The server's events — everything in the `server` scope of
+     * config/activity.php, sites and databases included.
+     *
+     * The types were a list of their own here and it drifted: it had nine of
+     * the scope's nineteen, so PHP versions, system users, build tools and
+     * every site and database event never reached this log — and nothing
+     * else shows them to someone without admin access. One source now, the
+     * same one the admin log's scope filter reads.
      *
      * Requires `activity_log` permission — different from `access-admin`
      * which gates the admin-wide log.
      */
-    public function serverIndex(Request $request, ActivityScopes $scopes): JsonResponse
+    public function serverIndex(ListServerActivityLogRequest $request, ActivityScopes $scopes): JsonResponse
     {
         $query = ActivityLog::with('user:id,username')
-            ->whereIn('type', [
-                'cronjob', 'disk_cleaner', 'service', 'fail2ban',
-                'firewall', 'git_account', 'node', 'setting', 'panel_update',
-            ])
+            ->whereIn('type', $scopes->types('server'))
             ->latest('created_at');
 
         if ($type = $request->input('filter.type')) {
@@ -135,7 +135,7 @@ class ActivityLogController extends Controller
         }
 
         if ($search = $request->string('search')->trim()->value()) {
-            ListSearch::apply($query, $search, ['type', 'action']);
+            ActivityLog::search($query, $search);
         }
 
         $perPage = (int) $request->input('per_page', 20);
