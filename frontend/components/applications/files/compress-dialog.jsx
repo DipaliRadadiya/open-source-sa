@@ -5,7 +5,7 @@ import { compressSuggestion, dirname } from "@/lib/files/path-helpers";
 import { TargetPathDialog } from "@/components/applications/files/target-path-dialog";
 import { ArchiveFormatField, useArchiveFormat } from "@/components/applications/files/archive-format-field";
 
-export function CompressDialog({ appId, file, open, onOpenChange, onSuccess }) {
+export function CompressDialog({ appId, file, existingPaths, open, onOpenChange, onSuccess }) {
   const t = useTranslations("applications.files");
   const format = useArchiveFormat();
   if (!file) return null;
@@ -21,8 +21,9 @@ export function CompressDialog({ appId, file, open, onOpenChange, onSuccess }) {
       description={t("compressDialog.subtitle")}
       submitLabel={t("compressDialog.submit")}
       savingLabel={t("saving")}
-      defaultTarget={compressSuggestion(file.path)}
+      defaultTarget={compressSuggestion(file.path, ".zip", new Set(existingPaths))}
       renderExtra={(field) => <ArchiveFormatField {...format} {...field} />}
+      normalize={format.complete}
       validate={format.validate}
       apply={compressFile}
       successMessage={() => t("compressDialog.done", { name: file.name })}

@@ -3917,7 +3917,9 @@
         "allFailed": "Não foi possível enviar nenhum destes arquivos.",
         "exists": "Já existe um arquivo com este nome nesta pasta. Renomeie-o ou exclua-o primeiro.",
         "stop": "Parar",
-        "stopped": "Envio interrompido. {done} de {count} arquivos foram enviados."
+        "stopped": "Envio interrompido. {done} de {count} arquivos foram enviados.",
+        "waiting": "Em pausa pelo limite de envios do servidor. Continua em {seconds, plural, one {# segundo} other {# segundos}}.",
+        "rateLimited": "O servidor está recusando mais envios agora. Clique em Enviar de novo daqui a um minuto."
       },
       "editor": {
         "subtitle": "As alterações são salvas em backup automaticamente antes de cada salvamento.",

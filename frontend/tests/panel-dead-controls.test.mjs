@@ -25,7 +25,8 @@ test("move and copy do not pre-fill the folder the files are already in", () => 
    * destination".
    */
   const bulk = read("components/applications/files/bulk-dialogs.jsx");
-  assert.match(bulk, /action === "compress" \? joinPath\(path, "archive\.zip"\) : ""/);
+  // Beside its contents, under a name nothing there already has.
+  assert.match(bulk, /action === "compress" \? compressSuggestion\(joinPath\(path, "archive"\), "\.zip", new Set\(files\.map\(\(f\) => f\.path\)\)\) : ""/);
 
   const code = strip(bulk);
   assert.doesNotMatch(

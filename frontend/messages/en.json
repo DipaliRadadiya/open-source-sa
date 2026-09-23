@@ -3917,7 +3917,9 @@
         "allFailed": "Couldn't upload any of these files.",
         "exists": "A file with this name is already in this folder. Rename or delete it first.",
         "stop": "Stop",
-        "stopped": "Upload stopped. {done} of {count} files were uploaded."
+        "stopped": "Upload stopped. {done} of {count} files were uploaded.",
+        "waiting": "Paused by the server's upload limit. Continuing in {seconds, plural, one {# second} other {# seconds}}.",
+        "rateLimited": "The server is refusing more uploads right now. Press Upload again in a minute."
       },
       "editor": {
         "subtitle": "Changes are backed up automatically before each save.",

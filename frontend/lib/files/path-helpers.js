@@ -25,10 +25,21 @@ function splitExtension(name) {
   return i <= 0 ? [name, ""] : [name.slice(0, i), name.slice(i)];
 }
 
-export function copySuggestion(path) {
+// The first of `candidate(1)`, `candidate(2)`, … not already taken. A second
+// Copy used to suggest the same "-copy" name as the first and be refused.
+function firstFree(candidate, taken) {
+  for (let n = 1; n < 100; n += 1) {
+    const path = candidate(n);
+    if (!taken.has(path)) return path;
+  }
+  return candidate(1);
+}
+
+// `taken` holds the paths already in the folder on screen.
+export function copySuggestion(path, taken = new Set()) {
   const dir = dirname(path);
   const [stem, ext] = splitExtension(basename(path));
-  return joinPath(dir, `${stem}-copy${ext}`);
+  return firstFree((n) => joinPath(dir, `${stem}-copy${n > 1 ? `-${n}` : ""}${ext}`), taken);
 }
 
 // The formats the API can write. `.tgz` is only ever read: it is the same
@@ -50,8 +61,8 @@ export function withArchiveFormat(path, format) {
   return `${stem}${format}`;
 }
 
-export function compressSuggestion(path, format = ".zip") {
+export function compressSuggestion(path, format = ".zip", taken = new Set()) {
   const dir = dirname(path);
   const [stem] = splitExtension(basename(path));
-  return joinPath(dir, `${stem}${format}`);
+  return firstFree((n) => joinPath(dir, `${stem}${n > 1 ? `-${n}` : ""}${format}`), taken);
 }

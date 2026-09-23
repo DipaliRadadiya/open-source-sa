@@ -179,3 +179,73 @@ test("the phone card never splits a permission string across lines", () => {
   assert.match(cards, /className=\{cn\("whitespace-nowrap", isWorldWritable/);
   assert.match(cards, /flex flex-wrap gap-x-2 font-mono/);
 });
+
+// ---- Write-flow tests on a live panel (2026-09-23) ----
+
+const editorSrc = read("components/applications/files/file-editor-dialog.jsx");
+const archiveField = read("components/applications/files/archive-format-field.jsx");
+const bulkSrc = read("components/applications/files/bulk-dialogs.jsx");
+const restoreSrc = read("components/applications/files/restore-file-backup-dialog.jsx");
+
+test("an upload refused by the rate limit waits and carries on", () => {
+  // Twelve files: eight went up, four rows read "Too Many Attempts."
+  assert.match(upload, /error\?\.response\?\.status === 429 && waits < RATE_LIMIT_MAX_WAITS/);
+  assert.match(upload, /await countDown\(retryAfterSeconds\(error\), update, controller\.signal\);/);
+  // Stop must end a wait, not sit it out.
+  assert.match(upload, /signal\.addEventListener\("abort", finish\);/);
+  assert.match(upload, /t\("uploadDialog\.waiting", \{ seconds: item\.waitSeconds \}\)/);
+  // Past the last wait it says so in our words, not the server's English.
+  assert.match(upload, /\? t\("uploadDialog\.rateLimited"\)/);
+});
+
+test("a failed file does not count towards the bar", () => {
+  // Four refused files and the bar still read 100%.
+  assert.match(upload, /i\.status === "error" \? 0 :/);
+});
+
+test("a file the editor refuses gets the Download screen, not an empty editor that closes", async () => {
+  const { EDITOR_MAX_BYTES } = await import("../lib/files/openable.js");
+  assert.equal(EDITOR_MAX_BYTES, 5 * 1024 * 1024, "the backend's FileBrowser::MAX_BYTES");
+  // Known too large from the listing: no request at all.
+  assert.match(editorSrc, /const tooLarge = file\.size > EDITOR_MAX_BYTES;/);
+  assert.match(editorSrc, /if \(tooLarge\) return;/);
+  // The refusal is a bare 422 — the error keys this used to wait for never come.
+  assert.match(editorSrc, /response\?\.status === 422 && !response\.data\?\.errors\?\.path/);
+  assert.doesNotMatch(editorSrc, /errors\?\.\["application\.file_too_large"\]/);
+});
+
+test("copy and compress suggest a name that is not already taken", async () => {
+  const { copySuggestion, compressSuggestion } = await import("../lib/files/path-helpers.js");
+  assert.equal(copySuggestion("qa/config.json"), "qa/config-copy.json");
+  assert.equal(copySuggestion("qa/config.json", new Set(["qa/config-copy.json"])), "qa/config-copy-2.json");
+  assert.equal(
+    copySuggestion("qa/config.json", new Set(["qa/config-copy.json", "qa/config-copy-2.json"])),
+    "qa/config-copy-3.json",
+  );
+  assert.equal(copySuggestion("site.tar.gz", new Set(["site-copy.tar.gz"])), "site-copy-2.tar.gz");
+  assert.equal(compressSuggestion("qa/sub", ".zip", new Set(["qa/sub.zip"])), "qa/sub-2.zip");
+  assert.equal(compressSuggestion("qa/archive", ".zip", new Set()), "qa/archive.zip");
+  assert.match(panel, /<CopyDialog\s+appId=\{appId\}\s+file=\{action\.file\}\s+existingPaths=\{files\.map\(\(f\) => f\.path\)\}/);
+  assert.match(panel, /<CompressDialog\s+appId=\{appId\}\s+file=\{action\.file\}\s+existingPaths=\{files\.map\(\(f\) => f\.path\)\}/);
+  assert.match(bulkSrc, /compressSuggestion\(joinPath\(path, "archive"\), "\.zip", new Set\(files\.map/);
+});
+
+test("an archive name typed without an extension gets the format picked above it", () => {
+  // The placeholder itself — "application-backup" — used to be refused.
+  assert.match(archiveField, /const \[chosen, setChosen\] = useState\(ARCHIVE_FORMATS\[0\]\);/);
+  assert.match(archiveField, /complete: \(value\) => \(!value \|\| value\.endsWith\("\/"\) \|\| archiveFormatOf\(value\) \? value : `\$\{value\}\$\{chosen\}`\)/);
+  assert.match(bulkSrc, /compressFiles\(appId, paths, archiveFormat\.complete\(target\.trim\(\)\)\)/);
+  assert.match(read("components/applications/files/compress-dialog.jsx"), /normalize=\{format\.complete\}/);
+  assert.match(read("components/applications/files/target-path-dialog.jsx"), /const trimmed = normalize\(value\.trim\(\)\);/);
+});
+
+test("saved versions are listed by when, not by backup file name", async () => {
+  const { parseApiWallClock } = await import("../lib/format/api-date.js");
+  const when = parseApiWallClock("23-09-2026 08:50:23");
+  // Written back in UTC it is the server's own wall-clock time, whatever zone
+  // the browser is in.
+  assert.equal(when.toISOString(), "2026-09-23T08:50:23.000Z");
+  assert.equal(parseApiWallClock("notes.txt.bak-20260923-085023"), null);
+  assert.match(restoreSrc, /format\.dateTime\(when, \{ dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" \}\)/);
+  assert.doesNotMatch(restoreSrc, /font-mono text-xs">\{backup\.name\}/);
+});

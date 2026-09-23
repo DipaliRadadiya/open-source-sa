@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChoiceField } from "@/components/ui/choice-field";
 import {
@@ -21,7 +22,12 @@ import {
  */
 export function useArchiveFormat() {
   const t = useTranslations("applications.files.archiveFormat");
+  // Remembered apart from the path, so a name typed without an extension
+  // still goes into the format picked above it.
+  const [chosen, setChosen] = useState(ARCHIVE_FORMATS[0]);
   return {
+    chosen,
+    setChosen,
     options: ARCHIVE_FORMATS.map((value) => ({
       value,
       label: t(`options.${value === ".zip" ? "zip" : "targz"}.label`),
@@ -31,16 +37,23 @@ export function useArchiveFormat() {
     // The extension is the truth: someone who types their own name straight
     // into the path field still gets the right button highlighted.
     validate: (value) => (archiveFormatOf(value) ? null : t("mustBeArchive")),
+    // A bare name gets the chosen extension; a folder path ("keep/") is left
+    // for validate to refuse rather than turned into a hidden ".zip".
+    complete: (value) => (!value || value.endsWith("/") || archiveFormatOf(value) ? value : `${value}${chosen}`),
   };
 }
 
-export function ArchiveFormatField({ options, legend, value, setValue, busy }) {
+export function ArchiveFormatField({ options, legend, chosen, setChosen, value, setValue, busy }) {
+  const typed = archiveFormatOf(value);
   return (
     <fieldset className="space-y-2" disabled={busy}>
       <legend className="pb-2 text-sm font-medium">{legend}</legend>
       <ChoiceField
-        value={archiveFormatOf(value) === ".tar.gz" || archiveFormatOf(value) === ".tgz" ? ".tar.gz" : ".zip"}
-        onChange={(next) => setValue(withArchiveFormat(value, next))}
+        value={typed === ".tar.gz" || typed === ".tgz" ? ".tar.gz" : typed === ".zip" ? ".zip" : chosen}
+        onChange={(next) => {
+          setChosen(next);
+          setValue(withArchiveFormat(value, next));
+        }}
         options={options}
         disabled={busy}
         name="archive-format"

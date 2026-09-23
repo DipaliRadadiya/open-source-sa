@@ -3917,7 +3917,9 @@
         "allFailed": "No se pudo subir ninguno de estos archivos.",
         "exists": "Ya hay un archivo con este nombre en esta carpeta. Cámbiale el nombre o elimínalo primero.",
         "stop": "Detener",
-        "stopped": "Subida detenida. Se subieron {done} de {count} archivos."
+        "stopped": "Subida detenida. Se subieron {done} de {count} archivos.",
+        "waiting": "En pausa por el límite de subidas del servidor. Continúa en {seconds, plural, one {# segundo} other {# segundos}}.",
+        "rateLimited": "El servidor no acepta más subidas ahora mismo. Haz clic en Subir de nuevo dentro de un minuto."
       },
       "editor": {
         "subtitle": "Los cambios se respaldan automáticamente antes de cada guardado.",

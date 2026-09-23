@@ -374,7 +374,7 @@ export function FilesPanel({
               the choice has to be in the URL to change what comes back. It
               also makes the view shareable and survives a reload. */}
           {files.length > 0 || hiddenCount > 0 ? (
-            <Button asChild variant="outline" size="sm" className="[&_svg]:text-muted-foreground">
+            <Button asChild variant="outline" size="sm">
               <Link
                 href={hiddenHref}
                 aria-pressed={!showHidden}
@@ -598,6 +598,7 @@ export function FilesPanel({
         <CopyDialog
           appId={appId}
           file={action.file}
+          existingPaths={files.map((f) => f.path)}
           open
           onOpenChange={(open) => !open && closeAction()}
           onSuccess={flashPath}
@@ -607,6 +608,7 @@ export function FilesPanel({
         <CompressDialog
           appId={appId}
           file={action.file}
+          existingPaths={files.map((f) => f.path)}
           open
           onOpenChange={(open) => !open && closeAction()}
           onSuccess={flashPath}

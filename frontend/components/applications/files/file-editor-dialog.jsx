@@ -7,6 +7,7 @@ import { FileCode2, Loader2, History, Download, TriangleAlert } from "lucide-rea
 import { getFileContent, saveFileContent, fileDownloadUrl } from "@/lib/api/files";
 import { fileContentSchema } from "@/lib/schemas/file";
 import { apiMessage } from "@/lib/api/error-message";
+import { EDITOR_MAX_BYTES } from "@/lib/files/openable";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ShortcutHint } from "@/components/ui/shortcut-hint";
@@ -48,13 +49,14 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   const router = useRouter();
   // Mounted fresh per file (see files-panel.jsx), so these start at the
   // "about to load" state directly rather than being reset by an effect.
-  const [loading, setLoading] = useState(true);
+  const tooLarge = file.size > EDITOR_MAX_BYTES;
+  const [loading, setLoading] = useState(!tooLarge);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(null); // { path, content, backups }
   const [contents, setContents] = useState("");
   // Set when the file can't be opened here at all — too big or looks binary.
-  // The API's own message names which; Download is the honest way out.
-  const [blocked, setBlocked] = useState(null);
+  // Download is the honest way out.
+  const [blocked, setBlocked] = useState(() => (tooLarge ? t("editor.tooLarge") : null));
   // Why the last save was refused. The API rejects a file for reasons the
   // editor cannot anticipate — permissions, disk full, a path that moved —
   // and those belong beside the text they are about, not in a toast that
@@ -96,6 +98,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
 
   useEffect(() => {
     let active = true;
+    if (tooLarge) return;
     getFileContent(appId, file.path)
       .then(({ data }) => {
         if (!active) return;
@@ -106,11 +109,18 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
       })
       .catch((error) => {
         if (!active) return;
-        const errors = error.response?.data?.errors;
-        const tooLarge = errors?.["application.file_too_large"];
-        const notText = errors?.["application.file_not_text"];
-        if (tooLarge || notText) {
-          setBlocked(tooLarge ? t("editor.tooLarge") : t("editor.notText"));
+        // Both refusals are a bare 422 with a message and no field — the
+        // server names no reason a client can branch on. A 422 that does
+        // name a field is a bad path, which is a real failure.
+        const response = error.response;
+        if (response?.status === 422 && !response.data?.errors?.path) {
+          // A shortcut opens a file with no listing size; the server's own
+          // sentence says which refusal it was.
+          setBlocked(
+            file.size == null
+              ? apiMessage(error, t("editor.notText"), { reference: false })
+              : t(file.size > EDITOR_MAX_BYTES ? "editor.tooLarge" : "editor.notText"),
+          );
         } else {
           toast.error(apiMessage(error, t("editor.loadFailed")));
           onOpenChange?.(false);
@@ -132,7 +142,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
     // failure path, and re-running on a new translator identity would abort the
     // in-flight request through the cleanup below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appId, file.path]);
+  }, [appId, file.path, tooLarge]);
 
   const dirty = loaded !== null && contents !== loaded.content;
   const canEdit = canManage;
@@ -205,8 +215,11 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
             </span>
             <DialogTitle className="truncate font-mono text-base">{file?.path}</DialogTitle>
           </div>
-          <DialogDescription className="pt-1">
-            {canEdit ? t("editor.subtitle") : t("editor.readOnly")}
+          {/* A file that cannot be opened has nothing to save, so the line
+              about backups before each save would be wrong. Screen readers
+              get the reason instead. */}
+          <DialogDescription className={blocked ? "sr-only" : "pt-1"}>
+            {blocked ?? (canEdit ? t("editor.subtitle") : t("editor.readOnly"))}
           </DialogDescription>
         </DialogHeader>
 

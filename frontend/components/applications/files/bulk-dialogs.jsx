@@ -19,7 +19,7 @@ import {
 } from "@/lib/api/files";
 import { bulkResult } from "@/lib/files/bulk-result";
 import { apiMessage } from "@/lib/api/error-message";
-import { dirname, joinPath } from "@/lib/files/path-helpers";
+import { compressSuggestion, dirname, joinPath } from "@/lib/files/path-helpers";
 import { sharedMode, selectedFiles } from "@/lib/files/shared-mode";
 import { symbolicMode } from "@/lib/files/describe-mode";
 
@@ -62,7 +62,7 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
    * a question is better than a filled one answering it wrongly.
    */
   const [target, setTarget] = useState(() =>
-    action === "compress" ? joinPath(path, "archive.zip") : "",
+    action === "compress" ? compressSuggestion(joinPath(path, "archive"), ".zip", new Set(files.map((f) => f.path))) : "",
   );
   /*
    * Starts at what the selection actually has, not at a constant.
@@ -198,7 +198,7 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
     },
     compress: {
       icon: FileArchive,
-      submit: () => compressFiles(appId, paths, target.trim()),
+      submit: () => compressFiles(appId, paths, archiveFormat.complete(target.trim())),
       label: t("bulk.archiveName"),
       placeholder: t("bulk.archiveNamePlaceholder"),
       hint: t("bulk.compressHint", { folder: dirname(paths[0]) || "/" }),
@@ -218,7 +218,7 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
       onSubmit={(event) => {
         event.preventDefault();
         if (action === "compress") {
-          const invalid = archiveFormat.validate(target.trim());
+          const invalid = archiveFormat.validate(archiveFormat.complete(target.trim()));
           if (invalid) {
             setError(invalid);
             return;

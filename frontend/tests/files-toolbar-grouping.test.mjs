@@ -57,7 +57,11 @@ test("every control in the strip still looks like a control", () => {
   for (const [name, src] of [["panel", strip], ["fix permissions", fix], ["storage", storage]]) {
     assert.doesNotMatch(src, /<Button[^>]*className="text-muted-foreground"/, `${name}: a control's text must not be greyed`);
   }
-  assert.match(fix, /className="\[&_svg\]:text-muted-foreground"/);
+  // …and not the icon either: a grey icon beside dark text read as a bug next
+  // to New folder / New file, which are plain outline buttons.
+  for (const [name, src] of [["panel", strip], ["fix permissions", fix], ["storage", storage]]) {
+    assert.doesNotMatch(src, /\[&_svg\]:text-muted-foreground/, `${name}: icons match the other toolbar buttons`);
+  }
 
   /*
    * Trash is a light-red TINT (Krishna, 2026-09-23) — outline with a 5% fill

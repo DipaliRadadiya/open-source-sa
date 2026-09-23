@@ -3917,7 +3917,9 @@
         "allFailed": "Impossible de téléverser ces fichiers.",
         "exists": "Un fichier de ce nom existe déjà dans ce dossier. Renommez-le ou supprimez-le d'abord.",
         "stop": "Arrêter",
-        "stopped": "Téléversement arrêté. {done} fichiers sur {count} ont été téléversés."
+        "stopped": "Téléversement arrêté. {done} fichiers sur {count} ont été téléversés.",
+        "waiting": "En pause à cause de la limite de téléversement du serveur. Reprise dans {seconds, plural, one {# seconde} other {# secondes}}.",
+        "rateLimited": "Le serveur refuse d'autres téléversements pour le moment. Cliquez à nouveau sur Téléverser dans une minute."
       },
       "editor": {
         "subtitle": "Une sauvegarde est créée automatiquement avant chaque enregistrement.",

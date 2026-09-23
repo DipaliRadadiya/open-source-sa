@@ -42,3 +42,19 @@ export function apiDuration(start, end) {
   const hours = Math.floor(minutes / 60);
   return `${hours}h ${String(minutes % 60).padStart(2, "0")}m`;
 }
+
+/**
+ * The stamp as a Date to format with `timeZone: "UTC"`.
+ *
+ * The stamp is a wall-clock time with no zone. `parseApiDate` reads it in the
+ * browser's zone while the formatter writes in the panel's, so the hour moved
+ * by the difference. Read and written as UTC it comes back exactly as the
+ * server wrote it.
+ */
+export function parseApiWallClock(value) {
+  const m = String(value ?? "").match(STAMP);
+  if (!m) return null;
+  const [, dd, mm, yyyy, hh, min, ss] = m.map(Number);
+  const date = new Date(Date.UTC(yyyy, mm - 1, dd, hh, min, ss));
+  return Number.isNaN(date.getTime()) ? null : date;
+}

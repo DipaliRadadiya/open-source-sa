@@ -55,6 +55,9 @@ export function TargetPathDialog({
   // Checked before the request goes out, so a wrong extension is an inline
   // message under the field instead of a toast after a round trip.
   validate,
+  // Finishes what was typed before it is checked or sent — Compress adds the
+  // chosen extension to a bare name.
+  normalize = (value) => value,
   /*
    * The "where does this land" line under the field. Null hides it.
    *
@@ -115,7 +118,7 @@ export function TargetPathDialog({
 
   async function onSubmit(e) {
     e.preventDefault();
-    const trimmed = value.trim();
+    const trimmed = normalize(value.trim());
     if ((!trimmed && !allowEmpty) || busy) return;
     const invalid = validate?.(trimmed);
     if (invalid) {

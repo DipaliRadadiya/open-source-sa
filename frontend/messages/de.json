@@ -3917,7 +3917,9 @@
         "allFailed": "Keine dieser Dateien konnte hochgeladen werden.",
         "exists": "In diesem Ordner gibt es bereits eine Datei mit diesem Namen. Benennen Sie sie um oder löschen Sie sie zuerst.",
         "stop": "Stoppen",
-        "stopped": "Hochladen gestoppt. {done} von {count} Dateien wurden hochgeladen."
+        "stopped": "Hochladen gestoppt. {done} von {count} Dateien wurden hochgeladen.",
+        "waiting": "Pausiert wegen des Upload-Limits des Servers. Weiter in {seconds, plural, one {# Sekunde} other {# Sekunden}}.",
+        "rateLimited": "Der Server nimmt gerade keine weiteren Uploads an. Klicken Sie in einer Minute erneut auf Hochladen."
       },
       "editor": {
         "subtitle": "Änderungen werden vor jedem Speichern automatisch gesichert.",

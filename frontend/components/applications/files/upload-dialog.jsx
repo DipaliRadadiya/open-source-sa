@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations, useFormatter } from "next-intl";
 import { toast } from "sonner";
 import { formatBytes } from "@/lib/format/bytes";
-import { UploadCloud, X, Loader2, CircleCheck, CircleAlert, Square } from "lucide-react";
+import { UploadCloud, X, Loader2, CircleCheck, CircleAlert, Square, Hourglass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadAnySize, uploadSpace } from "@/lib/api/files";
 import { joinPath } from "@/lib/files/path-helpers";
@@ -18,6 +18,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+// Retry-After is not in the API's CORS exposed headers, so the browser hides
+// it; without it, wait in steps. The server's window is a minute, so four
+// steps always outlast it.
+const RATE_LIMIT_WAIT_SECONDS = 20;
+const RATE_LIMIT_MAX_WAITS = 4;
+
+function retryAfterSeconds(error) {
+  const header = Number(error?.response?.headers?.["retry-after"]);
+  return Number.isFinite(header) && header > 0 && header <= 120 ? Math.ceil(header) : RATE_LIMIT_WAIT_SECONDS;
+}
 
 // The API takes one file per request and REFUSES a name that already exists
 // in the folder (`upload_exists`) — this orchestrates multiple drops sequentially against that
@@ -154,6 +165,25 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     onOpenChange?.(next);
   }
 
+  // Resolves early when Stop is pressed, so a wait never outlives the run.
+  function countDown(seconds, update, signal) {
+    return new Promise((resolve) => {
+      let left = seconds;
+      update({ status: "waiting", progress: 0, waitSeconds: left });
+      const timer = setInterval(() => {
+        left -= 1;
+        if (left <= 0) finish();
+        else update({ waitSeconds: left });
+      }, 1000);
+      function finish() {
+        clearInterval(timer);
+        signal.removeEventListener("abort", finish);
+        resolve();
+      }
+      signal.addEventListener("abort", finish);
+    });
+  }
+
   async function startUpload() {
     const controller = new AbortController();
     abortRef.current = controller;
@@ -180,28 +210,48 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
         failedCount += 1;
         continue;
       }
-      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: "uploading", error: null } : i)));
-      try {
-        await uploadAnySize(appId, joinPath(path, item.file.name), item.file, {
-          signal: controller.signal,
-          onProgress: (fraction) =>
-            setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, progress: fraction } : i))),
-        });
-        anySucceeded = true;
-        succeededNames.push(item.file.name);
-        setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: "done", progress: 1 } : i)));
-      } catch (error) {
-        // Stopped by the reader, not refused by the server: the file goes
-        // back to waiting, with no error on it, so Upload can pick it up again.
-        if (controller.signal.aborted) {
-          stopped = true;
-          setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: "pending", progress: 0, error: null } : i)));
-          break;
+      const update = (patch) => setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, ...patch } : i)));
+      let waits = 0;
+      for (;;) {
+        update({ status: "uploading", error: null, waitSeconds: 0 });
+        try {
+          await uploadAnySize(appId, joinPath(path, item.file.name), item.file, {
+            signal: controller.signal,
+            onProgress: (fraction) => update({ progress: fraction }),
+          });
+          anySucceeded = true;
+          succeededNames.push(item.file.name);
+          update({ status: "done", progress: 1 });
+        } catch (error) {
+          /*
+           * The server takes a fixed number of uploads a minute, so a folder
+           * of twelve files used to end with four rows reading "Too Many
+           * Attempts." Waiting is the whole fix — a refused request does not
+           * count against the limit, so trying again after the window loses
+           * nothing.
+           */
+          if (!controller.signal.aborted && error?.response?.status === 429 && waits < RATE_LIMIT_MAX_WAITS) {
+            waits += 1;
+            await countDown(retryAfterSeconds(error), update, controller.signal);
+            if (!controller.signal.aborted) continue;
+          }
+          // Stopped by the reader, not refused by the server: the file goes
+          // back to waiting, with no error on it, so Upload can pick it up again.
+          if (controller.signal.aborted) {
+            stopped = true;
+            update({ status: "pending", progress: 0, error: null, waitSeconds: 0 });
+            break;
+          }
+          failedCount += 1;
+          const message =
+            error?.response?.status === 429
+              ? t("uploadDialog.rateLimited")
+              : apiMessage(error, t("uploadDialog.itemFailed"));
+          update({ status: "error", error: message, progress: 0 });
         }
-        failedCount += 1;
-        const message = apiMessage(error, t("uploadDialog.itemFailed"));
-        setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, status: "error", error: message } : i)));
+        break;
       }
+      if (stopped) break;
     }
     abortRef.current = null;
     setUploading(false);
@@ -250,7 +300,10 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
   // A file refused for its name is never sent, so it is not part of "how far".
   const totalBytes = items.reduce((sum, i) => (i.nameTaken ? sum : sum + i.file.size), 0);
   const sentBytes = items.reduce(
-    (sum, i) => sum + (i.status === "done" ? i.file.size : i.file.size * (i.progress || 0)),
+    // A failed file sent nothing that stayed, so it adds nothing — otherwise
+    // a run where four files were refused still ended at 100%.
+    (sum, i) =>
+      sum + (i.status === "done" ? i.file.size : i.status === "error" ? 0 : i.file.size * (i.progress || 0)),
     0,
   );
   const doneCount = items.filter((i) => i.status === "done").length;
@@ -332,6 +385,8 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
                   <span className="min-w-0 flex-1 truncate font-mono text-xs">{item.file.name}</span>
                   {item.status === "uploading" ? (
                     <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+                  ) : item.status === "waiting" ? (
+                    <Hourglass className="size-4 shrink-0 text-muted-foreground" />
                   ) : item.status === "done" ? (
                     <CircleCheck className="size-4 shrink-0 text-success" />
                   ) : item.status === "error" ? (
@@ -377,6 +432,11 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
                     {formatBytes(item.file.size, format)}
                   </p>
                 )}
+                {item.status === "waiting" ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("uploadDialog.waiting", { seconds: item.waitSeconds })}
+                  </p>
+                ) : null}
                 {item.error ? <p className="mt-1 text-xs text-destructive">{item.error}</p> : null}
               </li>
             ))}

@@ -4,7 +4,7 @@ import { copyFile } from "@/lib/api/files";
 import { copySuggestion } from "@/lib/files/path-helpers";
 import { TargetPathDialog } from "@/components/applications/files/target-path-dialog";
 
-export function CopyDialog({ appId, file, open, onOpenChange, onSuccess }) {
+export function CopyDialog({ appId, file, existingPaths, open, onOpenChange, onSuccess }) {
   const t = useTranslations("applications.files");
   if (!file) return null;
 
@@ -19,7 +19,7 @@ export function CopyDialog({ appId, file, open, onOpenChange, onSuccess }) {
       description={t("copyDialog.subtitle")}
       submitLabel={t("copyDialog.submit")}
       savingLabel={t("saving")}
-      defaultTarget={copySuggestion(file.path)}
+      defaultTarget={copySuggestion(file.path, new Set(existingPaths))}
       apply={copyFile}
       successMessage={() => t("copyDialog.done", { name: file.name })}
       failureMessage={t("copyDialog.failed")}
