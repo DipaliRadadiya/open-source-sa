@@ -93,23 +93,15 @@ class IonCubeLoader
      */
     public function status(string $version): array
     {
-        if (! $this->supports($version)) {
-            return [
-                'supported' => false,
-                'installed' => false,
-                'source' => null,
-                'php_version' => $version,
-                'loader_version' => null,
-                'sha256' => null,
-                'path' => null,
-            ];
-        }
-
+        // Asked on every version, supported or not. The panel offers ionCube
+        // for 8.1+ only, but v7 installed it on 7.4 as well — and a card that
+        // answered "not available" without looking said so about a loader
+        // that was running.
         $source = $this->source($version);
         $panel = $source === self::SOURCE_PANEL;
 
         return [
-            'supported' => true,
+            'supported' => $this->supports($version),
             'installed' => $source !== null,
             // `external`: installed outside the panel. Install and Remove are
             // refused for it; the card should say so instead of offering them.
@@ -155,7 +147,7 @@ class IonCubeLoader
     public function panelFiles(string $version): array
     {
         try {
-            if (! $this->supports($version) || $this->source($version) !== self::SOURCE_PANEL) {
+            if ($this->source($version) !== self::SOURCE_PANEL) {
                 return [];
             }
 

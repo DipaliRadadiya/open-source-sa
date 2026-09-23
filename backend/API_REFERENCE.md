@@ -5287,7 +5287,7 @@ Sequence: back up → write → config test (`php-fpm -t`, or `lsphp -c php.ini 
 
 The ionCube Loader, which commercial PHP applications (WHMCS and most licensed scripts) need in order to run encrypted code. **Its own card, not a row in the extensions list** — there is no apt package for it, so nothing about the extensions endpoint applies.
 
-**`supported: false` is a real state, not an error.** ionCube publishes no loader for **PHP 8.0**, and the panel still offers 8.0. Render an explanation, not an Install button. A PHP version that is not installed at all is a `404` — there is no card for a PHP that is not there.
+**`supported: false` is a real state, not an error.** ionCube publishes no loader for **PHP 8.0**, and the panel still offers 8.0. Render an explanation, not an Install button. It can still come with `installed: true, source: "external"` — an earlier ServerAvatar version installed ionCube on 7.4 too — so show "installed outside the panel" with its version in that case, and no buttons either way. A PHP version that is not installed at all is a `404` — there is no card for a PHP that is not there.
 
 `loader_version` is read out of PHP itself, so it is the version actually loaded rather than the one that was requested; `null` while `installed` is `true` means the ini is in place and the loader did not load. `status` / `reason` / `reference` follow the same pattern as PHP extension installs.
 

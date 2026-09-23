@@ -289,6 +289,19 @@ describe('an ionCube the panel did not install', function () {
         'LiteSpeed package' => [['external' => true, 'loaded' => true]],
     ]);
 
+    it('reports it on a version the panel does not offer ionCube for', function (string $version) {
+        // v7 installed ionCube on 7.4 too. The card answered "not supported"
+        // without looking, about a loader that was running.
+        fakeIonCube(['loaded' => true]);
+
+        expect(app(IonCubeLoader::class)->status($version))->toMatchArray([
+            'supported' => false,
+            'installed' => true,
+            'source' => 'external',
+            'loader_version' => '15.5.1',
+        ]);
+    })->with(['7.4', '8.0']);
+
     it('reports the panel\'s own as panel', function () {
         fakeIonCube(['existing' => true, 'loaded' => true]);
 
