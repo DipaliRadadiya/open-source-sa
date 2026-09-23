@@ -2,6 +2,9 @@
 
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Doctor\Checks\DynamicResponseLimitCheck;
+use App\Services\Server\ServerOps;
+use App\Services\Server\ServerOpsResult;
+use Illuminate\Contracts\Process\ProcessResult;
 
 /*
  * The download ceiling nobody can see.
@@ -16,12 +19,27 @@ use App\Services\Server\Doctor\Checks\DynamicResponseLimitCheck;
  * change keeps the ceiling.
  */
 
-function limitCheck(?string $webServer): DynamicResponseLimitCheck
+function limitCheck(?string $webServer, ?ServerOpsResult $read = null): DynamicResponseLimitCheck
 {
     $capabilities = Mockery::mock(ServerCapabilities::class);
     $capabilities->shouldReceive('recordedWebServer')->andReturn($webServer);
 
-    return new DynamicResponseLimitCheck($capabilities);
+    $ops = Mockery::mock(ServerOps::class);
+    $ops->shouldReceive('run')->andReturn(
+        $read ?? new ServerOpsResult(ok: false, reference: 'r', answered: false),
+    );
+
+    return new DynamicResponseLimitCheck($capabilities, $ops);
+}
+
+/** A ServerOpsResult whose output() is the given config body. */
+function limitConfig(string $body): ServerOpsResult
+{
+    $process = Mockery::mock(ProcessResult::class);
+    $process->shouldReceive('output')->andReturn($body);
+    $process->shouldReceive('errorOutput')->andReturn('');
+
+    return new ServerOpsResult(ok: true, reference: 'r', result: $process, answered: true);
 }
 
 /** Runs the parser against a config body, via a temporary file. */
@@ -91,4 +109,28 @@ it('translates its name and its fix in every locale', function () {
         expect(__('doctor.fixes.dynamic_response_limit', [], $locale))
             ->not->toBe('doctor.fixes.dynamic_response_limit', "fix missing in {$locale}");
     }
+});
+
+it('reads the config through sudo, because the panel cannot traverse to it', function () {
+    // `/usr/local/lsws/conf` is drwxr-x--- owned by lsadm. The file inside is
+    // world-readable, so this looks fine until you try: `is_readable()` is
+    // false on every OpenLiteSpeed box, and the check reported "could not be
+    // checked" everywhere it mattered.
+    $result = limitCheck('openlitespeed', limitConfig("    maxDynRespSize               2047M \n"))->run();
+
+    expect($result['status'])->toBe('fail')
+        ->and($result['detail'])->toContain('2.0 GB');
+
+    $raised = limitCheck('openlitespeed', limitConfig("    maxDynRespSize               1024G \n"))->run();
+
+    expect($raised['status'])->toBe('pass');
+});
+
+it('warns rather than failing when it genuinely could not read the file', function () {
+    // "I could not find out" is not "this is wrong". Reporting a fail here
+    // would send an operator to change a setting that may already be correct.
+    $result = limitCheck('openlitespeed')->run();
+
+    expect($result['status'])->toBe('warn')
+        ->and($result['detail'])->toContain('could not be read');
 });

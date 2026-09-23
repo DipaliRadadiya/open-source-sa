@@ -4,6 +4,7 @@ namespace App\Services\Server\Doctor\Checks;
 
 use App\Contracts\DoctorCheck;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\ServerOps;
 use App\Support\Bytes;
 
 /**
@@ -38,7 +39,10 @@ class DynamicResponseLimitCheck implements DoctorCheck
      */
     private const MINIMUM_BYTES = 8 * 1024 * 1024 * 1024;
 
-    public function __construct(private ServerCapabilities $capabilities) {}
+    public function __construct(
+        private ServerCapabilities $capabilities,
+        private ServerOps $serverOps,
+    ) {}
 
     public function key(): string
     {
@@ -55,15 +59,27 @@ class DynamicResponseLimitCheck implements DoctorCheck
             ];
         }
 
-        if (! is_readable(self::CONFIG_PATH)) {
+        // Read through sudo, not `file_get_contents`. The file itself is
+        // world-readable but `/usr/local/lsws/conf` is `drwxr-x---` owned by
+        // lsadm, so the panel account cannot traverse to it and the direct
+        // read returns "not readable" on every OpenLiteSpeed box — a check
+        // that can never answer, which is barely a check at all.
+        $result = $this->serverOps->run(
+            ['cat', self::CONFIG_PATH],
+            ['feature' => 'doctor', 'op' => 'read_ols_config'],
+            timeout: 15,
+        );
+
+        if (! $result->answered) {
             return [
                 'status' => 'warn',
-                'detail' => self::CONFIG_PATH.' is not readable, so the download ceiling could not be checked',
+                'detail' => self::CONFIG_PATH.' could not be read, so the download ceiling is unknown'
+                    .' (reference '.$result->reference.')',
                 'fix' => 'doctor.fixes.dynamic_response_limit',
             ];
         }
 
-        $configured = $this->configuredBytes((string) file_get_contents(self::CONFIG_PATH));
+        $configured = $this->configuredBytes($result->output());
 
         if ($configured === null) {
             return [
