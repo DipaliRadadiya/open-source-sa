@@ -5234,9 +5234,11 @@ Replace the entire ini file. Requires `acknowledged: true`.
 
 **Request:** `{"contents": "; PHP config\n…", "acknowledged": true}`
 
-Sequence: back up → write → `php-fpm -t` → reload. On validation failure, previous file restored, no reload.
+Sequence: back up → write → config test (`php-fpm -t`, or `lsphp -c php.ini -v` on OpenLiteSpeed) → reload. On validation failure, previous file restored, no reload.
 
-`422` on invalid ini.
+`contents` is stored exactly as sent — not trimmed, so the file keeps its final newline.
+
+`422` on invalid ini — including a **syntax error**, which PHP itself only warns about (exit 0) while ignoring every line after it.
 
 ---
 
@@ -5250,8 +5252,10 @@ Sequence: back up → write → `php-fpm -t` → reload. On validation failure, 
   {"name": "mysql", "package": "php8.4-mysql", "modules": ["mysqli","mysqlnd","pdo_mysql"],
    "installed": true, "enabled": true, "builtin": false,
    "sapis": {"cli": true, "fpm": true}, "status": "ready"}
-], "panel_required": ["curl", "mbstring"]}
+], "toggle_supported": true, "panel_required": ["curl", "mbstring"]}
 ```
+
+**`toggle_supported`** — `false` on OpenLiteSpeed: an installed extension is always on and cannot be switched off (`PUT … {"enabled": false}` returns `422`). Show installed extensions without an on/off switch; **Install** (`enabled: true` on a not-installed row) still works.
 
 ---
 

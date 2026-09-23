@@ -162,3 +162,23 @@ it('refuses a config test for a managed service that is not installed', function
 
     $this->withHeaders(svcHeaders())->postJson('/api/services/nginx/config-test')->assertNotFound();
 });
+
+it('fails a php config test that exits 0 over an ini php could not parse', function () {
+    // Measured with php-fpm8.4 -t on 2026-09-23: exit 0, "test is successful",
+    // and every directive after the error ignored.
+    Process::fake(fn ($process) => match (true) {
+        ($process->command[0] ?? '') === 'systemctl' && ($process->command[1] ?? '') === 'show' => Process::result(
+            output: systemctlShowOutput($process->command, default: ['load' => 'loaded', 'active' => 'active', 'file' => 'enabled']),
+        ),
+        $process->command === ['/usr/sbin/php-fpm8.4', '-t'] => Process::result(
+            errorOutput: "PHP:  syntax error, unexpected end of file, expecting TC_DOLLAR_CURLY or TC_QUOTED_STRING or '\"' in /etc/php/8.4/fpm/php.ini on line 4\n"
+                ."[23-Sep-2026 11:50:41] NOTICE: configuration file /etc/php/8.4/fpm/php-fpm.conf test is successful\n",
+        ),
+        default => Process::result(exitCode: 0),
+    });
+
+    $response = $this->withHeaders(svcHeaders())->postJson('/api/services/php8.4-fpm/config-test');
+
+    $response->assertOk()->assertJsonPath('config_test.ok', false);
+    expect($response->json('config_test.output'))->toContain('syntax error');
+});

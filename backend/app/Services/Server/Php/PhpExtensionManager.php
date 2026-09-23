@@ -140,6 +140,14 @@ class PhpExtensionManager
     }
 
     /**
+     * Whether an installed extension can be switched off on this stack.
+     */
+    public function togglesExtensions(): bool
+    {
+        return $this->stack->togglesExtensions();
+    }
+
+    /**
      * Install the package behind an extension. Slow — apt — so this is called
      * from a job, never from a request.
      */
@@ -324,8 +332,12 @@ class PhpExtensionManager
     {
         $dir = $this->stack->modsDir($version);
 
+        // LiteSpeed's PECL packages number their ini — `50-redis.ini`,
+        // `40-apcu.ini` — where Debian's are bare. Read as-is, the module was
+        // `50-redis`: the package row said "not installed" and a second
+        // `redis` row turned up as a built-in, for an extension that was on.
         return collect(glob($dir.'/*.ini') ?: [])
-            ->map(fn (string $path) => basename($path, '.ini'))
+            ->map(fn (string $path) => $this->moduleName($path))
             ->sort()
             ->values()
             ->all();
@@ -408,7 +420,7 @@ class PhpExtensionManager
 
             // 20-curl.ini -> curl
             $enabled[$sapi] = collect(glob($dir.'/conf.d/*.ini') ?: [])
-                ->map(fn (string $path) => preg_replace('/^\d+-/', '', basename($path, '.ini')))
+                ->map(fn (string $path) => $this->moduleName($path))
                 ->values()
                 ->all();
         }
@@ -444,7 +456,13 @@ class PhpExtensionManager
 
         $lowerInstalled = array_map([$this, 'normaliseModule'], $installedModules);
 
-        return collect(preg_split('/\r?\n/', trim($output)) ?: [])
+        // `[PHP Modules]` only. `[Zend Modules]` repeats OPcache and adds the
+        // zend_extensions — ionCube lists itself there as "the ionCube PHP
+        // Loader", which no normalising turns into a module name, so it came
+        // out as a built-in row for something the ionCube card manages.
+        $section = preg_split('/^\[Zend Modules\]\s*$/m', $output)[0] ?? $output;
+
+        return collect(preg_split('/\r?\n/', trim($section)) ?: [])
             ->map(fn (string $line) => trim($line))
             ->filter(fn (string $line) => $line !== '' && ! str_starts_with($line, '['))
             ->map(fn (string $line) => $this->normaliseModule($line))
@@ -471,6 +489,12 @@ class PhpExtensionManager
         $dir = trim($result->output());
 
         return $result->ok && $dir !== '' && is_dir($dir) ? $dir : null;
+    }
+
+    /** `20-curl.ini` -> `curl`, `curl.ini` -> `curl`. */
+    private function moduleName(string $iniPath): string
+    {
+        return (string) preg_replace('/^\d+-/', '', basename($iniPath, '.ini'));
     }
 
     /**

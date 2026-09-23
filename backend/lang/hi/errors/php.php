@@ -8,6 +8,12 @@
 
 return [
     'not_installed' => 'PHP :version स्थापित नहीं है।',
+
+    // Version lookup, the ini editor and its rollback.
+    'unknown_version' => 'PHP :version इस सर्वर पर इंस्टॉल नहीं है।',
+    'unreadable' => 'PHP :version की कॉन्फ़िगरेशन पढ़ी नहीं जा सकी।',
+    'invalid_ini' => 'PHP ने वह कॉन्फ़िगरेशन अस्वीकार कर दी, इसलिए पिछली बहाल कर दी गई। कुछ भी रीलोड नहीं हुआ।',
+    'operation_failed' => 'PHP :version की कॉन्फ़िगरेशन अपडेट नहीं हो सकी।',
     'version_in_use' => 'PHP :version का उपयोग :apps कर रहे हैं। पहले उन साइटों को बदलें।',
     'version_is_default' => 'यह डिफ़ॉल्ट संस्करण है। पहले कोई अन्य चुनें।',
     'version_runs_panel' => 'PHP :version हटाने से पैनल बंद हो जाएगा — पैनल स्वयं इसी संस्करण पर चलता है।',

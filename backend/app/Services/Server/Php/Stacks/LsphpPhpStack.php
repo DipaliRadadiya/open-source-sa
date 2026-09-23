@@ -4,6 +4,7 @@ namespace App\Services\Server\Php\Stacks;
 
 use App\Contracts\PhpStack;
 use App\Exceptions\Server\Php\PhpConfigException;
+use App\Services\Server\Php\IniSyntaxCheck;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 
@@ -172,10 +173,11 @@ class LsphpPhpStack implements PhpStack
      */
     public function configTest(string $version): ServerOpsResult
     {
-        return $this->serverOps->run(
+        // Exit 0 is not a pass: PHP starts over an ini it could not parse.
+        return IniSyntaxCheck::apply($this->serverOps->run(
             $this->configTestCommand($version),
             ['feature' => 'php', 'stack' => 'lsphp', 'op' => 'config_test', 'version' => $version],
-        );
+        ));
     }
 
     /**

@@ -8,6 +8,12 @@
 
 return [
     'not_installed' => 'PHP :version ist nicht installiert.',
+
+    // Version lookup, the ini editor and its rollback.
+    'unknown_version' => 'PHP :version ist auf diesem Server nicht installiert.',
+    'unreadable' => 'Die Konfiguration von PHP :version konnte nicht gelesen werden.',
+    'invalid_ini' => 'PHP hat diese Konfiguration abgelehnt, daher wurde die vorherige wiederhergestellt. Es wurde nichts neu geladen.',
+    'operation_failed' => 'Die Konfiguration von PHP :version konnte nicht aktualisiert werden.',
     'version_in_use' => 'PHP :version wird von :apps verwendet. Ändern Sie zuerst diese Seiten.',
     'version_is_default' => 'Dies ist die Standardversion. Wählen Sie zuerst eine andere.',
     'version_runs_panel' => 'PHP :version zu entfernen würde das Panel offline nehmen — es ist die Version, auf der das Panel selbst läuft.',

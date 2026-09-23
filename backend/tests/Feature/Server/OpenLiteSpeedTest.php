@@ -1094,6 +1094,54 @@ describe('the lsphp stack', function () {
         expect(app(PhpRuntime::class)->default())->toBeNull();
     });
 
+    /*
+     * install.sh links /usr/local/bin/php to the panel's lsphp and registers no
+     * alternative at all, so reading only update-alternatives left every fresh
+     * OLS server with no default on the PHP screen (seen live, 2026-09-23).
+     */
+    it('reads the default from the php link on PATH when no alternative is registered', function () {
+        $link = $this->lsws.'/usr-local-bin-php';
+        symlink($this->lsws.'/lsphp84/bin/php', $link);
+        config(['server.php_path_link' => $link]);
+
+        Process::fake(fn ($process) => ($process->command[0] ?? '') === 'update-alternatives'
+            ? Process::result(errorOutput: 'update-alternatives: error: no alternatives for php', exitCode: 2)
+            : Process::result(exitCode: 0));
+
+        expect(app(PhpRuntime::class)->default())->toBe('8.4');
+    });
+
+    it('falls back to update-alternatives when the php link is not a version it knows', function () {
+        File::makeDirectory($this->lsws.'/lsphp83/bin', 0755, true);
+        File::put($this->lsws.'/lsphp83/bin/php', '');
+        File::put($this->lsws.'/lsphp83/bin/lsphp', '');
+
+        $link = $this->lsws.'/usr-local-bin-php';
+        symlink('/opt/somebody/elses/php', $link);
+        config(['server.php_path_link' => $link]);
+
+        Process::fake(fn ($process) => ($process->command[0] ?? '') === 'update-alternatives'
+            ? Process::result(output: "Value: {$this->lsws}/lsphp83/bin/php\n")
+            : Process::result(exitCode: 0));
+
+        expect(app(PhpRuntime::class)->default())->toBe('8.3');
+    });
+
+    it('fails the lsphp config test when php could not parse its ini', function () {
+        // `lsphp -c php.ini -v` exits 0 over a syntax error and runs with
+        // every directive after it ignored (measured on OLS, 2026-09-23).
+        Process::fake(fn () => Process::result(
+            output: "PHP 8.4.25 (cli) (built: Sep 12 2026)\n",
+            errorOutput: "PHP:  syntax error, unexpected end of file, expecting TC_DOLLAR_CURLY or TC_QUOTED_STRING or '\"' in {$this->lsws}/lsphp84/etc/php/8.4/litespeed/php.ini on line 4\n",
+        ));
+
+        expect(app(LsphpPhpStack::class)->configTest('8.4')->failed())->toBeTrue();
+    });
+
+    it('cannot switch an installed extension off, and says so', function () {
+        expect(app(PhpExtensionManager::class)->togglesExtensions())->toBeFalse();
+    });
+
     it('does not report a version whose directory has no interpreter in it', function () {
         // Reported from a real server: the dashboard offered PHP 8.3 on a box
         // that only had 8.4. A `lsphp83/` tree is left behind by a removed

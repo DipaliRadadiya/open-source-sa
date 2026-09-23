@@ -68,7 +68,7 @@ class PhpRuntime implements Runtime
     }
 
     /**
-     * What bare `php` resolves to, according to update-alternatives.
+     * What bare `php` resolves to: the PATH link, else update-alternatives.
      *
      * The path is matched against the stack's own `binaryPath()` per installed
      * version rather than having a version read out of it by pattern. The
@@ -80,6 +80,19 @@ class PhpRuntime implements Runtime
      */
     public function default(): ?string
     {
+        // `/usr/local/bin/php` first: where it exists it precedes /usr/bin on
+        // PATH, so it — not the alternative — is what `php` runs. install.sh
+        // creates it on OpenLiteSpeed and registers no alternative at all, so
+        // reading only the group left every fresh OLS server with no default
+        // on the PHP screen until someone pressed "make default". Only trusted
+        // when it names a version listed here; anything else falls through.
+        $link = (string) config('server.php_path_link', '/usr/local/bin/php');
+
+        if ($link !== '' && is_link($link) && ($target = readlink($link)) !== false
+            && ($version = $this->versionAt($target)) !== null) {
+            return $version;
+        }
+
         $output = $this->serverOps->run(
             ['update-alternatives', '--query', 'php'],
             ['feature' => 'runtime', 'op' => 'php_default'],
@@ -89,18 +102,22 @@ class PhpRuntime implements Runtime
             return null;
         }
 
-        $value = $matches[1];
-
-        foreach ($this->versions->versions() as $version) {
-            if ($this->binaryPath($version) === $value) {
-                return $version;
-            }
-        }
-
         // A selected path the panel does not recognise — a hand-built symlink,
         // or a version removed while it was still the default. Null says "this
         // is not one of the versions listed above", which is the truth; naming
         // one of them anyway would mark the wrong row as default.
+        return $this->versionAt($matches[1]);
+    }
+
+    /** The installed version whose interpreter is exactly this path. */
+    private function versionAt(string $binary): ?string
+    {
+        foreach ($this->versions->versions() as $version) {
+            if ($this->binaryPath($version) === $binary) {
+                return $version;
+            }
+        }
+
         return null;
     }
 

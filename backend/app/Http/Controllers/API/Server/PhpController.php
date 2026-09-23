@@ -177,6 +177,9 @@ class PhpController extends Controller
 
         return response()->json([
             'extensions' => $extensions->catalog($version),
+            // False on OpenLiteSpeed: an installed extension is simply on, and
+            // switching one off is refused. Install still works either way.
+            'toggle_supported' => $extensions->togglesExtensions(),
             'panel_required' => $version === $php->panelVersion() ? $extensions->panelRequired() : [],
         ]);
     }

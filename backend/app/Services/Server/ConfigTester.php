@@ -3,6 +3,7 @@
 namespace App\Services\Server;
 
 use App\Contracts\PhpStack;
+use App\Services\Server\Php\IniSyntaxCheck;
 
 /**
  * Validates a service's configuration without applying it.
@@ -41,6 +42,11 @@ class ConfigTester
             $command,
             ['feature' => 'service', 'op' => 'config_test', 'service' => $key],
         );
+
+        // A PHP unit's test exits 0 over an ini PHP could not parse.
+        if ($this->stack->versionForService($key) !== null) {
+            $result = IniSyntaxCheck::apply($result);
+        }
 
         return [
             'ok' => $result->ok,

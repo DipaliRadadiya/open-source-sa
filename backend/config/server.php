@@ -878,6 +878,11 @@ return [
 
     'default_php_version' => env('SERVER_DEFAULT_PHP_VERSION', '8.4'),
 
+    // What bare `php` resolves through when it exists (install.sh creates it
+    // on OpenLiteSpeed). Read as the PHP screen's default before the
+    // update-alternatives group.
+    'php_path_link' => env('SERVER_PHP_PATH_LINK', '/usr/local/bin/php'),
+
     /*
     | Where PHP-FPM puts its sockets, and the account the web server runs as.
     |

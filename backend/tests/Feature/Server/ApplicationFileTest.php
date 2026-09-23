@@ -951,6 +951,20 @@ describe('browsing', function () {
             ->and(ActivityLog::where('type', 'application')->where('action', 'file_edited')->exists())->toBeTrue();
     });
 
+    it('saves the content exactly as sent, final newline and indentation included', function () {
+        // The global TrimStrings middleware used to strip both ends of every
+        // saved file: the last newline, and the indentation of the first line.
+        fakeFileBrowserServer();
+
+        $content = "  indented\nlast line\n";
+
+        $this->actingAs($this->admin)
+            ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => $content])
+            ->assertOk();
+
+        expect(FileBrowserFake::$fs['index.php']['content'])->toBe($content);
+    });
+
     it('refuses to edit a path that does not exist — this is edit, not create', function () {
         fakeFileBrowserServer();
 

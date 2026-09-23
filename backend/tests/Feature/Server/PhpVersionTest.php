@@ -3,6 +3,7 @@
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Process;
 
 beforeEach(function () {
@@ -97,6 +98,75 @@ it('restores the previous ini and does not reload when php rejects it', function
     // and nothing is reloaded.
     Process::assertRan(fn ($p) => $p->command === ['cp', '-f', $ini.'.panel-bak', $ini]);
     Process::assertNotRan(fn ($p) => $p->command[0] === 'systemctl');
+});
+
+/*
+ * PHP does not refuse an ini it cannot parse: it warns, exits 0, and ignores
+ * every directive after the error. Measured on both stacks on 2026-09-23 — a
+ * `max_input_vars = 3000` below an unclosed quote read back as 1000.
+ */
+it('restores the previous ini when php exits 0 but could not parse it', function () {
+    Process::fake(fn ($process) => in_array('-t', $process->command, true)
+        ? Process::result(
+            errorOutput: "PHP:  syntax error, unexpected end of file, expecting TC_DOLLAR_CURLY or TC_QUOTED_STRING or '\"' in /etc/php/8.4/fpm/php.ini on line 4\n"
+                ."[23-Sep-2026 11:50:41] NOTICE: configuration file /etc/php/8.4/fpm/php-fpm.conf test is successful\n",
+        )
+        : Process::result(exitCode: 0));
+
+    $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
+        'contents' => "memory_limit = 512M\nfoo = \"bar\nmax_input_vars = 3000\n",
+        'acknowledged' => true,
+    ])->assertStatus(422)->assertJsonPath('message', 'PHP rejected that configuration, so the previous one was restored. Nothing was reloaded.');
+
+    $ini = "{$this->phpDir}/8.4/fpm/php.ini";
+
+    Process::assertRan(fn ($p) => $p->command === ['cp', '-f', $ini.'.panel-bak', $ini]);
+    Process::assertNotRan(fn ($p) => $p->command[0] === 'systemctl');
+});
+
+it('does not refuse an ini over a php warning that is not a parse error', function () {
+    // A running PHP with a complaint. Failing on these would refuse every save
+    // on a server that already loads a module twice.
+    Process::fake(fn ($process) => in_array('-t', $process->command, true)
+        ? Process::result(errorOutput: "PHP Warning:  Module \"redis\" is already loaded in Unknown on line 0\n")
+        : Process::result(exitCode: 0));
+
+    $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
+        'contents' => "memory_limit = 512M\n",
+        'acknowledged' => true,
+    ])->assertOk();
+
+    Process::assertRan(fn ($p) => $p->command === ['systemctl', 'reload', 'php8.4-fpm']);
+});
+
+it('writes the ini exactly as sent, final newline and indentation included', function () {
+    // The global TrimStrings middleware dropped the last newline on every
+    // save — a file that should have come back byte-identical did not.
+    Process::fake(['*' => Process::result(exitCode: 0)]);
+
+    $contents = "  ; indented comment\nmemory_limit = 512M\n";
+
+    $this->withHeaders(phpHeaders())->putJson('/api/php/versions/8.4/ini', [
+        'contents' => $contents,
+        'acknowledged' => true,
+    ])->assertOk();
+
+    Process::assertRan(fn ($p) => $p->command === ['tee', "{$this->phpDir}/8.4/fpm/php.ini"] && $p->input === $contents);
+});
+
+it('has a sentence, in every locale, for every PHP error it can raise', function () {
+    // Four of these were deleted in a refactor and never re-added, so a
+    // rejected ini answered with the literal "errors/php.invalid_ini".
+    $source = (string) file_get_contents(app_path('Exceptions/Server/Php/PhpConfigException.php'));
+    preg_match_all("/'(errors\/php\.[a-z_]+)'/", $source, $matches);
+
+    expect($matches[1])->not->toBeEmpty();
+
+    foreach (config('app.available_locales') as $locale) {
+        foreach (array_unique($matches[1]) as $key) {
+            expect(Lang::hasForLocale($key, $locale))->toBeTrue("{$key} missing for {$locale}");
+        }
+    }
 });
 
 it('requires the impact to be acknowledged', function () {

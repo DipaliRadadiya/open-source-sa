@@ -51,6 +51,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // request header is safe as early as possible.
         $middleware->api(prepend: ['throttle:api', SetLocale::class]);
 
+        // Whole files, saved by an editor: php.ini (`contents`) and the file
+        // manager (`content`). Trimming them dropped the final newline on
+        // every save, and the file manager also lost leading indentation.
+        $middleware->trimStrings(except: ['contents', 'content']);
+
         // The panel takes itself down to update, and these are the routes that
         // have to keep answering while it does.
         //

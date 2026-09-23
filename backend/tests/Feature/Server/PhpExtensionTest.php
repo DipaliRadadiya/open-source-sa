@@ -94,7 +94,7 @@ function fakeExtensions(): ArrayObject
 
         // `php -m` — the loaded set, including things compiled in.
         if (in_array('-m', $command, true)) {
-            return Process::result(output: "[PHP Modules]\nCore\ncurl\njson\nmbstring\nmysqli\npcre\nredis\nstandard\n\n[Zend Modules]\nZend OPcache\n");
+            return Process::result(output: "[PHP Modules]\nCore\ncurl\njson\nmbstring\nmysqli\npcre\nredis\nstandard\n\n[Zend Modules]\nthe ionCube PHP Loader + ionCube24\nZend OPcache\n");
         }
 
         return Process::result(exitCode: 0);
@@ -166,6 +166,47 @@ it('lists compiled-in extensions without a control', function () {
     expect($catalog['json']['builtin'])->toBeTrue()
         ->and($catalog['json']['package'])->toBeNull()
         ->and($catalog['curl']['builtin'])->toBeFalse();
+});
+
+it('does not list a zend_extension such as ionCube as a built-in', function () {
+    // `php -m` names ionCube only under [Zend Modules], as "the ionCube PHP
+    // Loader + ionCube24" — read as a module it became a built-in row for
+    // something the ionCube card manages.
+    fakeExtensions();
+
+    $names = collect(extCall('GET', "/api/php/versions/{$this->panel}/extensions")->json('extensions'))->pluck('name');
+
+    expect($names->filter(fn (string $n) => str_contains(strtolower($n), 'ioncube')))->toBeEmpty();
+});
+
+/*
+ * LiteSpeed's PECL packages number their ini — `50-redis.ini`, `40-apcu.ini`
+ * (seen on a real OLS box, 2026-09-23). Read as-is the module was `50-redis`:
+ * the package row said "not installed" and a second `redis` row turned up as a
+ * built-in, for an extension that was loaded.
+ */
+it('reads a numbered ini in mods-available as the module it loads', function () {
+    File::move(
+        "{$this->phpDir}/{$this->panel}/mods-available/redis.ini",
+        "{$this->phpDir}/{$this->panel}/mods-available/50-redis.ini",
+    );
+    fakeExtensions();
+
+    $rows = collect(extCall('GET', "/api/php/versions/{$this->panel}/extensions")->json('extensions'));
+    $redis = $rows->where('name', 'redis');
+
+    expect($redis)->toHaveCount(1)
+        ->and($redis->first()['installed'])->toBeTrue()
+        ->and($redis->first()['builtin'])->toBeFalse()
+        ->and($rows->pluck('name'))->not->toContain('50-redis');
+});
+
+it('says whether installed extensions can be switched off', function () {
+    fakeExtensions();
+
+    extCall('GET', "/api/php/versions/{$this->panel}/extensions")
+        ->assertOk()
+        ->assertJsonPath('toggle_supported', true);
 });
 
 it('refuses to turn off a compiled-in extension', function () {
