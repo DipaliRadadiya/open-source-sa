@@ -199,4 +199,14 @@ class S3Driver implements StorageDriver
     {
         return null;
     }
+
+    /**
+     * Null: the S3 adapter's `writeStream()` already does multipart uploads
+     * with the SDK's own retry behind it. Reimplementing that here would
+     * replace a well-tested path with a worse one.
+     */
+    public function uploadFrom(StorageDestination $destination, string $key, string $path, ?callable $onProgress = null): bool
+    {
+        return false;
+    }
 }

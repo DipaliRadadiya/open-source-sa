@@ -55,6 +55,29 @@ class UploadProgressReporter
     }
 
     /**
+     * Record an absolute figure rather than an increment.
+     *
+     * The resumable uploader reports what **Google has committed**, which is
+     * the only honest number on that path: after a resume the byte count can
+     * move backwards, because bytes we sent were never acknowledged. Adding
+     * deltas would keep counting those and drift past the file size, showing a
+     * backup 104% uploaded.
+     */
+    public function set(int $transferred): void
+    {
+        $this->transferred = $transferred;
+
+        $now = Date::now()->getTimestamp();
+
+        if ($this->lastWrittenAt !== null && ($now - $this->lastWrittenAt) < self::WRITE_EVERY_SECONDS) {
+            return;
+        }
+
+        $this->lastWrittenAt = $now;
+        $this->write();
+    }
+
+    /**
      * Force the final figure out, whatever the throttle says.
      *
      * Without this the last partial interval is lost and a completed upload

@@ -80,6 +80,13 @@ it('asks the driver for a direct download before falling back to a stream', func
             return true;
         }
 
+        // False, as the real FTP driver does: there is no resumable upload
+        // protocol to drive, so the caller falls back to `writeStream()`.
+        public function uploadFrom(StorageDestination $d, string $key, string $path, ?callable $onProgress = null): bool
+        {
+            return false;
+        }
+
         // Null, as the real FTP driver does: there is no URL a browser could
         // fetch an archive from over FTP, and the caller reports that Download
         // is unavailable rather than inventing one.

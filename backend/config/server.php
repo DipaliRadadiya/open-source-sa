@@ -410,6 +410,21 @@ return [
          * and read almost never, so speed is worth more than the last few
          * percent — the same call v7's agent made (`gzip -1`, backup.go:369).
          */
+        /*
+         * How many *consecutive* failed chunks end an upload.
+         *
+         * Consecutive, not total: a 100 GB archive is ~1048 chunks, and a
+         * budget of total failures would kill an upload that had recovered
+         * from every one of them hours apart. The counter resets whenever a
+         * chunk lands.
+         *
+         * The backoff grows because the failures worth surviving are transient
+         * — a 5xx, a dropped connection — and hammering Google immediately is
+         * how a blip becomes a ban.
+         */
+        'upload_attempts' => (int) env('BACKUP_UPLOAD_ATTEMPTS', 5),
+        'upload_backoff' => [5, 15, 30, 60],
+
         'compressor' => env('BACKUP_COMPRESSOR', 'auto'),
         'compression_level' => (int) env('BACKUP_COMPRESSION_LEVEL', 1),
     ],

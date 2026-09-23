@@ -172,4 +172,36 @@ interface StorageDriver
      * to share the file, return null instead.
      */
     public function downloadUrl(StorageDestination $destination, string $key): ?string;
+
+    /**
+     * Upload a local file with this provider's own resumable machinery.
+     *
+     * Returning false means "I have no special way to do this" — exactly as
+     * {@see self::downloadTo()} does — and the caller falls back to
+     * `writeStream()`. A driver that cannot resume should not pretend to.
+     *
+     * **Why this exists at all.** Flysystem's `writeStream()` is one shot: the
+     * Drive adapter loops chunks with no retry, and on any failure returns
+     * `false`, which surfaces as "Not able to write the file" with no cause
+     * attached anywhere. One bad chunk out of a thousand therefore discards the
+     * entire upload *and* the archiving that preceded it — measured on
+     * 2026-09-23, a 102 GB backup died after 35 chunks and lost 19 minutes.
+     *
+     * Google's resumable protocol is built for precisely this: ask the session
+     * for its committed offset and carry on. The vendor even ships a
+     * `resume()` method for it, and never calls it. A driver implementing this
+     * turns a transient blip from a total loss into a pause.
+     *
+     * `$onProgress` receives the cumulative byte count after each chunk, so the
+     * panel keeps showing movement — and so the heartbeat the reaper reads
+     * stays warm across a retry.
+     *
+     * @param  null|callable(int): void  $onProgress
+     */
+    public function uploadFrom(
+        StorageDestination $destination,
+        string $key,
+        string $path,
+        ?callable $onProgress = null,
+    ): bool;
 }

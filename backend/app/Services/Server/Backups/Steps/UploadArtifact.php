@@ -6,6 +6,7 @@ use App\Contracts\BackupStep;
 use App\Exceptions\UploadStalled;
 use App\Services\Server\Backups\BackupContext;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Services\Server\Backups\UploadProgressFilter;
 use App\Services\Server\Backups\UploadProgressReporter;
 use RuntimeException;
@@ -20,7 +21,10 @@ use Throwable;
  */
 class UploadArtifact implements BackupStep
 {
-    public function __construct(private DestinationDisk $disks) {}
+    public function __construct(
+        private DestinationDisk $disks,
+        private StorageDriverFactory $drivers,
+    ) {}
 
     public function key(): string
     {
@@ -39,7 +43,57 @@ class UploadArtifact implements BackupStep
         }
 
         $key = $this->objectKey($context);
-        $disk = $this->disks->for($context->target->storageDestination);
+        $destination = $context->target->storageDestination;
+
+        $size = filesize($context->archivePath);
+        $reporter = new UploadProgressReporter($context->backup, $size === false ? null : $size);
+
+        // The driver's own resumable upload first, if it has one. It is the
+        // only path that can survive a failed chunk: `writeStream()` gives up
+        // on the first error and reports it as "Not able to write the file"
+        // with no cause attached, which at 100 GB means ~1048 chances to lose
+        // an hour's work to a momentary 5xx.
+        $previousMemoryLimit = ini_get('memory_limit');
+        $this->raiseMemoryLimit();
+
+        try {
+            $uploaded = $this->drivers->for($destination)->uploadFrom(
+                $destination,
+                $key,
+                $context->archivePath,
+                // Bytes Google has committed, not bytes we have read: on this
+                // path they are the same thing, and after a resume the
+                // committed figure is the only one that is true.
+                fn (int $committed) => $reporter->set($committed),
+            );
+        } catch (Throwable $e) {
+            $reporter->flush();
+
+            if ($this->stalled($e)) {
+                throw new UploadStalled('the upload stopped transferring and was abandoned', previous: $e);
+            }
+
+            throw $e;
+        } finally {
+            if ($previousMemoryLimit !== false) {
+                ini_set('memory_limit', $previousMemoryLimit);
+            }
+        }
+
+        if ($uploaded) {
+            $reporter->flush();
+
+            $context->remoteKey = $key;
+            $context->manifest['key'] = $key;
+
+            return;
+        }
+
+        // No resumable path for this provider. Fall back to Flysystem, which
+        // cannot resume — so the retry below restarts the transfer rather than
+        // continuing it. Worth having anyway: a restart that succeeds beats a
+        // failure, and FTP/SFTP have nothing better available.
+        $disk = $this->disks->for($destination);
 
         $handle = fopen($context->archivePath, 'rb');
 
@@ -47,28 +101,15 @@ class UploadArtifact implements BackupStep
             throw new RuntimeException('could not open the archive for upload');
         }
 
-        // Raised for the length of the upload, and restored below.
-        //
-        // An archive at or under 100 MB does not stream: the Drive adapter
-        // hands it to Google's `MediaFileUpload`, which base64-encodes the
-        // whole thing in memory. Under the 128 M default a 35 MB backup killed
-        // the queue worker outright — a fatal, so nothing recorded a reason and
-        // the row simply stayed `running`. See `server.backups.upload_memory_limit`.
-        //
-        // Scoped to this step rather than set globally because it is the only
-        // place that needs it, and a worker that keeps a raised ceiling for
-        // every later job hides the next thing that leaks.
+        // Raised for the length of the upload, and restored below. An archive
+        // at or under 100 MB does not stream: the Drive adapter hands it to
+        // Google's `MediaFileUpload`, which base64-encodes the whole thing in
+        // memory. See `server.backups.upload_memory_limit`.
         $previousMemoryLimit = ini_get('memory_limit');
         $this->raiseMemoryLimit();
 
-        // Progress is measured as the adapter reads, which is the only place
-        // every driver behaves the same and — as the run that prompted this
-        // proved — the only counter that moves at all during an upload. See
-        // {@see UploadProgressFilter} for why this is a filter and not a
-        // hand-rolled chunk loop.
-        $size = filesize($context->archivePath);
-        $reporter = new UploadProgressReporter($context->backup, $size === false ? null : $size);
-
+        // Progress is measured as the adapter reads — the only place every
+        // driver behaves the same. See {@see UploadProgressFilter}.
         UploadProgressFilter::register();
         stream_filter_append($handle, UploadProgressFilter::NAME, STREAM_FILTER_READ, $reporter);
 

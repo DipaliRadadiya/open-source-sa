@@ -1,5 +1,6 @@
 <?php
 
+use App\Contracts\StorageDriver;
 use App\Enums\BackupStatus;
 use App\Exceptions\UploadStalled;
 use App\Jobs\RunBackup;
@@ -14,6 +15,7 @@ use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Steps\UploadArtifact;
 use App\Services\Server\Backups\Storage\DestinationDisk;
+use App\Services\Server\Backups\Storage\StorageDriverFactory;
 use App\Services\Server\Backups\UploadProgressReporter;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
@@ -39,6 +41,24 @@ function fakeUploadDisk(Closure $writeStream): DestinationDisk
     $disks->shouldReceive('for')->andReturn($filesystem);
 
     return $disks;
+}
+
+/**
+ * A driver factory whose driver declines the resumable path.
+ *
+ * These tests are about the `writeStream()` fallback — progress counting, the
+ * memory ceiling, stall classification — so the driver must return false and
+ * hand control there, exactly as S3/FTP/SFTP do in production.
+ */
+function decliningDrivers(): StorageDriverFactory
+{
+    $driver = Mockery::mock(StorageDriver::class);
+    $driver->shouldReceive('uploadFrom')->andReturn(false);
+
+    $factory = Mockery::mock(StorageDriverFactory::class);
+    $factory->shouldReceive('for')->andReturn($driver);
+
+    return $factory;
 }
 
 uses(RefreshDatabase::class);
@@ -138,7 +158,7 @@ it('counts every byte the adapter reads off the archive', function () {
         }
     });
 
-    (new UploadArtifact($disk))->run($context);
+    (new UploadArtifact($disk, decliningDrivers()))->run($context);
 
     expect($backup->fresh()->bytes_transferred)->toBe(64_000);
 
@@ -166,7 +186,7 @@ it('names a stalled upload instead of reporting it as a broken destination', fun
         );
     });
 
-    expect(fn () => (new UploadArtifact($disk))->run($context))
+    expect(fn () => (new UploadArtifact($disk, decliningDrivers()))->run($context))
         ->toThrow(UploadStalled::class);
 
     @unlink($archive);
@@ -187,7 +207,7 @@ it('lets an ordinary upload failure through unchanged', function () {
         throw new RuntimeException('storageQuotaExceeded');
     });
 
-    expect(fn () => (new UploadArtifact($disk))->run($context))
+    expect(fn () => (new UploadArtifact($disk, decliningDrivers()))->run($context))
         ->toThrow(RuntimeException::class, 'storageQuotaExceeded');
 
     @unlink($archive);
@@ -286,7 +306,7 @@ function ceilingSeenDuringUpload(string $baseline, string $configured): array
     $seen = null;
     (new UploadArtifact(fakeUploadDisk(function () use (&$seen) {
         $seen = ini_get('memory_limit');
-    })))->run($context);
+    }), decliningDrivers()))->run($context);
 
     $after = ini_get('memory_limit');
 

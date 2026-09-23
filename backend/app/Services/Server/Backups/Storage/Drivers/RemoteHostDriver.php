@@ -128,4 +128,14 @@ abstract class RemoteHostDriver implements StorageDriver
     {
         return null;
     }
+
+    /**
+     * Null: FTP and SFTP have no resumable upload protocol to drive. The
+     * caller's bounded retry is the only recovery available, and it restarts
+     * the transfer rather than continuing it.
+     */
+    public function uploadFrom(StorageDestination $destination, string $key, string $path, ?callable $onProgress = null): bool
+    {
+        return false;
+    }
 }

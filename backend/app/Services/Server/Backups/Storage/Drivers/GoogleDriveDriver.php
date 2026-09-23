@@ -231,4 +231,15 @@ class GoogleDriveDriver implements StorageDriver
     {
         return null;
     }
+
+    /**
+     * Null, unlike the OAuth sibling. A service account has no storage quota of
+     * its own, so this driver only works against a Shared Drive; rather than
+     * carry a second, differently-authenticated copy of the resumable uploader
+     * for a path that cannot be exercised here, it keeps `writeStream()`.
+     */
+    public function uploadFrom(StorageDestination $destination, string $key, string $path, ?callable $onProgress = null): bool
+    {
+        return false;
+    }
 }

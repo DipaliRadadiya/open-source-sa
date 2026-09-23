@@ -7,6 +7,7 @@ use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
 use App\Services\Server\Backups\Storage\GoogleDriveWorkspace;
 use App\Services\Server\Backups\Storage\GoogleOauthTokens;
+use App\Services\Server\Backups\Storage\GoogleResumableUpload;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -44,6 +45,7 @@ class GoogleDriveOauthDriver implements StorageDriver
     public function __construct(
         private GoogleOauthTokens $tokens,
         private GoogleDriveWorkspace $workspace,
+        private GoogleResumableUpload $resumable = new GoogleResumableUpload,
     ) {}
 
     public function provider(): StorageProvider
@@ -297,6 +299,42 @@ class GoogleDriveOauthDriver implements StorageDriver
         }
 
         return null;
+    }
+
+    /**
+     * Upload with resume, because `writeStream()` cannot survive a bad chunk.
+     *
+     * The adapter's loop has no retry and reports failure as `false`, which
+     * Flysystem renders as "Not able to write the file" with nothing
+     * underneath. At 100 GB that is ~1048 chances to lose an hour's work to a
+     * momentary 5xx — and it happened on 2026-09-23 at chunk 35.
+     *
+     * Returns false if anything about the destination is not ready, which
+     * hands the caller back to `writeStream()` rather than failing outright.
+     */
+    public function uploadFrom(
+        StorageDestination $destination,
+        string $key,
+        string $path,
+        ?callable $onProgress = null,
+    ): bool {
+        $clientId = (string) $destination->configValue('client_id', '');
+        $clientSecret = (string) $destination->configValue('client_secret', '');
+        $refreshToken = (string) $destination->configValue('refresh_token', '');
+
+        if ($clientId === '' || $clientSecret === '' || $refreshToken === '') {
+            return false;
+        }
+
+        return $this->resumable->upload(
+            $clientId,
+            $clientSecret,
+            $refreshToken,
+            (string) $destination->configValue('folder_id', ''),
+            $key,
+            $path,
+            $onProgress,
+        );
     }
 
     /**
