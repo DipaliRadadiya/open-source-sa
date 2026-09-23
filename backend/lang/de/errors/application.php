@@ -54,7 +54,13 @@ return [
     'file_svg_not_previewable' => 'SVG-Dateien werden hier nicht angezeigt, da ein SVG Code enthalten kann. Laden Sie die Datei herunter, um sie anzusehen.',
     'file_too_large_to_preview' => 'Dieses Bild ist zu groß für die Anzeige. Laden Sie es stattdessen herunter — Downloads haben keine Größenbeschränkung.',
 
-    'compress_too_large' => 'Diese Auswahl ist :size groß und überschreitet das Limit von :limit für das Komprimieren im Dateimanager. Wählen Sie weniger Dateien aus oder nutzen Sie ein Backup — es läuft im Hintergrund und hat keine Größenbeschränkung.',
+    'archive_failed' => [
+        'timed_out' => 'Das Archiv hat länger gedauert als der Server zulässt und wurde gestoppt. Versuchen Sie eine kleinere Auswahl.',
+        'command_failed' => 'Der Server konnte das Archiv nicht fertigstellen. Es wurde nichts halb geschrieben zurückgelassen.',
+        'application_missing' => 'Die Website wurde entfernt, bevor das Archiv erstellt werden konnte.',
+        'worker' => 'Der Vorgang wurde auf dem Server unerwartet beendet und ist nicht fertig geworden.',
+        'unknown' => 'Das Archiv wurde nicht fertiggestellt.',
+    ],
     'file_operation_failed' => 'Der Dateivorgang ist auf dem Server fehlgeschlagen.',
 
     'file_not_archive' => 'Hier können nur .zip- und .tar.gz-Archive entpackt werden.',

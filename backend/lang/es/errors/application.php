@@ -54,7 +54,13 @@ return [
     'file_svg_not_previewable' => 'Los archivos SVG no se muestran aquí, porque un SVG puede contener código. Descárgalo para verlo.',
     'file_too_large_to_preview' => 'Esa imagen es demasiado grande para mostrarla aquí. Descárgala: las descargas no tienen límite de tamaño.',
 
-    'compress_too_large' => 'Esta selección ocupa :size y supera el límite de :limit para comprimir en el gestor de archivos. Selecciona menos archivos o usa una copia de seguridad: se ejecuta en segundo plano y no tiene límite de tamaño.',
+    'archive_failed' => [
+        'timed_out' => 'El archivo comprimido tardó más de lo que permite el servidor y se detuvo. Prueba con una selección más pequeña.',
+        'command_failed' => 'El servidor no pudo terminar el archivo comprimido. No se dejó nada a medio escribir.',
+        'application_missing' => 'El sitio se eliminó antes de poder crear el archivo comprimido.',
+        'worker' => 'El proceso se detuvo inesperadamente en el servidor y no terminó.',
+        'unknown' => 'El archivo comprimido no se completó.',
+    ],
     'file_operation_failed' => 'La operación de archivo falló en el servidor.',
 
     'file_not_archive' => 'Aquí solo se pueden extraer archivos .zip y .tar.gz.',

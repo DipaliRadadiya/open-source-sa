@@ -3967,7 +3967,7 @@
         "title": "Compactar \"{name}\"",
         "subtitle": "Empacota isto num novo arquivo. Escolha abaixo onde fica guardado.",
         "submit": "Comprimir",
-        "done": "\"{name}\" compactado.",
+        "done": "\"{name}\" está a ser comprimido. O arquivo aparecerá quando terminar.",
         "failed": "Não foi possível compactar este item.",
         "savesTo": "Guarda em",
         "folderMustExist": "A pasta escolhida já tem de existir — esta ação não a cria."
@@ -3976,7 +3976,7 @@
         "title": "Extrair \"{name}\"",
         "subtitle": "Extrai um arquivo .zip, .tar.gz ou .tgz na pasta abaixo.",
         "submit": "Extrair",
-        "done": "\"{name}\" extraído.",
+        "done": "\"{name}\" está a ser extraído. Os ficheiros aparecerão quando terminar.",
         "failed": "Não foi possível extrair este arquivo.",
         "warning": "A extração acontece no local e pode sobrescrever arquivos existentes — não há como desfazer."
       },
@@ -4061,7 +4061,7 @@
         "compressTitle": "Compactar {count, plural, one {# item} other {# itens}}",
         "compressDescription": "Um arquivo, mantendo os nomes como estão agora.",
         "compressHint": "Tudo que está selecionado está em {folder}.",
-        "compressDone": "{count, plural, one {# item compactado.} other {# itens compactados.}}",
+        "compressDone": "{count, plural, one {# item está a ser comprimido.} other {# itens estão a ser comprimidos.}} O arquivo aparecerá quando terminar.",
         "permissionsTitle": "Permissões para {count, plural, one {# item} other {# itens}}",
         "permissionsDescription": "O mesmo modo é aplicado a tudo que está selecionado.",
         "permissionsDone": "{count, plural, one {# item atualizado.} other {# itens atualizados.}}",
@@ -4179,7 +4179,18 @@
         "plugins": "Plugins",
         "config": "wp-config.php"
       },
-      "dropHint": "Dica: arraste arquivos do seu computador para esta lista para enviá-los aqui."
+      "dropHint": "Dica: arraste arquivos do seu computador para esta lista para enviá-los aqui.",
+      "archiveJobs": {
+        "running": {
+          "compress": "A comprimir para \"{target}\"…",
+          "extract": "A extrair para \"{target}\"…"
+        },
+        "done": {
+          "compress": "\"{target}\" está pronto.",
+          "extract": "Extraído para \"{target}\"."
+        },
+        "failed": "O processo não foi concluído."
+      }
     },
     "workers": {
       "pageTitle": "Workers",

@@ -1348,7 +1348,7 @@ describe('extracting', function () {
 
         $this->actingAs($this->admin)
             ->postJson(filesUrl('/extract'), extractPayload())
-            ->assertOk();
+            ->assertAccepted();
 
         expect(FileBrowserFake::$fs)->toHaveKey('wp-content/plugins/my-plugin/plugin.php')
             ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- unzip -o')))->toBeTrue()
@@ -1362,7 +1362,7 @@ describe('extracting', function () {
             ['type' => '-', 'size' => 12, 'name' => 'my-plugin/plugin.php'],
         ];
 
-        $this->actingAs($this->admin)->postJson(filesUrl('/extract'), extractPayload())->assertOk();
+        $this->actingAs($this->admin)->postJson(filesUrl('/extract'), extractPayload())->assertAccepted();
 
         expect(FileBrowserFake::$fs['wp-content/plugins/my-plugin/plugin.php']['content'])->toBe('extracted');
     });
@@ -1471,7 +1471,7 @@ describe('extracting', function () {
 
         $this->actingAs($this->admin)
             ->postJson(filesUrl('/extract'), extractPayload('wp-content/plugins/thing.tar.gz'))
-            ->assertOk();
+            ->assertAccepted();
 
         expect(FileBrowserFake::$fs)->toHaveKey('wp-content/plugins/my-plugin/plugin.php')
             ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- tar -xzf')))->toBeTrue();
@@ -1694,7 +1694,7 @@ describe('compressing', function () {
 
         $this->actingAs($this->admin)
             ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.tar.gz'])
-            ->assertOk();
+            ->assertAccepted();
 
         // The panel could open a .tar.gz and not write one. It also matters
         // beyond symmetry: ZIP does not carry Unix permissions, so a site
@@ -1713,7 +1713,7 @@ describe('compressing', function () {
 
         $this->actingAs($this->admin)
             ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.tgz'])
-            ->assertOk();
+            ->assertAccepted();
 
         // The extension decides the format, so an unrecognised one has no
         // command to run — refused rather than guessed at.
@@ -1727,7 +1727,7 @@ describe('compressing', function () {
 
         $this->actingAs($this->admin)
             ->postJson(filesUrl('/compress'), ['path' => 'my-plugin', 'target' => 'wp-content/backup.zip'])
-            ->assertOk();
+            ->assertAccepted();
 
         expect(FileBrowserFake::$fs)->toHaveKey('wp-content/backup.zip')
             // The archive contains relative paths (my-plugin/...), not the
@@ -2208,7 +2208,7 @@ describe('bulk operations', function () {
                 'paths' => ['cache/a.txt', 'cache/b.txt'],
                 'target' => 'cache/bundle.zip',
             ])
-            ->assertOk();
+            ->assertAccepted();
 
         expect(FileBrowserFake::$fs)->toHaveKey('cache/bundle.zip');
 

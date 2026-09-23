@@ -3967,7 +3967,7 @@
         "title": "Comprimir «{name}»",
         "subtitle": "Empaqueta esto en un archivo nuevo. Elige abajo dónde se guarda.",
         "submit": "Comprimir",
-        "done": "«{name}» comprimido.",
+        "done": "Se está comprimiendo \"{name}\". El archivo aparecerá cuando termine.",
         "failed": "No se pudo comprimir este elemento.",
         "savesTo": "Se guarda en",
         "folderMustExist": "La carpeta que elijas ya debe existir; esto no la creará."
@@ -3976,7 +3976,7 @@
         "title": "Extraer «{name}»",
         "subtitle": "Extrae un archivo .zip, .tar.gz o .tgz en la carpeta indicada abajo.",
         "submit": "Extraer",
-        "done": "«{name}» extraído.",
+        "done": "Se está extrayendo \"{name}\". Los archivos aparecerán cuando termine.",
         "failed": "No se pudo extraer este archivo.",
         "warning": "La extracción ocurre en el mismo lugar y puede sobrescribir archivos existentes — no se puede deshacer."
       },
@@ -4061,7 +4061,7 @@
         "compressTitle": "Comprimir {count, plural, one {# elemento} other {# elementos}}",
         "compressDescription": "Un solo archivo comprimido, con los nombres tal como están ahora.",
         "compressHint": "Todo lo seleccionado está en {folder}.",
-        "compressDone": "{count, plural, one {# elemento comprimido.} other {# elementos comprimidos.}}",
+        "compressDone": "{count, plural, one {Se está comprimiendo # elemento.} other {Se están comprimiendo # elementos.}} El archivo aparecerá cuando termine.",
         "permissionsTitle": "Permisos de {count, plural, one {# elemento} other {# elementos}}",
         "permissionsDescription": "Se aplica el mismo modo a todo lo seleccionado.",
         "permissionsDone": "{count, plural, one {# elemento actualizado.} other {# elementos actualizados.}}",
@@ -4179,7 +4179,18 @@
         "plugins": "Plugins",
         "config": "wp-config.php"
       },
-      "dropHint": "Consejo: arrastra archivos desde tu equipo a esta lista para subirlos aquí."
+      "dropHint": "Consejo: arrastra archivos desde tu equipo a esta lista para subirlos aquí.",
+      "archiveJobs": {
+        "running": {
+          "compress": "Comprimiendo en \"{target}\"…",
+          "extract": "Extrayendo en \"{target}\"…"
+        },
+        "done": {
+          "compress": "\"{target}\" está listo.",
+          "extract": "Extraído en \"{target}\"."
+        },
+        "failed": "El proceso no se completó."
+      }
     },
     "workers": {
       "pageTitle": "Workers",

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Enums\FileArchiveStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\BrowseFilesRequest;
 use App\Http\Requests\Server\Application\ChmodFileRequest;
@@ -17,11 +18,14 @@ use App\Http\Requests\Server\Application\RestoreTrashRequest;
 use App\Http\Requests\Server\Application\SaveFileRequest;
 use App\Http\Requests\Server\Application\SearchFilesRequest;
 use App\Http\Requests\Server\Application\UploadFileRequest;
+use App\Http\Resources\FileArchiveJobResource;
 use App\Models\Application;
+use App\Models\FileArchiveJob;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PermissionFixer;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ApplicationFileController extends Controller
@@ -159,7 +163,7 @@ class ApplicationFileController extends Controller
         FileBrowser $files,
         ActivityLogger $activity,
     ): JsonResponse {
-        $files->extract($application, $request->archivePath(), $request->targetPath());
+        $job = $files->extract($application, $request->archivePath(), $request->targetPath());
 
         $activity->log('application.files_extracted', $application, [
             'name' => $application->name,
@@ -167,7 +171,44 @@ class ApplicationFileController extends Controller
             'target' => $request->targetPath(),
         ]);
 
-        return response()->json(['extracted' => true]);
+        return response()->json(
+            ['job' => new FileArchiveJobResource($job)],
+            SymfonyResponse::HTTP_ACCEPTED,
+        );
+    }
+
+    /**
+     * Archive operations that are running, or that finished recently enough
+     * that the person who started one has not seen the result yet.
+     *
+     * Recent completions are included on purpose: a poll that only returned
+     * in-flight rows would have a job vanish between two polls, and the panel
+     * could never tell "finished" from "the page was reloaded".
+     */
+    public function archiveJobs(Application $application): JsonResponse
+    {
+        $jobs = FileArchiveJob::query()
+            ->where('application_id', $application->id)
+            ->where(fn ($q) => $q->inFlight()->orWhere('finished_at', '>=', now()->subMinutes(5)))
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            // A worker killed outright never reaches `failed()`, so the row
+            // sits at `running` forever and the screen shows a spinner that
+            // will not resolve. Settled on read rather than by a scheduled
+            // reaper: the poll is the only thing that cares, and a stale row
+            // nobody is looking at costs nothing.
+            ->each(function (FileArchiveJob $job) {
+                if ($job->isStale()) {
+                    $job->update([
+                        'status' => FileArchiveStatus::Failed,
+                        'reason' => 'worker',
+                        'finished_at' => now(),
+                    ]);
+                }
+            });
+
+        return response()->json(['data' => FileArchiveJobResource::collection($jobs)]);
     }
 
     public function createDirectory(
@@ -238,7 +279,7 @@ class ApplicationFileController extends Controller
     ): JsonResponse {
         $paths = $request->selectedPaths();
 
-        $request->isBulk()
+        $job = $request->isBulk()
             ? $files->compressMany($application, $paths, $request->targetPath())
             : $files->compress($application, $paths[0], $request->targetPath());
 
@@ -249,7 +290,13 @@ class ApplicationFileController extends Controller
             'count' => count($paths),
         ]);
 
-        return response()->json(['compressed' => true]);
+        // 202, not 200: the archive does not exist yet. Saying "compressed"
+        // here is what the synchronous version did, and on anything large it
+        // was saying it about work that had not happened.
+        return response()->json(
+            ['job' => new FileArchiveJobResource($job)],
+            SymfonyResponse::HTTP_ACCEPTED,
+        );
     }
 
     /**

@@ -3967,7 +3967,7 @@
         "title": "Compresser « {name} »",
         "subtitle": "Regroupe ceci dans une nouvelle archive. Choisissez ci-dessous où elle ira.",
         "submit": "Compresser",
-        "done": "« {name} » compressé.",
+        "done": "« {name} » est en cours de compression. L'archive apparaîtra une fois terminée.",
         "failed": "Impossible de compresser cet élément.",
         "savesTo": "Enregistre dans",
         "folderMustExist": "Le dossier choisi doit déjà exister — il ne sera pas créé."
@@ -3976,7 +3976,7 @@
         "title": "Extraire « {name} »",
         "subtitle": "Extrait une archive .zip, .tar.gz ou .tgz dans le dossier ci-dessous.",
         "submit": "Extraire",
-        "done": "« {name} » extrait.",
+        "done": "« {name} » est en cours d'extraction. Les fichiers apparaîtront une fois terminée.",
         "failed": "Impossible d'extraire cette archive.",
         "warning": "L'extraction se fait sur place et peut écraser des fichiers existants — aucun retour en arrière possible."
       },
@@ -4061,7 +4061,7 @@
         "compressTitle": "Compresser {count, plural, one {# élément} other {# éléments}}",
         "compressDescription": "Une seule archive, avec les noms tels qu'ils sont actuellement.",
         "compressHint": "Tout ce qui est sélectionné se trouve dans {folder}.",
-        "compressDone": "{count, plural, one {# élément compressé.} other {# éléments compressés.}}",
+        "compressDone": "{count, plural, one {# élément est en cours de compression.} other {# éléments sont en cours de compression.}} L'archive apparaîtra une fois terminée.",
         "permissionsTitle": "Autorisations pour {count, plural, one {# élément} other {# éléments}}",
         "permissionsDescription": "Le même mode est appliqué à tout ce qui est sélectionné.",
         "permissionsDone": "{count, plural, one {# élément mis à jour.} other {# éléments mis à jour.}}",
@@ -4179,7 +4179,18 @@
         "plugins": "Extensions",
         "config": "wp-config.php"
       },
-      "dropHint": "Astuce : faites glisser des fichiers depuis votre ordinateur sur cette liste pour les téléverser ici."
+      "dropHint": "Astuce : faites glisser des fichiers depuis votre ordinateur sur cette liste pour les téléverser ici.",
+      "archiveJobs": {
+        "running": {
+          "compress": "Compression vers « {target} »…",
+          "extract": "Extraction vers « {target} »…"
+        },
+        "done": {
+          "compress": "« {target} » est prêt.",
+          "extract": "Extrait vers « {target} »."
+        },
+        "failed": "Le traitement ne s'est pas terminé."
+      }
     },
     "workers": {
       "pageTitle": "Workers",

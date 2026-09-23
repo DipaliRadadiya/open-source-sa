@@ -3967,7 +3967,7 @@
         "title": "\"{name}\" を圧縮",
         "subtitle": "これを新しいアーカイブにまとめます。保存先は下で選べます。",
         "submit": "圧縮",
-        "done": "\"{name}\" を圧縮しました。",
+        "done": "「{name}」を圧縮しています。完了するとアーカイブが表示されます。",
         "failed": "このアイテムを圧縮できませんでした。",
         "savesTo": "保存先",
         "folderMustExist": "指定したフォルダーは既に存在している必要があります。自動では作成されません。"
@@ -3976,7 +3976,7 @@
         "title": "\"{name}\" を展開",
         "subtitle": ".zip / .tar.gz / .tgz アーカイブを下のフォルダに展開します。",
         "submit": "展開",
-        "done": "\"{name}\" を展開しました。",
+        "done": "「{name}」を展開しています。完了するとファイルが表示されます。",
         "failed": "このアーカイブを展開できませんでした。",
         "warning": "展開はその場で行われ、既存ファイルを上書きする可能性があります。元に戻すことはできません。"
       },
@@ -4061,7 +4061,7 @@
         "compressTitle": "{count, plural, one {# 件のアイテム} other {# 件のアイテム}} を圧縮",
         "compressDescription": "現在の名前のまま、1つのアーカイブにまとめます。",
         "compressHint": "選択したものはすべて {folder} に含まれます。",
-        "compressDone": "{count, plural, one {# 件圧縮しました。} other {# 件圧縮しました。}}",
+        "compressDone": "{count, plural, other {# 件を圧縮しています。}}完了するとアーカイブが表示されます。",
         "permissionsTitle": "{count, plural, one {# 件のアイテム} other {# 件のアイテム}} の権限",
         "permissionsDescription": "同じ権限が選択したすべてに適用されます。",
         "permissionsDone": "{count, plural, one {# 件更新しました。} other {# 件更新しました。}}",
@@ -4179,7 +4179,18 @@
         "plugins": "プラグイン",
         "config": "wp-config.php"
       },
-      "dropHint": "ヒント: パソコンからこの一覧にファイルをドラッグすると、ここにアップロードできます。"
+      "dropHint": "ヒント: パソコンからこの一覧にファイルをドラッグすると、ここにアップロードできます。",
+      "archiveJobs": {
+        "running": {
+          "compress": "「{target}」に圧縮しています…",
+          "extract": "「{target}」に展開しています…"
+        },
+        "done": {
+          "compress": "「{target}」が完成しました。",
+          "extract": "「{target}」に展開しました。"
+        },
+        "failed": "処理は完了しませんでした。"
+      }
     },
     "workers": {
       "pageTitle": "ワーカー",

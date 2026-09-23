@@ -323,3 +323,15 @@ export function emptyTrash(appId, batch = null) {
 export function fixApplicationPermissions(appId) {
   return api.post(`/applications/${appId}/fix-permissions`);
 }
+
+/**
+ * Archive operations that are running, plus any that finished in the last few
+ * minutes.
+ *
+ * Recent completions come back on purpose: a poll that returned only in-flight
+ * rows would have a job vanish between two polls, and the panel could never
+ * tell "it finished" from "the page reloaded".
+ */
+export function getArchiveJobs(appId, { signal } = {}) {
+  return api.get(`/applications/${appId}/files/archive-jobs`, { signal });
+}

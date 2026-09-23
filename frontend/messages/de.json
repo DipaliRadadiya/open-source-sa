@@ -3967,7 +3967,7 @@
         "title": "„{name}“ komprimieren",
         "subtitle": "Verpackt dies in ein neues Archiv. Wählen Sie unten den Speicherort.",
         "submit": "Komprimieren",
-        "done": "„{name}“ komprimiert.",
+        "done": "„{name}“ wird komprimiert. Das Archiv erscheint, sobald es fertig ist.",
         "failed": "Dieser Eintrag konnte nicht komprimiert werden.",
         "savesTo": "Speichert in",
         "folderMustExist": "Der gewählte Ordner muss bereits vorhanden sein — er wird nicht angelegt."
@@ -3976,7 +3976,7 @@
         "title": "„{name}“ entpacken",
         "subtitle": "Entpackt ein .zip-, .tar.gz- oder .tgz-Archiv in den Ordner unten.",
         "submit": "Entpacken",
-        "done": "„{name}“ entpackt.",
+        "done": "„{name}“ wird entpackt. Die Dateien erscheinen, sobald es fertig ist.",
         "failed": "Dieses Archiv konnte nicht entpackt werden.",
         "warning": "Entpackt wird an derselben Stelle, bestehende Dateien können dabei überschrieben werden — es gibt kein Zurück."
       },
@@ -4061,7 +4061,7 @@
         "compressTitle": "{count, plural, one {# Eintrag} other {# Einträge}} komprimieren",
         "compressDescription": "Ein Archiv mit den Namen, wie sie jetzt sind.",
         "compressHint": "Alles Ausgewählte liegt in {folder}.",
-        "compressDone": "{count, plural, one {# Eintrag komprimiert.} other {# Einträge komprimiert.}}",
+        "compressDone": "{count, plural, one {# Element wird komprimiert.} other {# Elemente werden komprimiert.}} Das Archiv erscheint, sobald es fertig ist.",
         "permissionsTitle": "Berechtigungen für {count, plural, one {# Eintrag} other {# Einträge}}",
         "permissionsDescription": "Derselbe Modus wird auf alles Ausgewählte angewendet.",
         "permissionsDone": "{count, plural, one {# Eintrag aktualisiert.} other {# Einträge aktualisiert.}}",
@@ -4179,7 +4179,18 @@
         "plugins": "Plugins",
         "config": "wp-config.php"
       },
-      "dropHint": "Tipp: Ziehen Sie Dateien von Ihrem Computer auf diese Liste, um sie hierher hochzuladen."
+      "dropHint": "Tipp: Ziehen Sie Dateien von Ihrem Computer auf diese Liste, um sie hierher hochzuladen.",
+      "archiveJobs": {
+        "running": {
+          "compress": "Komprimieren nach „{target}“…",
+          "extract": "Entpacken nach „{target}“…"
+        },
+        "done": {
+          "compress": "„{target}“ ist fertig.",
+          "extract": "Nach „{target}“ entpackt."
+        },
+        "failed": "Der Vorgang wurde nicht abgeschlossen."
+      }
     },
     "workers": {
       "pageTitle": "Worker",

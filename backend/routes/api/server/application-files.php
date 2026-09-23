@@ -155,6 +155,13 @@ Route::post('/applications/{application}/files/copy', [ApplicationFileController
 Route::post('/applications/{application}/files/compress', [ApplicationFileController::class, 'compress'])
     ->middleware(['permission:app_file,manage', 'throttle:10,1']);
 
+// Polled while an archive job runs. `view` rather than `manage`: watching
+// something happen is not changing it, and a viewer looking at the file
+// browser should see that a compress is in progress rather than an
+// unexplained lock.
+Route::get('/applications/{application}/files/archive-jobs', [ApplicationFileController::class, 'archiveJobs'])
+    ->middleware(['permission:app_file,view', 'throttle:120,1']);
+
 Route::put('/applications/{application}/files/permissions', [ApplicationFileController::class, 'chmod'])
     ->middleware(['permission:app_file,manage', 'throttle:20,1']);
 

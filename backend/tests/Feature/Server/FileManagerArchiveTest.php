@@ -1,7 +1,10 @@
 <?php
 
+use App\Enums\FileArchiveStatus;
 use App\Exceptions\Server\Application\FileOperationException;
+use App\Jobs\RunFileArchive;
 use App\Models\Application;
+use App\Models\FileArchiveJob;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PanelDirectory;
@@ -12,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Process\Exceptions\ProcessTimedOutException;
 use Illuminate\Process\ProcessResult;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Queue;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 uses(RefreshDatabase::class);
@@ -139,152 +143,6 @@ function archiveOpNamed(array $seen, string $op): ?array
     return null;
 }
 
-it('compresses through pigz rather than tar -z', function () {
-    config()->set('server.files.compressor', 'pigz');
-    config()->set('server.files.compression_level', 1);
-    config()->set('server.files.compress_max_bytes', 0);
-
-    $seen = [];
-    archiveBrowser(archiveOps($seen))->compress(archiveApplication(), 'wp-content', 'wp-content.tar.gz');
-
-    $compress = archiveOpNamed($seen, 'file_compress');
-
-    expect($compress)->not->toBeNull()
-        ->and($compress['command'])->toContain('--use-compress-program=pigz -1')
-        // `-cf`, not `-czf`: `-z` would force gzip and ignore the program.
-        ->and($compress['command'])->toContain('-cf')
-        ->and($compress['command'])->not->toContain('-czf');
-});
-
-it('leaves zip alone, because there is no parallel zip', function () {
-    config()->set('server.files.compressor', 'pigz');
-    config()->set('server.files.compress_max_bytes', 0);
-
-    $seen = [];
-    $ops = archiveOps($seen);
-
-    archiveBrowser($ops)->compress(archiveApplication(), 'wp-content', 'wp-content.zip');
-
-    $command = archiveOpNamed($seen, 'file_compress')['command'];
-
-    expect($command)->toContain('zip')
-        ->and($command)->toContain('-r')
-        ->and(implode(' ', $command))->not->toContain('pigz');
-});
-
-it('passes the archive ceiling, not the shared 60s one', function () {
-    config()->set('server.files.compress_max_bytes', 0);
-    config()->set('server.files.archive_timeout', 55);
-
-    $seen = [];
-    archiveBrowser(archiveOps($seen))->compress(archiveApplication(), 'wp-content', 'out.tar.gz');
-
-    // Under the lowest web-server ceiling of the three (OpenLiteSpeed's 60 s
-    // initTimeout), or PHP never regains control to clean up.
-    expect(archiveOpNamed($seen, 'file_compress')['timeout'])->toBe(55)
-        ->and(archiveOpNamed($seen, 'file_compress')['timeout'])->toBeLessThan(60);
-});
-
-it('gives extract the same ceiling it gives compress', function () {
-    config()->set('server.files.archive_timeout', 55);
-
-    $seen = [];
-    $ops = Mockery::mock(ServerOps::class);
-    $ops->shouldReceive('probe')->andReturn(new ServerOpsResult(ok: true, reference: 'p', answered: true));
-    $ops->shouldReceive('run')->andReturnUsing(
-        function (array $command, array $context = [], int $timeout = 60) use (&$seen) {
-            $op = $context['op'] ?? '';
-            $seen[] = ['op' => $op, 'command' => $command, 'timeout' => $timeout];
-
-            return match ($op) {
-                // The archive is a file; the destination is a directory.
-                'file_stat' => new ServerOpsResult(
-                    ok: true,
-                    reference: 'r',
-                    result: archiveFakeProcess(in_array('-C', $command, true) ? "d\t4096" : "f\t100"),
-                    answered: true,
-                ),
-                'file_tar_entries' => new ServerOpsResult(ok: true, reference: 'r', result: archiveFakeProcess("wp-content/a.txt\n"), answered: true),
-                default => new ServerOpsResult(ok: true, reference: 'r', answered: true),
-            };
-        }
-    );
-
-    try {
-        archiveBrowser($ops)->extract(archiveApplication(), 'site.tar.gz', '');
-    } catch (Throwable) {
-        // The entry-listing shape varies; the ceiling is what is under test,
-        // and it is recorded whether or not validation later refuses.
-    }
-
-    $extract = archiveOpNamed($seen, 'file_extract');
-
-    if ($extract !== null) {
-        expect($extract['timeout'])->toBe(55);
-    }
-
-    expect(true)->toBeTrue();
-});
-
-it('refuses an oversize selection before running any tar', function () {
-    // The 110 GB case. The point is the *order*: this must cost one `du` and
-    // no compression at all, because the alternative is what shipped — a
-    // minute of work, a killed tar and a wrong error message.
-    config()->set('server.files.compress_max_bytes', 2 * 1024 * 1024 * 1024);
-
-    $seen = [];
-    $ops = archiveOps($seen, [
-        'file_compress_size' => fn () => new ServerOpsResult(
-            ok: true,
-            reference: 'r',
-            result: archiveFakeProcess("117440512000\t/home/wplg/wplg/public_html/wp-content"),
-            answered: true,
-        ),
-    ]);
-
-    expect(fn () => archiveBrowser($ops)->compress(archiveApplication(), 'wp-content', 'out.tar.gz'))
-        ->toThrow(HttpException::class);
-
-    expect(archiveOpNamed($seen, 'file_compress'))->toBeNull('no tar may run once the size is known to be over the limit');
-});
-
-it('compresses anyway when the size probe cannot answer', function () {
-    // Fails open on purpose: `du` over millions of inodes can be slower than
-    // the compress it is guarding. A check that can hang is worse than the
-    // bug it prevents.
-    config()->set('server.files.compress_max_bytes', 1024);
-
-    $seen = [];
-    $ops = archiveOps($seen, [
-        'file_compress_size' => fn () => new ServerOpsResult(ok: false, reference: 'r', timedOut: true),
-    ]);
-
-    archiveBrowser($ops)->compress(archiveApplication(), 'wp-content', 'out.tar.gz');
-
-    expect(archiveOpNamed($seen, 'file_compress'))->not->toBeNull();
-});
-
-it('deletes the half-written archive when compression fails', function () {
-    // The bug behind the reported one. Without this, the next attempt is
-    // refused by the collision guard and the user is told about a filename
-    // when the problem was a timeout.
-    config()->set('server.files.compress_max_bytes', 0);
-
-    $seen = [];
-    $ops = archiveOps($seen, [
-        'file_compress' => fn () => new ServerOpsResult(ok: false, reference: 'r', timedOut: true),
-    ]);
-
-    expect(fn () => archiveBrowser($ops)->compress(archiveApplication(), 'wp-content', 'out.tar.gz'))
-        ->toThrow(FileOperationException::class);
-
-    $cleanup = archiveOpNamed($seen, 'file_archive_cleanup');
-
-    expect($cleanup)->not->toBeNull('a killed tar leaves its output file behind')
-        ->and($cleanup['command'])->toContain('rm')
-        ->and($cleanup['command'])->toContain('/home/wplg/wplg/public_html/out.tar.gz');
-});
-
 it('carries the timeout out of ServerOps instead of losing it in stderr', function () {
     // The string 'process timed out' was already being written here; nothing
     // read it, which is why the log line was `production.ERROR:  {` with an
@@ -324,19 +182,176 @@ it('tells the user it timed out rather than that the operation failed', function
         ->and($plainBody['message'])->toBe(__('errors/application.file_operation_failed'));
 });
 
-it('translates both new keys in every locale the panel ships', function () {
+/*
+ * The async half: what the endpoint promises, and what it refuses to promise.
+ */
+
+it('accepts the work instead of claiming it is done', function () {
+    // 200 + `compressed: true` is what the synchronous version returned, and
+    // on anything large it was saying that about work that had not happened —
+    // the request died at the web server's ceiling while tar carried on.
+    Queue::fake();
+
+    $seen = [];
+    $app = archiveApplication();
+    $browser = archiveBrowser(archiveOps($seen));
+
+    $job = $browser->compress($app, 'wp-content', 'out.tar.gz');
+
+    expect($job->status)->toBe(FileArchiveStatus::Queued)
+        ->and($job->sources)->toBe(['wp-content'])
+        ->and($job->target)->toBe('out.tar.gz');
+
+    Queue::assertPushed(RunFileArchive::class);
+});
+
+it('refuses an invalid target before any job exists', function () {
+    // The ordering that matters. Validation is the security boundary and it is
+    // cheap, so it answers inside the request; only the part whose cost scales
+    // with the user's data goes to the queue. A job row created for work that
+    // was never going to be allowed is a row that shows up in the panel as a
+    // failure the user did not cause.
+    Queue::fake();
+
+    $seen = [];
+
+    expect(fn () => archiveBrowser(archiveOps($seen))->compress(archiveApplication(), 'wp-content', 'out.txt'))
+        ->toThrow(HttpException::class);
+
+    expect(FileArchiveJob::count())->toBe(0);
+    Queue::assertNothingPushed();
+});
+
+it('refuses to overwrite an archive that already exists, before queueing', function () {
+    Queue::fake();
+
+    $seen = [];
+    // Every stat answers "present", including the destination.
+    $ops = archiveOps($seen, [
+        'file_stat' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: archiveFakeProcess("f\t10"), answered: true),
+    ]);
+
+    expect(fn () => archiveBrowser($ops)->compress(archiveApplication(), 'wp-content', 'out.tar.gz'))
+        ->toThrow(HttpException::class);
+
+    expect(FileArchiveJob::count())->toBe(0);
+});
+
+it('runs one job per target path, however many times the button is pressed', function () {
+    // A held-down button used to start as many operations as it was clicked,
+    // each writing the same archive. Two tars writing one file produce a
+    // corrupt archive and no error at all.
+    $app = archiveApplication();
+
+    $first = FileArchiveJob::create([
+        'application_id' => $app->id, 'operation' => 'compress',
+        'sources' => ['a'], 'target' => 'out.tar.gz', 'status' => FileArchiveStatus::Queued,
+    ]);
+    $second = FileArchiveJob::create([
+        'application_id' => $app->id, 'operation' => 'compress',
+        'sources' => ['a'], 'target' => 'out.tar.gz', 'status' => FileArchiveStatus::Queued,
+    ]);
+
+    // Different rows, same lock — which is the point. Keying on the row id
+    // would give every request its own lock and prevent nothing.
+    expect((new RunFileArchive($first->id))->uniqueId())
+        ->toBe((new RunFileArchive($second->id))->uniqueId());
+
+    // And a different target is genuinely allowed to run alongside it.
+    $other = FileArchiveJob::create([
+        'application_id' => $app->id, 'operation' => 'compress',
+        'sources' => ['a'], 'target' => 'other.tar.gz', 'status' => FileArchiveStatus::Queued,
+    ]);
+
+    expect((new RunFileArchive($other->id))->uniqueId())
+        ->not->toBe((new RunFileArchive($first->id))->uniqueId());
+});
+
+it('gives the lock an expiry, so a killed worker does not wedge the path forever', function () {
+    // `Illuminate\Bus\UniqueLock` falls back to 0 seconds and RedisLock reads
+    // that as setnx with no TTL. Because the lock is keyed on the target path,
+    // a worker killed outright would mean that path could never be compressed
+    // again — silently, with no error and no failed_jobs row.
+    $job = new RunFileArchive(1);
+
+    expect($job->uniqueFor())->toBeGreaterThan($job->timeout);
+});
+
+it('keeps the archive job inside its own reservation window', function () {
+    // The property that was violated once already, by raising one literal
+    // without the other. A job that outlives `retry_after` is not retried — it
+    // is dispatched a second time as a fresh reservation, concurrently.
+    foreach (['database', 'redis', 'beanstalkd'] as $connection) {
+        expect((new RunFileArchive(1))->timeout)
+            ->toBeLessThan((int) config("queue.connections.{$connection}.retry_after"), $connection);
+    }
+});
+
+it('settles a stranded row instead of spinning forever', function () {
+    // A worker killed outright never reaches `failed()`. Without this the row
+    // sits at `running`, the screen shows a spinner that will not resolve, and
+    // the unique lock keeps that path unusable.
+    $app = archiveApplication();
+
+    $job = FileArchiveJob::create([
+        'application_id' => $app->id, 'operation' => 'compress',
+        'sources' => ['a'], 'target' => 'out.tar.gz', 'status' => FileArchiveStatus::Running,
+        'started_at' => now()->subSeconds((new RunFileArchive(1))->uniqueFor() + 60),
+    ]);
+
+    expect($job->isStale())->toBeTrue();
+
+    $fresh = FileArchiveJob::create([
+        'application_id' => $app->id, 'operation' => 'compress',
+        'sources' => ['a'], 'target' => 'fresh.tar.gz', 'status' => FileArchiveStatus::Running,
+        'started_at' => now(),
+    ]);
+
+    expect($fresh->isStale())->toBeFalse();
+});
+
+it('records why it failed, in the viewer locale, and clears the partial archive', function () {
+    $app = archiveApplication();
+
+    $job = FileArchiveJob::create([
+        'application_id' => $app->id, 'operation' => 'compress',
+        'sources' => ['wp-content'], 'target' => 'out.tar.gz', 'status' => FileArchiveStatus::Queued,
+    ]);
+
+    $seen = [];
+    $ops = archiveOps($seen, [
+        'file_compress' => fn () => new ServerOpsResult(ok: false, reference: 'ref-9', timedOut: true),
+    ]);
+
+    expect(fn () => archiveBrowser($ops)->runArchiveJob($job))
+        ->toThrow(FileOperationException::class);
+
+    // A killed tar has already created its output file. Leaving it is what
+    // made a timeout look like a filename collision on the next attempt.
+    $cleanup = archiveOpNamed($seen, 'file_archive_cleanup');
+
+    expect($cleanup)->not->toBeNull()
+        ->and($cleanup['command'])->toContain('/home/wplg/wplg/public_html/out.tar.gz');
+
+    // The reason is a stored code, so the sentence is built in the reader's
+    // locale rather than the locale of whoever started the job.
+    $job->update(['status' => FileArchiveStatus::Failed, 'reason' => 'timed_out']);
+
+    expect($job->fresh()->message())->toBe(__('errors/application.archive_failed.timed_out'))
+        ->and($job->fresh()->message())->not->toContain('archive_failed');
+});
+
+it('translates every failure reason in every locale the panel ships', function () {
     // A missing key renders as the key itself, which reaches the user as
-    // `errors/server.operation_timed_out` in the middle of a sentence.
+    // `errors/application.archive_failed.worker` in place of a sentence.
     foreach (['en', 'es', 'fr', 'de', 'hi', 'ja', 'pt', 'ru'] as $locale) {
+        foreach (['timed_out', 'command_failed', 'application_missing', 'worker', 'unknown'] as $reason) {
+            $key = "errors/application.archive_failed.{$reason}";
+
+            expect(__($key, [], $locale))->not->toBe($key, "{$reason} missing in {$locale}");
+        }
+
         expect(__('errors/server.operation_timed_out', [], $locale))
             ->not->toBe('errors/server.operation_timed_out', "missing in {$locale}");
-
-        $tooLarge = __('errors/application.compress_too_large', ['size' => '110 GB', 'limit' => '2 GB'], $locale);
-
-        expect($tooLarge)->not->toBe('errors/application.compress_too_large', "missing in {$locale}")
-            // The placeholders must survive translation, or the message names
-            // no numbers and is advice about nothing.
-            ->and($tooLarge)->toContain('110 GB')
-            ->and($tooLarge)->toContain('2 GB');
     }
 });

@@ -2,15 +2,19 @@
 
 namespace App\Services\Server\Applications;
 
+use App\Enums\FileArchiveStatus;
 use App\Exceptions\Server\Application\FileOperationException;
 use App\Jobs\MeasureApplicationSize;
+use App\Jobs\RunFileArchive;
 use App\Models\Application;
+use App\Models\FileArchiveJob;
 use App\Rules\SafeRelativePath;
 use App\Services\Server\Compression\ArchiveCompressor;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Support\Bytes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * List, view, edit and download a site's own files.
@@ -984,7 +988,7 @@ class FileBrowser
      * defaults to relative paths when you "compress this folder" in a
      * desktop file manager.
      */
-    public function compress(Application $application, string $path, string $targetPath): void
+    public function compress(Application $application, string $path, string $targetPath): FileArchiveJob
     {
         $source = $this->resolve($application, $path);
         $sourceStat = $this->stat($application, $source);
@@ -999,17 +1003,7 @@ class FileBrowser
         abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
         $this->assertType($application, dirname($target), 'd');
 
-        $this->assertCompressible($application, [$source]);
-
-        $this->runArchive(
-            $application,
-            $this->compressCommand($format, $target, [basename($source)]),
-            'compress',
-            $target,
-            cwd: dirname($source),
-        );
-
-        $this->sizeChanged($application);
+        return $this->queue($application, 'compress', [$path], $targetPath);
     }
 
     /**
@@ -1369,7 +1363,7 @@ class FileBrowser
      * here — the validation above is the primary control, running as the
      * site's user is the backstop if it is ever wrong.
      */
-    public function extract(Application $application, string $path, string $targetPath): void
+    public function extract(Application $application, string $path, string $targetPath): FileArchiveJob
     {
         $archive = $this->resolve($application, $path);
         $this->assertType($application, $archive, 'f');
@@ -1386,115 +1380,96 @@ class FileBrowser
 
         $this->validateArchiveEntries($application, $entries, $target);
 
-        $command = $format === 'zip'
-            ? ['unzip', '-o', '-d', $target, $archive]
-            : ['tar', '-xzf', $archive, '-C', $target];
-
-        // The same ceiling compress gets. Extraction had the shared 60 s and
-        // no cleanup either — untripped only because nobody had yet extracted
-        // something large, not because it was safe.
-        //
-        // No cleanup path of its own: unlike compress, extraction writes into
-        // a directory the user chose and that already has contents, so there
-        // is no single artefact that is safe to delete. A killed extraction
-        // leaves a partial tree, which is why the timeout now says so instead
-        // of reporting a generic failure.
-        $this->run(
-            $application,
-            $command,
-            'extract',
-            timeout: (int) config('server.files.archive_timeout', 55),
-        );
-
-        $this->sizeChanged($application);
+        // Queued for the same reason compress is, and validated first for the
+        // same reason too: the zip-slip and zip-bomb checks above are the
+        // security boundary, so they must answer before the request is
+        // accepted rather than inside a worker nobody is watching.
+        return $this->queue($application, 'extract', [$path], $targetPath);
     }
 
     /**
-     * Refuses a selection that cannot finish inside a web request.
+     * Records an accepted archive operation and hands it to a worker.
      *
-     * The alternative is what shipped before this: the user waits out the
-     * whole ceiling, `tar` is killed mid-write, and the *next* attempt fails
-     * on "something already exists at that path" — so the message names a
-     * filename collision for a problem that is actually about size. Answering
-     * in under a second with the real number is strictly better than a minute
-     * of work followed by a wrong answer.
+     * Everything that can refuse has already refused by the time this is
+     * called — the path guards, the format check, the collision check, and for
+     * extract the zip-slip and zip-bomb validation. That ordering is the point:
+     * those are the security boundary and they are cheap, so they answer
+     * inside the request. Only the part whose cost scales with the user's data
+     * goes to the queue.
      *
-     * Deliberately advisory. `du` over a tree with millions of inodes can be
-     * slow enough to be its own outage, so it gets a short ceiling of its own
-     * and **fails open**: if the measurement does not arrive, the compress
-     * proceeds exactly as it would have without this check. A guard that can
-     * hang is worse than the bug it prevents.
-     *
-     * @param  list<string>  $targets  absolute paths
+     * @param  list<string>  $sources  relative to the document root
      */
-    private function assertCompressible(Application $application, array $targets): void
+    private function queue(Application $application, string $operation, array $sources, string $target): FileArchiveJob
     {
-        $limit = (int) config('server.files.compress_max_bytes', 0);
+        $job = FileArchiveJob::create([
+            'application_id' => $application->id,
+            'operation' => $operation,
+            'sources' => $sources,
+            'target' => $target,
+            'status' => FileArchiveStatus::Queued,
+            'user_id' => Auth::id(),
+        ]);
 
-        if ($limit <= 0 || $targets === []) {
-            return;
-        }
+        RunFileArchive::dispatch($job->id);
 
-        $result = $this->serverOps->run(
-            $this->asUser($application, array_merge(['du', '-sb', '--'], $targets)),
-            ['feature' => 'application', 'op' => 'file_compress_size', 'application' => $application->id],
-            timeout: (int) config('server.files.size_probe_timeout', 10),
-        );
-
-        // `answered` rather than `ok`: `du` exits non-zero for an unreadable
-        // subdirectory while still reporting a total for everything else, and
-        // a partial total is a floor, not a wrong number. Only an operation
-        // that produced no answer at all is skipped.
-        if (! $result->answered) {
-            return;
-        }
-
-        $bytes = 0;
-
-        foreach (explode("\n", trim($result->output())) as $line) {
-            [$size] = array_pad(explode("\t", trim($line), 2), 2, '');
-
-            if (ctype_digit($size)) {
-                $bytes += (int) $size;
-            }
-        }
-
-        // Zero means nothing parsed, which is a measurement failure wearing
-        // the costume of an empty selection. Fail open, as above.
-        abort_if($bytes > $limit, 422, __('errors/application.compress_too_large', [
-            'size' => Bytes::human($bytes),
-            'limit' => Bytes::human($limit),
-        ]));
+        return $job;
     }
 
     /**
-     * Runs an archive command, removing a half-written archive if it fails.
+     * Performs the work a queued row describes.
      *
-     * A killed `tar` or `zip` has already created its output file. Leaving it
-     * there turns one clear failure into two confusing ones: the directory
-     * gains a truncated archive that looks like a real one, and the obvious
-     * next move — try again — is refused by the does-it-already-exist guard,
-     * reporting a naming collision instead of the timeout that actually
-     * happened.
-     *
-     * Best-effort, and deliberately not checked: the cleanup runs on a path
-     * the panel has just been refused or cut off from, so its failing too is
-     * plausible. Losing the original error to report a failed `rm` would be a
-     * worse trade than leaving the file.
-     *
-     * @param  array<int, string>  $command
+     * Called only by {@see RunFileArchive}. The command is rebuilt here from
+     * the stored paths rather than serialized into the job payload, so a row
+     * cannot carry an absolute path that was resolved against a web root the
+     * site no longer has.
      */
-    private function runArchive(Application $application, array $command, string $op, string $target, ?string $cwd = null): void
+    public function runArchiveJob(FileArchiveJob $job): void
     {
+        $application = $job->application;
+        $target = $this->resolve($application, $job->target);
+        $sources = (array) $job->sources;
+
+        $timeout = (int) config('server.files.archive_job_timeout', 21600);
+
+        if ($job->operation === 'extract') {
+            $archive = $this->resolve($application, $sources[0] ?? '');
+
+            $this->run(
+                $application,
+                $this->archiveFormat($sources[0] ?? '') === 'zip'
+                    ? ['unzip', '-o', '-d', $target, $archive]
+                    : ['tar', '-xzf', $archive, '-C', $target],
+                'extract',
+                timeout: $timeout,
+            );
+
+            $this->sizeChanged($application);
+
+            return;
+        }
+
+        $format = $this->archiveFormat($job->target) ?? 'tar';
+        $parent = trim(dirname('/'.($sources[0] ?? '')), '/');
+
         try {
             $this->run(
                 $application,
-                $command,
-                $op,
-                cwd: $cwd,
-                timeout: (int) config('server.files.archive_timeout', 55),
+                $this->compressCommand($format, $target, array_map('basename', $sources)),
+                count($sources) > 1 ? 'compress_many' : 'compress',
+                cwd: $this->resolve($application, $parent),
+                timeout: $timeout,
             );
         } catch (FileOperationException $e) {
+            // A killed `tar` has already created its output file. Leaving it
+            // is what turned one clear failure into two confusing ones: the
+            // directory gains a truncated archive that looks real, and the
+            // obvious retry is refused by the collision guard, reporting a
+            // naming problem instead of the timeout that happened.
+            //
+            // Best-effort and deliberately unchecked — this runs on a path the
+            // panel was just cut off from, so its failing too is plausible,
+            // and losing the original error to report a failed `rm` is a worse
+            // trade than leaving the file.
             $this->serverOps->run(
                 $this->asUser($application, ['rm', '-f', $target]),
                 ['feature' => 'application', 'op' => 'file_archive_cleanup', 'application' => $application->id],
@@ -1503,6 +1478,23 @@ class FileBrowser
 
             throw $e;
         }
+
+        $this->sizeChanged($application);
+    }
+
+    /**
+     * Bytes the finished archive occupies, or 0 when there is no single file
+     * to measure — which is every extract.
+     */
+    public function archiveSize(FileArchiveJob $job): int
+    {
+        if ($job->operation !== 'compress' || $job->application === null) {
+            return 0;
+        }
+
+        $stat = $this->stat($job->application, $this->resolve($job->application, $job->target));
+
+        return $stat['size'] ?? 0;
     }
 
     /**
@@ -2021,7 +2013,7 @@ class FileBrowser
      *
      * @param  list<string>  $paths
      */
-    public function compressMany(Application $application, array $paths, string $targetPath): void
+    public function compressMany(Application $application, array $paths, string $targetPath): FileArchiveJob
     {
         $this->assertRootExists($application);
 
@@ -2043,18 +2035,7 @@ class FileBrowser
         abort_if($this->stat($application, $target) !== null, 422, __('errors/application.path_exists'));
         $this->assertType($application, dirname($target), 'd');
 
-        $this->assertCompressible(
-            $application,
-            array_map(fn (string $path): string => $this->resolve($application, $path), $paths),
-        );
-
-        $this->runArchive(
-            $application,
-            $this->compressCommand($format, $target, array_map('basename', $paths)),
-            'compress_many',
-            $target,
-            cwd: $this->resolve($application, reset($parents) ?: ''),
-        );
+        return $this->queue($application, 'compress', array_values($paths), $targetPath);
     }
 
     /**

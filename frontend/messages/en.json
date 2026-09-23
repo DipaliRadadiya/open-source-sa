@@ -3967,7 +3967,7 @@
         "title": "Compress \"{name}\"",
         "subtitle": "Packages this into a new archive. Choose where it goes below.",
         "submit": "Compress",
-        "done": "\"{name}\" compressed.",
+        "done": "\"{name}\" is being compressed. The archive will appear when it finishes.",
         "failed": "Couldn't compress this item.",
         "savesTo": "Saves to",
         "folderMustExist": "The folder you choose must already exist — this will not create it."
@@ -3976,7 +3976,7 @@
         "title": "Extract \"{name}\"",
         "subtitle": "Extracts a .zip, .tar.gz or .tgz archive into the folder below.",
         "submit": "Extract",
-        "done": "\"{name}\" extracted.",
+        "done": "\"{name}\" is being extracted. The files will appear when it finishes.",
         "failed": "Couldn't extract this archive.",
         "warning": "Extraction happens in place and can overwrite existing files — there's no undo."
       },
@@ -4061,7 +4061,7 @@
         "compressTitle": "Compress {count, plural, one {# item} other {# items}}",
         "compressDescription": "One archive, holding the names as they are now.",
         "compressHint": "Everything selected is in {folder}.",
-        "compressDone": "{count, plural, one {# item compressed.} other {# items compressed.}}",
+        "compressDone": "{count, plural, one {# item is being compressed.} other {# items are being compressed.}} The archive will appear when it finishes.",
         "permissionsTitle": "Permissions for {count, plural, one {# item} other {# items}}",
         "permissionsDescription": "The same mode is applied to everything selected.",
         "permissionsDone": "{count, plural, one {# item updated.} other {# items updated.}}",
@@ -4179,7 +4179,18 @@
         "plugins": "Plugins",
         "config": "wp-config.php"
       },
-      "dropHint": "Tip: drag files from your computer onto this list to upload them here."
+      "dropHint": "Tip: drag files from your computer onto this list to upload them here.",
+      "archiveJobs": {
+        "running": {
+          "compress": "Compressing into \"{target}\"…",
+          "extract": "Extracting into \"{target}\"…"
+        },
+        "done": {
+          "compress": "\"{target}\" is ready.",
+          "extract": "Extracted into \"{target}\"."
+        },
+        "failed": "The archive didn't finish."
+      }
     },
     "workers": {
       "pageTitle": "Workers",

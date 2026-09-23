@@ -23,6 +23,7 @@ import { ImagePreviewDialog } from "@/components/applications/files/image-previe
 import { RenameDialog } from "@/components/applications/files/rename-dialog";
 import { CopyDialog } from "@/components/applications/files/copy-dialog";
 import { CompressDialog } from "@/components/applications/files/compress-dialog";
+import { ArchiveJobsBanner } from "@/components/applications/files/archive-jobs-banner";
 import { ExtractDialog } from "@/components/applications/files/extract-dialog";
 import { PermissionsDialog } from "@/components/applications/files/permissions-dialog";
 import { DeleteFileDialog } from "@/components/applications/files/delete-file-dialog";
@@ -302,6 +303,12 @@ export function FilesPanel({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
+      {/*
+       * Above the listing, not inside it. Compress and extract are queued, so
+       * the archive is not in the rows below yet — a spinner placed among the
+       * files would be pointing at a row that does not exist.
+       */}
+      <ArchiveJobsBanner appId={appId} />
       {dragOver ? (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border-2 border-dashed border-primary bg-primary/5 backdrop-blur-[1px]">
           <p className="flex items-center gap-2 rounded-lg bg-background px-4 py-2 text-sm font-medium shadow-lg">
