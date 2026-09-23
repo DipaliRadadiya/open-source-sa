@@ -946,7 +946,18 @@ install_packages() {
     # git-deployed project can depend on anything — so a conditional would have
     # to guess the future. It is ~235 MB, and it is the difference between an
     # install that works and one that fails for a reason the user cannot act on.
-    run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common build-essential
+    # `pigz` is gzip across every core, and backups are where that shows.
+    # Measured on a 103 GB site with 8 cores: `tar -czf` took 67 minutes with
+    # gzip pinned at 99.5% of one core and seven idle; pigz did the same work in
+    # ~15. Same format — pigz emits ordinary gzip, so `tar -tzf`, the verify step
+    # and every archive already in a bucket are unaffected.
+    #
+    # The panel falls back to gzip when this is absent, so it is an improvement
+    # rather than a requirement. That fallback is load-bearing: the updater ships
+    # code, never packages, so this line only ever reaches *fresh* installs —
+    # an existing panel upgrading to the code that prefers pigz will not have it
+    # until somebody runs `apt install pigz` by hand. ~60 KB.
+    run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common build-essential pigz
 
     local php_pkgs=()
 
