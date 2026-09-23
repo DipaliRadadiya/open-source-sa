@@ -54,6 +54,7 @@ return [
     'file_svg_not_previewable' => 'Los archivos SVG no se muestran aquí, porque un SVG puede contener código. Descárgalo para verlo.',
     'file_too_large_to_preview' => 'Esa imagen es demasiado grande para mostrarla aquí. Descárgala: las descargas no tienen límite de tamaño.',
 
+    'compress_too_large' => 'Esta selección ocupa :size y supera el límite de :limit para comprimir en el gestor de archivos. Selecciona menos archivos o usa una copia de seguridad: se ejecuta en segundo plano y no tiene límite de tamaño.',
     'file_operation_failed' => 'La operación de archivo falló en el servidor.',
 
     'file_not_archive' => 'Aquí solo se pueden extraer archivos .zip y .tar.gz.',

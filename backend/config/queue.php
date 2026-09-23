@@ -47,6 +47,16 @@ return [
     | 4200 clears the longest job rather than the longest provision, and the
     | test now checks every job's timeout instead of one of them.
     |
+    | Then `BACKUP_JOB_TIMEOUT` became 21600 so a 100 GB site could finish, and
+    | only the redis window was derived from it — leaving `database` (which is
+    | this file's *default* connection) and `beanstalkd` at 4200, against a job
+    | allowed six hours. A 103 GB backup takes about 88 minutes, so that is not
+    | a theoretical gap: on any panel not running redis, a large backup was
+    | dispatched a second time while the first was still uploading, both
+    | writing the same key. All three windows are derived from the one number
+    | now, because that is the property that keeps being violated by editing
+    | one of them.
+    |
     */
 
     'connections' => [
@@ -60,7 +70,10 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 4200),
+            'retry_after' => (int) env(
+                'DB_QUEUE_RETRY_AFTER',
+                (int) env('BACKUP_JOB_TIMEOUT', 21600) + 600,
+            ),
             'after_commit' => false,
         ],
 
@@ -68,7 +81,10 @@ return [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),
             'queue' => env('BEANSTALKD_QUEUE', 'default'),
-            'retry_after' => (int) env('BEANSTALKD_QUEUE_RETRY_AFTER', 4200),
+            'retry_after' => (int) env(
+                'BEANSTALKD_QUEUE_RETRY_AFTER',
+                (int) env('BACKUP_JOB_TIMEOUT', 21600) + 600,
+            ),
             'block_for' => 0,
             'after_commit' => false,
         ],

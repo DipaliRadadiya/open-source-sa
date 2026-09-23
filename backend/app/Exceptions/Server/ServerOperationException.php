@@ -38,6 +38,14 @@ abstract class ServerOperationException extends Exception
          * does.
          */
         public readonly bool $denied = false,
+        /**
+         * Killed at its timeout. Answered before the feature's own message
+         * because "the file operation failed on the server" describes a fault
+         * that does not exist: nothing is broken, the work was too big for the
+         * time allowed. Told the truth, the user makes a smaller selection;
+         * told the generic message, they retry the same thing and wait again.
+         */
+        public readonly bool $timedOut = false,
     ) {
         parent::__construct();
     }
@@ -67,6 +75,7 @@ abstract class ServerOperationException extends Exception
                 $this->denied => 'errors/server.sudo_denied',
                 $this->staleLock => 'errors/server.stale_lock',
                 $this->busy => 'errors/server.busy',
+                $this->timedOut => 'errors/server.operation_timed_out',
                 default => $this->messageKey(),
             }),
             // A stable code so the frontend can offer a retry button for this
@@ -75,6 +84,7 @@ abstract class ServerOperationException extends Exception
                 $this->denied => 'server_sudo_denied',
                 $this->staleLock => 'server_stale_lock',
                 $this->busy => 'server_busy',
+                $this->timedOut => 'server_operation_timed_out',
                 default => $this->code(),
             },
             'reference' => $this->reference,

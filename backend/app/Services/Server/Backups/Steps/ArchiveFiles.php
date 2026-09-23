@@ -5,6 +5,7 @@ namespace App\Services\Server\Backups\Steps;
 use App\Contracts\BackupStep;
 use App\Services\Server\Backups\BackupContext;
 use App\Services\Server\Backups\BackupRoot;
+use App\Services\Server\Compression\ArchiveCompressor;
 use App\Services\Server\ServerOps;
 use RuntimeException;
 
@@ -21,6 +22,7 @@ class ArchiveFiles implements BackupStep
     public function __construct(
         private ServerOps $serverOps,
         private BackupRoot $roots,
+        private ArchiveCompressor $compressor = new ArchiveCompressor,
     ) {}
 
     public function key(): string
@@ -35,77 +37,6 @@ class ArchiveFiles implements BackupStep
         return true;
     }
 
-    /**
-     * The compression command tar should pipe through.
-     *
-     * Resolved per archive rather than once at boot: `pigz` can be installed
-     * on a running panel, and an operator who apt-installs it should get the
-     * benefit on the next backup rather than after a restart.
-     *
-     * Falls back to `gzip` whenever pigz is absent, which is the load-bearing
-     * part. The updater ships code, never packages — so a build that *required*
-     * pigz would break every existing install the moment it upgraded, while
-     * working perfectly on every fresh one. The same trap
-     * `install.sh changes never reach existing installs` records.
-     */
-    private function compressor(): string
-    {
-        $level = (int) config('server.backups.compression_level', 1);
-
-        // Clamp rather than trust: gzip and pigz both reject anything outside
-        // 1-9, and a typo in an env file should not fail every backup on the
-        // box with a message about command-line syntax.
-        $level = max(1, min(9, $level));
-
-        return $this->compressorBinary().' -'.$level;
-    }
-
-    /**
-     * `pigz` if the configuration allows it and the binary is really there.
-     */
-    private function compressorBinary(): string
-    {
-        $configured = (string) config('server.backups.compressor', 'auto');
-
-        if ($configured === 'gzip') {
-            return 'gzip';
-        }
-
-        if ($configured === 'pigz') {
-            // Explicitly demanded. Honour it even if the lookup below fails —
-            // an operator who set this deserves the real error from tar rather
-            // than a silent downgrade that leaves them wondering why the
-            // backup is still slow.
-            return 'pigz';
-        }
-
-        return $this->onPath('pigz') ? 'pigz' : 'gzip';
-    }
-
-    /**
-     * Is this binary reachable?
-     *
-     * Walked by hand rather than shelled out to `which`: this runs once per
-     * backup, and spawning a process to ask whether we can spawn a process is
-     * the kind of thing that works until a box has an empty PATH.
-     *
-     * The fallback list matters because tar runs under `sudo`, whose
-     * `secure_path` is not the panel user's PATH.
-     */
-    private function onPath(string $binary): bool
-    {
-        $paths = array_filter(explode(PATH_SEPARATOR, (string) getenv('PATH')));
-        $paths = array_merge($paths, ['/usr/local/bin', '/usr/bin', '/bin']);
-
-        foreach (array_unique($paths) as $dir) {
-            if (is_executable(rtrim($dir, '/').'/'.$binary)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     public function run(BackupContext $context): void
     {
         $archive = $context->track($context->workingDirectory.'/backup.tar.gz');
@@ -118,7 +49,7 @@ class ArchiveFiles implements BackupStep
         // The artefact is unchanged: pigz emits ordinary gzip, so `tar -tzf`,
         // the verify step and every archive already in a bucket keep working.
         // Confirmed against GNU tar 1.35 before shipping.
-        $command = ['tar', '--use-compress-program='.$this->compressor(), '-cf', $archive];
+        $command = ['tar', '--use-compress-program='.$this->compressor->program('server.backups'), '-cf', $archive];
 
         foreach ((array) ($context->target->file_excludes ?? []) as $exclude) {
             // Passed as its own argv element, so a pattern containing a space

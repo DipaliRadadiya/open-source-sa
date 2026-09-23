@@ -54,6 +54,7 @@ return [
     'file_svg_not_previewable' => 'SVG files are not shown here, because an SVG can carry code. Download it to view it.',
     'file_too_large_to_preview' => 'That image is too large to display here. Download it instead — downloads have no size limit.',
 
+    'compress_too_large' => 'This selection is :size, over the :limit limit for compressing in the file manager. Select fewer files, or use a Backup — it runs in the background and has no size limit.',
     'file_operation_failed' => 'The file operation failed on the server.',
 
     'file_not_archive' => 'Only .zip and .tar.gz archives can be extracted here.',

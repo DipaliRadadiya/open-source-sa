@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\RunBackup;
+use App\Jobs\RunRestore;
 use App\Services\Server\Applications\ProvisioningBudget;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
@@ -59,8 +60,15 @@ function jobTimeouts(): array
 it('finds the jobs it is meant to be checking', function () {
     // Without this the test below passes on an empty list, which is how a
     // guard becomes decoration.
-    expect(jobTimeouts())->not->toBeEmpty()
-        ->and(array_keys(jobTimeouts()))->toContain(RunBackup::class);
+    //
+    // It used to name `RunBackup` here. That stopped being true when the
+    // backup timeout moved into the constructor to read `job_timeout`, and
+    // the assertion failed loudly — correctly, because reflection can no
+    // longer read the value, so `RunBackup` silently left the list this test
+    // exists to police. The fix is not to drop the name: it is to keep a
+    // non-empty list here AND cover the constructor-computed jobs below,
+    // which is what the next test now does.
+    expect(jobTimeouts())->not->toBeEmpty();
 });
 
 it('keeps every fixed job timeout inside the reservation window', function (string $connection) {
@@ -83,6 +91,14 @@ it('keeps the jobs that size themselves inside it too', function (string $connec
     // the budget; InstallDatabaseEngine from the installer's own limit.
     expect(app(ProvisioningBudget::class)->longest())->toBeLessThan($retryAfter)
         ->and((int) config('server.databases.install_timeout', 900) + 120)->toBeLessThan($retryAfter);
+
+    // RunBackup and RunRestore, the two jobs this whole file was written for.
+    // They read `job_timeout` in their constructors, so the reflection pass
+    // above cannot see them and they were covered by nothing at all between
+    // that change and this one. Asserted on the instances rather than on the
+    // config key, so a job that stops reading the key is caught too.
+    expect((new RunBackup(1))->timeout)->toBeLessThan($retryAfter)
+        ->and((new RunRestore(1, 1))->timeout)->toBeLessThan($retryAfter);
 })->with(['database', 'redis', 'beanstalkd']);
 
 /**

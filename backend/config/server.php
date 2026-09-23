@@ -260,6 +260,52 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | File manager archives
+    |--------------------------------------------------------------------------
+    |
+    | Compress and extract run inside an HTTP request, and the request's real
+    | ceiling belongs to the web server rather than to PHP:
+    |
+    |   nginx            fastcgi_read_timeout 300
+    |   Apache           ProxyTimeout 300
+    |   OpenLiteSpeed    initTimeout 60
+    |
+    | `archive_timeout` therefore sits under the *lowest* of the three. Raising
+    | it to 300 would work on two web servers and fail on the third, and on
+    | OpenLiteSpeed it would fail above PHP — so the cleanup that removes a
+    | half-written archive would never run, which is the bug this group exists
+    | to prevent. Anything that needs longer than this wants a Backup, not a
+    | button someone is watching.
+    |
+    */
+
+    'files' => [
+        // Own keys rather than the backups group's: a nightly job that may run
+        // for six hours and a button a person is waiting on do not want the
+        // same trade-off, even though both drive the same tar.
+        'compressor' => env('FILES_COMPRESSOR', 'auto'),
+        'compression_level' => (int) env('FILES_COMPRESSION_LEVEL', 1),
+
+        'archive_timeout' => (int) env('FILES_ARCHIVE_TIMEOUT', 55),
+
+        // Refuse up front rather than after a minute of work. Sized for the
+        // slowest box the panel installs on: pigz on one core is roughly gzip,
+        // ~25 MB/s, so 2 GB is ~80 s of compression — already over the ceiling
+        // above, which is the point. A box with cores to spare can raise it.
+        //
+        // A refusal that is wrong costs a config change. A timeout that is
+        // wrong costs a minute of waiting and leaves a partial archive behind.
+        'compress_max_bytes' => (int) env('FILES_COMPRESS_MAX_BYTES', 2 * 1024 * 1024 * 1024),
+
+        // The pre-flight measurement is a courtesy, not a gate: `du` over a
+        // tree with millions of inodes can itself be slow, and a size check
+        // that hangs is worse than no size check. On timeout the compress
+        // proceeds exactly as it would have without this feature.
+        'size_probe_timeout' => (int) env('FILES_SIZE_PROBE_TIMEOUT', 10),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Backups
     |--------------------------------------------------------------------------
     |

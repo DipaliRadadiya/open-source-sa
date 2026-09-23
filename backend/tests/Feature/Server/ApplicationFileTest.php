@@ -646,12 +646,24 @@ function fakeFileBrowserServer(): void
             return Process::result(exitCode: 0);
         }
 
-        // ['tar', '-czf', $target, '--', $name…] writing an archive, as
-        // opposed to the -xzf/-tvzf reads handled elsewhere.
-        if ($binary === 'tar' && ($inner[1] ?? '') === '-czf') {
-            FileBrowserFake::$fs[$relative($inner[2])] = ['type' => 'f', 'size' => 1, 'content' => 'tarred'];
+        // tar writing an archive, as opposed to the -xzf/-tvzf reads handled
+        // elsewhere. Matched on the create flag rather than on argv position:
+        // compression moved from `-czf` to
+        // `--use-compress-program=<prog> -cf` so the panel can use pigz, and a
+        // fixture that reads `$inner[1]` asserts against an argument order
+        // rather than against a command.
+        if ($binary === 'tar' && in_array('-cf', $inner, true)) {
+            $target = $inner[array_search('-cf', $inner, true) + 1];
+            FileBrowserFake::$fs[$relative($target)] = ['type' => 'f', 'size' => 1, 'content' => 'tarred'];
 
             return Process::result(exitCode: 0);
+        }
+
+        // The pre-flight size check. Answering zero keeps every existing
+        // fixture under whatever limit is configured — these tests are about
+        // what the panel writes, not about the guard, which has its own suite.
+        if ($binary === 'du') {
+            return Process::result(output: "0\t/\n", exitCode: 0);
         }
 
         if ($binary === 'rm') {
@@ -1688,7 +1700,9 @@ describe('compressing', function () {
         // beyond symmetry: ZIP does not carry Unix permissions, so a site
         // zipped and unzipped loses a 0600 wp-config.php.
         expect(FileBrowserFake::$fs)->toHaveKey('wp-content/backup.tar.gz')
-            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- tar -czf')))->toBeTrue()
+            // `--use-compress-program`, not `-z`: `-z` is gzip level 6 on one
+            // core, which is what made a large compress impossible.
+            ->and(collect(FileBrowserFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'runuser -u siteowner -- tar --use-compress-program=')))->toBeTrue()
             // Same cwd discipline as zip: bare names, so the archive does not
             // carry the server's directory layout inside it.
             ->and(FileBrowserFake::$cwds)->toContain('/home/siteowner/shop/public_html');

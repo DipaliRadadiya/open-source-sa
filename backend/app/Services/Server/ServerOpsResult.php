@@ -64,6 +64,21 @@ class ServerOpsResult
          * diagnostic should warn rather than assert.
          */
         public readonly bool $answered = false,
+        /**
+         * The command was killed at its timeout rather than finishing.
+         *
+         * Separated from an ordinary failure because the advice is different
+         * and specific: nothing is broken, the work did not fit in the time
+         * allowed, and the answer is a smaller job — not a retry, which will
+         * take exactly as long and fail exactly the same way.
+         *
+         * It also implies debris. A killed `tar` has already created its
+         * output file, so a caller that writes to a path must clean up before
+         * rethrowing, or the retry fails on "something already exists there"
+         * and reports that as the problem. That is precisely how a 110 GB
+         * compress was reported as a naming collision.
+         */
+        public readonly bool $timedOut = false,
     ) {}
 
     public function failed(): bool

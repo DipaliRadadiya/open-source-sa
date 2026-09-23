@@ -98,6 +98,7 @@ class ServerOps
             $stderr = '';
             $stdout = '';
             $result = null;
+            $timedOut = false;
 
             try {
                 $pending = Process::timeout($timeout);
@@ -130,6 +131,13 @@ class ServerOps
                 $stdout = $result->output();
             } catch (ProcessTimedOutException) {
                 $stderr = 'process timed out';
+                // Carried out to the caller rather than left only in stderr.
+                // The string was already written here; nothing read it, so
+                // every timed-out file operation reached the user as the
+                // generic "the operation failed" and reached the log as an
+                // empty message. A command killed at its ceiling and a command
+                // that refused are different problems with different answers.
+                $timedOut = true;
             }
 
             if ($ok || $attempts >= $maxAttempts || ! $this->isTransient($stderr)) {
@@ -175,6 +183,7 @@ class ServerOps
             'command' => $this->loggableCommand($command),
             'exit_code' => $exitCode,
             'expected_exit' => $expectedExit,
+            'timed_out' => $timedOut,
             'stderr' => $stderr,
             // Only on failure, and only the tail. Plenty of the tools the
             // panel drives report their errors on stdout and leave stderr
@@ -211,6 +220,7 @@ class ServerOps
             // once nobody does.
             staleLock: ! $ok && $this->isStaleLock($stderr),
             denied: $denied,
+            timedOut: $timedOut,
             // Computed here, once, because every caller that worked it out for
             // itself got it wrong the same way. See ServerOpsResult::$answered.
             answered: $ok || ($expectedExit && trim($stderr) === ''),

@@ -463,7 +463,7 @@ class ChunkedUpload
         );
 
         if ($result->failed()) {
-            throw new FileOperationException($result->reference, busy: $result->busy, staleLock: $result->staleLock, denied: $result->denied);
+            throw new FileOperationException($result->reference, busy: $result->busy, staleLock: $result->staleLock, denied: $result->denied, timedOut: $result->timedOut);
         }
 
         return $result;
