@@ -3,7 +3,6 @@
 namespace App\Services\Server\Applications;
 
 use App\Models\Application;
-use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Str;
@@ -37,7 +36,6 @@ class WordPressMagicLogin
 
     public function __construct(
         private ServerOps $serverOps,
-        private ManagedFile $files,
     ) {}
 
     /**
@@ -156,23 +154,30 @@ class WordPressMagicLogin
      * loads. Rewritten every time rather than only when absent, so a site whose
      * copy was edited or half-written is repaired by using the feature.
      *
+     * Written AS the site user. `wp-content` is the user's, and so is every
+     * name in it: as root, `install -d` + `tee` + `chown` followed whatever
+     * `mu-plugins` or `sv-magic-login.php` pointed at, which made this button
+     * a way to have root write a file anywhere and hand it to the site user.
+     * As the user, a planted link reaches only what the user could already
+     * write — and the result is the user's without a chown.
+     *
      * @throws ValidationException
      */
     private function installLoader(Application $application): void
     {
         $dir = $application->documentRoot().'/wp-content/mu-plugins';
         $path = $dir.'/sv-magic-login.php';
-        $owner = $application->systemUser->username;
+        $asUser = ['runuser', '-u', $application->systemUser->username, '--'];
 
         $this->serverOps->run(
-            ['install', '-d', '-m', '0755', '-o', $owner, '-g', $owner, $dir],
+            [...$asUser, 'mkdir', '-p', '-m', '0755', $dir],
             $this->context($application, 'ensure_mu_plugins'),
         );
 
-        $written = $this->files->put(
-            $path,
-            (string) file_get_contents(resource_path('stubs/sv-magic-login.php')),
+        $written = $this->serverOps->run(
+            [...$asUser, 'tee', $path],
             $this->context($application, 'write_magic_login_loader'),
+            input: (string) file_get_contents(resource_path('stubs/sv-magic-login.php')),
         );
 
         if ($written->failed()) {
@@ -182,8 +187,8 @@ class WordPressMagicLogin
         }
 
         $this->serverOps->run(
-            ['chown', "{$owner}:{$owner}", $path],
-            $this->context($application, 'chown_magic_login_loader'),
+            [...$asUser, 'chmod', '0644', $path],
+            $this->context($application, 'chmod_magic_login_loader'),
         );
     }
 

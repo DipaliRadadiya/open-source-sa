@@ -2,6 +2,7 @@
 
 return [
     'checks' => [
+        'site_root_lock' => 'Sperre des Site-Ordners',
         'php_isolation' => 'PHP-Isolation pro Anwendung',
         'privilege' => 'Privilegierte Befehle',
         'services' => 'Dienste',
@@ -16,6 +17,7 @@ return [
         'driver_contention' => 'Treiber-Konkurrenz',
     ],
     'fixes' => [
+        'site_root_unlocked' => 'Der Ordner einer Site kann von ihrem eigenen Benutzer umbenannt und durch einen eigenen ersetzt werden – damit werden die gesperrten PHP-Einstellungen der Site umgangen, und eine Panel-Aktion kann außerhalb der Site schreiben. Führen Sie `php artisan sites:resync` aus; es sperrt alle Site-Ordner und nennt die, bei denen es nicht ging. „Konnte nicht geprüft werden“ bedeutet meist, dass das Dateisystem kein Immutable-Attribut kennt (ZFS, manche Container); eine Site, die nach dem Resync weiterhin nicht gesperrt ist, hat einen Ordner, der nicht wie der vom Panel angelegte aussieht – prüfen Sie ihn, bevor Sie ihm vertrauen.',
         'php_pool_orphaned' => 'Ein PHP-FPM-Pool nennt ein Linux-Konto, das nicht mehr existiert — meist eine Seite, die vor ihrem Pool gelöscht wurde und deren Benutzer danach entfernt wurde. PHP-FPM startet damit nicht, daher scheitert jede neue PHP-Seite bei der Bereitstellung und bekommt die Schuld. Löschen Sie die genannten Pool-Dateien, führen Sie dann `php-fpm -t` aus und starten Sie php-fpm neu.',
         'php_isolation_missing' => 'Eine Seite, die das Panel für isoliert hält, hat keine Pool-Datei. Sie wird weiterhin aus dem gemeinsamen Pool als www-data ausgeliefert, ohne ihre eigenen Einstellungen. Öffnen Sie die PHP-Seite und isolieren Sie sie erneut.',
         'php_isolation_unknown' => 'Das Panel konnte nicht prüfen, ob diese Sites ihre PHP-Pool-Datei noch haben; ihre Isolation wurde daher nicht verifiziert. Führen Sie auf dem Server `sudo php artisan panel:sudoers` aus, um die sudo-Berechtigung zu aktualisieren; siehe die Rechteprüfung.',

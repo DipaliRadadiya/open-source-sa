@@ -3,6 +3,7 @@
 namespace App\Services\Server\Restores\Steps;
 
 use App\Contracts\RestoreStep;
+use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\Backups\BackupRoot;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\ServerOps;
@@ -23,6 +24,7 @@ class ExtractArchive implements RestoreStep
     public function __construct(
         private ServerOps $serverOps,
         private BackupRoot $roots,
+        private SiteRootLock $rootLock,
     ) {}
 
     public function key(): string
@@ -59,15 +61,20 @@ class ExtractArchive implements RestoreStep
         // neither the path nor the reason. Every other filesystem action in
         // this class already goes through ServerOps; these two were the
         // exception.
-        $this->serverOps->run(
-            ['rm', '-rf', $staging],
-            ['feature' => 'backup', 'op' => 'restore_staging_reset', 'application' => $context->application->id],
-        );
+        // The staging directory is created beside the live site, at the top of
+        // the site root — see SiteRootLock. Extracting into it afterwards
+        // changes only its own contents, so the flag goes back on first.
+        $created = $this->rootLock->unlocked($context->application, function () use ($staging, $context) {
+            $this->serverOps->run(
+                ['rm', '-rf', $staging],
+                ['feature' => 'backup', 'op' => 'restore_staging_reset', 'application' => $context->application->id],
+            );
 
-        $created = $this->serverOps->run(
-            ['mkdir', '-p', $staging],
-            ['feature' => 'backup', 'op' => 'restore_staging_create', 'application' => $context->application->id],
-        );
+            return $this->serverOps->run(
+                ['mkdir', '-p', $staging],
+                ['feature' => 'backup', 'op' => 'restore_staging_create', 'application' => $context->application->id],
+            );
+        });
 
         if ($created->failed()) {
             throw new RuntimeException('the staging directory could not be created');

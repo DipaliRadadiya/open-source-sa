@@ -319,3 +319,62 @@ it('swaps an archive of the application over the application', function () {
     expect($moves->getArrayCopy())->toContain([$application->publicHtmlPath(), $application->rootPath().'/.rollback-'.$restore->id])
         ->and($moves->getArrayCopy())->toContain([$staging.'/public_html', $application->publicHtmlPath()]);
 });
+
+it('lifts the site root lock around each move of a restore, and puts it back', function () {
+    // Both ends of every move are entries of the site root, which is
+    // immutable once the site is set up ({@see SiteRootLock}) — a restore
+    // that did not lift it would fail at its first `mv`, and one that did
+    // not put it back would leave the root renamable by its user.
+    $application = servedFromSubdirectory();
+
+    $backup = Backup::create([
+        'backup_target_id' => targetFor($application)->id,
+        'application_id' => $application->id,
+        'type' => 'filesystem',
+        'status' => BackupStatus::Verified,
+        'manifest' => ['key' => 'k', 'root_kind' => BackupRoot::APPLICATION],
+    ]);
+
+    $state = new ArrayObject(['locked' => true, 'log' => []]);
+
+    Process::fake(function ($process) use ($state) {
+        $command = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        return match ($command[0]) {
+            'chattr' => (function () use ($state, $command) {
+                $state['locked'] = $command[1] === '+i';
+                $state['log'] = [...$state['log'], $command[1]];
+
+                return Process::result();
+            })(),
+            'lsattr' => Process::result(output: ($state['locked'] ? '----i---------e-------' : '--------------e-------').' x'),
+            'stat' => Process::result(output: 'directory|root|1'),
+            'mv' => (function () use ($state) {
+                // A move with the flag still on would fail on a real server.
+                $state['log'] = [...$state['log'], $state['locked'] ? 'mv-while-locked' : 'mv'];
+
+                return Process::result();
+            })(),
+            default => Process::result(),
+        };
+    });
+
+    $staging = $this->home.'/.restore-staging';
+    File::ensureDirectoryExists($staging.'/public_html');
+
+    $restore = Restore::create([
+        'backup_id' => $backup->id,
+        'application_id' => $application->id,
+        'type' => 'filesystem',
+        'status' => 'running',
+    ]);
+
+    $context = new RestoreContext($restore, $backup, $application, $this->home);
+    $context->stagingDirectory = $staging;
+
+    app(SwapFiles::class)->run($context);
+
+    expect($state['log'])->not->toContain('mv-while-locked')
+        ->and($state['log'])->toContain('mv')
+        ->and($state['locked'])->toBeTrue();
+});

@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Application;
 use App\Services\Server\Applications\SiteConfigResyncer;
+use App\Services\Server\Applications\SiteRootLock;
 use Illuminate\Console\Command;
 
 /**
@@ -24,7 +26,7 @@ class ResyncSiteConfigs extends Command
 
     protected $description = 'Re-render every live site config from the current templates and bot lists';
 
-    public function handle(SiteConfigResyncer $resyncer): int
+    public function handle(SiteConfigResyncer $resyncer, SiteRootLock $rootLock): int
     {
         $result = $resyncer->run();
 
@@ -54,6 +56,60 @@ class ResyncSiteConfigs extends Command
             ));
         }
 
+        $this->lockSiteRoots($rootLock);
+
         return self::SUCCESS;
+    }
+
+    /**
+     * Make every existing site root immutable — see SiteRootLock.
+     *
+     * Here because this command is already run on every deploy and by the
+     * panel's own updater: a lock applied only when a site is created would
+     * protect new sites and leave every existing one open, the same shape as a
+     * template fix that reaches new sites only.
+     *
+     * A site root that is not a root-owned directory is reported and left
+     * alone. Locking it would pin whatever is there in place — and if the site
+     * user has already swapped it, that is exactly what must not be trusted.
+     */
+    private function lockSiteRoots(SiteRootLock $rootLock): void
+    {
+        $counts = [SiteRootLock::LOCKED => 0, SiteRootLock::UNSUPPORTED => 0];
+        $problems = [];
+
+        foreach (Application::query()->with('systemUser')->get() as $application) {
+            if ($application->systemUser === null) {
+                continue;
+            }
+
+            $result = $rootLock->lock($application);
+
+            if (array_key_exists($result, $counts)) {
+                $counts[$result]++;
+            } elseif ($result !== SiteRootLock::MISSING) {
+                $problems[] = [$application, $result];
+            }
+        }
+
+        $this->info(sprintf(
+            'Site roots: %d locked%s%s.',
+            $counts[SiteRootLock::LOCKED],
+            $counts[SiteRootLock::UNSUPPORTED] > 0
+                ? sprintf(', %d on a filesystem without the immutable flag', $counts[SiteRootLock::UNSUPPORTED])
+                : '',
+            $problems !== [] ? sprintf(', %d need attention', count($problems)) : '',
+        ));
+
+        foreach ($problems as [$application, $result]) {
+            $this->warn(sprintf(
+                'Not locked: %s (#%d) — %s',
+                $application->name,
+                $application->id,
+                $result === SiteRootLock::UNSAFE
+                    ? 'its directory is not a root-owned directory, so it was left alone; check '.$application->rootPath()
+                    : 'chattr failed; see the server-ops log',
+            ));
+        }
     }
 }

@@ -5,6 +5,7 @@ namespace App\Services\Server\Restores;
 use App\Contracts\RestoreStep;
 use App\Enums\RestoreStatus;
 use App\Models\Restore;
+use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -23,7 +24,7 @@ class RestoreRunner
     /** @var list<RestoreStep> */
     private array $steps;
 
-    public function __construct(private ServerOps $serverOps)
+    public function __construct(private ServerOps $serverOps, private SiteRootLock $rootLock)
     {
         $this->steps = array_map(
             fn (string $class): RestoreStep => app($class),
@@ -131,10 +132,11 @@ class RestoreRunner
         // the failure was silent and left behind exactly the copy this is
         // meant to remove.
         if ($context->stagingDirectory !== null) {
-            $this->serverOps->run(
+            // An entry of the site root, like the staging directory's creation.
+            $this->rootLock->unlocked($context->application, fn () => $this->serverOps->run(
                 ['rm', '-rf', $context->stagingDirectory],
                 ['feature' => 'backup', 'op' => 'restore_staging_cleanup'],
-            );
+            ));
         }
     }
 

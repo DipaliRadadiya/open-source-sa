@@ -2,6 +2,7 @@
 
 return [
     'checks' => [
+        'site_root_lock' => 'Bloqueo de la carpeta del sitio',
         'php_isolation' => 'Aislamiento de PHP por aplicación',
         'privilege' => 'Comandos privilegiados',
         'services' => 'Servicios',
@@ -16,6 +17,7 @@ return [
         'driver_contention' => 'Contención de controladores',
     ],
     'fixes' => [
+        'site_root_unlocked' => 'Su propio usuario puede renombrar la carpeta de un sitio y sustituirla por otra que controle, anulando la configuración PHP bloqueada del sitio y permitiendo que una acción del panel escriba fuera del sitio. Ejecuta `php artisan sites:resync`, que bloquea todas las carpetas de sitios e indica las que no pudo. "No se pudo comprobar" suele significar que el sistema de archivos no admite el atributo inmutable (ZFS, algunos contenedores); un sitio que siga sin bloquear tras la resincronización tiene una carpeta que no parece la creada por el panel: revísala antes de confiar en ella.',
         'php_pool_orphaned' => 'Un pool de PHP-FPM nombra una cuenta de Linux que ya no existe: normalmente un sitio que se eliminó antes que su pool y cuyo usuario se borró después. PHP-FPM no arranca con él, así que todo sitio PHP nuevo falla al aprovisionarse y carga con la culpa. Elimine los archivos de pool indicados, ejecute `php-fpm -t` y reinicie php-fpm.',
         'php_isolation_missing' => 'Un sitio que el panel cree aislado no tiene archivo de pool. Se sigue sirviendo desde el pool compartido, como www-data y sin ninguna de sus opciones. Abre la pantalla PHP del sitio y vuelve a aislarlo.',
         'php_isolation_unknown' => 'El panel no pudo comprobar si estos sitios conservan su archivo de pool de PHP, así que no se verificó su aislamiento. Ejecuta `sudo php artisan panel:sudoers` en el servidor para actualizar el permiso de sudo; consulta la comprobación de privilegios.',

@@ -4,6 +4,7 @@ namespace App\Services\Server\Restores\Steps;
 
 use App\Contracts\RestoreStep;
 use App\Services\Server\Applications\ProcessSupervisor;
+use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\Backups\BackupRoot;
 use App\Services\Server\Restores\RestoreContext;
 use App\Services\Server\ServerOps;
@@ -30,6 +31,7 @@ class SwapFiles implements RestoreStep
         private ServerOps $serverOps,
         private BackupRoot $roots,
         private ProcessSupervisor $processes,
+        private SiteRootLock $rootLock,
     ) {}
 
     public function key(): string
@@ -110,11 +112,14 @@ class SwapFiles implements RestoreStep
 
     private function move(RestoreContext $context, string $from, string $to, string $op): void
     {
-        $result = $this->serverOps->run(
+        // Both ends are entries of the site root — the live directory, the
+        // aside copy, the staged one — so each move changes the top level of a
+        // directory {@see SiteRootLock} keeps immutable.
+        $result = $this->rootLock->unlocked($context->application, fn () => $this->serverOps->run(
             ['mv', $from, $to],
             ['feature' => 'backup', 'op' => $op, 'application' => $context->application->id],
             timeout: 600,
-        );
+        ));
 
         if ($result->failed()) {
             throw new RuntimeException("could not move {$from} to {$to}");

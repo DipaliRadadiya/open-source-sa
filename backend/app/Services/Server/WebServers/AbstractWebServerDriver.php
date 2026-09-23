@@ -9,6 +9,7 @@ use App\Enums\WafMode;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Services\Server\Applications\ApplicationLogDirectory;
+use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
 use App\Services\Server\ManagedFile;
@@ -162,8 +163,14 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      */
     protected function ensurePanelDirectory(Application $application): void
     {
-        $this->serverOps->run(
-            ['mkdir', '-p', $application->panelPath()],
+        // `.panel` is an entry of the site root, which is immutable once the
+        // site is set up ({@see SiteRootLock}); creating it on a site that
+        // never had one needs the flag lifted, an existing one needs nothing.
+        // Resolved here rather than injected so every driver's constructor
+        // does not have to learn about it.
+        app(SiteRootLock::class)->ensureDirectory(
+            $application,
+            $application->panelPath(),
             ['feature' => 'application', 'op' => 'ensure_panel_dir', 'application' => $application->id],
         );
     }

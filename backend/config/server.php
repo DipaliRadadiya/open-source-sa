@@ -62,6 +62,7 @@ use App\Services\Server\Doctor\Checks\PhpIsolationCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
 use App\Services\Server\Doctor\Checks\QueueCheck;
 use App\Services\Server\Doctor\Checks\ServicesCheck;
+use App\Services\Server\Doctor\Checks\SiteRootLockCheck;
 use App\Services\Server\Doctor\Checks\WebServerCheck;
 use App\Services\Server\Doctor\Checks\WritablePathsCheck;
 use App\Services\Server\Php\Stacks\FpmPhpStack;
@@ -158,6 +159,10 @@ return [
             // site's own user. It reads the first bytes of a file to decide
             // what a preview may claim it is.
             'find', 'tail', 'head', 'cat', 'test', 'which', 'stat',
+            // The immutable flag on a site root — see SiteRootLock. Without it
+            // the site user can rename their root-owned site directory away
+            // (it sits in their home) and substitute their own.
+            'chattr', 'lsattr',
             // `openssl req` writes the key and certificate into /etc/ssl, and
             // `openssl x509 -enddate` reads out of /etc/letsencrypt/live —
             // both root-only. Without this, self-signed certificates cannot be
@@ -482,6 +487,7 @@ return [
             QueueCheck::class,
             DriverContentionCheck::class,
             PhpIsolationCheck::class,
+            SiteRootLockCheck::class,
             HealthEndpointCheck::class,
         ],
     ],

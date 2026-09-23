@@ -2,6 +2,7 @@
 
 return [
     'checks' => [
+        'site_root_lock' => 'Bloqueio da pasta do site',
         'php_isolation' => 'Isolamento de PHP por aplicação',
         'privilege' => 'Comandos privilegiados',
         'services' => 'Serviços',
@@ -16,6 +17,7 @@ return [
         'driver_contention' => 'Contenção de controladores',
     ],
     'fixes' => [
+        'site_root_unlocked' => 'A pasta de um site pode ser renomeada pelo próprio usuário e substituída por outra que ele controla — anulando as configurações PHP bloqueadas do site e permitindo que uma ação do painel grave fora do site. Execute `php artisan sites:resync`, que bloqueia todas as pastas de sites e aponta as que não conseguiu. "Não foi possível verificar" geralmente significa que o sistema de arquivos não suporta o atributo imutável (ZFS, alguns contêineres); um site ainda desbloqueado após a ressincronização tem uma pasta que não parece a criada pelo painel — examine-a antes de confiar nela.',
         'php_pool_orphaned' => 'Um pool do PHP-FPM indica uma conta Linux que já não existe — normalmente um site eliminado antes do seu pool, cujo utilizador foi depois removido. O PHP-FPM não arranca com ele, por isso todos os novos sites PHP falham o aprovisionamento e levam a culpa. Elimine os ficheiros de pool listados, execute `php-fpm -t` e reinicie o php-fpm.',
         'php_isolation_missing' => 'Um site que o painel julga isolado não tem ficheiro de pool. Continua a ser servido pelo pool partilhado, como www-data e sem nenhuma das suas definições. Abra o ecrã de PHP do site e isole-o de novo.',
         'php_isolation_unknown' => 'O painel não conseguiu verificar se esses sites ainda têm o arquivo de pool do PHP, portanto o isolamento deles não foi verificado. Execute `sudo php artisan panel:sudoers` no servidor para atualizar a permissão do sudo; veja a verificação de privilégios.',

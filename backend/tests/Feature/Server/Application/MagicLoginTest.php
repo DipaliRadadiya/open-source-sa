@@ -302,3 +302,23 @@ it('is offered on wordpress and on nothing else', function () {
         expect($this->application->fresh()->supports('app_magic_login'))->toBeFalse();
     }
 });
+
+it('writes the loader as the site user, never as root', function () {
+    // `wp-content` belongs to the site user, and so does every name in it. As
+    // root, `install -d` + `tee` + `chown` followed whatever `mu-plugins` or
+    // the loader's own name pointed at — this button became a way to have
+    // root write a file anywhere and hand it to the user (2026-09-23).
+    fakeWpCli(admins());
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/magic-login", ['wp_user_id' => 1])
+        ->assertStatus(201);
+
+    $touchesLoader = fn ($process): bool => str_contains(implode(' ', (array) $process->command), 'mu-plugins');
+
+    Process::assertRan(fn ($process) => $touchesLoader($process)
+        && array_slice((array) $process->command, 0, 4) === ['runuser', '-u', 'wpuser', '--']);
+
+    Process::assertNotRan(fn ($process) => $touchesLoader($process)
+        && ((array) $process->command)[0] !== 'runuser');
+});

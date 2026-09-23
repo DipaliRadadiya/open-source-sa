@@ -45,6 +45,13 @@ function fakeSite(): void
 {
     Process::fake(function ($process) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        // A `.env` beside the code is handled as the site user — the fake acts
+        // on the command under the `runuser -u <user> --` prefix.
+        if (($args[0] ?? '') === 'runuser') {
+            $args = array_slice($args, 4);
+        }
+
         [$binary] = $args;
 
         $disk = test()->disk;
@@ -318,6 +325,10 @@ describe('which file the screen opens', function () {
         $paths = new ArrayObject;
         Process::fake(function ($process) use ($paths, $beside) {
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'runuser') {
+                $args = array_slice($args, 4);
+            }
 
             if (($args[0] ?? '') === 'tee') {
                 $paths[] = (string) ($args[1] ?? '');

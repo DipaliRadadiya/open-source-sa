@@ -46,6 +46,7 @@ class ApplicationLogDirectory
     public function __construct(
         private ServerOps $serverOps,
         private WebServerManager $webServers,
+        private SiteRootLock $rootLock,
     ) {}
 
     /**
@@ -66,22 +67,25 @@ class ApplicationLogDirectory
         $directory = $application->logsPath();
         $group = $application->systemUser->username;
 
+        $context = [
+            'feature' => 'application',
+            'op' => 'log_dir',
+            'application' => $application->id,
+            'path' => $directory,
+        ];
+
+        // Created with the site root's immutable flag lifted when it is
+        // missing — `logs` is an entry of that directory ({@see SiteRootLock}).
+        // Ownership and mode below change the directory itself, not the site
+        // root, so they need nothing lifted.
+        $this->rootLock->ensureDirectory($application, $directory, $context);
+
         foreach ([
-            ['mkdir', '-p', $directory],
             // root owns it; the site's group can read and traverse.
             ['chown', "root:{$group}", $directory],
             ['chmod', '0750', $directory],
         ] as $command) {
-            $this->serverOps->run(
-                $command,
-                [
-                    'feature' => 'application',
-                    'op' => 'log_dir',
-                    'application' => $application->id,
-                    'path' => $directory,
-                ],
-                timeout: 15,
-            );
+            $this->serverOps->run($command, $context, timeout: 15);
         }
 
         return $this->admitLogWriter($application, $group);

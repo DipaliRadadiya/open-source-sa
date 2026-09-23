@@ -5,6 +5,7 @@ namespace App\Services\Server\Applications;
 use App\Exceptions\Server\Application\EnvironmentOperationException;
 use App\Models\Application;
 use App\Services\Server\ServerOps;
+use App\Services\Server\ServerOpsResult;
 use RuntimeException;
 
 /**
@@ -50,6 +51,7 @@ class ApplicationEnvironment
     public function __construct(
         private ServerOps $serverOps,
         private ApplicationProvisioner $provisioner,
+        private SiteRootLock $rootLock,
     ) {}
 
     /**
@@ -128,7 +130,7 @@ class ApplicationEnvironment
      */
     private function present(Application $application, string $path, string $op): bool
     {
-        $result = $this->serverOps->run(
+        $result = $this->run($application,
             ['test', '-f', $path],
             $this->context($application, $op),
             timeout: 15,
@@ -169,16 +171,18 @@ class ApplicationEnvironment
             return;
         }
 
-        $this->serverOps->run(
+        // The legacy file is at the top of the site root, so moving it out is
+        // a change to that directory — see mutate().
+        $this->rootLock->unlocked($application, fn () => $this->serverOps->run(
             ['mv', $legacy, $current],
             $this->context($application, 'env_legacy_move'),
             timeout: 15,
-        );
+        ));
     }
 
     public function read(Application $application): string
     {
-        $result = $this->serverOps->run(
+        $result = $this->run($application,
             ['cat', $this->path($application)],
             $this->context($application, 'env_read'),
             timeout: 30,
@@ -210,8 +214,13 @@ class ApplicationEnvironment
             throw new RuntimeException('the environment file is too large');
         }
 
+        return $this->mutate($application, fn (): ?string => $this->replace($application, $contents));
+    }
+
+    private function replace(Application $application, string $contents): ?string
+    {
         $path = $this->path($application);
-        $user = $application->systemUser?->username;
+        $user = $this->asUser($application) ? null : $application->systemUser?->username;
 
         $backup = $this->exists($application) ? $this->backup($application) : null;
 
@@ -220,7 +229,7 @@ class ApplicationEnvironment
         // in it being wrong.
         $temporary = $path.'.panel-tmp';
 
-        $written = $this->serverOps->run(
+        $written = $this->run($application,
             ['tee', $temporary],
             $this->context($application, 'env_write'),
             timeout: 30,
@@ -234,15 +243,15 @@ class ApplicationEnvironment
         // Ownership and mode before the rename, so the file is never briefly
         // in place while readable by anyone else.
         if ($user !== null) {
-            $this->serverOps->run(['chown', $user.':'.$user, $temporary], $this->context($application, 'env_chown'), timeout: 15);
+            $this->run($application, ['chown', $user.':'.$user, $temporary], $this->context($application, 'env_chown'), timeout: 15);
         }
 
-        $this->serverOps->run(['chmod', '0600', $temporary], $this->context($application, 'env_chmod'), timeout: 15);
+        $this->run($application, ['chmod', '0600', $temporary], $this->context($application, 'env_chmod'), timeout: 15);
 
-        $moved = $this->serverOps->run(['mv', $temporary, $path], $this->context($application, 'env_swap'), timeout: 15);
+        $moved = $this->run($application, ['mv', $temporary, $path], $this->context($application, 'env_swap'), timeout: 15);
 
         if ($moved->failed()) {
-            $this->serverOps->run(['rm', '-f', $temporary], $this->context($application, 'env_cleanup'), timeout: 15);
+            $this->run($application, ['rm', '-f', $temporary], $this->context($application, 'env_cleanup'), timeout: 15);
 
             throw new RuntimeException('the environment file could not be replaced');
         }
@@ -257,7 +266,7 @@ class ApplicationEnvironment
      */
     public function backups(Application $application): array
     {
-        $result = $this->serverOps->run(
+        $result = $this->run($application,
             ['find', dirname($this->path($application)), '-maxdepth', '1', '-name', '.env.bak-*', '-printf', '%f\n'],
             $this->context($application, 'env_backups'),
             timeout: 15,
@@ -299,7 +308,7 @@ class ApplicationEnvironment
         $directory = dirname($this->path($application));
         $source = $directory.'/'.$name;
 
-        $exists = $this->serverOps->run(['test', '-f', $source], $this->context($application, 'env_backup_exists'), timeout: 15);
+        $exists = $this->run($application, ['test', '-f', $source], $this->context($application, 'env_backup_exists'), timeout: 15);
 
         if ($exists->failed()) {
             throw new RuntimeException('that backup no longer exists');
@@ -337,7 +346,7 @@ class ApplicationEnvironment
         $path = $this->path($application);
         $name = $this->unusedBackupName($application);
 
-        $copied = $this->serverOps->run(
+        $copied = $this->run($application,
             ['cp', '-p', $path, dirname($path).'/'.$name],
             $this->context($application, 'env_backup'),
             timeout: 15,
@@ -390,7 +399,7 @@ class ApplicationEnvironment
         $surplus = array_slice($this->backups($application), self::KEEP_BACKUPS);
 
         foreach ($surplus as $backup) {
-            $this->serverOps->run(
+            $this->run($application,
                 ['rm', '-f', dirname($this->path($application)).'/'.$backup['name']],
                 $this->context($application, 'env_backup_prune'),
                 timeout: 15,
@@ -400,7 +409,7 @@ class ApplicationEnvironment
 
     private function readFile(Application $application, string $path): string
     {
-        $result = $this->serverOps->run(['cat', $path], $this->context($application, 'env_read_backup'), timeout: 30);
+        $result = $this->run($application, ['cat', $path], $this->context($application, 'env_read_backup'), timeout: 30);
 
         if ($result->failed()) {
             throw new RuntimeException('that backup could not be read');
@@ -420,6 +429,60 @@ class ApplicationEnvironment
         }
 
         return "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}:{$m[5]}:{$m[6]}";
+    }
+
+    /**
+     * Whether the `.env` lives in a directory the site's user owns.
+     *
+     * Two homes, two rules. At the top of the site root the directory is
+     * root's and immutable ({@see SiteRootLock}): nothing the user controls is
+     * on the path, so root may write there — with the flag lifted, since a save
+     * renames a file into it. Anywhere else it is beside the code, inside
+     * `public_html`, a directory the user owns and can fill with symlinks; root
+     * following one of those wrote and chowned whatever it pointed at, and read
+     * it back into this editor. There every command runs as the user, so a
+     * planted link reaches only what the user could already touch.
+     */
+    private function asUser(Application $application): bool
+    {
+        // Not `path()`: resolving the path is itself a `test -f`, which comes
+        // back through here, and asking for the path from inside its own
+        // resolution recurses forever. Until it is resolved the only command
+        // run is that one existence test, as before.
+        $path = $this->resolved[$application->id] ?? null;
+
+        return $path !== null
+            && $application->systemUser !== null
+            && dirname($path) !== rtrim($application->rootPath(), '/');
+    }
+
+    /**
+     * A save, restore or backup: the flag lifted when the file is at the top
+     * of the site root, nothing to lift when it is not.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $operation
+     * @return T
+     */
+    private function mutate(Application $application, callable $operation): mixed
+    {
+        return $this->asUser($application)
+            ? $operation()
+            : $this->rootLock->unlocked($application, $operation);
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     * @param  array<string, mixed>  $context
+     */
+    private function run(Application $application, array $command, array $context, int $timeout = 60, ?string $input = null): ServerOpsResult
+    {
+        if ($this->asUser($application)) {
+            $command = ['runuser', '-u', $application->systemUser->username, '--', ...$command];
+        }
+
+        return $this->serverOps->run($command, $context, timeout: $timeout, input: $input);
     }
 
     /**

@@ -13,6 +13,7 @@ use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 
 /**
@@ -40,6 +41,7 @@ class ApplicationProvisioner
         private PoolManager $pools,
         private ApplicationArtifacts $artifacts,
         private HttpReadinessCheck $readiness,
+        private SiteRootLock $rootLock,
     ) {}
 
     /**
@@ -143,6 +145,36 @@ class ApplicationProvisioner
      * @throws ProvisioningFailedException
      */
     public function provision(Application $application, bool $skipInstaller = false): array
+    {
+        // Provisioning is the one job that builds the top level of the site
+        // root — public_html, .panel, logs, the .env, an installer's data
+        // directory — so the immutable flag is off for all of it: a Retry Setup
+        // on a site that was locked would otherwise fail its first mkdir.
+        // Locked again whatever happens, success or failure, so a setup that
+        // dies halfway does not leave the site root renamable by its user.
+        // {@see SiteRootLock}
+        $this->rootLock->unlock($application);
+
+        try {
+            return $this->runProvisioning($application, $skipInstaller);
+        } finally {
+            $locked = $this->rootLock->lock($application);
+
+            if (! in_array($locked, [SiteRootLock::LOCKED, SiteRootLock::UNSUPPORTED, SiteRootLock::MISSING], true)) {
+                Log::channel('server-ops')->warning('site root not locked after provisioning', [
+                    'application' => $application->id,
+                    'result' => $locked,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function runProvisioning(Application $application, bool $skipInstaller): array
     {
         $driver = $this->webServers->driver();
         $user = $application->systemUser;
@@ -464,6 +496,12 @@ class ApplicationProvisioner
      */
     public function deprovision(Application $application, bool $removeFiles = false): void
     {
+        // Off for good, whether the files go or stay: `rm -rf` cannot remove an
+        // immutable directory, and files left to the user must be the user's
+        // to tidy up — an immutable directory in their home that nothing
+        // manages any more is one they could never delete.
+        $this->rootLock->unlock($application);
+
         // The process first: a unit left running holds its port and keeps
         // serving traffic for a site the panel has stopped listing.
         $this->supervisor->remove($application);

@@ -2,6 +2,7 @@
 
 return [
     'checks' => [
+        'site_root_lock' => 'Verrouillage du dossier du site',
         'php_isolation' => 'Isolation PHP par application',
         'privilege' => 'Commandes privilégiées',
         'services' => 'Services',
@@ -16,6 +17,7 @@ return [
         'driver_contention' => 'Contention des pilotes',
     ],
     'fixes' => [
+        'site_root_unlocked' => 'Le dossier d\'un site peut être renommé par son propre utilisateur et remplacé par un dossier qu\'il contrôle — ce qui contourne les réglages PHP verrouillés du site et permet à une action du panneau d\'écrire hors du site. Exécutez `php artisan sites:resync`, qui verrouille tous les dossiers de sites et signale ceux qu\'il n\'a pas pu verrouiller. « Impossible à vérifier » signifie généralement que le système de fichiers ne gère pas l\'attribut immuable (ZFS, certains conteneurs) ; un site encore non verrouillé après la resynchronisation a un dossier qui ne ressemble pas à celui créé par le panneau — examinez-le avant de lui faire confiance.',
         'php_pool_orphaned' => 'Un pool PHP-FPM désigne un compte Linux qui n\'existe plus — en général un site supprimé avant son pool, dont l\'utilisateur a ensuite été effacé. PHP-FPM refuse de démarrer avec lui : tout nouveau site PHP échoue au provisionnement et en porte le blâme. Supprimez les fichiers de pool listés, puis lancez `php-fpm -t` et redémarrez php-fpm.',
         'php_isolation_missing' => 'Un site que le panneau croit isolé n\'a pas de fichier de pool. Il est toujours servi depuis le pool partagé, en www-data, sans aucun de ses réglages. Ouvrez l\'écran PHP du site et isolez-le à nouveau.',
         'php_isolation_unknown' => 'Le panneau n’a pas pu vérifier si ces sites ont toujours leur fichier de pool PHP ; leur isolation n’a donc pas été vérifiée. Lancez `sudo php artisan panel:sudoers` sur le serveur pour actualiser l’autorisation sudo ; voir la vérification des privilèges.',
