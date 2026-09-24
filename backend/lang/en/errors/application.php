@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'compose_port_ambiguous' => 'This compose file publishes more than one port, so the panel cannot tell which one serves the site. Set Container port to the port inside the container that should be proxied.',
     'compose_unparsable' => 'Docker could not read this compose file. Check the indentation and quoting — the error from Docker itself is in the server operations log.',
     'compose_no_services' => 'This compose file defines no services, so there would be nothing to run.',
     'compose_bind_outside' => 'Service :service mounts :path, which is outside this application\'s own directory. A container may only mount its own files.',

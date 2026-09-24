@@ -105,6 +105,32 @@ class ContainerSupervisor
                 throw new ProvisioningFailedException('compose_invalid', '', implode(' ', $verdict['errors']));
             }
 
+            // The port nginx proxies to comes out of the file, not out of the
+            // allocator. With a generated compose the panel chooses the port
+            // and writes it in; with a pasted one the user has already chosen,
+            // and proxying to the allocated port instead points nginx at
+            // nothing — the container listens where the file says.
+            //
+            // Recorded on the application so the vhost and the container
+            // cannot disagree, which is the same rule the unit file and the
+            // Environment screen had to learn about naming one `.env`.
+            $port = $this->validator->publishedPort(
+                $verdict['resolved'] ?? [],
+                $application->container_port ? (int) $application->container_port : null,
+            );
+
+            if ($port === null) {
+                throw new ProvisioningFailedException(
+                    'compose_no_port',
+                    '',
+                    __('errors/application.compose_port_ambiguous'),
+                );
+            }
+
+            if ($application->app_port !== $port) {
+                $application->forceFill(['app_port' => $port])->save();
+            }
+
             return $compose;
         }
 

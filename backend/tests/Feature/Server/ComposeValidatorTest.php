@@ -199,3 +199,41 @@ it('translates every refusal in every locale', function () {
         }
     }
 });
+
+it('finds the published port when there is only one', function () {
+    // The panel cannot allocate this. With a pasted file the user has already
+    // chosen, and proxying to the port the panel wished for points nginx at
+    // nothing.
+    $resolved = ['services' => ['app' => [
+        'ports' => [['host_ip' => '127.0.0.1', 'published' => '3001', 'target' => 3001]],
+    ]]];
+
+    expect((new ComposeValidator(composeOps([])))->publishedPort($resolved))->toBe(3001);
+});
+
+it('uses the container port to disambiguate several published ports', function () {
+    // An application and its metrics endpoint is a legitimate file. The field
+    // the user already has names the port INSIDE the container, which is the
+    // number they know.
+    $resolved = ['services' => ['app' => [
+        'ports' => [
+            ['host_ip' => '127.0.0.1', 'published' => '9100', 'target' => 9100],
+            ['host_ip' => '127.0.0.1', 'published' => '3001', 'target' => 3001],
+        ],
+    ]]];
+
+    $validator = new ComposeValidator(composeOps([]));
+
+    expect($validator->publishedPort($resolved, 3001))->toBe(3001)
+        ->and($validator->publishedPort($resolved, 9100))->toBe(9100)
+        // And gives up rather than guessing, so the caller can ask.
+        ->and($validator->publishedPort($resolved))->toBeNull();
+});
+
+it('reports no port when the file publishes none', function () {
+    // A worker or a queue is a legitimate container with nothing to proxy to.
+    // Distinguished from ambiguity so the caller can say the right thing.
+    $resolved = ['services' => ['worker' => ['image' => 'busybox']]];
+
+    expect((new ComposeValidator(composeOps([])))->publishedPort($resolved))->toBeNull();
+});

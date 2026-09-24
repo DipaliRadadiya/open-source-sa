@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'compose_port_ambiguous' => 'Ce fichier compose publie plusieurs ports : le panel ne peut pas savoir lequel sert le site. Renseignez « Port du conteneur » avec le port interne à mandater.',
     'compose_unparsable' => 'Docker n\'a pas pu lire ce fichier compose. Vérifiez l\'indentation et les guillemets ; l\'erreur de Docker figure dans le journal des opérations serveur.',
     'compose_no_services' => 'Ce fichier compose ne définit aucun service : il n\'y aurait rien à exécuter.',
     'compose_bind_outside' => 'Le service :service monte :path, hors du répertoire propre à cette application. Un conteneur ne peut monter que ses propres fichiers.',

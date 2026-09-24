@@ -92,18 +92,27 @@ class DockerSiteType extends AbstractSiteType
     public function fields(): array
     {
         return [
-            $this->field('image', 'text', required: true, extra: [
+            // Required only when there is no compose file. A pasted compose
+            // names its own images — asking for one as well is asking the
+            // same question twice and refusing an answer the user already
+            // gave.
+            $this->field('image', 'text', extra: [
                 'placeholder' => 'nginx:1.27-alpine',
                 'help' => __('application.help.image'),
+                'required_without' => 'compose',
             ]),
 
             // The port *inside* the container. The published port on the host
             // is allocated by the panel and is not the user's to choose —
             // picking it would let two applications collide, and picking 80
             // would collide with the web server itself.
-            $this->field('container_port', 'number', required: true, extra: [
+            // Same, and for a second reason: with a compose file the panel
+            // reads the published port out of the resolved document instead,
+            // so asking would let the two disagree.
+            $this->field('container_port', 'number', extra: [
                 'default' => 80,
                 'help' => __('application.help.container_port'),
+                'required_without' => 'compose',
             ]),
 
             // Paste your own, and everything compose supports is supported.
@@ -133,8 +142,8 @@ class DockerSiteType extends AbstractSiteType
             // legal, and a regex tight enough to be useful here is tight
             // enough to reject something real. What is refused is whitespace
             // and shell metacharacters, because the value reaches a command.
-            'image' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9][A-Za-z0-9._\/:@-]*$/'],
-            'container_port' => ['required', 'integer', 'min:1', 'max:65535'],
+            'image' => ['required_without:compose', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9][A-Za-z0-9._\/:@-]*$/'],
+            'container_port' => ['required_without:compose', 'nullable', 'integer', 'min:1', 'max:65535'],
             // Bounded, because it reaches a parser and then a file. 128 KB is
             // far past any real compose file and far short of a problem.
             'compose' => ['nullable', 'string', 'max:131072'],

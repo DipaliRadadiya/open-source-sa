@@ -107,6 +107,56 @@ class ComposeValidator
     }
 
     /**
+     * The host port nginx should proxy to, from a resolved compose document.
+     *
+     * The panel cannot allocate this one. With a generated file the panel
+     * picks the port and writes it in; with a pasted file the user has
+     * already chosen, and proxying to a port the panel allocated instead
+     * would point nginx at nothing — the container is listening where the
+     * compose file says, not where the panel wished.
+     *
+     * One published port is unambiguous. Several is legitimate — an
+     * application and its metrics endpoint — and then `container_port`
+     * disambiguates by naming the port *inside* the container, which is the
+     * number the user knows. Only when neither settles it does this give up,
+     * and the caller turns that into a message asking for the container port
+     * rather than guessing.
+     *
+     * @param  array<string, mixed>  $resolved
+     */
+    public function publishedPort(array $resolved, ?int $containerPort = null): ?int
+    {
+        $published = [];
+
+        foreach (($resolved['services'] ?? []) as $service) {
+            foreach ((array) ($service['ports'] ?? []) as $port) {
+                if (is_array($port) && isset($port['published'])) {
+                    $published[] = [
+                        'host' => (int) $port['published'],
+                        'target' => (int) ($port['target'] ?? 0),
+                    ];
+                }
+            }
+        }
+
+        if ($published === []) {
+            return null;
+        }
+
+        if (count($published) === 1) {
+            return $published[0]['host'];
+        }
+
+        foreach ($published as $entry) {
+            if ($containerPort !== null && $entry['target'] === $containerPort) {
+                return $entry['host'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Bind mounts must stay inside the application's own directory.
      *
      * The check is on the *resolved* path, and that matters: `source` may be
