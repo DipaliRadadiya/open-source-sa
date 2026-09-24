@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Select,
   SelectContent,
@@ -73,6 +74,12 @@ export function LogToolbar({
   clearing = false,
   busy,
   disabled,
+  // A read that failed says "try again"; Reload is how, so it stays usable
+  // while everything that needs lines on screen is disabled.
+  reloadable = false,
+  // Why Reload is off when it is: the log is locked or gone, which is what
+  // the viewer's own box says.
+  reloadReason = null,
   searchRef,
   tailState = "idle",
   onResume,
@@ -365,12 +372,14 @@ export function LogToolbar({
               onClick={onCopyVisible}
               disabled={disabled}
             />
-            <IconAction
-              icon={RotateCw}
-              label={t("reload")}
-              onClick={onReload}
-              disabled={disabled}
-            />
+            <ReasonTooltip reason={disabled && !reloadable ? reloadReason : null} className="inline-flex h-full">
+              <IconAction
+                icon={RotateCw}
+                label={t("reload")}
+                onClick={onReload}
+                disabled={disabled && !reloadable}
+              />
+            </ReasonTooltip>
             {showDownload ? (
               <IconAction
                 icon={Download}

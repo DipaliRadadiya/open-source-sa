@@ -1,5 +1,6 @@
 import { serverFetch } from "@/lib/api/server-fetch";
 import { logReadResponseSchema } from "@/lib/schemas/log";
+import { failedRead } from "@/lib/logs/failed-read";
 
 /**
  * GET /api/logs/{key} — first screen of a source, rendered server-side so the
@@ -19,7 +20,7 @@ export async function getLog(key, { lines = 200 } = {}) {
 
     if (res.status === 403) return { status: "locked", log: null };
     if (res.status === 404) return { status: "missing", log: null };
-    if (!res.ok) return { status: "failed", log: null };
+    if (!res.ok) return failedRead(res);
 
     const parsed = logReadResponseSchema.safeParse(await res.json());
     return parsed.success

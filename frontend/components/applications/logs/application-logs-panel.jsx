@@ -78,6 +78,13 @@ export function ApplicationLogsPanel({
 
   const [lines, setLines] = useState(initial?.log?.lines ?? []);
   const [status, setStatus] = useState(initial?.status ?? "ok");
+  const [failedMessage, setFailedMessage] = useState(initial?.message ?? null);
+  // Read inside `load`'s catch: a first read that fails shows its box, a
+  // reload of lines already on screen keeps them and says so in a toast.
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
   const [truncated, setTruncated] = useState(Boolean(initial?.log?.truncated));
   // Only meaningful while filtering: the API sets it when the search covered
   // just the tail of the file, which is what makes an empty result honest.
@@ -143,6 +150,7 @@ export function ApplicationLogsPanel({
         setTruncated(Boolean(data?.log?.truncated));
         setSearchCapped(Boolean(data?.log?.search_window_capped));
         setStatus("ok");
+        setFailedMessage(null);
         return true;
       } catch (error) {
         // Cancelled by a newer read (a search, a reload), not a failure: `null`
@@ -152,10 +160,13 @@ export function ApplicationLogsPanel({
         if (code === 403) setStatus("locked");
         else if (code === 404) setStatus("missing");
         else {
-          // A tab whose first read failed has nothing to show but the failure;
-          // a reload of lines already on screen keeps them and says so.
-          setStatus((now) => (now === "loading" ? "failed" : now));
-          if (!silent) toast.error(apiMessage(error, t("loadFailed")));
+          // A tab whose first read failed has nothing to show but the failure,
+          // in the server's words; a reload of lines already on screen keeps
+          // them and says so.
+          if (statusRef.current === "loading") {
+            setStatus("failed");
+            setFailedMessage(apiMessage(error, null) || null);
+          } else if (!silent) toast.error(apiMessage(error, t("loadFailed")));
         }
         return false;
       } finally {
@@ -295,6 +306,7 @@ export function ApplicationLogsPanel({
       setTruncated(false);
       setSearchCapped(false);
       setStatus("loading");
+      setFailedMessage(null);
       const url = new URL(window.location.href);
       url.searchParams.set("source", key);
       window.history.replaceState(window.history.state, "", url);
@@ -366,6 +378,8 @@ export function ApplicationLogsPanel({
           clearing={clearing}
           busy={busy}
           disabled={disabled}
+          reloadable={status === "failed"}
+          reloadReason={status === "locked" ? t("locked.title") : status === "missing" ? t("missing.title") : null}
           searchRef={searchRef}
           tailState={effectiveTail}
           onResume={() => {
@@ -408,6 +422,7 @@ export function ApplicationLogsPanel({
           newestFirst={newestFirst}
           status={status}
           loadingText={t("loadingSource", { label: source?.label ?? current })}
+          failedMessage={failedMessage}
           following={follow}
           onCopyLine={(text) => copy(text, t("copiedLine"))}
         />
