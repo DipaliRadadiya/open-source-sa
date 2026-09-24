@@ -119,8 +119,14 @@ class PgsqlEngine implements DatabaseEngine
         // `rolcanlogin` — a role that cannot log in is a group, not an account,
         // and listing it as a database user on a migrated server invites
         // someone to hand it a password it will never use.
+        //
+        // Not `rolsuper` either. That is `postgres` and the panel's own
+        // `panel_*` connection account, and both were offered as users of
+        // every site database (2026-09-24): adopted, they could be renamed or
+        // dropped from the Databases screen, and dropping the panel's account
+        // ends its PostgreSQL management. A superuser belongs to no one site.
         $result = $this->run(
-            'SELECT rolname FROM pg_roles WHERE rolcanlogin = true ORDER BY rolname;'
+            'SELECT rolname FROM pg_roles WHERE rolcanlogin = true AND rolsuper = false ORDER BY rolname;'
         );
 
         if ($result->failed()) {
@@ -169,21 +175,33 @@ class PgsqlEngine implements DatabaseEngine
     }
 
     /**
-     * The databases an account can actually connect to.
+     * The databases that are an account's own: owned by it, or granted to it
+     * by name.
      *
-     * `has_database_privilege` rather than parsing an ACL column: the answer
-     * accounts for roles the account is a member of, which a literal reading of
-     * `datacl` does not.
+     * Not "can connect to". PostgreSQL grants CONNECT to PUBLIC by default, so
+     * that question answers "all of them" for every login role. The price of
+     * asking this one instead is that a grant received only through a group
+     * role is not seen; a user missing from the offer is added by hand, a user
+     * offered for the wrong site is the mistake that matters.
      *
      * @return array<int, string>
      */
     private function reachableDatabases(string $username): array
     {
+        // Databases the role owns or was granted something on by name — not
+        // every database it can CONNECT to. CONNECT is granted to PUBLIC by
+        // default, so that test matched every login role to every database,
+        // and Server Sync offered each site's user as a user of every other
+        // site (measured 2026-09-24). Ownership and an explicit grant in
+        // `datacl` are the two facts that say a database is this role's.
         $result = $this->run(sprintf(
-            'SELECT datname FROM pg_database WHERE datistemplate = false AND datallowconn = true '
-            .'AND has_database_privilege(%s, datname, %s) ORDER BY datname;',
+            'SELECT d.datname FROM pg_database d '
+            .'WHERE d.datistemplate = false AND d.datallowconn = true '
+            .'AND (d.datdba = (SELECT oid FROM pg_roles WHERE rolname = %1$s) '
+            .'OR EXISTS (SELECT 1 FROM aclexplode(d.datacl) a '
+            .'WHERE a.grantee = (SELECT oid FROM pg_roles WHERE rolname = %1$s))) '
+            .'ORDER BY d.datname;',
             $this->literal($username),
-            $this->literal('CONNECT'),
         ));
 
         if ($result->failed()) {

@@ -52,10 +52,19 @@ class CronjobDiscoverer implements Discoverable
 
         $tracked = Cronjob::query()->pluck('command', 'slug');
 
-        return array_merge(
-            $this->fromCronD($users, $tracked),
-            $this->fromUserCrontabs($users, $tracked),
-        );
+        // A job already adopted is not found again. The file check in
+        // fromCronD() only knows the panel's own file names, and an adopted
+        // job keeps its original file until its first edit, so every run
+        // offered it as new and "adopted" it again (the adopt below returns
+        // the existing row, so nothing duplicated, but the preview said
+        // otherwise). The slug is derived from the same fields on every run.
+        return array_values(array_filter(
+            array_merge(
+                $this->fromCronD($users, $tracked),
+                $this->fromUserCrontabs($users, $tracked),
+            ),
+            fn (array $item): bool => ! $tracked->has($item['attributes']['slug']),
+        ));
     }
 
     public function adopt(array $item): ?object
@@ -75,6 +84,7 @@ class CronjobDiscoverer implements Discoverable
                 // remove it. The slug names the file the panel *would* write,
                 // never the one it found, so nothing else can recover this.
                 'source_path' => $attributes['source_path'] ?? null,
+                'source_line' => $attributes['source_line'] ?? null,
                 // `name` is unique in this table. Two jobs legitimately run
                 // the same command on different schedules — a nightly backup
                 // and a midday one — and taking the command as the name made
@@ -191,9 +201,9 @@ class CronjobDiscoverer implements Discoverable
             //
             // A denied sudo exits non-zero too, and treating that as "this user
             // has no jobs" is how this reports an empty result on a server full
-            // of them. `crontab` is not in the panel's sudoers list, so today
-            // that is the *only* outcome here — said out loud rather than left
-            // to look like a clean scan that found nothing.
+            // of them — which is what an install whose sudoers predates
+            // `crontab` joining the allowlist would do. Said out loud rather
+            // than left to look like a clean scan that found nothing.
             if ($result->failed()) {
                 if (str_contains($result->errorOutput(), 'password is required')) {
                     Log::warning('crontab discovery skipped: the panel may not run crontab', [
@@ -218,6 +228,7 @@ class CronjobDiscoverer implements Discoverable
                     $expression,
                     $command,
                     ['source' => 'crontab', 'user' => $username],
+                    $line,
                 );
             }
         }
@@ -230,7 +241,7 @@ class CronjobDiscoverer implements Discoverable
      * @param  array<string, mixed>  $evidence
      * @return array<string, mixed>
      */
-    private function item($users, string $username, string $expression, string $command, array $evidence): array
+    private function item($users, string $username, string $expression, string $command, array $evidence, ?string $crontabLine = null): array
     {
         // The slug names the file the panel would write. Derived from the
         // command so re-running the sync produces the same one, and suffixed
@@ -251,11 +262,15 @@ class CronjobDiscoverer implements Discoverable
             ],
             'attributes' => [
                 'slug' => $slug,
-                // Only a cron.d job has a file of its own to reconcile against;
-                // a crontab line lives inside someone else's file and is left
-                // alone. (Reading those needs `crontab` in the panel's sudoers,
-                // which it does not have — see fromUserCrontabs.)
-                'source_path' => $evidence['source'] === 'cron.d' ? $evidence['path'] : null,
+                // Where the job came from, so the panel's first edit or delete
+                // can take the original away: a cron.d file is removed whole;
+                // a crontab line is removed from that user's crontab, which is
+                // why the exact line is kept. Leaving either made the job run
+                // twice once the panel wrote its own.
+                'source_path' => $evidence['source'] === 'cron.d'
+                    ? $evidence['path']
+                    : 'crontab:'.$username,
+                'source_line' => $crontabLine,
                 'name' => Str::limit($command, 60),
                 'username' => $username,
                 'system_user_id' => $users->get($username),

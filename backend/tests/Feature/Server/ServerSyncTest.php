@@ -628,6 +628,80 @@ describe('adopting a site', function () {
  * box this was developed against the panel's own frontend vhost is called
  * `sv-oss-app.conf`, which no amount of matching "panel" would ever catch.
  */
+/*
+ * The slug is the folder the files are in. It used to be made from the
+ * domain, so a site in /home/brown/brownsite was recorded as
+ * `brown23-172-120-87nipio`, a folder that does not exist, and its file
+ * manager, PHP settings, workers and backups all pointed at nothing. Found on
+ * a real server, 2026-09-24.
+ */
+describe('where an adopted site lives', function () {
+    beforeEach(function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        SystemUser::create(['username' => 'siteowner', 'home_path' => '/home/siteowner']);
+    });
+
+    it('names the site after the folder its files are in, not its domain', function () {
+        fakeVhosts(['legacy-vhost' => nginxVhost('brown.example.com', '/home/siteowner/brownsite/public_html')]);
+
+        runSync(SyncMode::Apply);
+
+        $application = Application::where('domain', 'brown.example.com')->firstOrFail();
+
+        expect($application->slug)->toBe('brownsite')
+            ->and($application->web_root)->toBe('/')
+            ->and($application->documentRoot())->toBe('/home/siteowner/brownsite/public_html');
+    });
+
+    it('keeps a served subdirectory as the web root', function () {
+        fakeVhosts(['legacy-vhost' => nginxVhost('craft.example.com', '/home/siteowner/craft/public_html/web')]);
+
+        runSync(SyncMode::Apply);
+
+        $application = Application::where('domain', 'craft.example.com')->firstOrFail();
+
+        expect($application->slug)->toBe('craft')
+            ->and($application->web_root)->toBe('web')
+            ->and($application->documentRoot())->toBe('/home/siteowner/craft/public_html/web');
+    });
+
+    it('does not adopt a site whose folder another site already uses', function () {
+        Application::forceCreate([
+            'system_user_id' => SystemUser::create(['username' => 'other', 'home_path' => '/home/other'])->id,
+            'name' => 'Other shop', 'slug' => 'shop', 'domain' => 'other.example.com',
+            'site_type' => 'php', 'serving_profile' => 'php', 'status' => 'active', 'web_root' => '/',
+        ]);
+        fakeVhosts(['legacy-vhost' => nginxVhost('shop.example.com', '/home/siteowner/shop/public_html')]);
+
+        $run = runSync(SyncMode::Apply);
+
+        expect(itemsWith($run, 'application', SyncAction::Skipped))->toContain('shop.example.com')
+            ->and($run->items()->where('resource_key', 'shop.example.com')->value('reason'))->toBe('folder_taken')
+            ->and(Application::where('domain', 'shop.example.com')->exists())->toBeFalse();
+    });
+
+    it('does not adopt a site served straight from its folder, with no public_html', function () {
+        fakeVhosts(['legacy-vhost' => nginxVhost('flat.example.com', '/home/siteowner/flat')]);
+
+        $run = runSync(SyncMode::Apply);
+
+        expect($run->items()->where('resource_key', 'flat.example.com')->value('reason'))->toBe('outside_panel_layout')
+            ->and(Application::where('domain', 'flat.example.com')->exists())->toBeFalse();
+    });
+
+    it('does not adopt a folder whose name cannot name a file', function () {
+        fakeVhosts(['legacy-vhost' => nginxVhost('odd.example.com', '/home/siteowner/my shop/public_html')]);
+
+        $run = runSync(SyncMode::Apply);
+
+        expect($run->items()->where('resource_key', 'odd.example.com')->value('reason'))->toBe('folder_name_unusable');
+    });
+});
+
 describe('excluding what is not a customer site', function () {
     beforeEach(function () {
         ServerCapability::create([
@@ -1372,6 +1446,32 @@ describe('discovering cronjobs', function () {
         runSync(SyncMode::Apply);
 
         expect(Cronjob::count())->toBe(1);
+    });
+
+    // The panel takes the line out of the crontab on its first edit, so it
+    // needs to know which line. Without it the job ran twice (2026-09-24).
+    it('records where a crontab job came from, down to the exact line', function () {
+        fakeCron(crontabs: ['siteowner' => "MAILTO=me@example.com\n*/5 * * * * /srv/job.sh\n"]);
+
+        runSync(SyncMode::Apply);
+
+        $job = Cronjob::firstOrFail();
+
+        expect($job->source_path)->toBe('crontab:siteowner')
+            ->and($job->source_line)->toBe('*/5 * * * * /srv/job.sh');
+    });
+
+    // Every run offered adopted jobs as new, because the file check only
+    // knew the panel's own file names (2026-09-24).
+    it('does not offer a job it has already adopted', function () {
+        fakeCron(
+            cronD: ['/etc/cron.d/legacy' => "0 3 * * * siteowner /usr/bin/php artisan backup:run\n"],
+            crontabs: ['siteowner' => "*/5 * * * * /srv/job.sh\n"],
+        );
+
+        runSync(SyncMode::Apply);
+
+        expect(itemsWith(runSync(), 'cronjob', SyncAction::Found))->toBe([]);
     });
 
     it('keeps two jobs that run the same command on different schedules', function () {

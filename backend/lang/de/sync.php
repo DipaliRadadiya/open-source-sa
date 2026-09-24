@@ -20,6 +20,8 @@ return [
         'firewall_app_profile' => 'Diese Regel nutzt ein Anwendungsprofil statt eines Ports. Die dahinterliegenden Ports können sich bei einem Paket-Update ändern; die heutigen Nummern zu importieren wäre eine Momentaufnahme, die sich als Regel ausgibt.',
         'panel_infrastructure' => 'Das ist das Panel selbst, keine Website, die es hosten kann. Absichtlich unangetastet gelassen.',
         'outside_panel_layout' => 'Diese Website ist nicht so abgelegt, wie das Panel Websites verwaltet, und kann ohne Verschieben der Dateien nicht übernommen werden. Sie wird weiterhin ausgeliefert – es wurde nichts geändert.',
+        'folder_taken' => 'Eine andere Website im Panel verwendet bereits einen Ordner mit diesem Namen. Ordnernamen müssen eindeutig sein, daher wurde diese nicht übernommen. Sie ist weiterhin erreichbar.',
+        'folder_name_unusable' => 'Der Ordnername dieser Website enthält Zeichen, die das Panel in Dateinamen nicht verwenden kann, daher wurde sie nicht übernommen. Sie ist weiterhin erreichbar.',
         'vhost_unreadable' => 'Die Webserver-Konfiguration dieser Website konnte nicht gelesen werden und blieb unangetastet.',
         'vhost_unparsed' => 'Diese Website wird ausgeliefert, aber ihre Konfiguration hat kein Format, das das Panel lesen kann. Übernimm sie von Hand oder prüfe die Datei.',
         'owner_not_tracked' => 'Das Linux-Konto, dem diese Website gehört, wird nicht vom Panel verwaltet. Synchronisiere zuerst die Systembenutzer.',

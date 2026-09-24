@@ -3650,6 +3650,12 @@ Reads a migrated server into the panel. `preview` (the default) changes nothing;
 
 `firewall_rule` is the one that has to be asked for: it is skipped unless `include_firewall: true`, because adopting a rule set is the one step here that can lock you out of the box.
 
+**What an adopted site is called (2026-09-24).** A site is adopted only if its document root is `{owner's home}/{folder}/public_html[/sub]`, and it is recorded with **`slug` = that folder** and `web_root` = the part after `public_html`. The slug used to be made from the domain, so the panel looked for the site in a folder that did not exist and its files, PHP settings, workers and backups all pointed at nothing. New skip `reason`s: `folder_taken` (another site in the panel already uses that folder name; slugs are unique) and `folder_name_unusable` (the folder name has characters the panel cannot put in a file name). A root not in that shape is `outside_panel_layout`, as before.
+
+**Database users.** MySQL/MariaDB users are now found (they never were: the account list was mis-read). PostgreSQL offers only non-superuser roles, each only for databases it **owns or was granted by name**; superusers (`postgres`, the panel's own `panel_*` account) are never offered, and PUBLIC's default CONNECT no longer makes every role look like a user of every database.
+
+**Cron jobs** already adopted are not offered again. A job adopted from a **user crontab** records `source_path: "crontab:<user>"` and the exact line; its first edit or delete removes that one line from the crontab (the rest is left as it is), so it no longer runs twice.
+
 ### POST `/server/sync`
 **Permission:** `sync` (manage) | **Throttle:** 10/min
 

@@ -20,6 +20,8 @@ return [
         'firewall_app_profile' => 'Esta regra usa um perfil de aplicação em vez de uma porta. As portas por trás podem mudar quando o pacote é atualizado, por isso importar os números de hoje seria uma fotografia a fazer-se passar pela regra.',
         'panel_infrastructure' => 'Isto é o próprio painel, não um site que ele possa alojar. Deixado intacto de propósito.',
         'outside_panel_layout' => 'Este site não está organizado da forma como o painel gere sites, por isso não pode ser adotado sem mover os seus ficheiros. Continua a ser servido — nada foi alterado.',
+        'folder_taken' => 'Outro site no painel já usa uma pasta com este nome. Os nomes de pasta precisam ser únicos, então este foi deixado como estava. Ele continua no ar.',
+        'folder_name_unusable' => 'O nome da pasta deste site contém caracteres que o painel não pode usar em nomes de arquivo, então ele foi deixado como estava. Ele continua no ar.',
         'vhost_unreadable' => 'Não foi possível ler a configuração do servidor web deste site, por isso ficou intacto.',
         'vhost_unparsed' => 'Este site está a ser servido, mas a sua configuração não tem um formato que o painel consiga ler. Adote-o manualmente ou verifique o ficheiro.',
         'owner_not_tracked' => 'A conta Linux dona deste site não é gerida pelo painel. Sincronize primeiro os utilizadores do sistema.',

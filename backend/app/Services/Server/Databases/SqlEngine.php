@@ -64,8 +64,16 @@ class SqlEngine implements DatabaseEngine
         // `mysql.user` rather than a SHOW: it is the only place that lists an
         // account with no grants at all, and an account nobody can see is
         // exactly the one worth surfacing on a migrated box.
+        //
+        // Two columns, not CONCAT(user, '\t', host). In --batch mode the
+        // client escapes a tab *inside* a value as a literal backslash-t, so
+        // the concatenated column came back as `brown_user\tlocalhost`, the
+        // split found no tab, and SHOW GRANTS ran for an account that does not
+        // exist. Every MySQL and MariaDB user was therefore found with no
+        // databases, and Server Sync never offered one. Found on a real
+        // server, 2026-09-24. Between columns the tab is a real one.
         $result = $this->run(
-            "SELECT CONCAT(user, '\t', host) FROM mysql.user WHERE user <> '';"
+            "SELECT user, host FROM mysql.user WHERE user <> '';"
         );
 
         if ($result->failed()) {

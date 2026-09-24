@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\ServerTimezone;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Process;
 
 beforeEach(function () {
@@ -511,6 +512,76 @@ it('removes the file an adopted job was imported from when it is edited', functi
     Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/legacy-backup']);
     Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/cron.d/imported-backup']);
     expect($cronjob->fresh()->source_path)->toBeNull();
+});
+
+/*
+ * A job adopted from a user's crontab lives inside a file the panel does not
+ * own. The first edit wrote the panel's copy and left the crontab line, so the
+ * job ran twice (found on a real server, 2026-09-24). Only that line goes;
+ * the rest of the crontab is the user's.
+ */
+function fakeUserCrontab(string $contents): Collection
+{
+    $ran = collect();
+
+    Process::fake(function ($process) use ($contents, $ran) {
+        $ran->push(['command' => $process->command, 'input' => (string) $process->input]);
+
+        return $process->command === ['crontab', '-l', '-u', 'deploy']
+            ? Process::result(output: $contents)
+            : Process::result();
+    });
+
+    return $ran;
+}
+
+function adoptedCrontabJob(): Cronjob
+{
+    return Cronjob::create([
+        'name' => 'Imported poller', 'slug' => 'imported-poller',
+        'source_path' => 'crontab:deploy', 'source_line' => '*/5 * * * * /srv/poll.sh',
+        'username' => 'deploy', 'command' => '/srv/poll.sh', 'expression' => '*/5 * * * *',
+    ]);
+}
+
+it('takes an adopted job\'s line out of the user crontab when it is edited, and nothing else', function () {
+    $ran = fakeUserCrontab("MAILTO=me@example.com\n*/30 * * * * /srv/keep.sh\n*/5 * * * * /srv/poll.sh\n");
+    $cronjob = adoptedCrontabJob();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/cronjobs/{$cronjob->id}", ['expression' => '*/10 * * * *'])
+        ->assertOk();
+
+    $write = $ran->first(fn (array $r) => $r['command'] === ['crontab', '-u', 'deploy', '-']);
+
+    expect($write)->not->toBeNull()
+        ->and($write['input'])->toBe("MAILTO=me@example.com\n*/30 * * * * /srv/keep.sh\n")
+        ->and($cronjob->fresh()->source_path)->toBeNull()
+        ->and($cronjob->fresh()->source_line)->toBeNull();
+
+    Process::assertRan(fn ($p) => $p->command === ['tee', '/etc/cron.d/imported-poller']);
+});
+
+it('takes the line out when an adopted crontab job is deleted', function () {
+    $ran = fakeUserCrontab("*/5 * * * * /srv/poll.sh\n");
+    $cronjob = adoptedCrontabJob();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson("/api/cronjobs/{$cronjob->id}")
+        ->assertNoContent();
+
+    expect($ran->first(fn (array $r) => $r['command'] === ['crontab', '-u', 'deploy', '-'])['input'] ?? null)->toBe('');
+});
+
+it('leaves the crontab alone when the line is no longer in it', function () {
+    $ran = fakeUserCrontab("*/30 * * * * /srv/keep.sh\n");
+    $cronjob = adoptedCrontabJob();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson("/api/cronjobs/{$cronjob->id}", ['expression' => '*/10 * * * *'])
+        ->assertOk();
+
+    expect($ran->contains(fn (array $r) => $r['command'] === ['crontab', '-u', 'deploy', '-']))->toBeFalse();
 });
 
 it('removes the imported file when an adopted job is switched off', function () {

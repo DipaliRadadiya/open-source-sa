@@ -115,7 +115,7 @@ class UpdateCronjob
                 throw new CronjobOperationException($detached->reference, step: 'detach_source');
             }
 
-            $cronjob->forceFill(['source_path' => null])->save();
+            $cronjob->forceFill(['source_path' => null, 'source_line' => null])->save();
         }
 
         $this->activityLogger->log('cronjob.updated', $cronjob, ['name' => $cronjob->name]);

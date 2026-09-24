@@ -20,6 +20,8 @@ return [
         'firewall_app_profile' => 'Cette règle utilise un profil d\'application plutôt qu\'un port. Les ports derrière peuvent changer lors d\'une mise à jour du paquet ; importer les numéros d\'aujourd\'hui serait un instantané se faisant passer pour la règle.',
         'panel_infrastructure' => 'Il s\'agit du panneau lui-même, pas d\'un site qu\'il peut héberger. Laissé de côté volontairement.',
         'outside_panel_layout' => 'Ce site n\'est pas organisé comme le panneau gère les sites ; il ne peut pas être adopté sans déplacer ses fichiers. Il continue d\'être servi — rien n\'a changé.',
+        'folder_taken' => 'Un autre site du panneau utilise déjà un dossier portant ce nom. Les noms de dossier doivent être uniques, ce site a donc été laissé tel quel. Il reste en ligne.',
+        'folder_name_unusable' => 'Le nom du dossier de ce site contient des caractères que le panneau ne peut pas utiliser dans des noms de fichier, il a donc été laissé tel quel. Il reste en ligne.',
         'vhost_unreadable' => 'La configuration du serveur web de ce site n\'a pas pu être lue ; il a été laissé tel quel.',
         'vhost_unparsed' => 'Ce site est servi, mais sa configuration n\'a pas une forme que le panneau sait lire. Adoptez-le à la main ou vérifiez le fichier.',
         'owner_not_tracked' => 'Le compte Linux propriétaire de ce site n\'est pas géré par le panneau. Synchronisez d\'abord les utilisateurs système.',
