@@ -391,3 +391,91 @@ it('strips OSC sequences, which would swallow the rest of a line', function () {
 
     expect(trim($out))->toBe('visible text');
 });
+
+/*
+ * The network a site joins.
+ *
+ * `external: true` is the invariant under test, and it is not cosmetic: without
+ * it Compose creates `<project>_<name>` and joins THAT, so the site comes up
+ * healthy and cannot reach the container it was deliberately put beside.
+ */
+
+it('joins the chosen network, and declares it external', function () {
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['docker_network' => 'ghost-net'])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    expect($written)->toContain('networks:')
+        ->and($written)->toContain('- ghost-net')
+        // The whole point. An `external: false` — or an absent declaration —
+        // is a second, differently-named network that resolves nothing.
+        ->and($written)->toContain('external: true');
+});
+
+it('writes the same file it always did when no network was chosen', function () {
+    // The regression that matters for every container site that already exists.
+    // A stray blank line would be harmless YAML and would still make every
+    // site's compose file "changed" on its next deploy — a diff nobody can tell
+    // from a real one.
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply(containerApp(), '/home/shop/shop/public_html');
+
+    expect($written)->not->toContain('networks:')
+        ->and($written)->not->toContain('external:');
+});
+
+it('leaves a pasted compose file alone, network or not', function () {
+    // A file that names its own networks must not have one appended: the user's
+    // file is the file. The field is for the GENERATED path only.
+    $pasted = <<<'YAML'
+    services:
+      app:
+        image: nginx:1.27-alpine
+        ports:
+          - "127.0.0.1:20001:80"
+        networks:
+          - their-own-net
+    networks:
+      their-own-net:
+        external: true
+    YAML;
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => ['app' => [
+                    'image' => 'nginx:1.27-alpine',
+                    'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']],
+                    'networks' => ['their-own-net' => null],
+                ]],
+                'networks' => ['their-own-net' => ['external' => true]],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['compose' => $pasted, 'docker_network' => 'ghost-net'])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    expect($written)->toContain('their-own-net')
+        ->and($written)->not->toContain('ghost-net');
+});

@@ -148,6 +148,11 @@ class ContainerSupervisor
             'envPath' => $application->envPath(),
             'memoryLimit' => (string) ($application->memory_limit
                 ?: config('server.docker.default_memory_limit', '512m')),
+            // Null means Docker's default bridge, which is what a site gets
+            // when nobody chose otherwise. Only reached on this branch: a
+            // pasted compose file returns above, because a file that names its
+            // own networks must not have one appended to it.
+            'network' => $application->docker_network ?: null,
         ])->render();
     }
 

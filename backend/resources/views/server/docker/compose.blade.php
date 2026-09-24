@@ -19,6 +19,17 @@ services:
     ports:
       - "127.0.0.1:{{ $appPort }}:{{ $containerPort }}"
 
+@if ($network !== null)
+    {{-- The network the site joins, when one was chosen on the Docker page.
+         The whole block — this comment included — is inside the conditional so
+         that a site without one renders the file byte-for-byte as it did
+         before this field existed. A stray blank line would be harmless YAML
+         and would still make every existing site's compose file "changed" on
+         its next deploy, which is a diff nobody can tell from a real one. --}}
+    networks:
+      - {{ $network }}
+
+@endif
     {{-- The site's own directory, and nothing above it. A bind mount is the
          one field that makes every other control cosmetic: `- /:/host` hands
          over the machine, and the site user does not have to be clever about
@@ -47,3 +58,20 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+@if ($network !== null)
+
+{{-- `external: true` is the load-bearing word.
+
+     Without it Compose does not join the network on the Docker page — it
+     CREATES one named `<project>_<network>` and joins that. The site comes up,
+     reports healthy, and cannot reach the container it was put next to,
+     because the two are on different networks that differ only by a prefix
+     nobody sees. With it, Compose looks the name up and fails loudly if it is
+     gone, which is the failure we want.
+
+     The panel is what created it, and the delete guard is what keeps it alive
+     while this file names it. --}}
+networks:
+  {{ $network }}:
+    external: true
+@endif

@@ -29,7 +29,7 @@ use Illuminate\Support\Str;
     // container; `app_port` is the loopback port on the host that nginx
     // proxies to, and conflating the two publishes a container on a port
     // another application already holds.
-    'image', 'container_port', 'memory_limit', 'compose',
+    'image', 'container_port', 'memory_limit', 'compose', 'docker_network',
     'build_command', 'deploy_script', 'start_command', 'package_manager',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
     'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'directory_size_updated_at',
