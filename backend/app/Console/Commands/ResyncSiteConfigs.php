@@ -107,7 +107,7 @@ class ResyncSiteConfigs extends Command
                 $application->name,
                 $application->id,
                 $result === SiteRootLock::UNSAFE
-                    ? 'its directory is not a root-owned directory, so it was left alone; check '.$application->rootPath()
+                    ? 'its directory is not a root-owned directory, so it was left alone; check '.$application->rootPath().' (a site server sync adopted: use Lock on the site\'s page)'
                     : 'chattr failed; see the server-ops log',
             ));
         }

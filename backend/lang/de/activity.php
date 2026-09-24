@@ -196,6 +196,7 @@ return [
     'application.php_settings_updated' => 'PHP-Einstellungen für :name aktualisiert',
     'application.basic_auth_enabled' => 'Passwortschutz für :name aktiviert',
     'application.basic_auth_disabled' => 'Passwortschutz für :name deaktiviert',
+    'application.root_locked' => 'Website-Ordner von :name gesperrt',
     'application.ai_bot_policy_updated' => 'AI-Bot-Blocker-Richtlinie für :name auf :policy gesetzt',
     'application.bot_rules_updated' => 'Eigene Bot-Regeln für :name aktualisiert (:blocked blockiert, :allowed erlaubt)',
     'application.web_root_changed' => 'Web-Root von :name auf :web_root geändert',

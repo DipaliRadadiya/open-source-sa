@@ -196,6 +196,7 @@ return [
     'application.php_settings_updated' => 'Обновил настройки PHP для :name',
     'application.basic_auth_enabled' => 'Включил защиту паролем для :name',
     'application.basic_auth_disabled' => 'Отключил защиту паролем для :name',
+    'application.root_locked' => 'Заблокировал папку сайта :name',
     'application.ai_bot_policy_updated' => 'Установил политику блокировки ИИ-ботов для :name на :policy',
     'application.bot_rules_updated' => 'Обновил пользовательские правила ботов для :name (заблокировано: :blocked, разрешено: :allowed)',
     'application.web_root_changed' => 'Изменил веб-корень :name на :web_root',

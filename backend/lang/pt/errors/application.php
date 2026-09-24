@@ -94,4 +94,16 @@ return [
     'generate_system_user_forbidden' => 'Não tem permissão para criar utilizadores do sistema, por isso não é possível gerar um novo para este site. Escolha antes um utilizador do sistema existente.',
     'system_user_conflict' => 'Escolha um utilizador do sistema novo ou um existente, não ambos.',
     'system_user_name_unavailable' => 'Não foi possível reservar um nome de utilizador do sistema para este site — não foi possível perguntar ao servidor que nomes já estão em uso. Tente novamente ou escolha um utilizador do sistema existente.',
+
+    // The Lock button for a site folder the panel did not create; see
+    // SiteRootLock::adopt(). Keyed by its result.
+    'root_lock' => [
+        'unsafe' => 'A pasta do site :path não é uma pasta normal, ou mudou durante a verificação, por isso não foi alterada. Verifique-a no servidor antes de tentar novamente.',
+        'missing' => 'A pasta do site :path não existe no servidor.',
+        'failed' => 'O servidor não conseguiu bloquear a pasta do site. Nada foi alterado. Consulte o registo do servidor para mais detalhes.',
+        'unsupported' => 'O disco deste servidor não suporta o bloqueio de pastas, por isso a pasta do site ficou como estava.',
+        'foreign_owner' => 'A pasta do site :path pertence a outra conta, não ao utilizador deste site, por isso não foi alterada. Verifique quem deve ser o proprietário antes de a bloquear.',
+        'writable' => 'Outras contas podem escrever na pasta do site :path, por isso um bloqueio não se manteria. Retire a permissão de escrita do grupo e de todos (por exemplo `chmod 755`) e tente novamente.',
+        'locks_out_user' => 'Bloquear a pasta do site :path impediria o utilizador deste site de a abrir: as permissões só lhe dão acesso como proprietário. Dê ao grupo da pasta permissão de leitura e abertura (por exemplo `chmod 750`), confirme que o utilizador pertence a esse grupo e tente novamente.',
+    ],
 ];

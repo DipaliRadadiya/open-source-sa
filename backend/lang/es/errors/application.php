@@ -94,4 +94,16 @@ return [
     'generate_system_user_forbidden' => 'No tiene permiso para crear usuarios del sistema, así que no se puede generar uno nuevo para este sitio. Elija un usuario del sistema existente.',
     'system_user_conflict' => 'Elija un usuario del sistema nuevo o uno existente, no ambos.',
     'system_user_name_unavailable' => 'No se pudo reservar un nombre de usuario del sistema para este sitio: no se pudo consultar al servidor qué nombres ya están en uso. Inténtelo de nuevo o elija un usuario del sistema existente.',
+
+    // The Lock button for a site folder the panel did not create; see
+    // SiteRootLock::adopt(). Keyed by its result.
+    'root_lock' => [
+        'unsafe' => 'La carpeta del sitio :path no es una carpeta normal, o cambió mientras se comprobaba, así que no se tocó. Revísala en el servidor antes de volver a intentarlo.',
+        'missing' => 'La carpeta del sitio :path no existe en el servidor.',
+        'failed' => 'El servidor no pudo bloquear la carpeta del sitio. No se cambió nada. Consulta el registro del servidor para más detalles.',
+        'unsupported' => 'El disco de este servidor no admite el bloqueo de carpetas, así que la carpeta del sitio se dejó como estaba.',
+        'foreign_owner' => 'La carpeta del sitio :path pertenece a otra cuenta, no al usuario de este sitio, así que no se tocó. Comprueba quién debe ser su propietario antes de bloquearla.',
+        'writable' => 'Otras cuentas pueden escribir en la carpeta del sitio :path, así que un bloqueo no se mantendría. Quita el permiso de escritura del grupo y público (por ejemplo `chmod 755`) y vuelve a intentarlo.',
+        'locks_out_user' => 'Bloquear la carpeta del sitio :path impediría que el usuario de este sitio la abra: sus permisos solo le dan acceso como propietario. Da al grupo de la carpeta permiso de lectura y apertura (por ejemplo `chmod 750`), asegúrate de que el usuario esté en ese grupo y vuelve a intentarlo.',
+    ],
 ];

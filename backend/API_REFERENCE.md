@@ -2407,6 +2407,20 @@ Returns **`405`**. There is no supported way back onto the shared pool: it means
 
 ## Application — Basic Auth (Password Protection)
 
+### GET `/applications/{application}/root-lock`
+**Permission:** `application` (view)
+
+Whether the site folder (`{home}/{slug}`) is locked against its own user: `{"root_lock": {"status": "locked|unlocked|unknown", "path": "/home/brown/brownsite"}}`. `unknown` means "could not check" (for example a filesystem with no immutable flag), not "unlocked". Every site the panel creates is locked when it is set up; `unlocked` is normally a site that **server sync adopted**, whose folder belongs to the site user.
+
+### POST `/applications/{application}/root-lock`
+**Permission:** `application` (manage) | **Throttle:** 10/min | no body
+
+The **Lock** button. Hands the folder to root (`chown -h`, owner only; the mode and every file inside are left as they are) and locks it, then returns the same shape as GET with `status: "locked"`. Already root's? It is just locked. Logged as `application.root_locked`.
+
+Show a warning before calling it: after locking, the site user can no longer add, delete or rename entries **directly in the site folder**; everything inside `public_html` works as before.
+
+Refused with **422** `{"message": "...", "code": "root_lock_request_refused"}` and nothing changed when: it is not a real folder (a symlink, or it changed while being checked), another account owns it, its group or everyone can write to it, or root ownership would lock the site user out (the user needs read+open through the folder's group). The `message` is translated and says what to fix.
+
 ### PUT `/applications/{application}/security`
 **Permission:** `app_security` (manage) | **Throttle:** 10/min
 

@@ -196,6 +196,7 @@ return [
     'application.php_settings_updated' => ':name の PHP 設定を更新しました',
     'application.basic_auth_enabled' => ':name のパスワード保護を有効にしました',
     'application.basic_auth_disabled' => ':name のパスワード保護を無効にしました',
+    'application.root_locked' => ':name のサイトフォルダーをロックしました',
     'application.ai_bot_policy_updated' => ':name のAIボットブロッカーポリシーを :policy に設定しました',
     'application.bot_rules_updated' => ':name のカスタムボットルールを更新しました（ブロック :blocked 件、許可 :allowed 件）',
     'application.web_root_changed' => ':name のウェブルートを :web_root に変更しました',

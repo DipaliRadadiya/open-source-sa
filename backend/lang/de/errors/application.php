@@ -94,4 +94,16 @@ return [
     'generate_system_user_forbidden' => 'Sie dürfen keine Systembenutzer anlegen, daher kann für diese Website kein neuer erzeugt werden. Wählen Sie stattdessen einen vorhandenen Systembenutzer.',
     'system_user_conflict' => 'Wählen Sie entweder einen neuen oder einen vorhandenen Systembenutzer, nicht beides.',
     'system_user_name_unavailable' => 'Für diese Website konnte kein Systembenutzername reserviert werden – der Server konnte nicht gefragt werden, welche Namen bereits vergeben sind. Versuchen Sie es erneut oder wählen Sie einen vorhandenen Systembenutzer.',
+
+    // The Lock button for a site folder the panel did not create; see
+    // SiteRootLock::adopt(). Keyed by its result.
+    'root_lock' => [
+        'unsafe' => 'Der Website-Ordner :path ist kein normaler Ordner oder hat sich während der Prüfung geändert und wurde daher nicht angetastet. Prüfe ihn auf dem Server, bevor du es erneut versuchst.',
+        'missing' => 'Der Website-Ordner :path existiert auf dem Server nicht.',
+        'failed' => 'Der Server konnte den Website-Ordner nicht sperren. Es wurde nichts geändert. Details stehen im Server-Log.',
+        'unsupported' => 'Das Dateisystem dieses Servers unterstützt die Ordnersperre nicht, daher wurde der Website-Ordner unverändert gelassen.',
+        'foreign_owner' => 'Der Website-Ordner :path gehört einem anderen Konto, nicht dem Benutzer dieser Website, und wurde daher nicht angetastet. Prüfe, wem er gehören sollte, bevor du ihn sperrst.',
+        'writable' => 'Andere Konten können in den Website-Ordner :path schreiben, daher würde eine Sperre nicht halten. Entferne die Schreibrechte für Gruppe und Alle (zum Beispiel `chmod 755`) und versuche es erneut.',
+        'locks_out_user' => 'Das Sperren des Website-Ordners :path würde den Benutzer dieser Website aussperren: Seine Rechte geben ihm nur als Eigentümer Zugriff. Gib der Gruppe des Ordners Lese- und Öffnungsrechte (zum Beispiel `chmod 750`), stelle sicher, dass der Benutzer in dieser Gruppe ist, und versuche es erneut.',
+    ],
 ];

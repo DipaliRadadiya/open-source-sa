@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Server\ApplicationController;
 use App\Http\Controllers\API\Server\ApplicationDomainController;
+use App\Http\Controllers\API\Server\ApplicationRootLockController;
 use App\Http\Controllers\API\Server\ApplicationSiteTypeController;
 use App\Http\Controllers\API\Server\ApplicationWebhookController;
 use App\Http\Controllers\API\Server\ApplicationWebRootController;
@@ -61,6 +62,13 @@ Route::post('/applications/{application}/enable', [ApplicationController::class,
 // because it is a server mutation — it creates a directory, rewrites the
 // vhost and reloads — and needs the throttle and the failure envelope that
 // go with one, not the plain-record semantics of `PUT /applications/{id}`.
+// The site folder's lock against its own user. A Lock button for sites that
+// server sync adopted, whose folder the panel did not create.
+Route::get('/applications/{application}/root-lock', [ApplicationRootLockController::class, 'show'])
+    ->middleware('permission:application');
+Route::post('/applications/{application}/root-lock', [ApplicationRootLockController::class, 'store'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+
 Route::put('/applications/{application}/web-root', [ApplicationWebRootController::class, 'update'])
     ->middleware(['permission:application,manage', 'throttle:10,1']);
 

@@ -94,4 +94,16 @@ return [
     'generate_system_user_forbidden' => 'You do not have permission to create system users, so a new one cannot be generated for this site. Choose an existing system user instead.',
     'system_user_conflict' => 'Choose either a new system user or an existing one, not both.',
     'system_user_name_unavailable' => 'A system username could not be reserved for this site — the server could not be asked which names are already in use. Try again, or choose an existing system user.',
+
+    // The Lock button for a site folder the panel did not create; see
+    // SiteRootLock::adopt(). Keyed by its result.
+    'root_lock' => [
+        'unsafe' => 'The site folder :path is not a plain folder, or it changed while it was being checked, so it was left alone. Check it on the server before trying again.',
+        'missing' => 'The site folder :path does not exist on the server.',
+        'failed' => 'The server could not lock the site folder. Nothing was changed. See the server log for details.',
+        'unsupported' => 'This server\'s disk does not support the folder lock, so the site folder was left as it was.',
+        'foreign_owner' => 'The site folder :path belongs to another account, not to this site\'s user, so it was left alone. Check who should own it before locking it.',
+        'writable' => 'The site folder :path can be written to by other accounts, so a lock would not hold. Remove the group and public write permission (for example `chmod 755`), then try again.',
+        'locks_out_user' => 'Locking the site folder :path would stop this site\'s user from opening it: its permissions give the user access only as its owner. Give the folder\'s group read and open permission (for example `chmod 750`) and make sure the user is in that group, then try again.',
+    ],
 ];

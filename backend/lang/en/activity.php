@@ -202,6 +202,7 @@ return [
     'application.php_settings_updated' => 'Updated the PHP settings for :name',
     'application.basic_auth_enabled' => 'Enabled password protection for :name',
     'application.basic_auth_disabled' => 'Disabled password protection for :name',
+    'application.root_locked' => 'Locked the site folder of :name',
     'application.ai_bot_policy_updated' => 'Set the AI Bot Blocker policy for :name to :policy',
     'application.bot_rules_updated' => 'Updated the custom bot rules for :name (:blocked blocked, :allowed allowed)',
     'application.web_root_changed' => 'Changed the web root of :name to :web_root',

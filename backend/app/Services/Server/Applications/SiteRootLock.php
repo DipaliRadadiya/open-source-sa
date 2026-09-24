@@ -47,6 +47,15 @@ class SiteRootLock
 
     public const FAILED = 'failed';
 
+    /** Owned by an account that is neither root nor the site's own user. */
+    public const FOREIGN_OWNER = 'foreign_owner';
+
+    /** Writable by its group or by everyone: an open lock would not hold. */
+    public const WRITABLE = 'writable';
+
+    /** Handing the directory to root would shut its own user out of it. */
+    public const LOCKS_OUT_USER = 'locks_out_user';
+
     public function __construct(private ServerOps $serverOps) {}
 
     /**
@@ -63,7 +72,7 @@ class SiteRootLock
      * `chattr` would otherwise lock the substitute. If it moved, the flag comes
      * off whatever was locked and the site is reported, not trusted.
      */
-    public function lock(Application $application): string
+    public function lock(Application $application, ?string $expectedInode = null): string
     {
         $path = $this->path($application);
 
@@ -75,6 +84,14 @@ class SiteRootLock
 
         if ($before === null) {
             return self::MISSING;
+        }
+
+        // `adopt()` hands over the inode it checked, so a directory swapped in
+        // between its chown and this stat is refused rather than locked.
+        if ($expectedInode !== null && $before['inode'] !== $expectedInode) {
+            $this->warn($application, $path, 'site root changed before it could be locked', $before);
+
+            return self::UNSAFE;
         }
 
         if (! $this->trustworthy($before)) {
@@ -99,6 +116,105 @@ class SiteRootLock
         }
 
         return self::LOCKED;
+    }
+
+    /**
+     * Bring a site root the panel did not create into the panel's layout —
+     * owned by root — and lock it. The Lock button on a site that server sync
+     * adopted.
+     *
+     * Such a root belongs to the site's user, because somebody else set the
+     * site up, and `lock()` rightly refuses a directory that is not root's: it
+     * cannot tell an adopted site from a substitute. This is where the user
+     * vouches for it, and where the checks that make that safe live:
+     *
+     *  - only ownership changes, and with `chown -h`, which never follows a
+     *    symlink. No `chmod`: it has no such option, so a root swapped for a
+     *    link at the wrong moment would have root change the mode of whatever
+     *    the link points at;
+     *  - so the mode stays as it is, and must already work with root as the
+     *    owner: the user keeps access through the directory's group, and
+     *    neither the group nor everyone else may write to it, or entries at
+     *    the top (`.panel`, `logs`) could be replaced whenever the flag is
+     *    lifted for an operation;
+     *  - the inode is compared across the chown and handed to `lock()`, so a
+     *    directory swapped in part-way is never locked;
+     *  - if the lock itself cannot be set, ownership is handed back: a root
+     *    the user can no longer write to and that is not locked either is a
+     *    change with nothing to show for it.
+     *
+     * Returns LOCKED or the reason it was left as it is.
+     */
+    public function adopt(Application $application): string
+    {
+        $path = $this->path($application);
+        $username = (string) $application->systemUser?->username;
+
+        if ($path === null || $username === '') {
+            return self::UNSAFE;
+        }
+
+        $before = $this->details($application, $path);
+
+        if ($before === null) {
+            return self::MISSING;
+        }
+
+        if ($before['type'] !== 'directory') {
+            $this->warn($application, $path, 'site root to adopt is not a directory', $before);
+
+            return self::UNSAFE;
+        }
+
+        // Already the panel's layout: nothing to hand over.
+        if ($before['owner'] === 'root') {
+            return $this->lock($application, $before['inode']);
+        }
+
+        if ($before['owner'] !== $username) {
+            return self::FOREIGN_OWNER;
+        }
+
+        $mode = $before['mode'];
+
+        if (($mode & 0o022) !== 0) {
+            return self::WRITABLE;
+        }
+
+        if (($mode & 0o050) !== 0o050 || ! $this->inGroup($application, $username, $before['group'])) {
+            return self::LOCKS_OUT_USER;
+        }
+
+        $chown = $this->serverOps->run(['chown', '-h', 'root', $path], $this->context($application, 'adopt'), timeout: 15);
+
+        if ($chown->failed()) {
+            return self::FAILED;
+        }
+
+        $after = $this->details($application, $path);
+
+        if ($after === null || $after['inode'] !== $before['inode'] || $after['type'] !== 'directory') {
+            // Belt and braces: lock() compares the same inode and would refuse
+            // this too. Checked here so the refusal comes before anything else
+            // runs against the path. Not handed back: whatever is at the path
+            // now is not what was checked, and giving an unknown root-owned
+            // entry to the site user is the one outcome worse than leaving it.
+            $this->warn($application, $path, 'site root changed while it was being adopted', $after ?? []);
+
+            return self::UNSAFE;
+        }
+
+        $locked = $this->lock($application, $before['inode']);
+
+        if ($locked === self::UNSUPPORTED || $locked === self::FAILED) {
+            $current = $this->details($application, $path);
+
+            if ($current !== null && $current['inode'] === $before['inode'] && $current['type'] === 'directory') {
+                $this->serverOps->run(['chown', '-h', $username, $path], $this->context($application, 'adopt_undo'), timeout: 15);
+            }
+        }
+
+        return $locked;
     }
 
     /**
@@ -252,6 +368,48 @@ class SiteRootLock
         }
 
         return ['type' => $parts[0], 'owner' => $parts[1], 'inode' => $parts[2]];
+    }
+
+    /**
+     * `inspect()` plus the group and mode `adopt()` has to judge. A separate
+     * read so the format every other caller (and test) relies on stays put.
+     *
+     * @return array{type: string, owner: string, group: string, mode: int, inode: string}|null
+     */
+    private function details(Application $application, string $path): ?array
+    {
+        $result = $this->serverOps->run(
+            ['stat', '-c', '%F|%U|%G|%a|%i', $path],
+            $this->context($application, 'inspect'),
+            timeout: 15,
+            expectedExitCodes: [1],
+        );
+
+        if ($result->failed()) {
+            return null;
+        }
+
+        $parts = explode('|', trim($result->output()));
+
+        if (count($parts) !== 5 || preg_match('/^[0-7]{3,4}$/', $parts[3]) !== 1) {
+            return null;
+        }
+
+        return [
+            'type' => $parts[0],
+            'owner' => $parts[1],
+            'group' => $parts[2],
+            'mode' => octdec($parts[3]) & 0o777,
+            'inode' => $parts[4],
+        ];
+    }
+
+    /** Whether the account is a member of the group, primary or supplementary. */
+    private function inGroup(Application $application, string $username, string $group): bool
+    {
+        $result = $this->serverOps->run(['id', '-nG', $username], $this->context($application, 'groups'), timeout: 15);
+
+        return $result->ok && in_array($group, preg_split('/\s+/', trim($result->output())) ?: [], true);
     }
 
     /** @param  array{type: string, owner: string, inode: string}  $stat */
