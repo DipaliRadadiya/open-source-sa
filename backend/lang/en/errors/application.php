@@ -1,6 +1,19 @@
 <?php
 
 return [
+    'compose_unparsable' => 'Docker could not read this compose file. Check the indentation and quoting — the error from Docker itself is in the server operations log.',
+    'compose_no_services' => 'This compose file defines no services, so there would be nothing to run.',
+    'compose_bind_outside' => 'Service :service mounts :path, which is outside this application\'s own directory. A container may only mount its own files.',
+    'compose_port_public' => 'Service :service publishes port :port to every address. Docker writes its own firewall rules ahead of the panel\'s, so that port would be reachable from the internet while the Firewall page shows it closed. Publish it to 127.0.0.1 and let nginx proxy to it.',
+    'compose_forbidden' => [
+        'privileged' => 'Service :service runs privileged, which gives it the whole host.',
+        'cap_add' => 'Service :service adds Linux capabilities. SYS_ADMIN alone is enough to mount the host\'s filesystems.',
+        'devices' => 'Service :service maps a host device. A raw block device is every file on that disk.',
+        'namespace' => 'Service :service shares one of the host\'s namespaces, which lets it see and signal processes outside the container.',
+        'security_opt' => 'Service :service sets security options. This is where AppArmor and seccomp get turned off.',
+        'network_mode' => 'Service :service sets a network mode. That would put it on the host\'s network, past the loopback publishing and past the firewall.',
+        'cgroup_parent' => 'Service :service sets a cgroup parent, which escapes the resource limits this server applies.',
+    ],
     'database_engine_not_used' => 'This application does not use a database.',
     'database_engine_unsupported' => 'This application cannot use that database engine. :application supports a different one.',
     'database_engine_unavailable' => 'That database engine is not running on this server. Install or start it first.',

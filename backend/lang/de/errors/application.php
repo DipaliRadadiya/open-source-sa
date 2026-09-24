@@ -1,6 +1,19 @@
 <?php
 
 return [
+    'compose_unparsable' => 'Docker konnte diese Compose-Datei nicht lesen. Prüfen Sie Einrückung und Anführungszeichen — die Meldung von Docker selbst steht im Serveroperations-Protokoll.',
+    'compose_no_services' => 'Diese Compose-Datei definiert keine Dienste, es gäbe also nichts auszuführen.',
+    'compose_bind_outside' => 'Dienst :service bindet :path ein, was außerhalb des eigenen Verzeichnisses dieser Anwendung liegt. Ein Container darf nur seine eigenen Dateien einbinden.',
+    'compose_port_public' => 'Dienst :service veröffentlicht Port :port auf allen Adressen. Docker schreibt eigene Firewall-Regeln vor denen des Panels, daher wäre dieser Port aus dem Internet erreichbar, obwohl die Firewall-Seite ihn als geschlossen anzeigt. Veröffentlichen Sie ihn auf 127.0.0.1 und lassen Sie nginx als Proxy arbeiten.',
+    'compose_forbidden' => [
+        'privileged' => 'Dienst :service läuft privilegiert, was ihm den gesamten Host gibt.',
+        'cap_add' => 'Dienst :service fügt Linux-Capabilities hinzu. SYS_ADMIN allein genügt, um die Dateisysteme des Hosts einzuhängen.',
+        'devices' => 'Dienst :service bindet ein Host-Gerät ein. Ein rohes Blockgerät ist jede Datei auf dieser Platte.',
+        'namespace' => 'Dienst :service teilt einen Namensraum des Hosts und kann damit Prozesse außerhalb des Containers sehen und ihnen Signale senden.',
+        'security_opt' => 'Dienst :service setzt Sicherheitsoptionen. Genau dort werden AppArmor und seccomp abgeschaltet.',
+        'network_mode' => 'Dienst :service setzt einen Netzwerkmodus. Das würde ihn in das Netzwerk des Hosts stellen — vorbei an der Loopback-Veröffentlichung und an der Firewall.',
+        'cgroup_parent' => 'Dienst :service setzt ein übergeordnetes cgroup und umgeht damit die Ressourcengrenzen dieses Servers.',
+    ],
     'database_engine_not_used' => 'Diese Anwendung verwendet keine Datenbank.',
     'database_engine_unsupported' => 'Diese Anwendung kann diese Datenbank-Engine nicht verwenden. :application unterstützt eine andere.',
     'database_engine_unavailable' => 'Diese Datenbank-Engine läuft auf diesem Server nicht. Installiere oder starte sie zuerst.',

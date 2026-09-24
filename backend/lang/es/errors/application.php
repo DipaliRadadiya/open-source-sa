@@ -1,6 +1,19 @@
 <?php
 
 return [
+    'compose_unparsable' => 'Docker no pudo leer este archivo compose. Revisa la indentación y las comillas; el error de Docker está en el registro de operaciones del servidor.',
+    'compose_no_services' => 'Este archivo compose no define ningún servicio, así que no habría nada que ejecutar.',
+    'compose_bind_outside' => 'El servicio :service monta :path, que está fuera del directorio propio de esta aplicación. Un contenedor solo puede montar sus propios archivos.',
+    'compose_port_public' => 'El servicio :service publica el puerto :port en todas las direcciones. Docker escribe sus propias reglas de firewall por delante de las del panel, así que ese puerto sería accesible desde internet aunque la página de Firewall lo muestre cerrado. Publícalo en 127.0.0.1 y deja que nginx haga de proxy.',
+    'compose_forbidden' => [
+        'privileged' => 'El servicio :service se ejecuta en modo privilegiado, lo que le da todo el host.',
+        'cap_add' => 'El servicio :service añade capacidades de Linux. SYS_ADMIN por sí sola basta para montar los sistemas de archivos del host.',
+        'devices' => 'El servicio :service mapea un dispositivo del host. Un dispositivo de bloque en bruto es cada archivo de ese disco.',
+        'namespace' => 'El servicio :service comparte uno de los espacios de nombres del host, lo que le permite ver y señalizar procesos fuera del contenedor.',
+        'security_opt' => 'El servicio :service establece opciones de seguridad. Ahí es donde se desactivan AppArmor y seccomp.',
+        'network_mode' => 'El servicio :service establece un modo de red. Eso lo pondría en la red del host, evitando la publicación en loopback y el firewall.',
+        'cgroup_parent' => 'El servicio :service establece un cgroup padre, lo que evade los límites de recursos que aplica este servidor.',
+    ],
     'database_engine_not_used' => 'Esta aplicación no usa una base de datos.',
     'database_engine_unsupported' => 'Esta aplicación no puede usar ese motor de base de datos. :application admite uno diferente.',
     'database_engine_unavailable' => 'Ese motor de base de datos no se está ejecutando en este servidor. Instálalo o inícialo primero.',

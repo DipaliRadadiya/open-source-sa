@@ -1,6 +1,19 @@
 <?php
 
 return [
+    'compose_unparsable' => 'Docker がこの compose ファイルを読み取れませんでした。インデントと引用符を確認してください。Docker 自身のエラーはサーバー操作ログにあります。',
+    'compose_no_services' => 'この compose ファイルにはサービスが定義されていないため、実行するものがありません。',
+    'compose_bind_outside' => 'サービス :service が :path をマウントしていますが、これはこのアプリケーション自身のディレクトリの外です。コンテナは自分のファイルのみマウントできます。',
+    'compose_port_public' => 'サービス :service がポート :port をすべてのアドレスに公開しています。Docker はパネルより前に独自のファイアウォール規則を書き込むため、ファイアウォール画面で閉じていると表示されていても、そのポートはインターネットから到達可能になります。127.0.0.1 に公開し、nginx にプロキシさせてください。',
+    'compose_forbidden' => [
+        'privileged' => 'サービス :service は特権モードで実行され、ホスト全体を掌握します。',
+        'cap_add' => 'サービス :service は Linux ケーパビリティを追加します。SYS_ADMIN だけでホストのファイルシステムをマウントできます。',
+        'devices' => 'サービス :service はホストのデバイスをマップします。生のブロックデバイスはそのディスク上の全ファイルです。',
+        'namespace' => 'サービス :service はホストの名前空間を共有し、コンテナ外のプロセスを参照・シグナル送信できます。',
+        'security_opt' => 'サービス :service はセキュリティオプションを設定します。AppArmor や seccomp を無効化する箇所です。',
+        'network_mode' => 'サービス :service はネットワークモードを設定します。ホストのネットワーク上に置かれ、ループバック公開もファイアウォールも迂回します。',
+        'cgroup_parent' => 'サービス :service は親 cgroup を設定し、このサーバーが適用するリソース制限を回避します。',
+    ],
     'database_engine_not_used' => 'このアプリケーションはデータベースを使用しません。',
     'database_engine_unsupported' => 'このアプリケーションはそのデータベースエンジンを使用できません。:application は別のものに対応しています。',
     'database_engine_unavailable' => 'そのデータベースエンジンはこのサーバーで実行されていません。先にインストールまたは起動してください。',

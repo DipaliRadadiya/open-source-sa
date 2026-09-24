@@ -28,6 +28,7 @@ class ContainerSupervisor
     public function __construct(
         private ServerOps $serverOps,
         private ManagedFile $files,
+        private ComposeValidator $validator,
     ) {}
 
     /**
@@ -56,16 +57,7 @@ class ContainerSupervisor
     {
         $path = $this->composePath($application, $documentRoot);
 
-        $rendered = View::make('server.docker.compose', [
-            'project' => $this->project($application),
-            'image' => (string) $application->image,
-            'appPort' => (int) $application->app_port,
-            'containerPort' => (int) ($application->container_port ?: 80),
-            'documentRoot' => rtrim($documentRoot, '/'),
-            'envPath' => $application->envPath(),
-            'memoryLimit' => (string) ($application->memory_limit
-                ?: config('server.docker.default_memory_limit', '512m')),
-        ])->render();
+        $rendered = $this->contents($application, $documentRoot);
 
         $context = ['feature' => 'application', 'op' => 'compose_write', 'application' => $application->id];
 
@@ -90,6 +82,42 @@ class ContainerSupervisor
         if (! $this->running($application, $documentRoot)) {
             throw new ProvisioningFailedException('container_exited', $result->reference);
         }
+    }
+
+    /**
+     * The file to write: the user's, or one built from the fields.
+     *
+     * A user-supplied file is **validated again here**, not only when it was
+     * saved. The form is not the only way a row changes — a restore, an import
+     * or a direct edit all reach this method — and a rule enforced once at the
+     * boundary is a rule that holds until something else writes the row.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function contents(Application $application, string $documentRoot): string
+    {
+        $compose = (string) $application->compose;
+
+        if (trim($compose) !== '') {
+            $verdict = $this->validator->validate($compose, $documentRoot);
+
+            if (! $verdict['ok']) {
+                throw new ProvisioningFailedException('compose_invalid', '', implode(' ', $verdict['errors']));
+            }
+
+            return $compose;
+        }
+
+        return View::make('server.docker.compose', [
+            'project' => $this->project($application),
+            'image' => (string) $application->image,
+            'appPort' => (int) $application->app_port,
+            'containerPort' => (int) ($application->container_port ?: 80),
+            'documentRoot' => rtrim($documentRoot, '/'),
+            'envPath' => $application->envPath(),
+            'memoryLimit' => (string) ($application->memory_limit
+                ?: config('server.docker.default_memory_limit', '512m')),
+        ])->render();
     }
 
     /**

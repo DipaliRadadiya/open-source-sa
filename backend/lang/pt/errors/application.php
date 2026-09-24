@@ -1,6 +1,19 @@
 <?php
 
 return [
+    'compose_unparsable' => 'O Docker não conseguiu ler este ficheiro compose. Verifique a indentação e as aspas — o erro do próprio Docker está no registo de operações do servidor.',
+    'compose_no_services' => 'Este ficheiro compose não define serviços, pelo que não haveria nada para executar.',
+    'compose_bind_outside' => 'O serviço :service monta :path, que está fora do diretório próprio desta aplicação. Um contentor só pode montar os seus próprios ficheiros.',
+    'compose_port_public' => 'O serviço :service publica a porta :port em todos os endereços. O Docker escreve as suas próprias regras de firewall antes das do painel, pelo que essa porta seria alcançável a partir da internet mesmo que a página da Firewall a mostre fechada. Publique-a em 127.0.0.1 e deixe o nginx fazer de proxy.',
+    'compose_forbidden' => [
+        'privileged' => 'O serviço :service corre em modo privilegiado, o que lhe dá o host inteiro.',
+        'cap_add' => 'O serviço :service adiciona capacidades do Linux. SYS_ADMIN por si só chega para montar os sistemas de ficheiros do host.',
+        'devices' => 'O serviço :service mapeia um dispositivo do host. Um dispositivo de blocos em bruto é cada ficheiro desse disco.',
+        'namespace' => 'O serviço :service partilha um dos namespaces do host, o que lhe permite ver e sinalizar processos fora do contentor.',
+        'security_opt' => 'O serviço :service define opções de segurança. É aí que o AppArmor e o seccomp são desligados.',
+        'network_mode' => 'O serviço :service define um modo de rede. Isso colocá-lo-ia na rede do host, contornando a publicação em loopback e a firewall.',
+        'cgroup_parent' => 'O serviço :service define um cgroup pai, escapando aos limites de recursos que este servidor aplica.',
+    ],
     'database_engine_not_used' => 'Este aplicativo não usa banco de dados.',
     'database_engine_unsupported' => 'Este aplicativo não pode usar esse mecanismo de banco de dados. :application é compatível com outro.',
     'database_engine_unavailable' => 'Esse mecanismo de banco de dados não está em execução neste servidor. Instale-o ou inicie-o primeiro.',

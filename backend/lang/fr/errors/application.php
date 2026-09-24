@@ -1,6 +1,19 @@
 <?php
 
 return [
+    'compose_unparsable' => 'Docker n\'a pas pu lire ce fichier compose. Vérifiez l\'indentation et les guillemets ; l\'erreur de Docker figure dans le journal des opérations serveur.',
+    'compose_no_services' => 'Ce fichier compose ne définit aucun service : il n\'y aurait rien à exécuter.',
+    'compose_bind_outside' => 'Le service :service monte :path, hors du répertoire propre à cette application. Un conteneur ne peut monter que ses propres fichiers.',
+    'compose_port_public' => 'Le service :service publie le port :port sur toutes les adresses. Docker écrit ses propres règles de pare-feu avant celles du panel : ce port serait joignable depuis internet alors que la page Pare-feu l\'affiche fermé. Publiez-le sur 127.0.0.1 et laissez nginx faire le proxy.',
+    'compose_forbidden' => [
+        'privileged' => 'Le service :service s\'exécute en mode privilégié, ce qui lui donne tout l\'hôte.',
+        'cap_add' => 'Le service :service ajoute des capacités Linux. SYS_ADMIN suffit à monter les systèmes de fichiers de l\'hôte.',
+        'devices' => 'Le service :service mappe un périphérique de l\'hôte. Un périphérique bloc brut, c\'est tous les fichiers de ce disque.',
+        'namespace' => 'Le service :service partage un espace de noms de l\'hôte, ce qui lui permet de voir et de signaler des processus hors du conteneur.',
+        'security_opt' => 'Le service :service définit des options de sécurité. C\'est là qu\'on désactive AppArmor et seccomp.',
+        'network_mode' => 'Le service :service définit un mode réseau, ce qui le placerait sur le réseau de l\'hôte, hors de la publication loopback et hors du pare-feu.',
+        'cgroup_parent' => 'Le service :service définit un cgroup parent, ce qui contourne les limites de ressources appliquées par ce serveur.',
+    ],
     'database_engine_not_used' => 'Cette application n\'utilise pas de base de données.',
     'database_engine_unsupported' => 'Cette application ne peut pas utiliser ce moteur de base de données. :application en prend en charge un autre.',
     'database_engine_unavailable' => 'Ce moteur de base de données ne fonctionne pas sur ce serveur. Installez-le ou démarrez-le d\'abord.',

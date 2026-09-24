@@ -105,6 +105,20 @@ class DockerSiteType extends AbstractSiteType
                 'default' => 80,
                 'help' => __('application.help.container_port'),
             ]),
+
+            // Paste your own, and everything compose supports is supported.
+            // Advanced, because the two fields above cover the common case and
+            // a textarea of YAML on the create form would make a one-image
+            // deploy look like work.
+            //
+            // Left empty, the panel writes the file from the fields. Filled,
+            // this is the file — validated first, and the validator is where
+            // the interesting part of this feature lives.
+            $this->field('compose', 'textarea', advanced: true, extra: [
+                'help' => __('application.help.compose'),
+                'rows' => 14,
+                'monospace' => true,
+            ]),
         ];
     }
 
@@ -121,6 +135,9 @@ class DockerSiteType extends AbstractSiteType
             // and shell metacharacters, because the value reaches a command.
             'image' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9][A-Za-z0-9._\/:@-]*$/'],
             'container_port' => ['required', 'integer', 'min:1', 'max:65535'],
+            // Bounded, because it reaches a parser and then a file. 128 KB is
+            // far past any real compose file and far short of a problem.
+            'compose' => ['nullable', 'string', 'max:131072'],
         ];
     }
 }
