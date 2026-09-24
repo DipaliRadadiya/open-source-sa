@@ -769,7 +769,8 @@
     "noTraversalPath": "The path cannot contain ..",
     "noSectionHeader": "Can't contain [ — that would start another program block",
     "required_frequency": "Choose how often backups run",
-    "required_type": "Choose what to back up"
+    "required_type": "Choose what to back up",
+    "hostnameLabelTooLong": "Each part of a domain between dots can be at most 63 characters."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -3605,7 +3606,7 @@
         "issuingStuck": "Still here after a few minutes? Remove it and try again.",
         "failed": "Certificate could not be issued",
         "reference": "Reference: {reference}",
-        "rateLimited": "Let's Encrypt has rate-limited this domain. Wait about a week before trying again — retrying now won't help.",
+        "rateLimited": "Let's Encrypt has rate-limited this domain. Wait about a week before trying Let's Encrypt again. A self-signed or uploaded certificate still works in the meantime.",
         "reissue": "Reissue",
         "remove": "Remove certificate",
         "active": "HTTPS is active",
@@ -3666,7 +3667,9 @@
         "reloadFailed": "The web server could not be reloaded.",
         "uploadNeedsBoth": "Paste both the certificate and its private key.",
         "removed": "The certificate was removed. This application is back on plain HTTP.",
-        "removedAlready": "The certificate had already been removed."
+        "removedAlready": "The certificate had already been removed.",
+        "rateLimitedMethod": "Let's Encrypt has rate-limited this domain for about a week. Choose Self-signed or upload your own in the meantime.",
+        "dryRunPartial": "Ready for {ready} of {total} domains. {count, plural, one {{names} will be left off the certificate.} other {{names} will be left off the certificate.}}"
       },
       "issueCertificate": "Set up SSL",
       "description": "Names that reach this application, and its certificate.",

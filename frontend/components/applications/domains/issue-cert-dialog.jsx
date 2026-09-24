@@ -8,6 +8,7 @@ import {
   fetchCertificateDryRun,
 } from "@/lib/api/domains";
 import { apiMessage } from "@/lib/api/error-message";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Caution } from "@/components/ui/caution";
 import { Label } from "@/components/ui/label";
@@ -55,9 +56,16 @@ export function IssueCertDialog({
   open,
   onOpenChange,
   onIssued,
+  // The last Let's Encrypt attempt hit its rate limit. The other methods do
+  // not go near Let's Encrypt, so only that one is closed.
+  rateLimited = false,
 }) {
   const t = useTranslations("applications.domains");
-  const types = availableTypes.length ? availableTypes : FALLBACK_TYPES;
+  const types = (availableTypes.length ? availableTypes : FALLBACK_TYPES).map((entry) =>
+    rateLimited && entry.type === "letsencrypt"
+      ? { ...entry, available: false, reason: t("ssl.rateLimitedMethod") }
+      : entry,
+  );
   // The server's recommendation, else the first thing that actually works —
   // never a fixed default, which is how the dialog came to open on Let's
   // Encrypt for sites Let's Encrypt refuses.
@@ -66,7 +74,12 @@ export function IssueCertDialog({
     types.find((entry) => entry.available)?.type ??
     types[0]?.type;
 
-  const [type, setType] = useState(defaultType);
+  const [chosen, setType] = useState(defaultType);
+  // A choice that has since become unavailable (Let's Encrypt after a rate
+  // limit) falls back to the default rather than staying selected and dead.
+  const type = types.some((entry) => entry.type === chosen && entry.available !== false)
+    ? chosen
+    : defaultType;
   // This dialog holds its own state rather than react-hook-form, so it gets none
   // of FormItem's label wiring for free. Without an id every label here was
   // decorative: clicking it did nothing and a screen reader announced an
@@ -96,6 +109,9 @@ export function IssueCertDialog({
 
   const selected = types.find((entry) => entry.type === type);
   const dryRunning = starting || dryRun?.status === "running";
+  // A pass needs only one name to pass. The rest are issued without, so the
+  // headline has to say which names the certificate will not cover.
+  const leftOff = dryRun?.status === "passed" ? (dryRun.domains ?? []).filter((entry) => !entry.ok) : [];
 
   function reset() {
     setType(defaultType);
@@ -341,18 +357,30 @@ export function IssueCertDialog({
           {dryRun && dryRun.status !== "running" ? (
             <div className="space-y-2">
               <p
-                className={
-                  dryRun.status === "passed"
-                    ? "flex items-center gap-2 text-sm font-medium text-success"
-                    : "flex items-center gap-2 text-sm font-medium text-destructive"
-                }
+                className={cn(
+                  "flex items-center gap-2 text-sm font-medium",
+                  dryRun.status !== "passed"
+                    ? "text-destructive"
+                    : leftOff.length
+                      ? "text-warning"
+                      : "text-success",
+                )}
               >
-                {dryRun.status === "passed" ? (
+                {dryRun.status === "passed" && !leftOff.length ? (
                   <Check className="size-4" />
                 ) : (
                   <TriangleAlert className="size-4" />
                 )}
-                {t(dryRun.status === "passed" ? "ssl.dryRunPassed" : "ssl.dryRunFailed")}
+                {dryRun.status !== "passed"
+                  ? t("ssl.dryRunFailed")
+                  : leftOff.length
+                    ? t("ssl.dryRunPartial", {
+                        ready: dryRun.domains.length - leftOff.length,
+                        total: dryRun.domains.length,
+                        names: leftOff.map((entry) => entry.domain).join(", "),
+                        count: leftOff.length,
+                      })
+                    : t("ssl.dryRunPassed")}
               </p>
 
               {/* Every name, passing ones included. "Two of your three domains
@@ -365,7 +393,7 @@ export function IssueCertDialog({
                       {entry.ok ? (
                         <Check className="mt-0.5 size-4 shrink-0 text-success" />
                       ) : (
-                        <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+                        <TriangleAlert className={cn("mt-0.5 size-4 shrink-0", leftOff.length ? "text-warning" : "text-destructive")} />
                       )}
                       {/* The icon carries the verdict; the sentence stays
                           readable. A failure message is the instruction for

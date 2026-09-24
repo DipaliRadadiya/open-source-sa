@@ -769,7 +769,8 @@
     "noTraversalPath": "パスに .. を含めることはできません",
     "noSectionHeader": "[ は使用できません。別のプログラムセクションが開始されてしまいます",
     "required_frequency": "バックアップの実行間隔を選択してください",
-    "required_type": "バックアップの対象を選択してください"
+    "required_type": "バックアップの対象を選択してください",
+    "hostnameLabelTooLong": "ドメインのドットで区切られた各部分は 63 文字までです。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -3605,7 +3606,7 @@
         "issuingStuck": "数分経ってもこのままですか？ 削除してもう一度お試しください。",
         "failed": "証明書を発行できませんでした",
         "reference": "参照: {reference}",
-        "rateLimited": "Let's Encrypt からこのドメインに対してレート制限を受けています。再試行は約 1 週間待ってください。今の時点で再試行しても解決しません。",
+        "rateLimited": "Let's Encrypt からこのドメインに対してレート制限を受けています。Let's Encrypt での再試行は約 1 週間待ってください。その間も自己署名またはアップロードした証明書は使えます。",
         "reissue": "再発行",
         "remove": "証明書を削除",
         "active": "HTTPS は有効です",
@@ -3666,7 +3667,9 @@
         "reloadFailed": "ウェブサーバーを再読み込みできませんでした。",
         "uploadNeedsBoth": "証明書と対応する秘密鍵の両方を貼り付けてください。",
         "removed": "証明書を削除しました。このアプリケーションは通常の HTTP に戻ります。",
-        "removedAlready": "証明書はすでに削除されています。"
+        "removedAlready": "証明書はすでに削除されています。",
+        "rateLimitedMethod": "Let's Encrypt からこのドメインに約 1 週間のレート制限を受けています。その間は自己署名を選ぶか、自分の証明書をアップロードしてください。",
+        "dryRunPartial": "{total} 件中 {ready} 件のドメインは準備できています。{count, plural, other {{names} は証明書に含まれません。}}"
       },
       "issueCertificate": "SSL を設定",
       "description": "このアプリケーションに到達する名前と証明書。",

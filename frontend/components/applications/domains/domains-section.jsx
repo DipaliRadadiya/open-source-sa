@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -133,12 +134,14 @@ export function DomainsSection({
 }) {
   const t = useTranslations("applications.domains");
   const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
 
   const [addOpen, setAddOpen] = useState(false);
   const [promoteTarget, setPromoteTarget] = useState(null);
   // Read from the list rather than carried on the menu item: promoting is the
   // one action whose consequence is about the name being replaced, not the one
-  // being clicked.
+  // being clicked. Copied onto the target when the dialog opens, because the
+  // dialog now stays open through the re-read that changes the list.
   const currentPrimary = domains.find((domain) => domain.type === "primary");
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -184,9 +187,12 @@ export function DomainsSection({
     setPending(true);
     try {
       await makePrimaryDomain(appId, promoteTarget.domain);
-      toast.success(t("toast.promoted", { domain: promoteTarget.domain }));
-      setPromoteTarget(null);
-      router.refresh();
+      // Closed once the list has re-read: closing first left the old primary
+      // on screen for seconds under a toast saying it had changed.
+      refreshThen(() => {
+        toast.success(t("toast.promoted", { domain: promoteTarget.domain }));
+        setPromoteTarget(null);
+      });
     } catch (error) {
       toast.error(apiMessage(error, t("toast.promoteFailed")));
     } finally {
@@ -199,9 +205,10 @@ export function DomainsSection({
     setPending(true);
     try {
       await deleteDomain(appId, target);
-      toast.success(t("toast.removed", { domain: target }));
-      setDeleteTarget(null);
-      router.refresh();
+      refreshThen(() => {
+        toast.success(t("toast.removed", { domain: target }));
+        setDeleteTarget(null);
+      });
     } catch (error) {
       /*
        * Already gone — another tab, another person, or a click that landed
@@ -210,9 +217,10 @@ export function DomainsSection({
        * disappear and invites a retry that can only ever 404.
        */
       if (error?.response?.status === 404) {
-        toast.info(t("toast.removedAlready", { domain: target }));
-        setDeleteTarget(null);
-        router.refresh();
+        refreshThen(() => {
+          toast.info(t("toast.removedAlready", { domain: target }));
+          setDeleteTarget(null);
+        });
         return;
       }
       toast.error(apiMessage(error, t("toast.removeFailed")));
@@ -248,7 +256,7 @@ export function DomainsSection({
           /* No border here. The rows already sit inside a Card, and a second
              frame around them drew the same edge twice — the coloured frames
              on the SSL card mean something, this one meant nothing. */
-          <div className="-mx-6 -mb-6 divide-y overflow-hidden rounded-b-xl border-t">
+          <div className="-mx-(--card-spacing) -mb-(--card-spacing) divide-y overflow-hidden border-t">
             {domains.map((domain) => {
               const isPrimary = domain.type === "primary";
               const isVerifying = Boolean(verifying[domain.domain]);
@@ -481,7 +489,7 @@ export function DomainsSection({
                             </DropdownMenuItem>
                             {domain.type === "alias" ? (
                               <DropdownMenuItem
-                                onSelect={() => setPromoteTarget(domain)}
+                                onSelect={() => setPromoteTarget({ ...domain, from: currentPrimary?.domain })}
                               >
                                 <Star className="size-4" />
                                 {t("makePrimary")}
@@ -535,20 +543,20 @@ export function DomainsSection({
         description={t("promote.body")}
         cancelLabel={t("cancel")}
         confirmLabel={t("makePrimary")}
-        pending={pending}
+        pending={pending || refreshing}
         onConfirm={confirmPromote}
       >
         {/* The swap is the fact worth seeing first, and the name being replaced
             is the one thing the title cannot show. Contrast alone separates the
             two — the outgoing name is muted, the incoming one is not — rather
             than stacking size, weight and colour on the same line. */}
-        {currentPrimary ? (
+        {promoteTarget?.from ? (
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 rounded-lg border p-3">
             <dt className="text-xs text-muted-foreground">
               {t("promote.nowLabel")}
             </dt>
             <dd className="truncate font-mono text-sm text-muted-foreground">
-              {currentPrimary.domain}
+              {promoteTarget.from}
             </dd>
             <dt className="text-xs text-muted-foreground">
               {t("promote.afterLabel")}
@@ -563,9 +571,9 @@ export function DomainsSection({
             semicolons, which is exactly the shape nobody reads before clicking
             a confirm button. */}
         <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
-          {currentPrimary ? (
+          {promoteTarget?.from ? (
             <li>
-              {t("promote.keepsServing", { domain: currentPrimary.domain })}
+              {t("promote.keepsServing", { domain: promoteTarget.from })}
             </li>
           ) : null}
           <li>{t("promote.renamesFiles")}</li>
@@ -600,7 +608,7 @@ export function DomainsSection({
         description={t("removeConfirm.body")}
         cancelLabel={t("cancel")}
         confirmLabel={t("remove")}
-        pending={pending}
+        pending={pending || refreshing}
         onConfirm={confirmDelete}
       >
         {/* The consequence nothing on this screen mentioned.

@@ -247,7 +247,8 @@
     "noTraversalPath": "La ruta no puede contener ..",
     "noSectionHeader": "No puede contener [ — eso iniciaría otro bloque de programa",
     "required_frequency": "Elige cada cuánto se hacen las copias",
-    "required_type": "Elige qué copiar"
+    "required_type": "Elige qué copiar",
+    "hostnameLabelTooLong": "Cada parte de un dominio entre puntos puede tener como máximo 63 caracteres."
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -3605,7 +3606,7 @@
         "issuingStuck": "¿Sigue así después de unos minutos? Elimínalo e inténtalo de nuevo.",
         "failed": "No se pudo emitir el certificado",
         "reference": "Referencia: {reference}",
-        "rateLimited": "Let's Encrypt ha limitado este dominio. Espera alrededor de una semana antes de volver a intentarlo: reintentar ahora no ayudará.",
+        "rateLimited": "Let's Encrypt ha limitado este dominio. Espera alrededor de una semana antes de volver a intentarlo con Let's Encrypt. Mientras tanto, un certificado autofirmado o subido sigue funcionando.",
         "reissue": "Reemitir",
         "remove": "Eliminar certificado",
         "active": "HTTPS está activo",
@@ -3666,7 +3667,9 @@
         "reloadFailed": "No se pudo recargar el servidor web.",
         "uploadNeedsBoth": "Pega tanto el certificado como su clave privada.",
         "removed": "Se eliminó el certificado. Esta aplicación vuelve a usar HTTP simple.",
-        "removedAlready": "El certificado ya se había eliminado."
+        "removedAlready": "El certificado ya se había eliminado.",
+        "rateLimitedMethod": "Let's Encrypt ha limitado este dominio durante alrededor de una semana. Mientras tanto, elige Autofirmado o sube el tuyo.",
+        "dryRunPartial": "Listo para {ready} de {total} dominios. {count, plural, one {{names} quedará fuera del certificado.} other {{names} quedarán fuera del certificado.}}"
       },
       "issueCertificate": "Configurar SSL",
       "description": "Nombres que llegan a esta aplicación y su certificado.",

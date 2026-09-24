@@ -769,7 +769,8 @@
     "noTraversalPath": "Der Pfad darf kein .. enthalten",
     "noSectionHeader": "Darf kein [ enthalten — das würde einen weiteren Programmblock beginnen",
     "required_frequency": "Wählen Sie, wie oft Backups laufen",
-    "required_type": "Wählen Sie, was gesichert wird"
+    "required_type": "Wählen Sie, was gesichert wird",
+    "hostnameLabelTooLong": "Jeder Teil einer Domain zwischen zwei Punkten darf höchstens 63 Zeichen lang sein."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -3605,7 +3606,7 @@
         "issuingStuck": "Nach einigen Minuten immer noch hier? Entfernen Sie es und versuchen Sie es erneut.",
         "failed": "Das Zertifikat konnte nicht ausgestellt werden",
         "reference": "Referenz: {reference}",
-        "rateLimited": "Let's Encrypt hat diese Domain gedrosselt. Warten Sie etwa eine Woche — ein Versuch jetzt hilft nicht.",
+        "rateLimited": "Let's Encrypt hat diese Domain gedrosselt. Warten Sie etwa eine Woche, bevor Sie es erneut mit Let's Encrypt versuchen. Ein selbst signiertes oder hochgeladenes Zertifikat funktioniert in der Zwischenzeit weiterhin.",
         "reissue": "Neu ausstellen",
         "remove": "Zertifikat entfernen",
         "active": "HTTPS ist aktiv",
@@ -3666,7 +3667,9 @@
         "reloadFailed": "Der Webserver konnte nicht neu geladen werden.",
         "uploadNeedsBoth": "Fügen Sie sowohl das Zertifikat als auch den zugehörigen privaten Schlüssel ein.",
         "removed": "Das Zertifikat wurde entfernt. Diese Anwendung läuft wieder über einfaches HTTP.",
-        "removedAlready": "Das Zertifikat wurde bereits entfernt."
+        "removedAlready": "Das Zertifikat wurde bereits entfernt.",
+        "rateLimitedMethod": "Let's Encrypt hat diese Domain für etwa eine Woche gedrosselt. Wählen Sie in der Zwischenzeit „Selbst signiert“ oder laden Sie ein eigenes hoch.",
+        "dryRunPartial": "Bereit für {ready} von {total} Domains. {count, plural, one {{names} wird nicht in das Zertifikat aufgenommen.} other {{names} werden nicht in das Zertifikat aufgenommen.}}"
       },
       "issueCertificate": "SSL einrichten",
       "description": "Namen, die diese Anwendung erreichen, und ihr Zertifikat.",

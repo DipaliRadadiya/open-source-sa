@@ -353,8 +353,11 @@ export function SslSection({
             ) : null}
           </>
         ),
+        // Remove and Reissue stay while rate-limited: only Let's Encrypt is
+        // closed, and the dialog says so on that method. Hiding both left the
+        // site stuck on a failed certificate for a week.
         actions:
-          canManage && !noRetry ? (
+          canManage ? (
             <>
               {/* Red text, the ink deepened in light mode: plain destructive
                   on the hover tint measured 3.82:1 (the Files Trash fix). */}
@@ -595,6 +598,7 @@ export function SslSection({
         open={issueOpen}
         onOpenChange={setIssueOpen}
         onIssued={setCert}
+        rateLimited={cert?.status === "failed" && NO_RETRY.has(cert.reason)}
       />
       <DeleteCertDialog
         open={deleteOpen}

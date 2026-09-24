@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidApplicationDomain } from "./application.js";
 
 /**
  * A site is not one hostname: every name it answers to is a row, and `type`
@@ -124,7 +125,10 @@ export const addDomainFormSchema = z
       // accepted here and refused by the server, which puts a field problem in
       // a toast and leaves the box looking fine.
       .max(253, "hostnameTooLong")
-      .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/, "hostnameInvalid"),
+      // Each part between dots is capped at 63 — the backend refuses a longer
+      // one with Laravel's bare "The domain field format is invalid."
+      .refine((value) => value.split(".").every((label) => label.length <= 63), "hostnameLabelTooLong")
+      .refine(isValidApplicationDomain, "hostnameInvalid"),
     type: z.enum(["alias", "redirect"]).default("alias"),
     /*
      * A full URL, checked here as well as server-side.

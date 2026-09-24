@@ -769,7 +769,8 @@
     "noTraversalPath": "O caminho não pode conter ..",
     "noSectionHeader": "Não pode conter [ — isso iniciaria outro bloco de programa",
     "required_frequency": "Escolha com que frequência os backups rodam",
-    "required_type": "Escolha o que incluir no backup"
+    "required_type": "Escolha o que incluir no backup",
+    "hostnameLabelTooLong": "Cada parte de um domínio entre pontos pode ter no máximo 63 caracteres."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -3605,7 +3606,7 @@
         "issuingStuck": "Continua assim ao fim de alguns minutos? Remova-o e tente de novo.",
         "failed": "Não foi possível emitir o certificado",
         "reference": "Referência: {reference}",
-        "rateLimited": "A Let's Encrypt limitou este domínio. Aguarde cerca de uma semana antes de tentar novamente — tentar agora não vai ajudar.",
+        "rateLimited": "A Let's Encrypt limitou este domínio. Aguarde cerca de uma semana antes de tentar a Let's Encrypt novamente. Enquanto isso, um certificado autoassinado ou enviado continua funcionando.",
         "reissue": "Reemitir",
         "remove": "Remover certificado",
         "active": "HTTPS está ativo",
@@ -3666,7 +3667,9 @@
         "reloadFailed": "Não foi possível recarregar o servidor web.",
         "uploadNeedsBoth": "Cole o certificado e a respetiva chave privada.",
         "removed": "O certificado foi removido. Esta aplicação voltou a HTTP simples.",
-        "removedAlready": "O certificado já tinha sido removido."
+        "removedAlready": "O certificado já tinha sido removido.",
+        "rateLimitedMethod": "A Let's Encrypt limitou este domínio por cerca de uma semana. Enquanto isso, escolha Autoassinado ou envie o seu próprio.",
+        "dryRunPartial": "Pronto para {ready} de {total} domínios. {count, plural, one {{names} ficará fora do certificado.} other {{names} ficarão fora do certificado.}}"
       },
       "issueCertificate": "Configurar SSL",
       "description": "Nomes que acessam esta aplicação e seu certificado.",
