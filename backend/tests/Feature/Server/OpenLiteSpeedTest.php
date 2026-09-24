@@ -167,6 +167,28 @@ describe('the shared httpd_config.conf', function () {
             ->toContain('map                     shop.test shop.test, www.shop.test');
     });
 
+    /*
+     * A map inside the panel's markers with no virtualHost block says nothing
+     * about where the site lives, and the rebuild rendered its block with an
+     * empty root: `vhRoot /`. OpenLiteSpeed accepts that until the site's own
+     * config names a log under $VH_ROOT, so it survived the config test and
+     * broke the next change instead (seen on a real server, 2026-09-24).
+     */
+    it('refuses to rebuild when a site in its maps has no known directory, and changes nothing', function () {
+        $orphan = "  ### BEGIN panel-managed maps — do not edit between these markers\n"
+            ."  map                     brownsite brown.test\n"
+            ."  ### END panel-managed maps\n";
+        $runs = fakeOls(olsConfig($orphan));
+        $before = sharedConfig();
+
+        $result = app(OlsSharedConfig::class)->register('shop.test', ['shop.test'], '/home/shopuser/shop.test');
+
+        expect($result->ok)->toBeFalse()
+            ->and($result->reference)->not->toBe('')
+            ->and(sharedConfig())->toBe($before)
+            ->and(collect($runs)->contains(fn (array $r) => ($r['command'][0] ?? '') === 'tee'))->toBeFalse();
+    });
+
     it('creates a secure listener when the server has none', function () {
         // OpenLiteSpeed binds certificates to a listener, not to a vhost. A
         // fresh install ships one plain listener and no secure one, and

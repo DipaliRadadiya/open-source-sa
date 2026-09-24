@@ -115,6 +115,20 @@ class ApplicationDiscoverer implements Discoverable
                 continue;
             }
 
+            // OpenLiteSpeed's installer ships a demo vhost called `Example`,
+            // served from $VH_ROOT/html/ and registered nowhere. It was
+            // reported as "being served, but its config is not in a shape the
+            // panel could read", which was untrue twice over (2026-09-24). Not
+            // a customer's site: nothing to report.
+            //
+            // Recognised by name *and* its stock document root, not by "is it
+            // registered in httpd_config.conf": a server migrated from v7
+            // registers every site through `include /etc/<brand>-ols/*.conf`,
+            // so that test would have dropped all of them.
+            if ($name === 'Example' && preg_match('/^\s*docRoot\s+\$VH_ROOT\/html\/?\s*$/m', $contents->output()) === 1) {
+                continue;
+            }
+
             $parsed = $this->parse($contents->output());
 
             if ($parsed['domains'] === [] || $parsed['root'] === null) {

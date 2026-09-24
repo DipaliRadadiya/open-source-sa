@@ -1656,6 +1656,24 @@ describe('discovering firewall rules', function () {
         expect(runSync()->items()->where('resource_type', 'firewall_rule')->count())->toBe(0);
     });
 
+    // `ufw status` prints a rule's comment after the source, on the same
+    // line. It was stored as part of the source (`Anywhere  # note`), a value
+    // ufw rejects, so the adopted rule could never be edited or deleted.
+    // Found on a real server, 2026-09-24.
+    it('keeps a rule\'s comment out of its source and makes it the description', function () {
+        fakeUfwForSync("[ 1] 65000/tcp                  ALLOW IN    Anywhere                   # brownfield test\n"
+            ."[ 2] 3306                       ALLOW IN    203.0.113.5                # office db\n");
+
+        runSync(SyncMode::Apply, ['include_firewall' => true]);
+
+        $rules = FirewallRule::query()->orderBy('port_from')->get(['port_from', 'source_ip', 'description'])->toArray();
+
+        expect($rules)->toBe([
+            ['port_from' => 3306, 'source_ip' => '203.0.113.5', 'description' => 'office db'],
+            ['port_from' => 65000, 'source_ip' => null, 'description' => 'brownfield test'],
+        ]);
+    });
+
     it('reads a port rule', function () {
         $run = ufwRun("Status: active\n\n[ 1] 3306                       ALLOW IN    203.0.113.5\n");
 
@@ -1901,6 +1919,24 @@ describe('discovering sites on OpenLiteSpeed', function () {
         // `shop` is already tracked and drops out by slug; `blog` survives.
         expect($found)->toHaveCount(1)
             ->and($found[0]['key'])->toBe('blog.example.com');
+    });
+
+    // The installer's demo vhost was reported as a site whose config could
+    // not be read (2026-09-24). Recognised by its stock document root, so a
+    // customer's own site that happens to be called Example is still found.
+    it('passes over OpenLiteSpeed\'s own Example vhost quietly, but not a real site of that name', function () {
+        fakeOlsVhosts([
+            'Example' => "docRoot \$VH_ROOT/html/\n",
+            'shop' => "docRoot /home/siteowner/shop/public_html\nvhDomain shop.example.com\n",
+        ]);
+
+        $found = app(ApplicationDiscoverer::class)->discover($this->run);
+
+        expect(array_column($found, 'key'))->toBe(['shop.example.com']);
+
+        fakeOlsVhosts(['Example' => "docRoot /home/siteowner/example/public_html\nvhDomain example.com\n"]);
+
+        expect(array_column(app(ApplicationDiscoverer::class)->discover($this->run), 'key'))->toBe(['example.com']);
     });
 
     it('finds sites a migrated server keeps under the old panels branded directory', function () {

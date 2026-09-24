@@ -8,6 +8,8 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * The two entries every OpenLiteSpeed site needs in the *shared*
@@ -235,9 +237,33 @@ class OlsSharedConfig
         }
 
         $original = $read->output();
+        $sites = $change($this->sites($original));
+
+        // A site with no known directory is refused, not written. It is a
+        // map line inside the markers with no virtualHost block beside it, so
+        // this file does not say where the site lives, and the block used to
+        // be rendered with an empty root: `vhRoot /`, the whole filesystem.
+        // OpenLiteSpeed accepts that until the site's own config names a log
+        // under $VH_ROOT, so the test below passed and the entry stayed, and
+        // the next change to that site failed its test instead (seen on a real
+        // server, 2026-09-24). Nothing is changed and the reference says why.
+        $unknown = array_keys(array_filter($sites, fn (array $site): bool => trim((string) ($site['root'] ?? ''), '/') === ''));
+
+        if ($unknown !== []) {
+            $reference = (string) Str::uuid();
+
+            Log::channel('server-ops')->error('ols shared config refused: a site has no known directory', $context + [
+                'reference' => $reference,
+                'sites' => $unknown,
+                'path' => $path,
+            ]);
+
+            return new ServerOpsResult(false, $reference);
+        }
+
         $updated = $this->render(
             $original,
-            $change($this->sites($original)),
+            $sites,
             $secureListener ? $this->tlsFallback($context) : null,
         );
 
