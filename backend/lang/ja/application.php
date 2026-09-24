@@ -10,6 +10,7 @@ return [
     ],
 
     'types' => [
+        'docker' => ['title' => 'Docker コンテナ', 'tagline' => '任意のレジストリの任意のイメージを nginx 経由で公開します。'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ブログ・ウェブサイト作成'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ブラウザーからデータベースを管理'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => '稼働監視とステータスページ'],
@@ -50,6 +51,8 @@ return [
     ],
 
     'fields' => [
+        'image' => 'イメージ',
+        'container_port' => 'コンテナのポート',
         'database_engine' => 'データベースエンジン',
         'company_name' => '会社名',
         'company_email' => '会社のメールアドレス',
@@ -129,6 +132,8 @@ return [
     ],
 
     'help' => [
+        'image' => '実行するイメージ。タグを明示してください（例: `nginx:1.27-alpine`）。タグなしの名前は `latest` を取得するため、デプロイが再現不能になり、ロールバックも意味を失います。',
+        'container_port' => 'コンテナ内でアプリケーションが待ち受けるポート。サーバー側のポートはパネルが割り当て、nginx をそこへ向けます。',
         'table_prefix_random' => '空欄にするとランダムな接頭辞が生成され、データベースを共有した場合でもテーブルが混ざりません。',
         'timezone' => 'サイトのタイムゾーン。例: America/New_York、Asia/Tokyo。設定 → 一般 → タイムゾーンを参照してください。',
         'table_prefix_optional' => '任意。空欄にすると、テーブルは接頭辞なしで作成されます。',

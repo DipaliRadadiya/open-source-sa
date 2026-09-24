@@ -15,6 +15,7 @@ return [
     ],
 
     'types' => [
+        'docker' => ['title' => 'Docker container', 'tagline' => 'Any image, from any registry, proxied by nginx.'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Blog and website builder'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Manage your databases in the browser'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Uptime monitoring and status pages'],
@@ -55,6 +56,8 @@ return [
     ],
 
     'fields' => [
+        'image' => 'Image',
+        'container_port' => 'Container port',
         'database_engine' => 'Database engine',
         'company_name' => 'Company name',
         'company_email' => 'Company email',
@@ -134,6 +137,8 @@ return [
     ],
 
     'help' => [
+        'image' => 'The image to run, with an explicit tag — `nginx:1.27-alpine`. A bare name pulls `latest`, which makes a deploy unreproducible and a rollback meaningless.',
+        'container_port' => 'The port your application listens on inside the container. The panel allocates the port on the server itself and points nginx at it.',
         'table_prefix_random' => 'Leave empty and a random prefix is generated, keeping the tables apart if the database is ever shared.',
         'timezone' => 'Timezone for the site, e.g. America/New_York or Europe/Berlin. See Settings → General → Timezone.',
         'table_prefix_optional' => 'Optional. Clear it and the tables are created with no prefix at all.',

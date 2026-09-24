@@ -10,6 +10,7 @@ return [
     ],
 
     'types' => [
+        'docker' => ['title' => 'Contenedor Docker', 'tagline' => 'Cualquier imagen, de cualquier registro, servida a través de nginx.'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Creador de blogs y sitios web'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Gestione sus bases de datos en el navegador'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Monitorización de disponibilidad y páginas de estado'],
@@ -50,6 +51,8 @@ return [
     ],
 
     'fields' => [
+        'image' => 'Imagen',
+        'container_port' => 'Puerto del contenedor',
         'database_engine' => 'Motor de base de datos',
         'company_name' => 'Nombre de la empresa',
         'company_email' => 'Correo de la empresa',
@@ -129,6 +132,8 @@ return [
     ],
 
     'help' => [
+        'image' => 'La imagen a ejecutar, con una etiqueta explícita: `nginx:1.27-alpine`. Un nombre sin etiqueta usa `latest`, lo que hace que un despliegue no sea reproducible y que revertirlo no signifique nada.',
+        'container_port' => 'El puerto en el que tu aplicación escucha dentro del contenedor. El panel asigna el puerto en el propio servidor y apunta nginx a él.',
         'table_prefix_random' => 'Déjalo vacío y se generará un prefijo aleatorio, manteniendo las tablas separadas si alguna vez se comparte la base de datos.',
         'timezone' => 'Zona horaria del sitio, p. ej. America/New_York o Europe/Madrid. Ver Ajustes → General → Zona horaria.',
         'table_prefix_optional' => 'Opcional. Si lo borras, las tablas se crean sin ningún prefijo.',

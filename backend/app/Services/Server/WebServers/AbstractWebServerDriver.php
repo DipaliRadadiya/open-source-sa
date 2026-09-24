@@ -235,9 +235,32 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         return (string) ($application->slug ?: $application->domain);
     }
 
+    /**
+     * Serving profiles that share a vhost, and which one they share.
+     *
+     * A container and a Node application are the same thing to a web server:
+     * something listening on a loopback port that nginx reverse-proxies to,
+     * WebSocket upgrade included. The `node` template is already entirely
+     * runtime-agnostic — it proxies to `127.0.0.1:{{ $appPort }}` and never
+     * asks what is behind it.
+     *
+     * A map rather than a `docker.blade.php` that includes the other, because
+     * the duplicate would be a second file to keep in step and the whole point
+     * is that there is nothing different to say. The template is selected by
+     * profile NAME, though, so without this a container aborts with a bare 500
+     * from `View::exists` — which is how this was found.
+     *
+     * @var array<string, string>
+     */
+    private const VHOST_PROFILE_ALIASES = [
+        'docker' => 'node',
+    ];
+
     public function renderConfig(Application $application, string $documentRoot): string
     {
-        $profile = $application->serving_profile;
+        $profile = (string) $application->serving_profile;
+        $profile = self::VHOST_PROFILE_ALIASES[$profile] ?? $profile;
+
         $view = "server.vhosts.{$this->name()}.{$profile}";
 
         abort_unless(View::exists($view), 500);

@@ -10,6 +10,7 @@ return [
     ],
 
     'types' => [
+        'docker' => ['title' => 'Docker-Container', 'tagline' => 'Jedes Image aus jeder Registry, über nginx bereitgestellt.'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Blog- und Website-Baukasten'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Verwalten Sie Ihre Datenbanken im Browser'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Verfügbarkeitsüberwachung und Statusseiten'],
@@ -50,6 +51,8 @@ return [
     ],
 
     'fields' => [
+        'image' => 'Image',
+        'container_port' => 'Container-Port',
         'database_engine' => 'Datenbank-Engine',
         'company_name' => 'Firmenname',
         'company_email' => 'Firmen-E-Mail',
@@ -129,6 +132,8 @@ return [
     ],
 
     'help' => [
+        'image' => 'Das auszuführende Image, mit ausdrücklichem Tag — `nginx:1.27-alpine`. Ein Name ohne Tag zieht `latest`, was ein Deployment nicht reproduzierbar und ein Rollback bedeutungslos macht.',
+        'container_port' => 'Der Port, auf dem Ihre Anwendung innerhalb des Containers lauscht. Den Port auf dem Server selbst vergibt das Panel und richtet nginx darauf aus.',
         'table_prefix_random' => 'Leer lassen, dann wird ein zufälliges Präfix erzeugt — so bleiben die Tabellen getrennt, falls die Datenbank je geteilt wird.',
         'timezone' => 'Zeitzone der Website, z. B. America/New_York oder Europe/Berlin. Siehe Einstellungen → Allgemein → Zeitzone.',
         'table_prefix_optional' => 'Optional. Wird das Feld geleert, werden die Tabellen ganz ohne Präfix angelegt.',

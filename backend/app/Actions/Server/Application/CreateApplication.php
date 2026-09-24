@@ -271,6 +271,12 @@ class CreateApplication
         // it — so asking for the command here left Uptime Kuma and friends
         // with no port at all, a unit with no `PORT`, and a reverse proxy
         // pointed at nothing.
-        return $servingProfile === 'node' ? $this->ports->allocate() : null;
+        // Both need one, for the same reason: nginx proxies to a loopback port
+        // and something has to be listening on it. A container without an
+        // allocated port renders a vhost pointing at `127.0.0.1:` and every
+        // request to the site is a 502.
+        return in_array($servingProfile, ['node', 'docker'], true)
+            ? $this->ports->allocate()
+            : null;
     }
 }

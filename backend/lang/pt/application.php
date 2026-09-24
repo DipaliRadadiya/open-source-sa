@@ -10,6 +10,7 @@ return [
     ],
 
     'types' => [
+        'docker' => ['title' => 'Contentor Docker', 'tagline' => 'Qualquer imagem, de qualquer registo, servida através do nginx.'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Criador de blogs e sites'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Faça a gestão das suas bases de dados no navegador'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Monitorização de disponibilidade e páginas de estado'],
@@ -50,6 +51,8 @@ return [
     ],
 
     'fields' => [
+        'image' => 'Imagem',
+        'container_port' => 'Porta do contentor',
         'database_engine' => 'Mecanismo de banco de dados',
         'company_name' => 'Nome da empresa',
         'company_email' => 'E-mail da empresa',
@@ -129,6 +132,8 @@ return [
     ],
 
     'help' => [
+        'image' => 'A imagem a executar, com uma etiqueta explícita — `nginx:1.27-alpine`. Um nome sem etiqueta puxa `latest`, o que torna uma implementação não reproduzível e uma reversão sem significado.',
+        'container_port' => 'A porta em que a sua aplicação escuta dentro do contentor. O painel atribui a porta no próprio servidor e aponta o nginx para ela.',
         'table_prefix_random' => 'Deixe vazio e será gerado um prefixo aleatório, mantendo as tabelas separadas caso a base de dados venha a ser partilhada.',
         'timezone' => 'Fuso horário do site, por ex. America/New_York ou Europe/Lisbon. Ver Definições → Geral → Fuso horário.',
         'table_prefix_optional' => 'Opcional. Se o limpar, as tabelas são criadas sem qualquer prefixo.',

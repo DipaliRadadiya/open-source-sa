@@ -2,6 +2,7 @@
 
 use App\Services\Applications\Types\AkauntingSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
+use App\Services\Applications\Types\DockerSiteType;
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
 use App\Services\Applications\Types\MauticSiteType;
@@ -1519,7 +1520,25 @@ return [
         'min_confidence' => 60,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Docker
+    |--------------------------------------------------------------------------
+    */
+
+    'docker' => [
+        // A container with no ceiling can exhaust the box and take the panel
+        // with it. Per-application overridable; never absent.
+        'default_memory_limit' => env('DOCKER_DEFAULT_MEMORY_LIMIT', '512m'),
+
+        // `compose up` pulls an image the first time, and an image can be
+        // large on a slow link. Generous, because the failure it prevents is a
+        // deploy that was working and got killed.
+        'command_timeout' => (int) env('DOCKER_COMMAND_TIMEOUT', 600),
+    ],
+
     'site_types' => [
+        DockerSiteType::class,
         WordPressSiteType::class,
         NextcloudSiteType::class,
         JoomlaSiteType::class,
