@@ -1223,6 +1223,42 @@ create_user() {
 
 # ─── Source ──────────────────────────────────────────────────────────────────
 
+# Does the panel we just checked out know the stack we were asked to build?
+#
+# It is possible for it not to, and it cost two servers. This script is fetched
+# from a URL -- often a branch -- while the panel is cloned from $REPO_BRANCH,
+# which defaults to main regardless of where the script itself came from. So
+# `curl .../feat/some-branch/install.sh | bash -s -- --stack=newthing` installs
+# main's panel, and main has never heard of `newthing`.
+#
+# The failure without this check lands on `artisan server:record-stack`, which
+# is the LAST thing setup_backend does -- after packages, composer, migrations
+# and seeding. Thirteen steps of work, then "Unknown stack". The fix is to fail
+# here instead, before any of it, and to name the flag that resolves it.
+#
+# Grepped rather than asked of artisan: composer has not run yet at this point,
+# so there is no artisan to ask. StackRegistryTest keeps this list and the
+# installer's own in step, so the grep is an early warning rather than the
+# authority.
+assert_panel_knows_stack() {
+    local registry="${APP_DIR}/backend/app/Services/Server/Capabilities/ServerCapabilities.php"
+
+    # No file means a layout this check does not understand. Say nothing rather
+    # than refuse an install over a path that moved.
+    [[ -f "$registry" ]] || return 0
+
+    if grep -qE "^[[:space:]]*'${STACK}' => \\[" "$registry"; then
+        return 0
+    fi
+
+    die "the panel on branch '${REPO_BRANCH}' does not support --stack=${STACK}.
+
+     This script came from one place and the panel was cloned from another.
+     If the stack is new, install the panel from the same branch:
+
+       --branch=<the branch this installer came from>"
+}
+
 fetch_source() {
     step "Fetching the panel"
 
@@ -1242,7 +1278,19 @@ fetch_source() {
         # As ${APP_USER}: a fetch run as root writes a root-owned
         # .git/FETCH_HEAD, and the panel's own updater — which fetches as
         # ${APP_USER} — can then never rewrite it.
-        run sudo -u "${APP_USER}" -H git -C "$APP_DIR" fetch --depth 1 origin "$REPO_BRANCH"
+        # An explicit refspec, not a bare branch name. The clone below is
+        # --depth 1, which pins remote.origin.fetch to ONE branch:
+        #
+        #   +refs/heads/main:refs/remotes/origin/main
+        #
+        # so `git fetch origin some-other-branch` fetches into FETCH_HEAD and
+        # never creates refs/remotes/origin/some-other-branch. The reset on the
+        # next line then dies on an unknown revision, and re-running the
+        # installer with a different --branch on an existing box was impossible.
+        # Writing the destination ref ourselves works for main too -- it
+        # rewrites the ref it already has.
+        run sudo -u "${APP_USER}" -H git -C "$APP_DIR" fetch --depth 1 origin \
+            "+refs/heads/${REPO_BRANCH}:refs/remotes/origin/${REPO_BRANCH}"
         run sudo -u "${APP_USER}" -H git -C "$APP_DIR" reset --hard "origin/${REPO_BRANCH}"
         ok "updated to the latest ${REPO_BRANCH}"
     else
@@ -1261,6 +1309,8 @@ fetch_source() {
         run git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$APP_DIR"
         ok "cloned into ${APP_DIR}"
     fi
+
+    assert_panel_knows_stack
 
     # Before composer and npm run, not after. Both run as ${APP_USER} and both
     # write into a tree git just created as root — without this they fail on
