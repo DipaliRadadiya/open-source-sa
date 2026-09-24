@@ -109,7 +109,7 @@ class ApplicationController extends Controller
         // So reloading the page and pressing save deleted every custom rule
         // the site had.
         return response()->json([
-            'application' => ApplicationResource::make($application->load('systemUser', 'botRules'))->resolve(),
+            'application' => ApplicationResource::make($application->load('systemUser', 'botRules', 'latestCheckout'))->resolve(),
         ]);
     }
 

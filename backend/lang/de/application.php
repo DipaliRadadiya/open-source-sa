@@ -230,4 +230,10 @@ return [
         'lede' => 'Sie wurde von ihrem Betreiber offline genommen. Bitte versuchen Sie es später erneut.',
         'foot' => 'Ausgeliefert vom Control Panel.',
     ],
+
+    // A deploy that failed after its checkout left the new code live.
+    // See Application::codeOnDisk().
+    'code_on_disk' => [
+        'incomplete' => 'Das letzte Deployment ist fehlgeschlagen, nachdem der neue Code bereits eingespielt war. Die Website läuft daher mit Commit :commit, der nicht vollständig bereitgestellt ist. Behebe das Problem und deploye erneut.',
+    ],
 ];

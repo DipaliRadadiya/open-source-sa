@@ -146,6 +146,9 @@ class DeploymentController extends Controller
 
             'auto_deploy' => (bool) $application->webhook_enabled,
             'last_commit' => $application->last_commit,
+            // What is on disk, which differs from `last_commit` after a deploy
+            // that failed once it had checked out. See Application::codeOnDisk().
+            'code_on_disk' => $application->codeOnDisk(),
             'last_deployed_at' => $application->last_deployed_at?->format('d-m-Y H:i:s'),
             'last_deployed_at_human' => $application->last_deployed_at?->diffForHumans(),
 

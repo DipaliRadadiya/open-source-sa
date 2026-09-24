@@ -319,3 +319,84 @@ it('has no deployment screen at all on a site that cannot deploy', function () {
         ->getJson("/api/applications/{$wordpress->id}/deployments")
         ->assertNotFound();
 });
+
+/*
+ * Deploys are in place: the checkout replaces the files before the script,
+ * the dependency check and the verify run. A deploy that failed in one of
+ * those left the new commit live while `last_commit` (success only) still
+ * named the old one, and the panel reported the old code as running. Found
+ * on a real server, 2026-09-24.
+ */
+describe('which commit is on disk', function () {
+    /** Deploy with `rev-parse` answering $commit; `$failChown` fails it after the checkout. */
+    function deployCommit(string $commit, bool $failChown = false): void
+    {
+        Process::fake(function ($process) use ($commit, $failChown) {
+            return match (true) {
+                in_array('rev-parse', $process->command, true) => Process::result(output: $commit),
+                in_array('log', $process->command, true) => Process::result(output: "Change\nAda Lovelace"),
+                $failChown && ($process->command[0] ?? '') === 'chown' => Process::result(errorOutput: 'operation not permitted', exitCode: 1),
+                ($process->command[0] ?? '') === 'curl' => Process::result(output: '200'),
+                default => Process::result(exitCode: 0),
+            };
+        });
+
+        runRecordedDeploy(app(DeploymentRecorder::class)->open(test()->application, DeploymentTrigger::Manual, test()->admin->id)->id);
+    }
+
+    it('names the new commit and says the deploy is incomplete when it failed after the checkout', function () {
+        deployCommit('aaaaaaa1111111');
+        deployCommit('bbbbbbb2222222', failChown: true);
+
+        $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}")
+            ->assertOk()
+            // Still the last deploy that succeeded…
+            ->assertJsonPath('application.last_commit', 'aaaaaaa1111111')
+            // …but not what is running.
+            ->assertJsonPath('application.code_on_disk.commit', 'bbbbbbb2222222')
+            ->assertJsonPath('application.code_on_disk.state', 'incomplete')
+            ->assertJsonPath('application.code_on_disk.message', __('application.code_on_disk.incomplete', ['commit' => 'bbbbbbb']));
+
+        $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}/deployments")
+            ->assertOk()
+            ->assertJsonPath('settings.code_on_disk.commit', 'bbbbbbb2222222')
+            ->assertJsonPath('settings.code_on_disk.state', 'incomplete');
+    });
+
+    it('is deployed again once a later deploy succeeds', function () {
+        deployCommit('bbbbbbb2222222', failChown: true);
+        deployCommit('ccccccc3333333');
+
+        $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}")
+            ->assertJsonPath('application.code_on_disk.commit', 'ccccccc3333333')
+            ->assertJsonPath('application.code_on_disk.state', 'deployed')
+            ->assertJsonPath('application.code_on_disk.message', null);
+    });
+
+    it('ignores a failed deploy that never reached the checkout: the old code is still there', function () {
+        deployCommit('aaaaaaa1111111');
+
+        Process::fake(fn ($process) => in_array('fetch', $process->command, true)
+            ? Process::result(errorOutput: 'fatal: repository not found', exitCode: 128)
+            : Process::result(exitCode: 0));
+        runRecordedDeploy(app(DeploymentRecorder::class)->open($this->application, DeploymentTrigger::Manual, $this->admin->id)->id);
+
+        $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}")
+            ->assertJsonPath('application.code_on_disk.commit', 'aaaaaaa1111111')
+            ->assertJsonPath('application.code_on_disk.state', 'deployed');
+    });
+
+    it('falls back to last_commit for a site with no recorded checkout', function () {
+        $this->application->forceFill(['last_commit' => 'ddddddd4444444'])->save();
+
+        $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}")
+            ->assertJsonPath('application.code_on_disk.commit', 'ddddddd4444444')
+            ->assertJsonPath('application.code_on_disk.state', 'deployed');
+    });
+
+    it('leaves it out of a list of sites, which does not load it', function () {
+        $this->actingAs($this->admin)->getJson('/api/applications')
+            ->assertOk()
+            ->assertJsonMissingPath('applications.0.code_on_disk');
+    });
+});

@@ -240,4 +240,10 @@ return [
         'lede' => 'It has been taken offline by its owner. Please try again later.',
         'foot' => 'Served by the control panel.',
     ],
+
+    // A deploy that failed after its checkout left the new code live.
+    // See Application::codeOnDisk().
+    'code_on_disk' => [
+        'incomplete' => 'The last deploy failed after the new code was put in place, so the site is running commit :commit, which is not fully deployed. Fix the problem and deploy again.',
+    ],
 ];

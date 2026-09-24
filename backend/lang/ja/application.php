@@ -230,4 +230,10 @@ return [
         'lede' => '所有者によってオフラインにされています。しばらくしてからもう一度お試しください。',
         'foot' => 'コントロールパネルによる配信です。',
     ],
+
+    // A deploy that failed after its checkout left the new code live.
+    // See Application::codeOnDisk().
+    'code_on_disk' => [
+        'incomplete' => '最後のデプロイは新しいコードを配置した後に失敗しました。そのため、サイトは完全にはデプロイされていないコミット :commit で動作しています。問題を修正して再度デプロイしてください。',
+    ],
 ];

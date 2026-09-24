@@ -230,4 +230,10 @@ return [
         'lede' => 'Il a été mis hors ligne par son propriétaire. Merci de réessayer plus tard.',
         'foot' => 'Servi par le panneau de contrôle.',
     ],
+
+    // A deploy that failed after its checkout left the new code live.
+    // See Application::codeOnDisk().
+    'code_on_disk' => [
+        'incomplete' => 'Le dernier déploiement a échoué après la mise en place du nouveau code : le site exécute donc le commit :commit, qui n\'est pas entièrement déployé. Corrigez le problème et redéployez.',
+    ],
 ];

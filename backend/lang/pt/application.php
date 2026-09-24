@@ -230,4 +230,10 @@ return [
         'lede' => 'Foi colocado offline pelo seu proprietário. Tente novamente mais tarde.',
         'foot' => 'Servido pelo painel de controlo.',
     ],
+
+    // A deploy that failed after its checkout left the new code live.
+    // See Application::codeOnDisk().
+    'code_on_disk' => [
+        'incomplete' => 'A última implementação falhou depois de o novo código ser colocado, por isso o site está a executar o commit :commit, que não está totalmente implementado. Corrija o problema e implemente novamente.',
+    ],
 ];

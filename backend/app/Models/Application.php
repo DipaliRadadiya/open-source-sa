@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AiBotPolicy;
 use App\Enums\ApplicationStatus;
+use App\Enums\DeploymentStatus;
 use App\Enums\DomainType;
 use App\Enums\WafCategory;
 use App\Enums\WafMode;
@@ -343,6 +344,57 @@ class Application extends Model
     public function deployments(): HasMany
     {
         return $this->hasMany(Deployment::class);
+    }
+
+    /**
+     * The newest deploy that got as far as checking out a commit — the code
+     * that is on disk now, whether or not that deploy went on to succeed.
+     *
+     * Deploys are in place: the checkout replaces the files first, and the
+     * script, dependency check and verify come after. A deploy that fails in
+     * any of those leaves the new code live, while `last_commit` (written on
+     * success only) still names the old one (found on a real server,
+     * 2026-09-24). See {@see codeOnDisk()}.
+     */
+    public function latestCheckout(): HasOne
+    {
+        return $this->hasOne(Deployment::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->whereNotNull('commit_hash'),
+        );
+    }
+
+    /**
+     * Which commit is on disk, and whether the deploy that put it there
+     * finished: `deployed`, `incomplete` (it failed after the checkout) or
+     * `deploying`. Falls back to `last_commit` for a site with no recorded
+     * checkout — one deployed before deployments were recorded, or a clone.
+     *
+     * `message` is the warning to show, and is set for `incomplete` only.
+     *
+     * @return array{commit: ?string, state: ?string, message: ?string}
+     */
+    public function codeOnDisk(): array
+    {
+        $checkout = $this->latestCheckout;
+
+        if ($checkout === null) {
+            return ['commit' => $this->last_commit, 'state' => $this->last_commit !== null ? 'deployed' : null, 'message' => null];
+        }
+
+        $state = match ($checkout->status) {
+            DeploymentStatus::Succeeded => 'deployed',
+            DeploymentStatus::Failed => 'incomplete',
+            default => 'deploying',
+        };
+
+        return [
+            'commit' => $checkout->commit_hash,
+            'state' => $state,
+            'message' => $state === 'incomplete'
+                ? __('application.code_on_disk.incomplete', ['commit' => substr((string) $checkout->commit_hash, 0, 7)])
+                : null,
+        ];
     }
 
     /**

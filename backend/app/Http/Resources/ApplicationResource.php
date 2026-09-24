@@ -253,9 +253,17 @@ class ApplicationResource extends JsonResource
             // never been provisioned.
             'provisioning_started_at' => $this->provisioning_started_at?->format('d-m-Y H:i:s'),
             'provisioning_started_at_human' => $this->provisioning_started_at?->diffForHumans(),
-            // What is actually on disk right now — the only honest answer to
-            // "which version is running".
+            // The last deploy that SUCCEEDED. Not necessarily what is on disk:
+            // deploys are in place, so one that fails after its checkout leaves
+            // the new commit live. `code_on_disk` answers that.
             'last_commit' => $this->last_commit,
+            // `{commit, state, message}`, state `deployed | incomplete |
+            // deploying`. Only on a response that loaded `latestCheckout`, so a
+            // list of sites does not run a query per row. `when` rather than
+            // `whenLoaded`: that one returns null for a loaded-but-empty
+            // relation without calling back, which skipped the `last_commit`
+            // fallback for every site with no recorded checkout.
+            'code_on_disk' => $this->when($this->resource->relationLoaded('latestCheckout'), fn () => $this->codeOnDisk()),
             'last_deployed_at' => $this->last_deployed_at?->format('d-m-Y H:i:s'),
             'last_deployed_at_human' => $this->last_deployed_at?->diffForHumans(),
             // Quote this to support; the technical detail is in the server-ops

@@ -1410,6 +1410,14 @@ If URL/vhost transition fails, the previous certificate status, canonical URL, a
 
 Newest first.
 
+**Which commit is live: `settings.code_on_disk`** (also on `GET /applications/{application}` as `application.code_on_disk`; not in the site list). Deploys are **in place**: the checkout replaces the files before the script, the dependency check and the verify run. So a deploy that fails after its checkout **leaves the new commit live**, while `last_commit` (written on success only) still names the old one.
+
+```json
+"code_on_disk": {"commit": "3293703efd3e…", "state": "incomplete", "message": "The last deploy failed after the new code was put in place, so the site is running commit 3293703, which is not fully deployed. Fix the problem and deploy again."}
+```
+
+`state`: `deployed` (the last deploy that reached checkout succeeded), `incomplete` (it failed after the checkout; show `message` as a warning), `deploying` (in flight), or `null` (never deployed). A deploy that failed *before* the checkout (for example the fetch) changed nothing and is ignored. **Show `code_on_disk.commit` as the running version, not `last_commit`.**
+
 ```json
 {"deployments": [{
   "id": 12,
