@@ -49,3 +49,8 @@ test("E5: the restore picker is a radio group led by the saved time", () => {
   assert.match(src, /role="radio"\s+aria-checked=\{active\}/);
   assert.match(src, /parseApiWallClock\(backup\.created_at\)/);
 });
+
+test("a refresh that unmounts its caller still runs the waiting step (the delete toast)", () => {
+  const src = read("hooks/use-refresh.js");
+  assert.match(src, /\(\) => \(\) => \{\s*const run = after\.current;\s*after\.current = null;\s*run\?\.\(\);/);
+});

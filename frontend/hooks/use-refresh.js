@@ -27,7 +27,8 @@ import { useNavTransition } from "@/components/data-table/nav-transition";
  * dialog that closed on the API's answer and refreshed behind it left the old
  * list up for 1.5–4 s on a real server, under a toast saying it was done — a
  * renamed file still wearing its old name. Keep the spinner while `pending`
- * and do the toast and the close in `after`.
+ * and do the toast and the close in `after`. It still runs if the refresh
+ * unmounts the caller.
  */
 export function useRefresh() {
   const nav = useNavTransition();
@@ -44,6 +45,21 @@ export function useRefresh() {
     after.current = null;
     run();
   }, [pending]);
+
+  /*
+   * The refresh can remove the very component that asked for it: a deleted
+   * worker's row takes its own delete dialog with it. The effect above then
+   * never sees `pending` fall, and "Worker deleted." was never shown. Run the
+   * waiting step on the way out instead — by then the refresh has landed.
+   */
+  useEffect(
+    () => () => {
+      const run = after.current;
+      after.current = null;
+      run?.();
+    },
+    [],
+  );
 
   return {
     pending,
