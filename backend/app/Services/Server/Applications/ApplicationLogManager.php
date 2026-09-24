@@ -32,6 +32,7 @@ class ApplicationLogManager
         private WebServerManager $webServers,
         private ProcessSupervisor $processes,
         private ApplicationProvisioner $provisioner,
+        private ContainerSupervisor $containers,
     ) {}
 
     /**
@@ -46,7 +47,11 @@ class ApplicationLogManager
                 'key' => $source['key'],
                 'label' => __('app_log.sources.'.$source['key']),
                 'kind' => $source['kind'],
-                'exists' => $source['kind'] === 'journal' || $this->fileExists($application, $source['path']),
+                // A container's log is a command, not a file — there is
+                // nothing on disk to stat, and the compose file being present
+                // is what makes the source real.
+                'exists' => in_array($source['kind'], ['journal', 'container'], true)
+                    || $this->fileExists($application, $source['path']),
             ],
             $this->catalog($application),
         ));
@@ -78,9 +83,15 @@ class ApplicationLogManager
         // lines, so comparing its count against 200 answered the same question
         // every time — `truncated` was structurally false, and the last 200
         // lines of a million-line access log were reported as the whole log.
-        $raw = $source['kind'] === 'journal'
-            ? $this->readJournal($application, $window + 1)
-            : $this->readFile($application, $source['path'], $window + 1);
+        $raw = match ($source['kind']) {
+            'journal' => $this->readJournal($application, $window + 1),
+            'container' => $this->containers->logs(
+                $application,
+                $this->provisioner->documentRoot($application),
+                $window + 1,
+            ),
+            default => $this->readFile($application, $source['path'], $window + 1),
+        };
 
         if ($raw === null) {
             return null;
@@ -166,6 +177,15 @@ class ApplicationLogManager
             foreach (ProcessSupervisor::logFiles($application) as $key => $path) {
                 $catalog[] = ['key' => $key, 'kind' => 'file', 'path' => $path];
             }
+        }
+
+        // A container writes to Docker's logging driver, not to a file in the
+        // site directory. Same reasoning as the Node source above and more
+        // acute: for a container the web-server logs describe *only* the
+        // proxy, so without this the screen shows a tidy 502 and no trace of
+        // the container that exited on startup and caused it.
+        if ($application->serving_profile === 'docker') {
+            $catalog[] = ['key' => 'container', 'kind' => 'container', 'path' => ''];
         }
 
         // The firewall's detect-mode log: the requests that *would* have been

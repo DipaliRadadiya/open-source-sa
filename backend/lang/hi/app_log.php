@@ -2,6 +2,7 @@
 
 return [
     'sources' => [
+        'container' => 'कंटेनर',
         'access' => 'एक्सेस लॉग',
         'error' => 'त्रुटि लॉग',
         'application' => 'ऐप्लिकेशन आउटपुट',

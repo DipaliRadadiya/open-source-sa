@@ -97,6 +97,24 @@ class CreateApplication
                     'rendering_type' => $data['rendering_type'] ?? null,
                     'status' => ApplicationStatus::Pending,
                     'system_user_id' => $data['system_user_id'],
+                    // A type's declared fields that are real columns.
+                    //
+                    // `typeSettings()` deliberately skips those — a column
+                    // should be a column, not a key in a JSON blob — but the
+                    // list below sets only the fields every type shares, so a
+                    // column-backed type field was dropped by both and
+                    // vanished. Measured, not theorised: a Docker application
+                    // was created with `image`, `container_port` and `compose`
+                    // all null, and the user's pasted compose file simply did
+                    // not exist afterwards.
+                    //
+                    // Spread FIRST, so the explicit entries below win. Last
+                    // was my first attempt and it is exactly backwards: a
+                    // type declaring `deploy_script` then overwrote the
+                    // CRLF-normalised value with the raw one, and a script
+                    // pasted from Windows went back to failing with
+                    // "command not found: composer\r". The suite caught it.
+                    ...$this->typeColumns($type->fields(), $data),
                     'name' => $data['name'],
                     'domain' => $data['domain'],
                     'php_version' => $data['php_version'] ?? null,
@@ -180,6 +198,35 @@ class CreateApplication
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
+    /**
+     * The type's declared fields that are columns on the model.
+     *
+     * The mirror of {@see typeSettings()}: that one takes the fields which are
+     * NOT columns, this one takes the fields which are. Between them every
+     * declared field lands somewhere, which is the property that was missing —
+     * a field in neither list is accepted by validation and then silently
+     * discarded.
+     *
+     * @param  array<int, array<string, mixed>>  $fields
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function typeColumns(array $fields, array $data): array
+    {
+        $columns = (new Application)->getFillable();
+        $values = [];
+
+        foreach ($fields as $field) {
+            $name = (string) $field['name'];
+
+            if (in_array($name, $columns, true) && array_key_exists($name, $data)) {
+                $values[$name] = $data[$name];
+            }
+        }
+
+        return $values;
+    }
+
     private function typeSettings(array $fields, array $data): array
     {
         $columns = (new Application)->getFillable();

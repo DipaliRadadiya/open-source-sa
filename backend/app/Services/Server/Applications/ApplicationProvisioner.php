@@ -36,6 +36,7 @@ class ApplicationProvisioner
         private WebServerManager $webServers,
         private InstallerManager $installers,
         private ProcessSupervisor $supervisor,
+        private ContainerSupervisor $containers,
         private ProvisionProgress $progress,
         private AutoIssueCertificate $autoCertificate,
         private PoolManager $pools,
@@ -452,6 +453,20 @@ class ApplicationProvisioner
      */
     private function startProcess(Application $application, string $documentRoot): void
     {
+        // A container is supervised by compose, not by systemd, and this is
+        // the fork that was missing: `ContainerSupervisor` existed, was
+        // tested, and was never called from here — so a Docker application
+        // provisioned to "active" with no container anywhere and nginx
+        // proxying to a port nothing listened on. Every test drove the
+        // supervisor directly, which proved it worked and nothing about
+        // whether it was reachable.
+        if ($application->serving_profile === 'docker') {
+            $this->containers->apply($application, $documentRoot);
+            $this->progress->record('start_app');
+
+            return;
+        }
+
         $installer = $this->installers->installerFor($application);
         $command = $installer?->startCommand($application, $documentRoot);
 
@@ -503,8 +518,14 @@ class ApplicationProvisioner
         $this->rootLock->unlock($application);
 
         // The process first: a unit left running holds its port and keeps
-        // serving traffic for a site the panel has stopped listing.
+        // serving traffic for a site the panel has stopped listing. A
+        // container does exactly the same, so both are asked — `remove()` on
+        // either is a no-op when there was nothing of that kind.
         $this->supervisor->remove($application);
+
+        if ($application->serving_profile === 'docker') {
+            $this->containers->remove($application, $this->documentRoot($application));
+        }
 
         // Then everything else the panel wrote outside the site's own
         // directory — the PHP-FPM pool, worker units, the fail2ban jail, the

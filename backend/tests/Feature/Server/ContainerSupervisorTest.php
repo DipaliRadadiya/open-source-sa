@@ -299,3 +299,45 @@ it('writes the user file verbatim when it passes', function () {
         // Not the generated template.
         ->and($written)->not->toContain('Managed by the panel');
 });
+
+it('is actually reached by provisioning, not merely callable', function () {
+    // The gap that produced a 502 on a live server. `ContainerSupervisor`
+    // existed, had seven passing tests, and was never called from
+    // `ApplicationProvisioner` — so a Docker application provisioned to
+    // "active" with no container anywhere and nginx proxying to a port
+    // nothing listened on.
+    //
+    // Every other test here drives the supervisor directly, which proves it
+    // works and nothing about whether it is reachable. This one reads the
+    // wiring.
+    $provisioner = file_get_contents(base_path('app/Services/Server/Applications/ApplicationProvisioner.php'));
+
+    expect($provisioner)->toContain('ContainerSupervisor')
+        ->and($provisioner)->toContain("serving_profile === 'docker'")
+        // And on the way out too: a container left running holds its port and
+        // serves traffic for a site the panel has stopped listing.
+        ->and(substr_count($provisioner, "serving_profile === 'docker'"))->toBeGreaterThanOrEqual(2);
+});
+
+it('persists the type fields that are columns', function () {
+    // `typeSettings()` skips fields that are real columns — correctly, a
+    // column should not live in a JSON blob — but the create action's own
+    // attribute list sets only the fields every type shares. A column-backed
+    // type field was dropped by both, so a pasted compose file was accepted,
+    // validated, and then simply did not exist.
+    $create = file_get_contents(base_path('app/Actions/Server/Application/CreateApplication.php'));
+
+    expect($create)->toContain('typeColumns');
+
+    // The real assertion: every field the docker type declares is either a
+    // column or a setting, and nothing declared falls between them.
+    $columns = (new Application)->getFillable();
+    $docker = collect(app(SiteTypeManager::class)->all())
+        ->first(fn ($type) => $type->name() === 'docker');
+
+    foreach ($docker->fields() as $field) {
+        expect(in_array($field['name'], $columns, true))->toBeTrue(
+            "docker field {$field['name']} is neither a column nor covered by a setting",
+        );
+    }
+});

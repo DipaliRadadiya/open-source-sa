@@ -10,6 +10,7 @@
 
 return [
     'sources' => [
+        'container' => 'Container',
         'access' => 'Access log',
         'error' => 'Error log',
         'application' => 'Application output',

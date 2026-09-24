@@ -2,6 +2,7 @@
 
 return [
     'sources' => [
+        'container' => 'Container',
         'access' => 'Zugriffsprotokoll',
         'error' => 'Fehlerprotokoll',
         'application' => 'Anwendungsausgabe',
