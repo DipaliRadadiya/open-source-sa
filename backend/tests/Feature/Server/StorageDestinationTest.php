@@ -1174,8 +1174,8 @@ it('uses path-style addressing only when a custom endpoint is configured', funct
         return test()->fakeDisk;
     });
 
-    // Custom endpoint (MinIO, Wasabi, B2) — these route through the path.
-    $prober->probe(makeDestination(['name' => 'MinIO', 'config' => ['endpoint' => 'https://minio.example.com']]));
+    // Custom endpoint (self-hosted, Wasabi, B2) — these route through the path.
+    $prober->probe(makeDestination(['name' => 'Self-hosted', 'config' => ['endpoint' => 'https://s3.example.com']]));
 
     // Empty endpoint *means* AWS, where path-style is deprecated and
     // unsupported for buckets in regions launched after 2019.

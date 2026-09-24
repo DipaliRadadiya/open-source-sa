@@ -13,14 +13,6 @@ use Throwable;
  * Any S3-compatible service: AWS, Cloudflare R2, Backblaze B2, Wasabi,
  * DigitalOcean Spaces, or a self-hosted one.
  *
- * MinIO was the self-hosted example everywhere in this feature until
- * 2026-09-15 and is deliberately no longer named: its repository has been
- * archived ("THIS REPOSITORY IS NO LONGER MAINTAINED"), the community edition
- * has been source-only with no prebuilt binaries or images since October 2025,
- * and a panel should not point people at software they cannot install or
- * patch. Nothing about the driver changed — a self-hosted S3 endpoint is still
- * exactly as supported as it was, and existing destinations are untouched.
- *
  * This is the original — and until now the only — destination driver. Its
  * config is carried over unchanged from `DestinationDisk`, including the two
  * flags whose defaults are wrong and whose docblocks are the reason they are
