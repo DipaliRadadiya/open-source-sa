@@ -42,6 +42,12 @@ class PermissionCatalog
             // meant "can reboot the server and move the SSH port".
             ['name' => 'php', 'title' => 'PHP', 'icon' => 'file-code', 'url' => '/php', 'order' => 10],
             ['name' => 'node', 'title' => 'Node.js', 'icon' => 'hexagon', 'url' => '/node', 'order' => 11],
+            // Networks and volumes: one permission, because they are the same
+            // job — the shared Docker objects an application's containers sit
+            // on and write to. Splitting them would give somebody the ability
+            // to delete the volume holding a database while being unable to
+            // see the network it talks over.
+            ['name' => 'docker', 'title' => 'Docker', 'icon' => 'container', 'url' => '/docker', 'order' => 11.5],
             ['name' => 'setting', 'title' => 'Settings', 'icon' => 'settings', 'url' => '/settings', 'order' => 12],
             ['name' => 'disk_cleaner', 'title' => 'Disk Cleaner', 'icon' => 'trash-2', 'url' => '/disk-cleaner', 'order' => 13],
             // The backups dashboard: history and restore across every app and

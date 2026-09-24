@@ -1308,7 +1308,8 @@
       "retryOnSetup": "Reintentar en la página de configuración",
       "retryOnDatabases": "Reintentar en la página de bases de datos",
       "retryOnPhp": "Reintentar en la página de PHP",
-      "retryOnFail2ban": "Reintentar en la página de Fail2ban"
+      "retryOnFail2ban": "Reintentar en la página de Fail2ban",
+      "retryOnDocker": "Reintentar en la página de Docker"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 servicio necesita atención} other {# servicios necesitan atención}}",
@@ -1335,7 +1336,8 @@
       "unitFailed": "Instalado pero no está funcionando. Su registro indicará por qué.",
       "openDatabases": "Abrir bases de datos",
       "openPhp": "Abrir PHP",
-      "openFail2ban": "Abrir Fail2ban"
+      "openFail2ban": "Abrir Fail2ban",
+      "openDocker": "Abrir Docker"
     },
     "moreActions": "Más acciones para {name}"
   },
@@ -6284,5 +6286,50 @@
       "disconnectFailed": "No se pudo desconectar."
     },
     "cardTitle": "Conexión"
+  },
+  "docker": {
+    "title": "Docker",
+    "subtitle": "Redes y volúmenes compartidos por los contenedores de este servidor.",
+    "create": "Crear",
+    "remove": "Quitar",
+    "none": "Ninguna",
+    "failed": "No se pudo completar.",
+    "loadFailed": "No se pudieron leer las redes y volúmenes de Docker.",
+    "ownedByApp": "App n.º {id}",
+    "unavailable": {
+      "title": "No es un servidor de contenedores",
+      "body": "Este servidor no aloja contenedores, así que no tiene redes ni volúmenes de Docker."
+    },
+    "columns": {
+      "name": "Nombre",
+      "driver": "Controlador",
+      "attached": "Contenedores",
+      "size": "Tamaño",
+      "usedBy": "Usada por"
+    },
+    "networks": {
+      "title": "Redes",
+      "placeholder": "nombre-de-red",
+      "hint": "Los contenedores en una misma red definida por el usuario pueden localizarse por nombre. El puente integrado de Docker no lo permite, y por eso una app y su base de datos necesitan una de estas.",
+      "builtIn": "Propia de Docker",
+      "created": "Red {name} creada.",
+      "removed": "Red {name} eliminada.",
+      "removeTitle": "¿Eliminar la red {name}?",
+      "removeBody": "No hay nada conectado. Los contenedores que la esperen más adelante no arrancarán hasta que se vuelva a crear.",
+      "removeBusy": "Todavía hay contenedores conectados a esta red. Deténlos o desconéctalos primero."
+    },
+    "volumes": {
+      "title": "Volúmenes",
+      "placeholder": "nombre-de-volumen",
+      "hint": "Un volumen es donde un contenedor guarda los datos que deben sobrevivir a una reconstrucción.",
+      "empty": "Aún no hay volúmenes en este servidor.",
+      "inUse": "{count} contenedor(es)",
+      "unused": "Sin usar",
+      "created": "Volumen {name} creado.",
+      "removed": "Volumen {name} eliminado.",
+      "removeTitle": "¿Eliminar el volumen {name}?",
+      "removeBody": "Esto borra los datos que contiene. Ahora mismo nadie lo usa, pero un contenedor detenido puede seguir esperándolo.",
+      "removeBusy": "Un contenedor en ejecución usa este volumen. Eliminarlo borraría datos que algo sigue escribiendo."
+    }
   }
 }

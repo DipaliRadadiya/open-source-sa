@@ -53,6 +53,15 @@ const HOMES = [
     label: "openFail2ban",
     retryLabel: "retryOnFail2ban",
   },
+  {
+    // A failed Docker install has somewhere to land that can say more than
+    // the setup page can: /setup reports a component installed as soon as
+    // any part of it is, and the Docker screen reads the daemon directly.
+    match: /^docker$/,
+    href: "/docker",
+    label: "openDocker",
+    retryLabel: "retryOnDocker",
+  },
 ];
 
 const SETUP = { href: "/setup", label: "openSetup", retryLabel: "retryOnSetup" };

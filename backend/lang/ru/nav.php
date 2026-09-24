@@ -13,6 +13,7 @@ return [
     'service' => 'Службы',
     'php' => 'PHP',
     'node' => 'Node.js',
+    'docker' => 'Docker',
     'setting' => 'Настройки',
     'disk_cleaner' => 'Очистка диска',
     'activity_log' => 'Журнал активности',

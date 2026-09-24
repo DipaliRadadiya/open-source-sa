@@ -1308,7 +1308,8 @@
       "retryOnSetup": "Auf der Einrichtungsseite erneut versuchen",
       "retryOnDatabases": "Auf der Datenbankseite erneut versuchen",
       "retryOnPhp": "Auf der PHP-Seite erneut versuchen",
-      "retryOnFail2ban": "Auf der Fail2ban-Seite erneut versuchen"
+      "retryOnFail2ban": "Auf der Fail2ban-Seite erneut versuchen",
+      "retryOnDocker": "Auf der Docker-Seite erneut versuchen"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 Dienst braucht Aufmerksamkeit} other {# Dienste brauchen Aufmerksamkeit}}",
@@ -1335,7 +1336,8 @@
       "unitFailed": "Installiert, aber nicht laufend. Das Protokoll nennt den Grund.",
       "openDatabases": "Datenbanken öffnen",
       "openPhp": "PHP öffnen",
-      "openFail2ban": "Fail2ban öffnen"
+      "openFail2ban": "Fail2ban öffnen",
+      "openDocker": "Docker öffnen"
     },
     "moreActions": "Weitere Aktionen für {name}"
   },
@@ -6284,5 +6286,50 @@
       "disconnectFailed": "Die Verbindung konnte nicht getrennt werden."
     },
     "cardTitle": "Verbindung"
+  },
+  "docker": {
+    "title": "Docker",
+    "subtitle": "Netzwerke und Volumes, die sich die Container dieses Servers teilen.",
+    "create": "Erstellen",
+    "remove": "Entfernen",
+    "none": "Keine",
+    "failed": "Das hat nicht funktioniert.",
+    "loadFailed": "Dockers Netzwerke und Volumes konnten nicht gelesen werden.",
+    "ownedByApp": "App #{id}",
+    "unavailable": {
+      "title": "Kein Container-Server",
+      "body": "Dieser Server hostet keine Container und hat daher weder Docker-Netzwerke noch -Volumes."
+    },
+    "columns": {
+      "name": "Name",
+      "driver": "Treiber",
+      "attached": "Container",
+      "size": "Größe",
+      "usedBy": "Genutzt von"
+    },
+    "networks": {
+      "title": "Netzwerke",
+      "placeholder": "netzwerk-name",
+      "hint": "Container im selben benutzerdefinierten Netzwerk erreichen einander über ihren Namen. Dockers eingebaute Bridge kann das nicht — deshalb brauchen eine App und ihre Datenbank so ein Netzwerk.",
+      "builtIn": "Dockers eigenes",
+      "created": "Netzwerk {name} erstellt.",
+      "removed": "Netzwerk {name} entfernt.",
+      "removeTitle": "Netzwerk {name} entfernen?",
+      "removeBody": "Es ist nichts damit verbunden. Container, die es später erwarten, starten nicht, bis es neu erstellt wird.",
+      "removeBusy": "An diesem Netzwerk hängen noch Container. Stoppen oder trennen Sie sie zuerst."
+    },
+    "volumes": {
+      "title": "Volumes",
+      "placeholder": "volume-name",
+      "hint": "In einem Volume bewahrt ein Container die Daten auf, die einen Neuaufbau überstehen müssen.",
+      "empty": "Auf diesem Server gibt es noch keine Volumes.",
+      "inUse": "{count} Container",
+      "unused": "Nicht in Benutzung",
+      "created": "Volume {name} erstellt.",
+      "removed": "Volume {name} entfernt.",
+      "removeTitle": "Volume {name} entfernen?",
+      "removeBody": "Damit werden die darin enthaltenen Daten gelöscht. Gerade nutzt es nichts, aber ein gestoppter Container kann es noch erwarten.",
+      "removeBusy": "Ein laufender Container nutzt dieses Volume. Es zu entfernen würde Daten löschen, die gerade geschrieben werden."
+    }
   }
 }

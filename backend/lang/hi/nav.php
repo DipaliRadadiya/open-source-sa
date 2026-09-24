@@ -13,6 +13,7 @@ return [
     'service' => 'सेवाएँ',
     'php' => 'PHP',
     'node' => 'Node.js',
+    'docker' => 'Docker',
     'setting' => 'सेटिंग्स',
     'disk_cleaner' => 'डिस्क क्लीनर',
     'activity_log' => 'गतिविधि लॉग',

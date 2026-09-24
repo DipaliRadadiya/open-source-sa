@@ -1308,7 +1308,8 @@
       "retryOnSetup": "Tentar novamente na página de setup",
       "retryOnDatabases": "Tentar novamente na página de bancos de dados",
       "retryOnPhp": "Tentar novamente na página do PHP",
-      "retryOnFail2ban": "Tentar novamente na página do Fail2ban"
+      "retryOnFail2ban": "Tentar novamente na página do Fail2ban",
+      "retryOnDocker": "Tentar novamente na página Docker"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 serviço precisa de atenção} other {# serviços precisam de atenção}}",
@@ -1335,7 +1336,8 @@
       "unitFailed": "Instalado, mas não está em execução. O log dirá o motivo.",
       "openDatabases": "Abrir bancos de dados",
       "openPhp": "Abrir PHP",
-      "openFail2ban": "Abrir Fail2ban"
+      "openFail2ban": "Abrir Fail2ban",
+      "openDocker": "Abrir Docker"
     },
     "moreActions": "Mais ações para {name}"
   },
@@ -6284,5 +6286,50 @@
       "disconnectFailed": "Não foi possível desconectar."
     },
     "cardTitle": "Conexão"
+  },
+  "docker": {
+    "title": "Docker",
+    "subtitle": "Redes e volumes partilhados pelos contentores deste servidor.",
+    "create": "Criar",
+    "remove": "Remover",
+    "none": "Nenhum",
+    "failed": "Não foi possível concluir.",
+    "loadFailed": "Não foi possível ler as redes e volumes do Docker.",
+    "ownedByApp": "App n.º {id}",
+    "unavailable": {
+      "title": "Não é um servidor de contentores",
+      "body": "Este servidor não aloja contentores, pelo que não tem redes nem volumes Docker."
+    },
+    "columns": {
+      "name": "Nome",
+      "driver": "Controlador",
+      "attached": "Contentores",
+      "size": "Tamanho",
+      "usedBy": "Usado por"
+    },
+    "networks": {
+      "title": "Redes",
+      "placeholder": "nome-da-rede",
+      "hint": "Contentores na mesma rede definida pelo utilizador alcançam-se pelo nome. A bridge integrada do Docker não permite isso — por isso uma app e a sua base de dados precisam de uma destas.",
+      "builtIn": "Do próprio Docker",
+      "created": "Rede {name} criada.",
+      "removed": "Rede {name} removida.",
+      "removeTitle": "Remover a rede {name}?",
+      "removeBody": "Não há nada ligado. Contentores que a esperem mais tarde não arrancarão até ser recriada.",
+      "removeBusy": "Ainda há contentores ligados a esta rede. Pare-os ou desligue-os primeiro."
+    },
+    "volumes": {
+      "title": "Volumes",
+      "placeholder": "nome-do-volume",
+      "hint": "Um volume é onde um contentor guarda os dados que têm de sobreviver a uma reconstrução.",
+      "empty": "Ainda não há volumes neste servidor.",
+      "inUse": "{count} contentor(es)",
+      "unused": "Não utilizado",
+      "created": "Volume {name} criado.",
+      "removed": "Volume {name} removido.",
+      "removeTitle": "Remover o volume {name}?",
+      "removeBody": "Isto apaga os dados lá dentro. Neste momento nada o usa, mas um contentor parado pode ainda precisar dele.",
+      "removeBusy": "Um contentor em execução está a usar este volume. Removê-lo apagaria dados que algo ainda está a escrever."
+    }
   }
 }

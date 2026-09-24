@@ -1308,7 +1308,8 @@
       "retryOnSetup": "セットアップページで再試行",
       "retryOnDatabases": "データベースページで再試行",
       "retryOnPhp": "PHP ページで再試行",
-      "retryOnFail2ban": "Fail2ban ページで再試行"
+      "retryOnFail2ban": "Fail2ban ページで再試行",
+      "retryOnDocker": "Docker ページで再試行"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 件のサービスに対応が必要です} other {# 件のサービスに対応が必要です}}",
@@ -1335,7 +1336,8 @@
       "unitFailed": "インストール済みですが実行されていません。ログで理由を確認してください。",
       "openDatabases": "データベースを開く",
       "openPhp": "PHP を開く",
-      "openFail2ban": "Fail2ban を開く"
+      "openFail2ban": "Fail2ban を開く",
+      "openDocker": "Docker を開く"
     },
     "moreActions": "{name} のその他の操作"
   },
@@ -6284,5 +6286,50 @@
       "disconnectFailed": "接続を解除できませんでした。"
     },
     "cardTitle": "接続"
+  },
+  "docker": {
+    "title": "Docker",
+    "subtitle": "このサーバーのコンテナが共有するネットワークとボリューム。",
+    "create": "作成",
+    "remove": "解除",
+    "none": "なし",
+    "failed": "実行できませんでした。",
+    "loadFailed": "Docker のネットワークとボリュームを読み取れませんでした。",
+    "ownedByApp": "アプリ #{id}",
+    "unavailable": {
+      "title": "コンテナサーバーではありません",
+      "body": "このサーバーはコンテナをホストしていないため、Docker のネットワークやボリュームはありません。"
+    },
+    "columns": {
+      "name": "名前",
+      "driver": "ドライバー",
+      "attached": "コンテナ",
+      "size": "サイズ",
+      "usedBy": "使用箇所"
+    },
+    "networks": {
+      "title": "ネットワーク",
+      "placeholder": "network-name",
+      "hint": "同じユーザー定義ネットワーク上のコンテナは名前で互いに到達できます。Docker 標準のブリッジではできないため、アプリとそのデータベースにはこれが必要です。",
+      "builtIn": "Docker 標準",
+      "created": "ネットワーク {name} を作成しました。",
+      "removed": "ネットワーク {name} を削除しました。",
+      "removeTitle": "ネットワーク {name} を削除しますか？",
+      "removeBody": "現在は何も接続されていません。後でこれを必要とするコンテナは、再作成するまで起動できません。",
+      "removeBusy": "このネットワークにはまだコンテナが接続されています。先に停止または切断してください。"
+    },
+    "volumes": {
+      "title": "ボリューム",
+      "placeholder": "volume-name",
+      "hint": "ボリュームは、コンテナを作り直しても残す必要のあるデータの置き場所です。",
+      "empty": "このサーバーにはまだボリュームがありません。",
+      "inUse": "{count} 個のコンテナ",
+      "unused": "未使用",
+      "created": "ボリューム {name} を作成しました。",
+      "removed": "ボリューム {name} を削除しました。",
+      "removeTitle": "ボリューム {name} を削除しますか？",
+      "removeBody": "中のデータも削除されます。現在は使用されていませんが、停止中のコンテナがまだ必要としている可能性があります。",
+      "removeBusy": "実行中のコンテナがこのボリュームを使用しています。削除すると書き込み中のデータが失われます。"
+    }
   }
 }

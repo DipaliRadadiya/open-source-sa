@@ -1308,7 +1308,8 @@
       "retryOnSetup": "Retry on the setup page",
       "retryOnDatabases": "Retry on the databases page",
       "retryOnPhp": "Retry on the PHP page",
-      "retryOnFail2ban": "Retry on the Fail2ban page"
+      "retryOnFail2ban": "Retry on the Fail2ban page",
+      "retryOnDocker": "Retry on the Docker page"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 service needs attention} other {# services need attention}}",
@@ -1335,7 +1336,8 @@
       "unitFailed": "Installed but not running. Its log will say why.",
       "openDatabases": "Open databases",
       "openPhp": "Open PHP",
-      "openFail2ban": "Open Fail2ban"
+      "openFail2ban": "Open Fail2ban",
+      "openDocker": "Open Docker"
     },
     "moreActions": "More actions for {name}"
   },
@@ -6284,5 +6286,50 @@
       "disconnectFailed": "Couldn't disconnect."
     },
     "cardTitle": "Connection"
+  },
+  "docker": {
+    "title": "Docker",
+    "subtitle": "Networks and volumes shared by this server's containers.",
+    "create": "Create",
+    "remove": "Remove",
+    "none": "None",
+    "failed": "That didn't work.",
+    "loadFailed": "Couldn't read Docker's networks and volumes.",
+    "ownedByApp": "App #{id}",
+    "unavailable": {
+      "title": "Not a container server",
+      "body": "This server doesn't host containers, so it has no Docker networks or volumes."
+    },
+    "columns": {
+      "name": "Name",
+      "driver": "Driver",
+      "attached": "Containers",
+      "size": "Size",
+      "usedBy": "Used by"
+    },
+    "networks": {
+      "title": "Networks",
+      "placeholder": "network-name",
+      "hint": "Containers on the same user-defined network can reach each other by name. Docker's built-in bridge can't do that, which is why an app and its database need one of these.",
+      "builtIn": "Docker's own",
+      "created": "Network {name} created.",
+      "removed": "Network {name} removed.",
+      "removeTitle": "Remove network {name}?",
+      "removeBody": "Nothing is attached to it. Containers that later expect it will fail to start until it's recreated.",
+      "removeBusy": "Containers are still attached to this network. Stop or detach them first."
+    },
+    "volumes": {
+      "title": "Volumes",
+      "placeholder": "volume-name",
+      "hint": "A volume is where a container keeps data that has to survive being rebuilt.",
+      "empty": "No volumes on this server yet.",
+      "inUse": "{count} container(s)",
+      "unused": "Not in use",
+      "created": "Volume {name} created.",
+      "removed": "Volume {name} removed.",
+      "removeTitle": "Remove volume {name}?",
+      "removeBody": "This deletes the data inside it. Nothing is using it right now, but a stopped container may still expect it.",
+      "removeBusy": "A running container is using this volume. Removing it would delete data something is still writing to."
+    }
   }
 }

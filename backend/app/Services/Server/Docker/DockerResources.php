@@ -4,6 +4,7 @@ namespace App\Services\Server\Docker;
 
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\ServerOps;
+use App\Services\Server\ServerOpsResult;
 
 /**
  * Docker's networks and volumes, as the panel presents them.
@@ -105,6 +106,76 @@ class DockerResources
                 'application_id' => $this->applicationIdFrom((string) ($row['Name'] ?? '')),
             ];
         }, $rows);
+    }
+
+    /**
+     * Create a user-defined bridge network.
+     *
+     * Bridge, and not a choice: `overlay` needs swarm, `macvlan` needs a
+     * parent interface and hands the container an address on the host's LAN,
+     * and `host` is the thing the whole design refuses. Offering a driver
+     * dropdown would be offering three ways to break the box and one that
+     * works.
+     *
+     * The reason user-defined networks matter at all: only they give DNS
+     * resolution by container name, which is how an application reaches its
+     * database container. Docker's own `bridge` does not.
+     */
+    public function createNetwork(string $name): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['docker', 'network', 'create', '--driver', 'bridge', $name],
+            ['feature' => 'docker', 'op' => 'docker_network_create'],
+            timeout: 30,
+        );
+    }
+
+    public function removeNetwork(string $name): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['docker', 'network', 'rm', $name],
+            ['feature' => 'docker', 'op' => 'docker_network_remove'],
+            timeout: 30,
+        );
+    }
+
+    public function createVolume(string $name): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['docker', 'volume', 'create', $name],
+            ['feature' => 'docker', 'op' => 'docker_volume_create'],
+            timeout: 30,
+        );
+    }
+
+    /**
+     * Remove a volume — and never with `--force`.
+     *
+     * `docker volume rm -f` removes a volume that is still attached to a
+     * container, which is how somebody deletes a database while it is
+     * running. The panel checks first and refuses; without the check, Docker
+     * would happily do it.
+     */
+    public function removeVolume(string $name): ServerOpsResult
+    {
+        return $this->serverOps->run(
+            ['docker', 'volume', 'rm', $name],
+            ['feature' => 'docker', 'op' => 'docker_volume_remove'],
+            timeout: 30,
+        );
+    }
+
+    /**
+     * A name Docker will accept, and that cannot be an argument.
+     *
+     * The value reaches a command line. Docker's own rule is
+     * `[a-zA-Z0-9][a-zA-Z0-9_.-]*`, which already excludes whitespace and
+     * every shell metacharacter — and, importantly, a leading `-`, so a name
+     * cannot arrive as a flag.
+     */
+    public static function validName(string $name): bool
+    {
+        return preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/', $name) === 1;
     }
 
     /**

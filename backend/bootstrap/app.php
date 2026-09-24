@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CentralSystemGuard;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureServerHostsContainers;
 use App\Http\Middleware\EnsureServerManagesDatabases;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\ThrottleRequestsPerRoute;
@@ -93,6 +94,9 @@ return Application::configure(basePath: dirname(__DIR__))
             // uses one. See the class for why it is middleware rather than a
             // check in twenty-nine controller actions.
             'manages-databases' => EnsureServerManagesDatabases::class,
+            // The mirror of the above: Docker's own screens, on a server that
+            // hosts containers.
+            'hosts-containers' => EnsureServerHostsContainers::class,
             'central' => CentralSystemGuard::class,
             // One counter per route for `throttle:N,M`; see the class.
             'throttle' => ThrottleRequestsPerRoute::class,

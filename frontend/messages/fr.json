@@ -1308,7 +1308,8 @@
       "retryOnSetup": "Réessayer sur la page de configuration",
       "retryOnDatabases": "Réessayer sur la page des bases de données",
       "retryOnPhp": "Réessayer sur la page PHP",
-      "retryOnFail2ban": "Réessayer sur la page Fail2ban"
+      "retryOnFail2ban": "Réessayer sur la page Fail2ban",
+      "retryOnDocker": "Réessayer depuis la page Docker"
     },
     "summary": {
       "attention": "{count, plural, =1 {1 service à vérifier} other {# services à vérifier}}",
@@ -1335,7 +1336,8 @@
       "unitFailed": "Installé mais pas en exécution. Son journal indique pourquoi.",
       "openDatabases": "Ouvrir les bases de données",
       "openPhp": "Ouvrir PHP",
-      "openFail2ban": "Ouvrir Fail2ban"
+      "openFail2ban": "Ouvrir Fail2ban",
+      "openDocker": "Ouvrir Docker"
     },
     "moreActions": "Plus d’actions pour {name}"
   },
@@ -6284,5 +6286,50 @@
       "disconnectFailed": "Impossible de se déconnecter."
     },
     "cardTitle": "Connexion"
+  },
+  "docker": {
+    "title": "Docker",
+    "subtitle": "Réseaux et volumes partagés par les conteneurs de ce serveur.",
+    "create": "Créer",
+    "remove": "Retirer",
+    "none": "Aucune",
+    "failed": "Cela n'a pas fonctionné.",
+    "loadFailed": "Impossible de lire les réseaux et volumes Docker.",
+    "ownedByApp": "App n° {id}",
+    "unavailable": {
+      "title": "Pas un serveur de conteneurs",
+      "body": "Ce serveur n'héberge pas de conteneurs : il n'a ni réseaux ni volumes Docker."
+    },
+    "columns": {
+      "name": "Nom",
+      "driver": "Pilote",
+      "attached": "Conteneurs",
+      "size": "Taille",
+      "usedBy": "Utilisé par"
+    },
+    "networks": {
+      "title": "Réseaux",
+      "placeholder": "nom-du-reseau",
+      "hint": "Les conteneurs d'un même réseau défini par l'utilisateur se joignent par leur nom. Le pont intégré de Docker ne le permet pas : c'est pourquoi une app et sa base de données en ont besoin.",
+      "builtIn": "Propre à Docker",
+      "created": "Réseau {name} créé.",
+      "removed": "Réseau {name} supprimé.",
+      "removeTitle": "Supprimer le réseau {name} ?",
+      "removeBody": "Rien n'y est attaché. Les conteneurs qui l'attendront plus tard ne démarreront pas tant qu'il n'est pas recréé.",
+      "removeBusy": "Des conteneurs sont encore attachés à ce réseau. Arrêtez-les ou détachez-les d'abord."
+    },
+    "volumes": {
+      "title": "Volumes",
+      "placeholder": "nom-du-volume",
+      "hint": "Un volume est l'endroit où un conteneur conserve les données qui doivent survivre à une reconstruction.",
+      "empty": "Aucun volume sur ce serveur pour l'instant.",
+      "inUse": "{count} conteneur(s)",
+      "unused": "Inutilisé",
+      "created": "Volume {name} créé.",
+      "removed": "Volume {name} supprimé.",
+      "removeTitle": "Supprimer le volume {name} ?",
+      "removeBody": "Cela efface les données qu'il contient. Rien ne l'utilise actuellement, mais un conteneur arrêté peut encore l'attendre.",
+      "removeBusy": "Un conteneur en cours d'exécution utilise ce volume. Le supprimer effacerait des données qu'un processus écrit encore."
+    }
   }
 }
