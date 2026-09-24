@@ -5572,7 +5572,9 @@ The list response also carries **`google_oauth_redirect_uri`** at the top level:
 
 **The test result is cleared whenever the provider or *any* config key changes** (the one exception is `host_fingerprint`, which a successful probe records itself). A stored "connected" describes the credentials that were tested, not the ones now saved.
 
-`last_test_error` is a stable category, safe to branch on and to translate: `invalid_credentials` · `unreachable` · `host_key_mismatch` · `invalid_private_key` · `mismatch`. The raw exception is never echoed.
+`last_test_error` is a stable category, safe to branch on and to translate: `invalid_credentials` · `bucket_not_found` · `wrong_region` · `tls_failed` · `unreachable` · `host_key_mismatch` · `invalid_private_key` · `mismatch`. The raw exception is never echoed. (S3 only: before 2026-09-24 a wrong bucket, a wrong region and a broken TLS certificate were all reported as `invalid_credentials`. Backblaze B2 still answers a wrong-region endpoint with `invalid_credentials`, because B2 itself says "the key is not valid".)
+
+**Backblaze B2 keeps deleted backups.** A B2 bucket's default lifecycle is *keep all versions*, so when the panel deletes a backup (by hand or by retention), B2 **hides** the file instead of removing it, and it is still stored and billed. Measured 2026-09-24. The panel does not work around this; tell the user to set the bucket's lifecycle to *Keep only the last version* in the Backblaze console. AWS, Wasabi and DigitalOcean Spaces keep no versions unless versioning was turned on deliberately; Cloudflare R2 has no versioning.
 
 `has_credentials` reports whether the provider's secrets are populated, without returning any of them. For SFTP it is *any of* password / private key, since those are alternatives.
 

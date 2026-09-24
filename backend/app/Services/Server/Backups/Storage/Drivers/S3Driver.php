@@ -7,6 +7,8 @@ use App\Enums\StorageProvider;
 use App\Models\StorageDestination;
 use App\Rules\SafeProviderHost;
 use App\Rules\SingleLine;
+use Aws\Exception\AwsException;
+use GuzzleHttp\Exception\TransferException;
 use Throwable;
 
 /**
@@ -125,26 +127,77 @@ class S3Driver implements StorageDriver
     }
 
     /**
-     * The S3 SDK tags credential failures with one of these in the class name
-     * or message. The lowercased forms cover the substrings the SDK uses when
-     * only the message is available to us.
+     * Every S3 error code that means "these keys are wrong or not allowed".
      *
-     * Bucket-not-found (`NoSuchBucket`) deliberately falls through to
-     * "unreachable": the actionable advice is the same — check the bucket
-     * name and region.
+     * Asked of the provider's own error code, not of the exception class: the
+     * SDK throws one `S3Exception` for every failure, so the class says only
+     * that S3 answered, never what it said.
+     */
+    private const CREDENTIAL_CODES = [
+        'InvalidAccessKeyId',
+        'SignatureDoesNotMatch',
+        'AccessDenied',
+        'InvalidToken',
+        'ExpiredToken',
+        'InvalidSecurity',
+    ];
+
+    /**
+     * Codes AWS answers with when the bucket exists in another region.
+     * Measured: a PUT signed for us-east-1 against an ap-south-1 bucket is
+     * `AuthorizationHeaderMalformed` (400), which reads like a credentials
+     * problem and is not one.
+     */
+    private const REGION_CODES = [
+        'AuthorizationHeaderMalformed',
+        'PermanentRedirect',
+        'IllegalLocationConstraintException',
+    ];
+
+    /**
+     * cURL errors that mean the TLS handshake or certificate failed: the
+     * server was reached, but no request was ever sent. 35 is a broken
+     * handshake, 60 an untrusted certificate (self-signed, expired, wrong name).
+     */
+    private const TLS_ERRNOS = [35, 51, 53, 54, 58, 59, 60, 77, 80, 82, 83, 90, 91];
+
+    /**
+     * Classify by what the provider or cURL actually reported.
+     *
+     * This used to answer "credentials" for any `Aws\S3\Exception`, and every
+     * S3 failure is one: a wrong bucket, a wrong region and a server whose TLS
+     * is broken all told the user their keys were wrong, sending them to
+     * replace keys that worked. Measured against real AWS and a real broken
+     * host, 2026-09-24.
+     *
+     * The chain walk asks each link in turn. An `S3Exception` for a network
+     * failure carries no error code, so it answers null here and the Guzzle
+     * exception it wraps answers instead, from its cURL errno.
+     *
+     * One case stays "credentials" on purpose: Backblaze B2 keys belong to one
+     * region, and an endpoint in another region answers `InvalidAccessKeyId`
+     * ("the key is not valid"). Nothing in that answer says region, so calling
+     * it one would be a guess.
      */
     protected function categoryForType(Throwable $e): ?string
     {
-        // The AWS SDK's exception classes are matched by name rather than by
-        // `instanceof`: they are generated per-error and the panel should not
-        // import the SDK's class list to name five of them.
-        $name = $e::class;
+        if ($e instanceof AwsException) {
+            $code = $e->getAwsErrorCode();
 
-        if (str_contains($name, 'InvalidAccessKeyId')
-            || str_contains($name, 'SignatureDoesNotMatch')
-            || str_contains($name, 'AccessDenied')
-            || str_contains($name, 'Aws\S3\Exception')) {
-            return 'storage.test.invalid_credentials';
+            return match (true) {
+                in_array($code, self::CREDENTIAL_CODES, true) => 'storage.test.invalid_credentials',
+                $code === 'NoSuchBucket' => 'storage.test.bucket_not_found',
+                in_array($code, self::REGION_CODES, true) => 'storage.test.wrong_region',
+                default => null,
+            };
+        }
+
+        if ($e instanceof TransferException && method_exists($e, 'getHandlerContext')) {
+            $errno = $e->getHandlerContext()['errno'] ?? null;
+
+            if (in_array($errno, self::TLS_ERRNOS, true)) {
+                return 'storage.test.tls_failed';
+            }
         }
 
         return null;
