@@ -401,3 +401,67 @@ it('does not write PHP settings for a site that does not run PHP', function () {
     expect($app->steps)->not->toContain('harden_php')
         ->and($app->phpSettings)->toBeNull();
 });
+
+/*
+ * The `.env` a container's compose file insists on.
+ *
+ * `compose.blade.php` declares `env_file` unconditionally, and Compose treats a
+ * missing one as fatal — so a container site with no `.env` cannot start. The
+ * guard here read `site_type !== 'git'`, which meant no site built from the
+ * image/port fields ever got one. It failed at `container_start`, several steps
+ * after the step that did not create the file.
+ */
+
+it('creates the env file a container site cannot start without', function () {
+    $ran = [];
+    Process::fake(function ($process) use (&$ran) {
+        $ran[] = $process->command;
+
+        return Process::result(exitCode: 0);
+    });
+
+    $app = makeApp([
+        'site_type' => 'docker',
+        'serving_profile' => 'docker',
+        'image' => 'nginx:1.27-alpine',
+        'container_port' => 80,
+        'web_root' => 'public_html',
+    ]);
+
+    (new ProvisionApplication($app->id))->handle(
+        app(ApplicationProvisioner::class),
+        app(ActivityLogger::class),
+    );
+
+    $env = $app->fresh()->envPath();
+
+    // The same path the compose file names. Asserting on the rendered file's
+    // string instead would pass while nothing created it — which is exactly how
+    // this shipped.
+    expect(collect($ran)->contains(
+        fn (array $command): bool => in_array('touch', $command, true) && in_array($env, $command, true),
+    ))->toBeTrue("nothing touched {$env}");
+});
+
+it('still does not create one for a PHP site, which has no use for it', function () {
+    // The guard exists. Widening it to every site type would put a dotfile in
+    // the root of every static and WordPress site for no reader.
+    $ran = [];
+    Process::fake(function ($process) use (&$ran) {
+        $ran[] = $process->command;
+
+        return Process::result(exitCode: 0);
+    });
+
+    $app = makeApp();
+
+    (new ProvisionApplication($app->id))->handle(
+        app(ApplicationProvisioner::class),
+        app(ActivityLogger::class),
+    );
+
+    expect(collect($ran)->contains(
+        fn (array $command): bool => in_array('touch', $command, true)
+            && in_array($app->fresh()->envPath(), $command, true),
+    ))->toBeFalse();
+});

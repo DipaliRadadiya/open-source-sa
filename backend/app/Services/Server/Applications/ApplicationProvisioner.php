@@ -239,7 +239,22 @@ class ApplicationProvisioner
                 ['feature' => 'application', 'op' => 'mkdir', 'application' => $application->id],
             );
 
-            if ($result->failed() || $application->site_type !== 'git') {
+            // Git sites need it because their code reads it. A container needs
+            // it because the compose file the panel generates declares
+            // `env_file` unconditionally — and Compose treats a missing one as
+            // fatal, so this guard being `=== 'git'` meant no container site
+            // built from the image/port fields could start at all. It failed at
+            // `container_start` with a reference number, several steps after the
+            // step that did not create the file.
+            //
+            // Not visible in the suite: `Process` is faked, so `docker compose
+            // up` succeeded against a file that was never there. And not
+            // visible on the test box either, because the only container site on
+            // it used a PASTED compose file, which has no `env_file` line.
+            $needsEnv = $application->site_type === 'git'
+                || $application->serving_profile === 'docker';
+
+            if ($result->failed() || ! $needsEnv) {
                 return $result;
             }
 
