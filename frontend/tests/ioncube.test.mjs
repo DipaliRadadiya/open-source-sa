@@ -21,8 +21,40 @@ test("an unsupported PHP version is a normal answer, not a failure", () => {
     loader_version: null,
   });
   assert.equal(parsed.supported, false);
-  assert.match(CARD, /\{supported \? \(/, "the action is rendered only when supported");
-  assert.match(CARD, /!supported \? \(/, "and the reason is shown when it is not");
+  assert.match(CARD, /canAct = !external && \(supported \|\| installed\)/, "no Install where none is published");
+  assert.match(CARD, /!supported && !installed \? \(/, "and the reason is shown when it is not");
+});
+
+test("a loader installed outside the panel is shown, never offered a button", () => {
+  /*
+   * v7 installed ionCube on 7.4, which the panel no longer supports, so
+   * `supported: false` can arrive with `installed: true`. Install and Remove
+   * both 422 for an external loader; the card says why instead.
+   */
+  const parsed = ionCubeSchema.parse({
+    supported: false,
+    installed: true,
+    source: "external",
+    php_version: "7.4",
+    loader_version: "14.4.0",
+  });
+  assert.equal(parsed.source, "external", "the schema must not strip `source`");
+  assert.match(CARD, /external = installed && ioncube\.source === "external"/);
+  assert.match(CARD, /t\("external", \{ version \}\)/);
+});
+
+test("a failed install shows the server's sentence, not its reason code", () => {
+  const parsed = ionCubeSchema.parse({
+    supported: true,
+    installed: false,
+    status: "failed",
+    reason: "ioncube_download_failed",
+    message: "The ionCube Loader could not be downloaded.",
+    reference: "ERR-1",
+  });
+  assert.equal(parsed.message, "The ionCube Loader could not be downloaded.", "the schema must not strip `message`");
+  assert.match(CARD, /ioncube\.message \?\? t\("installFailed"\)/);
+  assert.doesNotMatch(CARD, /ioncube\.reason \?\?/);
 });
 
 test("the card reads the install state through the shared tracker vocabulary", () => {

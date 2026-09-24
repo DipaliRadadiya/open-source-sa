@@ -4,10 +4,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { FileCode2, Loader2, TriangleAlert } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { readPhpIni, savePhpIni } from "@/lib/api/php";
 import { phpIniResponseSchema } from "@/lib/schemas/php";
-import { LEVEL_CLASS, lineLevel } from "@/lib/logs/severity";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -74,13 +72,11 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
       toast.success(t("phpIni.saved", { version }));
       setOpen(false);
     } catch (error) {
-      const data = error.response?.data;
-      // PHP's own rejection, shown verbatim — it names the line. The previous
-      // file is already back in place server-side, which is the first thing the
-      // reader needs to know.
-      const invalid = data?.errors?.["php.invalid_ini"];
-      if (invalid) {
-        setPhpError(Array.isArray(invalid) ? invalid.join("\n") : String(invalid));
+      // A 422 is PHP refusing the file (the old one is already back) or the
+      // form itself: shown beside the editor, not in a toast that vanishes
+      // while they are still looking for the mistake.
+      if (error.response?.status === 422) {
+        setPhpError(apiMessage(error, t("phpIni.saveFailed")));
       } else {
         toast.error(apiMessage(error, t("phpIni.saveFailed")));
       }
@@ -176,21 +172,14 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
             )}
           </div>
 
-          {/* PHP refused it. Say so in PHP's words, and say what that means:
-              nothing was applied and the old file is already back. */}
           {phpError ? (
-            <div className="shrink-0 overflow-hidden rounded-lg border border-console-border bg-console">
-              <div className="border-b border-console-border px-3 py-1.5 text-xs uppercase tracking-wide text-console-muted">
-                {t("phpIni.rejectedTitle")}
-              </div>
-              <pre className="console-scroll max-h-40 overflow-auto p-3 font-mono text-xs leading-6">
-                {phpError.split("\n").map((line, i) => (
-                  <div key={i} className={cn("text-console-foreground", LEVEL_CLASS[lineLevel(line)])}>
-                    {line || " "}
-                  </div>
-                ))}
-              </pre>
-            </div>
+            <p
+              role="alert"
+              className="flex shrink-0 items-start gap-2.5 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm"
+            >
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+              <span>{phpError}</span>
+            </p>
           ) : null}
 
             <div className="flex shrink-0 items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 p-3">

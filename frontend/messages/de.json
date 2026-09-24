@@ -1288,7 +1288,6 @@
       "title": "php.ini — PHP {version}",
       "description": "Die gesamte Datei, so wie PHP sie liest. Beim Speichern wird sie gesichert, geschrieben, mit php-fpm -t getestet und neu geladen. Lehnt PHP sie ab, wird die vorherige Datei zurückgelegt und nichts neu geladen.",
       "acknowledge": "Mir ist klar, dass eine fehlerhafte php.ini den FPM von PHP {version} am Start hindern kann, wodurch alle Anwendungen auf dieser Version offline gehen.",
-      "rejectedTitle": "PHP hat diese Datei abgelehnt — nichts wurde geändert",
       "save": "Speichern und neu laden",
       "cancel": "Abbrechen",
       "copy": "Datei kopieren",
@@ -2139,6 +2138,7 @@
       "installFailed": "Der ionCube Loader konnte nicht installiert werden.",
       "removeFailed": "Der ionCube Loader konnte nicht entfernt werden.",
       "unsupported": "ionCube veröffentlicht keinen Loader für PHP {version}. Verwenden Sie für Software, die ihn benötigt, eine andere Version.",
+      "external": "Außerhalb des Panels installiert (von einer früheren Version oder einem Systempaket). Es wird zusammen mit PHP {version} entfernt.",
       "loadFailed": "Der Status des ionCube Loaders konnte nicht gelesen werden.",
       "removeConfirmTitle": "ionCube Loader entfernen?",
       "removeConfirmBody": "Jede Anwendung unter PHP {version}, die verschlüsselte Software ausführt, funktioniert erst wieder, sobald er erneut installiert ist.",
@@ -4689,6 +4689,7 @@
       "presetsLabel": "Worker-Voreinstellungen",
       "useSuggested": "Empfohlene Liste verwenden",
       "unmanaged": "Die PHP-Pool-Datei dieser Anwendung wurde von Hand bearbeitet. Hier zu speichern ersetzt sie durch die Version des Panels, und diese Änderungen gehen verloren.",
+      "managedUnknown": "Es konnte nicht geprüft werden, ob die PHP-Pool-Datei dieser Anwendung von Hand bearbeitet wurde.",
       "fields": {
         "version": "PHP-Version",
         "upload": "Größte Datei, die jemand hochladen darf",

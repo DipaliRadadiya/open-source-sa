@@ -146,8 +146,13 @@ export const ionCubeSchema = z.object({
   loader_version: z.string().nullish(),
   sha256: z.string().nullish(),
   path: z.string().nullish(),
+  // `panel` | `external` | null. An external loader (v7's php.ini line, or
+  // LiteSpeed's package) is shown but never touched: Install and Remove 422.
+  source: z.string().nullish(),
   status: z.string().nullish(),
+  // `reason` is a code; `message` is the sentence to show.
   reason: z.string().nullish(),
+  message: z.string().nullish(),
   reference: z.string().nullish(),
 });
 

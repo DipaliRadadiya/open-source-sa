@@ -1288,7 +1288,6 @@
       "title": "php.ini — PHP {version}",
       "description": "The whole file, as PHP reads it. On save it is backed up, written, tested with php-fpm -t, and reloaded. If PHP rejects it the previous file is put back and nothing is reloaded.",
       "acknowledge": "I understand a bad php.ini can stop PHP {version} FPM from starting, which would take every application on that version offline.",
-      "rejectedTitle": "PHP rejected this file — nothing was changed",
       "save": "Save and reload",
       "cancel": "Cancel",
       "copy": "Copy file",
@@ -2139,6 +2138,7 @@
       "installFailed": "The ionCube Loader could not be installed.",
       "removeFailed": "The ionCube Loader could not be removed.",
       "unsupported": "ionCube publishes no loader for PHP {version}. Use another version for software that needs it.",
+      "external": "Installed outside the panel (by an earlier version or a system package). It is removed together with PHP {version}.",
       "loadFailed": "The ionCube Loader status could not be read.",
       "removeConfirmTitle": "Remove the ionCube Loader?",
       "removeConfirmBody": "Any application on PHP {version} running encrypted software will stop working until it is installed again.",
@@ -4689,6 +4689,7 @@
       "presetsLabel": "Worker presets",
       "useSuggested": "Use the recommended list",
       "unmanaged": "This application's PHP pool file has been edited by hand. Saving here replaces it with the panel's own version, and those edits will be lost.",
+      "managedUnknown": "Couldn't check whether this application's PHP pool file was edited by hand.",
       "fields": {
         "version": "PHP version",
         "upload": "Biggest file someone can upload",

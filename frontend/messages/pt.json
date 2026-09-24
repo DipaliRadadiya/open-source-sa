@@ -1288,7 +1288,6 @@
       "title": "php.ini — PHP {version}",
       "description": "O arquivo completo, como o PHP lê. Ao salvar, ele é copiado, gravado, testado com php-fpm -t e recarregado. Se o PHP rejeitar, o arquivo anterior é restaurado e nada é recarregado.",
       "acknowledge": "Entendo que um php.ini inválido pode impedir o PHP {version} FPM de iniciar, tirando do ar todas as aplicações dessa versão.",
-      "rejectedTitle": "PHP rejeitou este arquivo — nada foi alterado",
       "save": "Salvar e recarregar",
       "cancel": "Cancelar",
       "copy": "Copiar arquivo",
@@ -2139,6 +2138,7 @@
       "installFailed": "Não foi possível instalar o ionCube Loader.",
       "removeFailed": "Não foi possível remover o ionCube Loader.",
       "unsupported": "A ionCube não publica nenhum loader para o PHP {version}. Use outra versão para o software que precisa dele.",
+      "external": "Instalado fora do painel (por uma versão anterior ou um pacote do sistema). É removido junto com o PHP {version}.",
       "loadFailed": "Não foi possível ler o status do ionCube Loader.",
       "removeConfirmTitle": "Remover o ionCube Loader?",
       "removeConfirmBody": "Qualquer aplicação no PHP {version} que execute software criptografado deixará de funcionar até que seja instalado novamente.",
@@ -4689,6 +4689,7 @@
       "presetsLabel": "Presets de workers",
       "useSuggested": "Usar lista recomendada",
       "unmanaged": "O arquivo de pool PHP desta aplicação foi editado manualmente. Salvar aqui o substitui pela versão do painel e essas edições serão perdidas.",
+      "managedUnknown": "Não foi possível verificar se o arquivo de pool PHP desta aplicação foi editado manualmente.",
       "fields": {
         "version": "Versão do PHP",
         "upload": "Maior arquivo que alguém pode enviar",

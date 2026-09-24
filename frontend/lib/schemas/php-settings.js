@@ -91,8 +91,9 @@ export const applicationPhpSchema = z
     isolation_supported: z.boolean().default(true),
     runs_as: z.string().nullish(),
     // False when the pool file no longer matches what the panel would write —
-    // someone edited it by hand, and saving would overwrite their work.
-    managed: z.boolean().default(true),
+    // someone edited it by hand, and saving would overwrite their work. Null
+    // when the panel could not read the pool file to check.
+    managed: z.boolean().nullable().default(true),
     settings: z
       .object({
         memory_limit: z.string().default("128M"),

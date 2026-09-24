@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
+import { Info, Loader2, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
 
 import { installIonCube, removeIonCube } from "@/lib/api/php";
 import { apiMessage } from "@/lib/api/error-message";
@@ -24,7 +24,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
  * row whose Install means something entirely different from every other row's
  * is worse than a card that admits it is a different kind of thing.
  *
- * Five states, and `unsupported` is the one worth spelling out: ionCube
+ * Six states, and `unsupported` is the one worth spelling out: ionCube
  * publishes no loader for PHP 8.0 and this panel still offers 8.0, so the card
  * says so instead of letting the button earn a 422.
  */
@@ -49,6 +49,10 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   const installing = isInFlight(ioncube.status);
   const installFailed = ioncube.status === "failed";
   const { supported, installed } = ioncube;
+  // Installed outside the panel. Both buttons would earn a 422, so neither is
+  // offered.
+  const external = installed && ioncube.source === "external";
+  const canAct = !external && (supported || installed);
 
   async function install() {
     setBusy(true);
@@ -59,8 +63,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
       toast.success(t("installStarted", { version }));
       router.refresh();
     } catch (error) {
-      const reference = error.response?.data?.reference;
-      toast.error([apiMessage(error, t("installFailed")), reference].filter(Boolean).join(" · "));
+      toast.error(apiMessage(error, t("installFailed")));
     } finally {
       setBusy(false);
     }
@@ -114,7 +117,12 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
 
           <p className="text-xs leading-relaxed text-muted-foreground">{t("subtitle")}</p>
 
-          {!supported ? (
+          {external ? (
+            <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
+              <Info className="mt-0.5 size-3.5 shrink-0" />
+              {t("external", { version })}
+            </p>
+          ) : !supported && !installed ? (
             <p className="flex items-start gap-1.5 text-xs leading-relaxed text-warning">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
               {t("unsupported", { version })}
@@ -124,17 +132,22 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
           ) : installFailed ? (
             /* The server's own sentence: it names what went wrong — a checksum
                that did not match, a download that failed — and ours could only
-               say that something did. */
+               say that something did. `reason` is a code, not this. */
             <p className="flex items-start gap-1.5 text-xs leading-relaxed text-destructive">
               <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-              {ioncube.reason ?? t("installFailed")}
+              <span>
+                {ioncube.message ?? t("installFailed")}
+                {ioncube.reference ? (
+                  <span className="ml-1.5 font-mono whitespace-nowrap text-muted-foreground">{ioncube.reference}</span>
+                ) : null}
+              </span>
             </p>
           ) : (
             <p className="text-xs leading-relaxed text-muted-foreground">{t("hint")}</p>
           )}
         </div>
 
-        {supported ? (
+        {canAct ? (
           <div className="shrink-0">
             <ReasonTooltip reason={canManage ? null : tp("noPermission")}>
               {installed ? (

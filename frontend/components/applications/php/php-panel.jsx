@@ -157,10 +157,17 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", time
         <IsolationCard php={php} canManage={canManage} busy={busy} onIsolate={isolate} />
   
         {/* Said before they press save, not after their work has gone. */}
-        {php.isolated && !php.managed ? (
+        {php.isolated && php.managed === false ? (
           <p className="flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
             <span>{t("unmanaged")}</span>
+          </p>
+        ) : php.isolated && php.managed === null ? (
+          // Could not be checked, which is neither answer: no warning about
+          // edits nobody may have made.
+          <p className="flex items-start gap-2.5 rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+            <Info className="mt-0.5 size-4 shrink-0" />
+            <span>{t("managedUnknown")}</span>
           </p>
         ) : null}
   

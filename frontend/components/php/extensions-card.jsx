@@ -122,10 +122,12 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
       );
       router.refresh();
     } catch (error) {
-      // The reference id stays: it's what the backend needs to find this failure
-      // in its own logs, and a 500 here is exactly when someone will ask.
-      const reference = error.response?.data?.reference;
-      toast.error([apiMessage(error, t("extensions.failed")), reference].filter(Boolean).join(" · "));
+      // apiMessage keeps the reference: a 500 here is exactly when someone
+      // will be asked to quote it.
+      toast.error(apiMessage(error, t("extensions.failed")));
+      // A 500 can mean "changed, but PHP was not reloaded", so the switch must
+      // re-read what is on disk rather than keep showing the old state.
+      router.refresh();
     } finally {
       setPending(null);
     }
@@ -257,12 +259,26 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
                             {extension.status === "installing" ? (
                               <Loader2 className="size-3 shrink-0 animate-spin" />
                             ) : null}
-                            <span className="truncate font-mono">
-                              {extension.output?.trimEnd().split("\n").pop() ||
-                                (extension.current_step
-                                  ? t(`versions.steps.${extension.current_step}`)
-                                  : t("extensions.installingShort"))}
-                            </span>
+                            {extension.status === "failed" && extension.message ? (
+                              // The server's sentence, not apt's last line: after
+                              // `reload_failed` apt succeeded and its tail reads
+                              // as fine.
+                              <span className="text-destructive">
+                                {extension.message}
+                                {extension.reference ? (
+                                  <span className="ml-1.5 font-mono whitespace-nowrap text-muted-foreground">
+                                    {extension.reference}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : (
+                              <span className="truncate font-mono">
+                                {extension.output?.trimEnd().split("\n").pop() ||
+                                  (extension.current_step
+                                    ? t(`versions.steps.${extension.current_step}`)
+                                    : t("extensions.installingShort"))}
+                              </span>
+                            )}
                           </span>
                         ) : null}
                         </span>

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
+  applicationPhpSchema,
   budgetWith,
   memoryCeilingBytes,
   phpSettingsFormSchema,
@@ -141,4 +142,16 @@ test("the ⓘ is tied to the directive, so it cannot wrap away alone", () => {
   assert.match(PHP_PANEL_SOURCE, /hint=\{directive \? undefined : explain\}/);
   assert.match(PHP_PANEL_SOURCE, /whitespace-nowrap/);
   assert.match(PHP_PANEL_SOURCE, /<LabelHint>\{explain\}<\/LabelHint>/);
+});
+
+test("a pool file that could not be checked is neither managed nor hand-edited", () => {
+  // `managed: null` used to fail the whole response, emptying the PHP tab.
+  const parsed = applicationPhpSchema.safeParse({ application_id: 1, isolated: true, managed: null, settings: {} });
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.data.managed, null);
+  assert.equal(applicationPhpSchema.parse({ application_id: 1, settings: {} }).managed, true);
+  // Only `false` earns the "edited by hand" warning; null gets its own note.
+  assert.match(PHP_PANEL_SOURCE, /php\.managed === false \?/);
+  assert.match(PHP_PANEL_SOURCE, /php\.managed === null \?/);
+  assert.doesNotMatch(PHP_PANEL_SOURCE, /!php\.managed/);
 });

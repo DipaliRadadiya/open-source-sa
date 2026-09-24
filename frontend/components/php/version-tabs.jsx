@@ -56,7 +56,8 @@ const VALUES = ["extensions", "ioncube"];
  */
 function ionCubeBadge(ioncube, failed, t) {
   if (failed || !ioncube) return null;
-  if (!ioncube.supported) return { label: t("ioncube.unavailableShort"), variant: "outline" };
+  // v7 installed it on 7.4, so unsupported can still be running.
+  if (!ioncube.supported && !ioncube.installed) return { label: t("ioncube.unavailableShort"), variant: "outline" };
   if (ioncube.status === "failed") return { label: t("ioncube.failedShort"), variant: "destructive" };
   if (isInFlight(ioncube.status)) {
     // Removing is in flight too, and calling it "Installing" is the same kind of

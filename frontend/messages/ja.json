@@ -1288,7 +1288,6 @@
       "title": "php.ini — PHP {version}",
       "description": "PHP が読み込むファイル全体です。保存時にはバックアップが作成され、書き込み、php-fpm -t でのテスト、リロードが行われます。PHP が拒否した場合、以前のファイルが復元され、リロードは行われません。",
       "acknowledge": "不適切な php.ini は PHP {version} FPM の起動を妨げ、そのバージョンのすべてのアプリケーションを停止させることを理解しました。",
-      "rejectedTitle": "PHP がこのファイルを拒否しました — 変更はされていません",
       "save": "保存してリロード",
       "cancel": "キャンセル",
       "copy": "ファイルをコピー",
@@ -2139,6 +2138,7 @@
       "installFailed": "ionCube Loader をインストールできませんでした。",
       "removeFailed": "ionCube Loader を削除できませんでした。",
       "unsupported": "ionCube は PHP {version} 用のローダーを公開していません。それを必要とするソフトウェアには別のバージョンをご使用ください。",
+      "external": "パネル外でインストールされています（以前のバージョンまたはシステムパッケージによる）。PHP {version} と一緒に削除されます。",
       "loadFailed": "ionCube Loader の状態を読み取れませんでした。",
       "removeConfirmTitle": "ionCube Loader を削除しますか?",
       "removeConfirmBody": "PHP {version} で動作している暗号化ソフトウェアをご利用のアプリケーションは、再インストールするまで動作しなくなります。",
@@ -4689,6 +4689,7 @@
       "presetsLabel": "ワーカーのプリセット",
       "useSuggested": "推奨値を使用",
       "unmanaged": "このアプリケーションの PHP プールファイルは手動で編集されています。ここで保存するとパネルの設定で置き換えられ、手動での編集内容は失われます。",
+      "managedUnknown": "このアプリケーションの PHP プールファイルが手動で編集されたかどうかを確認できませんでした。",
       "fields": {
         "version": "PHP バージョン",
         "upload": "アップロード可能な最大ファイルサイズ",
