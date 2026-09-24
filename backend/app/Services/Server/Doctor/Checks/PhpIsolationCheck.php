@@ -206,6 +206,21 @@ class PhpIsolationCheck implements DoctorCheck
             ];
         }
 
+        // Every vhost can name its user and still not run as it: OpenLiteSpeed
+        // keeps one external app per name, so vhosts sharing a processor name
+        // all run as whichever of them it loaded first.
+        $collisions = $this->sharedProcessorNames();
+
+        if ($collisions !== []) {
+            return [
+                'status' => 'fail',
+                'detail' => collect($collisions)
+                    ->map(fn (array $vhosts, string $name): string => "{$name} is defined by ".implode(', ', $vhosts))
+                    ->implode('; ').' — OpenLiteSpeed runs one process per name, so those sites share one user',
+                'fix' => 'doctor.fixes.ols_shared_processor',
+            ];
+        }
+
         return [
             'status' => 'pass',
             'detail' => $stack->key().' — no FPM pools; every PHP site has its interpreter and its own user',
@@ -227,13 +242,61 @@ class PhpIsolationCheck implements DoctorCheck
      * others' `.env`, database credentials and uploads. Nothing about such a
      * server looks wrong from the outside.
      *
+     * @return array<int, string>
+     */
+    private function vhostsRunningAsNobody(): array
+    {
+        $offenders = [];
+
+        foreach ($this->lsapiVhosts() as $vhost => $contents) {
+            if (preg_match('/^\s*extUser\s+\S+/m', $contents) !== 1) {
+                $offenders[] = $vhost;
+            }
+        }
+
+        return $offenders;
+    }
+
+    /**
+     * LSAPI processor names defined by more than one vhost, with the vhosts.
+     *
+     * The panel used to write `extprocessor lsphp84` into every site's vhost.
+     * OpenLiteSpeed keeps one external app per name, so the first vhost loaded
+     * supplied the extUser and socket for every site on that version: on a
+     * real server (2026-09-24) three sites' PHP ran as a fourth site's user.
+     * The panel now names each site's processor after the site; this finds the
+     * vhosts still written the old way, or edited by hand.
+     *
+     * @return array<string, list<string>>
+     */
+    private function sharedProcessorNames(): array
+    {
+        $definedBy = [];
+
+        foreach ($this->lsapiVhosts() as $vhost => $contents) {
+            preg_match_all('/^\s*extprocessor\s+(\S+)\s*\{(.*?)^\s*\}/ms', $contents, $blocks, PREG_SET_ORDER);
+
+            foreach ($blocks as [, $name, $body]) {
+                if (preg_match('/^\s*type\s+lsapi\s*$/m', $body) === 1) {
+                    $definedBy[$name][] = $vhost;
+                }
+            }
+        }
+
+        return array_filter($definedBy, fn (array $vhosts): bool => count(array_unique($vhosts)) > 1);
+    }
+
+    /**
+     * Every OpenLiteSpeed vhost that runs PHP over LSAPI, keyed by its
+     * directory name, with the file's contents.
+     *
      * Read from disk rather than from the database on purpose: the question is
      * what OpenLiteSpeed will actually do, and the file is the only thing that
      * answers it.
      *
-     * @return array<int, string>
+     * @return array<string, string>
      */
-    private function vhostsRunningAsNobody(): array
+    private function lsapiVhosts(): array
     {
         // Where this server actually keeps them, not where config guesses: a
         // migrated box uses the old panel's branded directory, and globbing the
@@ -244,8 +307,6 @@ class PhpIsolationCheck implements DoctorCheck
             return [];
         }
 
-        $offenders = [];
-
         // Both names a vhost may have. A server migrated from the old panel
         // calls it `main.conf`, and matching only ours meant this check saw no
         // sites at all there and reported clean — a check that cannot see is
@@ -255,6 +316,8 @@ class PhpIsolationCheck implements DoctorCheck
         foreach (OlsVhostLayout::FILENAMES as $filename) {
             $paths = array_merge($paths, (array) glob($root.'/*/'.$filename));
         }
+
+        $vhosts = [];
 
         foreach ($paths as $path) {
             $contents = @file_get_contents((string) $path);
@@ -273,12 +336,10 @@ class PhpIsolationCheck implements DoctorCheck
                 continue;
             }
 
-            if (preg_match('/^\s*extUser\s+\S+/m', $contents) !== 1) {
-                $offenders[] = basename(dirname((string) $path));
-            }
+            $vhosts[basename(dirname((string) $path))] = $contents;
         }
 
-        return $offenders;
+        return $vhosts;
     }
 
     private function human(int $bytes): string

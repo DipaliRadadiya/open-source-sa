@@ -41,6 +41,7 @@ return [
         'binaries_optional' => 'Chaque outil manquant désactive la fonction indiquée à côté. Installez-le depuis la page de configuration, ou ignorez-le si vous n’en avez pas besoin.',
         'web_server_missing' => 'Aucun serveur web pris en charge trouvé. Installez nginx ou Apache.',
         'ols_missing_extuser' => 'Every OpenLiteSpeed site needs its own `extUser`, or it runs as `nobody` and can read every other site\'s files. Re-save the site in the panel to rewrite its vhost.',
+        'ols_shared_processor' => 'Two or more OpenLiteSpeed sites define a PHP processor with the same name. OpenLiteSpeed keeps one process per name, so they all run as the first site\'s user and can read each other\'s files. Run `php artisan sites:resync` to give each site its own.',
         'web_server_mismatch' => 'Exécutez `php artisan server:record-stack <lemp|lamp|ols|mern>` sur ce serveur pour enregistrer la pile réellement utilisée. D\'ici là, la création de sites écrit dans le mauvais serveur web.',
         'web_server_undrivable' => 'Le panneau ne peut pas écrire de configuration pour ce serveur web, donc aucun site ne peut être créé. Passez à nginx ou Apache.',
         'web_server_config' => 'La configuration du serveur web est invalide. Lancez son propre test de configuration — le prochain rechargement échouera tant que ce n’est pas corrigé.',

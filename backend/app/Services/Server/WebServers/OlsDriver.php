@@ -122,6 +122,16 @@ class OlsDriver extends AbstractWebServerDriver
             // file, the logs -- is keyed by slug already; the socket is the
             // one that wandered off.
             'socketName' => $this->socketName($application),
+            // The processor's name, which must be this site's alone.
+            //
+            // It was `lsphp84` in every vhost. OpenLiteSpeed keeps one external
+            // app per name (it logs it as `lsphp84.655340`, the name plus the
+            // vhost's suEXEC uid, which is `nobody` for every vhost), so the
+            // first vhost it loaded supplied the extUser and socket for all of
+            // them. Measured on a real server, 2026-09-24: three sites' PHP ran
+            // as a fourth site's user, which could read their files, and any
+            // site whose wp-config.php that user could not read answered 500.
+            'processorName' => 'lsphp'.str_replace('.', '', $version).'-'.$this->socketName($application),
             // The LSAPI binary, not the CLI — this is what OLS spawns.
             'lsphpBinary' => $this->stack->handlerPath($version),
             // Where this site's own php settings live. Written by `apply()`

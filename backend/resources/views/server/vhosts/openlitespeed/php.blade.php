@@ -109,7 +109,10 @@ index {
      LiteSpeed Cache needs it. But the reason is preference, not incapability,
      so do not let this comment talk you out of an fcgi handler where one is
      warranted. --}}
-extprocessor lsphp{{ $lsphpVersion }} {
+{{-- Named for this site, never just `lsphp84`: OpenLiteSpeed keeps one
+     external app per name, so a name every vhost shares runs every site's PHP
+     as whichever site was loaded first. See `processorName` in OlsDriver. --}}
+extprocessor {{ $processorName }} {
   type                    lsapi
   address                 uds://tmp/lshttpd/lsphp{{ $lsphpVersion }}-{{ $socketName }}.sock
   maxConns                {{ $lsapiChildren }}
@@ -161,7 +164,7 @@ extprocessor lsphp{{ $lsphpVersion }} {
 }
 
 scripthandler {
-  add                     lsapi:lsphp{{ $lsphpVersion }} php
+  add                     lsapi:{{ $processorName }} php
 }
 
 {{-- The front-controller rewrite lives here rather than in .htaccess. OLS only

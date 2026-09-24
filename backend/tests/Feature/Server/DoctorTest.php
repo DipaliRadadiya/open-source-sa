@@ -774,6 +774,75 @@ it('fails when an OpenLiteSpeed site has no extUser', function () {
         ->and($report['checks'][0]['detail'])->not->toContain('isolated');
 });
 
+/*
+ * Every vhost can name its own user and still not run as it. The panel wrote
+ * `extprocessor lsphp84` into every vhost, and OpenLiteSpeed keeps one external
+ * app per name, so the first vhost loaded supplied the user for all of them. On
+ * a real server (2026-09-24) three sites' PHP ran as a fourth site's user.
+ */
+function olsVhostsWithProcessors(array $vhosts): array
+{
+    $root = sys_get_temp_dir().'/ols-shared-'.Str::random(8);
+
+    foreach ($vhosts as $vhost => [$processor, $user]) {
+        mkdir($root.'/'.$vhost, 0755, true);
+        file_put_contents($root."/{$vhost}/vhconf.conf", <<<CONF
+        extprocessor {$processor} {
+          type                    lsapi
+          extUser                 {$user}
+          extGroup                {$user}
+        }
+
+        scripthandler {
+          add                     lsapi:{$processor} php
+        }
+        CONF);
+    }
+
+    config()->set('server.web_server_drivers.openlitespeed.vhost_root', $root);
+    config()->set('server.doctor.checks', [PhpIsolationCheck::class]);
+
+    ServerCapability::query()->delete();
+    ServerCapability::query()->create([
+        'stack' => 'ols', 'web_server' => 'openlitespeed',
+        'capabilities' => ['php' => true, 'node' => false],
+        'source' => 'installer', 'verified_at' => now(),
+    ]);
+
+    Process::fake(fn () => Process::result(output: ''));
+
+    $check = app(Doctor::class)->run()['checks'][0];
+
+    File::deleteDirectory($root);
+
+    return $check;
+}
+
+it('fails when OpenLiteSpeed sites share a PHP processor name, even with their own extUser', function () {
+    $check = olsVhostsWithProcessors([
+        'shop' => ['lsphp84', 'shopuser'],
+        'blog' => ['lsphp84', 'bloguser'],
+        'wiki' => ['lsphp84-wiki', 'wikiuser'],
+    ]);
+
+    expect($check['status'])->toBe('fail')
+        ->and($check['fix'])->toBe(__('doctor.fixes.ols_shared_processor'))
+        ->and($check['detail'])->toContain('lsphp84 is defined by')
+        ->and($check['detail'])->toContain('shop')
+        ->and($check['detail'])->toContain('blog')
+        // The site with a processor of its own is not part of the problem.
+        ->and($check['detail'])->not->toContain('wiki');
+});
+
+it('passes when every OpenLiteSpeed site has a processor of its own', function () {
+    $check = olsVhostsWithProcessors([
+        'shop' => ['lsphp84-shop', 'shopuser'],
+        'blog' => ['lsphp84-blog', 'bloguser'],
+    ]);
+
+    expect($check['status'])->toBe('pass');
+});
+
 // A static or proxy vhost has no PHP process and needs no extUser. Reporting
 // one would train people to ignore this check.
 it('does not ask a non-PHP OpenLiteSpeed vhost for an extUser', function () {

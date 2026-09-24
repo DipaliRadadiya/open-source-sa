@@ -844,13 +844,51 @@ describe('the driver', function () {
         expect($config)
             ->toContain('docRoot                   /home/shopuser/shop.test')
             ->toContain('vhDomain                  shop.test')
-            // lsphp84, not lsphp8.4 — LiteSpeed drops the dot everywhere.
-            ->toContain('extprocessor lsphp84 {')
+            // lsphp84, not lsphp8.4 — LiteSpeed drops the dot everywhere —
+            // and named for this site. See the test below.
+            ->toContain('extprocessor lsphp84-shop {')
+            ->toContain('add                     lsapi:lsphp84-shop php')
             // bin/lsphp, not bin/php: the CLI does not speak LSAPI, so a
             // vhost pointed at it would run no PHP at all.
             ->toContain('path                    '.$this->lsws.'/lsphp84/bin/lsphp')
             // OLS spawns the process itself, so it has to be told who as.
             ->toContain('extUser                 shopuser');
+    });
+
+    /*
+     * Every vhost used to name its processor `lsphp84`. OpenLiteSpeed keeps one
+     * external app per name, so the first vhost loaded supplied the extUser and
+     * socket for all of them. On a real server (2026-09-24) three sites' PHP ran
+     * as a fourth site's user, which could read their files, and the sites whose
+     * wp-config.php it could not read answered 500.
+     */
+    it('gives each site a processor of its own, and routes its PHP to that one', function () {
+        fakeOls(olsConfig());
+
+        $other = Application::forceCreate([
+            'system_user_id' => SystemUser::create(['username' => 'bloguser', 'home_path' => '/home/bloguser'])->id,
+            'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.test',
+            'site_type' => 'wordpress', 'serving_profile' => 'php', 'web_root' => '/',
+            'status' => 'pending', 'php_version' => '8.4',
+        ]);
+
+        $names = [];
+
+        foreach ([[$this->app_, 'shopuser'], [$other, 'bloguser']] as [$site, $user]) {
+            $config = app(OlsDriver::class)->renderConfig($site, "/home/{$user}/{$site->slug}");
+
+            preg_match('/^extprocessor (\S+) \{/m', $config, $defined);
+            preg_match('/^\s*add\s+lsapi:(\S+) php$/m', $config, $handled);
+
+            // The handler must name the processor this vhost defines, and that
+            // processor must run as this site's own user.
+            expect($handled[1] ?? null)->toBe($defined[1] ?? 'none')
+                ->and($config)->toContain("extUser                 {$user}");
+
+            $names[] = $defined[1];
+        }
+
+        expect($names[0])->not->toBe($names[1]);
     });
 
     it('uses OpenLiteSpeed regex context syntax, not nginx', function () {
