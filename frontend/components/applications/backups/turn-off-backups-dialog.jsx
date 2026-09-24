@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -27,28 +27,42 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
   const [pending, setPending] = useState(false);
   const [savingPause, setSavingPause] = useState(false);
   const [deleteBackups, setDeleteBackups] = useState(false);
+  /*
+   * Open until the page behind has re-read. Closing on the API's answer left
+   * the old card, and its Turn off button, on screen for two to four seconds
+   * on a real server, under a toast saying it was done.
+   */
+  const [refreshing, startRefresh] = useTransition();
+  const doneMessage = useRef(null);
+  const [action, setAction] = useState(null);
+  useEffect(() => {
+    if (refreshing || !doneMessage.current) return;
+    toast.success(doneMessage.current);
+    doneMessage.current = null;
+    onOpenChange(false);
+  }, [refreshing, onOpenChange]);
+  const working = pending || savingPause || refreshing;
+  const pauseBusy = savingPause || (refreshing && action === "pause");
   const hasBackups = count === null || count > 0;
   // Already paused: offering to pause it is no alternative at all.
   const canPause = Boolean(target?.enabled) && target?.frequency !== "manual";
 
   function handleOpenChange(next) {
-    if (pending || savingPause) return;
+    if (working) return;
     if (!next) setDeleteBackups(false);
     onOpenChange(next);
   }
 
   async function confirm() {
+    setAction("delete");
     setPending(true);
     try {
       await deleteBackupTarget(application.id, { deleteBackups: hasBackups && deleteBackups });
-      toast.success(
+      doneMessage.current =
         hasBackups && count
           ? t("doneWithBackups", { name: application.name, count })
-          : t("done", { name: application.name }),
-      );
-      setDeleteBackups(false);
-      onOpenChange(false);
-      router.refresh();
+          : t("done", { name: application.name });
+      startRefresh(() => router.refresh());
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
     } finally {
@@ -62,6 +76,7 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
    * deletes backups on save, and this exists to keep them.
    */
   async function pause() {
+    setAction("pause");
     setSavingPause(true);
     try {
       await saveBackupTarget(application.id, {
@@ -74,10 +89,9 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
         file_excludes: target.file_excludes ?? [],
         database_excludes: target.database_excludes ?? [],
       });
-      toast.success(t("paused"));
       setDeleteBackups(false);
-      onOpenChange(false);
-      router.refresh();
+      doneMessage.current = t("paused");
+      startRefresh(() => router.refresh());
     } catch (error) {
       toast.error(apiMessage(error, t("pauseFailed")));
     } finally {
@@ -97,7 +111,7 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
       confirmLabel={t("confirm")}
       confirmVariant="destructive"
       confirmDisabled={(hasBackups && !deleteBackups) || savingPause}
-      pending={pending}
+      pending={pending || (refreshing && action === "delete")}
       onConfirm={confirm}
     >
       {hasBackups ? (
@@ -121,8 +135,8 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
           {canPause ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
               <p className="min-w-48 flex-1 text-xs leading-5 text-muted-foreground">{t("keepHint")}</p>
-              <Button type="button" variant="outline" size="sm" onClick={pause} disabled={pending || savingPause}>
-                {savingPause ? <Loader2 className="size-4 animate-spin" /> : <PauseCircle className="size-4" />}
+              <Button type="button" variant="outline" size="sm" onClick={pause} disabled={pending || savingPause || refreshing}>
+                {pauseBusy ? <Loader2 className="size-4 animate-spin" /> : <PauseCircle className="size-4" />}
                 {t("pauseInstead")}
               </Button>
             </div>

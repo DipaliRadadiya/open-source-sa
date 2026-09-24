@@ -298,7 +298,9 @@ export function BackupsPanel({
         databasesKnown={databasesKnown}
       />
 
-      {target ? (
+      {/* Kept while open: a successful turn-off refreshes the page to no
+          target, and the dialog has to outlive that to close and say so. */}
+      {target || turningOff ? (
         <TurnOffBackupsDialog
           open={turningOff}
           onOpenChange={setTurningOff}
