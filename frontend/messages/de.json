@@ -6059,6 +6059,25 @@
       "noDatabase": {
         "title": "Diese Anwendung hat keine Datenbank",
         "description": "Backups dieser Anwendung enthalten keine, bis Sie eine verknüpfen."
+      },
+      "turnOff": {
+        "action": "Backups abschalten",
+        "running": "Ein Backup läuft gerade. Warten Sie, bis es fertig ist, bevor Sie die Backups abschalten.",
+        "title": "Backups für {name} abschalten?",
+        "description": "Der Zeitplan und seine Einstellungen werden entfernt, und für diese Anwendung laufen keine Backups mehr.",
+        "cancel": "Abbrechen",
+        "confirm": "Backups abschalten",
+        "deleteCount": "{count, plural, one {Auch das # Backup löschen} other {Auch die # Backups löschen}}",
+        "deleteAll": "Auch die Backups löschen",
+        "deleteHint": "Erforderlich: Ohne Zeitplan können die Backups nicht behalten werden. Ihre Archive werden aus {destination} entfernt, und das lässt sich nicht rückgängig machen.",
+        "storage": "Ihrem Speicher",
+        "keepHint": "Möchten Sie die Backups behalten? Pausieren Sie stattdessen: Nichts läuft mehr nach Zeitplan, und alle Backups bleiben erhalten.",
+        "pauseInstead": "Stattdessen pausieren",
+        "paused": "Backups pausiert. Alle Backups bleiben erhalten.",
+        "pauseFailed": "Die Backups konnten nicht pausiert werden.",
+        "done": "Backups für {name} abgeschaltet.",
+        "doneWithBackups": "{count, plural, one {Backups für {name} abgeschaltet und # Backup gelöscht.} other {Backups für {name} abgeschaltet und # Backups gelöscht.}}",
+        "failed": "Die Backups konnten nicht abgeschaltet werden."
       }
     },
     "empty": {

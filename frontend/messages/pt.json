@@ -6059,6 +6059,25 @@
       "noDatabase": {
         "title": "Esta aplicação não possui banco de dados",
         "description": "Os backups desta aplicação não conterão um até que você o anexe."
+      },
+      "turnOff": {
+        "action": "Desativar backups",
+        "running": "Um backup está em execução. Aguarde terminar antes de desativar os backups.",
+        "title": "Desativar os backups de {name}?",
+        "description": "O agendamento e as configurações são removidos, e nenhum outro backup será feito para esta aplicação.",
+        "cancel": "Cancelar",
+        "confirm": "Desativar backups",
+        "deleteCount": "{count, plural, one {Excluir também o # backup} other {Excluir também os # backups}}",
+        "deleteAll": "Excluir também os backups",
+        "deleteHint": "Obrigatório: os backups não podem ser mantidos sem o agendamento. Os arquivos são removidos de {destination}, e isso não pode ser desfeito.",
+        "storage": "seu storage",
+        "keepHint": "Quer manter os backups? Pause em vez disso: nada é executado no agendamento, e todos os backups são mantidos.",
+        "pauseInstead": "Pausar em vez disso",
+        "paused": "Backups pausados. Todos os backups foram mantidos.",
+        "pauseFailed": "Não foi possível pausar os backups.",
+        "done": "Backups desativados para {name}.",
+        "doneWithBackups": "{count, plural, one {Backups desativados para {name}, e # backup excluído.} other {Backups desativados para {name}, e # backups excluídos.}}",
+        "failed": "Não foi possível desativar os backups."
       }
     },
     "empty": {

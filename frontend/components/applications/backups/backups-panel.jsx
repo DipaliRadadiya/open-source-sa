@@ -14,6 +14,7 @@ import {
   PauseCircle,
   Pencil,
   PlayCircle,
+  PowerOff,
   ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ import { DestinationHealth } from "@/components/backups/destination-health";
 import { DatabaseCardActions } from "@/components/applications/database-card-actions";
 import { RestoreDialog } from "@/components/backups/restore-dialog";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
+import { TurnOffBackupsDialog } from "@/components/applications/backups/turn-off-backups-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 /**
@@ -55,6 +57,9 @@ export function BackupsPanel({
   activeRestore = null,
   canManage,
   canRestore,
+  // `backup` manage: removing the schedule can take every archive with it,
+  // so the API asks for the server-level permission, not `app_backup`.
+  canTurnOff = false,
   databaseCounts = null,
   databasesKnown = false,
   // The site's own databases, and what could be attached to it. Only supplied
@@ -78,6 +83,7 @@ export function BackupsPanel({
   const [clearing, setClearing] = useState(null);
   const [restoring, setRestoring] = useState(null);
   const [editing, setEditing] = useState(false);
+  const [turningOff, setTurningOff] = useState(false);
   // Seeded from the server, then replaced the moment a restore is started here
   // so the progress appears on the click rather than after a round trip.
   const [restore, setRestore] = useState(activeRestore);
@@ -252,6 +258,11 @@ export function BackupsPanel({
         blockedReason={!running && !queued && busy ? t("alreadyRunning") : null}
         onBackUpNow={backUpNow}
         onEdit={() => setEditing(true)}
+        canTurnOff={canTurnOff}
+        // The API refuses while a run is in flight: its archive would belong
+        // to a schedule that no longer exists.
+        turnOffBlockedReason={running || queued || busy ? t("turnOff.running") : null}
+        onTurnOff={() => setTurningOff(true)}
       />
 
       <RecentBackups
@@ -286,6 +297,16 @@ export function BackupsPanel({
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
       />
+
+      {target ? (
+        <TurnOffBackupsDialog
+          open={turningOff}
+          onOpenChange={setTurningOff}
+          application={application}
+          target={target}
+          count={backupsFailed ? null : total}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(clearing)}
@@ -350,7 +371,7 @@ function stateOf(target) {
  * facts, and the two actions. No form — the answer to "am I covered?" should
  * not require reading a set of inputs.
  */
-function ProtectionCard({ target, lastBackup, lastBackupUnknown = false, canManage, running, blockedReason, onBackUpNow, onEdit }) {
+function ProtectionCard({ target, lastBackup, lastBackupUnknown = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
   const t = useTranslations("backups.application");
   const state = stateOf(target);
   const { icon: Icon, tone, ring } = STATE[state];
@@ -523,10 +544,27 @@ function ProtectionCard({ target, lastBackup, lastBackupUnknown = false, canMana
 
           {/* Exclusions change what a restore gives you back, so their
               existence belongs here even when the patterns do not. */}
-          {excludes > 0 ? (
-            <p className="mt-4 border-t pt-3 text-xs text-muted-foreground">
-              {t("summary.excludes", { count: excludes })}
-            </p>
+          {excludes > 0 || canTurnOff ? (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3">
+              <p className="text-xs text-muted-foreground">
+                {excludes > 0 ? t("summary.excludes", { count: excludes }) : null}
+              </p>
+              {/* Quiet and last: a way out, not something to press by accident
+                  beside "Back up now". The dialog carries the weight. */}
+              {canTurnOff ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onTurnOff}
+                  disabled={Boolean(turnOffBlockedReason)}
+                  disabledReason={turnOffBlockedReason}
+                  className="ml-auto [--destructive-ink:color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] text-(--destructive-ink) hover:bg-destructive/10 hover:text-(--destructive-ink) dark:text-destructive dark:hover:text-destructive"
+                >
+                  <PowerOff className="size-4" />
+                  {t("turnOff.action")}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </CardContent>
       ) : null}

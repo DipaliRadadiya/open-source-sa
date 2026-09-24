@@ -121,6 +121,7 @@ export default async function ApplicationBackupsPage({ params }) {
           activeRestore={activeRestore}
           canManage={canManage}
           canRestore={canRestore}
+          canTurnOff={canRestore}
           siteDatabases={siteDbs.databases}
           unattachedDatabases={spareDbs.databases}
           engines={engineList.engines}

@@ -6059,6 +6059,25 @@
       "noDatabase": {
         "title": "This application has no database",
         "description": "Backups of this application will not contain one until you attach it."
+      },
+      "turnOff": {
+        "action": "Turn off backups",
+        "running": "A backup is running. Wait for it to finish before turning backups off.",
+        "title": "Turn off backups for {name}?",
+        "description": "The schedule and its settings are removed, and no more backups will run for this application.",
+        "cancel": "Cancel",
+        "confirm": "Turn off backups",
+        "deleteCount": "{count, plural, one {Also delete its # backup} other {Also delete its # backups}}",
+        "deleteAll": "Also delete its backups",
+        "deleteHint": "Required: backups can't be kept once the schedule is gone. Their archives are removed from {destination}, and this can't be undone.",
+        "storage": "your storage",
+        "keepHint": "Want to keep the backups? Pause instead: nothing runs on a schedule, and every backup stays.",
+        "pauseInstead": "Pause instead",
+        "paused": "Backups paused. Every backup is kept.",
+        "pauseFailed": "Backups could not be paused.",
+        "done": "Backups turned off for {name}.",
+        "doneWithBackups": "{count, plural, one {Backups turned off for {name}, and # backup deleted.} other {Backups turned off for {name}, and # backups deleted.}}",
+        "failed": "Backups could not be turned off."
       }
     },
     "empty": {

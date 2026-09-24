@@ -6059,6 +6059,25 @@
       "noDatabase": {
         "title": "Cette application n'a pas de base de données",
         "description": "Les sauvegardes de cette application n'en contiendront pas tant que vous n'en attacherez pas une."
+      },
+      "turnOff": {
+        "action": "Désactiver les sauvegardes",
+        "running": "Une sauvegarde est en cours. Attendez qu'elle se termine avant de désactiver les sauvegardes.",
+        "title": "Désactiver les sauvegardes de {name} ?",
+        "description": "La planification et ses paramètres sont supprimés, et plus aucune sauvegarde ne sera faite pour cette application.",
+        "cancel": "Annuler",
+        "confirm": "Désactiver les sauvegardes",
+        "deleteCount": "{count, plural, one {Supprimer aussi sa # sauvegarde} other {Supprimer aussi ses # sauvegardes}}",
+        "deleteAll": "Supprimer aussi ses sauvegardes",
+        "deleteHint": "Obligatoire : les sauvegardes ne peuvent pas être conservées sans planification. Leurs archives sont supprimées de {destination}, et c'est irréversible.",
+        "storage": "votre stockage",
+        "keepHint": "Vous voulez garder les sauvegardes ? Mettez plutôt en pause : rien ne s'exécute selon la planification, et toutes les sauvegardes sont conservées.",
+        "pauseInstead": "Mettre en pause plutôt",
+        "paused": "Sauvegardes en pause. Toutes les sauvegardes sont conservées.",
+        "pauseFailed": "Les sauvegardes n'ont pas pu être mises en pause.",
+        "done": "Sauvegardes désactivées pour {name}.",
+        "doneWithBackups": "{count, plural, one {Sauvegardes désactivées pour {name}, et # sauvegarde supprimée.} other {Sauvegardes désactivées pour {name}, et # sauvegardes supprimées.}}",
+        "failed": "Les sauvegardes n'ont pas pu être désactivées."
       }
     },
     "empty": {

@@ -6059,6 +6059,25 @@
       "noDatabase": {
         "title": "Esta aplicación no tiene base de datos",
         "description": "Las copias de seguridad de esta aplicación no incluirán ninguna hasta que la vincules."
+      },
+      "turnOff": {
+        "action": "Desactivar copias",
+        "running": "Hay una copia de seguridad en curso. Espera a que termine antes de desactivar las copias.",
+        "title": "¿Desactivar las copias de {name}?",
+        "description": "Se eliminan la programación y sus ajustes, y no se harán más copias de seguridad de esta aplicación.",
+        "cancel": "Cancelar",
+        "confirm": "Desactivar copias",
+        "deleteCount": "{count, plural, one {Eliminar también su # copia} other {Eliminar también sus # copias}}",
+        "deleteAll": "Eliminar también sus copias",
+        "deleteHint": "Obligatorio: las copias no se pueden conservar sin la programación. Sus archivos se eliminan de {destination} y no se puede deshacer.",
+        "storage": "tu almacenamiento",
+        "keepHint": "¿Quieres conservar las copias? Ponlas en pausa: no se ejecuta nada programado y se conservan todas.",
+        "pauseInstead": "Pausar en su lugar",
+        "paused": "Copias en pausa. Se conservan todas.",
+        "pauseFailed": "No se pudieron pausar las copias.",
+        "done": "Copias desactivadas para {name}.",
+        "doneWithBackups": "{count, plural, one {Copias desactivadas para {name} y # copia eliminada.} other {Copias desactivadas para {name} y # copias eliminadas.}}",
+        "failed": "No se pudieron desactivar las copias."
       }
     },
     "empty": {
