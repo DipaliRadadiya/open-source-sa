@@ -26,7 +26,17 @@ class UpdateApplication
         // Merge rather than replace: a partial settings update must not wipe
         // the answers it didn't mention.
         if (array_key_exists('settings', $data)) {
-            $data['settings'] = array_merge($application->settings ?? [], (array) $data['settings']);
+            // A password sent here is for the installer (a retry after a
+            // failed install), so it goes where the installer reads it, not
+            // into the plain `settings` the API returns.
+            $incoming = (array) $data['settings'];
+            $secrets = array_intersect_key($incoming, array_flip(Application::INSTALL_SECRET_KEYS));
+
+            $data['settings'] = array_merge($application->settings ?? [], array_diff_key($incoming, $secrets));
+
+            if ($secrets !== []) {
+                $data['install_secrets'] = array_merge($application->install_secrets ?? [], $secrets);
+            }
         }
 
         // A rename moves the web-server config, because the file is named after

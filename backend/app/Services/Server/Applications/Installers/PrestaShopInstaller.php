@@ -45,7 +45,7 @@ class PrestaShopInstaller extends AbstractPhpInstaller
      */
     public function install(Application $application, string $documentRoot, array $context): void
     {
-        $settings = $application->settings ?? [];
+        $settings = $application->installSettings();
 
         $this->downloadAndExtract($application, null, $documentRoot);
 

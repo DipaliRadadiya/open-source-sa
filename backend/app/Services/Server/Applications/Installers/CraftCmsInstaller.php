@@ -79,7 +79,7 @@ class CraftCmsInstaller extends AbstractPhpInstaller
      */
     public function install(Application $application, string $documentRoot, array $context): void
     {
-        $settings = $application->settings ?? [];
+        $settings = $application->installSettings();
         // `web/` is the document root; Craft itself lives in the directory
         // above it, and that is where its commands must run.
         $projectRoot = dirname($documentRoot);

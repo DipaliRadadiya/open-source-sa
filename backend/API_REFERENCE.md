@@ -892,6 +892,8 @@ It is set by a deploy, by a file change (about a minute later — see
 
 `settings` is always an object (`{}` when empty), never `[]`. `steps` is a genuine list and stays `[]`.
 
+🔴 **`settings` never contains a password (2026-09-24).** The installer's passwords (`admin_password`, `mailer_password`) used to be saved here and returned to anyone who could view the site, for as long as the site existed. They are now held encrypted, only until the install succeeds, and are never returned. Sending them on `PUT /applications/{id}` (for example to fix a failed install before Retry setup) still works; they go where the installer reads them, not into `settings`.
+
 ---
 
 ### GET `/applications/{application}/sidebar`

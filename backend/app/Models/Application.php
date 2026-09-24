@@ -26,7 +26,7 @@ use Illuminate\Support\Str;
     'system_user_id', 'production_application_id', 'cloned_from_application_id', 'name', 'domain', 'site_type', 'serving_profile', 'status',
     'php_version', 'node_version', 'app_port', 'rendering_type', 'web_root',
     'build_command', 'deploy_script', 'start_command', 'package_manager',
-    'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
+    'git_account_id', 'repository', 'repository_url', 'branch', 'settings', 'install_secrets',
     'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'directory_size_updated_at',
     'current_release_id', 'previous_release_path',
     'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',
@@ -37,6 +37,26 @@ use Illuminate\Support\Str;
 class Application extends Model
 {
     use HasFactory;
+
+    /**
+     * The installer's secrets: every field a site type asks for as a
+     * `password`.
+     *
+     * Written to the encrypted `install_secrets` rather than to `settings`,
+     * and never returned by the API. A list rather than read from the site
+     * types, because building a type's fields runs commands on the server
+     * (the PHP versions on offer) and this is read on every response.
+     * InstallSecretsTest fails if a type adds a password field that is not
+     * here.
+     */
+    public const INSTALL_SECRET_KEYS = ['admin_password', 'mailer_password'];
+
+    /**
+     * Never serialized: the installer's passwords are for the installer.
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['install_secrets'];
 
     /**
      * @return array<string, string>
@@ -58,6 +78,9 @@ class Application extends Model
             'fail2ban_filter_content' => 'string',
             'status' => ApplicationStatus::class,
             'settings' => 'array',
+            // The passwords a one-click installer needs, held only until the
+            // install succeeds. See installSettings().
+            'install_secrets' => 'encrypted:array',
             'steps' => 'array',
             'last_deployed_at' => 'datetime',
             'directory_size_bytes' => 'integer',
@@ -68,6 +91,24 @@ class Application extends Model
             'webhook_secret' => 'encrypted',
             'webhook_last_delivered_at' => 'datetime',
         ];
+    }
+
+    /**
+     * What an installer reads: the site's settings plus the passwords it was
+     * created with.
+     *
+     * The passwords are kept apart, in `install_secrets`, because `settings`
+     * is plain JSON and is returned by the API. They used to live in
+     * `settings`, which put every one-click site's admin password in front of
+     * anyone allowed to view the site, for as long as the site existed. They
+     * are held only until the install succeeds; ProvisionApplication then
+     * clears them, because nothing reads them again.
+     *
+     * @return array<string, mixed>
+     */
+    public function installSettings(): array
+    {
+        return array_merge($this->settings ?? [], $this->install_secrets ?? []);
     }
 
     public function systemUser(): BelongsTo

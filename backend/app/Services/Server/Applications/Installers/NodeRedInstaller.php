@@ -45,7 +45,7 @@ class NodeRedInstaller extends AbstractNodeInstaller
      */
     public function install(Application $application, string $documentRoot, array $context): void
     {
-        $settings = $application->settings ?? [];
+        $settings = $application->installSettings();
 
         // --omit=dev: the editor is shipped built, so the dev tree is a few
         // hundred megabytes of nothing this will ever run.

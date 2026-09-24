@@ -87,6 +87,9 @@ class ProvisionApplication implements ShouldBeUnique, ShouldQueue
                 'status' => ApplicationStatus::Active,
                 'steps' => $steps,
                 'reference' => null,
+                // The admin password has been handed to the installer, and
+                // nothing reads it again. Kept on failure, for Retry setup.
+                'install_secrets' => null,
             ]);
 
             $activityLogger->log('application.provisioned', $application, [

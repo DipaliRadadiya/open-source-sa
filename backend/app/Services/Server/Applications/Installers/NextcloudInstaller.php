@@ -111,10 +111,10 @@ class NextcloudInstaller extends AbstractPhpInstaller
             ...$this->portOption($context),
             '--database-name', (string) $context['database'],
             '--database-user', (string) $context['db_user'],
-            '--admin-user', (string) ($application->settings['admin_user'] ?? 'admin'),
-            '--admin-email', (string) ($application->settings['admin_email'] ?? ''),
+            '--admin-user', (string) ($application->installSettings()['admin_user'] ?? 'admin'),
+            '--admin-email', (string) ($application->installSettings()['admin_email'] ?? ''),
             '--data-dir', $dataDir,
-        ], $context['db_password']."\n".($application->settings['admin_password'] ?? '')."\n", $documentRoot);
+        ], $context['db_password']."\n".($application->installSettings()['admin_password'] ?? '')."\n", $documentRoot);
 
         // Installed from the command line, Nextcloud has no request to learn
         // the hostname from, so it trusts only localhost. Without this the

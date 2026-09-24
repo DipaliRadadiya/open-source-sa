@@ -47,7 +47,7 @@ class StatamicInstaller extends AbstractPhpInstaller
      */
     public function install(Application $application, string $documentRoot, array $context): void
     {
-        $settings = $application->settings ?? [];
+        $settings = $application->installSettings();
         // `public/` is served; Statamic itself lives above it.
         $projectRoot = dirname($documentRoot);
 

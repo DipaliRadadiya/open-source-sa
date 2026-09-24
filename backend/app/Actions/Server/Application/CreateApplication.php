@@ -122,7 +122,7 @@ class CreateApplication
                     'repository' => $data['repository'] ?? null,
                     'repository_url' => $data['repository_url'] ?? null,
                     'branch' => $data['branch'] ?? null,
-                    'settings' => $this->typeSettings($type->fields(), $data),
+                    ...$this->splitSecrets($this->typeSettings($type->fields(), $data)),
                 ]);
 
                 // The domains table is the list the Domains screen reads, and until now
@@ -170,6 +170,26 @@ class CreateApplication
         ProvisionApplication::dispatch($application->id, Auth::id());
 
         return $application->fresh(['systemUser']);
+    }
+
+    /**
+     * Separate the installer's passwords from the rest of the answers.
+     *
+     * `settings` is plain JSON and the API returns it; the passwords go to
+     * `install_secrets`, which is encrypted, never serialized, and cleared once
+     * the install succeeds.
+     *
+     * @param  array<string, mixed>  $settings
+     * @return array{settings: array<string, mixed>, install_secrets: array<string, mixed>|null}
+     */
+    private function splitSecrets(array $settings): array
+    {
+        $secrets = array_intersect_key($settings, array_flip(Application::INSTALL_SECRET_KEYS));
+
+        return [
+            'settings' => array_diff_key($settings, $secrets),
+            'install_secrets' => $secrets === [] ? null : $secrets,
+        ];
     }
 
     /**

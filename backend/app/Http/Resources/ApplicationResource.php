@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\SiteTypeSuggestion;
 use App\Services\Git\Webhooks\WebhookManager;
@@ -223,7 +224,15 @@ class ApplicationResource extends JsonResource
             // shape of this field would then depend on whether it happens to
             // be populated, forcing every consumer to handle both.
             // `steps` below is a genuine list and correctly stays `[]`.
-            'settings' => (object) ($this->settings ?? []),
+            //
+            // Without the installer's passwords. New sites never put them
+            // here (they go to the encrypted `install_secrets`), but a value
+            // saved before that, or sent through PUT, must still not be
+            // returned to anyone who can merely view the site.
+            'settings' => (object) array_diff_key(
+                $this->settings ?? [],
+                array_flip(Application::INSTALL_SECRET_KEYS),
+            ),
 
             // Provisioning progress, so the UI can show which stage it reached
             // instead of a bare spinner.
