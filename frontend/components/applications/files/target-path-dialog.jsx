@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Folder, Loader2 } from "lucide-react";
@@ -10,6 +9,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormModal } from "@/components/ui/form-modal";
+import { useRefresh } from "@/hooks/use-refresh";
 
 /**
  * The shared shape behind Rename, Copy, Compress and Extract: one "target
@@ -78,12 +78,13 @@ export function TargetPathDialog({
 }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   // Mounted fresh per file (see files-panel.jsx), so the pre-filled default
   // is the initial state directly rather than something an effect resets.
   const [value, setValue] = useState(defaultTarget);
   const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [submitting, setBusy] = useState(false);
+  const busy = submitting || refreshing;
   const inputRef = useRef(null);
 
   /*
@@ -133,10 +134,11 @@ export function TargetPathDialog({
     setError(null);
     try {
       await apply(appId, file.path, trimmed);
-      toast.success(successMessage(file, trimmed));
-      onSuccess?.(trimmed);
-      handleOpenChange(false);
-      router.refresh();
+      refreshThen(() => {
+        toast.success(successMessage(file, trimmed));
+        onSuccess?.(trimmed);
+        onOpenChange?.(false);
+      });
     } catch (err) {
       const targetError = err.response?.data?.errors?.target?.[0];
       if (targetError) {

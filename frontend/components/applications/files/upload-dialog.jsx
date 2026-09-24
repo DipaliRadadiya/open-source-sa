@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations, useFormatter } from "next-intl";
 import { toast } from "sonner";
 import { formatBytes } from "@/lib/format/bytes";
@@ -10,6 +9,7 @@ import { joinPath } from "@/lib/files/path-helpers";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { IconTooltip } from "@/components/ui/icon-tooltip";
+import { useRefresh } from "@/hooks/use-refresh";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +38,7 @@ function retryAfterSeconds(error) {
 export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = null, existingNames = [], onSuccess }) {
   const t = useTranslations("applications.files");
   const format = useFormatter();
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   const [items, setItems] = useState([]); // { id, file, status, progress, error }
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -131,11 +131,13 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
       let queued = 0;
       return prev.map((item) => {
         if (item.status === "done" || item.nameTaken) return item;
-        queued += item.file.size;
 
-        if (queued > usable) {
+        // A file that does not fit is never sent, so it uses none of the room:
+        // counting it anyway blocked every smaller file listed after it.
+        if (queued + item.file.size > usable) {
           return { ...item, status: "error", error: t("uploadDialog.noSpace"), spaceBlocked: true };
         }
+        queued += item.file.size;
         // Room again — because something ahead of it was removed, or the
         // disk was freed up elsewhere.
         return item.spaceBlocked
@@ -157,7 +159,7 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
   }
 
   function handleOpenChange(next) {
-    if (uploading) return;
+    if (uploading || refreshing) return;
     if (!next) {
       setItems([]);
       setDragOver(false);
@@ -262,11 +264,19 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     }
     abortRef.current = null;
     setUploading(false);
+    const uploaded = succeededNames.length;
+    const clean = !stopped && !failedCount && uploaded > 0 && !skippedCount;
     if (anySucceeded) {
-      router.refresh();
-      // Only unambiguous with exactly one file — a multi-file batch has no
-      // single row that "the" upload landed at.
-      if (succeededNames.length === 1) onSuccess?.(joinPath(path, succeededNames[0]));
+      // After the list has re-read, not before: closing first showed a list
+      // without the new file for seconds on a real server.
+      refreshThen(() => {
+        // Only unambiguous with exactly one file — a multi-file batch has no
+        // single row that "the" upload landed at.
+        if (succeededNames.length === 1) onSuccess?.(joinPath(path, succeededNames[0]));
+        // Only on a clean run — a partial failure has to stay on screen,
+        // since the per-file reason is only shown here.
+        if (clean) handleOpenChange(false);
+      });
     }
 
     // Say what happened. Previously nothing did: the only completion signal
@@ -274,8 +284,6 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     // has scrolled, and the auto-close never fired at all — it tested the
     // `items` closure captured before the run, where every item is still
     // "pending", so the "everything finished" condition could never be true.
-    const uploaded = succeededNames.length;
-
     if (stopped) {
       toast.info(t("uploadDialog.stopped", { done: uploaded, count: items.filter((i) => !i.nameTaken).length }));
       return;
@@ -290,10 +298,6 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
           ? t("uploadDialog.uploadedOne", { name: succeededNames[0] })
           : t("uploadDialog.uploadedMany", { count: uploaded }),
       );
-      // Long enough for the last row to be seen ticking over, short enough
-      // not to feel stuck. Only on a clean run — a partial failure has to
-      // stay on screen, since the per-file reason is only shown here.
-      setTimeout(() => handleOpenChange(false), 700);
     } else if (uploaded) {
       toast.warning(
         skippedCount
@@ -305,7 +309,11 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     }
   }
 
-  const hasPending = items.some((i) => !i.nameTaken && (i.status === "pending" || i.status === "error"));
+  // A file known not to fit is skipped like a taken name, so it is not "to do":
+  // counting it left Upload enabled with nothing it could send.
+  const hasPending = items.some(
+    (i) => !i.nameTaken && !i.spaceBlocked && (i.status === "pending" || i.status === "error"),
+  );
 
   // Batch progress, weighted by bytes rather than by file count: with a 2 GB
   // file next to four 10 KB ones, "4 of 5 done" would sit at 80% for almost
@@ -464,12 +472,12 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
               {t("uploadDialog.stop")}
             </Button>
           ) : (
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={refreshing}>
               {t("cancel")}
             </Button>
           )}
-          <Button type="button" onClick={startUpload} disabled={!hasPending || uploading}>
-            {uploading ? <Loader2 className="size-4 animate-spin" /> : null}
+          <Button type="button" onClick={startUpload} disabled={!hasPending || uploading || refreshing}>
+            {uploading || refreshing ? <Loader2 className="size-4 animate-spin" /> : null}
             {t("uploadDialog.submit")}
           </Button>
         </DialogFooter>

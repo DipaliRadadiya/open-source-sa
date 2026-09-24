@@ -72,6 +72,8 @@ export function DataTable({
   sortable = false,
   stickyHeader = false,
   defaultSorting = [],
+  // Told about each client-side sort change, e.g. to remember it.
+  onSortingChange,
   rowClassName,
   fixedLayout = false,
   contextMenu,
@@ -123,7 +125,11 @@ export function DataTable({
     ...(sortable
       ? {
           state: { sorting },
-          onSortingChange: setSorting,
+          onSortingChange: (updater) => {
+            const next = typeof updater === "function" ? updater(sorting) : updater;
+            setSorting(next);
+            onSortingChange?.(next);
+          },
           getSortedRowModel: getSortedRowModel(),
         }
       : null),

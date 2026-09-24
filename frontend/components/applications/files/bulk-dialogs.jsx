@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -35,6 +34,7 @@ import {
   useArchiveFormat,
 } from "@/components/applications/files/archive-format-field";
 import { PermanentDeleteField } from "@/components/applications/files/permanent-delete-field";
+import { useRefresh } from "@/hooks/use-refresh";
 
 /**
  * The dialogs behind the selection bar. One component because all four share
@@ -45,8 +45,9 @@ import { PermanentDeleteField } from "@/components/applications/files/permanent-
 export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChange, onResult }) {
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const { pending: refreshing, refreshThen } = useRefresh();
+  const [running, setBusy] = useState(false);
+  const busy = running || refreshing;
   /*
    * Compress gets a useful default; move and copy get none.
    *
@@ -119,9 +120,10 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
     try {
       const { data } = await call();
       const result = bulkResult(data, paths);
-      onResult(action, result, { permanent });
-      onOpenChange(false);
-      router.refresh();
+      refreshThen(() => {
+        onResult(action, result, { permanent });
+        onOpenChange(false);
+      });
     } catch (err) {
       // A 422 here is the whole request refused — a bad target, a selection
       // spanning folders, a count that no longer matches. It belongs in the
@@ -294,7 +296,13 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
         <div className="space-y-2">
           {action === "compress" ? (
             <div className="pb-2">
-              <ArchiveFormatField {...archiveFormat} value={target} setValue={setTarget} busy={busy} />
+              <ArchiveFormatField
+                {...archiveFormat}
+                value={target}
+                setValue={setTarget}
+                busy={busy}
+                suggest={(ext) => compressSuggestion(joinPath(path, "archive"), ext, new Set(files.map((f) => f.path)))}
+              />
             </div>
           ) : null}
           <Label htmlFor="bulk-target">{meta.label}</Label>

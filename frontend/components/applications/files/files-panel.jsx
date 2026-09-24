@@ -37,6 +37,7 @@ import { joinPath } from "@/lib/files/path-helpers";
 import { canOpenFile } from "@/lib/files/openable";
 import { isImageFile } from "@/lib/files/file-icon";
 import { hiddenToggleHref } from "@/lib/files/hidden-href";
+import { HIDDEN_COOKIE, writePref } from "@/lib/files/view-prefs";
 import { folderSize } from "@/lib/api/files";
 import { apiMessage } from "@/lib/api/error-message";
 
@@ -46,6 +47,7 @@ export function FilesPanel({
   initialFiles,
   hiddenCount = 0,
   showHidden = true,
+  initialSort,
   canManage,
   breakdown = null,
   siteType = null,
@@ -175,6 +177,8 @@ export function FilesPanel({
   const writeReason = canWrite ? null : t("noPermission");
 
   const hiddenHref = hiddenToggleHref({ appId, path, showHidden });
+  // Remembered for the next folder too, not only this URL.
+  const rememberHidden = () => writePref(HIDDEN_COOKIE, showHidden ? "hide" : null);
 
   // Folder sizes are computed one at a time, on request, and remembered for
   // as long as the listing is on screen — asking twice for the same folder
@@ -425,6 +429,7 @@ export function FilesPanel({
                 href={hiddenHref}
                 aria-pressed={!showHidden}
                 scroll={false}
+                onClick={rememberHidden}
               >
                 {showHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                 {showHidden ? t("hidden.hide") : t("hidden.show")}
@@ -474,7 +479,7 @@ export function FilesPanel({
           description={t("empty.hiddenOnlyDescription")}
           action={
             <Button asChild variant="outline" size="sm">
-              <Link href={hiddenHref} scroll={false}>
+              <Link href={hiddenHref} scroll={false} onClick={rememberHidden}>
                 <Eye className="size-3.5" />
                 {t("hidden.show")}
               </Link>
@@ -556,6 +561,7 @@ export function FilesPanel({
               onToggleAll={toggleAll}
               folderSizes={folderSizes}
               sizingPaths={sizingPaths}
+              initialSort={initialSort}
             />
           </div>
           {/* The drop target has always been this whole panel; nothing said

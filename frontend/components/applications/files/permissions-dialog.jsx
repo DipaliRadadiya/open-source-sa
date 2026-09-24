@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Lock } from "lucide-react";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { PermissionModeField } from "@/components/applications/files/permission-mode-field";
 import { modeParts, symbolicMode } from "@/lib/files/describe-mode";
+import { useRefresh } from "@/hooks/use-refresh";
 
 const DEFAULT_MODE = "644";
 
@@ -19,7 +19,7 @@ const DEFAULT_MODE = "644";
 // has — older backends that don't send `mode` yet still get today's behavior.
 export function PermissionsDialog({ appId, file, open, onOpenChange }) {
   const t = useTranslations("applications.files");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   const currentMode = file?.mode ?? null;
   // One piece of state: the mode itself. The checkboxes edit its digits, so no
   // combination can be entered that the server would reject.
@@ -27,7 +27,8 @@ export function PermissionsDialog({ appId, file, open, onOpenChange }) {
     modeParts(currentMode) ? currentMode : DEFAULT_MODE,
   );
   const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [saving, setBusy] = useState(false);
+  const busy = saving || refreshing;
 
   function handleOpenChange(next) {
     if (busy) return;
@@ -48,9 +49,10 @@ export function PermissionsDialog({ appId, file, open, onOpenChange }) {
     setError(null);
     try {
       await setFilePermissions(appId, file.path, mode);
-      toast.success(t("permissionsDialog.done", { name: file.name }));
-      handleOpenChange(false);
-      router.refresh();
+      refreshThen(() => {
+        toast.success(t("permissionsDialog.done", { name: file.name }));
+        onOpenChange?.(false);
+      });
     } catch (err) {
       const modeError = err.response?.data?.errors?.mode?.[0];
       if (modeError) setError(modeError);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useNavTransition } from "@/components/data-table/nav-transition";
 
@@ -22,14 +22,35 @@ import { useNavTransition } from "@/components/data-table/nav-transition";
  * Under a `<NavTransitionProvider>` it borrows the list's pending signal, so
  * the table dims with the same transition rather than running a second one
  * beside it; elsewhere it keeps its own.
+ *
+ * `refreshThen(after)` runs `after` once the refreshed page is on screen. A
+ * dialog that closed on the API's answer and refreshed behind it left the old
+ * list up for 1.5–4 s on a real server, under a toast saying it was done — a
+ * renamed file still wearing its old name. Keep the spinner while `pending`
+ * and do the toast and the close in `after`.
  */
 export function useRefresh() {
   const nav = useNavTransition();
   const router = useRouter();
   const [localPending, startLocal] = useTransition();
 
+  const pending = nav ? nav.isPending : localPending;
+  const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
+  const after = useRef(null);
+
+  useEffect(() => {
+    if (pending || !after.current) return;
+    const run = after.current;
+    after.current = null;
+    run();
+  }, [pending]);
+
   return {
-    pending: nav ? nav.isPending : localPending,
-    refresh: nav ? nav.refresh : () => startLocal(() => router.refresh()),
+    pending,
+    refresh,
+    refreshThen: (fn) => {
+      after.current = fn;
+      refresh();
+    },
   };
 }

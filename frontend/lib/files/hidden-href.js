@@ -13,9 +13,10 @@ export function hiddenToggleHref({ appId, path = "", showHidden = true }) {
   // root from three folders deep.
   if (path) params.set("path", path);
 
-  // Only the non-default is written. Showing is what this screen has always
-  // done, so `?hidden=1` on every URL would be noise that says nothing.
-  if (showHidden) params.set("hidden", "0");
+  // Both directions are explicit: the remembered choice (lib/files/view-prefs)
+  // can be "hide", and a bare URL would then answer with the cookie instead of
+  // the click.
+  params.set("hidden", showHidden ? "0" : "1");
 
   const query = params.toString();
 

@@ -9,6 +9,7 @@ export function CompressDialog({ appId, file, existingPaths, open, onOpenChange,
   const t = useTranslations("applications.files");
   const format = useArchiveFormat();
   if (!file) return null;
+  const suggest = (ext) => compressSuggestion(file.path, ext, new Set(existingPaths));
 
   return (
     <TargetPathDialog
@@ -21,8 +22,8 @@ export function CompressDialog({ appId, file, existingPaths, open, onOpenChange,
       description={t("compressDialog.subtitle")}
       submitLabel={t("compressDialog.submit")}
       savingLabel={t("saving")}
-      defaultTarget={compressSuggestion(file.path, ".zip", new Set(existingPaths))}
-      renderExtra={(field) => <ArchiveFormatField {...format} {...field} />}
+      defaultTarget={suggest(".zip")}
+      renderExtra={(field) => <ArchiveFormatField {...format} {...field} suggest={suggest} />}
       normalize={format.complete}
       validate={format.validate}
       apply={compressFile}

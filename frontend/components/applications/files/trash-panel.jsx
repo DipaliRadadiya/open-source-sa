@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowLeft, File as FileIcon, RotateCcw, Trash2, TriangleAlert, Undo2 } from "lucide-react";
@@ -18,6 +17,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { RefreshButton } from "@/components/data-table/refresh-button";
+import { useRefresh } from "@/hooks/use-refresh";
 
 /**
  * What is recoverable, and the two ways out of it.
@@ -48,11 +48,15 @@ export function TrashPanel({
   backHref,
 }) {
   const t = useTranslations("applications.files.trash");
-  const router = useRouter();
+  const { pending: refreshing, refresh, refreshThen } = useRefresh();
   // Emptying (one batch or all) goes through a dialog that stays open until it
   // is done; restores are per row and can overlap, so they are tracked apart.
   const [pending, setPending] = useState(null);
   const restoring = usePendingKeys();
+  // Taken off the list the moment the API says yes. The refresh that removes
+  // it for real takes seconds on a real server, and until then its Restore
+  // button was live again — a second press answered "already exists".
+  const [restored, setRestored] = useState(() => new Set());
   const [confirming, setConfirming] = useState(null);
 
   const manageReason = canManage ? null : t("noPermission");
@@ -60,7 +64,7 @@ export function TrashPanel({
   // Preserves the order the API sends (newest first) — Map keeps insertion
   // order, so the newest batch stays at the top without a second sort.
   const batches = new Map();
-  for (const entry of trash) {
+  for (const entry of trash.filter((e) => !restored.has(`${e.batch}:${e.path}`))) {
     if (!batches.has(entry.batch)) batches.set(entry.batch, []);
     batches.get(entry.batch).push(entry);
   }
@@ -71,8 +75,9 @@ export function TrashPanel({
     restoring.start(key);
     try {
       await restoreTrashed(appId, entry.batch, entry.path);
+      setRestored((prev) => new Set(prev).add(key));
       toast.success(t("restored", { name: entry.path }));
-      router.refresh();
+      refresh();
     } catch (error) {
       // 422 here is the non-overwrite rule: something is back at that path and
       // the file sitting there now is the one somebody kept. Worth saying in
@@ -87,9 +92,11 @@ export function TrashPanel({
     setPending(batch ?? "all");
     try {
       await emptyTrash(appId, batch);
-      toast.success(batch ? t("batchEmptied") : t("emptied"));
-      setConfirming(null);
-      router.refresh();
+      const done = batch ? t("batchEmptied") : t("emptied");
+      refreshThen(() => {
+        toast.success(done);
+        setConfirming(null);
+      });
     } catch (error) {
       toast.error(apiMessage(error, t("emptyFailed")));
     } finally {
@@ -248,14 +255,14 @@ export function TrashPanel({
 
       <ConfirmDialog
         open={confirming !== null}
-        onOpenChange={(next) => !next && pending === null && setConfirming(null)}
+        onOpenChange={(next) => !next && pending === null && !refreshing && setConfirming(null)}
         icon={TriangleAlert}
         tone="destructive"
         title={confirming?.batch ? t("confirmBatch.title", { count: confirming.count }) : t("confirmAll.title")}
         description={confirming?.batch ? t("confirmBatch.description") : t("confirmAll.description")}
         cancelLabel={t("cancel")}
-        confirmLabel={pending !== null ? t("emptying") : t("confirmSubmit")}
-        pending={pending !== null}
+        confirmLabel={pending !== null || refreshing ? t("emptying") : t("confirmSubmit")}
+        pending={pending !== null || refreshing}
         onConfirm={() => empty(confirming?.batch ?? null)}
       />
     </Card>

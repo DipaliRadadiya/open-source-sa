@@ -1,6 +1,5 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, FolderPlus } from "lucide-react";
@@ -12,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormModal } from "@/components/ui/form-modal";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { useRefresh } from "@/hooks/use-refresh";
 
 function joinPath(base, name) {
   return base ? `${base}/${name}` : name;
@@ -19,7 +19,7 @@ function joinPath(base, name) {
 
 export function NewFolderDialog({ appId, path, open, onOpenChange, onSuccess }) {
   const t = useTranslations("applications.files");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   const form = useForm({
     resolver: zodResolver(newFolderSchema),
     defaultValues: { name: "" },
@@ -28,11 +28,13 @@ export function NewFolderDialog({ appId, path, open, onOpenChange, onSuccess }) 
   async function onSubmit(values) {
     try {
       await createDirectory(appId, joinPath(path, values.name.trim()));
-      toast.success(t("newFolder.created", { name: values.name.trim() }));
-      onSuccess?.(joinPath(path, values.name.trim()));
-      onOpenChange?.(false);
-      form.reset({ name: "" });
-      router.refresh();
+      const name = values.name.trim();
+      refreshThen(() => {
+        toast.success(t("newFolder.created", { name }));
+        onSuccess?.(joinPath(path, name));
+        onOpenChange?.(false);
+        form.reset({ name: "" });
+      });
     } catch (error) {
       // The API validates a "path" field (the folder name joined onto the
       // current directory) — this form only exposes "name", so the error has
@@ -50,9 +52,10 @@ export function NewFolderDialog({ appId, path, open, onOpenChange, onSuccess }) 
     }
   }
 
-  const isSubmitting = form.formState.isSubmitting;
+  const isSubmitting = form.formState.isSubmitting || refreshing;
 
   function handleOpenChange(next) {
+    if (isSubmitting) return;
     if (!next) form.reset({ name: "" });
     onOpenChange?.(next);
   }

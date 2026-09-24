@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Wrench } from "lucide-react";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useModeSentence } from "@/components/applications/files/use-mode-sentence";
+import { useRefresh } from "@/hooks/use-refresh";
 
 /**
  * The whole-site reset — a different, page-level action from any one file's
@@ -18,7 +18,7 @@ import { useModeSentence } from "@/components/applications/files/use-mode-senten
 export function FixPermissionsButton({ appId, canManage }) {
   const t = useTranslations("applications.files");
   const sentenceFor = useModeSentence();
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -26,9 +26,10 @@ export function FixPermissionsButton({ appId, canManage }) {
     setPending(true);
     try {
       await fixApplicationPermissions(appId);
-      toast.success(t("fixPermissions.done"));
-      setOpen(false);
-      router.refresh();
+      refreshThen(() => {
+        toast.success(t("fixPermissions.done"));
+        setOpen(false);
+      });
     } catch (error) {
       toast.error(apiMessage(error, t("fixPermissions.failed")));
     } finally {
@@ -66,7 +67,7 @@ export function FixPermissionsButton({ appId, canManage }) {
         description={t("fixPermissions.description")}
         cancelLabel={t("cancel")}
         confirmLabel={t("fixPermissions.confirm")}
-        pending={pending}
+        pending={pending || refreshing}
         onConfirm={onConfirm}
         className="w-full sm:!max-w-lg"
       >

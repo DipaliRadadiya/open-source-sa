@@ -2,12 +2,14 @@ import Link from "next/link";
 import { FolderSearch, FolderX } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import { getFiles } from "@/lib/applications/get-files";
 import { basename, dirname } from "@/lib/files/path-helpers";
+import { HIDDEN_COOKIE, SORT_COOKIE, parseSort, resolveShowHidden } from "@/lib/files/view-prefs";
 import { getTrash } from "@/lib/applications/get-trash";
 import { getBreakdown } from "@/lib/applications/get-breakdown";
 import { FilesPanel } from "@/components/applications/files/files-panel";
@@ -46,11 +48,12 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
   // memory/research-file-trash.md. Every panel that has one reaches it from the
   // file manager's toolbar.
   const showTrash = rawTrash === "1";
-  // In the URL rather than in the browser's storage: the listing is fetched on
-  // the server, so the choice has to reach the server to have any effect. It
-  // also makes the state shareable, survives a reload, and needs no effect
-  // reading localStorage after mount.
-  const showHidden = rawHidden !== "0";
+  // Server-side, because the listing is fetched here: an explicit ?hidden= in
+  // the URL wins (a shared link shows what its sender saw), otherwise the
+  // reader's remembered choice — see lib/files/view-prefs.js.
+  const cookieStore = await cookies();
+  const showHidden = resolveShowHidden(rawHidden, cookieStore.get(HIDDEN_COOKIE)?.value);
+  const initialSort = parseSort(cookieStore.get(SORT_COOKIE)?.value);
 
   const [permissions, appPermissions, t, result] = await Promise.all([
     getPermissions(),
@@ -191,6 +194,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
             initialFiles={filesResult.files}
             hiddenCount={filesResult.hiddenCount}
             showHidden={showHidden}
+            initialSort={initialSort}
             canManage={canManage}
             breakdown={breakdown}
             siteType={application.site_type}

@@ -36,6 +36,11 @@ export function ArchiveJobsBanner({ appId }) {
   // Which finished jobs have already been announced. Without it the toast
   // fires on every poll for the five minutes a completed row stays visible.
   const announced = useRef(new Set());
+  // The API returns recent completions too, so the first answer on every page
+  // load held jobs that finished before this visit: each one toasted again,
+  // five at once on a real server. Only a job that lands while this page is
+  // open is news.
+  const primed = useRef(false);
 
   // Drives the interval below. Held in state rather than derived from `jobs`
   // so the effect re-runs — and so the switch back to idle happens on the
@@ -53,6 +58,12 @@ export function ArchiveJobsBanner({ appId }) {
         if (!parsed.success || !active) return;
 
         const rows = parsed.data.data;
+        if (!primed.current) {
+          primed.current = true;
+          for (const job of rows) {
+            if (!ARCHIVE_IN_FLIGHT.includes(job.status)) announced.current.add(job.id);
+          }
+        }
         setJobs(rows);
         setRate(rows.some((job) => ARCHIVE_IN_FLIGHT.includes(job.status))
           ? POLL_ACTIVE_MS

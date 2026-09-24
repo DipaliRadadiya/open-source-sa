@@ -86,7 +86,14 @@ export function SiteSearchResults({ appId, query, onAction }) {
   }
 
   if (status === "error") {
-    return <EmptyState icon={SearchX} title={t("siteSearch.failed")} description={remote.message} />;
+    // No reason from the server means the fallback, which is the title already.
+    return (
+      <EmptyState
+        icon={SearchX}
+        title={t("siteSearch.failed")}
+        description={remote.message === t("siteSearch.failed") ? null : remote.message}
+      />
+    );
   }
 
   if (files.length === 0) {

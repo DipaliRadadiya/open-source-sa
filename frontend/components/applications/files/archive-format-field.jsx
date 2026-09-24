@@ -43,7 +43,7 @@ export function useArchiveFormat() {
   };
 }
 
-export function ArchiveFormatField({ options, legend, chosen, setChosen, value, setValue, busy }) {
+export function ArchiveFormatField({ options, legend, chosen, setChosen, value, setValue, busy, suggest }) {
   const typed = archiveFormatOf(value);
   return (
     <fieldset className="space-y-2" disabled={busy}>
@@ -52,7 +52,11 @@ export function ArchiveFormatField({ options, legend, chosen, setChosen, value, 
         value={typed === ".tar.gz" || typed === ".tgz" ? ".tar.gz" : typed === ".zip" ? ".zip" : chosen}
         onChange={(next) => {
           setChosen(next);
-          setValue(withArchiveFormat(value, next));
+          // An untouched suggestion is re-suggested for the new format: the
+          // "-2" in "src-2.zip" only meant src.zip was taken, and it was
+          // carried into "src-2.tar.gz" when "src.tar.gz" was free.
+          const untouched = suggest && ARCHIVE_FORMATS.some((ext) => value === suggest(ext));
+          setValue(untouched ? suggest(next) : withArchiveFormat(value, next));
         }}
         options={options}
         disabled={busy}
