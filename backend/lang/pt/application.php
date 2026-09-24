@@ -51,6 +51,7 @@ return [
     ],
 
     'fields' => [
+        'compose' => 'Ficheiro compose',
         'image' => 'Imagem',
         'container_port' => 'Porta do contentor',
         'database_engine' => 'Mecanismo de banco de dados',
@@ -132,6 +133,7 @@ return [
     ],
 
     'help' => [
+        'compose' => 'Opcional. Cole o seu próprio ficheiro compose e tudo o que o Compose suporta é suportado: vários serviços, volumes nomeados, healthchecks. Deixe vazio e o painel escreve um a partir dos campos acima. As portas têm de ser publicadas em 127.0.0.1 e os bind mounts permanecer dentro do diretório desta aplicação; o resto é recusado com o motivo.',
         'image' => 'A imagem a executar, com uma etiqueta explícita — `nginx:1.27-alpine`. Um nome sem etiqueta puxa `latest`, o que torna uma implementação não reproduzível e uma reversão sem significado.',
         'container_port' => 'A porta em que a sua aplicação escuta dentro do contentor. O painel atribui a porta no próprio servidor e aponta o nginx para ela.',
         'table_prefix_random' => 'Deixe vazio e será gerado um prefixo aleatório, mantendo as tabelas separadas caso a base de dados venha a ser partilhada.',

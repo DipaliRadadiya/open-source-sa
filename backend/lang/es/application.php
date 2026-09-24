@@ -51,6 +51,7 @@ return [
     ],
 
     'fields' => [
+        'compose' => 'Archivo compose',
         'image' => 'Imagen',
         'container_port' => 'Puerto del contenedor',
         'database_engine' => 'Motor de base de datos',
@@ -132,6 +133,7 @@ return [
     ],
 
     'help' => [
+        'compose' => 'Opcional. Pega tu propio archivo compose y todo lo que Compose admite estará disponible: varios servicios, volúmenes con nombre, healthchecks. Déjalo vacío y el panel escribirá uno a partir de los campos anteriores. Los puertos deben publicarse en 127.0.0.1 y los montajes deben permanecer dentro del directorio de esta aplicación; cualquier otra cosa se rechaza indicando el motivo.',
         'image' => 'La imagen a ejecutar, con una etiqueta explícita: `nginx:1.27-alpine`. Un nombre sin etiqueta usa `latest`, lo que hace que un despliegue no sea reproducible y que revertirlo no signifique nada.',
         'container_port' => 'El puerto en el que tu aplicación escucha dentro del contenedor. El panel asigna el puerto en el propio servidor y apunta nginx a él.',
         'table_prefix_random' => 'Déjalo vacío y se generará un prefijo aleatorio, manteniendo las tablas separadas si alguna vez se comparte la base de datos.',

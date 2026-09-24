@@ -51,6 +51,7 @@ return [
     ],
 
     'fields' => [
+        'compose' => 'Compose-Datei',
         'image' => 'Image',
         'container_port' => 'Container-Port',
         'database_engine' => 'Datenbank-Engine',
@@ -132,6 +133,7 @@ return [
     ],
 
     'help' => [
+        'compose' => 'Optional. Fügen Sie Ihre eigene Compose-Datei ein — alles, was Compose unterstützt, wird unterstützt: mehrere Dienste, benannte Volumes, Healthchecks. Lassen Sie sie leer, schreibt das Panel eine aus den Feldern oben. Ports müssen auf 127.0.0.1 veröffentlicht werden und Bind-Mounts innerhalb des Verzeichnisses dieser Anwendung bleiben; alles andere wird mit Begründung abgelehnt.',
         'image' => 'Das auszuführende Image, mit ausdrücklichem Tag — `nginx:1.27-alpine`. Ein Name ohne Tag zieht `latest`, was ein Deployment nicht reproduzierbar und ein Rollback bedeutungslos macht.',
         'container_port' => 'Der Port, auf dem Ihre Anwendung innerhalb des Containers lauscht. Den Port auf dem Server selbst vergibt das Panel und richtet nginx darauf aus.',
         'table_prefix_random' => 'Leer lassen, dann wird ein zufälliges Präfix erzeugt — so bleiben die Tabellen getrennt, falls die Datenbank je geteilt wird.',

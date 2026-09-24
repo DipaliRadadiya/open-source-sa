@@ -149,3 +149,30 @@ it('gives up on a producer that has stopped, rather than hanging', function () {
     expect($bytes)->toBe(0)
         ->and($elapsed)->toBeLessThan(10.0);
 });
+
+it('does not throw when a command cannot be started at all', function () {
+    // The class documents "Never throws" and every caller relies on it: they
+    // read `failed()` and raise their own translated exception. A command
+    // whose working directory the panel user cannot enter fails inside
+    // `posix_spawn`, before the process exists, and the raw Symfony exception
+    // went straight past every caller's handling and reached the user as a
+    // stack trace.
+    //
+    // Found with `docker compose config` and a cwd of /home/ubuntu, which is
+    // 0750 and not the panel's to enter. Nothing about it is Docker-specific.
+    silenceServerOps();
+
+    $result = app(ServerOps::class)->run(
+        ['true'],
+        ['feature' => 'test', 'op' => 'test'],
+        cwd: '/definitely/not/a/directory',
+    );
+
+    // Failed and *unanswered*, which is the distinction callers act on: a
+    // command that ran and said no is not the same as one that never ran.
+    // The reason itself is in the server-ops log against the reference —
+    // there is no process to read stderr from when the spawn is what failed.
+    expect($result->failed())->toBeTrue()
+        ->and($result->answered)->toBeFalse()
+        ->and($result->reference)->not->toBe('');
+});

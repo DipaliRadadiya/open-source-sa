@@ -4,6 +4,7 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
@@ -91,7 +92,7 @@ it('publishes only to loopback, never to every address', function () {
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc123\n"), answered: true),
     ], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files))->apply(containerApp(), '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->apply(containerApp(), '/home/shop/shop/public_html');
 
     expect($written)->toContain('"127.0.0.1:20001:80"')
         // The naive form, which binds 0.0.0.0 and is reachable past ufw.
@@ -106,7 +107,7 @@ it('mounts the application directory and nothing above it', function () {
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
     ], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files))->apply(containerApp(), '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->apply(containerApp(), '/home/shop/shop/public_html');
 
     expect($written)->toContain('/home/shop/shop/public_html:/app')
         ->and($written)->not->toContain('- /:/');
@@ -121,7 +122,7 @@ it('gives every container a memory ceiling and bounded logs', function () {
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
     ], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files))->apply(containerApp(), '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->apply(containerApp(), '/home/shop/shop/public_html');
 
     expect($written)->toContain('mem_limit:')
         ->and($written)->toContain('max-size:');
@@ -141,7 +142,7 @@ it('refuses to report a container that started and died as running', function ()
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult(''), answered: true),
     ], $ran, $written);
 
-    expect(fn () => (new ContainerSupervisor($ops, $files))->apply(containerApp(), '/home/shop/shop/public_html'))
+    expect(fn () => (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->apply(containerApp(), '/home/shop/shop/public_html'))
         ->toThrow(ProvisioningFailedException::class);
 });
 
@@ -156,7 +157,7 @@ it('names the project explicitly, so two apps cannot collide', function () {
     ], $ran, $written);
 
     $app = containerApp();
-    (new ContainerSupervisor($ops, $files))->apply($app, '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->apply($app, '/home/shop/shop/public_html');
 
     $up = collect($ran)->firstWhere('op', 'compose_up');
 
@@ -173,7 +174,7 @@ it('does not delete data when the application is removed', function () {
     $written = null;
     [$ops, $files] = containerDeps([], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files))->remove(containerApp(), '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->remove(containerApp(), '/home/shop/shop/public_html');
 
     $down = collect($ran)->firstWhere('op', 'compose_down');
 
@@ -189,7 +190,7 @@ it('bounds the log read', function () {
     $written = null;
     [$ops, $files] = containerDeps([], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files))->logs(containerApp(), '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->logs(containerApp(), '/home/shop/shop/public_html');
 
     expect(collect($ran)->firstWhere('op', 'compose_logs')['command'])->toContain('--tail');
 });
@@ -232,4 +233,69 @@ it('reuses the node vhost rather than needing one of its own', function () {
         // The upgrade pair, without which a WebSocket connection hangs waiting
         // for a handshake that never comes.
         ->and($config)->toContain('proxy_set_header Upgrade');
+});
+
+it('validates a user-supplied compose file again at deploy time', function () {
+    // The form is not the only way a row changes — a restore, an import or a
+    // direct edit all reach `apply()`. A rule enforced once at the boundary
+    // holds only until something else writes the row.
+    $app = containerApp();
+    $app->compose = "services:\n  web:\n    image: nginx\n    privileged: true\n";
+    $app->save();
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        // The validator's own parse, answering with a resolved document that
+        // contains the forbidden key.
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true,
+            reference: 'r',
+            result: processResult(json_encode(['services' => ['web' => ['privileged' => true]]])),
+            answered: true,
+        ),
+    ], $ran, $written);
+
+    // The validator shares the mocked ServerOps deliberately. Resolving it
+    // from the container gives it the real one, which cannot reach docker in
+    // a test — every verdict comes back "unparsable" and the refusal tests
+    // pass for the wrong reason.
+    expect(fn () => (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply($app, '/home/shop/shop/public_html'))
+        ->toThrow(ProvisioningFailedException::class);
+
+    // And nothing was written: a file that fails validation must not reach
+    // disk, or the next deploy picks it up without being asked.
+    expect($written)->toBeNull();
+});
+
+it('writes the user file verbatim when it passes', function () {
+    // Stored and written as given, not as the resolved document `config`
+    // produces. The resolved form is normalised, expanded and reordered —
+    // handing it back would give someone a file they did not write.
+    $app = containerApp();
+    $app->compose = "services:\n  web:\n    image: nginx:alpine\n    ports:\n      - \"127.0.0.1:20001:80\"\n";
+    $app->save();
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true,
+            reference: 'r',
+            result: processResult(json_encode(['services' => ['web' => [
+                'image' => 'nginx:alpine',
+                'ports' => [['host_ip' => '127.0.0.1', 'published' => '20001', 'target' => 80]],
+            ]]])),
+            answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply($app, '/home/shop/shop/public_html');
+
+    expect($written)->toBe($app->compose)
+        // Not the generated template.
+        ->and($written)->not->toContain('Managed by the panel');
 });

@@ -56,6 +56,7 @@ return [
     ],
 
     'fields' => [
+        'compose' => 'Compose file',
         'image' => 'Image',
         'container_port' => 'Container port',
         'database_engine' => 'Database engine',
@@ -137,6 +138,7 @@ return [
     ],
 
     'help' => [
+        'compose' => 'Optional. Paste your own compose file and everything Compose supports is supported — multiple services, named volumes, healthchecks. Leave it empty and the panel writes one from the fields above. Ports must publish to 127.0.0.1 and bind mounts must stay inside this application\'s directory; anything else is refused with the reason.',
         'image' => 'The image to run, with an explicit tag — `nginx:1.27-alpine`. A bare name pulls `latest`, which makes a deploy unreproducible and a rollback meaningless.',
         'container_port' => 'The port your application listens on inside the container. The panel allocates the port on the server itself and points nginx at it.',
         'table_prefix_random' => 'Leave empty and a random prefix is generated, keeping the tables apart if the database is ever shared.',
