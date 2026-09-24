@@ -28,3 +28,11 @@ test("the delete dialog does not offer to remove files it cannot find", () => {
   assert.match(DIALOG, /removeFiles: removeFiles && !orphaned/);
   assert.match(DIALOG, /t\("filesKept"\)/);
 });
+
+test("reads under such a site are answered here, not sent to be refused", () => {
+  // Next renders the hidden page next to the layout's panel; without this each
+  // of its reads went to the API and came back 409.
+  const READ = fs.readFileSync("lib/api/read.js", "utf8");
+  assert.match(READ, /UNDER_APPLICATION = \/\^\\\/applications\\\/\(\\d\+\)\\\/\.\//, "the site itself must not match, or getApplication would recurse");
+  assert.match(READ, /\(await getApplication\(site\[1\]\)\)\.application\?\.system_user === null/);
+});
