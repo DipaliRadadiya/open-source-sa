@@ -3431,6 +3431,7 @@
       "removeFiles": "Excluir também os arquivos e backups da aplicação",
       "removeFilesOn": "O diretório da aplicação e todos os backups dela — incluindo os arquivos no seu storage — serão excluídos.",
       "removeFilesOff": "Os arquivos permanecem no servidor. Os backups da aplicação saem do painel junto com ela, mas os arquivos ficam no seu storage — exclua-os lá se não quiser mais mantê-los.",
+      "filesKept": "Os arquivos não são removidos: sem o usuário do sistema, o painel não sabe onde eles estão. Eles permanecem no servidor.",
       "systemUserStays": "O usuário do sistema {username} não é removido. Se nenhum outro aplicativo o usa, você pode excluí-lo em Usuários do sistema.",
       "confirmLabel": "Digite <code>{domain}</code> para confirmar",
       "submit": "Excluir aplicação",
@@ -3446,6 +3447,10 @@
       "databasesFailed": "A aplicação foi excluída, mas {databases} não puderam ser removidos.",
       "goToDatabases": "Abrir Bancos de dados",
       "removeFilesHint": "Desligado, a aplicação é removida do painel, mas os arquivos permanecem no servidor. Ligado, os arquivos e suas cópias de segurança são excluídos e não podem ser recuperados."
+    },
+    "systemUserMissing": {
+      "title": "O usuário do sistema desta aplicação está faltando",
+      "description": "Sem ele, o painel não consegue trabalhar com os arquivos nem as configurações de {name}. Você ainda pode excluir a aplicação."
     },
     "facts": {
       "title": "Aplicação",

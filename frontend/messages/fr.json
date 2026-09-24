@@ -3431,6 +3431,7 @@
       "removeFiles": "Supprimer aussi les fichiers et sauvegardes de l'application",
       "removeFilesOn": "Le répertoire de l'application, ainsi que toutes ses sauvegardes — y compris les archives dans votre stockage — sont supprimés.",
       "removeFilesOff": "Les fichiers restent sur le serveur. Les sauvegardes de l'application quittent le panneau avec elle, mais leurs archives restent dans votre stockage — supprimez-les là-bas si vous n'en voulez plus.",
+      "filesKept": "Ses fichiers ne sont pas supprimés : sans l'utilisateur système, le panneau ne sait pas où ils se trouvent. Ils restent sur le serveur.",
       "systemUserStays": "L'utilisateur système {username} n'est pas supprimé. Si aucune autre application ne l'utilise, vous pouvez le supprimer dans Utilisateurs système.",
       "confirmLabel": "Tapez <code>{domain}</code> pour confirmer",
       "submit": "Supprimer l'application",
@@ -3446,6 +3447,10 @@
       "databasesFailed": "L'application a été supprimée, mais {databases} n'ont pas pu être retirées.",
       "goToDatabases": "Ouvrir Bases de données",
       "removeFilesHint": "Désactivé, l'application est retirée du panneau mais ses fichiers restent sur le serveur. Activé, les fichiers et ses sauvegardes sont supprimés et ne peuvent pas être récupérés."
+    },
+    "systemUserMissing": {
+      "title": "L'utilisateur système de cette application est introuvable",
+      "description": "Sans lui, le panneau ne peut pas travailler sur les fichiers ni les réglages de {name}. Vous pouvez toujours supprimer l'application."
     },
     "facts": {
       "title": "Application",

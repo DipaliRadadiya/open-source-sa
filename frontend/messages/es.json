@@ -3431,6 +3431,7 @@
       "removeFiles": "Eliminar también los archivos y las copias de seguridad de la aplicación",
       "removeFilesOn": "Se eliminan el directorio de la aplicación y todas sus copias de seguridad, incluidos los archivos guardados en tu almacenamiento.",
       "removeFilesOff": "Los archivos permanecen en el servidor. Las copias de seguridad de la aplicación desaparecen del panel junto con ella, pero sus archivos siguen en tu almacenamiento: elimínalos allí si ya no los quieres.",
+      "filesKept": "Sus archivos no se eliminan: sin el usuario del sistema, el panel no sabe dónde están. Permanecen en el servidor.",
       "systemUserStays": "El usuario del sistema {username} no se elimina. Si ninguna otra aplicación lo usa, puedes borrarlo en Usuarios del sistema.",
       "confirmLabel": "Escribe <code>{domain}</code> para confirmar",
       "submit": "Eliminar aplicación",
@@ -3446,6 +3447,10 @@
       "databasesFailed": "La aplicación se eliminó, pero no se pudo eliminar {databases}.",
       "goToDatabases": "Abrir Bases de datos",
       "removeFilesHint": "Desactivado: la aplicación se elimina del panel pero sus archivos permanecen en el servidor. Activado: los archivos y sus copias de seguridad se eliminan y no se pueden recuperar."
+    },
+    "systemUserMissing": {
+      "title": "Falta el usuario del sistema de esta aplicación",
+      "description": "Sin él, el panel no puede trabajar con los archivos ni la configuración de {name}. Aún puedes eliminar la aplicación."
     },
     "facts": {
       "title": "Aplicación",

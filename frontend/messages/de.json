@@ -3431,6 +3431,7 @@
       "removeFiles": "Auch die Dateien und Backups der Anwendung löschen",
       "removeFilesOn": "Das Verzeichnis der Anwendung und jedes ihrer Backups — samt der Archive in Ihrem Speicher — werden gelöscht.",
       "removeFilesOff": "Die Dateien bleiben auf dem Server. Die Backups der Anwendung verlassen das Panel mit ihr, ihre Archive bleiben aber in Ihrem Speicher — löschen Sie sie dort, wenn Sie sie nicht mehr wollen.",
+      "filesKept": "Ihre Dateien werden nicht entfernt: Ohne den Systembenutzer weiß das Panel nicht, wo sie liegen. Sie bleiben auf dem Server.",
       "systemUserStays": "Der Systembenutzer {username} wird nicht entfernt. Wenn keine andere Anwendung ihn nutzt, können Sie ihn unter Systembenutzer löschen.",
       "confirmLabel": "Tippen Sie <code>{domain}</code>, um zu bestätigen",
       "submit": "Anwendung löschen",
@@ -3446,6 +3447,10 @@
       "databasesFailed": "Die Anwendung wurde gelöscht, aber {databases} konnte nicht entfernt werden.",
       "goToDatabases": "Datenbanken öffnen",
       "removeFilesHint": "Aus: Die Seite wird aus dem Panel entfernt, aber ihre Dateien bleiben auf dem Server. Ein: Die Dateien und die Sicherungen werden gelöscht und können nicht wiederhergestellt werden."
+    },
+    "systemUserMissing": {
+      "title": "Der Systembenutzer dieser Anwendung fehlt",
+      "description": "Ohne ihn kann das Panel nicht mit den Dateien oder Einstellungen von {name} arbeiten. Sie können die Anwendung weiterhin löschen."
     },
     "facts": {
       "title": "Anwendung",

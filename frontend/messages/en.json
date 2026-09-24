@@ -3431,6 +3431,7 @@
       "removeFiles": "Also delete the application’s files and backups",
       "removeFilesOn": "The application’s directory, and every backup it has — including the archives in your storage — are deleted.",
       "removeFilesOff": "The files stay on the server. The application’s backups leave the panel with it, but their archives stay in your storage — delete them there if you no longer want them.",
+      "filesKept": "Its files are not removed: without the system user the panel can't tell where they are. They stay on the server.",
       "systemUserStays": "The system user {username} is not removed. If no other application uses it, you can delete it from System Users.",
       "confirmLabel": "Type <code>{domain}</code> to confirm",
       "submit": "Delete application",
@@ -3446,6 +3447,10 @@
       "databasesFailed": "The application was deleted, but {databases} could not be removed.",
       "goToDatabases": "Open Databases",
       "removeFilesHint": "Off, the application is removed from the panel but its files stay on the server. On, the files and its backups are deleted and cannot be recovered."
+    },
+    "systemUserMissing": {
+      "title": "This application's system user is missing",
+      "description": "The panel can't work on {name}'s files or settings without it. You can still delete the application."
     },
     "facts": {
       "title": "Application",

@@ -39,6 +39,8 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   const [pending, setPending] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [removeFiles, setRemoveFiles] = useState(false);
+  // Null when the user is gone; absent (undefined) when it was not loaded.
+  const orphaned = application?.system_user === null;
   const [removeDatabases, setRemoveDatabases] = useState(false);
   /*
    * Only to NAME them on the checkbox. "Also delete the database" is a
@@ -95,7 +97,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     if (!matches) return;
     setPending(true);
     try {
-      const { data } = await deleteApplication(application.id, { removeFiles, removeDatabases });
+      const { data } = await deleteApplication(application.id, { removeFiles: removeFiles && !orphaned, removeDatabases });
 
       /*
        * 200 with a failure inside it. The site really is gone — a red toast
@@ -160,22 +162,31 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       onConfirm={onConfirm}
     >
       <div className="space-y-4">
-        <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
-          <Checkbox
-            id="delete-app-files"
-            checked={removeFiles}
-            onCheckedChange={(value) => setRemoveFiles(value === true)}
-            className="mt-0.5"
-          />
-          <div className="space-y-1">
-            <Label htmlFor="delete-app-files" className="text-sm font-medium" hint={t("removeFilesHint")}>
-              {t("removeFiles")}
-            </Label>
-            <p className="text-xs leading-5 text-muted-foreground">
-              {removeFiles ? t("removeFilesOn") : t("removeFilesOff")}
-            </p>
+        {/* No system user, no home to find the files in: the API skips them
+            rather than guess, so offering the choice would be a promise it
+            does not keep. */}
+        {orphaned ? (
+          <p className="rounded-lg border bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
+            {t("filesKept")}
+          </p>
+        ) : (
+          <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
+            <Checkbox
+              id="delete-app-files"
+              checked={removeFiles}
+              onCheckedChange={(value) => setRemoveFiles(value === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="delete-app-files" className="text-sm font-medium" hint={t("removeFilesHint")}>
+                {t("removeFiles")}
+              </Label>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {removeFiles ? t("removeFilesOn") : t("removeFilesOff")}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Only when there is one. The old note said a database "is kept" on
             every site, including those that never had one. */}
