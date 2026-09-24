@@ -3277,7 +3277,7 @@ Restore history — what was restored, when, and by whom. Paginated.
 
 The application is flattened as `application_name` / `application_domain` — no nested object.
 
-`safety_backup_id` — the pre-restore snapshot created automatically. `rollback_path` — the previous site directory still on disk.
+`safety_backup_id` — the pre-restore snapshot created automatically. `rollback_path` — the previous site directory still on disk. **Only the newest successful restore of a site keeps one (2026-09-24):** each successful file restore removes the copies earlier restores left, and their `rollback_path` becomes `null`. Every restore made a full copy of the site and none was ever removed, so five restores of a 117 MB site left 585 MB. A *failed* restore's copy is never removed.
 
 `current_step` is the machine key, `current_step_title` its localised sentence, and `step_number` / `total_steps` turn it into a progress bar. `step_number` is null when nothing has started yet; `total_steps` is always populated, so a bar can be rendered before the first step reports.
 

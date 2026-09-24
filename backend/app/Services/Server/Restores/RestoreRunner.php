@@ -69,6 +69,8 @@ class RestoreRunner
                 'finished_at' => now(),
             ]);
 
+            $this->pruneOlderRollbacks($restore, $context);
+
             return $restore->refresh();
         } catch (Throwable $e) {
             $failed = true;
@@ -137,6 +139,70 @@ class RestoreRunner
                 ['rm', '-rf', $context->stagingDirectory],
                 ['feature' => 'backup', 'op' => 'restore_staging_cleanup'],
             ));
+        }
+    }
+
+    /**
+     * Keep only the newest copy of the site a restore moved aside.
+     *
+     * Every file restore moves the live site to `.rollback-{id}` beside it and
+     * nothing ever removed one, so each restore cost a full copy of the site on
+     * disk, for good: five restores of a 117 MB site left 585 MB (measured on
+     * a real server, 2026-09-24). The newest copy is the one worth having, as
+     * "the restore worked but the site is wrong" is asked about the restore
+     * just run; the older ones are also in the safety backups.
+     *
+     * Only paths the panel itself recorded, on earlier *successful* restores of
+     * the same site, and only where the path is exactly `.rollback-{that id}`
+     * beside the new copy. A failed restore's copy is never touched: if moving
+     * it back failed, that copy is the site. `rm -rf` on a symlink removes the
+     * link and not its target, so a copy swapped for one cannot redirect this.
+     *
+     * Never fails the restore: it has already succeeded, and tidying up is not
+     * a reason to report otherwise.
+     */
+    private function pruneOlderRollbacks(Restore $restore, RestoreContext $context): void
+    {
+        if ($context->rollbackPath === null) {
+            return;
+        }
+
+        $parent = dirname($context->rollbackPath);
+
+        $older = Restore::query()
+            ->where('application_id', $restore->application_id)
+            ->where('id', '!=', $restore->id)
+            ->where('status', RestoreStatus::Succeeded)
+            ->whereNotNull('rollback_path')
+            ->get();
+
+        foreach ($older as $previous) {
+            $path = (string) $previous->rollback_path;
+
+            if ($path !== $parent.'/.rollback-'.$previous->id) {
+                continue;
+            }
+
+            try {
+                $result = $this->rootLock->unlocked($context->application, fn () => $this->serverOps->run(
+                    ['rm', '-rf', $path],
+                    ['feature' => 'backup', 'op' => 'restore_prune_rollback', 'application' => $restore->application_id],
+                    timeout: 600,
+                ));
+
+                if ($result->failed()) {
+                    continue;
+                }
+
+                $previous->update(['rollback_path' => null]);
+            } catch (Throwable $e) {
+                Log::channel('server-ops')->warning('old restore copy not removed', [
+                    'feature' => 'backup',
+                    'op' => 'restore_prune_rollback',
+                    'restore' => $previous->id,
+                    'detail' => $e->getMessage(),
+                ]);
+            }
         }
     }
 
