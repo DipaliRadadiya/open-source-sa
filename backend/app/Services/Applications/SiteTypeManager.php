@@ -94,6 +94,26 @@ class SiteTypeManager
 
     public function catalog(): array
     {
+        // Types this stack will never host are left out entirely, rather than
+        // rendered as blocked cards.
+        //
+        // Every other block is worth showing: a missing runtime or database
+        // names something you can install, and a web-server refusal affects a
+        // type or two while the rest of the grid still works. `stack` is not
+        // like them — nothing installs a way out, and it is true of every card
+        // at once. On a container-only server that meant seventeen cards
+        // repeating one sentence about the server, which is noise rather than
+        // honesty, and a worse screen than the one it replaced.
+        //
+        // The refusal itself is untouched: `unavailable()` still answers for
+        // these types, and `StoreApplicationRequest` still calls it, so the
+        // endpoint refuses a filtered type exactly as before. This hides a card
+        // whose endpoint says no — not a button whose endpoint works.
+        $types = array_filter(
+            $this->all(),
+            fn (SiteType $type) => ($this->unavailable($type)['code'] ?? null) !== self::BLOCKED_STACK,
+        );
+
         return array_map(function (SiteType $type) {
             $profile = $type->servingProfile();
             $blocked = $this->unavailable($type);
@@ -151,7 +171,7 @@ class SiteTypeManager
                 'php_version_range' => $type->supportedPhpRange(),
                 'fields' => [...$type->fields(), ...$this->engineField($type)],
             ];
-        }, $this->all());
+        }, $types);
     }
 
     /**

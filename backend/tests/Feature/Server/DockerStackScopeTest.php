@@ -90,22 +90,31 @@ it('is permissive about a server nobody recorded', function () {
         ->and(app(ServerCapabilities::class)->hosts('node'))->toBeTrue();
 });
 
-it('refuses a PHP site type with a reason, rather than hiding it', function () {
+it('leaves types this stack will never host out of the grid', function () {
+    // Not shown, because nothing installs a way out and the reason is the same
+    // for every one of them. Rendering seventeen cards that each repeat one
+    // sentence about the server is noise, and a worse screen than the one it
+    // replaced.
     recordStack('docker');
 
-    $types = collect(app(SiteTypeManager::class)->catalog());
-    $wordpress = $types->firstWhere('name', 'wordpress');
+    $names = collect(app(SiteTypeManager::class)->catalog())->pluck('name');
 
-    // Present, so the user can see it exists and why it is unavailable here.
-    expect($wordpress)->not->toBeNull()
-        ->and($wordpress['available'])->toBeFalse()
-        ->and($wordpress['unavailable_code'])->toBe(SiteTypeManager::BLOCKED_STACK)
-        // The sentence, not just the code — a greyed card with no reason sends
-        // people to support.
-        ->and($wordpress['unavailable_reason'])->toBe(__('application.unavailable.stack'))
-        // No install button: nothing you could install would change this, and
-        // offering one is the lie the web-server code already avoids.
-        ->and($wordpress['install_runtime'] ?? null)->toBeNull();
+    expect($names)->not->toContain('wordpress')
+        ->and($names)->not->toContain('moodle');
+});
+
+it('still refuses a filtered type at the API', function () {
+    // The assertion that keeps the filter honest. Leaving a card out of the
+    // grid is only acceptable while the endpoint says no — otherwise it is a
+    // hidden door rather than a closed one.
+    recordStack('docker');
+
+    $manager = app(SiteTypeManager::class);
+    $wordpress = collect($manager->all())->first(fn ($type) => $type->name() === 'wordpress');
+
+    expect($manager->unavailable($wordpress))->not->toBeNull()
+        ->and($manager->unavailable($wordpress)['code'])->toBe(SiteTypeManager::BLOCKED_STACK)
+        ->and($manager->unavailable($wordpress)['reason'])->toBe(__('application.unavailable.stack'));
 });
 
 it('still offers PHP site types on a PHP stack', function () {
@@ -115,7 +124,10 @@ it('still offers PHP site types on a PHP stack', function () {
 
     $wordpress = collect(app(SiteTypeManager::class)->catalog())->firstWhere('name', 'wordpress');
 
-    expect($wordpress['unavailable_code'])->not->toBe(SiteTypeManager::BLOCKED_STACK);
+    // Present AND not stack-blocked: the filter must not have eaten the grid
+    // on a stack that does host PHP.
+    expect($wordpress)->not->toBeNull()
+        ->and($wordpress['unavailable_code'])->not->toBe(SiteTypeManager::BLOCKED_STACK);
 });
 
 it('stops recommending a database engine on a container-only server', function () {
