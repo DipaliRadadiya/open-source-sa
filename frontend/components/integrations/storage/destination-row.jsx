@@ -142,7 +142,7 @@ export function DestinationRow({
               {/* Not "verified" — only that both secret columns are populated.
                   Whether they WORK is what Test answers. */}
               {destination.has_credentials ? (
-                <Badge variant="secondary">{t("row.credentialsSet")}</Badge>
+                <Badge variant="muted">{t("row.credentialsSet")}</Badge>
               ) : (
                 <>
                   <Badge variant="warning">{t("row.credentialsMissing")}</Badge>

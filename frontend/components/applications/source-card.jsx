@@ -91,7 +91,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
               about the card, not an action you can take — grouping it with the
               buttons implied it was one of them. */}
           {pushToDeploy ? (
-            <Badge variant="secondary" className="w-fit gap-1.5 font-normal">
+            <Badge variant="muted" className="w-fit gap-1.5 font-normal">
               <Webhook className="size-3" />
               {t("pushToDeploy")}
             </Badge>

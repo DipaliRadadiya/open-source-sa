@@ -156,7 +156,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{t("enable")}</span>
-                            <Badge variant={field.value ? "success" : "secondary"}>
+                            <Badge variant={field.value ? "success" : "muted"}>
                               {field.value ? t("statusProtected") : t("statusNotProtected")}
                             </Badge>
                           </div>

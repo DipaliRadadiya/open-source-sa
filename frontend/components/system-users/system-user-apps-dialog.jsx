@@ -11,7 +11,7 @@ function statusVariant(status) {
   const s = (status ?? "").toLowerCase();
   if (/(active|running|online|live|deployed)/.test(s)) return "success";
   if (/(stop|error|fail|offline|down|inactive)/.test(s)) return "destructive";
-  return "secondary";
+  return "muted";
 }
 
 export function SystemUserAppsDialog({ user, open, onOpenChange }) {

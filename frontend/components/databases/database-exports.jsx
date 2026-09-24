@@ -46,8 +46,8 @@ const SLOW_AFTER_MS = 120_000;
 const TONE = {
   completed: "success",
   failed: "destructive",
-  running: "secondary",
-  queued: "secondary",
+  running: "muted",
+  queued: "muted",
 };
 
 /**
@@ -335,7 +335,7 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
     <div className="flex items-start justify-between gap-3 py-3.5">
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={TONE[row.status] ?? "secondary"} className="font-normal">
+          <Badge variant={TONE[row.status] ?? "muted"} className="font-normal">
             {running ? <Loader2 className="size-3 animate-spin" /> : null}
             {t(`status.${row.status}`)}
           </Badge>

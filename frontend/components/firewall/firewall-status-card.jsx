@@ -243,7 +243,7 @@ function PolicyBadge({ icon: Icon, label, value, tone }) {
 function incomingTone(value) {
   if (value === "deny") return "success";
   if (value === "allow") return "warning";
-  return "secondary";
+  return "muted";
 }
 
 /**
@@ -254,7 +254,7 @@ function incomingTone(value) {
  */
 function outgoingTone(value) {
   if (value === "allow") return "success";
-  return "secondary";
+  return "muted";
 }
 
 // "deny"/"allow" are UFW's words, not everyone's. Anything unexpected is shown

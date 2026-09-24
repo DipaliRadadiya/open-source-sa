@@ -4987,7 +4987,12 @@
         "body": "Elle a été créée comme copie d'une autre application, elle n'a donc pas sa propre zone de préproduction. Renvoyez-la depuis l'application à laquelle elle appartient.",
         "action": "Aller à l'application d'origine"
       },
-      "copyAge": "Copie effectuée {age}"
+      "copyAge": "Copie effectuée {age}",
+      "remove": {
+        "title": "Supprimer la préproduction",
+        "body": "Supprime l'application de préproduction {domain}. {production} n'est pas modifiée.",
+        "action": "Supprimer"
+      }
     },
     "stagingBadge": "Préproduction",
     "paused": "En pause",

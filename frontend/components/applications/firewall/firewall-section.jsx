@@ -97,7 +97,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   // Watch mode is not protection, so it must not borrow protection's colour —
   // the same rule that stopped "nothing blocked" rendering as a green shield
   // on the bot blocker.
-  const statusVariant = blocking ? "success" : enabled ? "warning" : "secondary";
+  const statusVariant = blocking ? "success" : enabled ? "warning" : "muted";
   const statusLabel = blocking ? t("statusBlocking") : enabled ? t("statusWatching") : t("statusOff");
   // The log only exists once the site has actually been running in watch mode —
   // linking to it off an unsaved selection would point at a file that isn't there.

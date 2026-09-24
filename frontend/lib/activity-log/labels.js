@@ -9,7 +9,7 @@ export function humanizeActivity(key) {
 // Semantic badge variant for an activity verb (green for additions, red for
 // removals/failures, neutral otherwise).
 export function actionBadgeVariant(action) {
-  if (!action) return "secondary";
+  if (!action) return "muted";
   const a = action.toLowerCase();
   if (
     a.includes("fail") ||
@@ -31,7 +31,7 @@ export function actionBadgeVariant(action) {
   if (a.includes("password") || a.includes("reset") || a.includes("sudo")) {
     return "warning";
   }
-  return "secondary";
+  return "muted";
 }
 
 // Tailwind bg class for a status dot, keyed off the same verb semantics.

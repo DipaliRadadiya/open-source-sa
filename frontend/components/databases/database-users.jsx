@@ -178,7 +178,7 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
           {/* Colour carries the risk: local is safe, one address opens a
               firewall hole, anywhere opens it to the internet. A row of
               identical grey badges made all three look the same. */}
-          <Badge variant={ACCESS_TONE[access] ?? "secondary"} className="font-normal">
+          <Badge variant={ACCESS_TONE[access] ?? "muted"} className="font-normal">
             {tAccess(`${access}.label`)}
             {access === "remote" && user.host ? ` · ${user.host}` : ""}
           </Badge>

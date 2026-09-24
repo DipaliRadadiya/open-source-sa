@@ -96,14 +96,14 @@ function StatusPill({ state, recommended, detail }) {
   }
   if (state === "installing") {
     return (
-      <Badge variant="secondary" className="gap-1.5 font-normal text-primary">
+      <Badge variant="muted" className="gap-1.5 font-normal text-primary">
         <Loader2 className="size-3 animate-spin" />
         {t("pillInstalling")}
       </Badge>
     );
   }
   if (state === "unavailable") {
-    return <Badge variant="secondary" className="font-normal">{t("pillUnavailable")}</Badge>;
+    return <Badge variant="muted" className="font-normal">{t("pillUnavailable")}</Badge>;
   }
   if (state === "failed") {
     return <Badge variant="destructive" className="font-normal">{t("pillFailed")}</Badge>;

@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 const ACTION_VARIANTS = {
   adopted: "success",
-  skipped: "secondary",
+  skipped: "muted",
   failed: "destructive",
   found: "outline",
 };

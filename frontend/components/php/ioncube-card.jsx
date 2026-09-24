@@ -103,7 +103,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
                 {t("installed")}
               </Badge>
             ) : supported ? (
-              <Badge variant="secondary" className="font-normal">
+              <Badge variant="muted" className="font-normal">
                 {t("notInstalled")}
               </Badge>
             ) : null}

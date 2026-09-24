@@ -4987,7 +4987,12 @@
         "body": "Foi feita como cópia de outra aplicação, então não tem uma área de staging própria. Envie de volta pela aplicação de origem.",
         "action": "Ir para a aplicação original"
       },
-      "copyAge": "Cópia feita {age}"
+      "copyAge": "Cópia feita {age}",
+      "remove": {
+        "title": "Excluir staging",
+        "body": "Exclui a aplicação de staging {domain}. {production} não é alterado.",
+        "action": "Excluir"
+      }
     },
     "stagingBadge": "Staging",
     "paused": "Em pausa",

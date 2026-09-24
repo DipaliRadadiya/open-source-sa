@@ -256,7 +256,7 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                 />
               </div>
             ) : (
-              <Badge variant="secondary" className="font-normal">
+              <Badge variant={enabled ? "success" : "muted"} className="font-normal">
                 {enabled ? t("webhook.on") : t("webhook.off")}
               </Badge>
             )}
@@ -294,18 +294,12 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
           <>
             <div className="flex flex-wrap items-center gap-2">
               {verifiedBySignature ? (
-                <Badge
-                  variant="secondary"
-                  className="gap-1.5 font-normal text-success"
-                >
+                <Badge variant="success" className="gap-1.5 font-normal">
                   <ShieldCheck className="size-3.5" />
                   {t("webhook.verifiedSignature")}
                 </Badge>
               ) : (
-                <Badge
-                  variant="secondary"
-                  className="gap-1.5 font-normal text-warning"
-                >
+                <Badge variant="warning" className="gap-1.5 font-normal">
                   <ShieldAlert className="size-3.5" />
                   {t("webhook.verifiedToken")}
                 </Badge>

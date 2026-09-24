@@ -40,6 +40,9 @@ export default async function ApplicationStagingPage({ params }) {
   }
 
   const canManage = can(appPermissions, "app_staging", "manage", "application");
+  // Removing the copy is an ordinary application delete, so it is gated the
+  // way the API gates it, not by the staging permission.
+  const canDelete = can(permissions, "application", "manage");
   const settled = application.status === "active";
 
   const staging = settled ? await getApplicationStaging(id) : null;
@@ -70,6 +73,7 @@ export default async function ApplicationStagingPage({ params }) {
           production={application}
           staging={staging.staging}
           canManage={canManage}
+          canDelete={canDelete}
         />
       )}
     </div>

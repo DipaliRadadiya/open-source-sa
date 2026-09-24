@@ -31,7 +31,8 @@ export function DeleteSystemUserDialog({ user, open, onOpenChange }) {
       await deleteSystemUser(user.id);
       toast.success(t("toast.deleted"));
       handleOpenChange(false);
-      router.push("/system-users");
+      // Refresh in place: the URL keeps its page, and the list page steps back
+      // itself when the row deleted was the last one on it.
       router.refresh();
     } catch (error) {
       // 422 = still owns applications; show the backend's translated message.

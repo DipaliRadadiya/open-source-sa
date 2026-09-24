@@ -187,7 +187,7 @@ export function VersionSummary({
           {/* Filled, not outlined: "Default" is a state this version is in, and
               it should not read like the outline tags used for plain labels. */}
           {version.is_default ? (
-            <Badge variant="secondary" className="font-normal">
+            <Badge variant="muted" className="font-normal">
               {t("versions.default")}
             </Badge>
           ) : null}

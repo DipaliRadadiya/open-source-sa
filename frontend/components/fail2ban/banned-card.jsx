@@ -99,7 +99,7 @@ function expiryContent(ban, t) {
   if (!since) return <span className="text-muted-foreground">{t("banned.unknownLeft")}</span>;
 
   return (
-    <Badge variant="secondary" className="font-normal">
+    <Badge variant="muted" className="font-normal">
       {t("banned.permanent")}
     </Badge>
   );

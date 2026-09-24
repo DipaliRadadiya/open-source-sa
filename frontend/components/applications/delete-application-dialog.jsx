@@ -18,9 +18,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  * Deleting an application stops the domain being served, so the domain is what
  * has to be typed — the thing that goes dark, not the label.
  *
- * The files are a separate decision and default to being kept, which matches
- * the API. Two things people expect to happen and don't are said out loud: the
- * code on disk stays, and a database created for this site stays too.
+ * The files and databases are separate decisions, ticked by default: deleting
+ * a site usually means all of it, and unticking is the deliberate choice.
+ * Unticked, what is left behind is said out loud: the code on disk stays, and
+ * a database created for this site stays too.
  *
  * `remove_files` also destroys this site's backups — every row AND the archives
  * in the storage destination. That is the whole reason the checkbox names them:
@@ -38,10 +39,10 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [confirm, setConfirm] = useState("");
-  const [removeFiles, setRemoveFiles] = useState(false);
+  const [removeFiles, setRemoveFiles] = useState(true);
   // Null when the user is gone; absent (undefined) when it was not loaded.
   const orphaned = application?.system_user === null;
-  const [removeDatabases, setRemoveDatabases] = useState(false);
+  const [removeDatabases, setRemoveDatabases] = useState(true);
   /*
    * Only to NAME them on the checkbox. "Also delete the database" is a
    * different decision from "also delete shop_live", and the second is the one
@@ -86,8 +87,8 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   function handleOpenChange(next) {
     if (!next) {
       setConfirm("");
-      setRemoveFiles(false);
-      setRemoveDatabases(false);
+      setRemoveFiles(true);
+      setRemoveDatabases(true);
       setDatabases([]);
     }
     onOpenChange?.(next);

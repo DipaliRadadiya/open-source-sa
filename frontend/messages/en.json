@@ -4987,7 +4987,12 @@
         "body": "It was made as a copy of another application, so it does not get a staging area of its own. Push it back from the application it belongs to.",
         "action": "Go to the original application"
       },
-      "copyAge": "Copy made {age}"
+      "copyAge": "Copy made {age}",
+      "remove": {
+        "title": "Delete staging",
+        "body": "Deletes the staging application {domain}. {production} is not touched.",
+        "action": "Delete"
+      }
     },
     "stagingBadge": "Staging",
     "paused": "Paused",

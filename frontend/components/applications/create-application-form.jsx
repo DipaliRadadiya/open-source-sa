@@ -1423,9 +1423,17 @@ export function CreateApplicationForm({
         (item) => item.dataset.fieldName === focusRequest,
       );
       container?.scrollIntoView({ behavior: "smooth", block: "center" });
-      const control = container?.querySelector(
-        '[data-slot="form-control"], input, textarea, button:not([disabled])',
-      );
+      // One selector at a time: as a list, querySelector returns whichever
+      // comes first in the DOM, and a password's Generate button sits in the
+      // label row above its input.
+      const control = [
+        '[data-slot="form-control"]',
+        "input:not([type=hidden])",
+        "textarea",
+        "button:not([disabled])",
+      ]
+        .map((selector) => container?.querySelector(selector))
+        .find(Boolean);
       control?.focus({ preventScroll: true });
       setFocusRequest(null);
     });

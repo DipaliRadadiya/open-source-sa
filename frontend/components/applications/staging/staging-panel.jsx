@@ -3,12 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowUpFromLine, ExternalLink, FlaskConical } from "lucide-react";
+import { ArrowUpFromLine, ExternalLink, FlaskConical, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CreateStagingDialog } from "@/components/applications/staging/create-staging-dialog";
 import { PushStagingDialog } from "@/components/applications/staging/push-staging-dialog";
+import { DeleteApplicationDialog } from "@/components/applications/delete-application-dialog";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 
 /**
  * One site's staging copy.
@@ -23,10 +25,12 @@ import { PushStagingDialog } from "@/components/applications/staging/push-stagin
  * a two-step, typed-confirmation action rather than a button, and the mode
  * picker states what each choice destroys instead of offering a default.
  */
-export function StagingPanel({ appId, production, staging, canManage }) {
+export function StagingPanel({ appId, production, staging, canManage, canDelete = false }) {
   const t = useTranslations("applications.staging");
+  const tApp = useTranslations("applications");
   const [creating, setCreating] = useState(false);
   const [pushing, setPushing] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   // This site IS the copy. Offering to stage it would make a staging site of
   // a staging site — the API would allow it, and nothing about it is useful.
@@ -39,7 +43,7 @@ export function StagingPanel({ appId, production, staging, canManage }) {
             <span className="flex shrink-0 items-center justify-center text-muted-foreground">
               <FlaskConical className="size-4.5 text-primary" />
             </span>
-            <div className="min-w-0 flex-1 space-y-1">
+            <div className="min-w-60 flex-1 space-y-1">
               <p className="font-semibold">{t("isCopy.title")}</p>
               <p className="text-sm text-muted-foreground">{t("isCopy.body")}</p>
             </div>
@@ -97,10 +101,10 @@ export function StagingPanel({ appId, production, staging, canManage }) {
           <span className="flex shrink-0 items-center justify-center text-muted-foreground">
             <FlaskConical className="size-4.5 text-primary" />
           </span>
-          <div className="min-w-0 flex-1 space-y-1">
+          <div className="min-w-60 flex-1 space-y-1">
             <p className="flex flex-wrap items-center gap-2 font-semibold">
               {staging.name}
-              <Badge variant={staging.status === "active" ? "success" : "outline"}>
+              <Badge variant={staging.status === "active" ? "success" : "muted"}>
                 {staging.status_title ?? staging.status}
               </Badge>
             </p>
@@ -152,6 +156,27 @@ export function StagingPanel({ appId, production, staging, canManage }) {
           ) : null}
         </div>
       </Card>
+
+      {/* Its own card, away from Push: both are red, and the two must never
+          be one misclick apart. */}
+      <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <div className="min-w-60 flex-1 space-y-1">
+            <p className="text-sm font-medium">{t("remove.title")}</p>
+            <p className="text-sm break-words text-muted-foreground">
+              {t("remove.body", { domain: staging.domain, production: production.domain })}
+            </p>
+          </div>
+          <ReasonTooltip reason={canDelete ? null : tApp("noPermission")}>
+            <Button variant="destructive" className="shrink-0" disabled={!canDelete} onClick={() => setRemoving(true)}>
+              <Trash2 className="size-4" />
+              {t("remove.action")}
+            </Button>
+          </ReasonTooltip>
+        </CardContent>
+      </Card>
+
+      <DeleteApplicationDialog application={staging} open={removing} onOpenChange={setRemoving} />
 
       {/* Same contract, and it matters more here: the typed domain is the
           safeguard, so it must never be pre-filled from a previous visit. */}

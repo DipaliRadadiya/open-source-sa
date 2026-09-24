@@ -436,7 +436,7 @@ export function BotBlockerSection({
                           {/* The count sits on every option, not just the
                               selected one, so the three can be compared without
                               clicking through them. */}
-                          <Badge variant={option.blocked_count ? (warn ? "warning" : "secondary") : "outline"}>
+                          <Badge variant={option.blocked_count ? (warn ? "warning" : "muted") : "outline"}>
                             {t("blockedCount", { count: option.blocked_count })}
                           </Badge>
                           {/* Which option is really in force, and which one you
@@ -444,7 +444,7 @@ export function BotBlockerSection({
                               a separate "currently active" row above repeated the
                               selected card's own title and count word for word. */}
                           {key === currentPolicy ? (
-                            <Badge variant={isProtected ? "success" : "secondary"}>
+                            <Badge variant={isProtected ? "success" : "muted"}>
                               {t("activeNow")}
                             </Badge>
                           ) : null}

@@ -293,7 +293,7 @@ export function CloneApplicationPanel({
               <Form {...form}>
                 <form noValidate
                   onSubmit={form.handleSubmit(() => setConfirming(true))}
-                  className="flex flex-col"
+                  className="flex flex-col gap-(--card-spacing)"
                 >
                   <CardContent className="space-y-5 border-t pt-(--card-spacing)">
                     <FormField
@@ -767,7 +767,7 @@ function ExistingCopies({ copies }) {
                 {copy.status !== "active" ? (
                   <Badge
                     variant={
-                      copy.status === "failed" ? "destructive" : "outline"
+                      copy.status === "failed" ? "destructive" : "muted"
                     }
                     className="shrink-0 font-normal"
                   >

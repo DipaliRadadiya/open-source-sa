@@ -26,7 +26,7 @@ export function CreateReadinessPanel({ items = [], onSelectItem }) {
       <CardHeader className="space-y-1 pb-3">
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-base">{t("guided.stageReview")}</CardTitle>
-          <Badge variant={complete ? "success" : "secondary"} className="font-normal">
+          <Badge variant={complete ? "success" : "muted"} className="font-normal">
             {complete ? t("readiness.ready") : t("readiness.needsAttention")}
           </Badge>
         </div>

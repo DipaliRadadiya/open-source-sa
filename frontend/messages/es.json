@@ -4987,7 +4987,12 @@
         "body": "Se creó como copia de otra aplicación, así que no tiene su propia área de pruebas. Publícala desde la aplicación a la que pertenece.",
         "action": "Ir a la aplicación original"
       },
-      "copyAge": "Copia hecha {age}"
+      "copyAge": "Copia hecha {age}",
+      "remove": {
+        "title": "Eliminar el entorno de pruebas",
+        "body": "Elimina la aplicación de pruebas {domain}. {production} no se modifica.",
+        "action": "Eliminar"
+      }
     },
     "stagingBadge": "Pruebas",
     "paused": "En pausa",

@@ -80,7 +80,7 @@ export function ProcessCard({ application, canManage = false, className }) {
     <Card className={className}>
       <CardHeader className="gap-1.5">
         <CardTitle as="h2">{t("title")}</CardTitle>
-        <Badge variant={STATE_VARIANT[state] ?? "secondary"} className="font-normal">
+        <Badge variant={STATE_VARIANT[state] ?? "muted"} className="font-normal">
           {stateLabel}
         </Badge>
       </CardHeader>

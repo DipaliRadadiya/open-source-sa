@@ -12,6 +12,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { Pager } from "@/components/data-table/pager";
 import { PerPageSelect } from "@/components/data-table/per-page-select";
 import { apiMessage } from "@/lib/api/error-message";
+import { PER_PAGE_OPTIONS } from "@/lib/schemas/user";
 
 /**
  * What changed on this firewall, and when.
@@ -151,7 +152,10 @@ export function HistoryDialog({ isAdmin }) {
                 </li>
               ))}
             </ul>
-            {state.meta?.last_page > 1 ? (
+            {/* Same rule as the list pager: the selector stays while the
+                history is longer than the smallest option, or choosing 20 on
+                15 entries hides the only way back to 10. */}
+            {state.meta?.last_page > 1 || state.meta?.total > PER_PAGE_OPTIONS[0] ? (
               <div className="flex flex-col gap-3">
                 {/* This dialog is capped at `sm:max-w-lg`, so a viewport-sized
                     `sm:flex-row` layout made the selector squeeze the pager and
@@ -166,15 +170,17 @@ export function HistoryDialog({ isAdmin }) {
                     load(1, nextPerPage);
                   }}
                 />
-                <div className="self-end">
-                  <Pager
-                    page={state.meta.current_page}
-                    lastPage={state.meta.last_page}
-                    total={state.meta.total}
-                    pending={state.loading}
-                    onPageChange={load}
-                  />
-                </div>
+                {state.meta.last_page > 1 ? (
+                  <div className="self-end">
+                    <Pager
+                      page={state.meta.current_page}
+                      lastPage={state.meta.last_page}
+                      total={state.meta.total}
+                      pending={state.loading}
+                      onPageChange={load}
+                    />
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>

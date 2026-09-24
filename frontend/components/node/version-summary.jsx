@@ -198,7 +198,7 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
           <CardTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
             {t("versions.name", { version: version.version })}
             {version.is_default ? (
-              <Badge variant="secondary" className="font-normal">
+              <Badge variant="muted" className="font-normal">
                 {t("versions.default")}
               </Badge>
             ) : null}

@@ -48,7 +48,7 @@ export function UsersCards({ users, roles = [], currentUserId }) {
 
             <CardFacts>
               <CardFact label={t("columns.accountType")}>
-                <Badge variant={user.is_admin ? "default" : "secondary"}>
+                <Badge variant={user.is_admin ? "default" : "muted"}>
                   {user.is_admin ? t("roleBadge.admin") : t("roleBadge.user")}
                 </Badge>
               </CardFact>

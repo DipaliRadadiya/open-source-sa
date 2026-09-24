@@ -152,7 +152,7 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                             the table doubles as a preview of the policy above
                             rather than a list to cross-reference by hand. */}
                         {bot.blocked ? (
-                          <Badge variant="secondary">{t("blocked")}</Badge>
+                          <Badge variant="muted">{t("blocked")}</Badge>
                         ) : (
                           <span className="text-xs text-muted-foreground">{t("allowed")}</span>
                         )}

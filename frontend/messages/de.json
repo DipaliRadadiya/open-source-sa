@@ -4987,7 +4987,12 @@
         "body": "Sie wurde als Kopie einer anderen Anwendung erstellt und bekommt daher keinen eigenen Staging-Bereich. Übertragen Sie sie von der Anwendung aus, zu der sie gehört.",
         "action": "Zur ursprünglichen Anwendung"
       },
-      "copyAge": "Kopie erstellt {age}"
+      "copyAge": "Kopie erstellt {age}",
+      "remove": {
+        "title": "Staging löschen",
+        "body": "Löscht die Staging-Anwendung {domain}. {production} bleibt unberührt.",
+        "action": "Löschen"
+      }
     },
     "stagingBadge": "Staging",
     "paused": "Pausiert",

@@ -251,7 +251,7 @@ export function CleanupPanel({ categories, canManage, measuredAt }) {
                                 ) : null}
   
                                 {empty ? (
-                                  <Badge variant="secondary" className="font-normal">
+                                  <Badge variant="muted" className="font-normal">
                                     {t("list.alreadyClean")}
                                   </Badge>
                                 ) : null}

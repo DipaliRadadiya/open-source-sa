@@ -126,7 +126,7 @@ export function BackupCard({
             backup 18 hours ago" is stale the second one starts, and it is the
             only thing on this card that changes while somebody watches it. */}
         {failed ? null : inProgress ? (
-          <Badge variant="secondary" className="w-fit gap-1.5 font-normal">
+          <Badge variant="muted" className="w-fit gap-1.5 font-normal">
             <Loader2 className="size-3 animate-spin" />
             {t("state.running")}
           </Badge>

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 // failed — invisible to anyone who can't separate red from green.
 const STATUS_META = {
   active: { icon: CircleCheck, variant: "success" },
-  inactive: { icon: CircleMinus, variant: "outline" },
+  inactive: { icon: CircleMinus, variant: "muted" },
   failed: { icon: CircleAlert, variant: "destructive" },
 };
 

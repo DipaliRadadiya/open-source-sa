@@ -42,7 +42,7 @@ const TONE = {
   succeeded: { icon: CircleCheck, badge: "success", dot: "text-success" },
   failed: { icon: CircleAlert, badge: "destructive", dot: "text-destructive" },
   running: { icon: Loader2, badge: "warning", dot: "text-warning", spin: true },
-  queued: { icon: Loader2, badge: "secondary", dot: "text-muted-foreground", spin: true },
+  queued: { icon: Loader2, badge: "muted", dot: "text-muted-foreground", spin: true },
 };
 
 /**
