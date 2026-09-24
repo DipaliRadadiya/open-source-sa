@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Caution } from "@/components/ui/caution";
-import { Switch } from "@/components/ui/switch";
+import { PendingSwitch } from "@/components/ui/pending-switch";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { IssueCertDialog } from "@/components/applications/domains/issue-cert-dialog";
@@ -159,6 +159,9 @@ export function SslSection({
   const [issueOpen, setIssueOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  // The switch's own request, apart from `busy`: removing the certificate
+  // also disables the switch, but it is not the switch that is working then.
+  const [savingHttps, setSavingHttps] = useState(false);
   const [reloading, setReloading] = useState(false);
 
   /*
@@ -214,6 +217,7 @@ export function SslSection({
 
   async function onToggleForceHttps(next) {
     setBusy(true);
+    setSavingHttps(true);
     try {
       const updated = await setForceHttps(appId, next);
       setCert(updated);
@@ -225,6 +229,7 @@ export function SslSection({
       toast.error(apiMessage(error, t("ssl.forceHttpsFailed")));
     } finally {
       setBusy(false);
+      setSavingHttps(false);
     }
   }
 
@@ -482,7 +487,7 @@ export function SslSection({
               <p>{t("ssl.expiredForcedHttps")}</p>
               {canManage ? (
                 <Button size="sm" disabled={busy} onClick={() => onToggleForceHttps(false)}>
-                  {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {savingHttps ? <Loader2 className="size-4 animate-spin" /> : null}
                   {t("ssl.turnOffForceHttps")}
                 </Button>
               ) : null}
@@ -501,7 +506,10 @@ export function SslSection({
                 </p>
               ) : null}
               {canManage && webServer ? (
-                <Button size="sm" variant="outline" onClick={reloadWebServer} disabled={reloading}>
+                /* Solid, like "Turn off Force HTTPS" in the note above: it is the
+                   fix for what the note reports, and an outline button on the
+                   red tint read as a washed-out grey box. */
+                <Button size="sm" className="w-fit" onClick={reloadWebServer} disabled={reloading}>
                   {reloading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                   {t("ssl.reloadWebServer", { service: webServer })}
                 </Button>
@@ -528,9 +536,13 @@ export function SslSection({
                   {t("ssl.forceHttpsHint")}
                 </span>
               </Label>
-              <Switch
+              {/* A spinner beside it while the change is applied: a switch that
+                  only greys out reads as broken, which is when it gets pressed
+                  again. */}
+              <PendingSwitch
                 id="force-https"
                 checked={cert.force_https}
+                pending={savingHttps}
                 disabled={busy}
                 onCheckedChange={onToggleForceHttps}
                 className="mt-1 shrink-0"
