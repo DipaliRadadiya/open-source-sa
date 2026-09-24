@@ -511,7 +511,7 @@ What this server is and what it can run — drives which site types are offered.
 }}
 ```
 
-`stack` is how the box was **built** (`lemp|lamp|ols|mern`, or `null` for a
+`stack` is how the box was **built** (`lemp|lamp|ols|mern|docker`, or `null` for a
 server migrated in from another panel); the inner `capabilities` object is what
 it can run **now**. They diverge legitimately — installing Node on a LEMP box
 adds the capability without changing how the box was built — so **filter on
