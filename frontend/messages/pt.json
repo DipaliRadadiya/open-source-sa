@@ -898,7 +898,7 @@
       },
       "deployFailed": {
         "chip": "A última implantação de {site} falhou",
-        "detail": "O aplicativo continua servindo a versão anterior, e o próximo push falhará da mesma forma até que isso seja corrigido.",
+        "detail": "O último deploy não terminou, e o próximo push falhará da mesma forma até que isso seja corrigido.",
         "action": "Ver o log de implantação"
       },
       "processDown": {
@@ -3123,11 +3123,9 @@
         "subtitle": "Quem editou este arquivo e quais chaves alterou. Os valores nunca são registrados.",
         "loadFailed": "Não foi possível carregar o histórico de alterações.",
         "empty": "Este arquivo ainda não foi alterado pelo painel.",
-        "actionUpdated": "salvou este arquivo",
         "actionRestored": "restaurou uma versão anterior",
         "bySystem": "O painel",
         "byUnknown": "Uma conta excluída",
-        "noKeys": "Nenhuma chave alterada — apenas comentários ou espaçamento.",
         "restore": "Restaurar",
         "restored": "A versão anterior foi restaurada.",
         "restoreFailed": "Não foi possível restaurar essa versão.",
@@ -3137,7 +3135,6 @@
         "confirmBody": "O ficheiro atual é guardado primeiro, pelo que esta ação também é reversível.",
         "cancel": "Cancelar",
         "confirmSubmit": "Restaurar",
-        "showValues": "Mostrar valores",
         "diffLoading": "Lendo as cópias salvas…",
         "diffFailed": "Não foi possível ler esses valores.",
         "diffUnavailable": "A cópia da versão anterior foi excluída, então esta alteração não pode ser exibida.",
@@ -3145,7 +3142,17 @@
         "colBefore": "Antes",
         "colAfter": "Depois",
         "absent": "Não definido",
-        "emptyValue": "vazio"
+        "emptyValue": "vazio",
+        "actionChanged": "alterou {count, plural, one {# variável} other {# variáveis}}",
+        "actionNoKeys": "salvou o arquivo sem alterar nenhuma variável",
+        "noKeysNote": "Apenas comentários ou linhas em branco mudaram.",
+        "showChanges": "Mostrar alterações",
+        "hideChanges": "Ocultar alterações",
+        "status": {
+          "added": "Adicionado",
+          "removed": "Removido",
+          "changed": "Alterado"
+        }
       }
     },
     "title": "Aplicações",
@@ -3191,7 +3198,10 @@
       "reference": "Referência do suporte: {reference}",
       "redeploy": "Re-deploy",
       "manage": "Gerenciar deploy",
-      "description": "De onde vem o código e como ele é publicado."
+      "description": "De onde vem o código e como ele é publicado.",
+      "failedAtStep": "O último deploy falhou em {step}.",
+      "incomplete": "O último deploy falhou depois que o código novo foi colocado, então esse código está ativo, mas não totalmente implantado. Corrija o problema e faça o deploy novamente.",
+      "notFullyDeployed": "Deploy incompleto"
     },
     "gitAccount": "Conta Git",
     "gitAccountPlaceholder": "Escolha uma conta conectada",
@@ -3708,7 +3718,6 @@
         "branch": "Branch",
         "lastDeploy": "Último deploy",
         "never": "Nunca feito deploy",
-        "commit": "Commit do deploy",
         "action": "Fazer deploy agora",
         "redeploy": "Fazer deploy novamente",
         "deploying": "Fazendo deploy…",
@@ -3724,13 +3733,17 @@
         "reference": "Referência: {reference}",
         "notDeployedYet": "Esta aplicação ainda não tem código — faça deploy para puxar seu repositório de {branch} e publicá-la.",
         "resetNote": "Fazer deploy reseta a aplicação para a branch {branch}; alterações feitas diretamente no servidor são descartadas.",
-        "viewCommit": "Ver commit no seu provedor Git"
+        "viewCommit": "Ver commit no seu provedor Git",
+        "failedAtStep": "O último deploy falhou em “{step}”.",
+        "incomplete": "O último deploy falhou depois que o código novo foi colocado, então esse código está ativo, mas não totalmente implantado. Corrija o problema e faça o deploy novamente.",
+        "liveCommit": "Commit ativo",
+        "notFullyDeployed": "Deploy incompleto"
       },
       "webhook": {
         "title": "Deploy no push",
         "subtitle": "Faça deploy automaticamente em cada push para {branch}.",
         "on": "Ligado",
-        "disabledBody": "Ative para fazer deploy automaticamente em cada push. Você receberá uma URL e um segredo para adicionar ao seu provedor Git.",
+        "disabledBody": "Ative para fazer deploy automaticamente em cada push. O painel adiciona o webhook ao seu repositório ou fornece uma URL e um segredo para você adicionar.",
         "provider": "Provedor Git",
         "providerPlaceholder": "Escolha seu provedor",
         "enable": "Ativar deploy em push",
@@ -3764,7 +3777,9 @@
         "offBody": "O auto-deploy está desligado. Ative para fazer deploy em cada push para {branch} — sua URL e segredo do webhook são mantidos.",
         "providerHint": "Em qual serviço está o repositório. Ele define como verificamos se uma requisição realmente veio deles.",
         "urlHint": "Cole isso nas configurações de webhook do seu repositório. É o endereço que seu serviço de Git chama quando há novo código.",
-        "disabledBodyNamed": "Ativar isso cria uma URL de webhook e um secret para {provider}. Você os adiciona ao seu repositório na próxima etapa."
+        "disabledBodyNamed": "Ativar isso adiciona um webhook ao seu repositório no {provider}. Se o painel não conseguir adicioná-lo por você, você receberá uma URL e um secret para colar.",
+        "added": "Webhook adicionado ao repositório",
+        "addedBody": "O painel o adicionou no {provider} para você, então não há nada para colar. Cada push para {branch} faz o deploy automaticamente."
       },
       "cancel": "Cancelar",
       "runtime": {
@@ -3825,7 +3840,8 @@
         "noPermission": "Seu papel não inclui Deploy para esta aplicação com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
         "title": "Histórico de deploy",
         "subtitle": "Cada deploy, mais recente primeiro. Abra um para ler seu log de build.",
-        "busy": "Já há uma implantação em andamento. Aguarde terminar."
+        "busy": "Já há uma implantação em andamento. Aguarde terminar.",
+        "pushStarted": "Novo deploy iniciado por um push para {branch}."
       },
       "tabs": {
         "history": "Histórico",
@@ -4286,12 +4302,14 @@
       "create": {
         "title": "Adicionar worker",
         "subtitle": "Escolha um modelo para começar ou escreva seu próprio comando.",
-        "submit": "Adicionar worker"
+        "submit": "Adicionar worker",
+        "failed": "O worker não iniciou, então não foi adicionado. Verifique se o comando funciona nesta aplicação e tente novamente."
       },
       "edit": {
         "title": "Editar worker",
         "subtitle": "As alterações se aplicam na próxima vez que este worker reiniciar.",
-        "submit": "Salvar alterações"
+        "submit": "Salvar alterações",
+        "failed": "Não foi possível aplicar estas alterações. Verifique se o comando funciona nesta aplicação e tente novamente."
       },
       "delete": {
         "title": "Excluir este worker?",
@@ -4354,7 +4372,8 @@
           "queue": "Queue worker",
           "horizon": "Horizon",
           "custom": "Personalizado"
-        }
+        },
+        "commandPlaceholder": "O comando que deve continuar rodando"
       },
       "runsAsTooltip": "Executa como {user}, não como o próprio usuário desta aplicação.",
       "supervisor": {
@@ -5008,7 +5027,10 @@
       "bots": "Bots de IA",
       "on": "Ligado",
       "off": "Desligado",
-      "description": "Configurações de proteção desta aplicação."
+      "description": "Configurações de proteção desta aplicação.",
+      "folder": "Pasta do site",
+      "locked": "Bloqueada",
+      "unlocked": "Não bloqueada"
     },
     "backups": {
       "title": "Backups",
@@ -5053,7 +5075,9 @@
         "php_eol": "Trocar versão do PHP",
         "deploy_failed": "Ver deployment",
         "disk": "Liberar espaço"
-      }
+      },
+      "folderUnlocked": "Pasta do site não bloqueada",
+      "reviewFolder": "Bloquear"
     },
     "filters": {
       "allStatuses": "Todos os status",
@@ -5223,6 +5247,16 @@
       "detectAction": "Verificar o que está instalado",
       "changeTo": "Tratar antes como {type}",
       "menuHint": "Opções do tipo de aplicação"
+    },
+    "rootLock": {
+      "lock": "Bloquear",
+      "title": "Bloquear a pasta do site?",
+      "body": "{path} passará a pertencer ao root e ficará bloqueada, como em toda aplicação que o painel cria. Depois disso, o usuário do sistema não poderá adicionar, excluir nem renomear nada diretamente nesta pasta. Tudo dentro de public_html funciona como antes.",
+      "cancel": "Cancelar",
+      "confirm": "Bloquear pasta",
+      "locking": "Bloqueando…",
+      "done": "Pasta do site bloqueada.",
+      "failed": "Não foi possível bloquear a pasta do site."
     }
   },
   "panelUpdate": {
@@ -6202,7 +6236,8 @@
       "hideDetailsShort": "Ocultar detalhes",
       "ignoreShort": "Dispensar",
       "restoreShort": "Desfazer dispensa",
-      "working": "Trabalhando…"
+      "working": "Trabalhando…",
+      "wholeType": "Todos"
     },
     "outcomes": {
       "found": "Encontrado",

@@ -50,7 +50,7 @@ export function RegisterForm({ policy }) {
 
   return (
     <Form {...form}>
-      <form
+      <form noValidate
         method="post"
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="grid gap-4"

@@ -291,7 +291,7 @@ export function CloneApplicationPanel({
               </CardHeader>
 
               <Form {...form}>
-                <form
+                <form noValidate
                   onSubmit={form.handleSubmit(() => setConfirming(true))}
                   className="flex flex-col"
                 >

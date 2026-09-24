@@ -898,7 +898,7 @@
       },
       "deployFailed": {
         "chip": "Le dernier déploiement de {site} a échoué",
-        "detail": "L'application sert toujours sa version précédente, et le prochain envoi échouera de la même façon tant que ce n'est pas corrigé.",
+        "detail": "Le dernier déploiement ne s'est pas terminé, et le prochain envoi échouera de la même façon tant que ce n'est pas corrigé.",
         "action": "Voir le journal de déploiement"
       },
       "processDown": {
@@ -3123,11 +3123,9 @@
         "subtitle": "Qui a modifié ce fichier et quelles clés ont changé. Les valeurs ne sont jamais enregistrées.",
         "loadFailed": "L'historique des modifications n'a pas pu être chargé.",
         "empty": "Ce fichier n'a pas encore été modifié via le panneau.",
-        "actionUpdated": "a enregistré ce fichier",
         "actionRestored": "a restauré une version antérieure",
         "bySystem": "Le panneau",
         "byUnknown": "Un compte supprimé",
-        "noKeys": "Aucune clé modifiée — uniquement des commentaires ou des espaces.",
         "restore": "Restaurer",
         "restored": "La version antérieure a été restaurée.",
         "restoreFailed": "Cette version n'a pas pu être restaurée.",
@@ -3137,7 +3135,6 @@
         "confirmBody": "Le fichier actuel est sauvegardé au préalable, cette opération est donc elle aussi réversible.",
         "cancel": "Annuler",
         "confirmSubmit": "Restaurer",
-        "showValues": "Afficher les valeurs",
         "diffLoading": "Lecture des copies enregistrées…",
         "diffFailed": "Ces valeurs n'ont pas pu être lues.",
         "diffUnavailable": "La copie de la version précédente a été supprimée, cette modification ne peut pas être affichée.",
@@ -3145,7 +3142,17 @@
         "colBefore": "Avant",
         "colAfter": "Après",
         "absent": "Non défini",
-        "emptyValue": "vide"
+        "emptyValue": "vide",
+        "actionChanged": "a modifié {count, plural, one {# variable} other {# variables}}",
+        "actionNoKeys": "a enregistré le fichier sans modifier de variable",
+        "noKeysNote": "Seuls des commentaires ou des lignes vides ont changé.",
+        "showChanges": "Afficher les modifications",
+        "hideChanges": "Masquer les modifications",
+        "status": {
+          "added": "Ajouté",
+          "removed": "Supprimé",
+          "changed": "Modifié"
+        }
       }
     },
     "title": "Applications",
@@ -3191,7 +3198,10 @@
       "reference": "Référence d'assistance : {reference}",
       "redeploy": "Redéployer",
       "manage": "Gérer le déploiement",
-      "description": "D'où vient le code et comment il est livré."
+      "description": "D'où vient le code et comment il est livré.",
+      "failedAtStep": "Le dernier déploiement a échoué à l'étape {step}.",
+      "incomplete": "Le dernier déploiement a échoué après la mise en place du nouveau code : ce code est en ligne, mais pas entièrement déployé. Corrigez le problème et déployez à nouveau.",
+      "notFullyDeployed": "Déploiement incomplet"
     },
     "gitAccount": "Compte Git",
     "gitAccountPlaceholder": "Choisir un compte connecté",
@@ -3708,7 +3718,6 @@
         "branch": "Branche",
         "lastDeploy": "Dernier déploiement",
         "never": "Jamais déployé",
-        "commit": "Commit déployé",
         "action": "Déployer maintenant",
         "redeploy": "Redéployer",
         "deploying": "Déploiement…",
@@ -3724,13 +3733,17 @@
         "reference": "Référence : {reference}",
         "notDeployedYet": "Cette application n'a pas encore de code — déployez pour récupérer votre dépôt depuis {branch} et la mettre en ligne.",
         "resetNote": "Le déploiement réinitialise l'application à la branche {branch} ; les modifications faites directement sur le serveur sont perdues.",
-        "viewCommit": "Voir le commit sur votre fournisseur Git"
+        "viewCommit": "Voir le commit sur votre fournisseur Git",
+        "failedAtStep": "Le dernier déploiement a échoué à l'étape « {step} ».",
+        "incomplete": "Le dernier déploiement a échoué après la mise en place du nouveau code : ce code est en ligne, mais pas entièrement déployé. Corrigez le problème et déployez à nouveau.",
+        "liveCommit": "Commit en ligne",
+        "notFullyDeployed": "Déploiement incomplet"
       },
       "webhook": {
         "title": "Déployer au push",
         "subtitle": "Déployez automatiquement à chaque push vers {branch}.",
         "on": "Activé",
-        "disabledBody": "Activez ceci pour déployer automatiquement à chaque push. Vous obtiendrez une URL et un secret à ajouter à votre fournisseur Git.",
+        "disabledBody": "Activez ceci pour déployer automatiquement à chaque push. Le panneau ajoute le webhook à votre dépôt, ou vous donne une URL et un secret à ajouter vous-même.",
         "provider": "Fournisseur Git",
         "providerPlaceholder": "Choisissez votre fournisseur",
         "enable": "Activer le déploiement au push",
@@ -3764,7 +3777,9 @@
         "offBody": "Le déploiement automatique est désactivé. Activez-le pour déployer à chaque push sur {branch} — votre URL et votre secret de webhook sont conservés.",
         "providerHint": "Le service sur lequel se trouve le dépôt. C’est lui qui détermine comment nous vérifions qu’une requête entrante vient vraiment de lui.",
         "urlHint": "Collez ceci dans les paramètres webhook de votre dépôt. C’est l’adresse que votre service Git appelle lorsqu’il y a du nouveau code.",
-        "disabledBodyNamed": "L’activer crée une URL de webhook et un secret pour {provider}. Vous les ajoutez à votre dépôt à l’étape suivante."
+        "disabledBodyNamed": "L’activer ajoute un webhook à votre dépôt {provider}. Si le panneau ne peut pas l’ajouter pour vous, vous obtiendrez une URL et un secret à coller.",
+        "added": "Webhook ajouté au dépôt",
+        "addedBody": "Le panneau l'a ajouté pour vous sur {provider} : il n'y a rien à coller. Chaque push sur {branch} est déployé automatiquement."
       },
       "cancel": "Annuler",
       "runtime": {
@@ -3825,7 +3840,8 @@
         "noPermission": "Votre rôle n'inclut pas Déploiement pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
         "title": "Historique des déploiements",
         "subtitle": "Chaque déploiement, du plus récent au plus ancien. Ouvrez-en un pour lire son journal de build.",
-        "busy": "Un déploiement est déjà en cours. Attendez qu'il se termine."
+        "busy": "Un déploiement est déjà en cours. Attendez qu'il se termine.",
+        "pushStarted": "Nouveau déploiement lancé par un push sur {branch}."
       },
       "tabs": {
         "history": "Historique",
@@ -4286,12 +4302,14 @@
       "create": {
         "title": "Ajouter un worker",
         "subtitle": "Choisissez un modèle pour commencer, ou écrivez votre propre commande.",
-        "submit": "Ajouter un worker"
+        "submit": "Ajouter un worker",
+        "failed": "Le worker n'a pas démarré, il n'a donc pas été ajouté. Vérifiez que la commande fonctionne pour cette application, puis réessayez."
       },
       "edit": {
         "title": "Modifier le worker",
         "subtitle": "Les modifications s'appliquent au prochain redémarrage de ce worker.",
-        "submit": "Enregistrer les modifications"
+        "submit": "Enregistrer les modifications",
+        "failed": "Ces modifications n'ont pas pu être appliquées. Vérifiez que la commande fonctionne pour cette application, puis réessayez."
       },
       "delete": {
         "title": "Supprimer ce worker ?",
@@ -4354,7 +4372,8 @@
           "queue": "Worker de file",
           "horizon": "Horizon",
           "custom": "Personnalisé"
-        }
+        },
+        "commandPlaceholder": "La commande à maintenir en marche"
       },
       "runsAsTooltip": "S'exécute en tant que {user}, pas avec l'utilisateur de l'application.",
       "supervisor": {
@@ -5008,7 +5027,10 @@
       "bots": "Bots IA",
       "on": "Activé",
       "off": "Désactivé",
-      "description": "Paramètres de protection pour cette application."
+      "description": "Paramètres de protection pour cette application.",
+      "folder": "Dossier du site",
+      "locked": "Verrouillé",
+      "unlocked": "Non verrouillé"
     },
     "backups": {
       "title": "Sauvegardes",
@@ -5053,7 +5075,9 @@
         "php_eol": "Changer la version PHP",
         "deploy_failed": "Voir le déploiement",
         "disk": "Libérer de l'espace"
-      }
+      },
+      "folderUnlocked": "Dossier du site non verrouillé",
+      "reviewFolder": "Le verrouiller"
     },
     "filters": {
       "allStatuses": "Tous les statuts",
@@ -5223,6 +5247,16 @@
       "detectAction": "Vérifier ce qui est installé",
       "changeTo": "Traiter plutôt comme {type}",
       "menuHint": "Options du type d'application"
+    },
+    "rootLock": {
+      "lock": "Verrouiller",
+      "title": "Verrouiller le dossier du site ?",
+      "body": "{path} appartiendra à root et sera verrouillé, comme pour chaque application créée par le panneau. Ensuite, l'utilisateur système ne pourra plus rien ajouter, supprimer ni renommer directement dans ce dossier. Tout ce qui se trouve dans public_html fonctionne comme avant.",
+      "cancel": "Annuler",
+      "confirm": "Verrouiller le dossier",
+      "locking": "Verrouillage…",
+      "done": "Dossier du site verrouillé.",
+      "failed": "Le dossier du site n'a pas pu être verrouillé."
     }
   },
   "panelUpdate": {
@@ -6202,7 +6236,8 @@
       "hideDetailsShort": "Masquer les détails",
       "ignoreShort": "Ignorer",
       "restoreShort": "Annuler l'ignor",
-      "working": "Traitement…"
+      "working": "Traitement…",
+      "wholeType": "Tous"
     },
     "outcomes": {
       "found": "Trouvé",

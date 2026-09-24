@@ -898,7 +898,7 @@
       },
       "deployFailed": {
         "chip": "{site}'s last deploy failed",
-        "detail": "The application is still serving its previous version, and the next push will fail the same way until this is fixed.",
+        "detail": "The last deploy did not finish, and the next push will fail the same way until this is fixed.",
         "action": "See the deploy log"
       },
       "processDown": {
@@ -3123,11 +3123,9 @@
         "subtitle": "Who edited this file and which keys they changed. Values are never recorded.",
         "loadFailed": "The change history could not be loaded.",
         "empty": "This file has not been changed through the panel yet.",
-        "actionUpdated": "saved this file",
         "actionRestored": "restored an earlier version",
         "bySystem": "The panel",
         "byUnknown": "A deleted account",
-        "noKeys": "No key changed — comments or spacing only.",
         "restore": "Restore",
         "restored": "The earlier version was restored.",
         "restoreFailed": "That version could not be restored.",
@@ -3137,7 +3135,6 @@
         "confirmBody": "The current file is backed up first, so this is itself undoable.",
         "cancel": "Cancel",
         "confirmSubmit": "Restore",
-        "showValues": "Show values",
         "diffLoading": "Reading the saved copies…",
         "diffFailed": "Those values could not be read.",
         "diffUnavailable": "The copy of the previous version has been deleted, so this change cannot be shown.",
@@ -3145,7 +3142,17 @@
         "colBefore": "Before",
         "colAfter": "After",
         "absent": "Not set",
-        "emptyValue": "empty"
+        "emptyValue": "empty",
+        "actionChanged": "changed {count, plural, one {# variable} other {# variables}}",
+        "actionNoKeys": "saved the file without changing any variable",
+        "noKeysNote": "Only comments or blank lines changed.",
+        "showChanges": "Show changes",
+        "hideChanges": "Hide changes",
+        "status": {
+          "added": "Added",
+          "removed": "Removed",
+          "changed": "Changed"
+        }
       }
     },
     "title": "Applications",
@@ -3191,7 +3198,10 @@
       "reference": "Support reference: {reference}",
       "redeploy": "Re-deploy",
       "manage": "Manage deployment",
-      "description": "Where the code comes from and how it ships."
+      "description": "Where the code comes from and how it ships.",
+      "failedAtStep": "The last deploy failed at {step}.",
+      "incomplete": "The last deploy failed after the new code was put in place, so that code is live but not fully deployed. Fix the problem and deploy again.",
+      "notFullyDeployed": "Not fully deployed"
     },
     "gitAccount": "Git account",
     "gitAccountPlaceholder": "Choose a connected account",
@@ -3708,7 +3718,6 @@
         "branch": "Branch",
         "lastDeploy": "Last deployed",
         "never": "Never deployed",
-        "commit": "Deployed commit",
         "action": "Deploy now",
         "redeploy": "Deploy again",
         "deploying": "Deploying…",
@@ -3724,13 +3733,17 @@
         "reference": "Reference: {reference}",
         "notDeployedYet": "This application has no code yet — deploy to pull your repository from {branch} and go live.",
         "resetNote": "Deploying resets the application to the {branch} branch; changes made directly on the server are discarded.",
-        "viewCommit": "View commit on your Git provider"
+        "viewCommit": "View commit on your Git provider",
+        "failedAtStep": "Last deploy failed at “{step}”.",
+        "incomplete": "The last deploy failed after the new code was put in place, so that code is live but not fully deployed. Fix the problem and deploy again.",
+        "liveCommit": "Live commit",
+        "notFullyDeployed": "Not fully deployed"
       },
       "webhook": {
         "title": "Deploy on push",
         "subtitle": "Automatically deploy whenever you push to {branch}.",
         "on": "On",
-        "disabledBody": "Turn this on to deploy automatically on every push. You'll get a URL and secret to add to your Git provider.",
+        "disabledBody": "Turn this on to deploy automatically on every push. The panel adds the webhook to your repository, or gives you a URL and secret to add yourself.",
         "provider": "Git provider",
         "providerPlaceholder": "Choose your provider",
         "enable": "Enable deploy on push",
@@ -3764,7 +3777,9 @@
         "offBody": "Auto-deploy is off. Turn it on to deploy on every push to {branch} — your webhook URL and secret are kept.",
         "providerHint": "Which service the repository is on. It decides how we check that an incoming request really came from them.",
         "urlHint": "Paste this into your repository's webhook settings. It is the address your Git service calls when there is new code.",
-        "disabledBodyNamed": "Turning this on creates a webhook URL and secret for {provider}. You add them to your repository in the next step."
+        "disabledBodyNamed": "Turning this on adds a webhook to your {provider} repository. If the panel can't add it for you, you'll get a URL and secret to paste instead.",
+        "added": "Webhook added to the repository",
+        "addedBody": "The panel added it to {provider} for you, so there is nothing to paste. Pushing to {branch} deploys automatically."
       },
       "cancel": "Cancel",
       "runtime": {
@@ -3825,7 +3840,8 @@
         "noPermission": "Your role does not include Deployment for this application with Manage access. Ask an administrator to grant it.",
         "title": "Deploy history",
         "subtitle": "Every deploy, newest first. Open one to read its build log.",
-        "busy": "A deployment is already running. Wait for it to finish."
+        "busy": "A deployment is already running. Wait for it to finish.",
+        "pushStarted": "New deploy started from a push to {branch}."
       },
       "tabs": {
         "history": "History",
@@ -4286,12 +4302,14 @@
       "create": {
         "title": "Add a worker",
         "subtitle": "Pick a template to start, or write your own command.",
-        "submit": "Add worker"
+        "submit": "Add worker",
+        "failed": "The worker did not start, so it was not added. Check that the command runs for this application, then try again."
       },
       "edit": {
         "title": "Edit worker",
         "subtitle": "Changes apply the next time this worker restarts.",
-        "submit": "Save changes"
+        "submit": "Save changes",
+        "failed": "These changes could not be applied. Check that the command runs for this application, then try again."
       },
       "delete": {
         "title": "Delete this worker?",
@@ -4354,7 +4372,8 @@
           "queue": "Queue worker",
           "horizon": "Horizon",
           "custom": "Custom"
-        }
+        },
+        "commandPlaceholder": "The command to keep running"
       },
       "runsAsTooltip": "Runs as {user}, not this application's own user.",
       "supervisor": {
@@ -5008,7 +5027,10 @@
       "bots": "AI bots",
       "on": "On",
       "off": "Off",
-      "description": "Protection settings for this application."
+      "description": "Protection settings for this application.",
+      "folder": "Site folder",
+      "locked": "Locked",
+      "unlocked": "Not locked"
     },
     "backups": {
       "title": "Backups",
@@ -5053,7 +5075,9 @@
         "php_eol": "Change PHP version",
         "deploy_failed": "View deployment",
         "disk": "Free up space"
-      }
+      },
+      "folderUnlocked": "Site folder not locked",
+      "reviewFolder": "Lock it"
     },
     "filters": {
       "allStatuses": "All statuses",
@@ -5223,6 +5247,16 @@
       "detectAction": "Check what is installed",
       "changeTo": "Treat as {type} instead",
       "menuHint": "Application type options"
+    },
+    "rootLock": {
+      "lock": "Lock",
+      "title": "Lock the site folder?",
+      "body": "{path} will be owned by root and locked, like every application the panel creates. After that, the system user can't add, delete or rename anything directly in this folder. Everything inside public_html works as before.",
+      "cancel": "Cancel",
+      "confirm": "Lock folder",
+      "locking": "Locking…",
+      "done": "Site folder locked.",
+      "failed": "The site folder could not be locked."
     }
   },
   "panelUpdate": {
@@ -6202,7 +6236,8 @@
       "hideDetailsShort": "Hide details",
       "ignoreShort": "Dismiss",
       "restoreShort": "Undo dismissing",
-      "working": "Working…"
+      "working": "Working…",
+      "wholeType": "All of them"
     },
     "outcomes": {
       "found": "Found",

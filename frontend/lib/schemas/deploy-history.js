@@ -74,6 +74,9 @@ export const deploymentsResponseSchema = z.object({
 
 export const deploymentResponseSchema = z.object({ deployment: deploymentSchema });
 
+/** `GET /deployments/latest`: the newest row, the same shape as the history's. */
+export const latestDeploymentResponseSchema = z.object({ latest: deploymentSchema.nullable() });
+
 /**
  * The settings form.
  *

@@ -121,7 +121,7 @@ export function RoleForm({ mode = "create", role, catalog }) {
 
   return (
     <Form {...form}>
-      <form
+      <form noValidate
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="space-y-6"
       >

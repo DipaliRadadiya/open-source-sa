@@ -64,6 +64,31 @@ export async function ProtectionCard({ application, items }) {
         <ul className="divide-y border-t">
           {items.map((item) => {
             const Icon = item.on ? ShieldCheck : ShieldOff;
+            /* A row with its own control (the folder lock) acts in place: it
+               has no screen of its own to open, so it is not a link. */
+            if (!item.href) {
+              return (
+                <li key={item.key} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-6 py-3">
+                  {/* Label on one line; the state and the button move below it
+                      together when the card is too narrow. As flex-1 the label
+                      was what gave way, down to one word per line in French. */}
+                  <span className="flex items-center gap-3 whitespace-nowrap">
+                    <Icon
+                      className={`size-4 shrink-0 ${item.on ? "text-success" : "text-warning"}`}
+                    />
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </span>
+                  <span className="ms-auto flex items-center gap-3">
+                    <span
+                      className={`text-sm ${item.on ? "text-foreground" : "text-muted-foreground"}`}
+                    >
+                      {item.state}
+                    </span>
+                    {item.control ?? null}
+                  </span>
+                </li>
+              );
+            }
             return (
               <li key={item.key}>
                 <Link

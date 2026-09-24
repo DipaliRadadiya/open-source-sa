@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { CircleAlert, CircleCheck, Loader2, RefreshCw, TriangleAlert, Undo2 } from "lucide-react";
+import { CircleAlert, CircleCheck, EyeOff, Loader2, RefreshCw, TriangleAlert, Undo2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { reasonText } from "@/lib/backups/reason";
@@ -26,6 +26,18 @@ const POLL_LIMIT_MS = 20 * 60 * 1000;
  * claimed to be under way for twenty minutes before admitting otherwise.
  */
 const QUEUED_LIMIT_MS = 2 * 60 * 1000;
+
+/*
+ * The two kinds of button on these banners, and nothing else.
+ *
+ * The action the banner offers (Undo, Check again) is the panel's ordinary
+ * filled button. Closing it (Dismiss, Hide) is neutral: a plain white surface,
+ * no outline and no status colour — green or red belongs to the message, not
+ * to a button that only closes it. The grey default fill disappeared into the
+ * pale tints, which is why the neutral one is white rather than grey.
+ */
+const NEUTRAL =
+  "border-transparent bg-background text-foreground shadow-xs hover:bg-muted dark:bg-secondary dark:hover:bg-muted";
 
 /**
  * A restore, while it happens and after it finishes.
@@ -158,9 +170,11 @@ export function RestoreProgress({
           {/* The way back. Nobody else in this class of product has one, and
               burying it in a table row would waste the only thing that makes
               a wrong restore survivable. */}
+          {/* One size and one style for both: a filled button beside bare
+              text read as one control and a caption. */}
           <div className="ml-14 flex flex-wrap gap-2">
             {restore.safety_backup_id && !wasUndo ? (
-              <Button variant="outline" onClick={openUndo} disabled={loadingUndo}>
+              <Button size="sm" onClick={openUndo} disabled={loadingUndo}>
                 {loadingUndo ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
@@ -169,7 +183,8 @@ export function RestoreProgress({
                 {t("undo")}
               </Button>
             ) : null}
-            <Button variant="ghost" onClick={onDismiss}>
+            <Button variant="secondary" size="sm" onClick={onDismiss} className={NEUTRAL}>
+              <X className="size-4" />
               {t("dismiss")}
             </Button>
           </div>
@@ -222,7 +237,8 @@ export function RestoreProgress({
             ) : null}
           </div>
         </div>
-        <Button variant="outline" onClick={onDismiss} className="ml-14">
+        <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("ml-14", NEUTRAL)}>
+          <X className="size-4" />
           {t("dismiss")}
         </Button>
       </div>
@@ -261,11 +277,12 @@ export function RestoreProgress({
           </div>
         </div>
         <div className="ml-14 flex flex-wrap gap-2">
-          <Button variant="outline" onClick={refresh} disabled={refreshing}>
+          <Button size="sm" onClick={refresh} disabled={refreshing}>
             <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
             {t("checkAgain")}
           </Button>
-          <Button variant="ghost" onClick={onDismiss}>
+          <Button variant="secondary" size="sm" onClick={onDismiss} className={NEUTRAL}>
+            <X className="size-4" />
             {t("dismiss")}
           </Button>
         </div>
@@ -287,7 +304,8 @@ export function RestoreProgress({
             <p className="font-medium">{t("queued")}</p>
             <p className="text-sm text-muted-foreground">{t("queuedBody")}</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={onDismiss} className="shrink-0">
+          <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("shrink-0", NEUTRAL)}>
+            <EyeOff className="size-4" />
             {t("hide")}
           </Button>
         </div>
@@ -308,9 +326,11 @@ export function RestoreProgress({
           </p>
         </div>
         {/* Hiding it entirely means a restore that never finishes leaves a
-            banner nobody can clear. Ghost, and off to the side, so it does not
-            compete with the thing they are watching. */}
-        <Button variant="ghost" size="sm" onClick={onDismiss} className="shrink-0">
+            banner nobody can clear. Off to the side so it does not compete
+            with the thing they are watching, but a real button: as ghost text
+            it read as a label, not as something to press. */}
+        <Button variant="secondary" size="sm" onClick={onDismiss} className={cn("shrink-0", NEUTRAL)}>
+          <EyeOff className="size-4" />
           {t("hide")}
         </Button>
       </div>

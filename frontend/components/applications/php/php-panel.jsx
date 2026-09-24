@@ -504,7 +504,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
       value={{ appId, overridden: php.overridden ?? {}, disabled: !canManage || saving, onReset }}
     >
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(save)} className="space-y-3">
+      <form noValidate onSubmit={form.handleSubmit(save)} className="space-y-3">
         {/* The pool vanished between loading this screen and pressing save, so
             nothing here can be applied. Persistent rather than a toast: it is
             not a message about the click, it is the state the site is in until

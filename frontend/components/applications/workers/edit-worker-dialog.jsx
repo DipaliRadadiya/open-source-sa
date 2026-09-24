@@ -1,13 +1,14 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Pencil, ChevronDown, TriangleAlert } from "lucide-react";
 import { workerFormSchema } from "@/lib/schemas/worker";
 import { updateWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { apiMessage } from "@/lib/api/error-message";
+import { useRefresh } from "@/hooks/use-refresh";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { WorkerAdvancedFields } from "@/components/applications/workers/worker-advanced-fields";
@@ -54,7 +55,7 @@ function valuesFrom(worker) {
 
 export function EditWorkerDialog({ worker, appId, presets = [], workers = [], open, onOpenChange }) {
   const t = useTranslations("applications.workers");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
 
   const form = useForm({
     resolver: zodResolver(workerFormSchema),
@@ -106,10 +107,17 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
 
     try {
       await updateWorker(appId, worker.id, payload);
-      toast.success(t("toast.updated"));
-      onOpenChange?.(false);
-      router.refresh();
+      // Closed once the list shows the change, not on the API's answer.
+      refreshThen(() => {
+        toast.success(t("toast.updated"));
+        onOpenChange?.(false);
+      });
     } catch (error) {
+      // Same as creating: a restart that fails answers a bare 500.
+      if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
+        form.setError("root.server", { message: apiMessage(error, t("edit.failed")) });
+        return;
+      }
       /*
        * `kind` is sent and is in the form's values, but has no control — it is
        * set by picking a preset. So the API's "you can't run Horizon and a
@@ -121,7 +129,9 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
     }
   }
 
-  const isSubmitting = form.formState.isSubmitting;
+  // Stays busy through the list's re-read, so the button cannot be pressed
+  // twice while the dialog is still open over a saved worker.
+  const isSubmitting = form.formState.isSubmitting || refreshing;
   const serverError = form.formState.errors.root?.server?.message;
   const others = workers.filter((w) => w.id !== worker.id);
 

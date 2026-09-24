@@ -77,7 +77,10 @@ export function WorkerCommandField({ form, presets, onPick, workers = [] }) {
               className="font-mono"
               autoComplete="off"
               spellCheck={false}
-              placeholder="php8.4 artisan queue:work --sleep=3 --tries=3"
+              // This application's own example, from its presets. A fixed
+              // Laravel command showed on Craft and git sites too — exactly the
+              // command that fails to start there.
+              placeholder={presets.find((p) => p.command)?.command ?? t("form.commandPlaceholder")}
               {...field}
             />
           </FormControl>

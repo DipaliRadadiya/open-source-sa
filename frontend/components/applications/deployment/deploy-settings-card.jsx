@@ -175,7 +175,7 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(save)}>
+        <form noValidate onSubmit={form.handleSubmit(save)}>
           {/*
            * The panel's settings card, not a hand-rolled one.
            *

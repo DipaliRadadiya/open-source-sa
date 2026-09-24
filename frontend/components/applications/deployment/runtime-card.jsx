@@ -73,7 +73,7 @@ export function RuntimeCard({ application, canManage }) {
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(save)}>
+        <form noValidate onSubmit={form.handleSubmit(save)}>
           {/*
            * The same Section/Row system as the card above it, so the Settings
            * tab has ONE field layout rather than three. It was a hand-rolled

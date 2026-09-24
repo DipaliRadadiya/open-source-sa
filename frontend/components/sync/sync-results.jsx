@@ -153,6 +153,12 @@ export function SyncResults({
               {visible.map((item) => {
                 const key = ignoreKey(item);
                 const ignored = ignoredKeys.has(key);
+                // One line standing for every worker, certificate or PHP
+                // setting of the sites a preview found: they cannot be read
+                // until the sites exist. Its key is the type itself, so it is
+                // not a name to show, and ignoring it would put that type name
+                // on the ignore list.
+                const wholeType = item.action === "skipped" && item.resource_key === item.resource_type;
                 const isOpen = expanded.has(item.id);
 
                 return [
@@ -164,40 +170,47 @@ export function SyncResults({
                       {/* A chevron on its own is a guess. The aria-label names
                           the row for a screen reader; the tooltip is the same
                           answer for everyone else. */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-7"
-                            aria-expanded={isOpen}
-                            aria-label={t("results.toggleDetails", { name: item.resource_key })}
-                            onClick={() => toggleExpanded(item.id)}
-                          >
-                            <ChevronRight
-                              className={cn("size-4 transition-transform", isOpen && "rotate-90")}
-                              aria-hidden
-                            />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isOpen ? t("results.hideDetailsShort") : t("results.showDetailsShort")}
-                        </TooltipContent>
-                      </Tooltip>
+                      {/* A whole-type line has no details to open. */}
+                      {wholeType ? null : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-7"
+                              aria-expanded={isOpen}
+                              aria-label={t("results.toggleDetails", { name: item.resource_key })}
+                              onClick={() => toggleExpanded(item.id)}
+                            >
+                              <ChevronRight
+                                className={cn("size-4 transition-transform", isOpen && "rotate-90")}
+                                aria-hidden
+                              />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {isOpen ? t("results.hideDetailsShort") : t("results.showDetailsShort")}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                     </TableCell>
                     <TableCell className="align-top text-sm text-muted-foreground">
                       {t(`types.${item.resource_type}`)}
                     </TableCell>
                     <TableCell className="align-top">
-                      <span className={cn("font-mono text-sm break-all", ignored && "line-through")}>
-                        {item.resource_key}
-                      </span>
+                      {wholeType ? (
+                        <span className="text-sm">{t("results.wholeType")}</span>
+                      ) : (
+                        <span className={cn("font-mono text-sm break-all", ignored && "line-through")}>
+                          {item.resource_key}
+                        </span>
+                      )}
                       {/* The reason is already a full sentence in the reader's
                           language — the backend localizes it — so one line of
                           it here is the whole explanation, not a label. */}
                       {item.reason ? (
-                        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                        <p className={cn("mt-0.5 text-xs text-muted-foreground", wholeType ? "max-w-xl whitespace-normal" : "line-clamp-1")}>
                           {item.reason}
                         </p>
                       ) : null}
@@ -213,7 +226,7 @@ export function SyncResults({
                       </Badge>
                     </TableCell>
                     <TableCell className="align-top">
-                      {canManage ? (
+                      {canManage && !wholeType ? (
                         <Tooltip>
                           {/* The trigger wraps a span: a disabled button
                               swallows pointer events, so the tooltip would

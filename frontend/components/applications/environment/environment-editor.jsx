@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveEnvironment } from "@/lib/api/environment";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -73,17 +74,11 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
 
   const dirty = contents !== (env.raw ?? "");
 
-  // Warn on reload/close with unsaved edits — the only guard the App Router
-  // gives us for free. In-app navigation is a Link away and rare here.
-  useEffect(() => {
-    if (!dirty) return undefined;
-    const onBeforeUnload = (e) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
+  // Registered with the panel's guard, which asks before the sidebar, header
+  // or breadcrumb leave and covers reload/close too. A beforeunload of its own
+  // covered only the last two: a click on another page in the sidebar threw the
+  // edits away without a word.
+  useWatchUnsaved("environment-editor", dirty);
 
   // The button must say what the save will actually do — otherwise a Node app
   // ignores the file until restart, or a cached config quietly overrides it.

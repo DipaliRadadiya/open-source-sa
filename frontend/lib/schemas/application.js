@@ -90,6 +90,9 @@ const webhookSchema = z.object({
   url: z.string().nullish(),
   secret: z.string().nullish(),
   verification: z.string().nullish(),
+  // True when the panel added the webhook to the repository itself; false
+  // means the URL and secret have to be pasted in by hand.
+  registered: z.boolean().default(false),
   last_delivered_at: z.string().nullish(),
   last_delivered_at_human: z.string().nullish(),
 }).passthrough();
@@ -267,6 +270,17 @@ export const applicationSchema = z.object({
   waf_exceptions: z.array(z.string()).optional(),
   waf_custom_rules: z.array(z.string()).optional(),
   last_commit: z.union([z.string(), z.record(z.string(), z.unknown())]).nullish(),
+  // What is actually on disk. Deploys are in place, so one that fails after
+  // its checkout leaves the NEW commit live while `last_commit` (written on
+  // success only) still names the old one. Sent on a single application, not
+  // in the list.
+  code_on_disk: z
+    .object({
+      commit: z.string().nullish(),
+      state: z.enum(["deployed", "incomplete", "deploying"]).nullable().catch(null),
+      message: z.string().nullish(),
+    })
+    .nullish(),
   last_deployed_at: z.string().nullish(),
   last_deployed_at_human: z.string().nullish(),
   steps: z.array(z.string()).default([]),
@@ -483,4 +497,16 @@ export const createApplicationSchema = z.object({
       message: "applicationSystemUserRequired",
     });
   }
+});
+
+/**
+ * `GET|POST /applications/{id}/root-lock`: whether the site folder is locked
+ * against its own user. `unknown` is "could not check" (a filesystem with no
+ * immutable flag), never "unlocked" — the two must not render the same.
+ */
+export const rootLockResponseSchema = z.object({
+  root_lock: z.object({
+    status: z.enum(["locked", "unlocked", "unknown"]).catch("unknown"),
+    path: z.string().nullish(),
+  }),
 });

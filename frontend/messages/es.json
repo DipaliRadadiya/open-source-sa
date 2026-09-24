@@ -898,7 +898,7 @@
       },
       "deployFailed": {
         "chip": "El último despliegue de {site} falló",
-        "detail": "La aplicación sigue sirviendo la versión anterior, y el próximo envío fallará igual hasta que se corrija.",
+        "detail": "El último despliegue no terminó, y el próximo envío fallará igual hasta que se corrija.",
         "action": "Ver el registro de despliegue"
       },
       "processDown": {
@@ -3123,11 +3123,9 @@
         "subtitle": "Quién editó este archivo y qué claves cambió. Los valores nunca se registran.",
         "loadFailed": "No se pudo cargar el historial de cambios.",
         "empty": "Este archivo aún no se ha cambiado desde el panel.",
-        "actionUpdated": "guardó este archivo",
         "actionRestored": "restauró una versión anterior",
         "bySystem": "El panel",
         "byUnknown": "Una cuenta eliminada",
-        "noKeys": "Ninguna clave cambió: solo comentarios o espaciado.",
         "restore": "Restaurar",
         "restored": "Se restauró la versión anterior.",
         "restoreFailed": "No se pudo restaurar esa versión.",
@@ -3137,7 +3135,6 @@
         "confirmBody": "El archivo actual se respalda primero, así que esto también se puede deshacer.",
         "cancel": "Cancelar",
         "confirmSubmit": "Restaurar",
-        "showValues": "Ver valores",
         "diffLoading": "Leyendo las copias guardadas…",
         "diffFailed": "No se pudieron leer esos valores.",
         "diffUnavailable": "La copia de la versión anterior se eliminó, así que este cambio no se puede mostrar.",
@@ -3145,7 +3142,17 @@
         "colBefore": "Antes",
         "colAfter": "Después",
         "absent": "Sin establecer",
-        "emptyValue": "vacío"
+        "emptyValue": "vacío",
+        "actionChanged": "cambió {count, plural, one {# variable} other {# variables}}",
+        "actionNoKeys": "guardó el archivo sin cambiar ninguna variable",
+        "noKeysNote": "Solo cambiaron comentarios o líneas en blanco.",
+        "showChanges": "Ver cambios",
+        "hideChanges": "Ocultar cambios",
+        "status": {
+          "added": "Añadida",
+          "removed": "Eliminada",
+          "changed": "Cambiada"
+        }
       }
     },
     "title": "Aplicaciones",
@@ -3191,7 +3198,10 @@
       "reference": "Referencia de soporte: {reference}",
       "redeploy": "Volver a desplegar",
       "manage": "Gestionar despliegue",
-      "description": "De dónde viene el código y cómo se publica."
+      "description": "De dónde viene el código y cómo se publica.",
+      "failedAtStep": "El último despliegue falló en {step}.",
+      "incomplete": "El último despliegue falló después de colocar el código nuevo, así que ese código está activo pero no desplegado del todo. Corrige el problema y vuelve a desplegar.",
+      "notFullyDeployed": "Despliegue incompleto"
     },
     "gitAccount": "Cuenta de Git",
     "gitAccountPlaceholder": "Elige una cuenta conectada",
@@ -3708,7 +3718,6 @@
         "branch": "Rama",
         "lastDeploy": "Último despliegue",
         "never": "Nunca desplegado",
-        "commit": "Commit desplegado",
         "action": "Desplegar ahora",
         "redeploy": "Volver a desplegar",
         "deploying": "Desplegando…",
@@ -3724,13 +3733,17 @@
         "reference": "Referencia: {reference}",
         "notDeployedYet": "Esta aplicación aún no tiene código: despliega para obtener tu repositorio de {branch} y ponerlo en línea.",
         "resetNote": "Al desplegar, la aplicación se restablece a la rama {branch}; los cambios hechos directamente en el servidor se descartan.",
-        "viewCommit": "Ver el commit en tu proveedor de Git"
+        "viewCommit": "Ver el commit en tu proveedor de Git",
+        "failedAtStep": "El último despliegue falló en «{step}».",
+        "incomplete": "El último despliegue falló después de colocar el código nuevo, así que ese código está activo pero no desplegado del todo. Corrige el problema y vuelve a desplegar.",
+        "liveCommit": "Commit activo",
+        "notFullyDeployed": "Despliegue incompleto"
       },
       "webhook": {
         "title": "Desplegar al hacer push",
         "subtitle": "Despliega automáticamente cada vez que hagas push a {branch}.",
         "on": "Activado",
-        "disabledBody": "Actívalo para desplegar automáticamente con cada push. Obtendrás una URL y un secreto para añadir a tu proveedor de Git.",
+        "disabledBody": "Actívalo para desplegar automáticamente con cada push. El panel añade el webhook a tu repositorio o te da una URL y un secreto para añadirlos tú.",
         "provider": "Proveedor de Git",
         "providerPlaceholder": "Elige tu proveedor",
         "enable": "Activar despliegue al hacer push",
@@ -3764,7 +3777,9 @@
         "offBody": "El despliegue automático está desactivado. Actívalo para desplegar con cada push a {branch}: se conservan tu URL de webhook y el secreto.",
         "providerHint": "El servicio en el que se encuentra el repositorio. Él decide cómo verificamos que una solicitud entrante realmente provenga de ellos.",
         "urlHint": "Péguelo en la configuración de webhook de su repositorio. Es la dirección que su servicio Git llama cuando hay código nuevo.",
-        "disabledBodyNamed": "Al activarlo se crean una URL de webhook y un secreto para {provider}. Los añades a tu repositorio en el siguiente paso."
+        "disabledBodyNamed": "Al activarlo se añade un webhook a tu repositorio de {provider}. Si el panel no puede añadirlo por ti, recibirás una URL y un secreto para pegarlos tú.",
+        "added": "Webhook añadido al repositorio",
+        "addedBody": "El panel lo añadió en {provider} por ti, así que no hay nada que pegar. Cada push a {branch} se despliega automáticamente."
       },
       "cancel": "Cancelar",
       "runtime": {
@@ -3825,7 +3840,8 @@
         "noPermission": "Tu rol no incluye Despliegue de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
         "title": "Historial de despliegues",
         "subtitle": "Todos los despliegues, del más reciente al más antiguo. Abre uno para leer su registro.",
-        "busy": "Ya hay un despliegue en curso. Espera a que termine."
+        "busy": "Ya hay un despliegue en curso. Espera a que termine.",
+        "pushStarted": "Nuevo despliegue iniciado por un push a {branch}."
       },
       "tabs": {
         "history": "Historial",
@@ -4286,12 +4302,14 @@
       "create": {
         "title": "Añadir un worker",
         "subtitle": "Elige una plantilla para empezar o escribe tu propio comando.",
-        "submit": "Añadir worker"
+        "submit": "Añadir worker",
+        "failed": "El worker no arrancó, así que no se añadió. Comprueba que el comando funciona en esta aplicación y vuelve a intentarlo."
       },
       "edit": {
         "title": "Editar worker",
         "subtitle": "Los cambios se aplican la próxima vez que este worker se reinicie.",
-        "submit": "Guardar cambios"
+        "submit": "Guardar cambios",
+        "failed": "No se pudieron aplicar estos cambios. Comprueba que el comando funciona en esta aplicación y vuelve a intentarlo."
       },
       "delete": {
         "title": "¿Eliminar este worker?",
@@ -4354,7 +4372,8 @@
           "queue": "Worker de cola",
           "horizon": "Horizon",
           "custom": "Personalizado"
-        }
+        },
+        "commandPlaceholder": "El comando que debe seguir ejecutándose"
       },
       "runsAsTooltip": "Se ejecuta como {user}, no como el usuario propio de la aplicación.",
       "supervisor": {
@@ -5008,7 +5027,10 @@
       "bots": "Bots de IA",
       "on": "Activado",
       "off": "Desactivado",
-      "description": "Ajustes de protección de esta aplicación."
+      "description": "Ajustes de protección de esta aplicación.",
+      "folder": "Carpeta del sitio",
+      "locked": "Bloqueada",
+      "unlocked": "Sin bloquear"
     },
     "backups": {
       "title": "Copias de seguridad",
@@ -5053,7 +5075,9 @@
         "php_eol": "Cambiar la versión de PHP",
         "deploy_failed": "Ver el despliegue",
         "disk": "Liberar espacio"
-      }
+      },
+      "folderUnlocked": "Carpeta del sitio sin bloquear",
+      "reviewFolder": "Bloquearla"
     },
     "filters": {
       "allStatuses": "Todos los estados",
@@ -5223,6 +5247,16 @@
       "detectAction": "Comprobar qué hay instalado",
       "changeTo": "Tratar como {type} en su lugar",
       "menuHint": "Opciones del tipo de aplicación"
+    },
+    "rootLock": {
+      "lock": "Bloquear",
+      "title": "¿Bloquear la carpeta del sitio?",
+      "body": "{path} pasará a ser propiedad de root y quedará bloqueada, como toda aplicación que crea el panel. Después, el usuario del sistema no podrá añadir, eliminar ni renombrar nada directamente en esta carpeta. Todo lo que hay dentro de public_html funciona igual que antes.",
+      "cancel": "Cancelar",
+      "confirm": "Bloquear carpeta",
+      "locking": "Bloqueando…",
+      "done": "Carpeta del sitio bloqueada.",
+      "failed": "No se pudo bloquear la carpeta del sitio."
     }
   },
   "panelUpdate": {
@@ -6202,7 +6236,8 @@
       "hideDetailsShort": "Ocultar detalles",
       "ignoreShort": "Descartar",
       "restoreShort": "Deshacer el descarte",
-      "working": "Trabajando…"
+      "working": "Trabajando…",
+      "wholeType": "Todos"
     },
     "outcomes": {
       "found": "Encontrado",

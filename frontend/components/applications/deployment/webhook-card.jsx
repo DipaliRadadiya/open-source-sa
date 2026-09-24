@@ -3,6 +3,7 @@ import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
+  CircleCheck,
   Eye,
   EyeOff,
   Info,
@@ -10,6 +11,7 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
+  TriangleAlert,
   Webhook,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -138,6 +140,13 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  /*
+   * Why the panel could not add the hook to the repository itself, from the
+   * last save. Only a save's response carries it; after a reload the card
+   * still knows from `webhook.registered` that the hook must be pasted, it
+   * just no longer knows why.
+   */
+  const [manualReason, setManualReason] = useState(null);
 
   const selectedProvider = providers.find((p) => p.name === providerName) ?? null;
   const activeProvider = providers.find((p) => p.name === webhook.provider) ?? null;
@@ -150,7 +159,13 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
       const { data } = await updateWebhook(application.id, payload);
       const parsed = applicationSchema.safeParse(data?.application);
       if (parsed.success) onChange(parsed.data);
-      toast.success(t(successKey));
+      const registration = data?.webhook_registration ?? null;
+      setManualReason(registration?.status === "manual" ? (registration.message ?? null) : null);
+      toast.success(
+        registration?.status === "registered" && successKey !== "webhook.rotated"
+          ? t("webhook.added")
+          : t(successKey),
+      );
       return true;
     } catch (error) {
       toast.error(apiMessage(error, t(failKey)));
@@ -354,6 +369,38 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
               </div>
             ) : null}
 
+            {/* Added to the repository by the panel: nothing to paste, so
+                the URL, secret and paste steps would only be instructions for
+                a job already done. */}
+            {webhook.registered ? (
+              <div className="flex items-start gap-2.5 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
+                <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" />
+                <div className="space-y-0.5">
+                  <p className="font-medium">{t("webhook.added")}</p>
+                  <p className="text-muted-foreground">
+                    {t("webhook.addedBody", {
+                      provider: activeProvider?.title ?? webhook.provider ?? "",
+                      branch: application.branch ?? "main",
+                    })}
+                  </p>
+                  <p className="pt-1 text-xs text-muted-foreground">
+                    {t("webhook.lastDelivered")}:{" "}
+                    <span className="font-medium text-foreground">
+                      {webhook.last_delivered_at_human ??
+                        webhook.last_delivered_at ??
+                        t("webhook.noDeliveries")}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            ) : (
+            <>
+            {manualReason ? (
+              <div className="flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/5 p-3 text-sm">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+                <p>{manualReason}</p>
+              </div>
+            ) : null}
             <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
               <div className="space-y-4">
                 <ReadOnlyField
@@ -385,6 +432,8 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                 />
               ) : null}
             </div>
+            </>
+            )}
 
             {canManage ? (
               <div className="border-t pt-4">

@@ -61,7 +61,7 @@ export function ProfileForm({ user, onDirtyChange }) {
 
   return (
     <Form {...form}>
-      <form
+      <form noValidate
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         className="max-w-3xl space-y-6"
       >

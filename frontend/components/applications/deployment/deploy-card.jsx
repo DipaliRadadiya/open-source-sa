@@ -23,6 +23,8 @@ import {
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import { cn } from "@/lib/utils";
+import { isDeployIncomplete, liveCommit } from "@/lib/applications/code-on-disk";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Progress } from "@/components/ui/progress";
@@ -95,14 +97,14 @@ export function DeployCard({
   // the first screen to need them was.
   const ts = useTranslations("applications.details");
   const stepLabel = (step) => provisionStepLabel(step, ts);
-  const commit =
-    typeof application.last_commit === "string" ? application.last_commit : null;
+  const commit = liveCommit(application);
+  const incomplete = isDeployIncomplete(application);
   const repository = application.repository ?? application.repository_url;
   const branch = application.branch ?? "main";
   // The site is serving the OLD code, so a set failed_step is a deploy warning,
   // not an outage — saying that plainly is the point.
   const deployFailed =
-    application.status === "active" && Boolean(application.failed_step);
+    application.status === "active" && (Boolean(application.failed_step) || incomplete);
   // A git app is created "active" serving a placeholder; until the first deploy
   // there is no code. Say what to do rather than showing a blank "—".
   const neverDeployed = !application.last_deployed_at && !commit;
@@ -150,7 +152,19 @@ export function DeployCard({
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="space-y-0.5">
-                <p>{t("deploy.failedAt", { step: stepLabel(application.failed_step) })}</p>
+                {/* "The previous version is still live" is only true when the
+                    deploy failed before its checkout. After it, the new commit
+                    is serving, half-built, and the backend says so. */}
+                {incomplete ? (
+                  <>
+                    {application.failed_step ? (
+                      <p>{t("deploy.failedAtStep", { step: stepLabel(application.failed_step) })}</p>
+                    ) : null}
+                    <p>{application.code_on_disk?.message || t("deploy.incomplete")}</p>
+                  </>
+                ) : (
+                  <p>{t("deploy.failedAt", { step: stepLabel(application.failed_step) })}</p>
+                )}
                 {application.reference ? (
                   <p className="font-mono text-xs opacity-90">
                     {t("deploy.reference", { reference: application.reference })}
@@ -210,7 +224,7 @@ export function DeployCard({
           <Fact icon={GitBranch} label={t("deploy.branch")}>
             <span className="block truncate font-mono text-xs">{branch}</span>
           </Fact>
-          <Fact icon={GitCommitHorizontal} label={t("deploy.commit")}>
+          <Fact icon={GitCommitHorizontal} label={t("deploy.liveCommit")}>
             {commit ? (
               <span className="flex flex-wrap items-center gap-1.5">
                 {commitHref ? (
@@ -232,6 +246,11 @@ export function DeployCard({
                   <span className="font-mono text-xs">{commit.slice(0, 10)}</span>
                 )}
                 <CopyButton value={commit} className="size-6" />
+                {incomplete ? (
+                  <Badge variant="outline" className="border-warning/40 bg-warning/10 font-normal text-warning">
+                    {t("deploy.notFullyDeployed")}
+                  </Badge>
+                ) : null}
               </span>
             ) : (
               <span className="text-sm text-muted-foreground">—</span>

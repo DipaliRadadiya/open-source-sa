@@ -8,7 +8,9 @@ import { History, Settings2, Webhook } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { deployApplication } from "@/lib/api/applications";
-import { readApplication } from "@/lib/api/deployment";
+import { fetchLatestDeployment, readApplication } from "@/lib/api/deployment";
+import { latestDeploymentResponseSchema } from "@/lib/schemas/deploy-history";
+import { isNewPush, latestChanged, watchDelay, WATCH_MS } from "@/lib/applications/latest-deploy";
 import { applicationSchema } from "@/lib/schemas/application";
 import { apiMessage } from "@/lib/api/error-message";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
@@ -110,7 +112,10 @@ export function DeploymentPanel({
           // appeared, and its commit never appeared, until someone reloaded
           // the page by hand. Re-run the server component instead.
           router.refresh();
-          if (next.failed_step) {
+          if (next.code_on_disk?.state === "incomplete") {
+            // Failed after the checkout: the new commit is live, half-built.
+            toast.error(next.code_on_disk.message || t("deploy.incomplete"));
+          } else if (next.failed_step) {
             toast.error(
               t("deploy.failedAt", { step: provisionStepLabel(next.failed_step, ts) }),
             );
@@ -124,6 +129,79 @@ export function DeploymentPanel({
       toast.error(apiMessage(error, t("deploy.failed")));
     }
   }, [application.id, application.last_deployed_at, refresh, stopPoll, router, t, ts]);
+
+  /*
+   * Watch for deploys this page did not start: a push, or someone else.
+   *
+   * The history is a server render, so a deploy started by a webhook stayed
+   * invisible until a reload. Every 5 s (2.5 s while one runs) the page asks
+   * for the newest deploy and re-reads only when it differs from the top row.
+   * Paused while the tab is hidden and asked again on return: a background tab
+   * polling a shared rate limit helps nobody.
+   *
+   * The top row and `deploying` are read through refs so a history that just
+   * re-rendered does not restart the timer.
+   */
+  const topRef = useRef(deployments[0] ?? null);
+  const deployingRef = useRef(deploying);
+  useEffect(() => {
+    topRef.current = deployments[0] ?? null;
+  }, [deployments]);
+  useEffect(() => {
+    deployingRef.current = deploying;
+  }, [deploying]);
+
+  useEffect(() => {
+    let timer = null;
+    let stopped = false;
+    let delay = WATCH_MS;
+
+    async function tick() {
+      timer = null;
+      if (document.hidden) return;
+      try {
+        const { data } = await fetchLatestDeployment(application.id);
+        const parsed = latestDeploymentResponseSchema.safeParse(data);
+        if (!stopped && parsed.success) {
+          const latest = parsed.data.latest;
+          const top = topRef.current;
+          delay = watchDelay(latest, deployingRef.current);
+          if (latestChanged(latest, top)) {
+            if (isNewPush(latest, top) && !deployingRef.current) {
+              toast.info(t("history.pushStarted", { branch: latest.branch ?? application.branch ?? "main" }));
+            }
+            // Held until the refreshed history replaces it, so the same change
+            // is not acted on twice while the server render is on its way.
+            topRef.current = latest;
+            // The Deploy card reads the application (commit, failed step), the
+            // history reads the server render: both have moved.
+            await refresh();
+            router.refresh();
+          }
+        }
+      } catch {
+        // A missed check is not worth a toast; the next one will tell.
+      }
+      if (!stopped && !document.hidden) timer = setTimeout(tick, delay);
+    }
+
+    function onVisibility() {
+      if (document.hidden) {
+        clearTimeout(timer);
+        timer = null;
+      } else if (!timer && !stopped) {
+        tick();
+      }
+    }
+
+    timer = setTimeout(tick, delay);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [application.id, application.branch, refresh, router, t]);
 
   /*
    * A deploy this page did not start.

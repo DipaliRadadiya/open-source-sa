@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { History, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { restoreEnvironment } from "@/lib/api/environment";
 import { apiMessage } from "@/lib/api/error-message";
+import { parseApiWallClock } from "@/lib/format/api-date";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -27,6 +28,7 @@ export function RestoreBackupDialog({
   onRestored,
 }) {
   const t = useTranslations("applications.environment");
+  const format = useFormatter();
   const [selected, setSelected] = useState(null);
   const [restart, setRestart] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -73,13 +75,20 @@ export function RestoreBackupDialog({
       // Wider than a yes/no confirmation: the body lists backup filenames.
       className="sm:!max-w-lg"
     >
-      <div className="space-y-2">
+      {/* A choice of one, so a radio group: a row of plain buttons told a
+          screen reader nothing about which copy was picked. The saved time
+          leads — it is what people choose by — and the file name follows for
+          anyone matching it against the server. */}
+      <div role="radiogroup" aria-label={t("restore.title")} className="space-y-2">
         {backups.map((backup) => {
           const active = selected === backup.name;
+          const when = parseApiWallClock(backup.created_at);
           return (
             <button
               key={backup.name}
               type="button"
+              role="radio"
+              aria-checked={active}
               onClick={() => setSelected(backup.name)}
               className={cn(
                 "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
@@ -87,14 +96,14 @@ export function RestoreBackupDialog({
               )}
             >
               <span className="min-w-0">
-                <span className="block truncate font-mono text-xs">
+                <span className="block text-sm font-medium">
+                  {when
+                    ? format.dateTime(when, { dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" })
+                    : (backup.created_at ?? backup.name)}
+                </span>
+                <span className="block truncate font-mono text-xs text-muted-foreground">
                   {backup.name}
                 </span>
-                {backup.created_at ? (
-                  <span className="block text-xs text-muted-foreground">
-                    {backup.created_at}
-                  </span>
-                ) : null}
               </span>
               {active ? (
                 <Check className="size-4 shrink-0 text-primary" />

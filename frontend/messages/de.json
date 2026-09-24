@@ -898,7 +898,7 @@
       },
       "deployFailed": {
         "chip": "Die letzte Bereitstellung von {site} ist fehlgeschlagen",
-        "detail": "Die Anwendung liefert weiterhin die vorherige Version aus, und der nächste Push schlägt genauso fehl, bis dies behoben ist.",
+        "detail": "Das letzte Deployment wurde nicht abgeschlossen, und der nächste Push schlägt genauso fehl, bis dies behoben ist.",
         "action": "Bereitstellungsprotokoll ansehen"
       },
       "processDown": {
@@ -3123,11 +3123,9 @@
         "subtitle": "Wer diese Datei bearbeitet hat und welche Schlüssel geändert wurden. Werte werden nie aufgezeichnet.",
         "loadFailed": "Der Änderungsverlauf konnte nicht geladen werden.",
         "empty": "Diese Datei wurde über das Panel noch nicht geändert.",
-        "actionUpdated": "hat diese Datei gespeichert",
         "actionRestored": "hat eine frühere Version wiederhergestellt",
         "bySystem": "Das Panel",
         "byUnknown": "Ein gelöschtes Konto",
-        "noKeys": "Kein Schlüssel geändert — nur Kommentare oder Leerzeichen.",
         "restore": "Wiederherstellen",
         "restored": "Die frühere Version wurde wiederhergestellt.",
         "restoreFailed": "Diese Version konnte nicht wiederhergestellt werden.",
@@ -3137,7 +3135,6 @@
         "confirmBody": "Die aktuelle Datei wird zuerst gesichert, dieser Schritt lässt sich also ebenfalls rückgängig machen.",
         "cancel": "Abbrechen",
         "confirmSubmit": "Wiederherstellen",
-        "showValues": "Werte zeigen",
         "diffLoading": "Die gespeicherten Kopien werden gelesen…",
         "diffFailed": "Diese Werte konnten nicht gelesen werden.",
         "diffUnavailable": "Die Kopie der vorherigen Version wurde gelöscht, diese Änderung lässt sich daher nicht zeigen.",
@@ -3145,7 +3142,17 @@
         "colBefore": "Vorher",
         "colAfter": "Nachher",
         "absent": "Nicht festgelegt",
-        "emptyValue": "leer"
+        "emptyValue": "leer",
+        "actionChanged": "hat {count, plural, one {# Variable} other {# Variablen}} geändert",
+        "actionNoKeys": "hat die Datei gespeichert, ohne eine Variable zu ändern",
+        "noKeysNote": "Nur Kommentare oder Leerzeilen wurden geändert.",
+        "showChanges": "Änderungen zeigen",
+        "hideChanges": "Änderungen ausblenden",
+        "status": {
+          "added": "Hinzugefügt",
+          "removed": "Entfernt",
+          "changed": "Geändert"
+        }
       }
     },
     "title": "Anwendungen",
@@ -3191,7 +3198,10 @@
       "reference": "Support-Referenz: {reference}",
       "redeploy": "Erneut deployen",
       "manage": "Deployment verwalten",
-      "description": "Woher der Code kommt und wie er ausgeliefert wird."
+      "description": "Woher der Code kommt und wie er ausgeliefert wird.",
+      "failedAtStep": "Das letzte Deployment ist bei {step} gescheitert.",
+      "incomplete": "Das letzte Deployment ist gescheitert, nachdem der neue Code bereits eingespielt war. Dieser Code ist live, aber nicht vollständig deployt. Beheben Sie das Problem und deployen Sie erneut.",
+      "notFullyDeployed": "Nicht vollständig deployt"
     },
     "gitAccount": "Git-Konto",
     "gitAccountPlaceholder": "Verbundenes Konto wählen",
@@ -3708,7 +3718,6 @@
         "branch": "Branch",
         "lastDeploy": "Zuletzt deployt",
         "never": "Nie deployt",
-        "commit": "Deployter Commit",
         "action": "Jetzt deployen",
         "redeploy": "Erneut deployen",
         "deploying": "Wird deployt…",
@@ -3724,13 +3733,17 @@
         "reference": "Referenz: {reference}",
         "notDeployedYet": "Diese Anwendung hat noch keinen Code — deployen Sie, um Ihr Repository von {branch} zu holen und live zu gehen.",
         "resetNote": "Ein Deployment setzt die Anwendung auf den Branch {branch} zurück; direkt auf dem Server gemachte Änderungen werden verworfen.",
-        "viewCommit": "Commit bei Ihrem Git-Anbieter ansehen"
+        "viewCommit": "Commit bei Ihrem Git-Anbieter ansehen",
+        "failedAtStep": "Das letzte Deployment ist bei „{step}“ gescheitert.",
+        "incomplete": "Das letzte Deployment ist gescheitert, nachdem der neue Code bereits eingespielt war. Dieser Code ist live, aber nicht vollständig deployt. Beheben Sie das Problem und deployen Sie erneut.",
+        "liveCommit": "Live-Commit",
+        "notFullyDeployed": "Nicht vollständig deployt"
       },
       "webhook": {
         "title": "Deployen bei Push",
         "subtitle": "Automatisch deployen, sobald Sie auf {branch} pushen.",
         "on": "An",
-        "disabledBody": "Schalten Sie das ein, um bei jedem Push automatisch zu deployen. Sie bekommen eine URL und ein Secret für Ihren Git-Anbieter.",
+        "disabledBody": "Schalten Sie das ein, um bei jedem Push automatisch zu deployen. Das Panel trägt den Webhook in Ihr Repository ein oder gibt Ihnen eine URL und ein Secret zum selbst Eintragen.",
         "provider": "Git-Anbieter",
         "providerPlaceholder": "Anbieter wählen",
         "enable": "Deployen bei Push aktivieren",
@@ -3764,7 +3777,9 @@
         "offBody": "Automatisches Deployen ist aus. Schalten Sie es ein, um bei jedem Push auf {branch} zu deployen — Ihre Webhook-URL und Ihr Secret bleiben erhalten.",
         "providerHint": "Auf welchem Dienst das Repository liegt. Er bestimmt, wie wir prüfen, ob eine eingehende Anfrage wirklich von dort stammt.",
         "urlHint": "Fügen Sie dies in die Webhook-Einstellungen Ihres Repositorys ein. Es ist die Adresse, die Ihr Git-Dienst bei neuem Code aufruft.",
-        "disabledBodyNamed": "Beim Aktivieren werden eine Webhook-URL und ein Secret für {provider} erstellt. Sie fügen beides im nächsten Schritt in Ihr Repository ein."
+        "disabledBodyNamed": "Beim Aktivieren wird Ihrem {provider}-Repository ein Webhook hinzugefügt. Kann das Panel ihn nicht selbst eintragen, erhalten Sie eine URL und ein Secret zum Einfügen.",
+        "added": "Webhook zum Repository hinzugefügt",
+        "addedBody": "Das Panel hat ihn für Sie bei {provider} eingetragen, es gibt also nichts einzufügen. Ein Push auf {branch} wird automatisch deployt."
       },
       "cancel": "Abbrechen",
       "runtime": {
@@ -3825,7 +3840,8 @@
         "noPermission": "Ihre Rolle enthält nicht „Deployment“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
         "title": "Deploy-Verlauf",
         "subtitle": "Jedes Deployment, neueste zuerst. Öffnen Sie eines, um sein Build-Protokoll zu lesen.",
-        "busy": "Es läuft bereits ein Deployment. Warten Sie, bis es fertig ist."
+        "busy": "Es läuft bereits ein Deployment. Warten Sie, bis es fertig ist.",
+        "pushStarted": "Neues Deployment durch einen Push auf {branch} gestartet."
       },
       "tabs": {
         "history": "Verlauf",
@@ -4286,12 +4302,14 @@
       "create": {
         "title": "Worker hinzufügen",
         "subtitle": "Wählen Sie eine Vorlage zum Start oder schreiben Sie Ihren eigenen Befehl.",
-        "submit": "Worker hinzufügen"
+        "submit": "Worker hinzufügen",
+        "failed": "Der Worker ist nicht gestartet und wurde daher nicht hinzugefügt. Prüfen Sie, ob der Befehl für diese Anwendung läuft, und versuchen Sie es erneut."
       },
       "edit": {
         "title": "Worker bearbeiten",
         "subtitle": "Die Änderungen greifen, wenn dieser Worker das nächste Mal neu startet.",
-        "submit": "Änderungen speichern"
+        "submit": "Änderungen speichern",
+        "failed": "Diese Änderungen konnten nicht übernommen werden. Prüfen Sie, ob der Befehl für diese Anwendung läuft, und versuchen Sie es erneut."
       },
       "delete": {
         "title": "Diesen Worker löschen?",
@@ -4354,7 +4372,8 @@
           "queue": "Queue-Worker",
           "horizon": "Horizon",
           "custom": "Eigener"
-        }
+        },
+        "commandPlaceholder": "Der Befehl, der dauerhaft laufen soll"
       },
       "runsAsTooltip": "Läuft als {user}, nicht als der eigene Benutzer dieser Anwendung.",
       "supervisor": {
@@ -5008,7 +5027,10 @@
       "bots": "KI-Bots",
       "on": "An",
       "off": "Aus",
-      "description": "Schutzeinstellungen für diese Anwendung."
+      "description": "Schutzeinstellungen für diese Anwendung.",
+      "folder": "Website-Ordner",
+      "locked": "Gesperrt",
+      "unlocked": "Nicht gesperrt"
     },
     "backups": {
       "title": "Backups",
@@ -5053,7 +5075,9 @@
         "php_eol": "PHP-Version ändern",
         "deploy_failed": "Deployment ansehen",
         "disk": "Platz freigeben"
-      }
+      },
+      "folderUnlocked": "Website-Ordner nicht gesperrt",
+      "reviewFolder": "Sperren"
     },
     "filters": {
       "allStatuses": "Alle Status",
@@ -5223,6 +5247,16 @@
       "detectAction": "Prüfen, was installiert ist",
       "changeTo": "Stattdessen als {type} behandeln",
       "menuHint": "Optionen für den Anwendungstyp"
+    },
+    "rootLock": {
+      "lock": "Sperren",
+      "title": "Website-Ordner sperren?",
+      "body": "{path} gehört danach root und wird gesperrt, wie bei jeder Anwendung, die das Panel anlegt. Danach kann der Systembenutzer direkt in diesem Ordner nichts mehr hinzufügen, löschen oder umbenennen. Alles in public_html funktioniert wie bisher.",
+      "cancel": "Abbrechen",
+      "confirm": "Ordner sperren",
+      "locking": "Wird gesperrt…",
+      "done": "Website-Ordner gesperrt.",
+      "failed": "Der Website-Ordner konnte nicht gesperrt werden."
     }
   },
   "panelUpdate": {
@@ -6202,7 +6236,8 @@
       "hideDetailsShort": "Details ausblenden",
       "ignoreShort": "Ausblenden",
       "restoreShort": "Ausblenden zurücknehmen",
-      "working": "Läuft…"
+      "working": "Läuft…",
+      "wholeType": "Alle"
     },
     "outcomes": {
       "found": "Gefunden",

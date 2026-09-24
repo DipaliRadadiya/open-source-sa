@@ -21,6 +21,8 @@ import { ProcessCard } from "@/components/applications/process-card";
 import { DomainsCard } from "@/components/applications/domains-card";
 import { ProtectionCard } from "@/components/applications/protection-card";
 import { AttentionStrip } from "@/components/applications/attention-strip";
+import { RootLockButton } from "@/components/applications/root-lock-button";
+import { getRootLock } from "@/lib/applications/get-root-lock";
 import { issueItems, localKeysSupersededBy } from "@/lib/applications/issue-items";
 import { BackupCard } from "@/components/applications/backup-card";
 import { DatabaseCard } from "@/components/applications/database-card";
@@ -102,7 +104,7 @@ export default async function ApplicationDetailPage({ params }) {
   // buttons that would only earn a 403.
   const canManageDatabases = can(permissions, "database", "manage");
 
-  const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes, spareDatabases, engineList] = await Promise.all([
+  const [domainList, certificate, backup, backupRuns, siteDatabases, siteTypes, spareDatabases, engineList, rootLock] = await Promise.all([
     settled && canSeeDomains
       ? getApplicationDomains(id)
       : Promise.resolve({ domains: [], failed: false }),
@@ -146,7 +148,11 @@ export default async function ApplicationDetailPage({ params }) {
       ? getUnattachedDatabases()
       : Promise.resolve({ databases: [] }),
     settled && canManageDatabases ? getEngines() : Promise.resolve({ engines: [] }),
+    // Whether the site folder is locked against its own user. Only a site
+    // server sync adopted is normally unlocked; see the Security card row.
+    settled ? getRootLock(id) : Promise.resolve({ rootLock: null, failed: false }),
   ]);
+  const folderStatus = rootLock.rootLock?.status ?? null;
 
   const needsDatabase = siteNeedsDatabase(siteTypes.siteTypes, application.site_type);
   // Only when we actually looked and found none, and only for a type that
@@ -195,6 +201,21 @@ export default async function ApplicationDetailPage({ params }) {
       on: Boolean(application.ai_bot_policy) && application.ai_bot_policy !== "allow_all",
       state: application.ai_bot_policy_title ?? t("protection.off"),
       href: `/applications/${id}/bot-blocker`,
+    },
+    /*
+     * Only a definite answer gets a row. `unknown` is "could not check" (no
+     * immutable flag on this disk) and a failed read is no answer at all;
+     * either one rendered as "Not locked" would be a claim nothing backs.
+     */
+    (folderStatus === "locked" || folderStatus === "unlocked") && {
+      key: "folder",
+      label: t("protection.folder"),
+      on: folderStatus === "locked",
+      state: folderStatus === "locked" ? t("protection.locked") : t("protection.unlocked"),
+      control:
+        folderStatus === "unlocked" ? (
+          <RootLockButton applicationId={id} path={rootLock.rootLock.path} canManage={canManage} />
+        ) : null,
     },
   ].filter(Boolean);
 
@@ -257,6 +278,15 @@ export default async function ApplicationDetailPage({ params }) {
       label: t("attention.noDatabase"),
       action: t("attention.attachDatabase"),
       href: "/databases",
+    },
+    // Unlike the protections below, this one is a risk and not a choice: the
+    // site user can swap the folder for one they control. Points at the row
+    // that fixes it rather than acting from the strip.
+    folderStatus === "unlocked" && {
+      key: "folder",
+      label: t("attention.folderUnlocked"),
+      action: t("attention.reviewFolder"),
+      href: "#security",
     },
     canSeeBackups && !backup.failed && !backup.target && {
       key: "backups",

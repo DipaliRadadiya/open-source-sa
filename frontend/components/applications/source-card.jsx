@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { isDeployIncomplete, liveCommit } from "@/lib/applications/code-on-disk";
+import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { toast } from "sonner";
 import { GitBranch, Loader2, Rocket, Settings2, TriangleAlert, Unlink, Webhook } from "lucide-react";
 import { deployApplication } from "@/lib/api/applications";
@@ -36,19 +38,19 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
   const account = gitAccounts.find((a) => a.id === application.git_account_id) ?? null;
   const providerTitle = application.git_account_missing ? null : account?.provider_title;
   const t = useTranslations("applications.source");
+  const td = useTranslations("applications.details");
   const router = useRouter();
   const [deploying, setDeploying] = useState(false);
   const [relinking, setRelinking] = useState(false);
 
-  const commit =
-    typeof application.last_commit === "string"
-      ? application.last_commit
-      : (application.last_commit?.sha ?? application.last_commit?.hash ?? null);
+  const commit = liveCommit(application);
+  const incomplete = isDeployIncomplete(application);
   const repository = application.repository ?? application.repository_url;
   const pushToDeploy = application.webhook?.enabled;
   // The site is active, so the OLD code is still serving — this is a deploy
   // warning, not an outage. Saying so is the whole point of the card.
-  const deployFailed = application.status === "active" && Boolean(application.failed_step);
+  const deployFailed =
+    application.status === "active" && (Boolean(application.failed_step) || incomplete);
 
   async function deploy() {
     setDeploying(true);
@@ -149,7 +151,18 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <div className="space-y-0.5">
-              <p>{t("failedAt", { step: application.failed_step })}</p>
+              {/* Only a deploy that failed before its checkout leaves the old
+                  version serving; after it, the new commit is live. */}
+              {incomplete ? (
+                <>
+                  {application.failed_step ? (
+                    <p>{t("failedAtStep", { step: provisionStepLabel(application.failed_step, td) })}</p>
+                  ) : null}
+                  <p>{application.code_on_disk?.message || t("incomplete")}</p>
+                </>
+              ) : (
+                <p>{t("failedAt", { step: provisionStepLabel(application.failed_step, td) })}</p>
+              )}
               {application.reference ? (
                 <p className="font-mono text-xs opacity-90">
                   {t("reference", { reference: application.reference })}
@@ -177,7 +190,14 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
           {commit ? (
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">{t("commit")}</p>
-              <p className="font-mono text-xs">{commit.slice(0, 12)}</p>
+              <p className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
+                {commit.slice(0, 12)}
+                {incomplete ? (
+                  <Badge variant="outline" className="border-warning/40 bg-warning/10 font-sans font-normal text-warning">
+                    {t("notFullyDeployed")}
+                  </Badge>
+                ) : null}
+              </p>
             </div>
           ) : null}
         </div>

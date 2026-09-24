@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Cog, ChevronDown, TriangleAlert } from "lucide-react";
@@ -9,6 +8,8 @@ import { Caution } from "@/components/ui/caution";
 import { workerFormSchema, WORKER_FORM_DEFAULTS } from "@/lib/schemas/worker";
 import { createWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { apiMessage } from "@/lib/api/error-message";
+import { useRefresh } from "@/hooks/use-refresh";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { WorkerAdvancedFields } from "@/components/applications/workers/worker-advanced-fields";
@@ -40,7 +41,7 @@ import { WorkerKindField } from "@/components/applications/workers/worker-kind-f
  */
 export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], workers = [], seed }) {
   const t = useTranslations("applications.workers");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   // The server's own "installing supervisor" message, kept on screen until
   // the next attempt. Null when there is nothing to say.
   const [installing, setInstalling] = useState(null);
@@ -122,10 +123,20 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
         return;
       }
 
-      toast.success(t("toast.created"));
-      onOpenChange?.(false);
-      router.refresh();
+      // Closed once the list shows the change, not on the API's answer.
+      refreshThen(() => {
+        toast.success(t("toast.created"));
+        onOpenChange?.(false);
+      });
     } catch (error) {
+      // A command that will not start answers 500 with no reason the page can
+      // use, and a bare "Something went wrong" toast left a filled-in form that
+      // looked untouched. Said on the form, with what to check: the server has
+      // already removed the worker it could not start.
+      if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
+        form.setError("root.server", { message: apiMessage(error, t("create.failed")) });
+        return;
+      }
       // `kind` has no control here either — picking the Horizon preset on a
       // site that already has a queue worker is the exact path to the API's
       // conflict, and it landed nowhere.
@@ -133,7 +144,9 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
     }
   }
 
-  const isSubmitting = form.formState.isSubmitting;
+  // Stays busy through the list's re-read, so the button cannot be pressed
+  // twice while the dialog is still open over a saved worker.
+  const isSubmitting = form.formState.isSubmitting || refreshing;
   const serverError = form.formState.errors.root?.server?.message;
 
   function handleOpenChange(next) {

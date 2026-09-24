@@ -121,7 +121,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   return (
     <DisabledReasonProvider reason={controlReason}>
       <Form {...form}>
-        <form method="post" onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())} className="max-w-4xl">
+        <form noValidate method="post" onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())} className="max-w-4xl">
           <Card className="gap-0 overflow-hidden py-0 shadow-sm">
             <CardContent className="space-y-5 p-5">
               {/* The toggle IS the feature — it gets a full-width tinted row of
@@ -199,9 +199,11 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                     work, but it also clips anything that visually bleeds past
                     the edge — an invalid field's ring included, right where
                     the username/password inputs sit flush against this
-                    boundary. `-mx-1 px-1` gives the ring 4px to bleed into on
-                    each side while netting zero actual layout shift. */}
-                <CollapsibleContent className="-mx-1 overflow-hidden px-1 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                    boundary. `-m-1 p-1` gives the ring 4px to bleed into on
+                    each side while netting zero actual layout shift — the
+                    bottom too, where the inputs are the last thing in it and
+                    a focused field lost the lower edge of its ring. */}
+                <CollapsibleContent className="-mx-1 -mb-1 overflow-hidden px-1 pb-1 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
                   <div className="space-y-4 border-t pt-5">
                     <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
                       <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />

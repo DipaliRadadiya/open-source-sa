@@ -75,7 +75,7 @@ export function LoginForm() {
 
   return (
     <Form {...form}>
-      <form
+      <form noValidate
         // Unhydrated, a form with no method falls back to GET and puts the
         // password in the URL. React intercepts this before it ever submits.
         method="post"

@@ -86,7 +86,10 @@ export function FormModal({
         )}
       >
         {asForm ? (
-          <form onSubmit={onSubmit} className="contents">
+          // noValidate: the browser's own checks (a number's min and max,
+          // `required`) popped an English bubble in front of the translated
+          // message the form's schema already has for the same rule.
+          <form noValidate onSubmit={onSubmit} className="contents">
             {inner}
           </form>
         ) : (

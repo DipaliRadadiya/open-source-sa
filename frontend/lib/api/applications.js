@@ -256,3 +256,12 @@ export function pushApplicationStaging(id, mode) {
 export function updateWebRoot(id, webRoot) {
   return api.put(`/applications/${id}/web-root`, { web_root: webRoot });
 }
+
+/**
+ * Hand the site folder to root and lock it — the Lock button for a site server
+ * sync adopted. 422 with a translated message, and nothing changed, when the
+ * folder is not safe to lock. Throttled to 10/min.
+ */
+export function lockApplicationRoot(id) {
+  return api.post(`/applications/${id}/root-lock`);
+}
