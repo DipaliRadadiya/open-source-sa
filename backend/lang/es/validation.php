@@ -199,6 +199,10 @@ return [
     'start_command_wrapper' => 'Inicia la app con su archivo de entrada, por ejemplo \"node server.js\", no con :binary. Un gestor de paquetes bifurca el proceso real, así que las señales nunca le llegan.',
 
     'port_in_use_by_app' => 'El puerto :port ya lo usa otra aplicación en este servidor.',
+
+    // A network the panel created, named by a site that will join it.
+    'docker_network_invalid' => 'Empieza el nombre de la red con una letra o un número y después usa letras, números, puntos, guiones o guiones bajos.',
+    'docker_network_missing' => 'En este servidor no hay ninguna red de Docker llamada \':name\'. Puede que se haya eliminado desde que se cargó esta página.',
     'node_version_unsupported' => 'La aplicación :type funciona con Node :range. Elige una versión dentro de ese rango: fuera de él la aplicación se niega a iniciarse y el sitio no sirve nada.',
     'php_version_unsupported' => 'La aplicación :type funciona con PHP :range. Elige una versión dentro de ese rango: fuera de él la instalación falla a medias, dentro del código de la propia aplicación, y deja un sitio que hay que limpiar.',
     'php_version_default_unsupported' => 'La aplicación :type funciona con PHP :range. Dejar este campo vacío usa el valor predeterminado del servidor (:default), que está fuera de ese rango: elige una versión dentro del rango.',

@@ -121,6 +121,7 @@ return [
     'git_account.disconnected' => ':provider アカウント :label を切断しました',
     'application.created' => 'アプリケーション :name (:site_type) を作成しました',
     'application.updated' => 'アプリケーション :name を更新しました',
+    'application.container_updated' => ':name のコンテナ設定を更新しました',
     'application.deleted' => 'アプリケーション :name (:site_type) を削除しました',
     'application.process_start' => ':name を開始しました',
     'application.process_stop' => ':name を停止しました',

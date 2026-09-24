@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\Server\ApplicationContainerController;
 use App\Http\Controllers\API\Server\ApplicationController;
 use App\Http\Controllers\API\Server\ApplicationDomainController;
 use App\Http\Controllers\API\Server\ApplicationSiteTypeController;
@@ -62,6 +63,16 @@ Route::post('/applications/{application}/enable', [ApplicationController::class,
 // vhost and reloads — and needs the throttle and the failure envelope that
 // go with one, not the plain-record semantics of `PUT /applications/{id}`.
 Route::put('/applications/{application}/web-root', [ApplicationWebRootController::class, 'update'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+
+// Container settings. Its own sub-resource for the same reason web-root is one:
+// applying it rewrites the compose file and recreates the container, which is a
+// server mutation with real downtime, not a field write.
+//
+// Throttled at the same rate as the other apply paths — each call runs
+// `docker compose up -d`, and a form that can be spammed is a site that can be
+// restarted in a loop.
+Route::put('/applications/{application}/container', [ApplicationContainerController::class, 'update'])
     ->middleware(['permission:application,manage', 'throttle:10,1']);
 
 // Site type. Read the disk to find out what is installed, then relabel the

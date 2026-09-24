@@ -121,6 +121,7 @@ return [
     'git_account.disconnected' => 'Отключён аккаунт :provider :label',
     'application.created' => 'Создано приложение :name (:site_type)',
     'application.updated' => 'Обновлено приложение :name',
+    'application.container_updated' => 'Обновлены настройки контейнера для :name',
     'application.deleted' => 'Удалено приложение :name (:site_type)',
     'application.process_start' => ':name запущено',
     'application.process_stop' => ':name остановлено',

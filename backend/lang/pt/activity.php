@@ -121,6 +121,7 @@ return [
     'git_account.disconnected' => 'Desconectou a conta :provider :label',
     'application.created' => 'Criou a aplicação :name (:site_type)',
     'application.updated' => 'Atualizou a aplicação :name',
+    'application.container_updated' => 'Atualizou as definições do contentor de :name',
     'application.deleted' => 'Excluiu a aplicação :name (:site_type)',
     'application.process_start' => ':name iniciada',
     'application.process_stop' => ':name parada',

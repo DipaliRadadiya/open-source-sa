@@ -7,6 +7,7 @@ use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Setup\SetupCatalog;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Process;
 
 uses(RefreshDatabase::class);
 
@@ -192,4 +193,47 @@ it('translates both refusals in every locale', function () {
         expect(__('application.unavailable.stack', [], $locale))
             ->not->toBe('application.unavailable.stack', "site-type refusal missing in {$locale}");
     }
+});
+
+/*
+ * The network field on the Docker card.
+ *
+ * It is a `select`, and a `select` the API declares with no options is not an
+ * empty chooser — the create form falls back to the runtime version list and
+ * offers PHP versions as networks. So the options have to be resolved here, and
+ * resolving them costs a `docker network ls`, which must not happen on a box
+ * that hosts no containers.
+ */
+
+it('offers the server\'s networks as options on the Docker card', function () {
+    recordStack('docker');
+
+    Process::fake(fn () => Process::result(output: implode("\n", [
+        json_encode(['ID' => 'a1', 'Name' => 'bridge', 'Driver' => 'bridge', 'Scope' => 'local']),
+        json_encode(['ID' => 'a2', 'Name' => 'ghost-net', 'Driver' => 'bridge', 'Scope' => 'local']),
+    ])));
+
+    $docker = collect(app(SiteTypeManager::class)->catalog())->firstWhere('name', 'docker');
+    $field = collect($docker['fields'])->firstWhere('name', 'docker_network');
+
+    expect($field)->not->toBeNull()
+        ->and($field['type'])->toBe('select')
+        // Never empty when networks exist, or the form renders a version list.
+        ->and(collect($field['options'])->pluck('value')->all())->toBe(['ghost-net'])
+        // `bridge` is what an empty choice already means, and `host`/`none`
+        // cannot resolve names — offering them is offering a trap.
+        ->and(collect($field['options'])->pluck('value'))->not->toContain('bridge');
+});
+
+it('does not ask docker anything on a server that hosts no containers', function () {
+    // `fields()` is serialised for EVERY site type in the catalog listing.
+    // Ungated, this runs `docker network ls` on a LEMP box, on a request that
+    // has nothing to do with Docker, to build options for a card not shown.
+    recordStack('lemp');
+
+    Process::fake();
+
+    app(SiteTypeManager::class)->catalog();
+
+    Process::assertNotRan(fn ($process) => in_array('docker', $process->command, true));
 });

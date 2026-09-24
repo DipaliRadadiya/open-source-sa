@@ -158,6 +158,16 @@ class ApplicationResource extends JsonResource
             'build_command' => $this->build_command,
             'start_command' => $this->start_command,
 
+            // What a container site runs as. Present for every application so
+            // the shape of the payload does not depend on the site type, and
+            // null on the ones that are not containers — the frontend decides
+            // whether to render the card from `serving_profile`, which is the
+            // same thing the backend gates the endpoint on.
+            'image' => $this->image,
+            'container_port' => $this->container_port,
+            'memory_limit' => $this->memory_limit,
+            'docker_network' => $this->docker_network,
+
             // Whether this application runs a process of its own, and what
             // systemd says about it *right now*. Null for PHP and static sites,
             // which have nothing to run — render no controls for those rather

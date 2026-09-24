@@ -176,6 +176,10 @@ return [
     'start_command_wrapper' => 'アプリはエントリファイル（例:「node server.js」）で起動してください。:binary では実際のプロセスがフォークされ、シグナルが届きません。',
 
     'port_in_use_by_app' => 'ポート :port はこのサーバーの別のアプリケーションが使用中です。',
+
+    // A network the panel created, named by a site that will join it.
+    'docker_network_invalid' => 'ネットワーク名は英数字で始め、その後は英数字、ドット、ハイフン、アンダースコアを使用してください。',
+    'docker_network_missing' => 'このサーバーに \':name\' という Docker ネットワークはありません。このページを読み込んだあとに削除された可能性があります。',
     'node_version_unsupported' => ':type アプリケーションは Node :range で動作します。その範囲内のバージョンを選んでください。範囲外ではアプリケーションが起動を拒否し、サイトは何も配信しません。',
     'php_version_unsupported' => ':type アプリケーションは PHP :range で動作します。その範囲内のバージョンを選んでください。範囲外ではインストールがアプリケーション自身のコードの途中で失敗し、後片付けの必要なサイトが残ります。',
     'php_version_default_unsupported' => ':type アプリケーションは PHP :range で動作します。この欄を空のままにするとサーバーの既定値 (:default) が使われますが、これは範囲外です。範囲内のバージョンを選んでください。',

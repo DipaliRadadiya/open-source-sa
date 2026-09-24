@@ -34,6 +34,7 @@ return [
     'no_web_server' => 'nenhum servidor web detectado',
     'provision_failed' => 'A configuração do site falhou na etapa ":step".',
     'not_a_git_application' => 'A aplicação não é uma implantação git, portanto não há nada para baixar.',
+    'not_a_container' => 'Esta aplicação não é executada num contentor, por isso não tem definições de contentor.',
     'no_database_engine' => 'Nenhum mecanismo de banco de dados disponível. Instale e configure o MySQL ou MariaDB antes de criar esta aplicação.',
     'no_process' => '\"‎:name\" não executa um processo próprio.',
     'process_failed' => 'Não foi possível :action a aplicação. Informe a referência ao suporte.',
