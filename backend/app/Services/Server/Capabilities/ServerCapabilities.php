@@ -31,6 +31,15 @@ class ServerCapabilities
         'lamp' => ['web_server' => 'apache', 'capabilities' => ['php' => true, 'node' => false]],
         'ols' => ['web_server' => 'openlitespeed', 'capabilities' => ['php' => true, 'node' => false]],
         'mern' => ['web_server' => 'nginx', 'capabilities' => ['php' => false, 'node' => true]],
+        // docker is nginx too, and `php => true` is deliberate: the box still
+        // serves PHP sites. Containers are reached through a reverse proxy on
+        // an allocated port, which is the vhost a Node app already gets, so
+        // nothing about this stack removes what nginx was already doing.
+        //
+        // The runtimes are overwritten by detection below in any case; the
+        // preset only decides what a box is assumed to have before anything
+        // has been looked at.
+        'docker' => ['web_server' => 'nginx', 'capabilities' => ['php' => true, 'node' => false]],
     ];
 
     /** Whether reconcileWebServer() has already run for this request. */

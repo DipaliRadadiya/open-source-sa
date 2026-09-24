@@ -19,7 +19,7 @@ use Illuminate\Console\Command;
  */
 class RecordServerStack extends Command
 {
-    protected $signature = 'server:record-stack {stack : lemp, lamp, ols or mern}';
+    protected $signature = 'server:record-stack {stack : one of the presets in ServerCapabilities::STACKS}';
 
     protected $description = 'Record the stack this server was built with';
 
