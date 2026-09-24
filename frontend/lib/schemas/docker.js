@@ -18,6 +18,12 @@ export const dockerNetworkSchema = z.object({
   // say which site owns it rather than showing a machine-generated name as
   // though a human chose it.
   application_id: z.number().nullish(),
+  // The sites that CHOSE this network, which is a different question from the
+  // one above: `application_id` is inferred from Compose's naming, and says
+  // nothing about a site that joined a network somebody else created. Declared
+  // here or it never arrives — Zod strips what the schema does not name, so an
+  // unlisted key is silently dropped between the API and the page.
+  sites: z.array(z.object({ id: z.number(), name: z.string() })).default([]),
   containers: z
     .array(
       z.object({
@@ -55,4 +61,33 @@ export const dockerNetworksResponseSchema = z.object({
 
 export const dockerVolumesResponseSchema = z.object({
   volumes: z.array(dockerVolumeSchema),
+});
+
+/**
+ * A name Docker will accept.
+ *
+ * Mirrors `DockerResources::validName()` — `[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}`.
+ * The server is still the authority (it is what hands the value to a command
+ * line); this exists so a typo is a message under the field rather than a
+ * round-trip and a toast in the corner.
+ */
+export const dockerNameSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/);
+
+/**
+ * The container settings form.
+ *
+ * `docker_network` is nullable and empty means Docker's default bridge — a real
+ * answer, not a missing one, which is why it is not `.min(1)`.
+ */
+export const containerSettingsFormSchema = z.object({
+  container_port: z.coerce.number().int().min(1).max(65535),
+  memory_limit: z
+    .string()
+    .regex(/^\d+(b|k|m|g)?$/i)
+    .or(z.literal("")),
+  docker_network: z.string(),
 });

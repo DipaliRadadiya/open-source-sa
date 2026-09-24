@@ -27,3 +27,18 @@ export async function getDockerResources() {
     message: networks.message ?? volumes.message,
   };
 }
+
+/**
+ * Just the networks, for the picker on a container site's settings.
+ *
+ * Degrades to an empty list on failure here, unlike `getDockerResources()`
+ * above, and the difference is deliberate: this feeds a chooser beside a saved
+ * value, so "we could not ask" and "there are none" both mean the same thing to
+ * it — offer nothing new and keep showing what the site already has. The page
+ * that makes claims about the machine is the one that must not guess.
+ */
+export async function getDockerNetworks() {
+  const networks = await read("/docker/networks", dockerNetworksResponseSchema);
+
+  return networks.failed ? [] : (networks.data?.networks ?? []);
+}

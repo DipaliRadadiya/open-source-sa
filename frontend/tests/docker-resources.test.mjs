@@ -32,8 +32,10 @@ test("Docker's own networks get no delete button at all", () => {
 test("removal always goes through a confirmation", () => {
   assert.match(panel, /<ConfirmDialog/);
   assert.match(panel, /confirmVariant="destructive"/);
-  // And a busy resource cannot be confirmed even if the row was stale.
-  assert.match(panel, /confirmDisabled=\{confirm\?\.busy === true\}/);
+  // And a busy resource cannot be confirmed even if the row was stale — now
+  // including a network a site names, which is a second refusal the endpoint
+  // makes and `busy` cannot see (a stopped site is attached to no container).
+  assert.match(panel, /confirmDisabled=\{confirm\?\.busy === true \|\|/);
 });
 
 test("the server's own refusal is shown, not a generic one", () => {
@@ -86,5 +88,93 @@ test("the busy-volume warning says what is lost, not just 'are you sure'", () =>
   for (const locale of LOCALES) {
     const busy = messages[locale].docker.volumes.removeBusy;
     assert.ok(busy.length > 40, `${locale}: removeBusy is too terse to explain the risk`);
+  }
+});
+
+/*
+ * The network a site joins.
+ *
+ * A network the panel creates is only useful if something can join it, and the
+ * generated compose file is the only thing that can. These cover the frontend
+ * half: the card exists, the empty choice round-trips, and the delete gate on
+ * this page matches the one the endpoint enforces.
+ */
+
+const card = read("components/applications/container-card.jsx");
+const appPage = read("app/(app)/applications/[application]/page.jsx");
+const schemas = read("lib/schemas/docker.js");
+
+test("the networks table shows which sites joined a network", () => {
+  // Not the same as the `ownedByApp` badge, which is inferred from Compose's
+  // naming and says nothing about a site that joined someone else's network.
+  assert.match(panel, /network\.sites\.length > 0/);
+  assert.match(panel, /site\.name/);
+});
+
+test("the delete gate matches the endpoint's second refusal", () => {
+  // The endpoint 409s when a site names the network — including a STOPPED site,
+  // which is attached to no container. A button whose only outcome is that 409
+  // is not a button.
+  assert.match(panel, /confirm\?\.sites\?\.length/);
+  assert.match(panel, /networks\.removeUsedBySites/);
+  for (const locale of LOCALES) {
+    assert.ok(
+      messages[locale].docker.networks.removeUsedBySites,
+      `${locale} is missing docker.networks.removeUsedBySites`,
+    );
+  }
+});
+
+test("the network schema declares sites, or Zod drops it", () => {
+  // Zod strips what the schema does not name, so an unlisted key never reaches
+  // the page — silently, and looking exactly like an API that did not send it.
+  assert.match(schemas, /sites: z\s*\n?\s*\.array/);
+});
+
+test("the container card is offered only to containers", () => {
+  // The endpoint refuses the fields for any other profile, so rendering it
+  // elsewhere would be a card whose only outcome is a 422.
+  assert.match(appPage, /const isContainer = application\.serving_profile === "docker"/);
+  assert.match(appPage, /\{isContainer \? \(\s*<ContainerCard/);
+});
+
+test("the empty network choice is one constant, not three strings", () => {
+  // Radix refuses `value=""`, so "Docker's default bridge" needs a value of its
+  // own — and the defaults, the item and the submit mapping have to agree on
+  // it. They did not in the first version, and picking the default sent the
+  // sentinel to the API as a network name.
+  assert.match(card, /const DEFAULT_NETWORK = "__default__"/);
+  const uses = card.match(/DEFAULT_NETWORK/g) ?? [];
+  assert.ok(uses.length >= 4, `expected the constant to be used throughout, saw ${uses.length}`);
+  assert.doesNotMatch(card, /docker_network: values\.docker_network === ""/);
+});
+
+test("saving the card refreshes the server-rendered siblings", () => {
+  // The Docker page's "used by" column and this site's own facts are both
+  // server-rendered. Without a refresh they keep showing page-load state.
+  assert.match(card, /router\.refresh\(\)/);
+});
+
+test("the card says the site restarts before the click, not after", () => {
+  // Saving recreates the container. That is downtime, and it is not something
+  // to discover from a graph.
+  assert.match(card, /note=\{t\("restartNote"\)\}/);
+  for (const locale of LOCALES) {
+    assert.ok(
+      messages[locale].applications.container.restartNote,
+      `${locale} is missing applications.container.restartNote`,
+    );
+  }
+});
+
+test("every container card string exists in every locale", () => {
+  const reference = Object.keys(messages.en.applications.container);
+  for (const locale of LOCALES) {
+    const keys = Object.keys(messages[locale].applications.container ?? {});
+    assert.deepEqual(
+      keys.slice().sort(),
+      reference.slice().sort(),
+      `${locale} disagrees with en on applications.container`,
+    );
   }
 });

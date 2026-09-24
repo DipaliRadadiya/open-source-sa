@@ -111,6 +111,24 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
                         {t("ownedByApp", { id: network.application_id })}
                       </Badge>
                     ) : null}
+                    {/*
+                      Sites that CHOSE this network, which is not the same as
+                      the badge above: that one is inferred from Compose's
+                      `sv-app-<id>_default` naming and says nothing about a site
+                      that joined a network somebody else made. It is also what
+                      the delete refuses on — a stopped site is attached to no
+                      container and still names the network — so the reason a
+                      Remove is refused has to be visible before it is clicked.
+                    */}
+                    {network.sites.length > 0 ? (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {network.sites.map((site) => (
+                          <Badge key={site.id} variant="outline" className="font-sans font-normal">
+                            {site.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-sm">{network.driver}</TableCell>
                   <TableCell className="text-sm">
@@ -175,6 +193,11 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
                             name: network.name,
                             busy: network.containers.length > 0,
                             containers: network.containers.map((c) => c.name),
+                            // Mirrors the endpoint's second refusal. Without it
+                            // the button's only possible outcome is a 409, and
+                            // a control whose only outcome is an error is not a
+                            // control.
+                            sites: network.sites.map((site) => site.name),
                           })
                         }
                       >
@@ -293,12 +316,15 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
           confirm
             ? confirm.busy
               ? t(`${confirm.kind}s.removeBusy`)
-              : t(`${confirm.kind}s.removeBody`)
+              : confirm.sites?.length
+                ? // Named, not counted — the site to go and change.
+                  t("networks.removeUsedBySites", { sites: confirm.sites.join(", ") })
+                : t(`${confirm.kind}s.removeBody`)
             : ""
         }
         confirmLabel={t("remove")}
         confirmVariant="destructive"
-        confirmDisabled={confirm?.busy === true}
+        confirmDisabled={confirm?.busy === true || (confirm?.sites?.length ?? 0) > 0}
         pending={pending === "remove"}
         onConfirm={async () => {
           if (!confirm) return;
