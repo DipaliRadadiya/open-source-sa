@@ -68,6 +68,7 @@ const BUILT_SERVER_URLS = new Set([
   "/services",
   "/php",
   "/node",
+  "/docker",
   "/settings",
   "/disk-cleaner",
   "/backups",
