@@ -17,11 +17,15 @@ import { LogViewer } from "@/components/logs/log-viewer";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Eraser } from "lucide-react";
 import { apiMessage } from "@/lib/api/error-message";
+import {
+  APP_LOG_FOLLOW_COOKIE,
+  APP_LOG_LINES_COOKIE,
+  followFor as followPrefFor,
+  serializeFollowPrefs,
+  writeCookie,
+} from "@/lib/logs/app-log-prefs";
 
 const POLL_MS = 3000;
-// Access logs are a firehose on a busy site — open them paused; error and the
-// app's own output are the ones you usually want tailing.
-const AUTO_FOLLOW_KEYS = new Set(["error", "application", "application_error"]);
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
 
 /*
@@ -44,6 +48,8 @@ export function ApplicationLogsPanel({
   selected,
   initial,
   initialLines,
+  // Live per source as the reader last left it; unset keys use the defaults.
+  followPrefs = {},
   canManage = false,
 }) {
   const t = useTranslations("logs");
@@ -108,7 +114,8 @@ export function ApplicationLogsPanel({
    * Logs page — which does wire it — works, so the control looked proven.
    */
   const [newestFirst, setNewestFirst] = useState(false);
-  const [follow, setFollow] = useState(AUTO_FOLLOW_KEYS.has(current));
+  const [prefs, setPrefs] = useState(followPrefs);
+  const [follow, setFollow] = useState(() => followPrefFor(current, followPrefs));
   const [busy, setBusy] = useState(false);
   const [tailState, setTailState] = useState("idle");
   // Each tab opens with its own default. Switching tabs keeps this component
@@ -118,7 +125,7 @@ export function ApplicationLogsPanel({
   const [followFor, setFollowFor] = useState(current);
   if (followFor !== current) {
     setFollowFor(current);
-    setFollow(AUTO_FOLLOW_KEYS.has(current));
+    setFollow(followPrefFor(current, prefs));
     setTailState("idle");
   }
   const [clearing, setClearing] = useState(false);
@@ -240,6 +247,20 @@ export function ApplicationLogsPanel({
           : "live"
         : "idle";
 
+  // The reader's choices, remembered — not the automatic pause after failures,
+  // which is the panel's decision rather than theirs.
+  function chooseFollow(next) {
+    setFollow(next);
+    const updated = { ...prefs, [current]: next };
+    setPrefs(updated);
+    writeCookie(APP_LOG_FOLLOW_COOKIE, serializeFollowPrefs(updated));
+  }
+
+  function chooseLines(next) {
+    setLineCount(next);
+    writeCookie(APP_LOG_LINES_COOKIE, String(next));
+  }
+
   const nextLineStep = LINE_OPTIONS.find((n) => n > lineCount) ?? null;
   const searchRef = useRef(null);
 
@@ -359,9 +380,9 @@ export function ApplicationLogsPanel({
           severity={severity}
           onSeverityChange={setSeverity}
           lines={lineCount}
-          onLinesChange={setLineCount}
+          onLinesChange={chooseLines}
           follow={follow}
-          onFollowChange={setFollow}
+          onFollowChange={chooseFollow}
           wrap={wrap}
           onWrapChange={setWrap}
           newestFirst={newestFirst}
@@ -401,7 +422,7 @@ export function ApplicationLogsPanel({
             {nextLineStep ? (
               <button
                 type="button"
-                onClick={() => setLineCount(nextLineStep)}
+                onClick={() => chooseLines(nextLineStep)}
                 className="rounded font-medium text-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 {t("loadMore", { count: nextLineStep })}

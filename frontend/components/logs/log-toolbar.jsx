@@ -209,6 +209,9 @@ export function LogToolbar({
             ref={searchRef}
             value={term}
             onChange={(e) => onTermChange(e.target.value)}
+            // The API's own limit (grep ≤ 200): past it the server refused the
+            // search while the previous results stayed under the new text.
+            maxLength={200}
             placeholder={t("searchPlaceholder")}
             disabled={disabled}
             className={cn("w-full", term && "pr-8")}

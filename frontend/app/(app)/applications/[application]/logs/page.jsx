@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/ui/page-header";
 import { ScrollText } from "lucide-react";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -10,6 +11,7 @@ import {
   getApplicationLog,
 } from "@/lib/applications/get-application-logs";
 import { ApplicationLogsPanel } from "@/components/applications/logs/application-logs-panel";
+import { APP_LOG_FOLLOW_COOKIE, APP_LOG_LINES_COOKIE, parseFollowPrefs, parseLinesPref } from "@/lib/logs/app-log-prefs";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -29,13 +31,17 @@ export async function generateMetadata({ params }) {
 
 export default async function ApplicationLogsPage({ params, searchParams }) {
   const { application: id } = await params;
-  const [sp, permissions, appPermissions, t, result] = await Promise.all([
+  const [sp, permissions, appPermissions, t, result, cookieStore] = await Promise.all([
     searchParams,
     getPermissions(),
     getPermissions("application", id).catch(() => []),
     getTranslations("applications.logs"),
     getApplication(id),
+    cookies(),
   ]);
+  // The reader's own choices from last time — see lib/logs/app-log-prefs.js.
+  const followPrefs = parseFollowPrefs(safeDecode(cookieStore.get(APP_LOG_FOLLOW_COOKIE)?.value));
+  const lines = parseLinesPref(cookieStore.get(APP_LOG_LINES_COOKIE)?.value, DEFAULT_LINES);
 
   if (!can(permissions, "application", "view")) return <PermissionDenied title={t("pageTitle")} />;
   // The site is gone. Land on the list — the only place left to go — and say
@@ -68,7 +74,7 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
     null;
 
   const initial = selected
-    ? await getApplicationLog(id, selected, { lines: DEFAULT_LINES })
+    ? await getApplicationLog(id, selected, { lines })
     : { status: "ok", log: null };
 
   return (
@@ -96,10 +102,19 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
           sources={sources}
           selected={selected}
           initial={initial}
-          initialLines={DEFAULT_LINES}
+          initialLines={lines}
+          followPrefs={followPrefs}
           canManage={canManage}
         />
       )}
     </div>
   );
+}
+
+function safeDecode(value) {
+  try {
+    return value ? decodeURIComponent(value) : value;
+  } catch {
+    return value;
+  }
 }

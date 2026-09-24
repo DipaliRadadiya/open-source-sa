@@ -103,7 +103,7 @@ test("Clear log carries destructive weight, and actions are divided from view", 
 test("the Logs page tests found on 2026-09-23 stay fixed", () => {
   const panel = read("components/applications/logs/application-logs-panel.jsx");
   // Each tab opens with its own live default.
-  assert.match(panel, /if \(followFor !== current\) \{\s*setFollowFor\(current\);\s*setFollow\(AUTO_FOLLOW_KEYS\.has\(current\)\);/);
+  assert.match(panel, /if \(followFor !== current\) \{\s*setFollowFor\(current\);\s*setFollow\(followPrefFor\(current, prefs\)\);/);
   // Tabs switch on the page: no navigation, one read, the URL still updated.
   assert.match(panel, /window\.history\.replaceState\(window\.history\.state, "", url\)/);
   assert.match(panel, /setStatus\("loading"\);/);
