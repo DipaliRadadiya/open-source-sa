@@ -2982,7 +2982,7 @@
     "connect": {
       "action": "Подключить аккаунт",
       "unavailable": "Не удалось загрузить список провайдеров.",
-      "readOnly": "{brand} только читает ваши репозитории и ветки. Операции записи не выполняются.",
+      "readOnly": "{brand} читает ваши репозитории и ветки и добавляет вебхук деплоя. Код он никогда не отправляет.",
       "pickTitle": "Подключить аккаунт Git",
       "pickSubtitle": "Выберите, где хранится ваш код.",
       "hints": {
@@ -2991,10 +2991,10 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Подключить {provider}",
-      "subtitle": "Вставьте токен. {brand} только читает ваши репозитории и ветки — он никогда ничего не отправляет.",
-      "scopeHint_github": "Отметьте область <scope>repo</scope>. Больше ничего не нужно.",
-      "scopeHint_gitlab": "Отметьте <scope>read_repository</scope> и <scope>read_api</scope> и выберите <option>Устаревший токен</option> — новый детальный тип их не предлагает.",
-      "scopeHint_bitbucket": "Отметьте только <scope>read:repository:bitbucket</scope>. Токен, ограниченный одним репозиторием, покажет только его.",
+      "subtitle": "Вставьте токен. {brand} читает ваши репозитории и ветки и добавляет вебхук деплоя — код он никогда не отправляет.",
+      "scopeHint_github": "Отметьте <scope>repo</scope> и <scope>admin:repo_hook</scope>. Второе разрешение позволяет панели самой добавить вебхук деплоя в ваш репозиторий.",
+      "scopeHint_gitlab": "Отметьте <scope>api</scope> и <scope>read_repository</scope> и выберите <option>Устаревший токен</option>.",
+      "scopeHint_bitbucket": "Отметьте <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope> и <scope>write:webhook:bitbucket</scope>. Разрешения на вебхуки позволяют панели самой добавить вебхук деплоя.",
       "nameLabel": "Название",
       "namePlaceholder": "Рабочий {provider}",
       "nameHelp": "Название для вас. Так этот аккаунт будет отображаться при создании приложения.",
@@ -3017,7 +3017,8 @@
       "fieldHelp": {
         "gitlab_host": "Только для собственного GitLab. Для gitlab.com оставьте поле пустым. Укажите адрес, по которому вы входите, например https://gitlab.example.com — не адрес проекта.",
         "bitbucket_workspace": "ID рабочей области из вашего адреса Bitbucket: bitbucket.org/workspace-id/repository."
-      }
+      },
+      "scopeNote_gitlab": "<strong>Зачем api?</strong> Это единственное разрешение GitLab, с которым панель может сама добавить вебхук деплоя. Оно также даёт полный доступ к вашему аккаунту GitLab, поэтому создайте этот токен только для панели и задайте срок действия. Нужен меньший доступ? Отметьте вместо него <scope>read_repository</scope> и <scope>read_api</scope> и добавьте вебхук вручную."
     },
     "edit": {
       "title": "Изменить аккаунт",

@@ -2982,7 +2982,7 @@
     "connect": {
       "action": "アカウントを接続",
       "unavailable": "プロバイダーの一覧を読み込めませんでした。",
-      "readOnly": "{brand} はリポジトリとブランチの読み取りのみを行います。書き込みは行いません。",
+      "readOnly": "{brand} はリポジトリとブランチを読み取り、デプロイ用ウェブフックを追加します。コードをプッシュすることはありません。",
       "pickTitle": "Git アカウントを接続",
       "pickSubtitle": "コードの保管場所を選択してください。",
       "hints": {
@@ -2991,10 +2991,10 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "{provider} を接続",
-      "subtitle": "トークンを貼り付けてください。{brand} はリポジトリとブランチを読み取るだけで、プッシュは行いません。",
-      "scopeHint_github": "<scope>repo</scope> スコープにチェックを入れてください。他は不要です。",
-      "scopeHint_gitlab": "<scope>read_repository</scope> と <scope>read_api</scope> にチェックを入れ、<option>レガシートークン</option> を選んでください。新しいきめ細かいトークンではこれらを選べません。",
-      "scopeHint_bitbucket": "<scope>read:repository:bitbucket</scope> だけにチェックを入れてください。1 つのリポジトリに限定したトークンは、そのリポジトリだけを表示します。",
+      "subtitle": "トークンを貼り付けてください。{brand} はリポジトリとブランチを読み取り、デプロイ用ウェブフックを追加します。コードをプッシュすることはありません。",
+      "scopeHint_github": "<scope>repo</scope> と <scope>admin:repo_hook</scope> にチェックを入れてください。後者があると、パネルがリポジトリにデプロイ用ウェブフックを自動で追加します。",
+      "scopeHint_gitlab": "<scope>api</scope> と <scope>read_repository</scope> にチェックを入れ、<option>レガシートークン</option> を選んでください。",
+      "scopeHint_bitbucket": "<scope>read:repository:bitbucket</scope>、<scope>read:webhook:bitbucket</scope>、<scope>write:webhook:bitbucket</scope> にチェックを入れてください。ウェブフックのスコープがあると、パネルがデプロイ用ウェブフックを自動で追加します。",
       "nameLabel": "名前",
       "namePlaceholder": "仕事用 {provider}",
       "nameHelp": "識別用の名前です。アプリケーション作成時にこのアカウントを識別するために表示されます。",
@@ -3017,7 +3017,8 @@
       "fieldHelp": {
         "gitlab_host": "セルフホストの GitLab を使用する場合のみ入力してください。gitlab.com の場合は空欄にしてください。プロジェクトのアドレスではなく、ログイン時に使用するアドレス(例: https://gitlab.example.com)を入力してください。",
         "bitbucket_workspace": "Bitbucket のアドレスに含まれるワークスペース ID: bitbucket.org/workspace-id/repository"
-      }
+      },
+      "scopeNote_gitlab": "<strong>なぜ api？</strong> パネルがデプロイ用ウェブフックを自動で追加できる GitLab の権限はこれだけです。ただし GitLab アカウントへのフルアクセスも与えるため、このトークンはパネル専用に作成し、有効期限を設定してください。権限を絞りたい場合は、代わりに <scope>read_repository</scope> と <scope>read_api</scope> を選び、ウェブフックはご自身で追加してください。"
     },
     "edit": {
       "title": "アカウントを編集",

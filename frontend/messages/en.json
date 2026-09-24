@@ -2982,7 +2982,7 @@
     "connect": {
       "action": "Connect account",
       "unavailable": "The list of providers could not be loaded.",
-      "readOnly": "{brand} only reads your repositories and branches. It never pushes.",
+      "readOnly": "{brand} reads your repositories and branches and adds the deploy webhook. It never pushes code.",
       "pickTitle": "Connect a Git account",
       "pickSubtitle": "Choose where your code lives.",
       "hints": {
@@ -2991,10 +2991,10 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Connect {provider}",
-      "subtitle": "Paste a token. {brand} only reads your repositories and branches — it never pushes.",
-      "scopeHint_github": "Tick the <scope>repo</scope> scope. Nothing else is needed.",
-      "scopeHint_gitlab": "Tick <scope>read_repository</scope> and <scope>read_api</scope>, and choose <option>Legacy token</option> — the newer fine-grained type does not offer them.",
-      "scopeHint_bitbucket": "Tick <scope>read:repository:bitbucket</scope> only. A token scoped to one repository will list just that one.",
+      "subtitle": "Paste a token. {brand} reads your repositories and branches and adds the deploy webhook — it never pushes code.",
+      "scopeHint_github": "Tick <scope>repo</scope> and <scope>admin:repo_hook</scope>. The second lets the panel add the deploy webhook to your repository for you.",
+      "scopeHint_gitlab": "Tick <scope>api</scope> and <scope>read_repository</scope>, and choose <option>Legacy token</option>.",
+      "scopeHint_bitbucket": "Tick <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope> and <scope>write:webhook:bitbucket</scope>. The webhook ones let the panel add the deploy webhook for you.",
       "nameLabel": "Name",
       "namePlaceholder": "Work {provider}",
       "nameHelp": "A name for you. It is how this account appears when you create an application.",
@@ -3017,7 +3017,8 @@
       "fieldHelp": {
         "gitlab_host": "Only for a self-hosted GitLab. Leave this empty for gitlab.com. Use the address you sign in at, like https://gitlab.example.com — not the address of a project.",
         "bitbucket_workspace": "The workspace ID from your Bitbucket address: bitbucket.org/workspace-id/repository."
-      }
+      },
+      "scopeNote_gitlab": "<strong>Why api?</strong> It is the only GitLab permission that lets the panel add the deploy webhook for you. It also gives full access to your GitLab account, so create this token only for the panel and give it an expiry date. Prefer less access? Tick <scope>read_repository</scope> and <scope>read_api</scope> instead and add the webhook yourself."
     },
     "edit": {
       "title": "Edit account",

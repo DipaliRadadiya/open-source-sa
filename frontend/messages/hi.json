@@ -2982,7 +2982,7 @@
     "connect": {
       "action": "खाता जोड़ें",
       "unavailable": "प्रोवाइडर की सूची लोड नहीं हो सकी।",
-      "readOnly": "{brand} केवल आपकी रिपॉज़िटरी और ब्रांच पढ़ता है। यह कभी कुछ नहीं लिखता।",
+      "readOnly": "{brand} आपकी रिपॉज़िटरी और ब्रांच पढ़ता है और डिप्लॉय वेबहुक जोड़ता है। यह कभी कोड पुश नहीं करता।",
       "pickTitle": "Git खाता जोड़ें",
       "pickSubtitle": "चुनें कि आपका कोड कहाँ है।",
       "hints": {
@@ -2991,10 +2991,10 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "{provider} जोड़ें",
-      "subtitle": "टोकन पेस्ट करें। {brand} केवल आपके रिपॉज़िटरी और ब्रांच पढ़ता है — यह कभी पुश नहीं करता।",
-      "scopeHint_github": "<scope>repo</scope> स्कोप चुनें। और कुछ ज़रूरी नहीं है।",
-      "scopeHint_gitlab": "<scope>read_repository</scope> और <scope>read_api</scope> चुनें, और <option>लेगेसी टोकन</option> चुनें — नया फ़ाइन-ग्रेन्ड प्रकार ये नहीं देता।",
-      "scopeHint_bitbucket": "केवल <scope>read:repository:bitbucket</scope> चुनें। एक ही रिपॉज़िटरी तक सीमित टोकन केवल वही दिखाएगा।",
+      "subtitle": "टोकन पेस्ट करें। {brand} आपके रिपॉज़िटरी और ब्रांच पढ़ता है और डिप्लॉय वेबहुक जोड़ता है — यह कभी कोड पुश नहीं करता।",
+      "scopeHint_github": "<scope>repo</scope> और <scope>admin:repo_hook</scope> चुनें। दूसरा वाला पैनल को आपकी रिपॉज़िटरी में डिप्लॉय वेबहुक खुद जोड़ने देता है।",
+      "scopeHint_gitlab": "<scope>api</scope> और <scope>read_repository</scope> चुनें, और <option>लेगेसी टोकन</option> चुनें।",
+      "scopeHint_bitbucket": "<scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope> और <scope>write:webhook:bitbucket</scope> चुनें। वेबहुक वाले पैनल को डिप्लॉय वेबहुक खुद जोड़ने देते हैं।",
       "nameLabel": "नाम",
       "namePlaceholder": "काम वाला {provider}",
       "nameHelp": "आपकी सुविधा के लिए एक नाम। ऐप्लिकेशन बनाते समय यह खाता इसी नाम से दिखेगा।",
@@ -3017,7 +3017,8 @@
       "fieldHelp": {
         "gitlab_host": "केवल सेल्फ-होस्टेड GitLab के लिए। gitlab.com के लिए इसे खाली छोड़ें। वही पता डालें जिससे आप साइन इन करते हैं, जैसे https://gitlab.example.com — किसी प्रोजेक्ट का पता नहीं।",
         "bitbucket_workspace": "आपके Bitbucket पते से वर्कस्पेस आईडी: bitbucket.org/workspace-id/repository।"
-      }
+      },
+      "scopeNote_gitlab": "<strong>api क्यों?</strong> GitLab में यही एकमात्र अनुमति है जिससे पैनल आपके लिए डिप्लॉय वेबहुक जोड़ सकता है। यह आपके GitLab खाते की पूरी पहुँच भी देता है, इसलिए यह टोकन सिर्फ़ पैनल के लिए बनाएँ और इसकी समाप्ति तिथि रखें। कम पहुँच चाहिए? इसके बजाय <scope>read_repository</scope> और <scope>read_api</scope> चुनें और वेबहुक खुद जोड़ें।"
     },
     "edit": {
       "title": "खाता संपादित करें",

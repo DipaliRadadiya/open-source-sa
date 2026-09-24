@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { ExternalLink, KeyRound, Loader2, TriangleAlert } from "lucide-react";
+import { ExternalLink, Info, KeyRound, Loader2, TriangleAlert } from "lucide-react";
 import { connectFormSchema } from "@/lib/schemas/git";
 import { connectAccount } from "@/lib/api/git";
 import { createTokenUrl } from "@/lib/git/provider-links";
@@ -89,7 +89,12 @@ function ScopeHint({ provider, fallback }) {
     return fallback ? <FormDescription>{fallback}</FormDescription> : null;
   }
 
+  // A permission that asks for more than it sounds like gets its reason
+  // written next to it, not behind a tooltip: GitLab's `api` is full access.
+  const noteKey = `scopeNote_${provider.name}`;
+
   return (
+    <>
     <FormDescription>
       {t.rich(key, {
         // The scope is a literal string to find in a list of checkboxes, so it
@@ -100,6 +105,20 @@ function ScopeHint({ provider, fallback }) {
         option: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
       })}
     </FormDescription>
+    {t.has(noteKey) ? (
+      <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/5 p-2.5 text-xs leading-5 text-muted-foreground">
+        <Info className="mt-0.5 size-3.5 shrink-0 text-warning" aria-hidden />
+        <p>
+          {t.rich(noteKey, {
+            scope: (chunks) => (
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-foreground">{chunks}</code>
+            ),
+            strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+          })}
+        </p>
+      </div>
+    ) : null}
+    </>
   );
 }
 

@@ -2982,7 +2982,7 @@
     "connect": {
       "action": "Konto verbinden",
       "unavailable": "Die Liste der Anbieter konnte nicht geladen werden.",
-      "readOnly": "{brand} liest nur Ihre Repositories und Branches. Es pusht nie.",
+      "readOnly": "{brand} liest Ihre Repositories und Branches und trägt den Deploy-Webhook ein. Es pusht nie Code.",
       "pickTitle": "Git-Konto verbinden",
       "pickSubtitle": "Wählen Sie, wo Ihr Code liegt.",
       "hints": {
@@ -2991,10 +2991,10 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "{provider} verbinden",
-      "subtitle": "Token einfügen. {brand} liest nur Ihre Repositories und Branches — es pusht nie.",
-      "scopeHint_github": "Den Geltungsbereich <scope>repo</scope> ankreuzen. Mehr wird nicht benötigt.",
-      "scopeHint_gitlab": "<scope>read_repository</scope> und <scope>read_api</scope> ankreuzen und <option>Legacy-Token</option> wählen — der neuere feingranulare Typ bietet sie nicht.",
-      "scopeHint_bitbucket": "Nur <scope>read:repository:bitbucket</scope> ankreuzen. Ein auf ein Repository beschränktes Token listet nur dieses auf.",
+      "subtitle": "Token einfügen. {brand} liest Ihre Repositories und Branches und trägt den Deploy-Webhook ein — es pusht nie Code.",
+      "scopeHint_github": "Die Geltungsbereiche <scope>repo</scope> und <scope>admin:repo_hook</scope> ankreuzen. Mit dem zweiten trägt das Panel den Deploy-Webhook selbst in Ihr Repository ein.",
+      "scopeHint_gitlab": "<scope>api</scope> und <scope>read_repository</scope> ankreuzen und <option>Legacy-Token</option> wählen.",
+      "scopeHint_bitbucket": "<scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope> und <scope>write:webhook:bitbucket</scope> ankreuzen. Mit den Webhook-Bereichen trägt das Panel den Deploy-Webhook selbst ein.",
       "nameLabel": "Name",
       "namePlaceholder": "{provider} Arbeit",
       "nameHelp": "Ein Name für Sie. So erscheint dieses Konto beim Anlegen einer Anwendung.",
@@ -3017,7 +3017,8 @@
       "fieldHelp": {
         "gitlab_host": "Nur für ein selbst gehostetes GitLab. Für gitlab.com leer lassen. Nutzen Sie die Adresse, unter der Sie sich anmelden, etwa https://gitlab.example.com — nicht die Adresse eines Projekts.",
         "bitbucket_workspace": "Die Workspace-ID aus Ihrer Bitbucket-Adresse: bitbucket.org/workspace-id/repository."
-      }
+      },
+      "scopeNote_gitlab": "<strong>Warum api?</strong> Nur mit dieser GitLab-Berechtigung kann das Panel den Deploy-Webhook für Sie eintragen. Sie gewährt aber vollen Zugriff auf Ihr GitLab-Konto – erstellen Sie das Token also nur für das Panel und mit Ablaufdatum. Lieber weniger Zugriff? Kreuzen Sie stattdessen <scope>read_repository</scope> und <scope>read_api</scope> an und tragen Sie den Webhook selbst ein."
     },
     "edit": {
       "title": "Konto bearbeiten",

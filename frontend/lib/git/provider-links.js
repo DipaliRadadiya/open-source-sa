@@ -25,9 +25,15 @@ export function createTokenUrl(provider, host, brand) {
       // get wrong, and the fix is a link, not a longer paragraph. The note is
       // the panel's own name because it is what the customer later reads on
       // GitHub's token list, long after they have forgotten making it.
-      return `https://github.com/settings/tokens/new?scopes=repo&description=${encodeURIComponent(brand)}`;
+      // `admin:repo_hook` is what lets the panel add the deploy webhook to the
+      // repository itself; without it GitHub refuses and the user pastes the
+      // URL and secret by hand.
+      return `https://github.com/settings/tokens/new?scopes=repo,admin:repo_hook&description=${encodeURIComponent(brand)}`;
     case "gitlab":
-      return `${base(host, "https://gitlab.com")}${GITLAB_PATH}`;
+      // GitLab takes the name and the scopes in the URL too. `api` is the only
+      // GitLab scope that can add a webhook, and it is a broad one, so the
+      // connect form says so in plain words beside this link.
+      return `${base(host, "https://gitlab.com")}${GITLAB_PATH}?name=${encodeURIComponent(brand ?? "")}&scopes=api,read_repository`;
     case "bitbucket":
       return BITBUCKET_TOKENS;
     default:

@@ -2982,7 +2982,7 @@
     "connect": {
       "action": "Conectar conta",
       "unavailable": "Não foi possível carregar a lista de provedores.",
-      "readOnly": "{brand} apenas lê seus repositórios e branches. Nunca faz push.",
+      "readOnly": "{brand} lê seus repositórios e branches e adiciona o webhook de deploy. Nunca faz push de código.",
       "pickTitle": "Conectar uma conta Git",
       "pickSubtitle": "Escolha onde seu código está hospedado.",
       "hints": {
@@ -2991,10 +2991,10 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Conectar {provider}",
-      "subtitle": "Cole um token. O {brand} apenas lê os seus repositórios e ramos — nunca envia alterações.",
-      "scopeHint_github": "Marque o âmbito <scope>repo</scope>. Não é preciso mais nada.",
-      "scopeHint_gitlab": "Marque <scope>read_repository</scope> e <scope>read_api</scope>, e escolha <option>Token antigo</option> — o novo tipo granular não os oferece.",
-      "scopeHint_bitbucket": "Marque apenas <scope>read:repository:bitbucket</scope>. Um token limitado a um repositório mostrará só esse.",
+      "subtitle": "Cole um token. O {brand} lê os seus repositórios e ramos e adiciona o webhook de deploy — nunca envia código.",
+      "scopeHint_github": "Marque os escopos <scope>repo</scope> e <scope>admin:repo_hook</scope>. O segundo permite que o painel adicione o webhook de deploy ao seu repositório para você.",
+      "scopeHint_gitlab": "Marque <scope>api</scope> e <scope>read_repository</scope>, e escolha <option>Token antigo</option>.",
+      "scopeHint_bitbucket": "Marque <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope> e <scope>write:webhook:bitbucket</scope>. Os de webhook permitem que o painel adicione o webhook de deploy para você.",
       "nameLabel": "Nome",
       "namePlaceholder": "Trabalho {provider}",
       "nameHelp": "Um nome para você. É assim que esta conta aparece ao criar uma aplicação.",
@@ -3017,7 +3017,8 @@
       "fieldHelp": {
         "gitlab_host": "Apenas para um GitLab auto-hospedado. Deixe em branco para gitlab.com. Use o endereço em que você faz login, como https://gitlab.example.com — não o endereço de um projeto.",
         "bitbucket_workspace": "O ID do workspace do seu endereço Bitbucket: bitbucket.org/workspace-id/repository."
-      }
+      },
+      "scopeNote_gitlab": "<strong>Por que api?</strong> É a única permissão do GitLab que deixa o painel adicionar o webhook de deploy para você. Ela também dá acesso total à sua conta do GitLab, então crie este token só para o painel e defina uma data de expiração. Prefere menos acesso? Marque <scope>read_repository</scope> e <scope>read_api</scope> e adicione o webhook você mesmo."
     },
     "edit": {
       "title": "Editar conta",

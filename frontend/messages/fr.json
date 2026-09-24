@@ -2982,7 +2982,7 @@
     "connect": {
       "action": "Connecter un compte",
       "unavailable": "La liste des fournisseurs n'a pas pu être chargée.",
-      "readOnly": "{brand} lit uniquement vos dépôts et branches. Il n'y fait jamais d'envoi.",
+      "readOnly": "{brand} lit vos dépôts et branches et ajoute le webhook de déploiement. Il n'envoie jamais de code.",
       "pickTitle": "Connecter un compte Git",
       "pickSubtitle": "Choisissez où se trouve votre code.",
       "hints": {
@@ -2991,10 +2991,10 @@
         "bitbucket": "bitbucket.org"
       },
       "title": "Connecter {provider}",
-      "subtitle": "Collez un jeton. {brand} lit uniquement vos dépôts et vos branches — il n'envoie jamais rien.",
-      "scopeHint_github": "Cochez la portée <scope>repo</scope>. Rien d'autre n'est nécessaire.",
-      "scopeHint_gitlab": "Cochez <scope>read_repository</scope> et <scope>read_api</scope>, et choisissez <option>Jeton hérité</option> — le nouveau type granulaire ne les propose pas.",
-      "scopeHint_bitbucket": "Cochez uniquement <scope>read:repository:bitbucket</scope>. Un jeton limité à un dépôt n'affichera que celui-ci.",
+      "subtitle": "Collez un jeton. {brand} lit vos dépôts et vos branches et ajoute le webhook de déploiement — il n'envoie jamais de code.",
+      "scopeHint_github": "Cochez les portées <scope>repo</scope> et <scope>admin:repo_hook</scope>. La seconde permet au panneau d'ajouter lui-même le webhook de déploiement à votre dépôt.",
+      "scopeHint_gitlab": "Cochez <scope>api</scope> et <scope>read_repository</scope>, et choisissez <option>Jeton hérité</option>.",
+      "scopeHint_bitbucket": "Cochez <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope> et <scope>write:webhook:bitbucket</scope>. Celles du webhook permettent au panneau d'ajouter lui-même le webhook de déploiement.",
       "nameLabel": "Nom",
       "namePlaceholder": "Compte {provider}",
       "nameHelp": "Un nom pour vous. C'est ainsi qu'apparaît ce compte quand vous créez une application.",
@@ -3017,7 +3017,8 @@
       "fieldHelp": {
         "gitlab_host": "Uniquement pour un GitLab auto-hébergé. Laissez vide pour gitlab.com. Utilisez l'adresse à laquelle vous vous connectez, comme https://gitlab.example.com — pas l'adresse d'un projet.",
         "bitbucket_workspace": "L'identifiant d'espace de travail depuis votre adresse Bitbucket : bitbucket.org/identifiant-espace/depot."
-      }
+      },
+      "scopeNote_gitlab": "<strong>Pourquoi api ?</strong> C'est la seule permission GitLab qui permet au panneau d'ajouter le webhook de déploiement pour vous. Elle donne aussi un accès complet à votre compte GitLab : créez ce jeton uniquement pour le panneau, avec une date d'expiration. Vous préférez moins d'accès ? Cochez plutôt <scope>read_repository</scope> et <scope>read_api</scope> et ajoutez le webhook vous-même."
     },
     "edit": {
       "title": "Modifier le compte",
