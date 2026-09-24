@@ -3,6 +3,7 @@
 namespace App\Actions\Server\StorageDestination;
 
 use App\Models\Application;
+use App\Models\Backup;
 use App\Models\StorageDestination;
 use App\Services\ActivityLogger;
 use Illuminate\Validation\ValidationException;
@@ -41,6 +42,22 @@ class DeleteStorageDestination
                 'storage_destination' => [__('storage.delete.in_use', [
                     'name' => $destination->name,
                     'applications' => $this->list($names->all()),
+                ])],
+            ]);
+        }
+
+        // Backups whose archives are still in this destination. The database
+        // already refuses (`backups.storage_destination_id` is restrictOnDelete),
+        // but as an integrity error the user saw as a 500. Deleting them here
+        // instead would be the wrong kindness: an archive is somebody's only
+        // copy, and it goes when they delete the backup, not as a side effect.
+        $held = Backup::query()->where('storage_destination_id', $destination->getKey())->count();
+
+        if ($held > 0) {
+            throw ValidationException::withMessages([
+                'storage_destination' => [__('storage.delete.holds_backups', [
+                    'name' => $destination->name,
+                    'count' => $held,
                 ])],
             ]);
         }

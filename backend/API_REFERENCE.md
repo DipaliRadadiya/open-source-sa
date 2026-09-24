@@ -3165,7 +3165,7 @@ Note the label: `status: "verified"` renders as **"Complete"**, not "Verified" �
 
 `reason` is a classified failure code with `reason_title` its localised sentence; both null unless `status` is `failed`. `log_key` and `reference` are both **UUIDs assigned when the run starts** — never null, on any status. `log_key` addresses this run's log through the logs endpoints; `reference` is the id to quote to support.
 
-`is_safety: true` marks the automatic pre-restore snapshot rather than a backup anyone scheduled — worth distinguishing in the list so it does not read as a stray extra run.
+`is_safety: true` marks the automatic pre-restore snapshot rather than a backup anyone scheduled — worth distinguishing in the list so it does not read as a stray extra run. The newest **two** per site are kept; each restore removes older ones, **archive included** (until 2026-09-24 only the row was removed, so every restore from the third on left a full-site archive in the bucket that the panel could no longer see). An archive that cannot be removed keeps its row and is retried by the next restore.
 
 ---
 
@@ -5676,7 +5676,7 @@ Update `name`, `prefix` and any `config` key. **Secrets omitted = unchanged**, s
 ### DELETE `/integrations/storage/destinations/{storageDestination}`
 **Permission:** `storage` (manage)
 
-`422` if any backup target uses this destination.
+`422` if any backup target uses this destination, **or if any backup's archive is still stored in it** (`errors.storage_destination`, *"still holds N backup(s)"*), which happens after a target is repointed elsewhere. The second case used to be refused by the database as a `500`. Delete those backups first, which removes their archives too; the panel never deletes them as a side effect.
 
 **Response `204`:**
 

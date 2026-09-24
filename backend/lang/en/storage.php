@@ -107,6 +107,7 @@ return [
         // leaves the operator hunting through every application to find which
         // ones. Capped by the guard — see `and_more`.
         'in_use' => 'Cannot delete :name — it is still used by :applications. Remove or repoint those backup targets first.',
+        'holds_backups' => 'Cannot delete :name — it still holds :count backup(s). Delete those backups first, so their archives are removed from the storage too.',
         'and_more' => ':count more',
     ],
 

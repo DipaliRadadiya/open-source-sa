@@ -100,6 +100,7 @@ return [
 
     'delete' => [
         'in_use' => ':name kann nicht gelöscht werden — es wird noch von :applications verwendet. Entfernen oder ändern Sie diese Backup-Ziele zuerst.',
+        'holds_backups' => ':name kann nicht gelöscht werden — es enthält noch :count Backup(s). Löschen Sie zuerst diese Backups, damit ihre Archive auch aus dem Speicher entfernt werden.',
         'and_more' => ':count weitere',
     ],
 

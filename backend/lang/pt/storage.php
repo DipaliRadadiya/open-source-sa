@@ -100,6 +100,7 @@ return [
 
     'delete' => [
         'in_use' => 'Não é possível excluir :name — ainda é usado por :applications. Remova ou redirecione esses destinos de backup primeiro.',
+        'holds_backups' => 'Não é possível excluir :name — ainda contém :count backup(s). Exclua esses backups primeiro, para que os arquivos também sejam removidos do armazenamento.',
         'and_more' => 'mais :count',
     ],
 

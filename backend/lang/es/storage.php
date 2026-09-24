@@ -100,6 +100,7 @@ return [
 
     'delete' => [
         'in_use' => 'No se puede eliminar :name: todavía lo usan :applications. Elimina o redirige esos objetivos de copia de seguridad primero.',
+        'holds_backups' => 'No se puede eliminar :name: todavía contiene :count copia(s) de seguridad. Elimina primero esas copias, para que sus archivos también se borren del almacenamiento.',
         'and_more' => ':count más',
     ],
 

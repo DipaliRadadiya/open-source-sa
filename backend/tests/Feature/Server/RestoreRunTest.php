@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Server\Backup\DeleteBackup;
 use App\Contracts\DatabaseEngine;
 use App\Enums\BackupStatus;
 use App\Enums\RestoreStatus;
@@ -428,6 +429,59 @@ describe('old copies of the site', function () {
 
         expect(is_dir($elsewhere))->toBeTrue()
             ->and($removed->all())->not->toContain($elsewhere);
+    });
+});
+
+/*
+ * Safety backups are kept to the newest two, and the older ones used to be
+ * deleted as rows only: every restore from the third on left a full copy of the
+ * site in the bucket that nothing in the panel could see or remove. Found on a
+ * real server (2026-09-24) as a 40 MB archive left behind in AWS.
+ */
+describe('old safety backups', function () {
+    it('removes the archive of a safety backup it prunes, not only the row', function () {
+        fakeSafetyBackupTar();
+
+        $safeties = [];
+        foreach (range(1, 3) as $_) {
+            $restore = app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+            expect($restore->status)->toBe(RestoreStatus::Succeeded);
+
+            $safety = Backup::findOrFail($restore->safety_backup_id);
+            $safeties[] = ['id' => $safety->id, 'key' => $safety->manifest['key']];
+        }
+
+        [$oldest, $middle, $newest] = $safeties;
+
+        // Two kept, rows and archives both.
+        expect(Backup::where('is_safety', true)->pluck('id')->sort()->values()->all())->toBe([$middle['id'], $newest['id']])
+            ->and($this->fakeDisk->exists($middle['key']))->toBeTrue()
+            ->and($this->fakeDisk->exists($newest['key']))->toBeTrue();
+
+        // The pruned one is gone from the bucket too, which is the whole fix.
+        expect(Backup::find($oldest['id']))->toBeNull()
+            ->and($this->fakeDisk->exists($oldest['key']))->toBeFalse();
+    });
+
+    it('keeps the row of a safety backup whose archive will not delete, and still restores', function () {
+        fakeSafetyBackupTar();
+
+        foreach (range(1, 2) as $_) {
+            app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+        }
+
+        $this->mock(DeleteBackup::class)
+            ->shouldReceive('execute')
+            ->andThrow(new RuntimeException('the bucket is unreachable'));
+
+        $before = Backup::where('is_safety', true)->count();
+
+        $restore = app(RestoreRunner::class)->run(restoreFor(storedBackup()));
+
+        // Nothing was pruned, so nothing is orphaned: the row that could not be
+        // removed stays visible and is retried by the next restore.
+        expect($restore->status)->toBe(RestoreStatus::Succeeded)
+            ->and(Backup::where('is_safety', true)->count())->toBe($before + 1);
     });
 });
 

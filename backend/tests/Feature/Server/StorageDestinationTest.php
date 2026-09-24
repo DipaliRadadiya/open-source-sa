@@ -3,6 +3,7 @@
 use App\Enums\StorageProvider;
 use App\Models\ActivityLog;
 use App\Models\Application;
+use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Models\StorageDestination;
 use App\Models\SystemUser;
@@ -792,6 +793,47 @@ describe('the in-use guard', function () {
             ->and($message)->toContain('3 more');
     });
 
+    /*
+     * The target can be repointed while its old backups stay where they were
+     * written. The database refused this (restrictOnDelete on
+     * backups.storage_destination_id), but as a 500 naming nothing.
+     */
+    it('refuses to delete a destination that still holds backups, even with no target pointing at it', function () {
+        $old = makeDestination();
+        $new = makeDestination(['name' => 'New S3']);
+
+        $target = BackupTarget::create([
+            'application_id' => ($this->makeApplication)('Shop')->id,
+            'storage_destination_id' => $new->id,
+            'type' => 'full',
+            'retention_count' => 7,
+            'frequency' => 'daily',
+            'enabled' => true,
+        ]);
+
+        // forceCreate: the destination is deliberately not fillable (the model
+        // stamps the target's current one), and here it must be the old one.
+        foreach (range(1, 2) as $_) {
+            Backup::forceCreate([
+                'backup_target_id' => $target->id,
+                'application_id' => $target->application_id,
+                'storage_destination_id' => $old->id,
+                'type' => 'full',
+                'status' => 'verified',
+                'manifest' => ['key' => 'shop/old.tar.gz'],
+            ]);
+        }
+
+        $message = $this->withHeaders(storageAdminAuthHeader())
+            ->deleteJson("/api/integrations/storage/destinations/{$old->id}")
+            ->assertStatus(422)
+            ->json('errors.storage_destination.0');
+
+        expect($message)->toBe(__('storage.delete.holds_backups', ['name' => 'Work S3', 'count' => 2]))
+            ->and(StorageDestination::find($old->id))->not->toBeNull()
+            ->and(Backup::count())->toBe(2);
+    });
+
     it('deletes once the last backup target is gone', function () {
         $dest = makeDestination();
 
@@ -954,7 +996,7 @@ it('has copy for every provider, status and failure category in every locale', f
             expect(__('storage.test.'.$key))->not->toBe('storage.test.'.$key);
         }
 
-        foreach (['in_use', 'and_more'] as $key) {
+        foreach (['in_use', 'holds_backups', 'and_more'] as $key) {
             expect(__('storage.delete.'.$key))->not->toBe('storage.delete.'.$key);
         }
 

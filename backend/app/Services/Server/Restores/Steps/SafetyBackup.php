@@ -2,12 +2,15 @@
 
 namespace App\Services\Server\Restores\Steps;
 
+use App\Actions\Server\Backup\DeleteBackup;
 use App\Contracts\RestoreStep;
 use App\Enums\BackupStatus;
 use App\Models\Backup;
 use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Restores\RestoreContext;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 /**
  * Backs up the current state before it is overwritten.
@@ -30,7 +33,10 @@ class SafetyBackup implements RestoreStep
     /** Safety backups kept per target. Bounded, or they accumulate forever. */
     private const KEEP = 2;
 
-    public function __construct(private BackupRunner $backups) {}
+    public function __construct(
+        private BackupRunner $backups,
+        private DeleteBackup $deleteBackup,
+    ) {}
 
     public function key(): string
     {
@@ -79,18 +85,38 @@ class SafetyBackup implements RestoreStep
     /**
      * Safety backups are exempt from the target's retention, so they need
      * their own bound or a site restored twenty times keeps twenty archives.
+     *
+     * Through DeleteBackup, archive first and then the row, the same as
+     * retention. This used to delete the rows only: every restore from the
+     * third on left a full copy of the site in the bucket that nothing in the
+     * panel could see or remove, billed for good. Found on a real server,
+     * 2026-09-24, as a 40 MB archive left behind in AWS.
+     *
+     * An archive that will not delete keeps its row, visible and retried by the
+     * next restore, and does not fail this one: the safety backup this restore
+     * depends on has already been taken.
      */
     private function pruneOlderSafetyBackups(int $targetId, int $keepId): void
     {
-        Backup::query()
+        $expired = Backup::query()
             ->where('backup_target_id', $targetId)
             ->where('is_safety', true)
             ->whereKeyNot($keepId)
             ->orderByDesc('id')
             ->skip(self::KEEP - 1)
             ->take(100)
-            ->get()
-            ->each
-            ->delete();
+            ->get();
+
+        foreach ($expired as $backup) {
+            try {
+                $this->deleteBackup->execute($backup);
+            } catch (Throwable $e) {
+                Log::channel('server-ops')->warning('an old safety backup could not be deleted', [
+                    'feature' => 'backup',
+                    'backup' => $backup->id,
+                    'detail' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 }
