@@ -23,9 +23,23 @@ return [
     ],
     'frequency' => [
         'manual' => 'Nur manuell',
+        'hourly' => 'Stündlich',
+        'every_3_hours' => 'Alle 3 Stunden',
+        'every_6_hours' => 'Alle 6 Stunden',
+        'every_12_hours' => 'Alle 12 Stunden',
         'daily' => 'Täglich',
         'weekly' => 'Wöchentlich',
         'monthly' => 'Monatlich',
+    ],
+    'frequency_hint' => [
+        'manual' => 'Läuft nur, wenn Sie es starten.',
+        'hourly' => 'Läuft jede Stunde zur gewählten Minute.',
+        'every_3_hours' => 'Läuft zur gewählten Uhrzeit und rund um die Uhr alle 3 Stunden.',
+        'every_6_hours' => 'Läuft zur gewählten Uhrzeit und rund um die Uhr alle 6 Stunden.',
+        'every_12_hours' => 'Läuft zur gewählten Uhrzeit und 12 Stunden später.',
+        'daily' => 'Läuft einmal täglich zur gewählten Uhrzeit.',
+        'weekly' => 'Läuft jeden Sonntag zur gewählten Uhrzeit.',
+        'monthly' => 'Läuft am 1. jedes Monats zur gewählten Uhrzeit.',
     ],
     'errors' => [
         'restore_unverified' => 'Diese Sicherung wurde nie verifiziert und kann daher nicht wiederhergestellt werden.',

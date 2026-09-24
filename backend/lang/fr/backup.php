@@ -23,9 +23,23 @@ return [
     ],
     'frequency' => [
         'manual' => 'Manuel uniquement',
+        'hourly' => 'Toutes les heures',
+        'every_3_hours' => 'Toutes les 3 heures',
+        'every_6_hours' => 'Toutes les 6 heures',
+        'every_12_hours' => 'Toutes les 12 heures',
         'daily' => 'Quotidienne',
         'weekly' => 'Hebdomadaire',
         'monthly' => 'Mensuelle',
+    ],
+    'frequency_hint' => [
+        'manual' => 'S’exécute uniquement quand vous la lancez.',
+        'hourly' => 'S’exécute toutes les heures, à la minute choisie.',
+        'every_3_hours' => 'S’exécute à l’heure choisie puis toutes les 3 heures, jour et nuit.',
+        'every_6_hours' => 'S’exécute à l’heure choisie puis toutes les 6 heures, jour et nuit.',
+        'every_12_hours' => 'S’exécute à l’heure choisie et 12 heures plus tard.',
+        'daily' => 'S’exécute une fois par jour à l’heure choisie.',
+        'weekly' => 'S’exécute chaque dimanche à l’heure choisie.',
+        'monthly' => 'S’exécute le 1er de chaque mois à l’heure choisie.',
     ],
     'errors' => [
         'restore_unverified' => 'Cette sauvegarde n\'a jamais été vérifiée, elle ne peut donc pas être restaurée.',

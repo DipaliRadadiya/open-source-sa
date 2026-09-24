@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Backup;
 
+use App\Enums\BackupType;
 use App\Models\BackupTarget;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,11 +28,11 @@ class SaveBackupTargetRequest extends FormRequest
     {
         return [
             'storage_destination_id' => ['required', 'integer', Rule::exists('storage_destinations', 'id')],
-            'type' => ['required', Rule::in(['filesystem', 'database', 'full'])],
+            'type' => ['required', Rule::enum(BackupType::class)],
 
             // At least one. Zero would mean every run prunes the backup it
             // just took, which reads as "backups silently do nothing".
-            'retention_count' => ['required', 'integer', 'min:1', 'max:365'],
+            'retention_count' => ['required', 'integer', 'min:'.BackupTarget::RETENTION_MIN, 'max:'.BackupTarget::RETENTION_MAX],
 
             'frequency' => ['required', Rule::in(BackupTarget::FREQUENCIES)],
             'schedule_time' => ['sometimes', 'date_format:H:i'],

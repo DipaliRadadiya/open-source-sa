@@ -113,6 +113,13 @@ Route::get('/restores/{restore}', [RestoreController::class, 'show'])
     ->withoutMiddleware('throttle:api')
     ->middleware(['permission:backup', 'throttle:progress']);
 
+// What the settings form offers: frequencies, types, retention limits. The
+// same permission as reading one application's settings, since it is that
+// form's dropdowns. Declared before nothing it could shadow: there is no
+// /backup-targets/{id}.
+Route::get('/backup-targets/options', [BackupController::class, 'options'])
+    ->middleware('permission:app_backup');
+
 // Per-application settings and manual runs.
 Route::get('/applications/{application}/backup-target', [BackupController::class, 'showTarget'])
     ->middleware('permission:app_backup');

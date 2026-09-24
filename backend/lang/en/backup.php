@@ -23,9 +23,23 @@ return [
     ],
     'frequency' => [
         'manual' => 'Manual only',
+        'hourly' => 'Every hour',
+        'every_3_hours' => 'Every 3 hours',
+        'every_6_hours' => 'Every 6 hours',
+        'every_12_hours' => 'Every 12 hours',
         'daily' => 'Daily',
         'weekly' => 'Weekly',
         'monthly' => 'Monthly',
+    ],
+    'frequency_hint' => [
+        'manual' => 'Runs only when you start it.',
+        'hourly' => 'Runs every hour, at the chosen minute.',
+        'every_3_hours' => 'Runs at the chosen time and every 3 hours around the clock.',
+        'every_6_hours' => 'Runs at the chosen time and every 6 hours around the clock.',
+        'every_12_hours' => 'Runs at the chosen time and 12 hours later.',
+        'daily' => 'Runs once a day at the chosen time.',
+        'weekly' => 'Runs every Sunday at the chosen time.',
+        'monthly' => 'Runs on the 1st of each month at the chosen time.',
     ],
     'errors' => [
         'restore_unverified' => 'This backup was never verified, so it cannot be restored.',

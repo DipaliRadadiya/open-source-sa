@@ -3048,7 +3048,37 @@ Backup settings for one application.
 
 There is no `schedule` or `retention` field — they are **`frequency`** and **`retention_count`**. There is no nested `storage_destination` object either: only `storage_destination_id` plus a flat `storage_destination_name` (and that name is present only when the endpoint loads the relation — it does here and on save).
 
-`frequency` is `manual` · `daily` · `weekly` · `monthly`; `schedule_time` is `HH:MM`. `type` is `filesystem` · `database` · `full`.
+`frequency` is `manual` · `hourly` · `every_3_hours` · `every_6_hours` · `every_12_hours` · `daily` · `weekly` · `monthly`; `schedule_time` is `HH:MM`. `type` is `filesystem` · `database` · `full`. **Take the lists from `GET /backup-targets/options` rather than hardcoding them.**
+
+What `schedule_time` means depends on the frequency (added 2026-09-24):
+- `hourly`: **only the minute** is used. `14:30` runs at :30 past every hour.
+- `every_3_hours` / `every_6_hours` / `every_12_hours`: the chosen time is **one of the runs**, and the rest fall every N hours around the clock. `14:30` every 12 hours runs at 02:30 and 14:30; every 6 hours, at 02:30, 08:30, 14:30 and 20:30.
+- `daily` / `weekly` (Sunday) / `monthly` (the 1st): at that time.
+
+`retention_count` counts backups, not days, so on `hourly` a retention of 7 is seven hours of history. Say so next to the field. A run still in progress when the next slot comes makes that slot be skipped rather than start a second backup, and a slot missed while the server was down runs **once** when it is back.
+
+### GET `/backup-targets/options`
+**Permission:** `app_backup` (view)
+
+Everything the backup settings form offers, already translated into the request's language. Built from the same lists the save validation uses, so every value offered is accepted and the reverse.
+
+```json
+{
+  "frequencies": [
+    {"value": "manual", "label": "Manual only", "time": null, "hint": "Runs only when you start it."},
+    {"value": "hourly", "label": "Every hour", "time": "minute", "hint": "Runs every hour, at the chosen minute."},
+    {"value": "every_3_hours", "label": "Every 3 hours", "time": "time", "hint": "Runs at the chosen time and every 3 hours around the clock."},
+    "…",
+    {"value": "monthly", "label": "Monthly", "time": "time", "hint": "Runs on the 1st of each month at the chosen time."}
+  ],
+  "default_frequency": "daily",
+  "types": [{"value": "filesystem", "label": "Files"}, {"value": "database", "label": "Database"}, {"value": "full", "label": "Files and database"}],
+  "retention": {"min": 1, "max": 365},
+  "timezone": "UTC"
+}
+```
+
+`time` says which picker to render: `minute` (a minute only), `time` (hour and minute), or `null` (none: manual). `frequencies` is in display order.
 
 🔴 **`schedule_time` and `next_run_at` are in `timezone`, which is the panel's clock — *not* the server's.** (This line previously said "the server's timezone" and was wrong.) The scheduler resolves the slot against the application timezone, so on a box set to anything else, `02:00` is not 02:00 to the person who typed it — a user on `Asia/Kolkata` gets it at 07:30. **Always render `timezone` beside the time**; a bare `02:00` reads as local time to everyone, and nothing else in the response reveals otherwise.
 
