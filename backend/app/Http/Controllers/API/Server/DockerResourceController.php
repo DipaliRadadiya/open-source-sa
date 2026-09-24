@@ -75,7 +75,21 @@ class DockerResourceController extends Controller
             409,
             __('errors/docker.network_in_use', [
                 'name' => $name,
-                'containers' => implode(', ', $network['containers']),
+                'containers' => implode(', ', array_column($network['containers'], 'name')),
+            ]),
+        );
+
+        // The second refusal, and the one the container check cannot make: a
+        // site whose container is STOPPED is attached to nothing, so everything
+        // above passes and the delete succeeds — then the site's compose file
+        // still names this network with `external: true` and it will not start
+        // again. Nothing would connect the failure to this click.
+        abort_if(
+            $network['sites'] !== [],
+            409,
+            __('errors/docker.network_used_by_sites', [
+                'name' => $name,
+                'sites' => implode(', ', array_column($network['sites'], 'name')),
             ]),
         );
 

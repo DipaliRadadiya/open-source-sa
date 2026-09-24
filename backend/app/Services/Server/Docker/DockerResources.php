@@ -2,6 +2,7 @@
 
 namespace App\Services\Server\Docker;
 
+use App\Models\Application;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -47,12 +48,23 @@ class DockerResources
         // networks. One call each, joined on the name.
         $ports = $this->containerPorts();
 
+        // Which sites NAME a network, which is a different question from which
+        // containers are on one right now. A stopped site's container is on
+        // nothing, and its compose file still says `external: true` against
+        // this name — so deleting the network succeeds and the site fails to
+        // start later, with the cause an hour behind the symptom. One query for
+        // every network rather than one per row.
+        $sites = Application::query()
+            ->whereNotNull('docker_network')
+            ->get(['id', 'name', 'docker_network'])
+            ->groupBy('docker_network');
+
         // `use ($ports)` is load-bearing and its absence was silent: without
         // it `$ports` is undefined inside the closure, and the `??` below
         // turns that into `false` rather than an error — so every container
         // reported as internal-only, including ones published to the host.
         // The test that distinguishes Ghost from its MySQL is what caught it.
-        return array_map(function (array $row) use ($ports): array {
+        return array_map(function (array $row) use ($ports, $sites): array {
             $name = (string) ($row['Name'] ?? '');
 
             return [
@@ -67,6 +79,23 @@ class DockerResources
                 // UI show which application owns it, rather than presenting a
                 // machine-generated name as though a human chose it.
                 'application_id' => $this->applicationIdFrom($name),
+                // The sites that joined it on purpose, by name and id, so a
+                // refusal can say "staging-api is on it" instead of "it is in
+                // use" — which sends somebody to the terminal to find out
+                // which one.
+                // `->get($name, collect())`, not `$sites[$name] ?? collect()`.
+                // The `??` form swallows an undefined VARIABLE as well as an
+                // absent key, which is how the `use ($ports)` bug above stayed
+                // silent — and how this one did, until a test asked for a real
+                // answer. A missing key here is ordinary; a missing binding is
+                // a bug, and the two must not look the same.
+                'sites' => $sites->get($name, collect())
+                    ->map(fn (Application $application): array => [
+                        'id' => $application->id,
+                        'name' => $application->name,
+                    ])
+                    ->values()
+                    ->all(),
                 'containers' => array_map(
                     fn (string $container): array => [
                         'name' => $container,

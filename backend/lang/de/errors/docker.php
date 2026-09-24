@@ -7,6 +7,7 @@ return [
     'volume_exists' => 'Ein Volume namens :name existiert bereits.',
     'network_built_in' => ':name ist eines von Dockers eigenen Netzwerken. Docker legt es beim Neustart wieder an, und es zu entfernen würde jeden Container auf diesem Server lahmlegen.',
     'network_in_use' => 'Am Netzwerk :name hängen noch Container: :containers. Stoppen oder trennen Sie sie zuerst.',
+    'network_used_by_sites' => 'Diese Websites sollen dem Netzwerk :name beitreten: :sites. Ändern Sie zuerst deren Netzwerk — eine Entfernung würde verhindern, dass sie starten.',
     'volume_in_use' => 'Das Volume :name wird noch von :count Container(n) genutzt. Stoppen Sie diese zuerst — ein Volume im Betrieb zu löschen entfernt Daten, die gerade geschrieben werden.',
     'network_create_failed' => 'Das Netzwerk konnte nicht erstellt werden. Referenz :reference.',
     'network_remove_failed' => 'Das Netzwerk konnte nicht entfernt werden. Referenz :reference.',

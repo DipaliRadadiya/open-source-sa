@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Application;
 use App\Models\ServerCapability;
+use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Docker\DockerResources;
 use App\Services\Server\ServerOps;
@@ -214,10 +216,18 @@ it('names the containers when refusing to delete a busy network', function () {
     // what is on it, which sends the user to a terminal to find out.
     $admin = dockerAdmin();
 
+    // The container shape `networks()` really returns — `{name, ports,
+    // published}`, not a bare string. This mock said string, and that is the
+    // only reason the refusal read correctly here: the real path imploded an
+    // array of arrays and shipped "still has containers on it: Array". A fake
+    // that has drifted from its subject asserts nothing about the subject.
     $this->mock(DockerResources::class, function ($mock) {
         $mock->shouldReceive('networks')->andReturn([[
             'name' => 'sv-app-6_default', 'built_in' => false,
-            'containers' => ['uptime-kuma-1'], 'application_id' => 6,
+            'containers' => [
+                ['name' => 'uptime-kuma-1', 'ports' => ['127.0.0.1:3001->3001/tcp'], 'published' => true],
+            ],
+            'sites' => [], 'application_id' => 6,
         ]]);
     });
 
@@ -240,6 +250,73 @@ it('refuses to delete one of Docker\'s own networks', function () {
     });
 
     $this->actingAs($admin)->deleteJson('/api/docker/networks/bridge')->assertStatus(422);
+});
+
+it('refuses to delete a network a site is set to join', function () {
+    // The guard the container check cannot make. A STOPPED site is attached to
+    // nothing, so `containers` is empty and every check above passes — and its
+    // compose file still names this network with `external: true`, so the
+    // delete succeeds and the site never starts again. Nothing would connect
+    // that failure to this click.
+    $admin = dockerAdmin();
+
+    $this->mock(DockerResources::class, function ($mock) {
+        $mock->shouldReceive('networks')->andReturn([[
+            'name' => 'ghost-net', 'built_in' => false, 'containers' => [],
+            'sites' => [['id' => 6, 'name' => 'staging-api']], 'application_id' => null,
+        ]]);
+    });
+
+    $this->actingAs($admin)
+        ->deleteJson('/api/docker/networks/ghost-net')
+        ->assertStatus(409)
+        // Named, not counted: "it is in use" sends someone to the terminal.
+        ->assertJsonFragment(['message' => __('errors/docker.network_used_by_sites', [
+            'name' => 'ghost-net',
+            'sites' => 'staging-api',
+        ])]);
+});
+
+it('deletes a network no site names and nothing is attached to', function () {
+    // The other half of the guard above. Without this, "refuses when
+    // referenced" could be satisfied by refusing always.
+    $admin = dockerAdmin();
+
+    $this->mock(DockerResources::class, function ($mock) {
+        $mock->shouldReceive('networks')->andReturn([[
+            'name' => 'spare-net', 'built_in' => false, 'containers' => [],
+            'sites' => [], 'application_id' => null,
+        ]]);
+        $mock->shouldReceive('removeNetwork')->once()->with('spare-net')
+            ->andReturn(new ServerOpsResult(ok: true, reference: 'r', answered: true));
+    });
+
+    $this->actingAs($admin)->deleteJson('/api/docker/networks/spare-net')->assertOk();
+});
+
+it('reports which sites name a network', function () {
+    // `application_id` infers ownership from Compose's `sv-app-<id>_default`
+    // naming, which says nothing about a site that CHOSE a network somebody
+    // else created. Two different questions, and the page needs both.
+    $user = SystemUser::create(['username' => 'ghost', 'home_path' => '/home/ghost']);
+    $application = Application::forceCreate([
+        'system_user_id' => $user->id, 'name' => 'Ghost', 'slug' => 'ghost',
+        'domain' => 'ghost.test', 'web_root' => 'public_html',
+        'site_type' => 'docker', 'serving_profile' => 'docker',
+        'image' => 'ghost:5', 'container_port' => 2368, 'app_port' => 20001,
+        'docker_network' => 'ghost-net',
+    ]);
+
+    $networks = (new DockerResources(dockerResourceOps([
+        'docker_network_ls' => fn () => dockerResourceOutput(
+            '{"ID":"a1","Name":"ghost-net","Driver":"bridge","Scope":"local","Internal":"false"}'
+        ),
+    ])))->networks();
+
+    expect($networks[0]['sites'])->toBe([['id' => $application->id, 'name' => 'Ghost']])
+        // A site that chose the network is not a site that Compose named after
+        // it, and the page needs to tell those apart.
+        ->and($networks[0]['application_id'])->toBeNull();
 });
 
 it('refuses to delete a volume something is writing to', function () {
