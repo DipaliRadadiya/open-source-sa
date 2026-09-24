@@ -6316,7 +6316,9 @@
       "removed": "Netzwerk {name} entfernt.",
       "removeTitle": "Netzwerk {name} entfernen?",
       "removeBody": "Es ist nichts damit verbunden. Container, die es später erwarten, starten nicht, bis es neu erstellt wird.",
-      "removeBusy": "An diesem Netzwerk hängen noch Container. Stoppen oder trennen Sie sie zuerst."
+      "removeBusy": "An diesem Netzwerk hängen noch Container. Stoppen oder trennen Sie sie zuerst.",
+      "noPorts": "Keine Ports",
+      "internalOnly": "nur intern"
     },
     "volumes": {
       "title": "Volumes",

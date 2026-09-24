@@ -6316,7 +6316,9 @@
       "removed": "Red {name} eliminada.",
       "removeTitle": "¿Eliminar la red {name}?",
       "removeBody": "No hay nada conectado. Los contenedores que la esperen más adelante no arrancarán hasta que se vuelva a crear.",
-      "removeBusy": "Todavía hay contenedores conectados a esta red. Deténlos o desconéctalos primero."
+      "removeBusy": "Todavía hay contenedores conectados a esta red. Deténlos o desconéctalos primero.",
+      "noPorts": "Sin puertos",
+      "internalOnly": "solo interno"
     },
     "volumes": {
       "title": "Volúmenes",

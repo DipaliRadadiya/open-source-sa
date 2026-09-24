@@ -117,7 +117,39 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
                     {network.containers.length === 0 ? (
                       <span className="text-muted-foreground">{t("none")}</span>
                     ) : (
-                      <span className="font-mono text-xs">{network.containers.join(", ")}</span>
+                      <ul className="space-y-1">
+                        {network.containers.map((container) => (
+                          <li key={container.name} className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs">{container.name}</span>
+                            {/*
+                              Published and exposed are different things and
+                              look identical unless someone says so: a bare
+                              `3306/tcp` is reachable only from this network,
+                              while `127.0.0.1:2368->2368/tcp` is reachable
+                              from the host. Ghost and its MySQL sit on the
+                              same network and differ exactly here.
+                            */}
+                            {container.ports.length === 0 ? (
+                              <span className="text-xs text-muted-foreground">{t("networks.noPorts")}</span>
+                            ) : (
+                              container.ports.map((port) => (
+                                <Badge
+                                  key={port}
+                                  variant={port.includes("->") ? "secondary" : "outline"}
+                                  className="font-mono text-xs font-normal"
+                                >
+                                  {port}
+                                </Badge>
+                              ))
+                            )}
+                            {container.published ? null : (
+                              <span className="text-xs text-muted-foreground">
+                                {t("networks.internalOnly")}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </TableCell>
                   <TableCell>
@@ -142,7 +174,7 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
                             kind: "network",
                             name: network.name,
                             busy: network.containers.length > 0,
-                            containers: network.containers,
+                            containers: network.containers.map((c) => c.name),
                           })
                         }
                       >

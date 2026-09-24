@@ -18,7 +18,21 @@ export const dockerNetworkSchema = z.object({
   // say which site owns it rather than showing a machine-generated name as
   // though a human chose it.
   application_id: z.number().nullish(),
-  containers: z.array(z.string()).default([]),
+  containers: z
+    .array(
+      z.object({
+        name: z.string(),
+        // As Docker renders them: `127.0.0.1:2368->2368/tcp` for a published
+        // port, a bare `3306/tcp` for one only exposed to this network.
+        ports: z.array(z.string()).default([]),
+        // The arrow, decided server-side. An exposed port is reachable from
+        // the same network; a published one is reachable from the host. Far
+        // too easy to read as the same thing, so the API answers rather than
+        // leaving the UI to parse a string.
+        published: z.boolean().default(false),
+      }),
+    )
+    .default([]),
 });
 
 export const dockerVolumeSchema = z.object({

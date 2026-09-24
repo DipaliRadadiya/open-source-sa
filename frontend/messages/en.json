@@ -6316,7 +6316,9 @@
       "removed": "Network {name} removed.",
       "removeTitle": "Remove network {name}?",
       "removeBody": "Nothing is attached to it. Containers that later expect it will fail to start until it's recreated.",
-      "removeBusy": "Containers are still attached to this network. Stop or detach them first."
+      "removeBusy": "Containers are still attached to this network. Stop or detach them first.",
+      "noPorts": "No ports",
+      "internalOnly": "internal only"
     },
     "volumes": {
       "title": "Volumes",

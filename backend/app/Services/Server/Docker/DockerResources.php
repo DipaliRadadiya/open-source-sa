@@ -41,7 +41,18 @@ class DockerResources
     {
         $rows = $this->jsonLines(['docker', 'network', 'ls', '--format', '{{json .}}'], 'docker_network_ls');
 
-        return array_map(function (array $row): array {
+        // Fetched once for every network rather than per attachment. `docker
+        // network inspect` knows which containers are on a network and nothing
+        // about their ports; `docker ps` knows the ports and nothing about the
+        // networks. One call each, joined on the name.
+        $ports = $this->containerPorts();
+
+        // `use ($ports)` is load-bearing and its absence was silent: without
+        // it `$ports` is undefined inside the closure, and the `??` below
+        // turns that into `false` rather than an error — so every container
+        // reported as internal-only, including ones published to the host.
+        // The test that distinguishes Ghost from its MySQL is what caught it.
+        return array_map(function (array $row) use ($ports): array {
             $name = (string) ($row['Name'] ?? '');
 
             return [
@@ -56,7 +67,22 @@ class DockerResources
                 // UI show which application owns it, rather than presenting a
                 // machine-generated name as though a human chose it.
                 'application_id' => $this->applicationIdFrom($name),
-                'containers' => $this->attachments($name),
+                'containers' => array_map(
+                    fn (string $container): array => [
+                        'name' => $container,
+                        'ports' => $ports[$container]['ports'] ?? [],
+                        // Whether anything on the host can reach it. The
+                        // distinction is the whole security story of this
+                        // stack and it is invisible without saying it: Ghost
+                        // shows `127.0.0.1:2368->2368/tcp` and its MySQL shows
+                        // `3306/tcp` — exposed to its own network, published
+                        // nowhere. A reader should be able to see which is
+                        // which without knowing that an arrow is what
+                        // distinguishes them.
+                        'published' => $ports[$container]['published'] ?? false,
+                    ],
+                    $this->attachments($name),
+                ),
             ];
         }, $rows);
     }
@@ -106,6 +132,45 @@ class DockerResources
                 'application_id' => $this->applicationIdFrom((string) ($row['Name'] ?? '')),
             ];
         }, $rows);
+    }
+
+    /**
+     * Published ports per running container, keyed by name.
+     *
+     * Docker renders the mapping as `127.0.0.1:2368->2368/tcp` when a port is
+     * published to the host and as a bare `3306/tcp` when it is merely exposed
+     * to other containers. **The arrow is the whole difference** — an exposed
+     * port is reachable only from the same network, a published one is
+     * reachable from the host — and it is far too easy to read the two as the
+     * same thing.
+     *
+     * @return array<string, array{ports: list<string>, published: bool}>
+     */
+    private function containerPorts(): array
+    {
+        $rows = $this->jsonLines(['docker', 'ps', '--format', '{{json .}}'], 'docker_ps_ports');
+
+        $map = [];
+
+        foreach ($rows as $row) {
+            $name = (string) ($row['Names'] ?? '');
+
+            if ($name === '') {
+                continue;
+            }
+
+            $ports = array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) ($row['Ports'] ?? '')),
+            )));
+
+            $map[$name] = [
+                'ports' => $ports,
+                'published' => (bool) array_filter($ports, fn (string $port) => str_contains($port, '->')),
+            ];
+        }
+
+        return $map;
     }
 
     /**

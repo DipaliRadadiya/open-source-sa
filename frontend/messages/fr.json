@@ -6316,7 +6316,9 @@
       "removed": "Réseau {name} supprimé.",
       "removeTitle": "Supprimer le réseau {name} ?",
       "removeBody": "Rien n'y est attaché. Les conteneurs qui l'attendront plus tard ne démarreront pas tant qu'il n'est pas recréé.",
-      "removeBusy": "Des conteneurs sont encore attachés à ce réseau. Arrêtez-les ou détachez-les d'abord."
+      "removeBusy": "Des conteneurs sont encore attachés à ce réseau. Arrêtez-les ou détachez-les d'abord.",
+      "noPorts": "Aucun port",
+      "internalOnly": "interne uniquement"
     },
     "volumes": {
       "title": "Volumes",

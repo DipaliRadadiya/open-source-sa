@@ -103,6 +103,54 @@ it('reads size from system df, because volume ls reports N/A', function () {
         ->and(collect($ran)->pluck('op'))->toContain('docker_volume_df');
 });
 
+it('shows which containers are reachable from the host and which are not', function () {
+    // The whole security story of this stack, and invisible unless said: a
+    // bare `3306/tcp` is exposed to the container network only, while
+    // `127.0.0.1:2368->2368/tcp` is published to the host. The arrow is the
+    // only difference and it is far too easy to read the two as the same.
+    //
+    // Real shapes: Ghost and its MySQL, on one network, differing exactly here.
+    $ps = '{"Names":"sv-app-7-ghost-1","Ports":"127.0.0.1:2368->2368/tcp"}'
+        ."\n".'{"Names":"sv-app-7-db-1","Ports":"3306/tcp, 33060/tcp"}';
+
+    $ops = dockerResourceOps([
+        'docker_network_ls' => fn () => dockerResourceOutput('{"ID":"a1","Name":"sv-app-7_default","Driver":"bridge","Scope":"local","Internal":"false"}'),
+        'docker_ps_ports' => fn () => dockerResourceOutput($ps),
+        'docker_network_inspect' => fn () => dockerResourceOutput(json_encode([
+            'abc' => ['Name' => 'sv-app-7-ghost-1'],
+            'def' => ['Name' => 'sv-app-7-db-1'],
+        ])),
+    ]);
+
+    $containers = collect((new DockerResources($ops))->networks())
+        ->firstWhere('name', 'sv-app-7_default')['containers'];
+
+    $ghost = collect($containers)->firstWhere('name', 'sv-app-7-ghost-1');
+    $db = collect($containers)->firstWhere('name', 'sv-app-7-db-1');
+
+    expect($ghost['published'])->toBeTrue()
+        ->and($ghost['ports'])->toContain('127.0.0.1:2368->2368/tcp')
+        // Exposed, not published — nothing on the host can reach it.
+        ->and($db['published'])->toBeFalse()
+        ->and($db['ports'])->toContain('3306/tcp')
+        ->and($db['ports'])->toContain('33060/tcp');
+});
+
+it('asks docker ps once, not once per network', function () {
+    // `network inspect` knows the containers and nothing about their ports;
+    // `ps` knows the ports and nothing about the networks. One call each,
+    // joined on the name — a per-network `ps` would be a process per row.
+    $ran = [];
+    $ops = dockerResourceOps([
+        'docker_network_ls' => fn () => dockerResourceOutput(NETWORK_LINES),
+        'docker_ps_ports' => fn () => dockerResourceOutput('{"Names":"x","Ports":""}'),
+    ], $ran);
+
+    (new DockerResources($ops))->networks();
+
+    expect(collect($ran)->where('op', 'docker_ps_ports')->count())->toBe(1);
+});
+
 it('marks Docker-owned networks so the UI cannot offer a delete', function () {
     $ops = dockerResourceOps(['docker_network_ls' => fn () => dockerResourceOutput(NETWORK_LINES)]);
 

@@ -6316,7 +6316,9 @@
       "removed": "Rede {name} removida.",
       "removeTitle": "Remover a rede {name}?",
       "removeBody": "Não há nada ligado. Contentores que a esperem mais tarde não arrancarão até ser recriada.",
-      "removeBusy": "Ainda há contentores ligados a esta rede. Pare-os ou desligue-os primeiro."
+      "removeBusy": "Ainda há contentores ligados a esta rede. Pare-os ou desligue-os primeiro.",
+      "noPorts": "Sem portas",
+      "internalOnly": "apenas interno"
     },
     "volumes": {
       "title": "Volumes",
