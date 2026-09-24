@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, FileWarning, Lock, Inbox, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowUp, FileWarning, Loader2, Lock, Inbox, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LogLine } from "@/components/logs/log-line";
+import { appended } from "@/lib/logs/appended";
 
 const ROW_HEIGHT = 24;
 // "Already at the bottom" needs slack: fractional scroll positions and the
@@ -31,6 +32,7 @@ export function LogViewer({
   // read reached the line cap. The server log endpoint has no equivalent, so
   // this is undefined there and the wording stays as it was.
   searchCapped = false,
+  loadingText = null,
   searchedLines,
   /*
    * Newest line at the TOP rather than the bottom.
@@ -52,7 +54,9 @@ export function LogViewer({
   const [atBottom, setAtBottom] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [unseen, setUnseen] = useState(0);
-  const lastCount = useRef(lines.length);
+  // The previous buffer and what it was filtered by, to tell new lines from a
+  // buffer that was simply replaced (another filter, another log).
+  const previous = useRef({ lines, key: `${group}|${term}|${severity}` });
 
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual's useVirtualizer is the same known false positive as useReactTable
   // Reversed for rendering only. `lines` stays chronological everywhere else —
@@ -91,13 +95,31 @@ export function LogViewer({
 
   // Appends land after paint; stick to the bottom only if the reader was
   // already there, otherwise count what they haven't seen.
+  //
+  // Counted by what is new, not by how much longer the buffer got. The tail
+  // re-reads the last N lines, so once a busy log fills the window its length
+  // never changes again: the counter stuck at the first handful, and the lines
+  // slid up under a reader who had scrolled up to read them.
   useLayoutEffect(() => {
-    const added = lines.length - lastCount.current;
-    lastCount.current = lines.length;
+    const key = `${group}|${term}|${severity}`;
+    const before = previous.current;
+    previous.current = { lines, key };
+    if (before.key !== key || !before.lines.length || !lines.length) return;
+    const { added, dropped } = appended(before.lines, lines);
     if (added === 0) return;
-    if (atBottom) scrollToNewest();
-    else if (added > 0) setUnseen((n) => n + added);
-  }, [lines.length, atBottom, scrollToNewest]);
+    if (atBottom) {
+      scrollToNewest();
+      return;
+    }
+    setUnseen((n) => n + added);
+    // Keep the reader on the line they were reading. Oldest-first, the lines
+    // that fell off the top pulled everything up; newest-first, the new ones
+    // pushed everything down.
+    const el = scrollRef.current;
+    if (!el) return;
+    if (newestFirst) el.scrollTop += added * ROW_HEIGHT;
+    else if (dropped > 0) el.scrollTop = Math.max(0, el.scrollTop - dropped * ROW_HEIGHT);
+  }, [lines, group, term, severity, atBottom, newestFirst, scrollToNewest]);
 
   // A new source (or a new filter) starts at the newest line.
   useEffect(() => {
@@ -105,6 +127,16 @@ export function LogViewer({
     setAtBottom(true);
   }, [group, term, severity, newestFirst, scrollToNewest]);
 
+  // A tab just switched to: its lines are on their way, and the previous
+  // tab's must not stand in for them.
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center gap-2 bg-console text-sm text-console-muted" role="status">
+        <Loader2 className="size-4 animate-spin" aria-hidden />
+        {loadingText}
+      </div>
+    );
+  }
   if (status === "locked") {
     return <Notice icon={Lock} title={t("locked.title")} body={t("locked.body")} />;
   }
@@ -211,7 +243,8 @@ export function LogViewer({
       {!atBottom ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
           <Button size="sm" className="pointer-events-auto shadow-md" onClick={scrollToNewest}>
-            <ArrowDown className="size-4" />
+            {/* Towards the newest end, which is the top in newest-first. */}
+            {newestFirst ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />}
             {unseen > 0 ? t("jumpWithCount", { count: unseen }) : t("jump")}
           </Button>
         </div>

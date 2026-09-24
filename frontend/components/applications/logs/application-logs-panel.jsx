@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Info } from "lucide-react";
@@ -49,10 +48,23 @@ export function ApplicationLogsPanel({
 }) {
   const t = useTranslations("logs");
   const tApp = useTranslations("applications.logs");
-  const router = useRouter();
-  const searchParams = useSearchParams();
 
-  const source = sources.find((s) => s.key === selected) ?? null;
+  /*
+   * The tab on screen. Switched here rather than by navigating: a navigation
+   * re-rendered the whole page on the server — about eight requests, the log
+   * read twice (once for a first paint this component then ignored) — and on a
+   * slow answer the old tab stayed selected for seconds with nothing to say a
+   * click had landed. The URL is still updated, so a reload or a shared link
+   * opens the same tab.
+   */
+  const [current, setCurrent] = useState(selected);
+  // A real navigation to a different `?source=` (Back, a link) still wins.
+  const [selectedProp, setSelectedProp] = useState(selected);
+  if (selectedProp !== selected) {
+    setSelectedProp(selected);
+    setCurrent(selected);
+  }
+  const source = sources.find((s) => s.key === current) ?? null;
   // An "application" source only exists on a site that runs a process; when it
   // does, access/error describe the reverse proxy, not the app.
   //
@@ -89,9 +101,19 @@ export function ApplicationLogsPanel({
    * Logs page — which does wire it — works, so the control looked proven.
    */
   const [newestFirst, setNewestFirst] = useState(false);
-  const [follow, setFollow] = useState(AUTO_FOLLOW_KEYS.has(selected));
+  const [follow, setFollow] = useState(AUTO_FOLLOW_KEYS.has(current));
   const [busy, setBusy] = useState(false);
   const [tailState, setTailState] = useState("idle");
+  // Each tab opens with its own default. Switching tabs keeps this component
+  // (only the URL changes), so `follow` used to carry over: Access → Error never
+  // started tailing, and Error → Access kept polling the busiest log there is.
+  // Adjusted during render, not in an effect, so no frame polls the wrong one.
+  const [followFor, setFollowFor] = useState(current);
+  if (followFor !== current) {
+    setFollowFor(current);
+    setFollow(AUTO_FOLLOW_KEYS.has(current));
+    setTailState("idle");
+  }
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -123,11 +145,18 @@ export function ApplicationLogsPanel({
         setStatus("ok");
         return true;
       } catch (error) {
-        if (error?.code === "ERR_CANCELED") return false;
+        // Cancelled by a newer read (a search, a reload), not a failure: `null`
+        // so the live tail does not count it towards pausing itself.
+        if (error?.code === "ERR_CANCELED") return null;
         const code = error?.response?.status;
         if (code === 403) setStatus("locked");
         else if (code === 404) setStatus("missing");
-        else if (!silent) toast.error(apiMessage(error, t("loadFailed")));
+        else {
+          // A tab whose first read failed has nothing to show but the failure;
+          // a reload of lines already on screen keeps them and says so.
+          setStatus((now) => (now === "loading" ? "failed" : now));
+          if (!silent) toast.error(apiMessage(error, t("loadFailed")));
+        }
         return false;
       } finally {
         if (!silent) setBusy(false);
@@ -157,7 +186,7 @@ export function ApplicationLogsPanel({
     async function tick() {
       if (document.hidden) return;
       const ok = await load({ silent: true });
-      if (!active) return;
+      if (!active || ok === null) return;
       if (ok) {
         failures = 0;
         setTailState("live");
@@ -231,18 +260,18 @@ export function ApplicationLogsPanel({
   const clearLog = useCallback(async () => {
     setClearing(true);
     try {
-      await clearApplicationLog(appId, selected);
+      await clearApplicationLog(appId, current);
       setLines([]);
       setTruncated(false);
       setSearchCapped(false);
       setConfirmClear(false);
-      toast.success(tApp("clear.done", { label: source?.label ?? selected }));
+      toast.success(tApp("clear.done", { label: source?.label ?? current }));
     } catch (error) {
       toast.error(apiMessage(error, tApp("clear.failed")));
     } finally {
       setClearing(false);
     }
-  }, [appId, selected, source, tApp]);
+  }, [appId, current, source, tApp]);
 
   const copy = useCallback(
     async (text, message) => {
@@ -258,22 +287,28 @@ export function ApplicationLogsPanel({
 
   const selectSource = useCallback(
     (key) => {
-      const params = new URLSearchParams(searchParams);
-      params.set("source", key);
-      router.replace(`/applications/${appId}/logs?${params.toString()}`, {
-        scroll: false,
-      });
+      if (key === current) return;
+      setCurrent(key);
+      // The old tab's lines must not sit under the new tab's name while its
+      // own are on their way.
+      setLines([]);
+      setTruncated(false);
+      setSearchCapped(false);
+      setStatus("loading");
+      const url = new URL(window.location.href);
+      url.searchParams.set("source", key);
+      window.history.replaceState(window.history.state, "", url);
     },
-    [router, searchParams, appId],
+    [current],
   );
 
   // Reverse proxy hint: only on the proxy logs (access/error) of a process site.
   const showProxyHint =
-    hasAppOutput && (selected === "access" || selected === "error");
+    hasAppOutput && (current === "access" || current === "error");
 
   return (
     <Tabs
-      value={selected ?? undefined}
+      value={current ?? undefined}
       onValueChange={selectSource}
       className="gap-4"
     >
@@ -372,6 +407,7 @@ export function ApplicationLogsPanel({
           wrap={wrap}
           newestFirst={newestFirst}
           status={status}
+          loadingText={t("loadingSource", { label: source?.label ?? current })}
           following={follow}
           onCopyLine={(text) => copy(text, t("copiedLine"))}
         />
@@ -386,7 +422,7 @@ export function ApplicationLogsPanel({
         onOpenChange={setConfirmClear}
         icon={Eraser}
         tone="destructive"
-        title={tApp("clear.title", { label: source?.label ?? selected })}
+        title={tApp("clear.title", { label: source?.label ?? current })}
         description={tApp("clear.body")}
         cancelLabel={tApp("clear.cancel")}
         confirmLabel={tApp("clear.submit")}

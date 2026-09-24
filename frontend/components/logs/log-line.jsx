@@ -28,8 +28,12 @@ export function LogLine({ index, text, group, term, wrap, onCopy, copyLabel }) {
       {/* The gutter is the copy affordance: 48px of otherwise-dead space that
           already belongs to this row. A button per line would be chrome
           fighting the content, and a 24px row has no space for one. */}
+      {/* Out of the Tab order: every rendered line had one, so getting past
+          the log took ~55 presses. The log itself is focusable and scrolls by
+          keyboard, and "Copy visible lines" in the toolbar copies by keyboard. */}
       <button
         type="button"
+        tabIndex={-1}
         onClick={() => onCopy?.(text)}
         aria-label={copyLabel}
         className="relative w-12 shrink-0 select-none text-right text-xs leading-6 tabular-nums text-console-muted/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"

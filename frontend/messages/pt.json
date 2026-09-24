@@ -1132,7 +1132,7 @@
     "wrapOn": "Quebrar linhas",
     "wrapOff": "Não quebrar linhas",
     "linesLabel": "Linhas para carregar",
-    "linesOption": "Últimas {count} linhas",
+    "linesOption": "{count, plural, one {Última # linha} other {Últimas # linhas}}",
     "searchPlaceholder": "Filtrar linhas…",
     "jump": "Ir para o mais recente",
     "jumpWithCount": "{count} novas — ir para o mais recente",
@@ -1199,7 +1199,8 @@
     "clearSubmit": "Limpar log",
     "clearDone": "{label} limpo.",
     "clearFailed": "Não foi possível limpar o log.",
-    "clearBodyAudit": "Este log faz parte de como o servidor registra o que aconteceu — acessos, requisições bloqueadas, banimentos. Limpá-lo destrói evidências que você pode precisar após uma invasão, e não pode ser desfeito. O arquivo continua gravando a partir de agora."
+    "clearBodyAudit": "Este log faz parte de como o servidor registra o que aconteceu — acessos, requisições bloqueadas, banimentos. Limpá-lo destrói evidências que você pode precisar após uma invasão, e não pode ser desfeito. O arquivo continua gravando a partir de agora.",
+    "loadingSource": "Carregando {label}…"
   },
   "services": {
     "title": "Serviços",

@@ -81,7 +81,7 @@ test("every control on the band is one size, radius and border", () => {
   assert.match(severityBlock, /filterToggleClass\(severity === key\)/);
   assert.doesNotMatch(severityBlock, /border-transparent/);
   // `size="sm"` is 32px with an 8px radius; the band is 36 and 10.
-  assert.match(code, /className="h-9 rounded-lg border-destructive\/40/);
+  assert.match(code, /className="ml-auto h-9 rounded-lg border-destructive\/40/);
   // The tray held 36px children inside a 1px border, coming to 38.
   assert.match(code, /<div className="flex h-9 items-center overflow-hidden rounded-lg border divide-x">/);
   assert.match(code, /"size-9 h-full rounded-none"/);
@@ -92,6 +92,50 @@ test("Clear log carries destructive weight, and actions are divided from view", 
   // 200 lines" dropdown — one changes what you see, the other empties the file
   // for good.
   assert.match(code, /border-destructive\/40 text-destructive hover:bg-destructive\/10/);
-  // Same rule the Files toolbar uses, so one grouping language covers both.
-  assert.match(code, /<Separator orientation="vertical" className="mx-0\.5 !h-5 !self-center" \/>/);
+  // Kept apart from the view actions by position, not a divider: last in the
+  // band and pushed to the far end (a divider was left dangling at the start
+  // of a wrapped line on a phone). 2026-09-23.
+  const tray = code.indexOf('<div className="flex h-9 items-center overflow-hidden rounded-lg border divide-x">');
+  assert.ok(tray > 0 && code.indexOf("{onClear ? (", tray) > tray, "Clear log comes after the view actions");
+  assert.doesNotMatch(code, /<Separator/);
+});
+
+test("the Logs page tests found on 2026-09-23 stay fixed", () => {
+  const panel = read("components/applications/logs/application-logs-panel.jsx");
+  // Each tab opens with its own live default.
+  assert.match(panel, /if \(followFor !== current\) \{\s*setFollowFor\(current\);\s*setFollow\(AUTO_FOLLOW_KEYS\.has\(current\)\);/);
+  // Tabs switch on the page: no navigation, one read, the URL still updated.
+  assert.match(panel, /window\.history\.replaceState\(window\.history\.state, "", url\)/);
+  assert.match(panel, /setStatus\("loading"\);/);
+  assert.doesNotMatch(panel, /router\.replace\(/);
+  // A read cancelled by a newer one does not count towards pausing the tail.
+  assert.match(panel, /if \(error\?\.code === "ERR_CANCELED"\) return null;/);
+  assert.match(panel, /if \(!active \|\| ok === null\) return;/);
+  // Per-line copy buttons are out of the Tab order.
+  assert.match(read("components/logs/log-line.jsx"), /tabIndex=\{-1\}/);
+  // The line picker grows with its text (German, Russian).
+  assert.match(code, /className="w-auto min-w-40"/);
+});
+
+test("new lines are counted by what is new, not by how much longer the buffer got", async () => {
+  const { appended } = await import("../lib/logs/appended.js");
+  const a = ["1", "2", "3", "4", "5"];
+  // A full window that slid: two fell off, two arrived. Length never changed,
+  // which is why the old counter stuck.
+  assert.deepEqual(appended(a, ["3", "4", "5", "6", "7"]), { added: 2, dropped: 2 });
+  assert.deepEqual(appended(a, [...a, "6"]), { added: 1, dropped: 0 });
+  assert.deepEqual(appended(a, a), { added: 0, dropped: 0 });
+  assert.deepEqual(appended(a, ["x", "y"]), { added: 2, dropped: 5 });
+  const viewer = read("components/logs/log-viewer.jsx");
+  assert.match(viewer, /const \{ added, dropped \} = appended\(before\.lines, lines\);/);
+  // Keeps the reader on their line when old lines fall off the top.
+  assert.match(viewer, /el\.scrollTop = Math\.max\(0, el\.scrollTop - dropped \* ROW_HEIGHT\)/);
+  assert.match(viewer, /newestFirst \? <ArrowUp/);
+});
+
+test("the line picker says 'Last 1 line', not 'Last 1 lines'", () => {
+  for (const loc of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) {
+    const v = JSON.parse(read(`messages/${loc}.json`)).logs.linesOption;
+    assert.match(v, /^\{count, plural,/, `${loc} is a plural`);
+  }
 });

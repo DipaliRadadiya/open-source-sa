@@ -1132,7 +1132,7 @@
     "wrapOn": "折り返し",
     "wrapOff": "折り返しなし",
     "linesLabel": "読み込む行数",
-    "linesOption": "末尾 {count} 行",
+    "linesOption": "{count, plural, other {末尾 # 行}}",
     "searchPlaceholder": "行を絞り込み…",
     "jump": "最新へ移動",
     "jumpWithCount": "{count} 件追加 — 最新へ移動",
@@ -1199,7 +1199,8 @@
     "clearSubmit": "ログをクリア",
     "clearDone": "{label} をクリアしました。",
     "clearFailed": "ログをクリアできませんでした。",
-    "clearBodyAudit": "このログはサーバー上で起きたことを記録する仕組みの一部です — ログイン、ブロックしたリクエスト、ban などが含まれます。クリアすると、侵入後に必要となるかもしれない証拠が失われ、取り消すことはできません。今後ファイルへの記録は継続されます。"
+    "clearBodyAudit": "このログはサーバー上で起きたことを記録する仕組みの一部です — ログイン、ブロックしたリクエスト、ban などが含まれます。クリアすると、侵入後に必要となるかもしれない証拠が失われ、取り消すことはできません。今後ファイルへの記録は継続されます。",
+    "loadingSource": "{label} を読み込み中…"
   },
   "services": {
     "title": "サービス",

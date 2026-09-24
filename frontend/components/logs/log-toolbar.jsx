@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 import { filterToggleClass } from "@/lib/theme/filter-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -318,7 +317,7 @@ export function LogToolbar({
               }}
               disabled={disabled}
             >
-              <SelectTrigger aria-label={t("linesLabel")} className="w-40">
+              <SelectTrigger aria-label={t("linesLabel")} className="w-auto min-w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent position="popper">
@@ -336,40 +335,6 @@ export function LogToolbar({
               </SelectContent>
             </Select>
           )}
-
-          {/* Deliberately outside the segmented group below. Those are view
-              actions — they change what you see and nothing else. This one
-              destroys the thing being viewed, and putting it a pixel away from
-              Reload is how a misclick becomes an unrecoverable one. */}
-          {/* Everything to the left changes what you SEE; everything from here
-              acts on the log itself. Same rule the Files toolbar uses, so one
-              grouping language covers both. */}
-          <Separator orientation="vertical" className="mx-0.5 !h-5 !self-center" />
-          {onClear ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              /* h-9 and rounded-lg: `size="sm"` is 32px with an 8px radius,
-                 and every other control on this band is 36px with 10px. A
-                 button a notch shorter than its neighbours is most of why the
-                 row read as unrelated parts. */
-              /* Destructive weight, because the consequence is destructive.
-                 As a plain outline button it was indistinguishable from the
-                 "Last 200 lines" dropdown beside it — one changes the view,
-                 the other empties the file for good. */
-              className="h-9 rounded-lg border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={onClear}
-              disabled={disabled || clearing}
-            >
-              {clearing ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Eraser className="size-4" />
-              )}
-              {t("clear")}
-            </Button>
-          ) : null}
 
           {/* One segmented group, not four floating squares: these are view
               actions on the same object, so they read as a single control. */}
@@ -415,6 +380,38 @@ export function LogToolbar({
               />
             ) : null}
           </div>
+
+          {/* Last: everything before it changes what you SEE, this one empties
+              the file for good. It used to sit between the line picker and the
+              view buttons, in the middle of the harmless ones. */}
+          {onClear ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              /* h-9 and rounded-lg: `size="sm"` is 32px with an 8px radius,
+                 and every other control on this band is 36px with 10px. A
+                 button a notch shorter than its neighbours is most of why the
+                 row read as unrelated parts. */
+              /* Destructive weight, because the consequence is destructive.
+                 As a plain outline button it was indistinguishable from the
+                 "Last 200 lines" dropdown beside it — one changes the view,
+                 the other empties the file for good. */
+              /* ml-auto: pushed to the far end, apart from the view actions
+                 without a divider — a divider left at the start of a wrapped
+                 line on a phone. */
+              className="ml-auto h-9 rounded-lg border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={onClear}
+              disabled={disabled || clearing}
+            >
+              {clearing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Eraser className="size-4" />
+              )}
+              {t("clear")}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

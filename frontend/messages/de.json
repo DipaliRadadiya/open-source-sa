@@ -1132,7 +1132,7 @@
     "wrapOn": "Zeilen umbrechen",
     "wrapOff": "Zeilenumbruch aufheben",
     "linesLabel": "Zu ladende Zeilen",
-    "linesOption": "Letzte {count} Zeilen",
+    "linesOption": "{count, plural, one {Letzte # Zeile} other {Letzte # Zeilen}}",
     "searchPlaceholder": "Zeilen filtern…",
     "jump": "Zu den neuesten springen",
     "jumpWithCount": "{count} neu – zu den neuesten springen",
@@ -1199,7 +1199,8 @@
     "clearSubmit": "Log leeren",
     "clearDone": "{label} geleert.",
     "clearFailed": "Das Log konnte nicht geleert werden.",
-    "clearBodyAudit": "Dieses Log gehört zu der Aufzeichnung, was mit dem Server passiert ist — Anmeldungen, blockierte Anfragen, Sperren. Es zu leeren zerstört Beweise, die du nach einem Einbruch brauchen könntest, und ist nicht rückgängig zu machen. Die Datei zeichnet von jetzt an weiter auf."
+    "clearBodyAudit": "Dieses Log gehört zu der Aufzeichnung, was mit dem Server passiert ist — Anmeldungen, blockierte Anfragen, Sperren. Es zu leeren zerstört Beweise, die du nach einem Einbruch brauchen könntest, und ist nicht rückgängig zu machen. Die Datei zeichnet von jetzt an weiter auf.",
+    "loadingSource": "{label} wird geladen…"
   },
   "services": {
     "title": "Dienste",

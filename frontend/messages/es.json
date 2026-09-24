@@ -1132,7 +1132,7 @@
     "wrapOn": "Ajustar líneas",
     "wrapOff": "No ajustar líneas",
     "linesLabel": "Líneas a cargar",
-    "linesOption": "Últimas {count} líneas",
+    "linesOption": "{count, plural, one {Última # línea} other {Últimas # líneas}}",
     "searchPlaceholder": "Filtrar líneas…",
     "jump": "Ir a lo más reciente",
     "jumpWithCount": "{count} nuevas — ir a lo más reciente",
@@ -1199,7 +1199,8 @@
     "clearSubmit": "Vaciar el registro",
     "clearDone": "{label} vaciado.",
     "clearFailed": "No se pudo vaciar el registro.",
-    "clearBodyAudit": "Este registro forma parte de cómo el servidor anota lo que le ha pasado: inicios de sesión, peticiones bloqueadas, bloqueos. Vaciarlo destruye pruebas que podrías necesitar tras una intrusión y no se puede deshacer. El archivo sigue grabando desde ahora."
+    "clearBodyAudit": "Este registro forma parte de cómo el servidor anota lo que le ha pasado: inicios de sesión, peticiones bloqueadas, bloqueos. Vaciarlo destruye pruebas que podrías necesitar tras una intrusión y no se puede deshacer. El archivo sigue grabando desde ahora.",
+    "loadingSource": "Cargando {label}…"
   },
   "services": {
     "title": "Servicios",

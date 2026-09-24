@@ -1132,7 +1132,7 @@
     "wrapOn": "Retour à la ligne",
     "wrapOff": "Pas de retour à la ligne",
     "linesLabel": "Lignes à charger",
-    "linesOption": "{count} dernières lignes",
+    "linesOption": "{count, plural, one {# dernière ligne} other {# dernières lignes}}",
     "searchPlaceholder": "Filtrer les lignes…",
     "jump": "Aller aux plus récentes",
     "jumpWithCount": "{count} nouvelles — aller aux plus récentes",
@@ -1199,7 +1199,8 @@
     "clearSubmit": "Vider le journal",
     "clearDone": "{label} vidé.",
     "clearFailed": "Le journal n'a pas pu être vidé.",
-    "clearBodyAudit": "Ce journal fait partie de la manière dont le serveur enregistre ce qui s'y passe : connexions, requêtes bloquées, bannissements. Le vider détruit des preuves dont vous pourriez avoir besoin après une intrusion, et c'est irréversible. Le fichier continue d'enregistrer à partir de maintenant."
+    "clearBodyAudit": "Ce journal fait partie de la manière dont le serveur enregistre ce qui s'y passe : connexions, requêtes bloquées, bannissements. Le vider détruit des preuves dont vous pourriez avoir besoin après une intrusion, et c'est irréversible. Le fichier continue d'enregistrer à partir de maintenant.",
+    "loadingSource": "Chargement de {label}…"
   },
   "services": {
     "title": "Services",

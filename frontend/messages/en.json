@@ -1132,7 +1132,7 @@
     "wrapOn": "Wrap lines",
     "wrapOff": "Unwrap lines",
     "linesLabel": "Lines to load",
-    "linesOption": "Last {count} lines",
+    "linesOption": "{count, plural, one {Last # line} other {Last # lines}}",
     "searchPlaceholder": "Filter lines…",
     "jump": "Jump to latest",
     "jumpWithCount": "{count} new — jump to latest",
@@ -1199,7 +1199,8 @@
     "clearSubmit": "Clear log",
     "clearDone": "{label} cleared.",
     "clearFailed": "The log could not be cleared.",
-    "clearBodyAudit": "This log is part of how the server records what happened to it — sign-ins, blocked requests, bans. Clearing it destroys evidence you may need after a break-in, and it cannot be undone. The file keeps recording from now on."
+    "clearBodyAudit": "This log is part of how the server records what happened to it — sign-ins, blocked requests, bans. Clearing it destroys evidence you may need after a break-in, and it cannot be undone. The file keeps recording from now on.",
+    "loadingSource": "Loading {label}…"
   },
   "services": {
     "title": "Services",
