@@ -5,7 +5,7 @@ return [
     'compose_unparsable' => 'Docker no pudo leer este archivo compose. Revisa la indentación y las comillas; el error de Docker está en el registro de operaciones del servidor.',
     'compose_no_services' => 'Este archivo compose no define ningún servicio, así que no habría nada que ejecutar.',
     'compose_bind_outside' => 'El servicio :service monta :path, que está fuera del directorio propio de esta aplicación. Un contenedor solo puede montar sus propios archivos.',
-    'compose_port_public' => 'El servicio :service publica el puerto :port en todas las direcciones. Docker escribe sus propias reglas de firewall por delante de las del panel, así que ese puerto sería accesible desde internet aunque la página de Firewall lo muestre cerrado. Publícalo en 127.0.0.1 y deja que nginx haga de proxy.',
+    'compose_port_public' => 'Este archivo compose publica un puerto en todas las direcciones con un formato que el panel no pudo reescribir. Las reglas de firewall de Docker van por delante de las del panel, así que sería accesible desde internet aunque la página de Firewall lo muestre cerrado. Publícalo en 127.0.0.1 —por ejemplo `"127.0.0.1:3001:3001"`— y nginx hará de proxy.',
     'compose_forbidden' => [
         'privileged' => 'El servicio :service se ejecuta en modo privilegiado, lo que le da todo el host.',
         'cap_add' => 'El servicio :service añade capacidades de Linux. SYS_ADMIN por sí sola basta para montar los sistemas de archivos del host.',

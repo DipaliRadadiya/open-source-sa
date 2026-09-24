@@ -40,6 +40,26 @@ function composeOps(array $resolved, bool $answered = true): ServerOps
     return $ops;
 }
 
+/** A ServerOps that answers each successive `config` call from a list. */
+function composeOpsSequence(array $documents): ServerOps
+{
+    $ops = Mockery::mock(ServerOps::class);
+    $index = 0;
+
+    $ops->shouldReceive('run')->andReturnUsing(function () use ($documents, &$index) {
+        $doc = $documents[min($index, count($documents) - 1)];
+        $index++;
+
+        $process = Mockery::mock(ProcessResult::class);
+        $process->shouldReceive('output')->andReturn(json_encode($doc));
+        $process->shouldReceive('errorOutput')->andReturn('');
+
+        return new ServerOpsResult(ok: true, reference: 'r', result: $process, answered: true);
+    });
+
+    return $ops;
+}
+
 const ROOT = '/home/shop/shop/public_html';
 
 it('accepts a file that keeps to its own directory and to loopback', function () {
@@ -52,19 +72,47 @@ it('accepts a file that keeps to its own directory and to loopback', function ()
     expect((new ComposeValidator($ops))->validate('...', ROOT)['ok'])->toBeTrue();
 });
 
-it('refuses a port published to every address', function () {
-    // `"8080:80"` — the form everyone writes — resolves with NO host_ip, and
-    // Docker's rules sit ahead of ufw's, so it is reachable from the internet
-    // while the Firewall page reports it closed.
-    $ops = composeOps(['services' => ['web' => [
-        'image' => 'nginx:alpine',
-        'ports' => [['published' => '8080', 'target' => 80]],
-    ]]]);
+it('binds a public port to loopback instead of refusing the file', function () {
+    // The reversal that matters. `"3001:3001"` is the normal Docker idiom and
+    // EVERY upstream compose file publishes that way — it is what the
+    // project's own README says. Refusing it was right about the danger and
+    // wrong as a product decision: the panel would have been hostile to every
+    // image anyone ever tried.
+    //
+    // Two parses: the first sees a public port, the second (after the
+    // rewrite) sees loopback.
+    $public = ['services' => ['web' => ['ports' => [['published' => '3001', 'target' => 3001]]]]];
+    $fixed = ['services' => ['web' => ['ports' => [['host_ip' => '127.0.0.1', 'published' => '3001', 'target' => 3001]]]]];
 
-    $verdict = (new ComposeValidator($ops))->validate('...', ROOT);
+    $ops = composeOpsSequence([$public, $fixed]);
+
+    $verdict = (new ComposeValidator($ops))->validate(
+        "services:\n  web:\n    image: nginx\n    ports:\n      - \"3001:3001\"\n",
+        ROOT,
+    );
+
+    expect($verdict['ok'])->toBeTrue()
+        ->and($verdict['rewrote_ports'])->toBeTrue()
+        // What gets written is the bound form, not what was typed.
+        ->and($verdict['compose'])->toContain('127.0.0.1:3001:3001');
+});
+
+it('refuses a public port the rewrite could not fix', function () {
+    // The safety does NOT rest on the regex being complete. A mapping form the
+    // rewrite misses is re-parsed, still found public, and refused — never
+    // silently published to the world.
+    $public = ['services' => ['web' => ['ports' => [['published' => '8080', 'target' => 80]]]]];
+
+    // Both parses see a public port: the rewrite changed nothing it could fix.
+    $ops = composeOpsSequence([$public, $public]);
+
+    $verdict = (new ComposeValidator($ops))->validate(
+        "services:\n  web:\n    ports:\n      - target: 80\n        published: 8080\n",
+        ROOT,
+    );
 
     expect($verdict['ok'])->toBeFalse()
-        ->and(implode(' ', $verdict['errors']))->toContain('8080');
+        ->and($verdict['errors'][0])->toBe(__('errors/application.compose_port_public', ['service' => '', 'port' => '']));
 });
 
 it('refuses a bind mount outside the application directory', function () {

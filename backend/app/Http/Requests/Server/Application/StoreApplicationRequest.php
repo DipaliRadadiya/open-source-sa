@@ -11,6 +11,7 @@ use App\Rules\StartCommand;
 use App\Rules\SupportedNodeVersion;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\EngineVersionSupport;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Databases\DatabaseManager;
@@ -356,6 +357,37 @@ class StoreApplicationRequest extends FormRequest
                 // did not show.
                 if (($blocked = $manager->unavailable($type)) !== null) {
                     $validator->errors()->add('site_type', $blocked['reason']);
+                }
+            },
+
+            // A pasted compose file, checked here rather than at deploy time.
+            //
+            // It was only checked in the supervisor, so a refused file was
+            // accepted by the form, an application row was created, the vhost
+            // was written, and provisioning then failed — leaving a site that
+            // answered 502 and an application the user had to delete. The
+            // refusal has to arrive on the field, before any of that exists.
+            //
+            // Still checked in the supervisor too: the form is not the only
+            // way a row changes, and a rule enforced once at the boundary
+            // holds only until something else writes it.
+            function (Validator $validator) {
+                $compose = (string) $this->input('compose');
+
+                if (trim($compose) === '' || $validator->errors()->isNotEmpty()) {
+                    return;
+                }
+
+                // Validated against a directory that exists and that the panel
+                // can enter, because Compose resolves relative bind sources
+                // against the process's working directory — and the
+                // application's own directory has not been created yet at
+                // validation time. The site root it will get is under the
+                // system user's home, so that is the shape to check against.
+                $verdict = app(ComposeValidator::class)->validate($compose, sys_get_temp_dir());
+
+                foreach ($verdict['errors'] as $error) {
+                    $validator->errors()->add('compose', $error);
                 }
             },
 

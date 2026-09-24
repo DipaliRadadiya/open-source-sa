@@ -5,7 +5,7 @@ return [
     'compose_unparsable' => 'Docker n\'a pas pu lire ce fichier compose. Vérifiez l\'indentation et les guillemets ; l\'erreur de Docker figure dans le journal des opérations serveur.',
     'compose_no_services' => 'Ce fichier compose ne définit aucun service : il n\'y aurait rien à exécuter.',
     'compose_bind_outside' => 'Le service :service monte :path, hors du répertoire propre à cette application. Un conteneur ne peut monter que ses propres fichiers.',
-    'compose_port_public' => 'Le service :service publie le port :port sur toutes les adresses. Docker écrit ses propres règles de pare-feu avant celles du panel : ce port serait joignable depuis internet alors que la page Pare-feu l\'affiche fermé. Publiez-le sur 127.0.0.1 et laissez nginx faire le proxy.',
+    'compose_port_public' => 'Ce fichier compose publie un port sur toutes les adresses sous une forme que le panel n\'a pas pu réécrire. Les règles de pare-feu de Docker passent avant celles du panel : il serait joignable depuis internet alors que la page Pare-feu l\'affiche fermé. Publiez-le sur 127.0.0.1 — par exemple `"127.0.0.1:3001:3001"` — et nginx fera le proxy.',
     'compose_forbidden' => [
         'privileged' => 'Le service :service s\'exécute en mode privilégié, ce qui lui donne tout l\'hôte.',
         'cap_add' => 'Le service :service ajoute des capacités Linux. SYS_ADMIN suffit à monter les systèmes de fichiers de l\'hôte.',

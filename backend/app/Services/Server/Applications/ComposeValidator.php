@@ -62,17 +62,62 @@ class ComposeValidator
     public function __construct(private ServerOps $serverOps) {}
 
     /**
-     * @return array{ok: bool, errors: list<string>, resolved: array<string, mixed>|null}
+     * Check a compose file, fixing what can safely be fixed.
+     *
+     * `compose` in the result is what should actually be written — the user's
+     * file, with published ports bound to loopback if they were not already.
+     * That rewrite is the difference between a panel that refuses upstream's
+     * own file and one that runs it.
+     *
+     * Everything else stays a refusal, because there is no safe rewrite for
+     * it: `privileged`, `network_mode: host` and a bind mount of `/` are "no",
+     * not "let me fix that for you".
+     *
+     * @return array{ok: bool, errors: list<string>, resolved: array<string, mixed>|null, compose: string, rewrote_ports: bool}
      */
     public function validate(string $compose, string $documentRoot): array
     {
         $parsed = $this->parse($compose, $documentRoot);
 
         if ($parsed === null) {
-            return ['ok' => false, 'errors' => [__('errors/application.compose_unparsable')], 'resolved' => null];
+            return [
+                'ok' => false,
+                'errors' => [__('errors/application.compose_unparsable')],
+                'resolved' => null,
+                'compose' => $compose,
+                'rewrote_ports' => false,
+            ];
+        }
+
+        $rewrote = false;
+
+        // Rewrite, then **verify with Docker's own parser**. The safety does
+        // not rest on the regex being complete: if any published port still
+        // lacks a loopback address after the rewrite, the file is refused. A
+        // mapping form the rewrite misses is therefore refused, never silently
+        // published to the world.
+        if ($this->hasPublicPort($parsed)) {
+            $candidate = $this->bindToLoopback($compose);
+            $reparsed = $candidate === $compose ? null : $this->parse($candidate, $documentRoot);
+
+            if ($reparsed !== null && ! $this->hasPublicPort($reparsed)) {
+                $compose = $candidate;
+                $parsed = $reparsed;
+                $rewrote = true;
+            }
         }
 
         $errors = [];
+
+        // Only reached when the rewrite could not fix it — an exotic mapping
+        // form, or one the re-parse rejected. The message still says what to
+        // do, because at that point the user has to do it.
+        if ($this->hasPublicPort($parsed)) {
+            $errors[] = __('errors/application.compose_port_public', [
+                'service' => '',
+                'port' => '',
+            ]);
+        }
         $services = $parsed['services'] ?? [];
 
         if (! is_array($services) || $services === []) {
@@ -93,7 +138,6 @@ class ComposeValidator
             $errors = array_merge(
                 $errors,
                 $this->bindMountErrors((string) $name, $service, $documentRoot),
-                $this->portErrors((string) $name, $service),
             );
         }
 
@@ -103,6 +147,8 @@ class ComposeValidator
             // problem to fix, and five identical lines reads as five.
             'errors' => array_values(array_unique($errors)),
             'resolved' => $parsed,
+            'compose' => $compose,
+            'rewrote_ports' => $rewrote,
         ];
     }
 
@@ -196,36 +242,60 @@ class ComposeValidator
     }
 
     /**
-     * Published ports must bind loopback.
+     * Whether any published port is bound to every address.
      *
-     * A missing `host_ip` in the resolved document means every address, which
-     * is what `"8080:80"` expands to — the form everyone writes. Docker's
-     * rules sit ahead of the ones ufw manages, so that port is reachable from
-     * the internet while the panel's Firewall page reports it closed.
+     * A missing `host_ip` in the resolved document means exactly that, which
+     * is what `"8080:80"` expands to. Docker's rules sit ahead of the ones ufw
+     * manages, so such a port is reachable from the internet while the panel's
+     * Firewall page reports it closed.
      *
-     * @param  array<string, mixed>  $service
-     * @return list<string>
+     * This used to be an error. It is now a thing to *fix*, because refusing
+     * it was right about the danger and wrong as a product decision:
+     * `"3001:3001"` is the normal Docker idiom and **every upstream compose
+     * file publishes that way** — it is what the project's own README says. A
+     * panel that refuses a file copied verbatim from the project's docs is
+     * hostile, and would be hostile for every image anyone ever tried.
+     *
+     * @param  array<string, mixed>  $resolved
      */
-    private function portErrors(string $name, array $service): array
+    private function hasPublicPort(array $resolved): bool
     {
-        $errors = [];
+        foreach (($resolved['services'] ?? []) as $service) {
+            foreach ((array) ($service['ports'] ?? []) as $port) {
+                if (! is_array($port)) {
+                    continue;
+                }
 
-        foreach ((array) ($service['ports'] ?? []) as $port) {
-            if (! is_array($port)) {
-                continue;
-            }
-
-            $host = (string) ($port['host_ip'] ?? '');
-
-            if (! in_array($host, ['127.0.0.1', '::1'], true)) {
-                $errors[] = __('errors/application.compose_port_public', [
-                    'service' => $name,
-                    'port' => (string) ($port['published'] ?? '?'),
-                ]);
+                if (! in_array((string) ($port['host_ip'] ?? ''), ['127.0.0.1', '::1'], true)) {
+                    return true;
+                }
             }
         }
 
-        return $errors;
+        return false;
+    }
+
+    /**
+     * Rewrite short-form port mappings to publish on loopback.
+     *
+     * A text rewrite, and deliberately not a clever one — it handles the short
+     * forms (`- "3001:3001"`, `- 3001:3001`) because those are what people
+     * paste. The safety does **not** rest on this regex being complete: the
+     * caller re-runs `docker compose config` on the result and refuses unless
+     * *every* published port now names a loopback address. So a form this
+     * misses is refused, not silently published — the verification is the
+     * guarantee, the rewrite is only the convenience.
+     */
+    private function bindToLoopback(string $compose): string
+    {
+        return preg_replace_callback(
+            // A list entry that is a bare `host:container[/proto]` mapping,
+            // optionally quoted. An entry that already carries an address has
+            // two colons before the protocol and does not match.
+            '/^(\s*-\s*)(["\']?)(\d+:\d+(?:\/\w+)?)\2\s*$/m',
+            fn (array $m): string => $m[1].'"127.0.0.1:'.$m[3].'"',
+            $compose,
+        ) ?? $compose;
     }
 
     /**

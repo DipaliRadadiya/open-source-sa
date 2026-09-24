@@ -131,7 +131,12 @@ class ContainerSupervisor
                 $application->forceFill(['app_port' => $port])->save();
             }
 
-            return $compose;
+            // The validator's file, not the user's. They differ when a port
+            // was published to every address and the panel bound it to
+            // loopback — the row keeps what was typed so the editor shows it
+            // back unchanged, and the disk gets what actually runs. The same
+            // split every vhost and unit file here already has.
+            return $verdict['compose'];
         }
 
         return View::make('server.docker.compose', [

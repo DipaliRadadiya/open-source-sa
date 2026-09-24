@@ -5,7 +5,7 @@ return [
     'compose_unparsable' => 'Docker konnte diese Compose-Datei nicht lesen. Prüfen Sie Einrückung und Anführungszeichen — die Meldung von Docker selbst steht im Serveroperations-Protokoll.',
     'compose_no_services' => 'Diese Compose-Datei definiert keine Dienste, es gäbe also nichts auszuführen.',
     'compose_bind_outside' => 'Dienst :service bindet :path ein, was außerhalb des eigenen Verzeichnisses dieser Anwendung liegt. Ein Container darf nur seine eigenen Dateien einbinden.',
-    'compose_port_public' => 'Dienst :service veröffentlicht Port :port auf allen Adressen. Docker schreibt eigene Firewall-Regeln vor denen des Panels, daher wäre dieser Port aus dem Internet erreichbar, obwohl die Firewall-Seite ihn als geschlossen anzeigt. Veröffentlichen Sie ihn auf 127.0.0.1 und lassen Sie nginx als Proxy arbeiten.',
+    'compose_port_public' => 'Diese Compose-Datei veröffentlicht einen Port auf allen Adressen in einer Form, die das Panel nicht umschreiben konnte. Dockers Firewall-Regeln stehen vor denen des Panels, der Port wäre also aus dem Internet erreichbar, obwohl die Firewall-Seite ihn als geschlossen anzeigt. Veröffentlichen Sie ihn auf 127.0.0.1 — etwa `"127.0.0.1:3001:3001"` — dann übernimmt nginx den Proxy.',
     'compose_forbidden' => [
         'privileged' => 'Dienst :service läuft privilegiert, was ihm den gesamten Host gibt.',
         'cap_add' => 'Dienst :service fügt Linux-Capabilities hinzu. SYS_ADMIN allein genügt, um die Dateisysteme des Hosts einzuhängen.',
