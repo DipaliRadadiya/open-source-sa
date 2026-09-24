@@ -14,7 +14,8 @@ import { matchesSeverity } from "@/lib/logs/severity";
 import { LogSourceList } from "@/components/logs/log-source-list";
 import { LogToolbar } from "@/components/logs/log-toolbar";
 import { LogViewer } from "@/components/logs/log-viewer";
-import { FOLLOW_COOKIE, resolveFollow } from "@/lib/logs/follow-preference";
+import { FOLLOW_COOKIE, LINES_COOKIE, resolveFollow } from "@/lib/logs/follow-preference";
+import { writeCookie } from "@/lib/logs/app-log-prefs";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Eraser } from "lucide-react";
@@ -38,6 +39,7 @@ export function LogsPanel({
   initial,
   initialLines,
   followPreference,
+  renderedAt,
   canManage = false,
 }) {
   const t = useTranslations("logs");
@@ -47,10 +49,14 @@ export function LogsPanel({
   // effect, the poll's result is held separately and dropped the moment a fresh
   // server render arrives.
   const [polledSources, setPolledSources] = useState(null);
+  // "Written just now" is measured against the server render's clock until
+  // the first poll, so the browser draws the same dots the server did.
+  const [now, setNow] = useState(renderedAt);
   const [renderedWith, setRenderedWith] = useState(initialSources);
   if (renderedWith !== initialSources) {
     setRenderedWith(initialSources);
     setPolledSources(null);
+    setNow(renderedAt);
   }
   const sources = polledSources ?? initialSources;
   /*
@@ -65,6 +71,7 @@ export function LogsPanel({
   // every 30s, and a `load` rebuilt from them re-read the whole log each time.
   const sourceKey = source?.key ?? null;
   const readable = Boolean(source?.readable);
+  const appends = source?.follow !== false;
 
   const [lines, setLines] = useState(initial?.log?.lines ?? []);
   const [status, setStatus] = useState(initial?.status ?? "ok");
@@ -103,6 +110,10 @@ export function LogsPanel({
     } catch {
       // A blocked cookie costs the preference, nothing else.
     }
+  }, []);
+  const chooseLines = useCallback((next) => {
+    setLineCount(next);
+    writeCookie(LINES_COOKIE, String(next));
   }, []);
   // "reconnecting" after a blip, "paused" once we stop trying — a tail that
   // silently stops is indistinguishable from a log that went quiet.
@@ -171,7 +182,10 @@ export function LogsPanel({
       try {
         const { data } = await listLogSources();
         const parsed = logSourcesResponseSchema.safeParse(data);
-        if (active && parsed.success) setPolledSources(parsed.data.logs);
+        if (active && parsed.success) {
+          setPolledSources(parsed.data.logs);
+          setNow(Date.now());
+        }
       } catch {
         /* keep the last known catalog */
       }
@@ -240,6 +254,17 @@ export function LogsPanel({
     async function tick() {
       if (document.hidden) return;
       try {
+        if (!appends) {
+          // No cursor to resume from: re-read the window and replace it. The
+          // viewer tells new lines from the ones it already holds.
+          const { data } = await readLog(sourceKey, { lines: lineCount });
+          if (!active) return;
+          setLines(data?.log?.lines ?? []);
+          setTruncated(Boolean(data?.log?.truncated));
+          failures = 0;
+          setTailState("live");
+          return;
+        }
         const { data } = await readLog(sourceKey, { after: cursor.current });
         if (!active) return;
         const next = data?.log?.cursor ?? 0;
@@ -274,7 +299,7 @@ export function LogsPanel({
       clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
     };
-  }, [follow, disabled, debouncedTerm, sourceKey]);
+  }, [follow, disabled, debouncedTerm, sourceKey, appends, lineCount]);
 
   // Severity narrows what's on screen without another round trip, so it costs
   // nothing to keep tailing underneath it.
@@ -384,7 +409,7 @@ export function LogsPanel({
   return (
     <div className="grid gap-6 lg:h-[calc(100svh-13rem)] lg:min-h-[24rem] lg:grid-cols-[16.5rem_minmax(0,1fr)]">
       <aside className="lg:h-full lg:overflow-y-auto">
-        <LogSourceList sources={sources} selected={current} onSelect={selectSource} />
+        <LogSourceList sources={sources} selected={current} onSelect={selectSource} now={now} />
       </aside>
 
       <section className="flex h-[calc(100svh-13rem)] min-h-[24rem] flex-col overflow-hidden rounded-xl border bg-card shadow-sm lg:h-full lg:min-h-0">
@@ -394,13 +419,15 @@ export function LogsPanel({
           loaded={lines.length}
           // Only worth stating when it isn't what the selector already says:
           // the file came up short of the window we asked for.
-          wholeFile={!truncated && lines.length > 0}
+          // Not for the journal or a log read through the system: those have no
+          // file size, so a short window says nothing about the whole.
+          wholeFile={!truncated && lines.length > 0 && source?.size != null}
           term={term}
           onTermChange={setTerm}
           severity={severity}
           onSeverityChange={setSeverity}
           lines={lineCount}
-          onLinesChange={setLineCount}
+          onLinesChange={chooseLines}
           follow={follow}
           onFollowChange={changeFollow}
           wrap={wrap}
@@ -412,6 +439,7 @@ export function LogsPanel({
             copy(visible.join("\n"), t("copiedLines", { count: visible.length }))
           }
           downloadUrl={source ? logDownloadUrl(source.key) : undefined}
+          showDownload={source?.downloadable !== false}
           onClear={
             canManage && source?.clearable ? () => setConfirmClear(true) : null
           }
@@ -441,7 +469,7 @@ export function LogsPanel({
             {nextLineStep ? (
               <button
                 type="button"
-                onClick={() => setLineCount(nextLineStep)}
+                onClick={() => chooseLines(nextLineStep)}
                 className="rounded font-medium text-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 {t("loadMore", { count: nextLineStep })}

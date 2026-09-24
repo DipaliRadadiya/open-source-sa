@@ -1111,7 +1111,7 @@
     "whatToDo": "対処方法"
   },
   "logs": {
-    "title": "ログ",
+    "title": "システムログ",
     "subtitle": "このサーバーのログファイルを読みます。",
     "subtitleWithLocked": "このサーバーのログファイルを読みます。{total} 件中 {count} 件は高い権限が必要で、まだ開けません。",
     "sourcesLabel": "ログソース",

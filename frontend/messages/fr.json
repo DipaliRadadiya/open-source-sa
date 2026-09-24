@@ -1111,7 +1111,7 @@
     "whatToDo": "Que faire"
   },
   "logs": {
-    "title": "Journaux",
+    "title": "Journaux système",
     "subtitle": "Lire les fichiers journaux de ce serveur.",
     "subtitleWithLocked": "Lire les fichiers journaux de ce serveur. {count} sur {total} nécessitent un accès élevé et ne peuvent pas encore être ouverts.",
     "sourcesLabel": "Sources des journaux",

@@ -36,7 +36,8 @@ test("switching logs happens in place, not by a server navigation", () => {
 test("the catalog poll does not re-read the log", () => {
   // New source objects every 30s rebuilt `load`, and the effect re-ran it.
   assert.match(PANEL, /\[sourceKey, readable, lineCount, debouncedTerm, t\]/);
-  assert.match(PANEL, /\[follow, disabled, debouncedTerm, sourceKey\]/);
+  // Primitives only — `appends` is a boolean read off the source, not the object.
+  assert.match(PANEL, /\[follow, disabled, debouncedTerm, sourceKey, appends, lineCount\]/);
 });
 
 test("a first read that fails is one box, not a box and a toast", () => {

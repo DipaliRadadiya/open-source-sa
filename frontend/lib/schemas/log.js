@@ -47,6 +47,13 @@ export const logSourceSchema = z.object({
   // Read from the API, never inferred from the key: the registry decides which
   // sources these are, and a list kept here would drift from it.
   clear_sensitive: z.boolean().optional().default(false),
+  // Only plain files have byte offsets. The journal and anything read through
+  // the system cannot answer `?after=`: they return the whole window again, and
+  // appending that re-added the same lines on every tick.
+  follow: z.boolean().optional().default(true),
+  // `/download` refuses the same sources with a 422, which a plain link opens
+  // as a page of raw JSON.
+  downloadable: z.boolean().optional().default(true),
 });
 
 export const logSourcesResponseSchema = z.object({

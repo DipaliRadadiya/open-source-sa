@@ -1111,7 +1111,7 @@
     "whatToDo": "O que fazer"
   },
   "logs": {
-    "title": "Logs",
+    "title": "Logs do sistema",
     "subtitle": "Leia os arquivos de log deste servidor.",
     "subtitleWithLocked": "Leia os arquivos de log deste servidor. {count} de {total} precisam de acesso elevado e ainda não podem ser abertos.",
     "sourcesLabel": "Fontes de log",

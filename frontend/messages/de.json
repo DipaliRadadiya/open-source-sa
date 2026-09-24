@@ -1111,7 +1111,7 @@
     "whatToDo": "Was zu tun ist"
   },
   "logs": {
-    "title": "Protokolle",
+    "title": "Systemprotokolle",
     "subtitle": "Protokolldateien dieses Servers lesen.",
     "subtitleWithLocked": "Protokolldateien dieses Servers lesen. {count} von {total} benötigen erweiterten Zugriff und können noch nicht geöffnet werden.",
     "sourcesLabel": "Protokollquellen",

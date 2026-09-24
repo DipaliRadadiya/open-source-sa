@@ -1111,7 +1111,7 @@
     "whatToDo": "Qué hacer"
   },
   "logs": {
-    "title": "Registros",
+    "title": "Registros del sistema",
     "subtitle": "Consulta los archivos de registro de este servidor.",
     "subtitleWithLocked": "Consulta los archivos de registro de este servidor. {count} de {total} necesitan acceso elevado y aún no se pueden abrir.",
     "sourcesLabel": "Orígenes de registro",

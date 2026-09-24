@@ -55,8 +55,16 @@ export function ConfirmDialog({
   // asks you to review a list needs the room.
   className,
 }) {
+  // Escape used to close it mid-request, leaving the outcome to a toast about
+  // a box that was no longer there. Cancel is already disabled for the same
+  // reason; a caller with its own guard is unaffected.
+  function handleOpenChange(next) {
+    if (!next && pending) return;
+    onOpenChange?.(next);
+  }
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       {/* A confirmation carrying a body — a checkbox to weigh up, a list to
           review, a domain to type — gets more width, because the alternative is
           the same words in a taller, narrower column. The delete-site dialog
