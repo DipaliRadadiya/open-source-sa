@@ -42,6 +42,7 @@ return [
     ],
 
     'unavailable' => [
+        'stack' => 'This server runs containers only, so it does not host this kind of application.',
         'database' => 'This application needs :engines, which this server does not have.',
         'php' => 'This server does not have PHP installed.',
         'node' => 'This server does not have Node.js installed.',

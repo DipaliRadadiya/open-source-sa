@@ -81,6 +81,17 @@ class SiteTypeManager
 
     public const BLOCKED_WEB_SERVER = 'web_server';
 
+    /**
+     * The stack does not host this kind of application at all.
+     *
+     * Separate from `BLOCKED_RUNTIME` because there is nothing to install. A
+     * Docker box has PHP on it — the panel is PHP — so the runtime check
+     * passes and would have offered WordPress on a server that will never
+     * serve a PHP site. Offering an install button here would be the same lie
+     * the web-server code exists to avoid.
+     */
+    public const BLOCKED_STACK = 'stack';
+
     public function catalog(): array
     {
         return array_map(function (SiteType $type) {
@@ -162,6 +173,21 @@ class SiteTypeManager
      */
     public function unavailable(SiteType $type): ?array
     {
+        // First, because it is the strongest refusal and the others would
+        // answer misleadingly. A Docker box HAS php and node installed — the
+        // panel needs both — so the runtime check below passes cleanly for
+        // WordPress, and the user would be shown a card that fails only once
+        // they try to build a site with it.
+        if (! $this->capabilities->hosts($type->servingProfile())) {
+            return [
+                'code' => self::BLOCKED_STACK,
+                'reason' => __('application.unavailable.stack'),
+                // Nothing to install would change this, so the card must not
+                // offer to fix itself.
+                'runtime' => null,
+            ];
+        }
+
         $runtime = $this->requiredRuntime($type->servingProfile());
 
         if ($runtime !== null && ! $this->capabilities->supports($runtime)) {

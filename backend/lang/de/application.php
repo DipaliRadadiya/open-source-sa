@@ -37,6 +37,7 @@ return [
     ],
 
     'unavailable' => [
+        'stack' => 'Dieser Server führt ausschließlich Container aus und hostet diese Art von Anwendung daher nicht.',
         'database' => 'Diese Anwendung benötigt :engines, das auf diesem Server fehlt.',
         'php' => 'Auf diesem Server ist PHP nicht installiert.',
         'node' => 'Auf diesem Server ist Node.js nicht installiert.',

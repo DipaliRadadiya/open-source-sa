@@ -37,6 +37,7 @@ return [
     ],
 
     'unavailable' => [
+        'stack' => 'Ce serveur n\'exécute que des conteneurs ; il n\'héberge donc pas ce type d\'application.',
         'database' => 'Cette application nécessite :engines, absent de ce serveur.',
         'php' => 'PHP n\'est pas installé sur ce serveur.',
         'node' => 'Node.js n\'est pas installé sur ce serveur.',

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CentralSystemGuard;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureServerManagesDatabases;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\ThrottleRequestsPerRoute;
 use App\Services\Admin\ApiErrorLogWriter;
@@ -88,6 +89,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // adding to it, so a second call silently drops the first.
         $middleware->alias([
             'permission' => CheckPermission::class,
+            // Refuses database management where the stack hosts nothing that
+            // uses one. See the class for why it is middleware rather than a
+            // check in twenty-nine controller actions.
+            'manages-databases' => EnsureServerManagesDatabases::class,
             'central' => CentralSystemGuard::class,
             // One counter per route for `throttle:N,M`; see the class.
             'throttle' => ThrottleRequestsPerRoute::class,

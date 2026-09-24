@@ -27,25 +27,72 @@ class ServerCapabilities
      * @var array<string, array{web_server: string, capabilities: array<string, bool>}>
      */
     private const STACKS = [
-        'lemp' => ['web_server' => 'nginx', 'capabilities' => ['php' => true, 'node' => false]],
-        'lamp' => ['web_server' => 'apache', 'capabilities' => ['php' => true, 'node' => false]],
-        'ols' => ['web_server' => 'openlitespeed', 'capabilities' => ['php' => true, 'node' => false]],
-        'mern' => ['web_server' => 'nginx', 'capabilities' => ['php' => false, 'node' => true]],
-        // docker is nginx too, and `php => true` is deliberate: the box still
-        // serves PHP sites. Containers are reached through a reverse proxy on
-        // an allocated port, which is the vhost a Node app already gets, so
-        // nothing about this stack removes what nginx was already doing.
-        //
-        // The runtimes are overwritten by detection below in any case; the
-        // preset only decides what a box is assumed to have before anything
-        // has been looked at.
-        'docker' => ['web_server' => 'nginx', 'capabilities' => ['php' => true, 'node' => false]],
+        'lemp' => ['web_server' => 'nginx', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'static']]],
+        'lamp' => ['web_server' => 'apache', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'static']]],
+        'ols' => ['web_server' => 'openlitespeed', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['php', 'static']]],
+        'mern' => ['web_server' => 'nginx', 'capabilities' => ['php' => false, 'node' => true, 'serving_profiles' => ['node', 'static']]],
+        // docker hosts containers and nothing else. `php => true` is still
+        // honest and deliberate — PHP *is* installed, because the panel itself
+        // is a Laravel application — but `serving_profiles` says the box will
+        // not serve PHP *sites*, and that is the distinction the rest of the
+        // panel reads.
+        'docker' => ['web_server' => 'nginx', 'capabilities' => ['php' => true, 'node' => false, 'serving_profiles' => ['docker']]],
     ];
+
+    /**
+     * What a server offers when nothing recorded it.
+     *
+     * A box migrated in from another panel has `stack = null`, and it is
+     * certainly hosting something. Defaulting it to "hosts nothing" would
+     * empty the site-type catalog on a working server, so the unknown case is
+     * the permissive one — the same reasoning `detect()` already uses for the
+     * runtimes.
+     *
+     * @var list<string>
+     */
+    private const DEFAULT_PROFILES = ['php', 'node', 'static'];
 
     /** Whether reconcileWebServer() has already run for this request. */
     private bool $reconciled = false;
 
     public function __construct(private ServerOps $serverOps) {}
+
+    /**
+     * Whether this server will serve applications of a given kind.
+     *
+     * Distinct from `can('php')`, which answers whether PHP is *installed* —
+     * true on every box, because the panel is a Laravel application. This
+     * answers whether the box will host PHP *sites*, which is a decision the
+     * stack made.
+     */
+    public function hosts(string $profile): bool
+    {
+        return in_array($profile, $this->servingProfiles(), true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function servingProfiles(): array
+    {
+        // The recorded row only, and deliberately not `current()`: that detects
+        // and stores when no row exists, which shells out. This is read by a
+        // middleware on every database request, and a gate has no business
+        // being the thing that triggers server detection — it adds a probe, a
+        // latency and a failure mode to twenty-nine routes that did not have
+        // one.
+        //
+        // No row means nobody has recorded anything yet, which lands on the
+        // permissive default below, same as a row without the key.
+        $recorded = ServerCapability::query()->value('capabilities')['serving_profiles'] ?? null;
+
+        // A row written before this key existed, on a server that is plainly
+        // working. Treated as unknown rather than empty for the same reason
+        // detection is: an absent answer must not read as "nothing".
+        return is_array($recorded) && $recorded !== []
+            ? array_values($recorded)
+            : self::DEFAULT_PROFILES;
+    }
 
     /**
      * @return array<int, string>
@@ -106,8 +153,19 @@ class ServerCapabilities
         return $this->store([
             'stack' => $stack,
             'web_server' => $preset['web_server'],
-            // Detection still wins for the runtimes: the installer may have
-            // added more than the preset implies.
+            // Detection still wins for the RUNTIMES: the installer may have
+            // added more than the preset implies. It must not win for
+            // `serving_profiles`, and the order here is what guarantees that —
+            // `detectRuntimes()` carries no such key, so the preset's value
+            // survives the merge.
+            //
+            // That separation is the whole point. `php` answers "is PHP
+            // installed", which is true on every box because the panel is
+            // PHP; `serving_profiles` answers "will this box serve PHP
+            // sites", which is a decision, not an observation. They were the
+            // same question until the docker stack existed, and reading one
+            // as the other is what had the setup page recommending MySQL on a
+            // server that will never host a PHP site.
             'capabilities' => array_merge($preset['capabilities'], $this->detectRuntimes()),
             'source' => 'installer',
         ]);
@@ -125,7 +183,15 @@ class ServerCapabilities
         return $this->store([
             'stack' => $record->stack,
             'web_server' => $this->detectWebServer() ?? $record->web_server,
-            'capabilities' => $this->detectRuntimes(),
+            // Merged over what is recorded, not written in place of it.
+            // Replacing the array wiped `serving_profiles` on every runtime
+            // install or removal, so a Docker box that installed anything
+            // silently started offering WordPress again — the recorded
+            // decision erased by an unrelated observation.
+            'capabilities' => array_merge(
+                (array) $record->capabilities,
+                $this->detectRuntimes(),
+            ),
             'source' => $record->source,
         ]);
     }
@@ -224,7 +290,10 @@ class ServerCapabilities
         return $this->store([
             'stack' => null, // unknown: we did not build this box
             'web_server' => $this->detectWebServer(),
-            'capabilities' => $this->detectRuntimes(),
+            // Permissive by default. A box migrated in from another panel is
+            // certainly already hosting something, and answering "hosts
+            // nothing" would empty its site-type catalog on a working server.
+            'capabilities' => $this->detectRuntimes() + ['serving_profiles' => self::DEFAULT_PROFILES],
             'source' => 'detected',
         ]);
     }

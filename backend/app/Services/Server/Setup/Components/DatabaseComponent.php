@@ -3,6 +3,7 @@
 namespace App\Services\Server\Setup\Components;
 
 use App\Contracts\SetupComponent;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\Installers\EngineInstallerManager;
 
@@ -16,6 +17,7 @@ class DatabaseComponent implements SetupComponent
     public function __construct(
         private DatabaseManager $databases,
         private EngineInstallerManager $installers,
+        private ServerCapabilities $capabilities,
     ) {}
 
     public function key(): string
@@ -32,9 +34,26 @@ class DatabaseComponent implements SetupComponent
         return collect($this->databases->detectedVersions())->contains(fn (?string $version) => $version !== null);
     }
 
+    /**
+     * Only where something the box hosts could use one.
+     *
+     * This returned a hardcoded `true`, and nothing in the setup catalogue was
+     * stack-aware — so a Docker server, which hosts containers and manages no
+     * databases at all, was told to install MySQL before its first site. The
+     * panel's own data is SQLite; every engine here exists for *hosted sites*.
+     *
+     * Asked of the hosted profiles rather than the stack name, so a stack
+     * added later gets the right answer without editing this file.
+     */
     public function recommended(): bool
     {
-        return true;
+        foreach (['php', 'node'] as $profile) {
+            if ($this->capabilities->hosts($profile)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function detail(): ?string
