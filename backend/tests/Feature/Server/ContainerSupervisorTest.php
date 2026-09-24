@@ -341,3 +341,53 @@ it('persists the type fields that are columns', function () {
         );
     }
 });
+
+it('strips the escape codes the application itself prints', function () {
+    // `--no-color` controls compose's OWN colouring — the service-name prefix
+    // — and has no say over what the process inside the container prints. It
+    // is easy to assume otherwise, and the panel showed Uptime Kuma's coloured
+    // log lines as literal `[36m` text around every timestamp.
+    $ansi = "uptime-kuma-1  | \e[36m2026-09-24T10:42:27Z\e[0m [\e[32mSERVER\e[0m] \e[36mINFO:\e[0m Env: production\n";
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_logs' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult($ansi), answered: true,
+        ),
+    ], $ran, $written);
+
+    $out = (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->logs(containerApp(), '/home/shop/shop/public_html');
+
+    expect($out)->not->toContain("\e")
+        ->and($out)->not->toContain('[36m')
+        // The words survive — the information the colour carried is in the
+        // text, which is why stripping is enough and a renderer is not needed.
+        ->and($out)->toContain('SERVER')
+        ->and($out)->toContain('INFO:')
+        ->and($out)->toContain('Env: production')
+        // And the service prefix stays: it is what `docker compose logs`
+        // shows in a terminal too, and it is the only thing distinguishing
+        // services once a compose file has more than one.
+        ->and($out)->toContain('uptime-kuma-1');
+});
+
+it('strips OSC sequences, which would swallow the rest of a line', function () {
+    // A window-title escape runs until BEL. Removing only CSI would leave it,
+    // and everything up to the terminator would vanish into it.
+    $ansi = "\e]0;some title\x07visible text\n";
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_logs' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult($ansi), answered: true,
+        ),
+    ], $ran, $written);
+
+    $out = (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->logs(containerApp(), '/home/shop/shop/public_html');
+
+    expect(trim($out))->toBe('visible text');
+});

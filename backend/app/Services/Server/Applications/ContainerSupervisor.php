@@ -212,7 +212,51 @@ class ContainerSupervisor
             'compose_logs',
         );
 
-        return $result->output() !== '' ? $result->output() : $result->errorOutput();
+        return $this->plain($result->output() !== '' ? $result->output() : $result->errorOutput());
+    }
+
+    /**
+     * Strip the terminal escape sequences the application itself emits.
+     *
+     * `--no-color` above is not enough and it is easy to assume it is: that
+     * flag controls **compose's own** colouring — the service-name prefix —
+     * and has no say over what the process inside the container prints. Uptime
+     * Kuma colours its own log lines, so the panel showed
+     *
+     *     ^[[36m2026-09-24T10:42:27Z^[[0m [^[[32mSERVER^[[0m] …
+     *
+     * as literal `[36m` text. A terminal renders those as colour; a log viewer
+     * that prints them verbatim shows noise around every timestamp.
+     *
+     * Stripped rather than rendered as colour, because every other source in
+     * this viewer is a plain file — nginx writes no escape codes — and one tab
+     * that needs an ANSI renderer would be a second way of displaying a log.
+     * The information in the colour here is also in the text: `SERVER`,
+     * `INFO:` and the timestamp are all still words.
+     *
+     * The CSI pattern covers the colour and cursor sequences; OSC covers the
+     * window-title ones some tools emit, which would otherwise swallow the
+     * rest of a line.
+     */
+    private function plain(string $output): string
+    {
+        return (string) preg_replace(
+            [
+                // CSI: ESC [ … final-byte — colours, cursor moves, erases.
+                '/\x1B\[[0-9;?]*[ -\/]*[@-~]/',
+                // OSC: ESC ] … terminated by BEL or ST (ESC backslash).
+                // Titles and hyperlinks. The ST alternative needs four
+                // backslashes here: two to survive PHP's single-quoted
+                // string, leaving two for the regex to read as one literal.
+                '/\x1B\][^\x07]*(?:\x07|\x1B\\\\)/',
+                // Two-character escapes left over — charset selection and
+                // friends. Bounded to letters so a stray ESC before ordinary
+                // text cannot eat the character after it.
+                '/\x1B[()#][0-9A-Za-z]/',
+            ],
+            '',
+            $output,
+        );
     }
 
     /**
