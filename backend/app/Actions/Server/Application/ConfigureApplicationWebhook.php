@@ -6,6 +6,7 @@ use App\Exceptions\Server\Application\WebhookConfigurationException;
 use App\Exceptions\Server\GitProviderException;
 use App\Models\Application;
 use App\Services\ActivityLogger;
+use App\Services\Git\WebhookRegistrar;
 use App\Services\Git\Webhooks\WebhookManager;
 use Illuminate\Support\Str;
 
@@ -18,9 +19,20 @@ use Illuminate\Support\Str;
  */
 class ConfigureApplicationWebhook
 {
+    /**
+     * How the last `execute()` that switched deploy-on-push on left the
+     * repository's webhook: `{status: registered|manual, reason}`. Null after
+     * switching it off. Read by the controller to tell the user whether there
+     * is still something to paste into the provider.
+     *
+     * @var array{status: string, reason: ?string}|null
+     */
+    public ?array $registration = null;
+
     public function __construct(
         private WebhookManager $webhooks,
         private ActivityLogger $activityLogger,
+        private WebhookRegistrar $registrar,
     ) {}
 
     /**
@@ -34,7 +46,13 @@ class ConfigureApplicationWebhook
             throw WebhookConfigurationException::notAGitApplication();
         }
 
+        $this->registration = null;
+
         if (! ($data['enabled'] ?? false)) {
+            // The hook the panel added, taken out of the repository again.
+            // One added by hand is the user's and is left alone.
+            $this->registrar->unregister($application);
+
             $application->forceFill(['webhook_enabled' => false])->save();
 
             $this->activityLogger->log('application.webhook_disabled', $application, [
@@ -76,10 +94,18 @@ class ConfigureApplicationWebhook
             'webhook_secret' => $secret,
         ])->save();
 
+        // After the save: the provider is given the secret now stored, and
+        // on a rotation that is exactly the point.
+        $this->registration = $this->registrar->register($application);
+
         $this->activityLogger->log(
             $rotated ? 'application.webhook_rotated' : 'application.webhook_enabled',
             $application,
-            ['name' => $application->name, 'provider' => $provider],
+            [
+                'name' => $application->name,
+                'provider' => $provider,
+                'registered' => $this->registration['status'] === WebhookRegistrar::REGISTERED,
+            ],
         );
 
         return $application->refresh();

@@ -32,6 +32,15 @@ class ApplicationWebhookController extends Controller
 
         return response()->json([
             'application' => ApplicationResource::make($application->load('systemUser'))->resolve(),
+            // Whether the panel added the webhook to the repository itself, and
+            // if not, why — so the screen can say "done" or show the URL and
+            // secret to paste. Null when deploy-on-push was switched off.
+            'webhook_registration' => $configure->registration === null ? null : [
+                ...$configure->registration,
+                'message' => $configure->registration['reason'] === null
+                    ? null
+                    : __('application.webhook_registration.'.$configure->registration['reason']),
+            ],
         ]);
     }
 

@@ -236,4 +236,13 @@ return [
     'code_on_disk' => [
         'incomplete' => 'A última implementação falhou depois de o novo código ser colocado, por isso o site está a executar o commit :commit, que não está totalmente implementado. Corrija o problema e implemente novamente.',
     ],
+
+    // Why deploy-on-push still needs the webhook added by hand. See
+    // WebhookRegistrar.
+    'webhook_registration' => [
+        'no_account' => 'Este site é implementado a partir de um URL público, não de uma conta Git ligada, por isso o painel não pode adicionar o webhook por si. Adicione-o nas definições do repositório com o URL e o segredo abaixo.',
+        'signing_token' => 'O GitLab cria os tokens de assinatura ele próprio, por isso o painel não pode adicionar este webhook por si. Adicione-o nas definições de Webhooks do repositório com o URL abaixo e o seu token de assinatura.',
+        'not_public' => 'O endereço do painel não é acessível a partir da internet, por isso o GitHub, o GitLab ou o Bitbucket não conseguiriam entregar-lhe nada. Dê ao painel um endereço público ou adicione o webhook à mão depois.',
+        'provider_refused' => 'O fornecedor Git não deixou o painel adicionar o webhook. Provavelmente o token ligado não tem permissão para gerir webhooks neste repositório. Adicione-o à mão com o URL e o segredo abaixo, ou volte a ligar a conta com essa permissão.',
+    ],
 ];

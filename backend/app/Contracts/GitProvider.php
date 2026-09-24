@@ -2,6 +2,7 @@
 
 namespace App\Contracts;
 
+use App\Exceptions\Server\GitProviderException;
 use App\Models\GitAccount;
 use Illuminate\Support\Carbon;
 
@@ -60,4 +61,28 @@ interface GitProvider
      * @return array<int, array<string, mixed>>
      */
     public function branches(GitAccount $account, string $repository): array;
+
+    /**
+     * Add a push webhook to the repository and return the provider's id for
+     * it, which is what the two methods below address it by.
+     *
+     * @throws GitProviderException
+     */
+    public function createWebhook(GitAccount $account, string $repository, string $url, string $secret): string;
+
+    /**
+     * Point an existing webhook at the URL and secret again. False when the
+     * provider no longer has it (removed by hand), so the caller can create
+     * a new one.
+     *
+     * @throws GitProviderException
+     */
+    public function updateWebhook(GitAccount $account, string $repository, string $id, string $url, string $secret): bool;
+
+    /**
+     * Remove it. Already gone counts as removed.
+     *
+     * @throws GitProviderException
+     */
+    public function deleteWebhook(GitAccount $account, string $repository, string $id): void;
 }

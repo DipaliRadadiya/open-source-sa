@@ -200,10 +200,11 @@ class ApplicationResource extends JsonResource
             'webhook' => [
                 'enabled' => (bool) $this->webhook_enabled,
                 'provider' => $this->webhook_provider,
-                'url' => $this->webhook_identifier
-                    ? url("/api/webhooks/deploy/{$this->webhook_identifier}")
-                    : null,
+                'url' => $this->resource->webhookUrl(),
                 'secret' => $this->webhook_secret,
+                // True when the panel added the webhook to the repository
+                // itself; false means it has to be pasted in by hand.
+                'registered' => $this->webhook_remote_id !== null,
                 // Which check this secret gets. `token` means a plaintext
                 // shared value — only GitLab has one, only because it is the
                 // sole thing the panel can generate there, and the UI should

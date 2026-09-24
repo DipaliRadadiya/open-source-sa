@@ -246,4 +246,13 @@ return [
     'code_on_disk' => [
         'incomplete' => 'The last deploy failed after the new code was put in place, so the site is running commit :commit, which is not fully deployed. Fix the problem and deploy again.',
     ],
+
+    // Why deploy-on-push still needs the webhook added by hand. See
+    // WebhookRegistrar.
+    'webhook_registration' => [
+        'no_account' => 'This site deploys from a public URL, not a connected Git account, so the panel cannot add the webhook for you. Add it in your repository settings with the URL and secret below.',
+        'signing_token' => 'GitLab creates signing tokens itself, so the panel cannot add this webhook for you. Add it in the repository\'s Webhooks settings with the URL below and your signing token.',
+        'not_public' => 'The panel\'s address is not reachable from the internet, so GitHub, GitLab or Bitbucket could not deliver to it. Give the panel a public address, or add the webhook by hand once it has one.',
+        'provider_refused' => 'The Git provider did not let the panel add the webhook. The connected token probably lacks permission to manage webhooks on this repository. Add it by hand with the URL and secret below, or reconnect the account with that permission.',
+    ],
 ];

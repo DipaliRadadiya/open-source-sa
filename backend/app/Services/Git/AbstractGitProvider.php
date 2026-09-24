@@ -37,9 +37,13 @@ abstract class AbstractGitProvider implements GitProvider
      *  401/403 → invalid or under-scoped credential (the user's to fix)
      *  anything else / transport error → unreachable, logged with a reference
      *
+     * `$missingOk`: a 404 is an answer, not a failure, and comes back as the
+     * response — for updating or removing a webhook somebody may already have
+     * deleted by hand.
+     *
      * @param  callable(PendingRequest): Response  $call
      */
-    protected function send(GitAccount $account, callable $call): Response
+    protected function send(GitAccount $account, callable $call, bool $missingOk = false): Response
     {
         $reference = (string) Str::uuid();
 
@@ -59,6 +63,10 @@ abstract class AbstractGitProvider implements GitProvider
 
         if ($response->status() === 401 || $response->status() === 403) {
             throw GitProviderException::invalidCredentials($this->key());
+        }
+
+        if ($missingOk && $response->status() === 404) {
+            return $response;
         }
 
         if ($response->failed()) {

@@ -109,4 +109,51 @@ class GitlabProvider extends AbstractGitProvider
             'protected' => (bool) ($branch['protected'] ?? false),
         ], (array) $response->json()));
     }
+
+    public function createWebhook(GitAccount $account, string $repository, string $url, string $secret): string
+    {
+        $project = rawurlencode($repository);
+
+        $response = $this->send($account, fn ($client) => $client->post("/api/v4/projects/{$project}/hooks", $this->hookBody($url, $secret)));
+
+        return (string) $response->json('id');
+    }
+
+    public function updateWebhook(GitAccount $account, string $repository, string $id, string $url, string $secret): bool
+    {
+        $project = rawurlencode($repository);
+
+        $response = $this->send(
+            $account,
+            fn ($client) => $client->put("/api/v4/projects/{$project}/hooks/".rawurlencode($id), $this->hookBody($url, $secret)),
+            missingOk: true,
+        );
+
+        return $response->status() !== 404;
+    }
+
+    public function deleteWebhook(GitAccount $account, string $repository, string $id): void
+    {
+        $project = rawurlencode($repository);
+
+        $this->send($account, fn ($client) => $client->delete("/api/v4/projects/{$project}/hooks/".rawurlencode($id)), missingOk: true);
+    }
+
+    /**
+     * The secret goes in `token`, which GitLab sends back as the plain
+     * `X-Gitlab-Token` header. Its signing token cannot be set through the
+     * API (GitLab mints it), so a site using one is registered by hand — see
+     * WebhookRegistrar.
+     *
+     * @return array<string, mixed>
+     */
+    private function hookBody(string $url, string $secret): array
+    {
+        return [
+            'url' => $url,
+            'push_events' => true,
+            'token' => $secret,
+            'enable_ssl_verification' => true,
+        ];
+    }
 }

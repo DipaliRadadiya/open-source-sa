@@ -1645,12 +1645,23 @@ The `min:16` on `secret` is enforced with its own message: a four-character "sec
 {"application": {"…": "…", "webhook": {
   "enabled": true, "provider": "github",
   "url": "https://panel.example.com/api/webhooks/deploy/abc123",
-  "secret": "…", "verification": "signature",
+  "secret": "…", "verification": "signature", "registered": true,
   "last_delivered_at": null, "last_delivered_at_human": null
 }}}
 ```
 
 There is no `webhook_enabled` or `webhook_identifier` key in the response — the identifier is already baked into `webhook.url`, which is assembled server-side so the frontend never builds the path or gets the host wrong. Show `webhook.url` as the callback URL the user pastes into the provider. `last_delivered_at` is how you tell "configured" from "actually working"; a webhook that has never fired is worth surfacing.
+
+**The panel now adds the webhook to the repository itself** (GitHub, GitLab, Bitbucket), using the connected account's token: created on `enabled: true`, updated on a rotated secret (re-created if it was deleted in the provider), removed on `enabled: false` and when the site is deleted. A hook the user added by hand (`webhook.registered: false`) is never touched. The response carries how that went:
+
+```json
+{"application": {"…": "…", "webhook": {"…": "…", "registered": true}},
+ "webhook_registration": {"status": "registered", "reason": null, "message": null}}
+```
+
+- `status: "registered"`: nothing for the user to do. Show "Webhook added to the repository", **not** the URL-and-secret paste instructions.
+- `status: "manual"`: deploy-on-push **is still switched on**; show `message` (translated) plus `webhook.url` and `webhook.secret` to paste, as before. `reason` is one of `no_account` (deployed from a public URL), `signing_token` (a GitLab signing token, which GitLab mints itself), `not_public` (the panel's address is `localhost`/private, so the provider could not deliver), `provider_refused` (usually a token without permission to manage webhooks).
+- `webhook_registration` is `null` when switching off.
 
 ---
 

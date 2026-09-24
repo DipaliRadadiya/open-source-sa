@@ -30,7 +30,7 @@ use Illuminate\Support\Str;
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings', 'install_secrets',
     'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'directory_size_updated_at',
     'current_release_id', 'previous_release_path',
-    'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret',
+    'webhook_enabled', 'webhook_provider', 'webhook_identifier', 'webhook_secret', 'webhook_remote_id',
     'webhook_last_delivered_at',
     'fail2ban_enabled',
     'fail2ban_jail_name', 'fail2ban_jail_content', 'fail2ban_filter_content',
@@ -344,6 +344,19 @@ class Application extends Model
     public function deployments(): HasMany
     {
         return $this->hasMany(Deployment::class);
+    }
+
+    /**
+     * Where a provider delivers this site's push events, or null before
+     * deploy-on-push has been set up. The one place it is built, so the URL
+     * shown to the user and the one registered with the provider cannot
+     * differ.
+     */
+    public function webhookUrl(): ?string
+    {
+        return $this->webhook_identifier
+            ? url("/api/webhooks/deploy/{$this->webhook_identifier}")
+            : null;
     }
 
     /**

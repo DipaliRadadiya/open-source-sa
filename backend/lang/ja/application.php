@@ -236,4 +236,13 @@ return [
     'code_on_disk' => [
         'incomplete' => '最後のデプロイは新しいコードを配置した後に失敗しました。そのため、サイトは完全にはデプロイされていないコミット :commit で動作しています。問題を修正して再度デプロイしてください。',
     ],
+
+    // Why deploy-on-push still needs the webhook added by hand. See
+    // WebhookRegistrar.
+    'webhook_registration' => [
+        'no_account' => 'このサイトは接続済みの Git アカウントではなく公開 URL からデプロイされるため、パネルが Webhook を追加できません。下の URL とシークレットを使ってリポジトリ設定で追加してください。',
+        'signing_token' => 'GitLab の署名トークンは GitLab 自身が作成するため、パネルはこの Webhook を追加できません。下の URL とご自身の署名トークンを使って、リポジトリの Webhooks 設定で追加してください。',
+        'not_public' => 'パネルのアドレスがインターネットから到達できないため、GitHub、GitLab、Bitbucket は配信できません。パネルに公開アドレスを設定するか、その後で Webhook を手動で追加してください。',
+        'provider_refused' => 'Git プロバイダーがパネルによる Webhook の追加を許可しませんでした。接続中のトークンにこのリポジトリの Webhook を管理する権限がない可能性があります。下の URL とシークレットで手動で追加するか、その権限でアカウントを再接続してください。',
+    ],
 ];
