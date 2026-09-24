@@ -165,6 +165,12 @@ Route::get('/applications/{application}/deployments', [DeploymentController::cla
     ->middleware('permission:app_deployment');
 Route::post('/applications/{application}/deployments', [DeploymentController::class, 'store'])
     ->middleware('permission:app_deployment,manage');
+// Polled every few seconds while the Deployment screen is open, so a deploy
+// started by a push appears there without a reload. Before the {deployment}
+// route, which would otherwise take `latest` for an id and 404.
+Route::get('/applications/{application}/deployments/latest', [DeploymentController::class, 'latest'])
+    ->withoutMiddleware('throttle:api')
+    ->middleware(['permission:app_deployment', 'throttle:progress']);
 // Polled line-by-line while a deploy runs — same reasoning as the two above.
 Route::get('/applications/{application}/deployments/{deployment}', [DeploymentController::class, 'show'])
     ->withoutMiddleware('throttle:api')

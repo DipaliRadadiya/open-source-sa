@@ -1484,6 +1484,14 @@ only platform entries (`php`, `ext-*`), is left alone.
 
 ---
 
+
+### GET `/applications/{application}/deployments/latest`
+**Permission:** `app_deployment` (view) | **Throttle:** `progress` (polling bucket)
+
+The newest deploy only, **for polling while the Deployment screen is open**, so a deploy started by a push (webhook) appears without a reload. `{"latest": <one history row>}`, the **same shape as a row of `deployments`** (no `output`), or `{"latest": null}` when the site has never deployed.
+
+Recommended use: every ~5 s while the page is visible (2.5 s while `latest.in_flight`), stop when the tab is hidden. When `latest.id` is newer than the history's top row, or its `status` changed, put it at the top / reload the history (and `settings`, for `code_on_disk`).
+
 ### POST `/applications/{application}/deployments`
 **Permission:** `app_deployment` (manage)
 

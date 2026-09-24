@@ -37,6 +37,26 @@ class DeploymentController extends Controller
     }
 
     /**
+     * The newest deploy only, or null — what the Deployment screen polls
+     * while it is open.
+     *
+     * A deploy started by a push runs behind the page: the screen only
+     * polled after its own Deploy button, so the history stayed stale until a
+     * reload. Asking the full list every few seconds would re-send every row
+     * and the settings; this is one indexed row, the same shape as a history
+     * row (no build output — that stays on `show`), so the screen can compare
+     * its `id` and `status` with its top row and reload only on a change.
+     */
+    public function latest(Application $application): JsonResponse
+    {
+        $deployment = $application->deployments()->with('user')->orderByDesc('id')->first();
+
+        return response()->json([
+            'latest' => $deployment === null ? null : DeploymentResource::make($deployment)->resolve(),
+        ]);
+    }
+
+    /**
      * One deploy, with its output. Its own endpoint because the output is the
      * expensive part — a list of fifty carrying full build logs is a response
      * nobody asked for.

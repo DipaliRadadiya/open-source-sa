@@ -400,3 +400,57 @@ describe('which commit is on disk', function () {
             ->assertJsonMissingPath('applications.0.code_on_disk');
     });
 });
+
+/*
+ * What the Deployment screen polls while it is open. A deploy started by a
+ * push ran behind the page, which only polled after its own button, so the
+ * history stayed stale until a reload (reported 2026-09-24).
+ */
+describe('the newest deploy', function () {
+    function latestUrl(): string
+    {
+        return '/api/applications/'.test()->application->id.'/deployments/latest';
+    }
+
+    it('is the newest deploy only, in the history row\'s shape, without its build output', function () {
+        Deployment::create(['application_id' => $this->application->id, 'trigger' => DeploymentTrigger::Manual, 'status' => DeploymentStatus::Succeeded]);
+        $newest = Deployment::create([
+            'application_id' => $this->application->id, 'trigger' => DeploymentTrigger::Webhook,
+            'status' => DeploymentStatus::Running, 'output' => 'a very long build log',
+        ]);
+
+        $response = $this->actingAs($this->admin)->getJson(latestUrl())
+            ->assertOk()
+            ->assertJsonPath('latest.id', $newest->id)
+            ->assertJsonPath('latest.status', 'running')
+            ->assertJsonPath('latest.in_flight', true)
+            ->assertJsonPath('latest.trigger', 'webhook');
+
+        expect($response->json('latest'))->not->toHaveKey('output')
+            // The same keys as a row of the history, so the screen can put it
+            // straight at the top.
+            ->and(array_keys($response->json('latest')))->toBe(array_keys(
+                $this->actingAs($this->admin)->getJson("/api/applications/{$this->application->id}/deployments")->json('deployments.0'),
+            ));
+    });
+
+    it('is null on a site that has never deployed', function () {
+        $this->actingAs($this->admin)->getJson(latestUrl())
+            ->assertOk()
+            ->assertExactJson(['latest' => null]);
+    });
+
+    it('is readable with view on app_deployment, and refused without it', function () {
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_deployment');
+
+        $this->actingAs($viewer)->getJson(latestUrl())->assertOk();
+        $this->actingAs(User::factory()->create())->getJson(latestUrl())->assertForbidden();
+    });
+
+    it('does not exist on a site that cannot deploy', function () {
+        $this->application->forceFill(['site_type' => 'wordpress'])->save();
+
+        $this->actingAs($this->admin)->getJson(latestUrl())->assertNotFound();
+    });
+});
