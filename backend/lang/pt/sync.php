@@ -29,6 +29,7 @@ return [
         'discovery_failed' => 'Não foi possível ler do servidor. Nada foi alterado.',
         'adopt_failed' => 'Encontrado no servidor, mas o painel não conseguiu criar um registo.',
         'requires_system_user' => 'Ignorado porque os utilizadores do sistema não faziam parte desta execução e são necessários primeiro.',
+        'after_sites_adopted' => 'Esta pré-visualização encontrou sites novos. Os seus workers, certificados SSL e definições de PHP aparecem depois de os sites serem sincronizados: ao aplicar a sincronização, os sites são adotados primeiro e só depois estes são lidos.',
     ],
 
 ];

@@ -17,6 +17,7 @@ use App\Models\FirewallRule;
 use App\Models\ServerCapability;
 use App\Models\SshKey;
 use App\Models\SyncIgnore;
+use App\Models\SyncItem;
 use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -170,6 +171,68 @@ describe('preview', function () {
             Process::assertNotRan(fn ($p) => ($p->command[0] ?? '') === 'systemctl'
                 && in_array($verb, (array) $p->command, true));
         }
+    });
+});
+
+/*
+ * A preview writes nothing, so everything that belongs to a user it found
+ * used to be "skipped until users are synced", though applying the same run
+ * adopts the user first and then those. The preview said less than the apply
+ * would do (2026-09-24).
+ */
+describe('what a preview promises', function () {
+    beforeEach(function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        // One account on the box the panel has never seen, with a site, a key
+        // and a crontab job. Nothing about it is in the database.
+        Process::fake(function ($process) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+            $path = (string) ($args[1] ?? '');
+
+            return match (true) {
+                $binary === 'getent' => Process::result(output: "brown:x:1001:1001::/home/brown:/bin/bash\n"),
+                $binary === 'find' && str_contains($path, 'nginx') => Process::result(output: "/etc/nginx/sites-available/brownsite.conf\n"),
+                $binary === 'cat' && str_ends_with($path, 'brownsite.conf') => Process::result(output: nginxVhost('brown.example.com', '/home/brown/brownsite/public_html')),
+                $binary === 'cat' && $path === '/home/brown/.ssh/authorized_keys' => Process::result(output: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyMaterialForTests laptop@home\n"),
+                $binary === 'stat' => Process::result(output: 'brown'),
+                $binary === 'crontab' && ($args[3] ?? '') === 'brown' => Process::result(output: "*/5 * * * * php /home/brown/brownsite/cron.php\n"),
+                in_array($binary, ['cat', 'crontab', 'test', 'find'], true) => Process::result(exitCode: 1, errorOutput: 'nothing'),
+                default => Process::result(exitCode: 0),
+            };
+        });
+    });
+
+    /** @return array<int, string> `type:key`, sorted */
+    function listed(SyncRun $run, SyncAction $action, array $types): array
+    {
+        return $run->items()->where('action', $action)->whereIn('resource_type', $types)->get()
+            ->map(fn (SyncItem $item): string => $item->resource_type.':'.$item->resource_key)
+            ->sort()->values()->all();
+    }
+
+    it('lists what belongs to a user it found, exactly as applying it adopts', function () {
+        $types = ['system_user', 'application', 'ssh_key', 'cronjob'];
+
+        $preview = runSync(SyncMode::Preview);
+
+        expect($preview->items()->where('reason', 'owner_not_tracked')->exists())->toBeFalse()
+            ->and(listed($preview, SyncAction::Found, $types))->toHaveCount(4)
+            ->and(listed($preview, SyncAction::Found, $types))->toBe(listed(runSync(SyncMode::Apply), SyncAction::Adopted, $types));
+    });
+
+    it('says once per type that a found site\'s workers, SSL and PHP settings come after the sites', function () {
+        $said = runSync(SyncMode::Preview)->items()->where('reason', 'after_sites_adopted')->pluck('resource_type')->sort()->values()->all();
+
+        expect($said)->toBe(['certificate', 'php_settings', 'worker']);
+    });
+
+    it('does not say it on an apply, which has adopted the sites by then', function () {
+        expect(runSync(SyncMode::Apply)->items()->where('reason', 'after_sites_adopted')->exists())->toBeFalse();
     });
 });
 

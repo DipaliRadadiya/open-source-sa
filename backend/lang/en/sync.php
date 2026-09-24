@@ -29,6 +29,7 @@ return [
         'discovery_failed' => 'This could not be read from the server. Nothing was changed.',
         'adopt_failed' => 'Found on the server, but the panel could not create a record for it.',
         'requires_system_user' => 'Skipped because system users were not part of this run, and this needs them first.',
+        'after_sites_adopted' => 'This preview found new sites. Their workers, SSL certificates and PHP settings are listed once the sites are synced: applying the sync adopts the sites first, then reads these.',
     ],
 
 ];

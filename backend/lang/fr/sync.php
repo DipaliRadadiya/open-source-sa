@@ -29,6 +29,7 @@ return [
         'discovery_failed' => 'Impossible de lire depuis le serveur. Rien n\'a été modifié.',
         'adopt_failed' => 'Trouvé sur le serveur, mais le panneau n\'a pas pu créer d\'enregistrement.',
         'requires_system_user' => 'Ignoré car les utilisateurs système ne faisaient pas partie de cette exécution et sont requis d\'abord.',
+        'after_sites_adopted' => 'Cet aperçu a trouvé de nouveaux sites. Leurs workers, certificats SSL et réglages PHP s\'affichent une fois les sites synchronisés : l\'application de la synchronisation adopte d\'abord les sites, puis lit ces éléments.',
     ],
 
 ];

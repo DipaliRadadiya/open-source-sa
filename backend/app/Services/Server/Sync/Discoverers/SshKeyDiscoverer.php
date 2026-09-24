@@ -8,6 +8,7 @@ use App\Models\SyncRun;
 use App\Models\SystemUser;
 use App\Services\Server\ServerOps;
 use App\Services\Server\SshKeyManager;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Keys already in a user's `authorized_keys` that the panel has no record of.
@@ -41,7 +42,21 @@ class SshKeyDiscoverer implements Discoverable
     {
         $found = [];
 
-        foreach (SystemUser::query()->with('sshKeys')->get() as $systemUser) {
+        $systemUsers = SystemUser::query()->with('sshKeys')->get();
+
+        // A preview's own accounts, which applying it would adopt first (see
+        // SyncRun::previewedSystemUsers()). Unsaved stand-ins with no keys on
+        // record: every key in their file is new to the panel, and a preview
+        // never reaches adopt(), so the missing id is never used.
+        foreach ($run->previewedSystemUsers() as $username => $home) {
+            if ($home !== null && ! $systemUsers->contains('username', $username)) {
+                $systemUsers->push(
+                    (new SystemUser(['username' => $username, 'home_path' => $home]))->setRelation('sshKeys', new Collection),
+                );
+            }
+        }
+
+        foreach ($systemUsers as $systemUser) {
             $path = rtrim((string) $systemUser->home_path, '/').'/.ssh/authorized_keys';
 
             $result = $this->serverOps->run(

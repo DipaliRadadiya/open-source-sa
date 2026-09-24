@@ -29,6 +29,7 @@ return [
         'discovery_failed' => 'No se pudo leer del servidor. No se cambió nada.',
         'adopt_failed' => 'Encontrado en el servidor, pero el panel no pudo crear un registro.',
         'requires_system_user' => 'Omitido porque los usuarios del sistema no formaban parte de esta ejecución y hacen falta primero.',
+        'after_sites_adopted' => 'Esta vista previa encontró sitios nuevos. Sus workers, certificados SSL y ajustes de PHP se muestran cuando los sitios estén sincronizados: al aplicar la sincronización se adoptan primero los sitios y después se leen estos.',
     ],
 
 ];

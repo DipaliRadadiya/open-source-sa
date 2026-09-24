@@ -80,6 +80,17 @@ class ServerSync
 
                 $totals[$type] = $this->runOne($run, $discoverer);
                 $completed[] = $type;
+
+                // A preview adopts no sites, so the workers, certificates and
+                // PHP settings of the sites it found have nothing to belong to
+                // and are not listed. Said once per type rather than left out
+                // in silence: an apply adopts the sites first and reads these
+                // after, so the preview would otherwise under-report it.
+                if (! $run->mode->writes()
+                    && in_array('application', $discoverer->dependsOn(), true)
+                    && $run->items()->where('resource_type', 'application')->where('action', SyncAction::Found)->exists()) {
+                    $this->record($run, $type, $type, SyncAction::Skipped, ['reason' => 'after_sites_adopted']);
+                }
             }
 
             $run->forceFill([

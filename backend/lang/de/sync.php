@@ -29,6 +29,7 @@ return [
         'discovery_failed' => 'Konnte nicht vom Server gelesen werden. Es wurde nichts geändert.',
         'adopt_failed' => 'Auf dem Server gefunden, aber das Panel konnte keinen Eintrag anlegen.',
         'requires_system_user' => 'Übersprungen, weil Systembenutzer nicht Teil dieses Laufs waren und zuerst benötigt werden.',
+        'after_sites_adopted' => 'Diese Vorschau hat neue Websites gefunden. Ihre Worker, SSL-Zertifikate und PHP-Einstellungen werden angezeigt, sobald die Websites synchronisiert sind: Beim Anwenden werden zuerst die Websites übernommen und danach diese gelesen.',
     ],
 
 ];

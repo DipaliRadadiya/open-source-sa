@@ -3663,6 +3663,8 @@ Reads a migrated server into the panel. `preview` (the default) changes nothing;
 
 An omitted `mode` is **preview**. Refused with `422` while another run is live.
 
+**A preview lists what the apply would adopt, including what belongs to users it found.** The sites, SSH keys and cron jobs of an account the panel does not have yet show as `found`, not skipped, because applying the run adopts the account first. The workers, certificates and PHP settings of a **site** the preview found cannot be read until the site exists, so the preview adds one line per type instead: `action: "skipped"`, `resource_key` = the type, `reason: "after_sites_adopted"`. The apply reads them as usual.
+
 ### GET `/server/sync/{run}?since=<item id>`
 **Permission:** `sync` (view)
 

@@ -69,6 +69,16 @@ class ApplicationDiscoverer implements Discoverable
         $owners = SystemUser::query()->pluck('id', 'username');
         $homes = SystemUser::query()->pluck('home_path', 'username');
 
+        // In a preview, the accounts it found count as owners too: applying
+        // the same run adopts them before it gets here. No id, and none is
+        // needed, because a preview never adopts.
+        foreach ($run->previewedSystemUsers() as $username => $home) {
+            if (! $owners->has($username)) {
+                $owners->put($username, null);
+                $homes->put($username, $home);
+            }
+        }
+
         // Folders claimed in this run, so two vhosts serving one directory
         // cannot both be adopted as sites that each think they own it.
         $claimed = [];

@@ -46,6 +46,14 @@ class CronjobDiscoverer implements Discoverable
     {
         $users = SystemUser::query()->pluck('id', 'username');
 
+        // A preview's own accounts, which applying it would adopt first. See
+        // SyncRun::previewedSystemUsers().
+        foreach ($run->previewedSystemUsers()->keys() as $username) {
+            if (! $users->has($username)) {
+                $users->put($username, null);
+            }
+        }
+
         if ($users->isEmpty()) {
             return [];
         }
