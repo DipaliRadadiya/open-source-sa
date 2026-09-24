@@ -20,6 +20,16 @@ class DatabaseComponent implements SetupComponent
         private ServerCapabilities $capabilities,
     ) {}
 
+    /**
+     * Only where the box hosts something that could use one. A container-only
+     * server manages no engine — an application that wants a database brings
+     * one as a container — and the panel's own data is SQLite regardless.
+     */
+    public function applies(): bool
+    {
+        return $this->capabilities->hosts('php') || $this->capabilities->hosts('node');
+    }
+
     public function key(): string
     {
         return 'database';

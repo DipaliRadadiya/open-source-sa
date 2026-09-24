@@ -3,6 +3,7 @@
 namespace App\Services\Server\Setup\Components;
 
 use App\Contracts\SetupComponent;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Runtimes\NodeRuntime;
 
 /**
@@ -15,7 +16,19 @@ use App\Services\Server\Runtimes\NodeRuntime;
  */
 class NodeComponent implements SetupComponent
 {
-    public function __construct(private NodeRuntime $node) {}
+    public function __construct(private NodeRuntime $node,
+        private ServerCapabilities $capabilities,
+    ) {}
+
+    /**
+     * Only where Node *sites* are hosted. Node is installed on every server —
+     * the panel's interface is a Next.js build — but the version picker this
+     * row leads to exists for hosted applications.
+     */
+    public function applies(): bool
+    {
+        return $this->capabilities->hosts('node');
+    }
 
     public function key(): string
     {

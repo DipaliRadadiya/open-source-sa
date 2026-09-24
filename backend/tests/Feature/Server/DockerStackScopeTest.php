@@ -130,18 +130,36 @@ it('still offers PHP site types on a PHP stack', function () {
         ->and($wordpress['unavailable_code'])->not->toBe(SiteTypeManager::BLOCKED_STACK);
 });
 
-it('stops recommending a database engine on a container-only server', function () {
-    // The symptom that started this.
+it('leaves the site-facing setup rows off a container-only server', function () {
+    // The symptom that started this, and the fix I got wrong the first time.
+    // Marking the database row `recommended => false` left it on the page with
+    // its install button, because `recommended` only decides whether setup
+    // counts as complete. The row has to be absent.
     recordStack('docker');
-    $docker = collect(app(SetupCatalog::class)->toArray()['components'])
-        ->firstWhere('key', 'database');
 
+    $keys = collect(app(SetupCatalog::class)->toArray()['components'])->pluck('key');
+
+    expect($keys)->not->toContain('database')
+        // The same reasoning reaches three more rows: extra PHP versions,
+        // extra Node versions and the compiler toolchain all exist for hosted
+        // sites. A container builds its dependencies inside its own image.
+        ->and($keys)->not->toContain('php')
+        ->and($keys)->not->toContain('node')
+        ->and($keys)->not->toContain('build_tools')
+        // What remains is what serves the panel and the server itself.
+        ->and($keys)->toContain('redis')
+        ->and($keys)->toContain('fail2ban');
+});
+
+it('keeps every setup row on a stack that hosts sites', function () {
+    // Filtering everything is easy; filtering only the right rows is the job.
     recordStack('lemp');
-    $lemp = collect(app(SetupCatalog::class)->toArray()['components'])
-        ->firstWhere('key', 'database');
 
-    expect($docker['recommended'])->toBeFalse()
-        ->and($lemp['recommended'])->toBeTrue();
+    $keys = collect(app(SetupCatalog::class)->toArray()['components'])->pluck('key');
+
+    foreach (['database', 'php', 'build_tools', 'redis', 'fail2ban'] as $key) {
+        expect($keys)->toContain($key);
+    }
 });
 
 it('refuses the database API, not merely the screen', function () {

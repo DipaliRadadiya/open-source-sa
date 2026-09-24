@@ -31,6 +31,23 @@ interface SetupComponent
     public function installed(): bool;
 
     /**
+     * Whether this row belongs on this server at all.
+     *
+     * Distinct from `installed()` and from `recommended()`, and the distinction
+     * cost a wrong fix: marking the database row `recommended => false` on a
+     * container-only server left it on the page with its install button, because
+     * `recommended` only decides whether setup counts as complete. A row that
+     * does not apply must not be rendered at all.
+     *
+     * Most components apply everywhere. The ones that do not are the
+     * site-facing ones — a database engine, extra PHP or Node versions, the
+     * compiler toolchain — on a server that hosts no sites of that kind.
+     * Answered from the hosted serving profiles rather than a stack name, so a
+     * stack added later gets the right answer without editing six files.
+     */
+    public function applies(): bool;
+
+    /**
      * Whether the panel is meaningfully limited without it.
      *
      * Nothing here is *required* — the installer already put the web server, PHP

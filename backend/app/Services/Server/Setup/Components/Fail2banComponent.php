@@ -14,6 +14,12 @@ class Fail2banComponent implements SetupComponent
 {
     public function __construct(private Fail2banManager $fail2ban) {}
 
+    /** Server hardening, which every server wants. */
+    public function applies(): bool
+    {
+        return true;
+    }
+
     public function key(): string
     {
         return 'fail2ban';

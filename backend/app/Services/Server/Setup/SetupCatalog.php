@@ -42,7 +42,16 @@ class SetupCatalog
      */
     public function toArray(): array
     {
-        $rows = array_map(fn (SetupComponent $component) => $this->describe($component), $this->components);
+        // Rows that do not apply to this server are left out entirely, not
+        // merely marked unrecommended. Marking the database row
+        // `recommended => false` on a container-only server was the wrong fix
+        // and it showed: `recommended` decides whether setup counts as
+        // complete, so the row stayed on the page with its install button and
+        // the server was still being offered an engine it will never manage.
+        $rows = array_values(array_map(
+            fn (SetupComponent $component) => $this->describe($component),
+            array_filter($this->components, fn (SetupComponent $component) => $component->applies()),
+        ));
 
         $total = count($rows);
         $done = count(array_filter($rows, fn (array $row) => $row['state'] === 'installed'));

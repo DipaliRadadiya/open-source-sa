@@ -4,6 +4,7 @@ namespace App\Services\Server\Setup\Components;
 
 use App\Contracts\SetupComponent;
 use App\Services\Server\BuildTools\BuildToolsManager;
+use App\Services\Server\Capabilities\ServerCapabilities;
 
 /**
  * The compiler toolchain. Installed by `install.sh` on every new server, so
@@ -20,7 +21,19 @@ use App\Services\Server\BuildTools\BuildToolsManager;
  */
 class BuildToolsComponent implements SetupComponent
 {
-    public function __construct(private BuildToolsManager $buildTools) {}
+    public function __construct(private BuildToolsManager $buildTools,
+        private ServerCapabilities $capabilities,
+    ) {}
+
+    /**
+     * Only where something on the box compiles. The toolchain is here for npm
+     * packages with native modules, which belong to hosted Node and PHP
+     * applications; a container builds its own dependencies in its image.
+     */
+    public function applies(): bool
+    {
+        return $this->capabilities->hosts('php') || $this->capabilities->hosts('node');
+    }
 
     public function key(): string
     {
