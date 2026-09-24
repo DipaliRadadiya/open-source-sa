@@ -56,6 +56,8 @@ use App\Services\Server\DiskCleaner\Targets\TmpTarget;
 use App\Services\Server\Doctor\Checks\AccountLocksCheck;
 use App\Services\Server\Doctor\Checks\BinariesCheck;
 use App\Services\Server\Doctor\Checks\DatabaseCheck;
+use App\Services\Server\Doctor\Checks\DockerCheck;
+use App\Services\Server\Doctor\Checks\DockerExposureCheck;
 use App\Services\Server\Doctor\Checks\DriverContentionCheck;
 use App\Services\Server\Doctor\Checks\DynamicResponseLimitCheck;
 use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
@@ -202,6 +204,12 @@ return [
             'hostnamectl', 'timedatectl', 'shutdown', 'df', 'du',
             'ps', 'kill', 'ss', 'curl', 'unzip', 'zip',
             'tar', 'git', 'fnm', 'wp',
+            // Docker. Granted to the panel rather than by adding the site user
+            // to the `docker` group, and the distinction is the whole security
+            // model: group membership is root equivalence -- a member can bind
+            // mount / into a container and write anywhere. So the panel
+            // elevates the specific commands and nobody else gets the socket.
+            'docker',
         ],
 
         // Where a binary lives, when it is not /usr/bin/<name>.
@@ -522,6 +530,8 @@ return [
             ServicesCheck::class,
             WebServerCheck::class,
             DynamicResponseLimitCheck::class,
+            DockerCheck::class,
+            DockerExposureCheck::class,
             FrontendBuildCheck::class,
             WritablePathsCheck::class,
             DatabaseCheck::class,
@@ -1831,6 +1841,17 @@ return [
         | a match is a list somebody forgets to extend. Omit the key and the
         | service behaves as before — absent until its unit exists.
         */
+        /*
+        | Docker. `install` names the runtime_installs row so the Services list
+        | shows the entry while it installs and after a failed install, rather
+        | than the row simply not existing -- which reads as "I asked for
+        | Docker, where did it go".
+        |
+        | The unit is `docker`, not `docker.socket`: the socket unit is active
+        | on a box where the daemon has failed to start, so reading it would
+        | report a working Docker on a server that cannot run a container.
+        */
+        ['key' => 'docker', 'unit' => 'docker', 'label' => 'Docker', 'install' => ['runtime', 'docker']],
         ['key' => 'mysql', 'unit' => 'mysql', 'label' => 'MySQL', 'install' => ['database', 'mysql']],
         ['key' => 'mariadb', 'unit' => 'mariadb', 'label' => 'MariaDB', 'install' => ['database', 'mariadb']],
         ['key' => 'mongodb', 'unit' => 'mongod', 'label' => 'MongoDB', 'install' => ['database', 'mongodb']],

@@ -100,7 +100,7 @@ DRY_RUN=0          # --dry-run
 # the WAF cannot be enforced on OLS (OlsDriver::supportsWaf() returns false),
 # and there is no per-site PHP isolation. Neither is a defect in this script.
 # The bot blocker is NOT one of them — both OLS templates render its rules.
-STACK=""           # --stack=lemp|lamp|mern|ols  (prompted, or lemp)
+STACK=""           # --stack=lemp|lamp|mern|ols|docker  (prompted, or lemp)
 WEB_SERVER=""      # derived from STACK
 
 # The PHP the PANEL itself runs on: composer, artisan, the queue worker, cron
@@ -244,9 +244,11 @@ Control panel installer
   sudo bash install.sh [options]
 
   --stack=lemp                 Which stack to build:
-                                 lemp  nginx + PHP          (default)
-                                 lamp  Apache + PHP
-                                 mern  nginx + Node
+                                 lemp    nginx + PHP        (default)
+                                 lamp    Apache + PHP
+                                 mern    nginx + Node
+                                 ols     OpenLiteSpeed + PHP
+                                 docker  nginx + Docker
                                Asked interactively when not given and a terminal
                                is available. Required for `curl | bash`, which
                                has no terminal to ask on.
@@ -348,7 +350,8 @@ resolve_stack() {
             printf '       1) lemp   nginx + PHP     %s(default)%s\n' "$DIM" "$RESET"
             printf '       2) lamp   Apache + PHP\n'
             printf '       3) mern   nginx + Node\n'
-            printf '       4) ols    OpenLiteSpeed + PHP\n\n'
+            printf '       4) ols    OpenLiteSpeed + PHP\n'
+            printf '       5) docker nginx + Docker\n\n'
             printf '     Choice [1]: '
 
             local answer=""
@@ -360,6 +363,7 @@ resolve_stack() {
                 2|lamp)    STACK="lamp" ;;
                 3|mern)    STACK="mern" ;;
                 4|ols)     STACK="ols" ;;
+                5|docker)  STACK="docker" ;;
                 *) die "not one of the options: ${answer}" ;;
             esac
         else
@@ -369,7 +373,12 @@ resolve_stack() {
     fi
 
     case "$STACK" in
-        lemp|mern) WEB_SERVER="nginx" ;;
+        # docker is nginx too, and deliberately so: containers are reached
+        # through a reverse proxy on the allocated port, which is the same
+        # vhost a Node app already gets. The stack name is a product label over
+        # a runtime flag, not a fourth web server -- there is nothing a Docker
+        # web-server driver would do differently.
+        lemp|mern|docker) WEB_SERVER="nginx" ;;
         lamp)      WEB_SERVER="apache" ;;
         ols)
             WEB_SERVER="openlitespeed"
@@ -381,7 +390,7 @@ resolve_stack() {
             say "     and there is no per-site PHP isolation (no per-site pools)."
             say "     The bot blocker does work."
             ;;
-        *) die "unknown stack: ${STACK}  (expected lemp, lamp, mern or ols)" ;;
+        *) die "unknown stack: ${STACK}  (expected lemp, lamp, mern, ols or docker)" ;;
     esac
 
     derive_php_runtime
@@ -919,6 +928,63 @@ repair_panel_mongodb_repository() {
     done
 }
 
+# Docker, from Docker's own repository.
+#
+# Not `curl -fsSL https://get.docker.com | sh`. That is the documented
+# convenience script and it pipes a remote file straight into a root shell on
+# someone else's server — the same trade this installer already refuses for
+# LiteSpeed, whose one-liner drops keys into /etc/apt/trusted.gpg.d/ and trusts
+# them for every repository on the box. One keyring, scoped to one source with
+# signed-by, the way sury and MongoDB are already handled here.
+#
+# Ubuntu ships `docker.io` in universe, which would need no repository at all.
+# It is consistently several minor versions behind and does not carry the
+# compose v2 plugin, and compose is the format the panel generates — so the
+# older package would work right up until the first `docker compose` call.
+DOCKER_PACKAGES_DONE=0
+
+install_docker_packages() {
+    if (( DOCKER_PACKAGES_DONE )); then
+        return 0
+    fi
+    DOCKER_PACKAGES_DONE=1
+
+    local keyring="/etc/apt/keyrings/docker.asc"
+    local list="/etc/apt/sources.list.d/docker.list"
+
+    if [[ -f "$keyring" && -f "$list" ]]; then
+        skip "Docker repository already configured"
+    else
+        run install -d -m 0755 /etc/apt/keyrings
+        run_progress "Downloading the Docker repository signing key" \
+            curl -fsSL -o "$keyring" https://download.docker.com/linux/ubuntu/gpg
+        run chmod 0644 "$keyring"
+
+        if (( DRY_RUN )); then
+            printf '     %s$ write %s%s\n' "$DIM" "$list" "$RESET"
+        else
+            # dpkg's own architecture, not `uname -m`: the repository is
+            # indexed by amd64/arm64, and uname says x86_64/aarch64.
+            printf 'deb [arch=%s signed-by=%s] https://download.docker.com/linux/ubuntu %s stable\n' \
+                "$(dpkg --print-architecture)" "$keyring" "$OS_CODENAME" >"$list"
+        fi
+
+        run_progress "Refreshing package lists from the Docker repository" apt-get update -qq
+        ok "Docker repository added (${OS_CODENAME})"
+    fi
+
+    # buildx and compose are plugins now, not separate binaries. Without
+    # docker-compose-plugin there is no `docker compose` subcommand at all, and
+    # the panel generates compose files — so omitting it ships a stack whose
+    # every deploy fails on the first call.
+    run_progress "Installing Docker" apt-get install -y -qq \
+        docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    run systemctl enable --now docker
+
+    ok "Docker installed ($(docker --version 2>/dev/null || echo 'version unknown'))"
+}
+
 install_packages() {
     step "Installing packages"
 
@@ -958,6 +1024,14 @@ install_packages() {
     # an existing panel upgrading to the code that prefers pigz will not have it
     # until somebody runs `apt install pigz` by hand. ~60 KB.
     run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common build-essential pigz
+
+    # Docker, when the stack asked for it. Here rather than in a configure_*
+    # step so the runtime is present before anything tries to use it, and
+    # because it is the one package set that comes from a third-party
+    # repository the panel itself does not otherwise need.
+    if [[ "$STACK" == "docker" ]]; then
+        install_docker_packages
+    fi
 
     local php_pkgs=()
 

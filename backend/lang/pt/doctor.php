@@ -2,6 +2,8 @@
 
 return [
     'checks' => [
+        'docker' => 'Docker',
+        'docker_exposure' => 'Exposição de contentores',
         'dynamic_response_limit' => 'Limite de descarga de ficheiros',
         'site_root_lock' => 'Bloqueio da pasta do site',
         'php_isolation' => 'Isolamento de PHP por aplicação',
@@ -18,6 +20,10 @@ return [
         'driver_contention' => 'Contenção de controladores',
     ],
     'fixes' => [
+        'docker_missing' => 'O Docker não está instalado. Instale-o na página Serviços se pretende executar contentores; mais nada neste servidor precisa dele.',
+        'docker_down' => 'O Docker está instalado mas o seu daemon não responde. Execute `sudo systemctl status docker` para ver porquê e depois `sudo systemctl start docker`. Até lá nenhum contentor pode ser executado.',
+        'docker_denied' => 'O daemon está a funcionar mas recusou o painel. Execute `sudo php artisan panel:sudoers` para atualizar a permissão de sudo. NÃO adicione o utilizador do site ao grupo `docker` como solução alternativa — pertencer a esse grupo equivale a ser root neste servidor.',
+        'docker_exposure' => 'Um contentor está a publicar uma porta em todos os endereços. O Docker escreve as suas próprias regras de firewall antes das do ufw, por isso essa porta é alcançável a partir da internet mesmo que a página da Firewall a mostre fechada. Volte a publicá-la em 127.0.0.1 e deixe o nginx fazer de proxy, que é o que o painel faz nos contentores que cria.',
         'dynamic_response_limit' => 'O OpenLiteSpeed limita o tamanho do que o PHP devolve, e o valor por omissão é demasiado baixo para o gestor de ficheiros: qualquer descarga acima do limite é recusada com um 413 antes de o painel a ver, pelo que nada aparece nos registos. Defina `maxDynRespSize 1024G` em /usr/local/lsws/conf/httpd_config.conf e reinicie com `sudo /usr/local/lsws/bin/lswsctrl restart`. As instalações novas já o têm; as anteriores não, porque as atualizações entregam código e não configuração. `0` não significa ilimitado — significa zero.',
         'site_root_unlocked' => 'A pasta de um site pode ser renomeada pelo próprio usuário e substituída por outra que ele controla — anulando as configurações PHP bloqueadas do site e permitindo que uma ação do painel grave fora do site. Execute `php artisan sites:resync`, que bloqueia todas as pastas de sites e aponta as que não conseguiu. "Não foi possível verificar" geralmente significa que o sistema de arquivos não suporta o atributo imutável (ZFS, alguns contêineres); um site ainda desbloqueado após a ressincronização tem uma pasta que não parece a criada pelo painel — examine-a antes de confiar nela.',
         'php_pool_orphaned' => 'Um pool do PHP-FPM indica uma conta Linux que já não existe — normalmente um site eliminado antes do seu pool, cujo utilizador foi depois removido. O PHP-FPM não arranca com ele, por isso todos os novos sites PHP falham o aprovisionamento e levam a culpa. Elimine os ficheiros de pool listados, execute `php-fpm -t` e reinicie o php-fpm.',
