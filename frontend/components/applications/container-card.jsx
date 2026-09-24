@@ -205,6 +205,19 @@ export function ContainerCard({
               </Note>
             ) : null}
 
+            {/* The name to type, said out loud.
+
+                Compose also registers the service name — `app` in every file the
+                panel generates — so two sites on one network both answer to
+                `app` and Docker's DNS picks one at random. The slug alias is
+                unique, and a unique name nobody is told about is no better than
+                no unique name at all. */}
+            {defaults.docker_network !== DEFAULT_NETWORK && !missing ? (
+              <Note icon={Network} title={t("reachableTitle")}>
+                {t("reachableBody", { alias: application.slug })}
+              </Note>
+            ) : null}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}

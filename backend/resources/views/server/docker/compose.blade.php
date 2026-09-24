@@ -27,7 +27,23 @@ services:
          and would still make every existing site's compose file "changed" on
          its next deploy, which is a diff nobody can tell from a real one. --}}
     networks:
-      - {{ $network }}
+      {{ $network }}:
+        {{-- The site's own name on the network, and the reason this is the
+             mapping form rather than a one-line list.
+
+             Compose registers the SERVICE name as an alias, and every file the
+             panel generates names its service `app`. Two panel sites on one
+             network therefore both answer to `app`, and Docker's DNS returns
+             one of them at random — measured on the test box: four lookups of
+             `app` from the same container gave 172.19.0.2 once and .3 three
+             times. A user following any Docker tutorial types the service name,
+             so the default was a coin flip that looks like it works.
+
+             The slug is unique per site and is the name the UI tells people to
+             use. `app` stays ambiguous — Compose adds it and there is no way to
+             refuse — but nobody has to rely on it. --}}
+        aliases:
+          - {{ $alias }}
 
 @endif
     {{-- The site's own directory, and nothing above it. A bind mount is the

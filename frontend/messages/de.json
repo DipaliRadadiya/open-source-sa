@@ -3485,6 +3485,8 @@
       "missingOption": "{name} (nicht mehr auf diesem Server)",
       "missingTitle": "Dieses Netzwerk existiert nicht mehr",
       "missingBody": "Die Website soll {name} beitreten, und dieser Server hat es nicht mehr. Der Container startet erst, wenn Sie ein vorhandenes Netzwerk wählen oder dieses neu erstellen.",
+      "reachableTitle": "Wie andere Container diese Website erreichen",
+      "reachableBody": "Verwenden Sie den Hostnamen {alias} — zum Beispiel http://{alias} aus einem anderen Container im selben Netzwerk. Vermeiden Sie „app“: jede vom Panel erstellte Website antwortet auf diesen Namen, er trifft also eine beliebige davon.",
       "containerPort": "Container-Port",
       "containerPortHint": "Der Port, auf dem Ihre Anwendung innerhalb des Containers lauscht.",
       "memoryLimit": "Speicherlimit",

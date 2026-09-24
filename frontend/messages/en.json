@@ -3485,6 +3485,8 @@
       "missingOption": "{name} (no longer on this server)",
       "missingTitle": "This network is gone",
       "missingBody": "The site is set to join {name}, and this server no longer has it. The container will not start until you pick a network that exists, or recreate that one.",
+      "reachableTitle": "How other containers reach this site",
+      "reachableBody": "Use the hostname {alias} — for example http://{alias} from another container on the same network. Avoid “app”: every site the panel builds answers to that name, so it resolves to an arbitrary one of them.",
       "containerPort": "Container port",
       "containerPortHint": "The port your application listens on inside the container.",
       "memoryLimit": "Memory limit",

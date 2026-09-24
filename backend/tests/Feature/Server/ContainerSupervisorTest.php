@@ -414,10 +414,16 @@ it('joins the chosen network, and declares it external', function () {
         ->apply($application, '/home/shop/shop/public_html');
 
     expect($written)->toContain('networks:')
-        ->and($written)->toContain('- ghost-net')
+        ->and($written)->toContain('ghost-net:')
         // The whole point. An `external: false` — or an absent declaration —
         // is a second, differently-named network that resolves nothing.
-        ->and($written)->toContain('external: true');
+        ->and($written)->toContain('external: true')
+        // And the site's own unique name on it. Compose registers the SERVICE
+        // name too, and every generated file calls its service `app` — so two
+        // panel sites on one network both answer to `app` and Docker's DNS
+        // picks one at random. Measured on a real box before this was added.
+        ->and($written)->toContain('aliases:')
+        ->and($written)->toContain('- shop');
 });
 
 it('writes the same file it always did when no network was chosen', function () {

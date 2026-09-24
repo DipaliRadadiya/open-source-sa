@@ -3485,6 +3485,8 @@
       "missingOption": "{name} (plus présent sur ce serveur)",
       "missingTitle": "Ce réseau n'existe plus",
       "missingBody": "Le site est configuré pour rejoindre {name}, et ce serveur ne l'a plus. Le conteneur ne démarrera pas tant que vous n'aurez pas choisi un réseau existant ou recréé celui-ci.",
+      "reachableTitle": "Comment les autres conteneurs atteignent ce site",
+      "reachableBody": "Utilisez le nom d’hôte {alias} — par exemple http://{alias} depuis un autre conteneur du même réseau. Évitez «app» : tous les sites créés par le panneau répondent à ce nom, il en désigne donc un au hasard.",
       "containerPort": "Port du conteneur",
       "containerPortHint": "Le port sur lequel votre application écoute à l'intérieur du conteneur.",
       "memoryLimit": "Limite de mémoire",

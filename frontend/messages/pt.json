@@ -3485,6 +3485,8 @@
       "missingOption": "{name} (já não está neste servidor)",
       "missingTitle": "Esta rede já não existe",
       "missingBody": "O site está configurado para se juntar a {name} e este servidor já não a tem. O contentor não arranca até escolher uma rede existente ou recriar essa.",
+      "reachableTitle": "Como outros contentores alcançam este site",
+      "reachableBody": "Use o nome de host {alias} — por exemplo http://{alias} a partir de outro contentor na mesma rede. Evite “app”: todos os sites criados pelo painel respondem a esse nome, por isso aponta para um qualquer.",
       "containerPort": "Porta do contentor",
       "containerPortHint": "A porta em que a sua aplicação escuta dentro do contentor.",
       "memoryLimit": "Limite de memória",

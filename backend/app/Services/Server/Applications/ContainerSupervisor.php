@@ -153,6 +153,11 @@ class ContainerSupervisor
             // pasted compose file returns above, because a file that names its
             // own networks must not have one appended to it.
             'network' => $application->docker_network ?: null,
+            // The site's name on that network. Unique, unlike the service name
+            // `app`, which every generated file uses and which therefore
+            // resolves to an arbitrary one of them when two sites share a
+            // network.
+            'alias' => $application->slug,
         ])->render();
     }
 

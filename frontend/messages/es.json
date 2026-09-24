@@ -3485,6 +3485,8 @@
       "missingOption": "{name} (ya no está en este servidor)",
       "missingTitle": "Esta red ya no existe",
       "missingBody": "El sitio está configurado para unirse a {name} y este servidor ya no la tiene. El contenedor no arrancará hasta que elijas una red que exista o vuelvas a crear esa.",
+      "reachableTitle": "Cómo llegan otros contenedores a este sitio",
+      "reachableBody": "Usa el nombre de host {alias} — por ejemplo http://{alias} desde otro contenedor de la misma red. Evita «app»: todos los sitios que crea el panel responden a ese nombre, así que apunta a uno cualquiera.",
       "containerPort": "Puerto del contenedor",
       "containerPortHint": "El puerto en el que escucha tu aplicación dentro del contenedor.",
       "memoryLimit": "Límite de memoria",
