@@ -26,6 +26,11 @@ export function deleteBackupTarget(applicationId, { deleteBackups = false } = {}
   });
 }
 
+/** The settings form's choices, for a retry after the server render could not read them. */
+export function fetchBackupTargetOptions() {
+  return api.get("/backup-targets/options");
+}
+
 /**
  * Run a backup now. Throttled to 6/min on the backend — each call dumps a
  * database and writes a multi-gigabyte archive.

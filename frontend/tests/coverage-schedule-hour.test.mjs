@@ -24,8 +24,10 @@ const LOCALES = read("i18n/routing.js")
   .filter(Boolean);
 
 test("the table prints the hour, formatted the way the rest of the panel does", () => {
-  assert.match(table, /import \{ scheduleTimeLabel \} from "@\/lib\/backups\/schedule-time"/);
-  assert.match(table, /scheduleTimeLabel\(target\.schedule_time, format\)/);
+  // Through scheduleWhen since the API's options say which frequencies use the
+  // hour: hourly uses only the minute and is printed as one.
+  assert.match(table, /import \{ scheduleWhen \} from "@\/lib\/backups\/schedule-time"/);
+  assert.match(table, /scheduleWhen\(target, options, format\)/);
   // Its own line: measured, the column is 96px at 1024–1280 and
   // "Daily · 2:00 AM" needs 99.
   assert.match(table, /\{time \? <p className="truncate text-xs tabular-nums">\{time\}<\/p> : null\}/);
@@ -34,8 +36,10 @@ test("the table prints the hour, formatted the way the rest of the panel does", 
 test("a manual target is given no hour to misread", () => {
   // `frequency: "manual"` stores no time, and the API sends none. A stray
   // separator or an empty line would both imply one exists.
+  // scheduleWhen answers null for a frequency whose `time` is null (manual);
+  // its own test pins that. Both layouts must go through it.
   for (const source of [table, cards]) {
-    assert.match(source, /target\.frequency !== "manual" && target\.schedule_time/);
+    assert.match(source, /scheduleWhen\(target, options, format\)/);
   }
   assert.match(cards, /\.filter\(Boolean\)\s*\n?\s*\.join\(" · "\)/);
 });
@@ -43,7 +47,7 @@ test("a manual target is given no hour to misread", () => {
 test("the phone layout gets the hour too", () => {
   // This column went a month without the hour because nothing went back to it.
   // The cards falling behind the table is the same failure one layout over.
-  assert.match(cards, /import \{ scheduleTimeLabel \}/);
+  assert.match(cards, /import \{ scheduleWhen \}/);
   assert.match(cards, /value=\{target \? scheduleFact\(target\) : t\("placeholders\.schedule"\)\}/);
 });
 

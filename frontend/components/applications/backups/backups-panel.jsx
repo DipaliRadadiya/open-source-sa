@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
-import { scheduleTimeLabel } from "@/lib/backups/schedule-time";
+import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { clearStuckBackup, retryBackup, runBackupNow } from "@/lib/api/backups";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,8 @@ export function BackupsPanel({
   // The history request came back empty because it failed, not because the
   // site has never been backed up.
   backupsFailed = false,
+  // `GET /backup-targets/options`; null when it could not be read.
+  backupOptions = null,
 }) {
   const t = useTranslations("backups.application");
   const router = useRouter();
@@ -240,6 +242,7 @@ export function BackupsPanel({
 
       <ProtectionCard
         target={target}
+        options={backupOptions}
         // The newest run, for the one thing the target cannot answer: what
         // actually happened. `last_run_at` is unset when a run crashes.
         lastBackup={backups[0] ?? null}
@@ -296,6 +299,7 @@ export function BackupsPanel({
         target={target}
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
+        options={backupOptions}
       />
 
       {/* Kept while open: a successful turn-off refreshes the page to no
@@ -373,7 +377,7 @@ function stateOf(target) {
  * facts, and the two actions. No form — the answer to "am I covered?" should
  * not require reading a set of inputs.
  */
-function ProtectionCard({ target, lastBackup, lastBackupUnknown = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
+function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
   const t = useTranslations("backups.application");
   const state = stateOf(target);
   const { icon: Icon, tone, ring } = STATE[state];
@@ -390,14 +394,19 @@ function ProtectionCard({ target, lastBackup, lastBackupUnknown = false, canMana
    * on its own reads as the reader's own clock, and the panel has no other
    * place on this card that reveals otherwise.
    */
-  const schedule =
-    target?.schedule_time && target.frequency !== "manual"
-      ? t(target.timezone ? "summary.howOftenAtZone" : "summary.howOftenAt", {
-          frequency: target.frequency_title ?? target.frequency,
-          time: scheduleTimeLabel(target.schedule_time, format),
-          timezone: target.timezone ?? "",
-        })
-      : (target?.frequency_title ?? target?.frequency);
+  // Hourly reads only the minute of the stored time, so it is printed as
+  // ":30", not as one of its twenty-four hours.
+  const when = scheduleWhen(target, options, format);
+  const frequencyTitle = target?.frequency_title ?? target?.frequency;
+  const scheduleKey = when?.minute ? "summary.howOftenMinute" : "summary.howOftenAt";
+  const schedule = when
+    ? t(target.timezone ? `${scheduleKey}Zone` : scheduleKey, {
+        frequency: frequencyTitle,
+        time: when.time ?? "",
+        minute: when.minute ?? "",
+        timezone: target.timezone ?? "",
+      })
+    : frequencyTitle;
 
   const facts = target
     ? [

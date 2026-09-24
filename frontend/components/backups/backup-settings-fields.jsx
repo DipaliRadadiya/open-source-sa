@@ -15,7 +15,15 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BACKUP_TYPES } from "@/lib/schemas/backup";
+import {
+  frequencyOption,
+  historySpan,
+  minuteOf,
+  orderedTypes,
+  scheduledFrequencies,
+  timeUsage,
+  withMinute,
+} from "@/lib/backups/frequency";
 import { hasNoDatabase } from "@/lib/backups/database-availability";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -46,8 +54,6 @@ import {
  * pile with no shape, and people could not tell which answer belonged to which
  * question.
  */
-
-const DAYS_PER_RUN = { daily: 1, weekly: 7, monthly: 30 };
 
 /**
  * Patterns worth excluding, offered rather than applied.
@@ -103,20 +109,28 @@ export function BackupSettingsFields({
   // Absent means unknown, which reads the same as "say nothing".
   databaseCounts = null,
   databasesKnown = false,
+  // `GET /backup-targets/options`: the frequencies, types and retention bounds
+  // this form offers. Null when it could not be read, with a way to ask again.
+  options = null,
+  onRetryOptions = null,
+  retryingOptions = false,
 }) {
   const t = useTranslations("backups.form");
+  const tv = useTranslations("validation");
   /*
    * Only the API knows which clock the scheduler uses, so this is read off the
    * target rather than assumed. A target being set up for the first time has
    * not been told one yet — the line is then left out entirely instead of
    * guessing UTC, which would be a specific claim nothing backs.
    */
-  const scheduleTimezone = target?.timezone ?? null;
+  const scheduleTimezone = target?.timezone ?? options?.timezone ?? null;
   const automatic = useWatch({ control: form.control, name: "enabled" });
   const frequency = useWatch({ control: form.control, name: "frequency" });
   const retention = useWatch({ control: form.control, name: "retention_count" });
   const type = useWatch({ control: form.control, name: "type" });
   const applicationId = useWatch({ control: form.control, name: "application_id" });
+  const usage = timeUsage(options, frequency);
+  const span = historySpan(frequency, Number(retention));
 
   const destinationId = useWatch({ control: form.control, name: "storage_destination_id" });
 
@@ -216,6 +230,21 @@ export function BackupSettingsFields({
         </Group>
       ) : null}
 
+      {!options ? (
+        <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+          <div className="space-y-2">
+            <p>{t("optionsFailed")}</p>
+            {onRetryOptions ? (
+              <Button type="button" size="sm" variant="outline" disabled={retryingOptions} onClick={onRetryOptions}>
+                {retryingOptions ? <Loader2 className="size-4 animate-spin" /> : <RotateCw className="size-4" />}
+                {t("optionsRetry")}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+      <>
       <Group icon={Database} title={t("groups.content")}>
         <FormField
           control={form.control}
@@ -229,10 +258,10 @@ export function BackupSettingsFields({
                   disabled={disabled}
                   variant="card"
                   className="sm:grid sm:grid-cols-3 sm:gap-2"
-                  options={BACKUP_TYPES.map((option) => ({
+                  options={orderedTypes(options).map(({ value: option, label }) => ({
                     value: option,
-                    label: t(`types.${option}.label`),
-                    hint: t(`types.${option}.hint`),
+                    label,
+                    hint: t.has(`types.${option}.hint`) ? t(`types.${option}.hint`) : undefined,
                     // Blocked rather than merely warned about: this one would
                     // produce an archive with nothing in it, and a backup that
                     // reports success while holding nothing is discovered at
@@ -283,7 +312,9 @@ export function BackupSettingsFields({
                   checked={field.value}
                   onCheckedChange={(next) => {
                     field.onChange(next);
-                    form.setValue("frequency", next ? "daily" : "manual", { shouldDirty: true });
+                    form.setValue("frequency", next ? options.default_frequency : "manual", {
+                      shouldDirty: true,
+                    });
                   }}
                   disabled={disabled}
                 />
@@ -302,9 +333,9 @@ export function BackupSettingsFields({
                   <FormLabel required>{t("frequency")}</FormLabel>
                   <FormControl>
                     <Combobox
-                      options={["daily", "weekly", "monthly"].map((value) => ({
+                      options={scheduledFrequencies(options).map(({ value, label }) => ({
                         value,
-                        label: t(`frequencies.${value}`),
+                        label,
                       }))}
                       value={field.value}
                       onChange={field.onChange}
@@ -312,7 +343,9 @@ export function BackupSettingsFields({
                       placeholder={t("frequencyPlaceholder")}
                     />
                   </FormControl>
-                  <FormDescription>{t(`frequencyHint.${field.value ?? "daily"}`)}</FormDescription>
+                  {frequencyOption(options, field.value)?.hint ? (
+                    <FormDescription>{frequencyOption(options, field.value).hint}</FormDescription>
+                  ) : null}
                   <FormMessage />
                 </FormItem>
               )}
@@ -323,21 +356,47 @@ export function BackupSettingsFields({
                 admitting it. A native time input rather than a picker: this is
                 one value the OS already has a good control for, and it hands
                 back exactly the "HH:MM" the API validates. */}
+            {usage ? (
             <FormField
               control={form.control}
               name="schedule_time"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel required hint={t("scheduleTimeHint")}>{t("scheduleTime")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="time"
-                      step={60}
-                      disabled={disabled}
-                      className="w-full tabular-nums"
-                    />
-                  </FormControl>
+                  {/* Hourly reads only the minute. A clock face there would
+                      invite an hour that is then silently ignored. */}
+                  {usage === "minute" ? (
+                    <>
+                      <FormLabel required hint={t("scheduleMinuteHint")}>{t("scheduleMinute")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={59}
+                          disabled={disabled}
+                          className="w-full tabular-nums"
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          value={Number(minuteOf(field.value))}
+                          onChange={(event) => field.onChange(withMinute(field.value, event.target.value))}
+                        />
+                      </FormControl>
+                    </>
+                  ) : (
+                    <>
+                      <FormLabel required hint={t("scheduleTimeHint")}>{t("scheduleTime")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="time"
+                          step={60}
+                          disabled={disabled}
+                          className="w-full tabular-nums"
+                        />
+                      </FormControl>
+                    </>
+                  )}
                   {/*
                     Which clock this time is in, said out loud for the same
                     reason the cron dialog says it: a browser in another
@@ -363,6 +422,7 @@ export function BackupSettingsFields({
                 </FormItem>
               )}
             />
+            ) : null}
 
             <FormField
               control={form.control}
@@ -374,19 +434,26 @@ export function BackupSettingsFields({
                     <Input
                       type="number"
                       inputMode="numeric"
-                      min={1}
-                      max={365}
+                      min={options.retention.min}
+                      max={options.retention.max}
                       disabled={disabled}
                       {...field}
                     />
                   </FormControl>
+                  {/* It counts backups, not days: on an hourly schedule seven
+                      is seven hours of history, and the hint says so. */}
                   <FormDescription>
-                    {t("retentionHint", {
-                      count: Number(retention) || 0,
-                      days: (Number(retention) || 0) * (DAYS_PER_RUN[frequency] ?? 1),
-                    })}
+                    {span?.unit === "hours"
+                      ? t("retentionHintHours", { hours: span.amount })
+                      : span
+                        ? t("retentionHint", { days: span.amount })
+                        : t("retentionHintCount", { count: Number(retention) || 0 })}
                   </FormDescription>
-                  <FormMessage />
+                  <FormMessage>
+                    {form.formState.errors.retention_count?.message === "retentionRange"
+                      ? tv("retentionRange", options.retention)
+                      : undefined}
+                  </FormMessage>
                 </FormItem>
               )}
             />
@@ -396,6 +463,8 @@ export function BackupSettingsFields({
           <Caution>{t("warnings.retentionDown", { count: pruning })}</Caution>
         ) : null}
       </Group>
+      </>
+      )}
 
       <Group icon={HardDrive} title={t("groups.storage")}>
         {!hasDestinations ? (

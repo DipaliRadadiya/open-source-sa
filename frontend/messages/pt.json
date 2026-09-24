@@ -752,7 +752,7 @@
     "endpointPlaceholder": "Substitua a parte em <angle brackets> pelo seu próprio valor",
     "required_application": "Escolha uma aplicação",
     "required_destination": "Escolha onde armazenar os backups",
-    "retentionRange": "Mantenha entre 1 e 365 backups",
+    "retentionRange": "Mantenha entre {min} e {max} backups",
     "required_confirm": "Digite o domínio da aplicação para confirmar",
     "cloneDomainRequired": "Informe o domínio para a cópia.",
     "cloneDomainInvalid": "Informe um domínio completo, como copy.example.com",
@@ -767,7 +767,9 @@
     "max60": "Deve ter 60 caracteres ou menos",
     "max600": "Deve ser 600 ou menos",
     "noTraversalPath": "O caminho não pode conter ..",
-    "noSectionHeader": "Não pode conter [ — isso iniciaria outro bloco de programa"
+    "noSectionHeader": "Não pode conter [ — isso iniciaria outro bloco de programa",
+    "required_frequency": "Escolha com que frequência os backups rodam",
+    "required_type": "Escolha o que incluir no backup"
   },
   "serverDashboard": {
     "title": "Painel",
@@ -5704,7 +5706,8 @@
       "runsShortly": "Executa em breve",
       "notSetUpLine": "Não configurado — nada desta aplicação está sendo copiado.",
       "needsDestination": "Nenhum destino de armazenamento configurado ainda. Adicione um em Integrações → Armazenamento primeiro.",
-      "timesShownIn": "Horários exibidos em {timezone}"
+      "timesShownIn": "Horários exibidos em {timezone}",
+      "minutePast": "aos :{minute} de cada hora"
     },
     "setup": {
       "title": "Configurar backups",
@@ -5728,14 +5731,16 @@
         "noSite": "Escolha uma aplicação para continuar.",
         "noDestination": "Escolha onde armazenar os backups.",
         "incomplete": "Preencha o agendamento para continuar.",
-        "unchanged": "Nada foi alterado."
+        "unchanged": "Nada foi alterado.",
+        "noOptions": "As opções de backup não foram carregadas."
       },
       "editTitle": "Editar configurações de backup",
       "editSubtitle": "Altere o que é copiado, com que frequência e para onde vai.",
       "saveChanges": "Salvar alterações",
       "refreshFound": "Lista de armazenamento atualizada.",
       "refreshNoneNew": "Nenhum armazenamento novo encontrado ainda.",
-      "refreshFailed": "Não foi possível atualizar a lista de armazenamento."
+      "refreshFailed": "Não foi possível atualizar a lista de armazenamento.",
+      "optionsFailed": "Não foi possível carregar as opções de backup."
     },
     "form": {
       "applicationPlaceholder": "Escolha uma aplicação",
@@ -5750,15 +5755,12 @@
       "destinationEmpty": "Nenhum destino encontrado",
       "types": {
         "full": {
-          "label": "Arquivos + banco de dados",
           "hint": "Mais seguro — restauração completa"
         },
         "filesystem": {
-          "label": "Apenas arquivos",
           "hint": "Arquivos sem o banco de dados"
         },
         "database": {
-          "label": "Apenas banco de dados",
           "hint": "Banco de dados sem os arquivos"
         }
       },
@@ -5767,16 +5769,6 @@
       "automaticOff": "Os backups só serão executados quando você clicar em Fazer backup agora.",
       "frequency": "Com que frequência",
       "frequencyPlaceholder": "Escolha um agendamento",
-      "frequencies": {
-        "daily": "Todo dia",
-        "weekly": "Toda semana",
-        "monthly": "Todo mês"
-      },
-      "frequencyHint": {
-        "daily": "Executa uma vez por dia, no horário definido.",
-        "weekly": "Executa todo domingo, no horário definido.",
-        "monthly": "Executa no dia 1 de cada mês, no horário definido."
-      },
       "scheduleTime": "Em que horário",
       "scheduleTimeHint": "Não é o relógio do seu computador.",
       "retention": "Quantos manter",
@@ -5809,7 +5801,13 @@
       "fileExcludesHint": "Caminhos a serem deixados fora da cópia de segurança, um por linha. Caches e logs valem a pena excluir; uploads, não.",
       "databaseExcludesHint": "Bancos de dados a serem excluídos da cópia de segurança, um por linha. Útil para caches e qualquer coisa que você possa reconstruir.",
       "scheduleTimeZone": "Executa no horário do projeto ({timezone})",
-      "destinationNotConnected": "{name} ainda não foi conectado à sua conta Google, então os backups enviados para lá vão falhar."
+      "destinationNotConnected": "{name} ainda não foi conectado à sua conta Google, então os backups enviados para lá vão falhar.",
+      "optionsFailed": "Não foi possível carregar as opções de backup, então estas configurações ainda não podem ser salvas.",
+      "optionsRetry": "Tentar novamente",
+      "scheduleMinute": "Em que minuto",
+      "scheduleMinuteHint": "Minutos depois de cada hora, de 0 a 59.",
+      "retentionHintHours": "Cerca de {hours, plural, one {# hora} other {# horas}} de histórico. Os mais antigos são excluídos.",
+      "retentionHintCount": "Mantém {count, plural, one {o backup mais recente} other {os # backups mais recentes}}. Os mais antigos são excluídos."
     },
     "history": {
       "allApplications": "Todas as aplicações",
@@ -6033,7 +6031,9 @@
         "howOftenAt": "{frequency} às {time}",
         "keepsEverything": "Todos os backups mantidos",
         "keepsNotApplicable": "Não aplicável",
-        "howOftenAtZone": "{frequency} às {time} · {timezone}"
+        "howOftenAtZone": "{frequency} às {time} · {timezone}",
+        "howOftenMinute": "{frequency} aos :{minute}",
+        "howOftenMinuteZone": "{frequency} aos :{minute} · {timezone}"
       },
       "unknownReason": "O motivo não foi registrado.",
       "restore": "Restaurar",

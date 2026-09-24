@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { CheckCircle2, Loader2, PlayCircle, ShieldCheck } from "lucide-react";
-import { BACKUP_DEFAULT_TIME, backupTargetFormSchema } from "@/lib/schemas/backup";
-import { runBackupNow, saveBackupTarget } from "@/lib/api/backups";
+import {
+  BACKUP_DEFAULT_TIME,
+  backupTargetFormSchema,
+  backupTargetOptionsSchema,
+} from "@/lib/schemas/backup";
+import { frequencyOption, timeUsage } from "@/lib/backups/frequency";
+import { fetchBackupTargetOptions, runBackupNow, saveBackupTarget } from "@/lib/api/backups";
 import { listDestinations } from "@/lib/api/storage";
 import { storageDestinationsResponseSchema } from "@/lib/schemas/storage";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
@@ -45,6 +50,8 @@ export function SetupBackupsDialog({
   // form can say when a database backup would hold nothing.
   databaseCounts = null,
   databasesKnown = false,
+  // `GET /backup-targets/options`, read by the page. Null when that failed.
+  options: initialOptions = null,
 }) {
   const t = useTranslations("backups.setup");
   const router = useRouter();
@@ -66,16 +73,49 @@ export function SetupBackupsDialog({
   const [refreshing, setRefreshing] = useState(false);
   const available = refreshed ?? destinations;
 
+  // Re-read here only when the page's read failed and someone pressed retry.
+  const [fetchedOptions, setFetchedOptions] = useState(null);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const options = initialOptions ?? fetchedOptions;
+  // The resolver is fixed when the form is created; the ref lets it validate
+  // against options that arrived after that.
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
+
   const form = useForm({
-    resolver: zodResolver(backupTargetFormSchema),
+    resolver: (values, context, resolverOptions) =>
+      zodResolver(backupTargetFormSchema(optionsRef.current))(values, context, resolverOptions),
     mode: "onSubmit",
     reValidateMode: "onChange",
-    defaultValues: defaults(applicationId, destinations, target),
+    defaultValues: defaults(applicationId, destinations, target, options),
   });
+
+  async function retryOptions() {
+    setLoadingOptions(true);
+    try {
+      const { data } = await fetchBackupTargetOptions();
+      const parsed = backupTargetOptionsSchema.safeParse(data);
+      if (!parsed.success) {
+        toast.error(t("optionsFailed"));
+        return;
+      }
+      setFetchedOptions(parsed.data);
+      // A new target was seeded before there was a default to seed it with.
+      if (!target && !form.getValues("frequency")) {
+        form.setValue("frequency", parsed.data.default_frequency);
+      }
+    } catch (error) {
+      toast.error(apiMessage(error, t("optionsFailed")));
+    } finally {
+      setLoadingOptions(false);
+    }
+  }
 
   // Reopening from a different row must not inherit the previous row's site.
   useEffect(() => {
-    if (open) form.reset(defaults(applicationId, destinations, target));
+    if (open) form.reset(defaults(applicationId, destinations, target, options));
     // `destinations` and `target` are excluded deliberately. Both change
     // identity on every parent render, and re-seeding on them would overwrite a
     // half-filled form; `open` going false→true already covers arriving from a
@@ -90,9 +130,9 @@ export function SetupBackupsDialog({
         type: values.type,
         retention_count: values.retention_count,
         frequency: values.frequency,
-        // Only meaningful for a schedule. Sending it with `manual` would store
-        // a time for a backup that never runs on its own.
-        ...(values.frequency === "manual" ? null : { schedule_time: values.schedule_time }),
+        // Only for a frequency that reads it. Sending one with `manual` would
+        // store a time for a backup that never runs on its own.
+        ...(timeUsage(options, values.frequency) ? { schedule_time: values.schedule_time } : null),
         enabled: values.enabled,
         file_excludes: values.file_excludes,
         database_excludes: values.database_excludes,
@@ -131,7 +171,7 @@ export function SetupBackupsDialog({
     // Back to the prop: the page behind this dialog re-reads on navigation, so
     // its list is the fresher one once we are no longer holding a form open.
     setRefreshed(null);
-    form.reset(defaults(applicationId, destinations, target));
+    form.reset(defaults(applicationId, destinations, target, options));
     onOpenChange?.(false);
   }
 
@@ -184,8 +224,9 @@ export function SetupBackupsDialog({
 
   // What is missing, in the order the form asks for it. A disabled primary
   // action that does not say why is the anti-pattern; this is the sentence.
-  const blocker =
-    available.length === 0
+  const blocker = !options
+    ? t("blocked.noOptions")
+    : available.length === 0
       ? t("blocked.noStorage")
       : !values.application_id
         ? t("blocked.noSite")
@@ -272,12 +313,15 @@ export function SetupBackupsDialog({
           target={target}
           databaseCounts={databaseCounts}
           databasesKnown={databasesKnown}
+          options={options}
+          onRetryOptions={retryOptions}
+          retryingOptions={loadingOptions}
         />
 
         {/* What pressing Save will actually do, in one line. Reading your own
             answers back is the cheapest way to catch the wrong site or a
             schedule you did not mean. */}
-        <SummaryLine values={values} applications={applications} destinations={available} />
+        <SummaryLine values={values} applications={applications} destinations={available} options={options} />
       </FormModal>
     </Form>
   );
@@ -291,7 +335,7 @@ export function SetupBackupsDialog({
  * set one at a time; this is the only place the answers appear together, which
  * is where a wrong site or an unintended `manual` becomes obvious.
  */
-function SummaryLine({ values, applications, destinations }) {
+function SummaryLine({ values, applications, destinations, options }) {
   const t = useTranslations("backups.setup");
   const tf = useTranslations("backups.form");
 
@@ -301,8 +345,8 @@ function SummaryLine({ values, applications, destinations }) {
 
   const parts = [
     site.name,
-    tf(`types.${values.type}.label`),
-    values.enabled ? tf(`frequencies.${values.frequency ?? "daily"}`) : tf("automaticOffShort"),
+    options?.types.find((type) => type.value === values.type)?.label,
+    values.enabled ? frequencyOption(options, values.frequency)?.label : tf("automaticOffShort"),
     values.enabled ? t("keep", { count: Number(values.retention_count) || 0 }) : null,
     destination?.name,
   ].filter(Boolean);
@@ -322,7 +366,7 @@ function SummaryLine({ values, applications, destinations }) {
  * without making a single decision — which for this audience is the whole
  * difference between "set up" and "meant to set up".
  */
-function defaults(applicationId, destinations, target) {
+function defaults(applicationId, destinations, target, options) {
   if (target) {
     // A disabled target and a manual one mean the same thing to the backend,
     // and the form has one switch for both — so normalise on the way in, or
@@ -349,7 +393,7 @@ function defaults(applicationId, destinations, target) {
     storage_destination_id: destinations.length === 1 ? destinations[0].id : "",
     type: "full",
     retention_count: 7,
-    frequency: "daily",
+    frequency: options?.default_frequency ?? "",
     schedule_time: BACKUP_DEFAULT_TIME,
     enabled: true,
     file_excludes: [],

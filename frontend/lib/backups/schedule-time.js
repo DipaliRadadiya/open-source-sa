@@ -1,3 +1,5 @@
+import { minuteOf, timeUsage } from "./frequency.js";
+
 /**
  * A stored "HH:MM" shown the way the reader's clock shows times.
  *
@@ -25,4 +27,21 @@ export function scheduleTimeLabel(time, format) {
   // The date is a carrier, never shown — only the time fields are formatted.
   const at = new Date(2000, 0, 1, hours, minutes);
   return format.dateTime(at, { hour: "numeric", minute: "2-digit" });
+}
+
+/**
+ * When a target runs, as far as its frequency uses the stored time.
+ *
+ * `{ minute: "30" }` for a schedule that reads only the minute (hourly — its
+ * "14:30" means half past every hour, and printing 2:30 PM would name one run
+ * out of twenty-four), `{ time }` for one that runs at an hour, null for none.
+ * Also null when the options could not be read: the frequency's title alone
+ * is less than the full answer, a guessed hour would be a wrong one.
+ */
+export function scheduleWhen(target, options, format) {
+  if (!target?.schedule_time) return null;
+  const usage = timeUsage(options, target.frequency);
+  if (usage === "minute") return { minute: minuteOf(target.schedule_time) };
+  if (usage === "time") return { time: scheduleTimeLabel(target.schedule_time, format) };
+  return null;
 }

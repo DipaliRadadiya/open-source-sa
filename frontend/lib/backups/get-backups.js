@@ -10,6 +10,7 @@ import {
   RESTORE_IN_FLIGHT,
   RESTORE_STATUSES,
   backupResponseSchema,
+  backupTargetOptionsSchema,
   backupTargetResponseSchema,
   backupTargetsResponseSchema,
   backupsResponseSchema,
@@ -274,5 +275,14 @@ export async function getBackupCoverage() {
   };
 }
 
-
-
+/**
+ * The choices the backup settings form offers, in the reader's language.
+ *
+ * Cached per request: the list and the dialog on one screen ask the same
+ * question. `null` when it could not be read — the form then says so and
+ * offers to try again rather than falling back to a list typed out here.
+ */
+export const getBackupTargetOptions = cache(async function getBackupTargetOptions() {
+  const result = await read("/backup-targets/options", backupTargetOptionsSchema);
+  return { options: result.failed ? null : result.data, failed: result.failed };
+});

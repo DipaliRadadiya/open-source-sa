@@ -230,7 +230,7 @@
     "endpointPlaceholder": "Sustituye la parte entre <corchetes angulares> por tu propio valor",
     "required_application": "Elige una aplicación",
     "required_destination": "Elige dónde guardar las copias",
-    "retentionRange": "Conserva entre 1 y 365 copias",
+    "retentionRange": "Conserva entre {min} y {max} copias",
     "required_confirm": "Escribe el dominio de la aplicación para confirmar",
     "cloneDomainRequired": "Introduce el dominio de la copia.",
     "cloneDomainInvalid": "Introduce un dominio completo, como copia.ejemplo.com",
@@ -245,7 +245,9 @@
     "max60": "Debe tener 60 caracteres o menos",
     "max600": "Debe ser 600 o menos",
     "noTraversalPath": "La ruta no puede contener ..",
-    "noSectionHeader": "No puede contener [ — eso iniciaría otro bloque de programa"
+    "noSectionHeader": "No puede contener [ — eso iniciaría otro bloque de programa",
+    "required_frequency": "Elige cada cuánto se hacen las copias",
+    "required_type": "Elige qué copiar"
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -5704,7 +5706,8 @@
       "runsShortly": "Se ejecuta en breve",
       "notSetUpLine": "Sin configurar: no se respalda nada de esta aplicación.",
       "needsDestination": "Aún no hay ningún destino de almacenamiento. Añade uno en Integraciones → Almacenamiento primero.",
-      "timesShownIn": "Horas mostradas en {timezone}"
+      "timesShownIn": "Horas mostradas en {timezone}",
+      "minutePast": "a los :{minute} de cada hora"
     },
     "setup": {
       "title": "Configurar copias de seguridad",
@@ -5728,14 +5731,16 @@
         "noSite": "Elige una aplicación para continuar.",
         "noDestination": "Elige dónde guardar las copias.",
         "incomplete": "Completa la programación para continuar.",
-        "unchanged": "No ha cambiado nada."
+        "unchanged": "No ha cambiado nada.",
+        "noOptions": "Las opciones de copia no se han cargado."
       },
       "editTitle": "Editar ajustes de copia",
       "editSubtitle": "Cambia qué se copia, con qué frecuencia y dónde se guarda.",
       "saveChanges": "Guardar cambios",
       "refreshFound": "Lista de almacenamiento actualizada.",
       "refreshNoneNew": "Aún no se ha encontrado almacenamiento nuevo.",
-      "refreshFailed": "No se pudo actualizar la lista de almacenamiento."
+      "refreshFailed": "No se pudo actualizar la lista de almacenamiento.",
+      "optionsFailed": "No se pudieron cargar las opciones de copia."
     },
     "form": {
       "applicationPlaceholder": "Elige una aplicación",
@@ -5750,15 +5755,12 @@
       "destinationEmpty": "No se encontraron destinos",
       "types": {
         "full": {
-          "label": "Archivos + base de datos",
           "hint": "Lo más seguro: restauración completa"
         },
         "filesystem": {
-          "label": "Solo archivos",
           "hint": "Archivos sin la base de datos"
         },
         "database": {
-          "label": "Solo base de datos",
           "hint": "Base de datos sin los archivos"
         }
       },
@@ -5767,16 +5769,6 @@
       "automaticOff": "Las copias solo se ejecutan cuando pulsas Copiar ahora.",
       "frequency": "Con qué frecuencia",
       "frequencyPlaceholder": "Elige una programación",
-      "frequencies": {
-        "daily": "Cada día",
-        "weekly": "Cada semana",
-        "monthly": "Cada mes"
-      },
-      "frequencyHint": {
-        "daily": "Se ejecuta una vez al día, a la hora que elijas.",
-        "weekly": "Se ejecuta cada domingo, a la hora que elijas.",
-        "monthly": "Se ejecuta el día 1 de cada mes, a la hora que elijas."
-      },
       "scheduleTime": "A qué hora",
       "scheduleTimeHint": "No es el reloj de tu ordenador.",
       "retention": "Cuántas conservar",
@@ -5809,7 +5801,13 @@
       "fileExcludesHint": "Rutas a excluir de la copia de seguridad, una por línea. Vale la pena excluir cachés y registros; los archivos subidos, no.",
       "databaseExcludesHint": "Bases de datos que se excluirán de la copia de seguridad, una por línea. Útil para cachés y cualquier cosa que pueda reconstruir.",
       "scheduleTimeZone": "Se ejecuta en hora del proyecto ({timezone})",
-      "destinationNotConnected": "{name} aún no está conectado a tu cuenta de Google, así que las copias enviadas allí fallarán."
+      "destinationNotConnected": "{name} aún no está conectado a tu cuenta de Google, así que las copias enviadas allí fallarán.",
+      "optionsFailed": "No se pudieron cargar las opciones de copia, así que estos ajustes aún no se pueden guardar.",
+      "optionsRetry": "Reintentar",
+      "scheduleMinute": "En qué minuto",
+      "scheduleMinuteHint": "Minutos después de cada hora, de 0 a 59.",
+      "retentionHintHours": "{hours, plural, one {Una hora} other {Unas # horas}} de historial. Las más antiguas se eliminan.",
+      "retentionHintCount": "Conserva {count, plural, one {la copia más reciente} other {las # copias más recientes}}. Las más antiguas se eliminan."
     },
     "history": {
       "allApplications": "Todas las aplicaciones",
@@ -6033,7 +6031,9 @@
         "howOftenAt": "{frequency} a las {time}",
         "keepsEverything": "Se conservan todas",
         "keepsNotApplicable": "No aplicable",
-        "howOftenAtZone": "{frequency} a las {time} · {timezone}"
+        "howOftenAtZone": "{frequency} a las {time} · {timezone}",
+        "howOftenMinute": "{frequency} a los :{minute}",
+        "howOftenMinuteZone": "{frequency} a los :{minute} · {timezone}"
       },
       "unknownReason": "No se registró el motivo.",
       "restore": "Restaurar",

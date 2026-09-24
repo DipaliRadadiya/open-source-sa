@@ -752,7 +752,7 @@
     "endpointPlaceholder": "Ersetzen Sie den Teil in <spitzen Klammern> durch Ihren eigenen Wert",
     "required_application": "Anwendung auswählen",
     "required_destination": "Wählen Sie, wo die Backups gespeichert werden sollen",
-    "retentionRange": "Zwischen 1 und 365 Backups aufbewahren",
+    "retentionRange": "Zwischen {min} und {max} Backups aufbewahren",
     "required_confirm": "Geben Sie die Domain der Anwendung zur Bestätigung ein",
     "cloneDomainRequired": "Geben Sie die Domain für die Kopie ein.",
     "cloneDomainInvalid": "Geben Sie eine vollständige Domain ein, z. B. copy.example.com",
@@ -767,7 +767,9 @@
     "max60": "Darf höchstens 60 Zeichen lang sein",
     "max600": "Darf höchstens 600 sein",
     "noTraversalPath": "Der Pfad darf kein .. enthalten",
-    "noSectionHeader": "Darf kein [ enthalten — das würde einen weiteren Programmblock beginnen"
+    "noSectionHeader": "Darf kein [ enthalten — das würde einen weiteren Programmblock beginnen",
+    "required_frequency": "Wählen Sie, wie oft Backups laufen",
+    "required_type": "Wählen Sie, was gesichert wird"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -5704,7 +5706,8 @@
       "runsShortly": "Läuft in Kürze",
       "notSetUpLine": "Nicht eingerichtet — von dieser Anwendung wird nichts gesichert.",
       "needsDestination": "Es ist noch kein Speicherziel eingerichtet. Fügen Sie zuerst eines unter Integrationen → Speicher hinzu.",
-      "timesShownIn": "Zeiten in {timezone}"
+      "timesShownIn": "Zeiten in {timezone}",
+      "minutePast": ":{minute} nach jeder vollen Stunde"
     },
     "setup": {
       "title": "Backups einrichten",
@@ -5728,14 +5731,16 @@
         "noSite": "Wählen Sie eine Anwendung, um fortzufahren.",
         "noDestination": "Wählen Sie, wo Backups gespeichert werden.",
         "incomplete": "Füllen Sie den Zeitplan aus, um fortzufahren.",
-        "unchanged": "Nichts hat sich geändert."
+        "unchanged": "Nichts hat sich geändert.",
+        "noOptions": "Die Backup-Optionen wurden nicht geladen."
       },
       "editTitle": "Backup-Einstellungen bearbeiten",
       "editSubtitle": "Ändern Sie, was kopiert wird, wie oft und wohin.",
       "saveChanges": "Änderungen speichern",
       "refreshFound": "Speicherliste aktualisiert.",
       "refreshNoneNew": "Noch kein neuer Speicher gefunden.",
-      "refreshFailed": "Die Speicherliste konnte nicht aktualisiert werden."
+      "refreshFailed": "Die Speicherliste konnte nicht aktualisiert werden.",
+      "optionsFailed": "Die Backup-Optionen konnten nicht geladen werden."
     },
     "form": {
       "applicationPlaceholder": "Anwendung auswählen",
@@ -5750,15 +5755,12 @@
       "destinationEmpty": "Keine Ziele gefunden",
       "types": {
         "full": {
-          "label": "Dateien + Datenbank",
           "hint": "Am sichersten — eine vollständige Wiederherstellung"
         },
         "filesystem": {
-          "label": "Nur Dateien",
           "hint": "Dateien ohne die Datenbank"
         },
         "database": {
-          "label": "Nur Datenbank",
           "hint": "Datenbank ohne die Dateien"
         }
       },
@@ -5767,16 +5769,6 @@
       "automaticOff": "Backups laufen nur, wenn Sie „Jetzt sichern“ drücken.",
       "frequency": "Wie oft",
       "frequencyPlaceholder": "Zeitplan wählen",
-      "frequencies": {
-        "daily": "Jeden Tag",
-        "weekly": "Jede Woche",
-        "monthly": "Jeden Monat"
-      },
-      "frequencyHint": {
-        "daily": "Läuft einmal täglich, zur Zeit, die Sie festlegen.",
-        "weekly": "Läuft jeden Sonntag, zur Zeit, die Sie festlegen.",
-        "monthly": "Läuft am 1. jedes Monats, zur Zeit, die Sie festlegen."
-      },
       "scheduleTime": "Zu welcher Zeit",
       "scheduleTimeHint": "Nicht die Uhr Ihres Rechners.",
       "retention": "Wie viele behalten",
@@ -5809,7 +5801,13 @@
       "fileExcludesHint": "Pfade, die von der Sicherung ausgeschlossen werden, einer pro Zeile. Caches und Protokolle lohnen sich auszuschließen; Uploads nicht.",
       "databaseExcludesHint": "Datenbanken, die von der Sicherung ausgeschlossen werden, eine pro Zeile. Nützlich für Caches und alles, was sich neu aufbauen lässt.",
       "scheduleTimeZone": "Läuft in Projektzeit ({timezone})",
-      "destinationNotConnected": "{name} ist noch nicht mit Ihrem Google-Konto verbunden — dorthin gesendete Sicherungen schlagen fehl."
+      "destinationNotConnected": "{name} ist noch nicht mit Ihrem Google-Konto verbunden — dorthin gesendete Sicherungen schlagen fehl.",
+      "optionsFailed": "Die Backup-Optionen konnten nicht geladen werden, daher lassen sich diese Einstellungen noch nicht speichern.",
+      "optionsRetry": "Erneut versuchen",
+      "scheduleMinute": "Zu welcher Minute",
+      "scheduleMinuteHint": "Minuten nach jeder vollen Stunde, 0 bis 59.",
+      "retentionHintHours": "Etwa {hours, plural, one {# Stunde} other {# Stunden}} Verlauf. Ältere werden gelöscht.",
+      "retentionHintCount": "Behält {count, plural, one {das neueste Backup} other {die neuesten # Backups}}. Ältere werden gelöscht."
     },
     "history": {
       "allApplications": "Alle Anwendungen",
@@ -6033,7 +6031,9 @@
         "howOftenAt": "{frequency} um {time}",
         "keepsEverything": "Jedes Backup wird behalten",
         "keepsNotApplicable": "Nicht zutreffend",
-        "howOftenAtZone": "{frequency} um {time} · {timezone}"
+        "howOftenAtZone": "{frequency} um {time} · {timezone}",
+        "howOftenMinute": "{frequency} um :{minute}",
+        "howOftenMinuteZone": "{frequency} um :{minute} · {timezone}"
       },
       "unknownReason": "Der Grund wurde nicht aufgezeichnet.",
       "restore": "Wiederherstellen",

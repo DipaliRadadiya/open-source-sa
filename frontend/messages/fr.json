@@ -752,7 +752,7 @@
     "endpointPlaceholder": "Remplacez la partie entre <crochets angulaires> par votre propre valeur",
     "required_application": "Choisissez une application",
     "required_destination": "Choisissez où stocker les sauvegardes",
-    "retentionRange": "Conservez entre 1 et 365 sauvegardes",
+    "retentionRange": "Conservez entre {min} et {max} sauvegardes",
     "required_confirm": "Saisissez le domaine de l'application pour confirmer",
     "cloneDomainRequired": "Saisissez le domaine pour la copie.",
     "cloneDomainInvalid": "Saisissez un domaine complet, comme copie.exemple.com",
@@ -767,7 +767,9 @@
     "max60": "60 caractères maximum",
     "max600": "Doit être 600 ou moins",
     "noTraversalPath": "Le chemin ne doit pas contenir ..",
-    "noSectionHeader": "Ne doit pas contenir [ — cela démarrerait un autre bloc de programme"
+    "noSectionHeader": "Ne doit pas contenir [ — cela démarrerait un autre bloc de programme",
+    "required_frequency": "Choisissez la fréquence des sauvegardes",
+    "required_type": "Choisissez ce qu'il faut sauvegarder"
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -5704,7 +5706,8 @@
       "runsShortly": "S'exécute bientôt",
       "notSetUpLine": "Non configurée — rien n'est sauvegardé sur cette application.",
       "needsDestination": "Aucune destination de stockage n'est encore configurée. Ajoutez-en une via Intégrations → Stockage.",
-      "timesShownIn": "Heures affichées en {timezone}"
+      "timesShownIn": "Heures affichées en {timezone}",
+      "minutePast": "à :{minute} de chaque heure"
     },
     "setup": {
       "title": "Configurer les sauvegardes",
@@ -5728,14 +5731,16 @@
         "noSite": "Choisissez une application pour continuer.",
         "noDestination": "Choisissez où stocker les sauvegardes.",
         "incomplete": "Remplissez la planification pour continuer.",
-        "unchanged": "Rien n'a changé."
+        "unchanged": "Rien n'a changé.",
+        "noOptions": "Les options de sauvegarde ne sont pas chargées."
       },
       "editTitle": "Modifier les paramètres de sauvegarde",
       "editSubtitle": "Modifiez ce qui est copié, à quelle fréquence et où cela va.",
       "saveChanges": "Enregistrer les modifications",
       "refreshFound": "Liste de stockage mise à jour.",
       "refreshNoneNew": "Aucun nouveau stockage trouvé pour l'instant.",
-      "refreshFailed": "La liste de stockage n'a pas pu être actualisée."
+      "refreshFailed": "La liste de stockage n'a pas pu être actualisée.",
+      "optionsFailed": "Les options de sauvegarde n'ont pas pu être chargées."
     },
     "form": {
       "applicationPlaceholder": "Choisissez une application",
@@ -5750,15 +5755,12 @@
       "destinationEmpty": "Aucune destination trouvée",
       "types": {
         "full": {
-          "label": "Fichiers + base de données",
           "hint": "Le plus sûr — restauration complète"
         },
         "filesystem": {
-          "label": "Fichiers uniquement",
           "hint": "Fichiers sans la base de données"
         },
         "database": {
-          "label": "Base de données uniquement",
           "hint": "Base de données sans les fichiers"
         }
       },
@@ -5767,16 +5769,6 @@
       "automaticOff": "Les sauvegardes ne s'exécutent que lorsque vous cliquez sur Sauvegarder maintenant.",
       "frequency": "Fréquence",
       "frequencyPlaceholder": "Choisir une planification",
-      "frequencies": {
-        "daily": "Tous les jours",
-        "weekly": "Toutes les semaines",
-        "monthly": "Tous les mois"
-      },
-      "frequencyHint": {
-        "daily": "S'exécute une fois par jour, à l'heure que vous définissez.",
-        "weekly": "S'exécute chaque dimanche, à l'heure que vous définissez.",
-        "monthly": "S'exécute le 1er de chaque mois, à l'heure que vous définissez."
-      },
       "scheduleTime": "À quelle heure",
       "scheduleTimeHint": "Pas l’horloge de votre ordinateur.",
       "retention": "Combien en conserver",
@@ -5809,7 +5801,13 @@
       "fileExcludesHint": "Chemins à exclure de la sauvegarde, un par ligne. Les caches et les logs méritent de l’être ; les téléversements, non.",
       "databaseExcludesHint": "Bases de données à exclure de la sauvegarde, une par ligne. Utile pour les caches et tout ce que vous pouvez reconstruire.",
       "scheduleTimeZone": "S’exécute à l’heure du projet ({timezone})",
-      "destinationNotConnected": "{name} n’est pas encore connecté à votre compte Google : les sauvegardes envoyées là échoueront."
+      "destinationNotConnected": "{name} n’est pas encore connecté à votre compte Google : les sauvegardes envoyées là échoueront.",
+      "optionsFailed": "Les options de sauvegarde n'ont pas pu être chargées : ces réglages ne peuvent pas encore être enregistrés.",
+      "optionsRetry": "Réessayer",
+      "scheduleMinute": "À quelle minute",
+      "scheduleMinuteHint": "Minutes après chaque heure, de 0 à 59.",
+      "retentionHintHours": "Environ {hours, plural, one {# heure} other {# heures}} d'historique. Les plus anciennes sont supprimées.",
+      "retentionHintCount": "Conserve {count, plural, one {la sauvegarde la plus récente} other {les # sauvegardes les plus récentes}}. Les plus anciennes sont supprimées."
     },
     "history": {
       "allApplications": "Toutes les applications",
@@ -6033,7 +6031,9 @@
         "howOftenAt": "{frequency} à {time}",
         "keepsEverything": "Toutes les sauvegardes conservées",
         "keepsNotApplicable": "Non applicable",
-        "howOftenAtZone": "{frequency} à {time} · {timezone}"
+        "howOftenAtZone": "{frequency} à {time} · {timezone}",
+        "howOftenMinute": "{frequency} à :{minute}",
+        "howOftenMinuteZone": "{frequency} à :{minute} · {timezone}"
       },
       "unknownReason": "La raison n'a pas été enregistrée.",
       "restore": "Restaurer",

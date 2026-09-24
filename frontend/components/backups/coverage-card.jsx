@@ -40,6 +40,7 @@ export function CoverageCard({
   canManage,
   databaseCounts = null,
   databasesKnown = false,
+  backupOptions = null,
 }) {
   const t = useTranslations("backups.coverage");
   const tc = useTranslations("common");
@@ -113,7 +114,7 @@ export function CoverageCard({
     return () => clearTimeout(id);
   }, [justStarted]);
 
-  const listProps = { rows, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys };
+  const listProps = { rows, options: backupOptions, canManage, onSetUp: openSetup, onBackUpNow: backUpNow, busyIds: starting.pendingKeys };
 
   /*
    * The clock the Schedule column's hours are in.
@@ -283,6 +284,7 @@ export function CoverageCard({
         applicationId={setupFor}
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
+        options={backupOptions}
       />
     </>
   );

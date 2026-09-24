@@ -752,7 +752,7 @@
     "endpointPlaceholder": "Replace the part in <angle brackets> with your own value",
     "required_application": "Choose an application",
     "required_destination": "Choose where to store the backups",
-    "retentionRange": "Keep between 1 and 365 backups",
+    "retentionRange": "Keep between {min} and {max} backups",
     "required_confirm": "Type the application's domain to confirm",
     "cloneDomainRequired": "Enter the domain for the copy.",
     "cloneDomainInvalid": "Enter a full domain, like copy.example.com",
@@ -767,7 +767,9 @@
     "max60": "Must be 60 characters or fewer",
     "max600": "Must be 600 or fewer",
     "noTraversalPath": "The path cannot contain ..",
-    "noSectionHeader": "Can't contain [ — that would start another program block"
+    "noSectionHeader": "Can't contain [ — that would start another program block",
+    "required_frequency": "Choose how often backups run",
+    "required_type": "Choose what to back up"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -5704,7 +5706,8 @@
       "runsShortly": "Runs shortly",
       "notSetUpLine": "Not set up — nothing on this application is being backed up.",
       "needsDestination": "No storage destination is set up yet. Add one under Integrations → Storage first.",
-      "timesShownIn": "Times shown in {timezone}"
+      "timesShownIn": "Times shown in {timezone}",
+      "minutePast": ":{minute} past each hour"
     },
     "setup": {
       "title": "Set up backups",
@@ -5728,14 +5731,16 @@
         "noSite": "Choose an application to continue.",
         "noDestination": "Choose where to store backups.",
         "incomplete": "Fill in the schedule to continue.",
-        "unchanged": "Nothing has changed."
+        "unchanged": "Nothing has changed.",
+        "noOptions": "The backup choices have not loaded."
       },
       "editTitle": "Edit backup settings",
       "editSubtitle": "Change what is copied, how often, and where it goes.",
       "saveChanges": "Save changes",
       "refreshFound": "Storage list updated.",
       "refreshNoneNew": "No new storage found yet.",
-      "refreshFailed": "The storage list could not be refreshed."
+      "refreshFailed": "The storage list could not be refreshed.",
+      "optionsFailed": "The backup choices could not be loaded."
     },
     "form": {
       "applicationPlaceholder": "Choose an application",
@@ -5750,15 +5755,12 @@
       "destinationEmpty": "No destinations found",
       "types": {
         "full": {
-          "label": "Files + database",
           "hint": "Safest — a full restore"
         },
         "filesystem": {
-          "label": "Files only",
           "hint": "Files without the database"
         },
         "database": {
-          "label": "Database only",
           "hint": "Database without the files"
         }
       },
@@ -5767,16 +5769,6 @@
       "automaticOff": "Backups only run when you press Back up now.",
       "frequency": "How often",
       "frequencyPlaceholder": "Choose a schedule",
-      "frequencies": {
-        "daily": "Every day",
-        "weekly": "Every week",
-        "monthly": "Every month"
-      },
-      "frequencyHint": {
-        "daily": "Runs once a day, at the time you set.",
-        "weekly": "Runs every Sunday, at the time you set.",
-        "monthly": "Runs on the 1st of each month, at the time you set."
-      },
       "scheduleTime": "At what time",
       "scheduleTimeHint": "Not your computer's clock.",
       "retention": "How many to keep",
@@ -5809,7 +5801,13 @@
       "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not.",
       "databaseExcludesHint": "Databases to leave out of the backup, one per line. Useful for caches and anything you can rebuild.",
       "scheduleTimeZone": "Runs in project time ({timezone})",
-      "destinationNotConnected": "{name} has not been connected to your Google account yet, so backups sent there will fail."
+      "destinationNotConnected": "{name} has not been connected to your Google account yet, so backups sent there will fail.",
+      "optionsFailed": "The backup choices could not be loaded, so these settings cannot be saved yet.",
+      "optionsRetry": "Try again",
+      "scheduleMinute": "At what minute",
+      "scheduleMinuteHint": "Minutes past each hour, 0 to 59.",
+      "retentionHintHours": "About {hours, plural, one {# hour} other {# hours}} of history. Older ones are deleted.",
+      "retentionHintCount": "Keeps the newest {count, plural, one {# backup} other {# backups}}. Older ones are deleted."
     },
     "history": {
       "allApplications": "All applications",
@@ -6033,7 +6031,9 @@
         "howOftenAt": "{frequency} at {time}",
         "keepsEverything": "Every backup kept",
         "keepsNotApplicable": "Not applicable",
-        "howOftenAtZone": "{frequency} at {time} · {timezone}"
+        "howOftenAtZone": "{frequency} at {time} · {timezone}",
+        "howOftenMinute": "{frequency} at :{minute}",
+        "howOftenMinuteZone": "{frequency} at :{minute} · {timezone}"
       },
       "unknownReason": "The reason was not recorded.",
       "restore": "Restore",

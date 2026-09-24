@@ -5,7 +5,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication, getSiteTypes } from "@/lib/applications/get-applications";
 import { getStorageDestinations } from "@/lib/storage/get-storage";
-import { getActiveRestore, getBackupTarget, getBackups } from "@/lib/backups/get-backups";
+import { getActiveRestore, getBackupTarget, getBackupTargetOptions, getBackups } from "@/lib/backups/get-backups";
 import { getDatabaseCounts, getApplicationDatabases, getEngines, getUnattachedDatabases } from "@/lib/databases/get-databases";
 import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { BackupsPanel } from "@/components/applications/backups/backups-panel";
@@ -66,7 +66,7 @@ export default async function ApplicationBackupsPage({ params }) {
    * dropped `failed` entirely, so an unanswered request rendered as
    * "No backups have run for this site yet."
    */
-  const [{ target }, { destinations }, { backups, meta, failed: backupsFailed }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes] = await Promise.all([
+  const [{ target }, { destinations }, { backups, meta, failed: backupsFailed }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes, { options: backupOptions }] = await Promise.all([
     settled ? getBackupTarget(id) : Promise.resolve({ target: null }),
     getStorageDestinations(),
     settled
@@ -90,6 +90,9 @@ export default async function ApplicationBackupsPage({ params }) {
     settled && canManageDatabases
       ? getSiteTypes().catch(() => ({ siteTypes: [] }))
       : Promise.resolve({ siteTypes: [] }),
+    // The settings form's choices, and which picker each frequency uses — the
+    // card needs the latter to print an hourly schedule as a minute.
+    settled ? getBackupTargetOptions() : Promise.resolve({ options: null }),
   ]);
 
   // Only a site type that declares it needs one. A blank PHP or static site
@@ -127,6 +130,7 @@ export default async function ApplicationBackupsPage({ params }) {
           engines={engineList.engines}
           needsDatabase={needsDatabase}
           canManageDatabases={canManageDatabases}
+          backupOptions={backupOptions}
         />
       )}
     </div>

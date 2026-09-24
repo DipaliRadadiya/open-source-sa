@@ -27,6 +27,7 @@ export function BackupsEmptyState({
   canManage,
   databaseCounts = null,
   databasesKnown = false,
+  backupOptions = null,
 }) {
   const t = useTranslations("backups.empty");
   const [open, setOpen] = useState(false);
@@ -105,6 +106,7 @@ export function BackupsEmptyState({
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
         destinations={destinations}
+        options={backupOptions}
       />
     </>
   );

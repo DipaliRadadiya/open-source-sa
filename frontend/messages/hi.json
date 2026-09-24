@@ -230,7 +230,7 @@
     "endpointPlaceholder": "<कोण कोष्ठक> वाले हिस्से की जगह अपना मान डालें",
     "required_application": "एक ऐप्लिकेशन चुनें",
     "required_destination": "चुनें कि बैकअप कहाँ रखे जाएँ",
-    "retentionRange": "1 से 365 के बीच बैकअप रखें",
+    "retentionRange": "{min} से {max} के बीच बैकअप रखें",
     "required_confirm": "पुष्टि के लिए ऐप्लिकेशन का डोमेन टाइप करें",
     "cloneDomainRequired": "कॉपी के लिए डोमेन दर्ज करें।",
     "cloneDomainInvalid": "पूरा डोमेन दर्ज करें, जैसे copy.example.com",
@@ -245,7 +245,9 @@
     "max60": "60 वर्ण या उससे कम होना चाहिए",
     "max600": "600 या उससे कम होना चाहिए",
     "noTraversalPath": "पथ में .. नहीं हो सकता",
-    "noSectionHeader": "[ शामिल नहीं कर सकते — इससे दूसरा प्रोग्राम ब्लॉक शुरू हो जाएगा"
+    "noSectionHeader": "[ शामिल नहीं कर सकते — इससे दूसरा प्रोग्राम ब्लॉक शुरू हो जाएगा",
+    "required_frequency": "चुनें कि बैकअप कितनी बार चलें",
+    "required_type": "चुनें कि किसका बैकअप लेना है"
   },
   "admin": {
     "switchToAdmin": "एडमिन पैनल",
@@ -5704,7 +5706,8 @@
       "runsShortly": "जल्द ही चलेगा",
       "notSetUpLine": "सेट अप नहीं है — इस ऐप्लिकेशन का कुछ भी बैकअप नहीं हो रहा।",
       "needsDestination": "अभी कोई स्टोरेज डेस्टिनेशन सेट नहीं है। पहले Integrations → Storage में एक जोड़ें।",
-      "timesShownIn": "समय {timezone} में दिखाया गया है"
+      "timesShownIn": "समय {timezone} में दिखाया गया है",
+      "minutePast": "हर घंटे के :{minute} पर"
     },
     "setup": {
       "title": "बैकअप सेट करें",
@@ -5728,14 +5731,16 @@
         "noSite": "जारी रखने के लिए एक ऐप्लिकेशन चुनें।",
         "noDestination": "चुनें कि बैकअप कहाँ रखे जाएँ।",
         "incomplete": "जारी रखने के लिए शेड्यूल भरें।",
-        "unchanged": "कुछ भी नहीं बदला।"
+        "unchanged": "कुछ भी नहीं बदला।",
+        "noOptions": "बैकअप के विकल्प लोड नहीं हुए हैं।"
       },
       "editTitle": "बैकअप सेटिंग्स बदलें",
       "editSubtitle": "बदलें कि क्या कॉपी हो, कितनी बार, और कहाँ जाए।",
       "saveChanges": "बदलाव सहेजें",
       "refreshFound": "स्टोरेज सूची अपडेट हो गई।",
       "refreshNoneNew": "अभी तक कोई नया स्टोरेज नहीं मिला।",
-      "refreshFailed": "स्टोरेज सूची रीफ़्रेश नहीं हो सकी।"
+      "refreshFailed": "स्टोरेज सूची रीफ़्रेश नहीं हो सकी।",
+      "optionsFailed": "बैकअप के विकल्प लोड नहीं हो सके।"
     },
     "form": {
       "applicationPlaceholder": "एक ऐप्लिकेशन चुनें",
@@ -5750,15 +5755,12 @@
       "destinationEmpty": "कोई गंतव्य नहीं मिला",
       "types": {
         "full": {
-          "label": "फ़ाइलें + डेटाबेस",
           "hint": "सबसे सुरक्षित — पूरा रीस्टोर"
         },
         "filesystem": {
-          "label": "केवल फ़ाइलें",
           "hint": "डेटाबेस के बिना फ़ाइलें"
         },
         "database": {
-          "label": "केवल डेटाबेस",
           "hint": "फ़ाइलों के बिना डेटाबेस"
         }
       },
@@ -5767,16 +5769,6 @@
       "automaticOff": "बैकअप तभी चलते हैं जब आप 'अभी बैकअप लें' दबाते हैं।",
       "frequency": "कितनी बार",
       "frequencyPlaceholder": "एक शेड्यूल चुनें",
-      "frequencies": {
-        "daily": "हर दिन",
-        "weekly": "हर सप्ताह",
-        "monthly": "हर महीने"
-      },
-      "frequencyHint": {
-        "daily": "दिन में एक बार, आपके चुने समय पर चलता है।",
-        "weekly": "हर रविवार, आपके चुने समय पर चलता है।",
-        "monthly": "हर महीने की 1 तारीख़ को, आपके चुने समय पर चलता है।"
-      },
       "scheduleTime": "किस समय",
       "scheduleTimeHint": "आपके कंप्यूटर की घड़ी नहीं।",
       "retention": "कितने रखने हैं",
@@ -5809,7 +5801,13 @@
       "fileExcludesHint": "बैकअप से बाहर रखने के Path, प्रति पंक्ति एक। caches और logs को बाहर रखना उचित है; uploads को नहीं।",
       "databaseExcludesHint": "जिन डेटाबेस को बैकअप से बाहर रखना है, प्रति पंक्ति एक। कैशे और जो कुछ भी आप फिर से बना सकते हैं उसके लिए उपयोगी।",
       "scheduleTimeZone": "प्रोजेक्ट समय ({timezone}) में चलता है",
-      "destinationNotConnected": "{name} अभी तक आपके Google खाते से कनेक्ट नहीं है, इसलिए वहाँ भेजे गए बैकअप विफल होंगे।"
+      "destinationNotConnected": "{name} अभी तक आपके Google खाते से कनेक्ट नहीं है, इसलिए वहाँ भेजे गए बैकअप विफल होंगे।",
+      "optionsFailed": "बैकअप के विकल्प लोड नहीं हो सके, इसलिए ये सेटिंग्स अभी सेव नहीं हो सकतीं।",
+      "optionsRetry": "फिर से कोशिश करें",
+      "scheduleMinute": "किस मिनट पर",
+      "scheduleMinuteHint": "हर घंटे के बाद के मिनट, 0 से 59।",
+      "retentionHintHours": "लगभग {hours, plural, one {# घंटे} other {# घंटे}} का इतिहास। पुराने हट जाते हैं।",
+      "retentionHintCount": "सबसे नए {count, plural, one {# बैकअप} other {# बैकअप}} रखता है। पुराने हट जाते हैं।"
     },
     "history": {
       "allApplications": "सभी ऐप्लिकेशन",
@@ -6033,7 +6031,9 @@
         "howOftenAt": "{frequency}, {time} बजे",
         "keepsEverything": "सभी बैकअप रखे जाते हैं",
         "keepsNotApplicable": "लागू नहीं",
-        "howOftenAtZone": "{frequency}, {time} बजे · {timezone}"
+        "howOftenAtZone": "{frequency}, {time} बजे · {timezone}",
+        "howOftenMinute": "{frequency}, :{minute} पर",
+        "howOftenMinuteZone": "{frequency}, :{minute} पर · {timezone}"
       },
       "unknownReason": "कारण दर्ज नहीं हुआ।",
       "restore": "पुनर्स्थापित करें",

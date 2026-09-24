@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
-import { getBackupCoverage } from "@/lib/backups/get-backups";
+import { getBackupCoverage, getBackupTargetOptions } from "@/lib/backups/get-backups";
 import { getStorageDestinations } from "@/lib/storage/get-storage";
 import { getDatabaseCounts } from "@/lib/databases/get-databases";
 import { CoverageCard } from "@/components/backups/coverage-card";
@@ -11,7 +11,7 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 export const dynamic = "force-dynamic";
 
 export default async function BackupsPage() {
-  const [coverage, { destinations }, databases, appPermissions, t] = await Promise.all([
+  const [coverage, { destinations }, databases, appPermissions, t, { options: backupOptions }] = await Promise.all([
     getBackupCoverage(),
     getStorageDestinations(),
     // Lets the setup form say when the site picked in it has no database, so a
@@ -22,6 +22,9 @@ export default async function BackupsPage() {
     // filtering happens on the application's own page.
     getPermissions("application").catch(() => []),
     getTranslations("backups"),
+    // What the settings form offers. A failure is carried as null and the form
+    // says so; it never stops the coverage list rendering.
+    getBackupTargetOptions(),
   ]);
 
   if (coverage.failed) return <LoadFailed description={t("loadFailed")} status={coverage.status} failure={coverage.failure} message={coverage.message} debug={coverage.debug} />;
@@ -40,6 +43,7 @@ export default async function BackupsPage() {
         canManage={canManage}
         databaseCounts={databases.counts}
         databasesKnown={databases.known}
+        backupOptions={backupOptions}
       />
     );
   }
@@ -52,6 +56,7 @@ export default async function BackupsPage() {
       canManage={canManage}
       databaseCounts={databases.counts}
       databasesKnown={databases.known}
+      backupOptions={backupOptions}
     />
   );
 }

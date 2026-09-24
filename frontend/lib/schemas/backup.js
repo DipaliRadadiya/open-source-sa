@@ -24,8 +24,32 @@ export const BACKUP_TYPES = ["full", "filesystem", "database"];
  */
 export const BACKUP_DEFAULT_TIME = "02:00";
 
-/** Manual is not a schedule; the UI has to say so out loud. */
-export const BACKUP_FREQUENCIES = ["manual", "daily", "weekly", "monthly"];
+/**
+ * What the settings form offers, from `GET /backup-targets/options`.
+ *
+ * The backend builds it from the same constants its save validation reads, so
+ * every frequency listed is one the PUT accepts. The list used to be typed out
+ * here and stopped at monthly; the four sub-daily schedules would have been
+ * rejected by this form before the API ever saw them.
+ *
+ * `time` is which picker a frequency needs: `minute` (hourly — only the minute
+ * of `schedule_time` is used), `time`, or null (manual).
+ */
+export const backupTargetOptionsSchema = z.object({
+  frequencies: z.array(
+    z.object({
+      value: z.string(),
+      label: z.string(),
+      time: z.enum(["minute", "time"]).nullable(),
+      hint: z.string().nullish(),
+    }),
+  ),
+  default_frequency: z.string(),
+  types: z.array(z.object({ value: z.string(), label: z.string() })),
+  retention: z.object({ min: z.number(), max: z.number() }),
+  // The panel's clock, which `schedule_time` is read in — not the server's.
+  timezone: z.string().nullish(),
+});
 
 /**
  * Which types a given archive can satisfy.
@@ -315,29 +339,36 @@ export const restoresResponseSchema = z.object({
  * repeating in the UI: zero would prune the backup the run had just taken, so
  * "keep 0" reads as "backups silently do nothing".
  */
-export const backupTargetFormSchema = z.object({
-  application_id: z.coerce.number({ invalid_type_error: "required_application" }).min(1, "required_application"),
-  storage_destination_id: z.coerce
-    .number({ invalid_type_error: "required_destination" })
-    .min(1, "required_destination"),
-  type: z.enum(BACKUP_TYPES),
-  retention_count: z.coerce
-    .number({ invalid_type_error: "retentionRange" })
-    .int("retentionRange")
-    .min(1, "retentionRange")
-    .max(365, "retentionRange"),
-  frequency: z.enum(BACKUP_FREQUENCIES),
-  // `date_format:H:i` on the backend. The browser's own time input already
-  // refuses anything else, so this is the guard for a value that arrives some
-  // other way rather than a message anyone should see.
-  schedule_time: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "scheduleTime")
-    .default(BACKUP_DEFAULT_TIME),
-  enabled: z.boolean().default(true),
-  file_excludes: z.array(z.string().max(255, "max255")).max(100, "max100").default([]),
-  database_excludes: z.array(z.string().max(64, "max64")).max(100, "max100").default([]),
-});
+export function backupTargetFormSchema(options) {
+  const frequencies = options?.frequencies.map((f) => f.value) ?? [];
+  const types = options?.types.map((t) => t.value) ?? [];
+  const retention = options?.retention ?? { min: 1, max: Number.MAX_SAFE_INTEGER };
+  return z.object({
+    application_id: z.coerce.number({ invalid_type_error: "required_application" }).min(1, "required_application"),
+    storage_destination_id: z.coerce
+      .number({ invalid_type_error: "required_destination" })
+      .min(1, "required_destination"),
+    type: z.string().refine((value) => types.includes(value), "required_type"),
+    retention_count: z.coerce
+      .number({ invalid_type_error: "retentionRange" })
+      .int("retentionRange")
+      .min(retention.min, "retentionRange")
+      .max(retention.max, "retentionRange"),
+    // Only what the API offered. Without options nothing is accepted, and the
+    // dialog says why instead of saving a value it cannot check.
+    frequency: z.string().refine((value) => frequencies.includes(value), "required_frequency"),
+    // `date_format:H:i` on the backend. The browser's own time input already
+    // refuses anything else, so this is the guard for a value that arrives some
+    // other way rather than a message anyone should see.
+    schedule_time: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "scheduleTime")
+      .default(BACKUP_DEFAULT_TIME),
+    enabled: z.boolean().default(true),
+    file_excludes: z.array(z.string().max(255, "max255")).max(100, "max100").default([]),
+    database_excludes: z.array(z.string().max(64, "max64")).max(100, "max100").default([]),
+  });
+}
 
 /**
  * The restore confirmation.

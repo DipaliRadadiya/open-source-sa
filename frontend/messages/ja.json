@@ -752,7 +752,7 @@
     "endpointPlaceholder": "<> 内の部分を独自の値に置き換えてください",
     "required_application": "アプリケーションを選択",
     "required_destination": "バックアップの保存先を選択してください",
-    "retentionRange": "1〜365個のバックアップを保持してください",
+    "retentionRange": "{min}〜{max}個のバックアップを保持してください",
     "required_confirm": "確認のためアプリケーションのドメインを入力してください",
     "cloneDomainRequired": "コピー先のドメインを入力してください。",
     "cloneDomainInvalid": "copy.example.com のような完全なドメインを入力してください",
@@ -767,7 +767,9 @@
     "max60": "60文字以下",
     "max600": "600以下",
     "noTraversalPath": "パスに .. を含めることはできません",
-    "noSectionHeader": "[ は使用できません。別のプログラムセクションが開始されてしまいます"
+    "noSectionHeader": "[ は使用できません。別のプログラムセクションが開始されてしまいます",
+    "required_frequency": "バックアップの実行間隔を選択してください",
+    "required_type": "バックアップの対象を選択してください"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -5704,7 +5706,8 @@
       "runsShortly": "まもなく実行",
       "notSetUpLine": "未設定 — このアプリケーションのバックアップはまだ行われていません。",
       "needsDestination": "ストレージ先がまだ設定されていません。まず連携 → ストレージから追加してください。",
-      "timesShownIn": "表示時刻は {timezone} です"
+      "timesShownIn": "表示時刻は {timezone} です",
+      "minutePast": "毎時 :{minute}"
     },
     "setup": {
       "title": "バックアップを設定",
@@ -5728,14 +5731,16 @@
         "noSite": "続行するにはアプリケーションを選択してください。",
         "noDestination": "バックアップの保存先を選択してください。",
         "incomplete": "続行するにはスケジュールを入力してください。",
-        "unchanged": "変更されていません。"
+        "unchanged": "変更されていません。",
+        "noOptions": "バックアップの選択肢が読み込まれていません。"
       },
       "editTitle": "バックアップ設定を編集",
       "editSubtitle": "コピー対象、頻度、保存先を変更します。",
       "saveChanges": "変更を保存",
       "refreshFound": "ストレージ一覧が更新されました。",
       "refreshNoneNew": "新しいストレージはまだ見つかりません。",
-      "refreshFailed": "ストレージ一覧を更新できませんでした。"
+      "refreshFailed": "ストレージ一覧を更新できませんでした。",
+      "optionsFailed": "バックアップの選択肢を読み込めませんでした。"
     },
     "form": {
       "applicationPlaceholder": "アプリケーションを選択",
@@ -5750,15 +5755,12 @@
       "destinationEmpty": "保存先が見つかりません",
       "types": {
         "full": {
-          "label": "ファイル + データベース",
           "hint": "最も安全 — 完全に復元できます"
         },
         "filesystem": {
-          "label": "ファイルのみ",
           "hint": "ファイルのみ(データベースを含まない)"
         },
         "database": {
-          "label": "データベースのみ",
           "hint": "データベースのみ(ファイルを含まない)"
         }
       },
@@ -5767,16 +5769,6 @@
       "automaticOff": "「今すぐバックアップ」を押したときだけバックアップが実行されます。",
       "frequency": "実行間隔",
       "frequencyPlaceholder": "スケジュールを選択",
-      "frequencies": {
-        "daily": "毎日",
-        "weekly": "毎週",
-        "monthly": "毎月"
-      },
-      "frequencyHint": {
-        "daily": "設定した時刻に1日1回実行されます。",
-        "weekly": "設定した時刻に毎週日曜日に実行されます。",
-        "monthly": "設定した時刻に毎月1日に実行されます。"
-      },
       "scheduleTime": "実行時刻",
       "scheduleTimeHint": "お使いのコンピュータの時刻ではありません。",
       "retention": "保持する件数",
@@ -5809,7 +5801,13 @@
       "fileExcludesHint": "バックアップから除外するパスを1行ずつ指定します。キャッシュやログは除外する価値がありますが、アップロードは除外しないでください。",
       "databaseExcludesHint": "バックアップから除外するデータベースを1行ずつ指定します。キャッシュや再構築可能なものに便利です。",
       "scheduleTimeZone": "プロジェクト時刻 ({timezone}) で実行されます",
-      "destinationNotConnected": "{name} はまだ Google アカウントに接続されていないため、そこへのバックアップは失敗します。"
+      "destinationNotConnected": "{name} はまだ Google アカウントに接続されていないため、そこへのバックアップは失敗します。",
+      "optionsFailed": "バックアップの選択肢を読み込めなかったため、この設定はまだ保存できません。",
+      "optionsRetry": "再試行",
+      "scheduleMinute": "実行する分",
+      "scheduleMinuteHint": "毎時の何分に実行するか（0〜59）。",
+      "retentionHintHours": "約 {hours, plural, one {# 時間} other {# 時間}} 分の履歴を保持します。古いものは削除されます。",
+      "retentionHintCount": "最新の {count, plural, one {# 件} other {# 件}} を保持します。古いものは削除されます。"
     },
     "history": {
       "allApplications": "すべてのアプリケーション",
@@ -6033,7 +6031,9 @@
         "howOftenAt": "{frequency} {time}",
         "keepsEverything": "すべてのバックアップを保持",
         "keepsNotApplicable": "該当なし",
-        "howOftenAtZone": "{frequency} {time} · {timezone}"
+        "howOftenAtZone": "{frequency} {time} · {timezone}",
+        "howOftenMinute": "{frequency} :{minute}",
+        "howOftenMinuteZone": "{frequency} :{minute} · {timezone}"
       },
       "unknownReason": "理由は記録されていません。",
       "restore": "復元",

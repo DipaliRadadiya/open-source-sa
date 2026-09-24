@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { scheduleTimeLabel } from "@/lib/backups/schedule-time";
+import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { History, MoreHorizontal, PlayCircle, Settings2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -102,7 +102,7 @@ function TypeCell({ row }) {
   return <span className="text-sm">{target.type_title ?? target.type}</span>;
 }
 
-function ScheduleCell({ row }) {
+function ScheduleCell({ row, options }) {
   const t = useTranslations("backups.coverage");
   const format = useFormatter();
   const { target } = row.original;
@@ -121,10 +121,8 @@ function ScheduleCell({ row }) {
    * 96px at 1024–1280 and "Daily · 2:00 AM" needs 99. A manual target has no
    * hour to name and gets no line.
    */
-  const time =
-    target.frequency !== "manual" && target.schedule_time
-      ? scheduleTimeLabel(target.schedule_time, format)
-      : null;
+  const when = scheduleWhen(target, options, format);
+  const time = when?.minute ? t("minutePast", { minute: when.minute }) : (when?.time ?? null);
 
   return (
     <div className="min-w-0">
@@ -289,7 +287,7 @@ function ActionsCell({ row, table }) {
   );
 }
 
-export function CoverageTable({ rows, canManage, onSetUp, onBackUpNow, busyIds = [] }) {
+export function CoverageTable({ rows, options = null, canManage, onSetUp, onBackUpNow, busyIds = [] }) {
   const t = useTranslations("backups.coverage");
 
   const columns = [
@@ -301,7 +299,7 @@ export function CoverageTable({ rows, canManage, onSetUp, onBackUpNow, busyIds =
     },
     { accessorKey: "state", header: t("columns.status"), meta: { className: "w-36" }, cell: StatusCell },
     { id: "type", header: t("columns.type"), meta: { className: "w-44" }, cell: TypeCell },
-    { id: "schedule", header: t("columns.schedule"), meta: { className: "w-32" }, cell: ScheduleCell },
+    { id: "schedule", header: t("columns.schedule"), meta: { className: "w-32" }, cell: (ctx) => <ScheduleCell {...ctx} options={options} /> },
     { id: "storage", header: t("columns.storage"), meta: { className: "w-40" }, cell: StorageCell },
     { id: "runs", header: t("columns.lastRun"), meta: { className: "w-40" }, cell: RunsCell },
     {
