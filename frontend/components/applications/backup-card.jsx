@@ -8,7 +8,10 @@ import { useTranslations } from "next-intl";
 import {
   Archive,
   ArrowRight,
+  CalendarArrowUp,
+  CalendarClock,
   CircleAlert,
+  History,
   Loader2,
   ShieldCheck,
   ShieldOff,
@@ -82,7 +85,9 @@ export function BackupCard({
   const meta = {
     protected: { icon: ShieldCheck, variant: "success" },
     paused: { icon: PauseCircle, variant: "warning" },
-    unprotected: { icon: ShieldOff, variant: "secondary" },
+    // Red, not the quiet `secondary`: nothing to restore is the worst state
+    // this card can report, and it read as plain text under the title.
+    unprotected: { icon: ShieldOff, variant: "destructive" },
   }[state];
   const Icon = meta.icon;
 
@@ -133,50 +138,49 @@ export function BackupCard({
         )}
       </CardHeader>
 
-      {/* gap rather than space-y: space-y sets margin-top on children via a
-          compound selector that would outrank any margin set here. flex-1 lets
-          the card fill its stretched row, and the leftover collects as padding
-          under the last line — not as a gap above a button floated to the card
-          foot, which read as a rendering fault on any site with little to
-          report. */}
-      <CardContent className="flex flex-1 flex-col gap-3">
+      {/* Rows under a rule, like the Security, Domains and Database cards
+          beside it. The facts were a label at one edge and its value at the
+          other with nothing between, so "Last backup … Never" read as two
+          unrelated words. */}
+      <CardContent className="flex flex-1 flex-col p-0">
         {/* A failed read is not "no backups configured" — that would tell
             somebody their site is unprotected on the evidence of one request. */}
         {failed ? (
-          <p className="text-sm text-muted-foreground">{t("loadFailed")}</p>
+          <p className="px-(--card-spacing) text-sm text-muted-foreground">{t("loadFailed")}</p>
         ) : (
-          <dl className="space-y-1.5 text-sm">
+          <dl className="divide-y border-t text-sm">
             {target?.frequency_title ? (
-              <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">{t("schedule")}</dt>
-                <dd className="text-right">{target.frequency_title}</dd>
+              <div className="flex items-center gap-3 px-6 py-3">
+                <CalendarClock className="size-4 shrink-0 text-muted-foreground" />
+                <dt className="flex-1 font-medium">{t("schedule")}</dt>
+                <dd className="text-right text-muted-foreground">{target.frequency_title}</dd>
               </div>
             ) : null}
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">{t("lastRun")}</dt>
+            <div className="flex items-center gap-3 px-6 py-3">
+              <History className="size-4 shrink-0 text-muted-foreground" />
+              <dt className="flex-1 font-medium">{t("lastRun")}</dt>
               {/* Never blank: an empty cell reads as a rendering fault, and
                   "never" is a real and important answer here. */}
-              <dd className="text-right">{target?.last_run_at_human ?? t("never")}</dd>
+              <dd className="text-right text-muted-foreground">{target?.last_run_at_human ?? t("never")}</dd>
             </div>
             {target?.next_run_at_human && state === "protected" ? (
-              <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">{t("nextRun")}</dt>
-                <dd className="text-right">{target.next_run_at_human}</dd>
+              <div className="flex items-center gap-3 px-6 py-3">
+                <CalendarArrowUp className="size-4 shrink-0 text-muted-foreground" />
+                <dt className="flex-1 font-medium">{t("nextRun")}</dt>
+                <dd className="text-right text-muted-foreground">{target.next_run_at_human}</dd>
+              </div>
+            ) : null}
+            {/* The consequence, not the label. "Not protected" is a status; what
+                it means is that if this site is lost there is nothing to put
+                back. Paused gets its own line because it is the deceptive one
+                — it looks set up, and the last copy is ageing. */}
+            {state !== "protected" ? (
+              <div className="px-6 py-2.5 text-xs text-muted-foreground">
+                {state === "paused" ? t("pausedRisk") : t("unprotectedRisk")}
               </div>
             ) : null}
           </dl>
         )}
-
-        {/* The consequence, not the label. "Not protected" is a status; what it
-            means is that if this site is lost there is nothing to put back, and
-            that is the fact somebody needs before deciding it can wait. Paused
-            gets its own line because it is the deceptive one — it looks set up,
-            and the last copy is ageing. */}
-        {!failed && state !== "protected" ? (
-          <p className="text-sm text-muted-foreground">
-            {state === "paused" ? t("pausedRisk") : t("unprotectedRisk")}
-          </p>
-        ) : null}
 
         {/* The gap the toast could not cover. Between the click and the first
             row appearing, the card was byte-identical to the one the person was
@@ -185,7 +189,7 @@ export function BackupCard({
           <p
             role="status"
             className={cn(
-              "flex items-start gap-2 rounded-lg px-3 py-2 text-sm",
+              "mx-(--card-spacing) mt-(--card-spacing) flex items-start gap-2 rounded-lg px-3 py-2 text-sm",
               stalled ? "bg-warning/10 text-foreground" : "bg-muted/50 text-muted-foreground",
             )}
           >
@@ -198,7 +202,7 @@ export function BackupCard({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 px-(--card-spacing) pt-(--card-spacing)">
           {canManage && target ? (
             <Button
               variant="outline"
@@ -213,7 +217,7 @@ export function BackupCard({
           ) : null}
           {/* Setting one up is the point of the card when there is no target;
               a ghost link for the only thing worth doing here buries it. */}
-          <Button asChild variant={!failed && !target ? "default" : "ghost"} size="sm">
+          <Button asChild variant={!failed && !target ? "default" : "outline"} size="sm">
             <Link href={href} prefetch={false}>
               {target ? t("manage") : t("setUp")}
               <ArrowRight className="size-4" />

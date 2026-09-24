@@ -64,7 +64,9 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
             {t("secured")}
           </Badge>
         ) : (
-          <Badge variant="secondary" className="w-fit gap-1.5 font-normal">
+          // A state, not a label: the quiet `secondary` badge read as plain
+          // text beside the green HTTPS one it is the opposite of.
+          <Badge variant="warning" className="w-fit gap-1.5 font-normal">
             <ShieldOff className="size-3" />
             {t("noCertificate")}
           </Badge>
@@ -80,9 +82,12 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
               <li key={domain.id} className="flex items-center gap-3 px-6 py-3">
                 <Globe2 className="size-4 shrink-0 text-muted-foreground" />
                 <DomainText domain={domain.domain} className="min-w-0 flex-1 font-mono text-xs" />
-                <span className="shrink-0 text-xs text-muted-foreground">
+                {/* A badge, so the type reads as a tag on the name rather than a
+                    second column of text; the primary one tinted, being the
+                    name the site answers to. */}
+                <Badge variant={domain.type === "primary" ? "default" : "outline"} className="shrink-0 font-normal">
                   {domain.type_title ?? t(`types.${domain.type}`)}
-                </span>
+                </Badge>
               </li>
             ))}
             {extra > 0 ? (
