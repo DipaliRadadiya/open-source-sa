@@ -1,3 +1,5 @@
+import { rateLimitedMessage } from "./generic-error.js";
+
 /**
  * The message to show a person when a request fails.
  *
@@ -27,13 +29,23 @@
  * place looks like when it is not in one place. The middot form is theirs, kept
  * so nothing changes shape, and those thirteen copies are now gone.
  */
+// Laravel's own words for a throttled or crashed request: never translated,
+// and "Server Error" says less than the caller's own fallback.
+const FRAMEWORK_RATE_LIMIT = /^too many (attempts|requests)\.?$/i;
+const FRAMEWORK_SERVER_ERROR = /^server error\.?$/i;
+
 export function apiMessage(error, fallback, { reference: withReference = true } = {}) {
   const data = error?.response?.data;
   const message = data?.message;
+  const trimmed = typeof message === "string" ? message.trim() : "";
+
+  if (error?.response?.status === 429 && (!trimmed || FRAMEWORK_RATE_LIMIT.test(trimmed))) {
+    return rateLimitedMessage();
+  }
   const reference =
     withReference && typeof data?.reference === "string" ? data.reference.trim() : "";
 
-  const usable = typeof message === "string" ? message.trim() : "";
+  const usable = FRAMEWORK_SERVER_ERROR.test(trimmed) ? "" : trimmed;
   // Key-shaped, empty or missing: our own copy, which is written for a reader.
   const sentence = !usable || (!/\s/.test(usable) && /[/.]/.test(usable)) ? fallback : usable;
 
