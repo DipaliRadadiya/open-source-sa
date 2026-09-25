@@ -130,7 +130,7 @@ function ActionsCell({ row, table }) {
 }
 
 function RowMenuCell({ row, table }) {
-  const { appId, presets, canManage, workers } = table.options.meta;
+  const { appId, presets, canManage, canViewLogs, workers } = table.options.meta;
   return (
     <WorkerRowActions
       worker={row.original}
@@ -138,11 +138,12 @@ function RowMenuCell({ row, table }) {
       presets={presets}
       workers={workers}
       canManage={canManage}
+      canViewLogs={canViewLogs}
     />
   );
 }
 
-export function WorkersTable({ data, appId, presets = [], canManage = false, busy, setRowBusy, onWorkerUpdated }) {
+export function WorkersTable({ data, appId, presets = [], canManage = false, canViewLogs = false, busy, setRowBusy, onWorkerUpdated }) {
   const t = useTranslations("applications.workers");
 
   const columns = [
@@ -166,7 +167,7 @@ export function WorkersTable({ data, appId, presets = [], canManage = false, bus
     <DataTable
       columns={columns}
       data={data}
-      meta={{ appId, presets, canManage, busy, setRowBusy, onWorkerUpdated, workers: data }}
+      meta={{ appId, presets, canManage, canViewLogs, busy, setRowBusy, onWorkerUpdated, workers: data }}
       emptyMessage={t("empty.title")}
       rowClassName={(worker) =>
         cn(

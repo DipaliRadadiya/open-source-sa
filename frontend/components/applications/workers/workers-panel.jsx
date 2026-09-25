@@ -35,7 +35,7 @@ const STATE_DOT = {
   stopped: "bg-muted-foreground/50",
 };
 
-export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChecks, supervisorMissing = false, canManage }) {
+export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChecks, supervisorMissing = false, canManage, siteUser = null, canViewLogs = false }) {
   const t = useTranslations("applications.workers");
   const [workers, setWorkers] = useState(initialWorkers);
   const [presets, setPresets] = useState(initialPresets);
@@ -195,6 +195,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
               appId={appId}
               presets={presets}
               canManage={canManage}
+              canViewLogs={canViewLogs}
               busy={busy}
               setRowBusy={setRowBusy}
               onWorkerUpdated={applyWorker}
@@ -206,6 +207,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
               appId={appId}
               presets={presets}
               canManage={canManage}
+              canViewLogs={canViewLogs}
               busy={busy}
               setRowBusy={setRowBusy}
               onWorkerUpdated={applyWorker}
@@ -222,6 +224,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
           presets={presets}
           workers={workers}
           seed={seed}
+          siteUser={siteUser}
         />
       ) : null}
     </div>

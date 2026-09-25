@@ -10,10 +10,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MenuItemHint } from "@/components/data-table/menu-item-hint";
 import { EditWorkerDialog } from "@/components/applications/workers/edit-worker-dialog";
 import { DeleteWorkerDialog } from "@/components/applications/workers/delete-worker-dialog";
 
-export function WorkerRowActions({ worker, appId, presets, workers = [], canManage }) {
+export function WorkerRowActions({ worker, appId, presets, workers = [], canManage, canViewLogs = false }) {
   const t = useTranslations("applications.workers");
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
@@ -28,7 +29,7 @@ export function WorkerRowActions({ worker, appId, presets, workers = [], canMana
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44" onCloseAutoFocus={(e) => e.preventDefault()}>
-          {worker.log_identifier ? (
+          {worker.log_identifier && canViewLogs ? (
             <DropdownMenuItem asChild>
               {/* New tab, not in-place — this leaves the server-wide Logs
                   page, not another spot in this app, so navigating there
@@ -43,6 +44,15 @@ export function WorkerRowActions({ worker, appId, presets, workers = [], canMana
                 <SquareArrowOutUpRight className="ml-auto size-3.5 text-muted-foreground" />
               </Link>
             </DropdownMenuItem>
+          ) : worker.log_identifier ? (
+            // The log lives on the server-wide Logs page, which is its own
+            // grant. Offered as a link it opened a tab saying "no access".
+            <MenuItemHint hint={t("actions.viewLogsNoPermission")}>
+              <DropdownMenuItem disabled>
+                <ScrollText className="size-4" />
+                {t("actions.viewLogs")}
+              </DropdownMenuItem>
+            </MenuItemHint>
           ) : null}
           {canManage ? (
             <>

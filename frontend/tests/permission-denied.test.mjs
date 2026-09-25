@@ -242,8 +242,8 @@ test("an application sub-page refuses in place too, not just the server ones", (
     );
     assert.match(
       src,
-      // Environment first asks whether the screen exists for this site type.
-      /if \(!can\(appPermissions, "\w+", "view", "application"\)\) \{\s*(?:if \(\(await getApplicationEnvironment\(id\)\)\.status === 404\) notFound\(\);\s*)?return <PermissionDenied title=\{t\("(pageTitle|title)"\)\} \/>;/,
+      // Environment and Workers first ask whether the screen exists for this site type.
+      /if \(!can\(appPermissions, "\w+", "view", "application"\)\) \{\s*(?:if \(\(await get\w+\(id\)\)\.status === 404\) notFound\(\);\s*)?return <PermissionDenied title=\{t\("(pageTitle|title)"\)\} \/>;/,
       `${p} must refuse in place, named`,
     );
   }

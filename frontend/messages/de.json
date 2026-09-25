@@ -770,7 +770,9 @@
     "noSectionHeader": "Darf kein [ enthalten — das würde einen weiteren Programmblock beginnen",
     "required_frequency": "Wählen Sie, wie oft Backups laufen",
     "required_type": "Wählen Sie, was gesichert wird",
-    "hostnameLabelTooLong": "Jeder Teil einer Domain zwischen zwei Punkten darf höchstens 63 Zeichen lang sein."
+    "hostnameLabelTooLong": "Jeder Teil einer Domain zwischen zwei Punkten darf höchstens 63 Zeichen lang sein.",
+    "absolutePath": "Geben Sie einen vollständigen Pfad ein, der mit / beginnt",
+    "invalidUser": "Verwenden Sie Kleinbuchstaben, Zahlen, - und _"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -4286,7 +4288,8 @@
         "restart": "Neu starten",
         "edit": "Bearbeiten",
         "delete": "Löschen",
-        "viewLogs": "Protokolle ansehen"
+        "viewLogs": "Protokolle ansehen",
+        "viewLogsNoPermission": "Zum Ansehen der Logs ist die Server-Logs-Berechtigung nötig."
       },
       "toast": {
         "start": "{name} wird gestartet…",
@@ -4324,7 +4327,8 @@
         "title": "Worker bearbeiten",
         "subtitle": "Die Änderungen greifen, wenn dieser Worker das nächste Mal neu startet.",
         "submit": "Änderungen speichern",
-        "failed": "Diese Änderungen konnten nicht übernommen werden. Prüfen Sie, ob der Befehl für diese Anwendung läuft, und versuchen Sie es erneut."
+        "failed": "Diese Änderungen konnten nicht übernommen werden. Prüfen Sie, ob der Befehl für diese Anwendung läuft, und versuchen Sie es erneut.",
+        "failedStopped": "Diese Änderungen konnten nicht angewendet werden, daher wurde der Worker gestoppt. Korrigieren Sie den Befehl und speichern Sie erneut."
       },
       "delete": {
         "title": "Diesen Worker löschen?",
@@ -4335,7 +4339,7 @@
       },
       "form": {
         "name": "Name",
-        "namePlaceholder": "Queue-Worker",
+        "namePlaceholder": "background-jobs",
         "nameHint": "Eine kurze Bezeichnung, an der Sie diesen Worker erkennen.",
         "useTemplate": "Vorlage verwenden",
         "command": "Befehl",
@@ -4359,8 +4363,7 @@
           "horizon": "Sie haben schon Horizon — es verwaltet seine eigenen Queue-Worker."
         },
         "user": "Als Benutzer ausführen",
-        "userPlaceholder": "deploy",
-        "userHint": "Leer lassen, um als der eigene Benutzer dieser Anwendung zu laufen — das ist fast immer richtig.",
+        "userHint": "Das Konto, unter dem dieser Worker läuft — der eigene Benutzer der Anwendung.",
         "logFile": "Protokolldatei",
         "logFilePlaceholder": "/var/log/my-worker.log",
         "logFileHint": "Absoluter Pfad, und er darf kein .. enthalten — leer lassen, dann wählt supervisord einen.",

@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/ui/page-header";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -43,6 +43,9 @@ export default async function ApplicationWorkersPage({ params }) {
   // Craft, Statamic, blank PHP) — a missing grant here means the screen
   // shouldn't exist for this site, the same contract as Environment/Deployment.
   if (!can(appPermissions, "app_worker", "view", "application")) {
+    // A site type with nothing to supervise answers 404, a missing grant 403 —
+    // the same split as Environment, and for the same reason.
+    if ((await getWorkers(id)).status === 404) notFound();
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_worker", "manage", "application");
@@ -91,6 +94,8 @@ export default async function ApplicationWorkersPage({ params }) {
           initialChecks={workersResult.checks}
           supervisorMissing={supervisorMissing}
           canManage={canManage}
+          siteUser={application.system_user?.username ?? null}
+          canViewLogs={can(permissions, "logs", "view")}
         />
       )}
     </div>

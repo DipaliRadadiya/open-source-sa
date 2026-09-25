@@ -7,7 +7,6 @@ import { Loader2, Pencil, ChevronDown, TriangleAlert } from "lucide-react";
 import { workerFormSchema } from "@/lib/schemas/worker";
 import { updateWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
-import { apiMessage } from "@/lib/api/error-message";
 import { useRefresh } from "@/hooks/use-refresh";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
@@ -55,7 +54,7 @@ function valuesFrom(worker) {
 
 export function EditWorkerDialog({ worker, appId, presets = [], workers = [], open, onOpenChange }) {
   const t = useTranslations("applications.workers");
-  const { pending: refreshing, refreshThen } = useRefresh();
+  const { pending: refreshing, refresh, refreshThen } = useRefresh();
 
   const form = useForm({
     resolver: zodResolver(workerFormSchema),
@@ -95,10 +94,11 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
       name: values.name.trim(),
       command: values.command.trim(),
       directory: values.directory?.trim() || undefined,
+      // Never sent: the worker runs as the application's own user, and an
+      // absent key leaves an existing worker's account as it is.
+      user: undefined,
       // Blank means "no opinion", and the API treats an absent key that way —
-      // sending "" would ask it to store an empty username and an empty log
-      // path, which is not the same request at all.
-      user: values.user?.trim() || undefined,
+      // sending "" would ask it to store an empty log path.
       log_file: values.log_file?.trim() || undefined,
       log_level: values.log_level || undefined,
       extra_config: values.extra_config?.trim() || undefined,
@@ -113,9 +113,13 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
         onOpenChange?.(false);
       });
     } catch (error) {
-      // Same as creating: a restart that fails answers a bare 500.
+      // Unlike creating, nothing is rolled back: the API saves the new settings
+      // first, and when the worker cannot start with them it is left stopped.
+      // "Could not be applied" read as "nothing changed" over a row still
+      // showing Running. Says what happened, and re-reads the list behind.
       if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
-        form.setError("root.server", { message: apiMessage(error, t("edit.failed")) });
+        form.setError("root.server", { message: t("edit.failedStopped") });
+        refresh();
         return;
       }
       /*
@@ -284,7 +288,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-3">
-            <WorkerAdvancedFields form={form} />
+            <WorkerAdvancedFields form={form} runsAs={worker.effective_user} />
           </CollapsibleContent>
         </Collapsible>
       </FormModal>

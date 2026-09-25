@@ -84,6 +84,20 @@ export function FormModal({
           "flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg",
           className,
         )}
+        // Land on the first real field, not the first focusable node. Left to
+        // Radix, a dialog whose opening label carries a "?" hint focused that
+        // hint button — which sits before the input — and opened its note over
+        // the field the reader came to fill in. Falls back to Radix's own
+        // behaviour when there is no such field (e.g. a body of switches).
+        onOpenAutoFocus={(event) => {
+          const field = event.currentTarget.querySelector(
+            "input:not([type=hidden]):not([readonly]), textarea:not([readonly]), select",
+          );
+          if (field) {
+            event.preventDefault();
+            field.focus();
+          }
+        }}
       >
         {asForm ? (
           // noValidate: the browser's own checks (a number's min and max,

@@ -248,7 +248,9 @@
     "noSectionHeader": "No puede contener [ — eso iniciaría otro bloque de programa",
     "required_frequency": "Elige cada cuánto se hacen las copias",
     "required_type": "Elige qué copiar",
-    "hostnameLabelTooLong": "Cada parte de un dominio entre puntos puede tener como máximo 63 caracteres."
+    "hostnameLabelTooLong": "Cada parte de un dominio entre puntos puede tener como máximo 63 caracteres.",
+    "absolutePath": "Introduce una ruta completa que empiece por /",
+    "invalidUser": "Usa minúsculas, números, - y _"
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -4286,7 +4288,8 @@
         "restart": "Reiniciar",
         "edit": "Editar",
         "delete": "Eliminar",
-        "viewLogs": "Ver registros"
+        "viewLogs": "Ver registros",
+        "viewLogsNoPermission": "Ver los registros requiere el permiso de Registros del servidor."
       },
       "toast": {
         "start": "Iniciando {name}…",
@@ -4324,7 +4327,8 @@
         "title": "Editar worker",
         "subtitle": "Los cambios se aplican la próxima vez que este worker se reinicie.",
         "submit": "Guardar cambios",
-        "failed": "No se pudieron aplicar estos cambios. Comprueba que el comando funciona en esta aplicación y vuelve a intentarlo."
+        "failed": "No se pudieron aplicar estos cambios. Comprueba que el comando funciona en esta aplicación y vuelve a intentarlo.",
+        "failedStopped": "No se pudieron aplicar estos cambios, así que el worker se detuvo. Corrige el comando y guarda de nuevo."
       },
       "delete": {
         "title": "¿Eliminar este worker?",
@@ -4335,7 +4339,7 @@
       },
       "form": {
         "name": "Nombre",
-        "namePlaceholder": "Worker de cola",
+        "namePlaceholder": "background-jobs",
         "nameHint": "Una etiqueta corta para identificar este worker.",
         "useTemplate": "Usar plantilla",
         "command": "Comando",
@@ -4359,8 +4363,7 @@
           "horizon": "Ya tienes Horizon: gestiona sus propios workers de cola."
         },
         "user": "Ejecutar como usuario",
-        "userPlaceholder": "deploy",
-        "userHint": "Déjalo vacío para usar el usuario propio de la aplicación, que casi siempre es lo correcto.",
+        "userHint": "La cuenta con la que se ejecuta este worker: el propio usuario de la aplicación.",
         "logFile": "Archivo de registro",
         "logFilePlaceholder": "/var/log/mi-worker.log",
         "logFileHint": "Ruta absoluta y sin «..». Déjalo vacío y supervisord elegirá una.",

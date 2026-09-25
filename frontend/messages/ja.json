@@ -770,7 +770,9 @@
     "noSectionHeader": "[ は使用できません。別のプログラムセクションが開始されてしまいます",
     "required_frequency": "バックアップの実行間隔を選択してください",
     "required_type": "バックアップの対象を選択してください",
-    "hostnameLabelTooLong": "ドメインのドットで区切られた各部分は 63 文字までです。"
+    "hostnameLabelTooLong": "ドメインのドットで区切られた各部分は 63 文字までです。",
+    "absolutePath": "/ で始まる完全なパスを入力してください",
+    "invalidUser": "小文字、数字、-、_ を使用してください"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -4286,7 +4288,8 @@
         "restart": "再起動",
         "edit": "編集",
         "delete": "削除",
-        "viewLogs": "ログを表示"
+        "viewLogs": "ログを表示",
+        "viewLogsNoPermission": "ログの表示にはサーバーのログ権限が必要です。"
       },
       "toast": {
         "start": "{name} を起動しています…",
@@ -4324,7 +4327,8 @@
         "title": "ワーカーを編集",
         "subtitle": "変更は次回ワーカーが再起動したときに適用されます。",
         "submit": "変更を保存",
-        "failed": "変更を適用できませんでした。このアプリケーションでコマンドが実行できるか確認してから、もう一度お試しください。"
+        "failed": "変更を適用できませんでした。このアプリケーションでコマンドが実行できるか確認してから、もう一度お試しください。",
+        "failedStopped": "この変更を適用できなかったため、ワーカーは停止しました。コマンドを修正して再度保存してください。"
       },
       "delete": {
         "title": "このワーカーを削除しますか？",
@@ -4335,7 +4339,7 @@
       },
       "form": {
         "name": "名前",
-        "namePlaceholder": "キューワーカー",
+        "namePlaceholder": "background-jobs",
         "nameHint": "このワーカーを識別する短いラベルです。",
         "useTemplate": "テンプレートを使用",
         "command": "コマンド",
@@ -4359,8 +4363,7 @@
           "horizon": "すでに Horizon があります。Horizon が独自のキューワーカーを管理します。"
         },
         "user": "実行ユーザー",
-        "userPlaceholder": "deploy",
-        "userHint": "空欄の場合、このアプリケーション専用のユーザーとして実行されます。ほとんどの場合これが適切です。",
+        "userHint": "このワーカーが実行されるアカウント — アプリケーション自身のユーザーです。",
         "logFile": "ログファイル",
         "logFilePlaceholder": "/var/log/my-worker.log",
         "logFileHint": "絶対パスで、.. を含めることはできません。空欄の場合、supervisord が自動的に選択します。",

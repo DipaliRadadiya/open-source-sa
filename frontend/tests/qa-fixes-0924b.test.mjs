@@ -27,17 +27,19 @@ test("the password field's focus ring has room at the bottom of its section", ()
 });
 
 test("a worker that will not start is explained on the form, not in a vanishing toast", () => {
-  for (const [file, key] of [
-    ["components/applications/workers/create-worker-dialog.jsx", "create.failed"],
-    ["components/applications/workers/edit-worker-dialog.jsx", "edit.failed"],
-  ]) {
-    const src = read(file);
-    assert.match(src, /\(error\.response\?\.status \?\? 0\) >= 500/, file);
-    assert.match(src, new RegExp(`form\\.setError\\("root\\.server", \\{ message: apiMessage\\(error, t\\("${key.replace(".", "\\.")}"\\)\\) \\}\\)`), file);
-  }
+  // Create: a bare 500 means the worker never existed — the message names the
+  // command to check, and the form stays with its values.
+  const create = read("components/applications/workers/create-worker-dialog.jsx");
+  assert.match(create, /\(error\.response\?\.status \?\? 0\) >= 500/);
+  assert.match(create, /form\.setError\("root\.server", \{ message: apiMessage\(error, t\("create\.failed"\)\) \}\)/);
+  // Edit: the API saved the row and then could not start it, so the worker is
+  // now stopped — a different sentence, and the list is re-read behind it.
+  const edit = read("components/applications/workers/edit-worker-dialog.jsx");
+  assert.match(edit, /\(error\.response\?\.status \?\? 0\) >= 500/);
+  assert.match(edit, /form\.setError\("root\.server", \{ message: t\("edit\.failedStopped"\) \}\);\s*refresh\(\);/);
   for (const locale of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) {
     const w = JSON.parse(read(`messages/${locale}.json`)).applications.workers;
-    assert.ok(w.create.failed && w.edit.failed, locale);
+    assert.ok(w.create.failed && w.edit.failedStopped, locale);
   }
 });
 

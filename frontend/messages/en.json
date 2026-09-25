@@ -770,7 +770,9 @@
     "noSectionHeader": "Can't contain [ — that would start another program block",
     "required_frequency": "Choose how often backups run",
     "required_type": "Choose what to back up",
-    "hostnameLabelTooLong": "Each part of a domain between dots can be at most 63 characters."
+    "hostnameLabelTooLong": "Each part of a domain between dots can be at most 63 characters.",
+    "absolutePath": "Enter a full path that starts with /",
+    "invalidUser": "Use lowercase letters, numbers, - and _"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -4286,7 +4288,8 @@
         "restart": "Restart",
         "edit": "Edit",
         "delete": "Delete",
-        "viewLogs": "View logs"
+        "viewLogs": "View logs",
+        "viewLogsNoPermission": "Viewing logs needs the server Logs permission."
       },
       "toast": {
         "start": "Starting {name}…",
@@ -4324,7 +4327,8 @@
         "title": "Edit worker",
         "subtitle": "Changes apply the next time this worker restarts.",
         "submit": "Save changes",
-        "failed": "These changes could not be applied. Check that the command runs for this application, then try again."
+        "failed": "These changes could not be applied. Check that the command runs for this application, then try again.",
+        "failedStopped": "These changes could not be applied, so the worker was stopped. Fix the command and save again."
       },
       "delete": {
         "title": "Delete this worker?",
@@ -4335,7 +4339,7 @@
       },
       "form": {
         "name": "Name",
-        "namePlaceholder": "Queue worker",
+        "namePlaceholder": "background-jobs",
         "nameHint": "A short label to identify this worker.",
         "useTemplate": "Use template",
         "command": "Command",
@@ -4359,8 +4363,7 @@
           "horizon": "You already have Horizon — it manages its own queue workers."
         },
         "user": "Run as user",
-        "userPlaceholder": "deploy",
-        "userHint": "Leave empty to run as this application's own user, which is almost always right.",
+        "userHint": "The account this worker runs as — the application's own user.",
         "logFile": "Log file",
         "logFilePlaceholder": "/var/log/my-worker.log",
         "logFileHint": "Absolute path, and it can't contain .. — leave empty and supervisord chooses one.",

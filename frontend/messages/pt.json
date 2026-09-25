@@ -770,7 +770,9 @@
     "noSectionHeader": "Não pode conter [ — isso iniciaria outro bloco de programa",
     "required_frequency": "Escolha com que frequência os backups rodam",
     "required_type": "Escolha o que incluir no backup",
-    "hostnameLabelTooLong": "Cada parte de um domínio entre pontos pode ter no máximo 63 caracteres."
+    "hostnameLabelTooLong": "Cada parte de um domínio entre pontos pode ter no máximo 63 caracteres.",
+    "absolutePath": "Informe um caminho completo que comece com /",
+    "invalidUser": "Use letras minúsculas, números, - e _"
   },
   "serverDashboard": {
     "title": "Painel",
@@ -4286,7 +4288,8 @@
         "restart": "Reiniciar",
         "edit": "Editar",
         "delete": "Excluir",
-        "viewLogs": "Ver logs"
+        "viewLogs": "Ver logs",
+        "viewLogsNoPermission": "Ver os logs requer a permissão de Logs do servidor."
       },
       "toast": {
         "start": "Iniciando {name}…",
@@ -4324,7 +4327,8 @@
         "title": "Editar worker",
         "subtitle": "As alterações se aplicam na próxima vez que este worker reiniciar.",
         "submit": "Salvar alterações",
-        "failed": "Não foi possível aplicar estas alterações. Verifique se o comando funciona nesta aplicação e tente novamente."
+        "failed": "Não foi possível aplicar estas alterações. Verifique se o comando funciona nesta aplicação e tente novamente.",
+        "failedStopped": "Estas alterações não puderam ser aplicadas, então o worker foi parado. Corrija o comando e salve novamente."
       },
       "delete": {
         "title": "Excluir este worker?",
@@ -4335,7 +4339,7 @@
       },
       "form": {
         "name": "Nome",
-        "namePlaceholder": "Queue worker",
+        "namePlaceholder": "background-jobs",
         "nameHint": "Um rótulo curto para identificar este worker.",
         "useTemplate": "Usar modelo",
         "command": "Comando",
@@ -4359,8 +4363,7 @@
           "horizon": "Você já tem o Horizon — ele gerencia seus próprios queue workers."
         },
         "user": "Executar como usuário",
-        "userPlaceholder": "deploy",
-        "userHint": "Deixe vazio para executar como o próprio usuário desta aplicação, o que quase sempre é o correto.",
+        "userHint": "A conta com que este worker é executado — o próprio usuário da aplicação.",
         "logFile": "Arquivo de log",
         "logFilePlaceholder": "/var/log/my-worker.log",
         "logFileHint": "Caminho absoluto e não pode conter .. — deixe vazio e o supervisord escolhe um.",

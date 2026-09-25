@@ -39,7 +39,7 @@ import { WorkerKindField } from "@/components/applications/workers/worker-kind-f
  * fields (directory, stop-wait) sit behind a disclosure so the common path is
  * four visible fields: name, command, processes, and the two safety switches.
  */
-export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], workers = [], seed }) {
+export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], workers = [], seed, siteUser = null }) {
   const t = useTranslations("applications.workers");
   const { pending: refreshing, refreshThen } = useRefresh();
   // The server's own "installing supervisor" message, kept on screen until
@@ -94,10 +94,11 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
       name: values.name.trim(),
       command: values.command.trim(),
       directory: values.directory?.trim() || undefined,
+      // Never sent: the worker runs as the application's own user, and an
+      // absent key leaves an existing worker's account as it is.
+      user: undefined,
       // Blank means "no opinion", and the API treats an absent key that way —
-      // sending "" would ask it to store an empty username and an empty log
-      // path, which is not the same request at all.
-      user: values.user?.trim() || undefined,
+      // sending "" would ask it to store an empty log path.
       log_file: values.log_file?.trim() || undefined,
       log_level: values.log_level || undefined,
       extra_config: values.extra_config?.trim() || undefined,
@@ -301,7 +302,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-3">
-            <WorkerAdvancedFields form={form} />
+            <WorkerAdvancedFields form={form} runsAs={siteUser} />
           </CollapsibleContent>
         </Collapsible>
       </FormModal>

@@ -770,7 +770,9 @@
     "noSectionHeader": "Ne doit pas contenir [ — cela démarrerait un autre bloc de programme",
     "required_frequency": "Choisissez la fréquence des sauvegardes",
     "required_type": "Choisissez ce qu'il faut sauvegarder",
-    "hostnameLabelTooLong": "Chaque partie d'un domaine entre deux points peut comporter au maximum 63 caractères."
+    "hostnameLabelTooLong": "Chaque partie d'un domaine entre deux points peut comporter au maximum 63 caractères.",
+    "absolutePath": "Saisissez un chemin complet commençant par /",
+    "invalidUser": "Utilisez des minuscules, des chiffres, - et _"
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -4286,7 +4288,8 @@
         "restart": "Redémarrer",
         "edit": "Modifier",
         "delete": "Supprimer",
-        "viewLogs": "Voir les journaux"
+        "viewLogs": "Voir les journaux",
+        "viewLogsNoPermission": "Voir les journaux nécessite la permission Journaux du serveur."
       },
       "toast": {
         "start": "Démarrage de {name}…",
@@ -4324,7 +4327,8 @@
         "title": "Modifier le worker",
         "subtitle": "Les modifications s'appliquent au prochain redémarrage de ce worker.",
         "submit": "Enregistrer les modifications",
-        "failed": "Ces modifications n'ont pas pu être appliquées. Vérifiez que la commande fonctionne pour cette application, puis réessayez."
+        "failed": "Ces modifications n'ont pas pu être appliquées. Vérifiez que la commande fonctionne pour cette application, puis réessayez.",
+        "failedStopped": "Ces modifications n'ont pas pu être appliquées, le worker a donc été arrêté. Corrigez la commande et enregistrez à nouveau."
       },
       "delete": {
         "title": "Supprimer ce worker ?",
@@ -4335,7 +4339,7 @@
       },
       "form": {
         "name": "Nom",
-        "namePlaceholder": "Worker de file",
+        "namePlaceholder": "background-jobs",
         "nameHint": "Un libellé court pour identifier ce worker.",
         "useTemplate": "Utiliser le modèle",
         "command": "Commande",
@@ -4359,8 +4363,7 @@
           "horizon": "Vous avez déjà Horizon — il gère ses propres workers de file."
         },
         "user": "Exécuter en tant qu'utilisateur",
-        "userPlaceholder": "deploy",
-        "userHint": "Laissez vide pour exécuter avec l'utilisateur de l'application, ce qui est presque toujours correct.",
+        "userHint": "Le compte sous lequel ce worker s'exécute — l'utilisateur propre de l'application.",
         "logFile": "Fichier de log",
         "logFilePlaceholder": "/var/log/my-worker.log",
         "logFileHint": "Chemin absolu, et ne peut pas contenir .. — laissez vide et supervisord en choisira un.",
