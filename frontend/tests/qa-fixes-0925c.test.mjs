@@ -92,3 +92,13 @@ test("every new Environment string exists in every locale", () => {
     assert.ok(e.history.showOlder.includes("{count, plural,") && e.history.olderFailed, l);
   }
 });
+
+test("an open application page re-renders when its deploy or setup ends", () => {
+  const layout = read(`${APP}/layout.jsx`);
+  assert.match(layout, /<ApplicationStatusWatcher id=\{result\.application\.id\} status=\{result\.application\.status\} \/>/);
+  const watcher = read("components/applications/application-status-watcher.jsx");
+  assert.match(watcher, /const inFlight = status === "pending" \|\| status === "provisioning";/);
+  // Polls the status alone and refreshes once, on a change — not every tick.
+  assert.match(watcher, /if \(live && next && next !== status\) \{\s*window\.clearInterval\(timer\);\s*router\.refresh\(\);/);
+  assert.match(watcher, /const LIMIT_MS = 30 \* 60 \* 1000;/);
+});

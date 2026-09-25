@@ -265,3 +265,10 @@ export function updateWebRoot(id, webRoot) {
 export function lockApplicationRoot(id) {
   return api.post(`/applications/${id}/root-lock`);
 }
+
+// Just the status word, to notice a deploy or first setup ending. The whole
+// application comes back; nothing else here is read from it.
+export async function getApplicationStatus(id) {
+  const res = await api.get(`/applications/${id}`);
+  return res.data?.application?.status ?? null;
+}

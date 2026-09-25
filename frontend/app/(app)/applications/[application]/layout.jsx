@@ -3,6 +3,7 @@ import { getApplication } from "@/lib/applications/get-applications";
 import { ApplicationNav } from "@/components/sections/application-nav";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { SystemUserMissing } from "@/components/applications/system-user-missing";
+import { ApplicationStatusWatcher } from "@/components/applications/application-status-watcher";
 import { can } from "@/lib/permissions/can";
 
 /**
@@ -29,6 +30,9 @@ export default async function ApplicationLayout({ children, params }) {
           fact the sidebar needs when the site is gone. */}
       <ApplicationNav items={items} application={result?.application ?? null} />
       {name ? <PageCrumb href={`/applications/${application}`}>{name}</PageCrumb> : null}
+      {result?.application ? (
+        <ApplicationStatusWatcher id={result.application.id} status={result.application.status} />
+      ) : null}
       {orphaned ? (
         <SystemUserMissing
           application={result.application}
