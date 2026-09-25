@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { CircleAlert, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROVISION_STEPS, provisionStepLabel } from "@/lib/applications/provision-steps";
+import { isRedeploying } from "@/lib/applications/settled";
 import { Badge } from "@/components/ui/badge";
 
 /**
@@ -62,6 +63,16 @@ export function ApplicationStatusBadge({ application }) {
     );
   }
 
+  // The API says `provisioning` for a redeploy too, but the site is live and
+  // serving its old code; "Provisioning" read as a site being built from scratch.
+  if (isRedeploying(application)) {
+    return (
+      <Badge variant="warning" className="font-normal">
+        {t("deploying")}
+      </Badge>
+    );
+  }
+
   return (
     <Badge
       variant={STATUS_VARIANTS[application.status] ?? "muted"}
@@ -102,7 +113,9 @@ export function ApplicationStatusDot({ application, className }) {
   const variant = paused ? "warning" : (STATUS_VARIANTS[application.status] ?? "secondary");
   const label = paused
     ? t("paused")
-    : (t(`status.${application.status}`) ?? application.status_title ?? application.status);
+    : isRedeploying(application)
+      ? t("deploying")
+      : (t(`status.${application.status}`) ?? application.status_title ?? application.status);
 
   return (
     <span className={cn("flex min-w-0 items-center gap-1.5", className)}>

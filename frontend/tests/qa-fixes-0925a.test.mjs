@@ -10,8 +10,7 @@ const msg = (l) => JSON.parse(read(`messages/${l}.json`));
 
 test("a redeploy does not swap the page for 'still being set up'", () => {
   const src = page();
-  assert.match(src, /const deployedBefore = Boolean\(\s*application\.code_on_disk\?\.commit \|\| application\.last_deployed_at \|\| history\.deployments\.length,\s*\);/);
-  assert.match(src, /const settled = application\.status === "active" \|\| deployedBefore;/);
+  assert.match(src, /const settled = isSettled\(application\) \|\| history\.deployments\.length > 0;/);
   // …and the card shows a deploy it did not start.
   assert.match(panel(), /deploying=\{deploying \|\| application\.status === "provisioning" \|\| Boolean\(deployments\[0\]\?\.in_flight\)\}/);
 });

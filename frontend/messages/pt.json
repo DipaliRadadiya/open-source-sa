@@ -3154,8 +3154,14 @@
           "added": "Adicionado",
           "removed": "Removido",
           "changed": "Alterado"
-        }
-      }
+        },
+        "showOlder": "{count, plural, one {Mostrar # alteração anterior} other {Mostrar # alterações anteriores}}",
+        "olderFailed": "Não foi possível carregar as alterações anteriores."
+      },
+      "pageSubtitleReadOnly": "Veja o arquivo .env desta aplicação.",
+      "emptyFilePlaceholder": "# Este arquivo está vazio — adicione variáveis e salve",
+      "tooLargeTitle": "Não salvo — arquivo grande demais",
+      "tooLarge": "O arquivo pode ter no máximo 256 KB. Remova algo para salvá-lo."
     },
     "title": "Aplicações",
     "subtitle": "Aplicações e serviços rodando neste servidor.",
@@ -4623,6 +4629,10 @@
         "sourceFailed": {
           "title": "Esta aplicação não terminou de ser configurada",
           "body": "Não há nada completo para copiar. Corrija o original primeiro — uma cópia de uma aplicação pela metade herdaria o mesmo problema."
+        },
+        "deploying": {
+          "title": "Um deploy está em andamento",
+          "body": "Uma cópia feita agora pode misturar arquivos antigos e novos. Quando o deploy terminar, esta página permitirá cloná-lo."
         }
       },
       "result": {
@@ -5271,7 +5281,8 @@
       "locking": "Bloqueando…",
       "done": "Pasta do site bloqueada.",
       "failed": "Não foi possível bloquear a pasta do site."
-    }
+    },
+    "deploying": "Fazendo deploy"
   },
   "panelUpdate": {
     "title": "Atualização do painel",

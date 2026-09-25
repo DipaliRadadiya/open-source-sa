@@ -3154,8 +3154,14 @@
           "added": "Añadida",
           "removed": "Eliminada",
           "changed": "Cambiada"
-        }
-      }
+        },
+        "showOlder": "{count, plural, one {Ver # cambio anterior} other {Ver # cambios anteriores}}",
+        "olderFailed": "No se pudieron cargar los cambios anteriores."
+      },
+      "pageSubtitleReadOnly": "Consulta el archivo .env de esta aplicación.",
+      "emptyFilePlaceholder": "# Este archivo está vacío — añade variables y guarda",
+      "tooLargeTitle": "No guardado — archivo demasiado grande",
+      "tooLarge": "El archivo puede tener como máximo 256 KB. Quita algo para poder guardarlo."
     },
     "title": "Aplicaciones",
     "subtitle": "Aplicaciones y servicios que se ejecutan en este servidor.",
@@ -4623,6 +4629,10 @@
         "sourceFailed": {
           "title": "Esta aplicación no terminó de configurarse",
           "body": "No hay nada completo que copiar. Arregla primero el original: una copia de una aplicación a medio construir heredaría el mismo problema."
+        },
+        "deploying": {
+          "title": "Hay un despliegue en curso",
+          "body": "Una copia hecha ahora podría mezclar archivos antiguos y nuevos. Cuando termine el despliegue, podrás clonarlo desde aquí."
         }
       },
       "result": {
@@ -5271,7 +5281,8 @@
       "locking": "Bloqueando…",
       "done": "Carpeta del sitio bloqueada.",
       "failed": "No se pudo bloquear la carpeta del sitio."
-    }
+    },
+    "deploying": "Desplegando"
   },
   "panelUpdate": {
     "title": "Actualización del panel",

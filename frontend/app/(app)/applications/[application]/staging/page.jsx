@@ -7,6 +7,7 @@ import { getApplication, getApplicationStaging } from "@/lib/applications/get-ap
 import { StagingPanel } from "@/components/applications/staging/staging-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export default async function ApplicationStagingPage({ params }) {
   // Removing the copy is an ordinary application delete, so it is gated the
   // way the API gates it, not by the staging permission.
   const canDelete = can(permissions, "application", "manage");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   const staging = settled ? await getApplicationStaging(id) : null;
 

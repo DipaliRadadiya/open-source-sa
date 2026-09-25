@@ -11,6 +11,7 @@ import { gitProviderFromUrl } from "@/lib/applications/git-provider-from-url";
 import { DeploymentPanel } from "@/components/applications/deployment/deployment-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -104,18 +105,9 @@ export default async function ApplicationDeploymentPage({ params }) {
       ? providers.filter((p) => p.name === gitProvider)
       : providers;
 
-  /*
-   * A redeploy puts a live site back into `provisioning` (and `deployed`
-   * false) for its duration, so the status alone cannot tell a first build
-   * from a site that is already serving. Judged on that basis, every deploy
-   * swapped this whole page for "still being set up" mid-flight, and it stayed
-   * there after the deploy ended because nothing was left mounted to notice.
-   * Only a site that has never had code on disk waits for provisioning.
-   */
-  const deployedBefore = Boolean(
-    application.code_on_disk?.commit || application.last_deployed_at || history.deployments.length,
-  );
-  const settled = application.status === "active" || deployedBefore;
+  // The history too: a site whose deploys are all recorded failures has run
+  // deploys, and belongs on this page rather than behind a waiting message.
+  const settled = isSettled(application) || history.deployments.length > 0;
 
   return (
     <div className="space-y-6">

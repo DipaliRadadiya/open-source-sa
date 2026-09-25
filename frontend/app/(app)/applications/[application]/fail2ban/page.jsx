@@ -7,6 +7,7 @@ import { getApplication, getApplicationFail2ban } from "@/lib/applications/get-a
 import { Fail2banPanel } from "@/components/applications/fail2ban/fail2ban-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default async function ApplicationFail2banPage({ params }) {
   }
 
   const canManage = can(appPermissions, "app_fail2ban", "manage", "application");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   const status = settled ? await getApplicationFail2ban(id) : null;
 

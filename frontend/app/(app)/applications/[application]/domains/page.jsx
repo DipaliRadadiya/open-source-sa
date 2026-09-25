@@ -13,6 +13,7 @@ import { SslSection } from "@/components/applications/domains/ssl-section";
 import { DomainsSslTabs } from "@/components/applications/domains/domains-ssl-tabs";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,7 @@ export default async function ApplicationDomainsPage({ params }) {
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_domain", "manage", "application");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   const [domainList, certificate, capabilities] = await Promise.all([
     settled ? getApplicationDomains(id) : Promise.resolve({ domains: [], failed: false }),

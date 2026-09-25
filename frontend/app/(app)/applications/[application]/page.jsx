@@ -34,6 +34,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { ApplicationStatusBadge } from "@/components/applications/application-status-badge";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,7 @@ export default async function ApplicationDetailPage({ params }) {
   const isGit = Boolean(application.repository || application.repository_url);
   // Only a serving site has domains, a certificate or a running process. While
   // it is still being built, saying anything about them would be invention.
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   // For any git-linked site, not only a broken one. It feeds two things: the
   // repair dialog's list, and the provider name on the source card — the

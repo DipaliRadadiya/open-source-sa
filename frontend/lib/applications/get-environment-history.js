@@ -15,5 +15,5 @@ export async function getEnvironmentHistory(id) {
   // WHICH failure, not just that there was one: without the status and the
   // kind, the error box on this screen printed the same sentence whether the
   // API refused, crashed, or was not there at all.
-  return { history: result.failed ? null : (result.data?.history ?? null), failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
+  return { history: result.failed ? null : (result.data?.history ?? null), meta: result.data?.meta ?? null, failed: result.failed, status: result.status, failure: result.failure, message: result.message, debug: result.debug };
 }

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ChevronDown, Cog, History, Pencil, RotateCcw } from "lucide-react";
+import { ChevronDown, Cog, History, Loader2, Pencil, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { restoreEnvironment } from "@/lib/api/environment";
+import { getEnvironmentHistoryPage, restoreEnvironment } from "@/lib/api/environment";
+import { useRefresh } from "@/hooks/use-refresh";
 import { apiMessage } from "@/lib/api/error-message";
 import {
   actorOf,
@@ -46,6 +46,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 export function EnvironmentHistoryCard({
   appId,
   entries,
+  meta = null,
   failed = false,
   canManage = false,
   /*
@@ -63,24 +64,52 @@ export function EnvironmentHistoryCard({
   // The restart control reuses the editor dialog's strings, which live one
   // level up — so there is one sentence describing what restarting does.
   const tEnv = useTranslations("applications.environment");
-  const router = useRouter();
+  const { pending: refreshing, refreshThen } = useRefresh();
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
   // Off by default, matching the editor's dialog: restarting is a visible
   // interruption and should be asked for, not assumed.
   const [restart, setRestart] = useState(false);
 
+  // Pages after the first, fetched on request. Dropped when the first page
+  // changes (a save or restore just added a row): every row then shifts one
+  // place, and keeping them would hide the row that moved onto page two.
+  const [older, setOlder] = useState({ from: entries, rows: [], page: 1, last: meta?.last_page ?? 1 });
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  if (older.from !== entries) {
+    setOlder({ from: entries, rows: [], page: 1, last: meta?.last_page ?? 1 });
+  }
+  const shown = [...(entries ?? []), ...older.rows.filter((row) => !entries?.some((entry) => entry.id === row.id))];
+  const remaining = Math.max((meta?.total ?? 0) - shown.length, 0);
+
+  async function loadOlder() {
+    setLoadingOlder(true);
+    try {
+      const data = await getEnvironmentHistoryPage(appId, older.page + 1);
+      setOlder((current) =>
+        current.from === entries
+          ? { ...current, rows: [...current.rows, ...data.history], page: current.page + 1, last: data.meta?.last_page ?? current.last }
+          : current,
+      );
+    } catch (error) {
+      toast.error(apiMessage(error, t("olderFailed")));
+    } finally {
+      setLoadingOlder(false);
+    }
+  }
+
   async function confirmRestore() {
     setBusy(true);
     try {
       await restoreEnvironment(appId, { backup: pending.backup, restart });
-      toast.success(t("restored"));
-      setPending(null);
-      setRestart(false);
       // A refresh, not local state: the restore changed the file the editor
-      // above is showing, and leaving that stale would put the old text on
-      // screen over the new file on disk.
-      router.refresh();
+      // above is showing. Closed once it has landed — closing first left the
+      // old text in the editor for a second under "restored".
+      refreshThen(() => {
+        toast.success(t("restored"));
+        setPending(null);
+        setRestart(false);
+      });
     } catch (error) {
       toast.error(apiMessage(error, t("restoreFailed")));
     } finally {
@@ -107,7 +136,7 @@ export function EnvironmentHistoryCard({
           <p className="text-sm text-muted-foreground">{t("empty")}</p>
         ) : (
           <ul>
-            {entries.map((entry) => (
+            {shown.map((entry) => (
               <HistoryRow
                 key={entry.id}
                 appId={appId}
@@ -118,6 +147,12 @@ export function EnvironmentHistoryCard({
             ))}
           </ul>
         )}
+        {!failed && older.page < older.last && remaining > 0 ? (
+          <Button variant="outline" size="sm" className="mt-5" onClick={loadOlder} disabled={loadingOlder}>
+            {loadingOlder ? <Loader2 className="size-4 animate-spin" /> : null}
+            {t("showOlder", { count: remaining })}
+          </Button>
+        ) : null}
       </CardContent>
 
       <ConfirmDialog
@@ -134,7 +169,7 @@ export function EnvironmentHistoryCard({
         description={t("confirmBody")}
         cancelLabel={t("cancel")}
         confirmLabel={t("confirmSubmit")}
-        pending={busy}
+        pending={busy || refreshing}
         onConfirm={confirmRestore}
       >
         {/* Same control, same strings as the editor's restore dialog — one

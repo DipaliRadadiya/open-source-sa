@@ -3154,8 +3154,14 @@
           "added": "Added",
           "removed": "Removed",
           "changed": "Changed"
-        }
-      }
+        },
+        "showOlder": "{count, plural, one {Show # older change} other {Show # older changes}}",
+        "olderFailed": "Older changes could not be loaded."
+      },
+      "pageSubtitleReadOnly": "View this application's .env file.",
+      "emptyFilePlaceholder": "# This file is empty — add variables and save",
+      "tooLargeTitle": "Not saved — file too large",
+      "tooLarge": "The file can be at most 256 KB. Remove something to save it."
     },
     "title": "Applications",
     "subtitle": "Applications and services running on this server.",
@@ -4623,6 +4629,10 @@
         "sourceFailed": {
           "title": "This application did not finish setting up",
           "body": "There is nothing complete to copy. Fix the original first — a copy of a half-built application would inherit the same problem."
+        },
+        "deploying": {
+          "title": "A deploy is running",
+          "body": "A copy taken now could mix old and new files. Once the deploy finishes, this page will let you clone it."
         }
       },
       "result": {
@@ -5271,7 +5281,8 @@
       "locking": "Locking…",
       "done": "Site folder locked.",
       "failed": "The site folder could not be locked."
-    }
+    },
+    "deploying": "Deploying"
   },
   "panelUpdate": {
     "title": "Panel update",

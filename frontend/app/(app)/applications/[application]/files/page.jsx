@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { Button } from "@/components/ui/button";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,7 @@ export default async function ApplicationFilesPage({ params, searchParams }) {
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_file", "manage", "application");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   if (!isSafePath(path)) redirect(`/applications/${id}/files`);
 

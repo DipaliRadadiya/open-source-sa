@@ -15,6 +15,7 @@ import { getApplicationLog } from "@/lib/applications/get-application-logs";
 import { parseDetectLog } from "@/lib/firewall/parse-detect-log";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export default async function ApplicationFirewallPage({ params }) {
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_firewall", "manage", "application");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   // The category and mode labels come from the API; without them there is
   // nothing truthful to render, so a failure there is a load failure. The web

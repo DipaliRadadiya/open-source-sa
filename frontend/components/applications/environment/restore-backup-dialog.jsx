@@ -79,7 +79,13 @@ export function RestoreBackupDialog({
           screen reader nothing about which copy was picked. The saved time
           leads — it is what people choose by — and the file name follows for
           anyone matching it against the server. */}
-      <div role="radiogroup" aria-label={t("restore.title")} className="space-y-2">
+      {/* Bounded: twenty backups pushed Restore and Cancel a screen below
+          the list on a phone. The padding keeps focus rings inside the clip. */}
+      <div
+        role="radiogroup"
+        aria-label={t("restore.title")}
+        className="-m-1 max-h-[min(20rem,45dvh)] space-y-2 overflow-y-auto p-1"
+      >
         {backups.map((backup) => {
           const active = selected === backup.name;
           const when = parseApiWallClock(backup.created_at);

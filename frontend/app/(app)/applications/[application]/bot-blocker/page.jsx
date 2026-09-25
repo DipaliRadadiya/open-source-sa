@@ -12,6 +12,7 @@ import {
 } from "@/components/applications/bot-blocker/bot-traffic-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ export default async function ApplicationBotBlockerPage({ params, searchParams }
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_bot_blocker", "manage", "application");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   // The whole screen is rendered from this catalog — without it there is
   // nothing truthful to show, so a failure here is a load failure, not an

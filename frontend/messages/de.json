@@ -3154,8 +3154,14 @@
           "added": "Hinzugefügt",
           "removed": "Entfernt",
           "changed": "Geändert"
-        }
-      }
+        },
+        "showOlder": "{count, plural, one {# ältere Änderung zeigen} other {# ältere Änderungen zeigen}}",
+        "olderFailed": "Ältere Änderungen konnten nicht geladen werden."
+      },
+      "pageSubtitleReadOnly": "Sehen Sie die .env-Datei dieser Anwendung ein.",
+      "emptyFilePlaceholder": "# Diese Datei ist leer — Variablen hinzufügen und speichern",
+      "tooLargeTitle": "Nicht gespeichert — Datei zu groß",
+      "tooLarge": "Die Datei darf höchstens 256 KB groß sein. Entfernen Sie etwas, um sie zu speichern."
     },
     "title": "Anwendungen",
     "subtitle": "Anwendungen und Dienste, die auf diesem Server laufen.",
@@ -4623,6 +4629,10 @@
         "sourceFailed": {
           "title": "Diese Anwendung wurde nicht fertig eingerichtet",
           "body": "Es gibt nichts Vollständiges zu kopieren. Bringen Sie zuerst das Original in Ordnung — eine Kopie einer halb gebauten Anwendung würde dasselbe Problem erben."
+        },
+        "deploying": {
+          "title": "Ein Deploy läuft",
+          "body": "Eine Kopie von jetzt könnte alte und neue Dateien mischen. Sobald der Deploy fertig ist, können Sie sie hier klonen."
         }
       },
       "result": {
@@ -5271,7 +5281,8 @@
       "locking": "Wird gesperrt…",
       "done": "Website-Ordner gesperrt.",
       "failed": "Der Website-Ordner konnte nicht gesperrt werden."
-    }
+    },
+    "deploying": "Wird deployt"
   },
   "panelUpdate": {
     "title": "Panel-Update",

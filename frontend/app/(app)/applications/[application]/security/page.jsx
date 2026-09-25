@@ -7,6 +7,7 @@ import { getApplication } from "@/lib/applications/get-applications";
 import { SecuritySection } from "@/components/applications/security/security-section";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function ApplicationSecurityPage({ params }) {
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(appPermissions, "app_security", "manage", "application");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   return (
     <div className="space-y-6">

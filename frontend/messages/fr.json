@@ -3154,8 +3154,14 @@
           "added": "Ajouté",
           "removed": "Supprimé",
           "changed": "Modifié"
-        }
-      }
+        },
+        "showOlder": "{count, plural, one {Afficher # modification plus ancienne} other {Afficher # modifications plus anciennes}}",
+        "olderFailed": "Les modifications plus anciennes n'ont pas pu être chargées."
+      },
+      "pageSubtitleReadOnly": "Consultez le fichier .env de cette application.",
+      "emptyFilePlaceholder": "# Ce fichier est vide — ajoutez des variables et enregistrez",
+      "tooLargeTitle": "Non enregistré — fichier trop volumineux",
+      "tooLarge": "Le fichier ne peut pas dépasser 256 Ko. Supprimez du contenu pour pouvoir l'enregistrer."
     },
     "title": "Applications",
     "subtitle": "Applications et services exécutés sur ce serveur.",
@@ -4623,6 +4629,10 @@
         "sourceFailed": {
           "title": "Cette application n'a pas fini d'être configurée",
           "body": "Il n'y a rien de complet à copier. Corrigez d'abord l'original — une copie d'une application à moitié construite hériterait du même problème."
+        },
+        "deploying": {
+          "title": "Un déploiement est en cours",
+          "body": "Une copie faite maintenant pourrait mélanger anciens et nouveaux fichiers. Une fois le déploiement terminé, cette page vous permettra de le cloner."
         }
       },
       "result": {
@@ -5271,7 +5281,8 @@
       "locking": "Verrouillage…",
       "done": "Dossier du site verrouillé.",
       "failed": "Le dossier du site n'a pas pu être verrouillé."
-    }
+    },
+    "deploying": "Déploiement"
   },
   "panelUpdate": {
     "title": "Mise à jour du panneau",

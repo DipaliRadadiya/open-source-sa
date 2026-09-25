@@ -15,6 +15,7 @@ import { APP_LOG_FOLLOW_COOKIE, APP_LOG_LINES_COOKIE, parseFollowPrefs, parseLin
 import { EmptyState } from "@/components/data-table/empty-state";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ export default async function ApplicationLogsPage({ params, searchParams }) {
 
   // Emptying a log is a different trust from reading one.
   const canManage = can(appPermissions, "app_log", "manage", "application");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   const { logs: sources, failed, status: logsStatus, failure: logsFailure, message: logsMessage } = settled
     ? await getApplicationLogs(id)

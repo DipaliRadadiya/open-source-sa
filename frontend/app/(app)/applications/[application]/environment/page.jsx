@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/ui/page-header";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -10,6 +10,7 @@ import { EnvironmentEditor } from "@/components/applications/environment/environ
 import { EnvironmentHistoryCard } from "@/components/applications/environment/environment-history-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +40,13 @@ export default async function ApplicationEnvironmentPage({ params }) {
     return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
-  // The permission is only granted for site types that actually keep a .env, so
-  // a missing grant here means the screen shouldn't exist for this site.
+  // The grant is missing both for someone not allowed to see the file and for
+  // a site type that keeps no .env at all (WordPress's config is wp-config.php).
+  // The API tells them apart — 403 against 404 — and they are different
+  // sentences: telling an administrator "you don't have access" sent them off
+  // to find a permission that does not exist.
   if (!can(appPermissions, "app_environment", "view", "application")) {
+    if ((await getApplicationEnvironment(id)).status === 404) notFound();
     return <PermissionDenied title={t("pageTitle")} />;
   }
   const canManage = can(
@@ -50,7 +55,7 @@ export default async function ApplicationEnvironmentPage({ params }) {
     "manage",
     "application",
   );
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   // Together: the history is a log query and one directory listing, and running
   // it after the environment read would add its latency to a page that already
@@ -66,7 +71,7 @@ export default async function ApplicationEnvironmentPage({ params }) {
     <div className="space-y-6">
       <PageHeader
         title={t("pageTitle")}
-        subtitle={t("pageSubtitle")}
+        subtitle={canManage ? t("pageSubtitle") : t("pageSubtitleReadOnly")}
       />
 
       {!settled ? (
@@ -87,6 +92,7 @@ export default async function ApplicationEnvironmentPage({ params }) {
           <EnvironmentHistoryCard
             appId={id}
             entries={historyResult.history}
+            meta={historyResult.meta}
             failed={historyResult.failed}
             canManage={canManage}
             // Same signal the editor's restore dialog uses, from the same

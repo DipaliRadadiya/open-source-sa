@@ -99,9 +99,11 @@ test("every path that changes the file refreshes the page that renders its histo
     "utf8",
   );
 
+  // …and closes only once that refresh has landed, so the editor above is
+  // already showing the restored file under the toast.
   assert.match(
     card,
-    /router\.refresh\(\)/,
+    /refreshThen\(\(\) => \{/,
     "restoring from a history row must refresh the page too",
   );
 });
@@ -118,12 +120,12 @@ test("the editor takes new file contents that arrive from the server", () => {
 
   assert.match(
     editor,
-    /serverRaw/,
-    "the editor must track the last contents it saw from the server",
+    /const \[seenRaw, setSeenRaw\] = useState\(propRaw\);/,
+    "the editor must track the last contents the prop carried",
   );
   assert.match(
     editor,
-    /!==\s*serverRaw/,
+    /if \(propRaw !== seenRaw\) \{/,
     "…and compare the incoming prop against it",
   );
 
@@ -136,20 +138,21 @@ test("the editor takes new file contents that arrive from the server", () => {
 });
 
 test("a write this editor made is not re-applied by the refresh it triggers", () => {
-  // Otherwise anything typed between the "Saved" toast and the refresh landing
-  // is wiped by the sync.
+  // It was, in the other direction: the save marked its OWN text as seen while
+  // the prop still held the old file, so the next render copied the old file
+  // back in and "Environment saved." sat over the pre-save text until the
+  // refresh landed (1.3s on a real panel), wiping anything typed meanwhile.
   const editor = fs.readFileSync(
     path.join(root, "components/applications/environment/environment-editor.jsx"),
     "utf8",
   );
 
-  const marks = editor.match(/setServerRaw\(/g) ?? [];
-
-  // Once in the render-phase sync, once after save, once after restore.
-  assert.ok(
-    marks.length >= 3,
-    `save and restore must both mark their own write as seen, found ${marks.length}`,
-  );
+  // Only the prop moves the marker.
+  assert.equal((editor.match(/setSeenRaw\(/g) ?? []).length, 1);
+  // A refresh confirming this editor's own write leaves the text alone.
+  assert.match(editor, /if \(propRaw !== \(env\.raw \?\? ""\)\) \{\s*setContents\(editable\(propRaw\)\);/);
+  // Keystrokes made while the save ran survive it.
+  assert.match(editor, /setContents\(\(current\) => \(current === sent \? editable\(next\.raw \?\? sent\) : current\)\);/);
 });
 
 test("values are read from the backup files, not from the activity log", () => {

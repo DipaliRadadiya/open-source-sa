@@ -11,6 +11,7 @@ import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { BackupsPanel } from "@/components/applications/backups/backups-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
+import { isSettled } from "@/lib/applications/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ export default async function ApplicationBackupsPage({ params }) {
   const canRestore = can(permissions, "backup", "manage");
   // Attaching is a server-level database grant, not this site's backup grant.
   const canManageDatabases = can(permissions, "database", "manage");
-  const settled = application.status === "active";
+  const settled = isSettled(application);
 
   // A site still provisioning has nothing to back up and no directory to point
   // at — offering the form would be offering a save that cannot work.

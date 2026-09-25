@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isRedeploying } from "../applications/settled.js";
 
 /**
  * The domain rule, copied from `CreateCloneRequest` deliberately.
@@ -92,6 +93,8 @@ export function cloneBlockedReason(application, siteType) {
   // A site that never finished building is not "still being set up" — saying
   // so would leave someone waiting for a state that is not coming.
   if (application?.status === "failed") return "sourceFailed";
+  // A live site mid-deploy has code, but half of it may be the new commit.
+  if (isRedeploying(application)) return "deploying";
   if (application?.status !== "active") return "provisioning";
   if (!siteType) return null;
   if (siteType.needs_database && !CLONE_STRATEGY_SITE_TYPES.includes(siteType.name)) {
