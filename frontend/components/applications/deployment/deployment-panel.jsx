@@ -69,6 +69,9 @@ export function DeploymentPanel({
     window.history.replaceState(null, "", `?${params.toString()}`);
   }, []);
   const pollRef = useRef(null);
+  // Set when a poll gives up. Without it the provisioning watch below took
+  // over the moment the deploy poll stopped, and polled on without end.
+  const gaveUpRef = useRef(false);
   // The failure banner and the build log sit in two different cards; this is
   // the one place that can see both.
   const historyRef = useRef(null);
@@ -134,6 +137,7 @@ export function DeploymentPanel({
   const deploy = useCallback(async () => {
     const before = application.last_deployed_at;
     const startedAt = Date.now();
+    gaveUpRef.current = false;
     setDeploying(true);
     try {
       await deployApplication(application.id);
@@ -141,6 +145,7 @@ export function DeploymentPanel({
       stopPoll();
       pollRef.current = setInterval(async () => {
         if (Date.now() - startedAt > DEPLOY_WATCH_LIMIT_MS) {
+          gaveUpRef.current = true;
           stopPoll();
           setDeploying(false);
           router.refresh();
@@ -263,9 +268,16 @@ export function DeploymentPanel({
    * happening.
    */
   useEffect(() => {
-    if (deploying || application.status !== "provisioning" || pollRef.current) return undefined;
+    if (deploying || application.status !== "provisioning" || pollRef.current || gaveUpRef.current) return undefined;
 
+    const startedAt = Date.now();
     pollRef.current = setInterval(async () => {
+      if (Date.now() - startedAt > DEPLOY_WATCH_LIMIT_MS) {
+        gaveUpRef.current = true;
+        stopPoll();
+        router.refresh();
+        return;
+      }
       const next = await refresh();
       if (!next || next.status === "provisioning") return;
       stopPoll();

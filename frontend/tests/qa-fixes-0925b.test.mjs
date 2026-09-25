@@ -24,3 +24,9 @@ test("a read-only role sees Deploy disabled with the reason, not no button", () 
   assert.match(src, /!canManage \? t\("history\.noPermission"\)/);
   assert.match(src, /disabled=\{deploying \|\| unlinked \|\| !canManage\}/);
 });
+
+test("once a status poll gives up, the provisioning watch does not start another", () => {
+  const src = read("components/applications/deployment/deployment-panel.jsx");
+  assert.match(src, /\|\| pollRef\.current \|\| gaveUpRef\.current\) return undefined;/);
+  assert.equal((src.match(/gaveUpRef\.current = true;/g) ?? []).length, 2);
+});
