@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -11,6 +12,7 @@ import {
   ScrollText,
   SquareArrowOutUpRight,
   TriangleAlert,
+  Unlink,
 } from "lucide-react";
 import {
   Card,
@@ -30,6 +32,8 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Progress } from "@/components/ui/progress";
 import { StepList } from "@/components/applications/step-list";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
+import { RelinkGitAccountDialog } from "@/components/applications/relink-git-account-dialog";
 
 // Best-effort link to the commit on the provider, built from a public repo URL.
 // Only the hosts whose commit paths we actually know; anything else falls back
@@ -90,8 +94,14 @@ export function DeployCard({
   canViewLogs = false,
   onDeploy,
   onShowBuildLog,
+  gitAccounts = [],
 }) {
   const t = useTranslations("applications.deployment");
+  const tSource = useTranslations("applications.source");
+  const [relinking, setRelinking] = useState(false);
+  // The account this site deployed with was deleted: it keeps its repository
+  // and branch but has no credential, so a deploy can only fail at the fetch.
+  const unlinked = Boolean(application.git_account_missing);
   // A deploy records into the same `steps[]` as provisioning, so it reads the
   // same catalog of labels — which lives under `details` because that is where
   // the first screen to need them was.
@@ -128,7 +138,8 @@ export function DeployCard({
         <CardDescription>{t("deploy.subtitle")}</CardDescription>
         {canManage ? (
           <CardAction>
-            <Button onClick={onDeploy} disabled={deploying}>
+            <ReasonTooltip reason={unlinked && !deploying ? tSource("accountMissing") : null}>
+            <Button onClick={onDeploy} disabled={deploying || unlinked}>
               {deploying ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
@@ -140,10 +151,27 @@ export function DeployCard({
                   ? t("deploy.redeploy")
                   : t("deploy.action")}
             </Button>
+            </ReasonTooltip>
           </CardAction>
         ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
+        {unlinked ? (
+          <div
+            role="alert"
+            className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+          >
+            <span className="flex items-start gap-2">
+              <Unlink className="mt-0.5 size-4 shrink-0" />
+              {tSource("accountMissing")}
+            </span>
+            {canManage && gitAccounts.length ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => setRelinking(true)}>
+                {tSource("relink.action")}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
         {deployFailed ? (
           <div
             role="alert"
@@ -306,6 +334,14 @@ export function DeployCard({
           </p>
         ) : null}
       </CardContent>
+      {unlinked ? (
+        <RelinkGitAccountDialog
+          application={application}
+          accounts={gitAccounts}
+          open={relinking}
+          onOpenChange={setRelinking}
+        />
+      ) : null}
     </Card>
   );
 }

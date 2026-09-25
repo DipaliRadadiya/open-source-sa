@@ -551,17 +551,17 @@ export function DomainsSection({
             two — the outgoing name is muted, the incoming one is not — rather
             than stacking size, weight and colour on the same line. */}
         {promoteTarget?.from ? (
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 rounded-lg border p-3">
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1.5 rounded-lg border p-3">
             <dt className="text-xs text-muted-foreground">
               {t("promote.nowLabel")}
             </dt>
-            <dd className="truncate font-mono text-sm text-muted-foreground">
+            <dd className="font-mono text-sm break-all text-muted-foreground">
               {promoteTarget.from}
             </dd>
             <dt className="text-xs text-muted-foreground">
               {t("promote.afterLabel")}
             </dt>
-            <dd className="truncate font-mono text-sm">
+            <dd className="font-mono text-sm break-all">
               {promoteTarget?.domain}
             </dd>
           </dl>

@@ -1,4 +1,4 @@
-import { useCallback, useImperativeHandle, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -23,6 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+const LOG_POLL_MS = 3000;
 
 // `duration` is a count of seconds. Printed raw it read as a stray "60" in a
 // row of words, which looks like an id rather than how long the deploy took.
@@ -59,6 +61,8 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
   const router = useRouter();
   const [open, setOpen] = useState(null);
   const [loading, setLoading] = useState(false);
+  // A log that failed to load is not a deploy that printed nothing.
+  const [logFailed, setLogFailed] = useState(false);
   const [busyId, setBusyId] = useState(null);
 
   // The API decides what still counts as running, so this does not need its own
@@ -68,12 +72,14 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
   const show = useCallback(
     async (deployment) => {
       setOpen({ ...deployment, output: null });
+      setLogFailed(false);
       setLoading(true);
       try {
         const { data } = await fetchDeployment(applicationId, deployment.id);
         const parsed = deploymentResponseSchema.safeParse(data);
         if (parsed.success) setOpen(parsed.data.deployment);
       } catch (error) {
+        setLogFailed(true);
         toast.error(apiMessage(error, t("logFailed")));
       } finally {
         setLoading(false);
@@ -81,6 +87,28 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
     },
     [applicationId, t],
   );
+
+  // The backend adds each step's output as the step ends, so a log opened on a
+  // running deploy keeps growing. Re-read it until the deploy stops.
+  const openId = open?.id ?? null;
+  const openRunning = Boolean(open?.in_flight);
+  useEffect(() => {
+    if (!openId || !openRunning) return undefined;
+    let live = true;
+    const timer = setInterval(async () => {
+      try {
+        const { data } = await fetchDeployment(applicationId, openId);
+        const parsed = deploymentResponseSchema.safeParse(data);
+        if (live && parsed.success) setOpen(parsed.data.deployment);
+      } catch {
+        // Keep what is on screen; the next read may answer.
+      }
+    }, LOG_POLL_MS);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [applicationId, openId, openRunning]);
 
   // The failure banner up on the Deploy card opens a build log from here: the
   // evidence for "the setup script failed" lives in this dialog, and making
@@ -231,7 +259,7 @@ export function DeployHistoryCard({ ref, applicationId, deployments, canManage }
               ) : null}
             </div>
             <pre className="console-scroll min-h-0 flex-1 overflow-auto p-3 font-mono text-xs leading-6 text-console-foreground">
-              {loading ? t("loadingLog") : (open?.output ?? t("noOutput"))}
+              {loading ? t("loadingLog") : logFailed ? t("logFailed") : (open?.output ?? t("noOutput"))}
             </pre>
           </div>
         </DialogContent>

@@ -3669,7 +3669,8 @@
         "removed": "Se eliminó el certificado. Esta aplicación vuelve a usar HTTP simple.",
         "removedAlready": "El certificado ya se había eliminado.",
         "rateLimitedMethod": "Let's Encrypt ha limitado este dominio durante alrededor de una semana. Mientras tanto, elige Autofirmado o sube el tuyo.",
-        "dryRunPartial": "Listo para {ready} de {total} dominios. {count, plural, one {{names} quedará fuera del certificado.} other {{names} quedarán fuera del certificado.}}"
+        "dryRunPartial": "Listo para {ready} de {total} dominios. {count, plural, one {{names} quedará fuera del certificado.} other {{names} quedarán fuera del certificado.}}",
+        "dryRunStalled": "La simulación sigue sin terminar tras 10 minutos, así que dejamos de comprobarla. No se ha emitido nada. Vuelve a ejecutarla o configura el SSL sin ella."
       },
       "issueCertificate": "Configurar SSL",
       "description": "Nombres que llegan a esta aplicación y su certificado.",
@@ -3783,7 +3784,9 @@
         "urlHint": "Péguelo en la configuración de webhook de su repositorio. Es la dirección que su servicio Git llama cuando hay código nuevo.",
         "disabledBodyNamed": "Al activarlo se añade un webhook a tu repositorio de {provider}. Si el panel no puede añadirlo por ti, recibirás una URL y un secreto para pegarlos tú.",
         "added": "Webhook añadido al repositorio",
-        "addedBody": "El panel lo añadió en {provider} por ti, así que no hay nada que pegar. Cada push a {branch} se despliega automáticamente."
+        "addedBody": "El panel lo añadió en {provider} por ti, así que no hay nada que pegar. Cada push a {branch} se despliega automáticamente.",
+        "rotateConfirmBodyRegistered": "Se genera un nuevo secreto y el actual deja de funcionar. El panel actualiza el webhook en {provider} por ti, así que el despliegue automático sigue funcionando.",
+        "tokenTooShort": "El token de firma debe tener al menos 16 caracteres."
       },
       "cancel": "Cancelar",
       "runtime": {
@@ -3821,7 +3824,8 @@
           "loading": "Cargando ramas del repositorio…",
           "empty": "El repositorio no informó de ninguna rama: escribe el nombre.",
           "error": "No se pudieron cargar las ramas del repositorio. Escribe el nombre.",
-          "unlinked": "Esta aplicación no tiene una cuenta de Git operativa, así que no se pueden listar las ramas. Vuelve a conectarla en la página de la aplicación."
+          "unlinked": "Esta aplicación no tiene una cuenta de Git operativa, así que no se pueden listar las ramas. Vuelve a conectarla en la página de la aplicación.",
+          "missing": "Esta rama ya no está en el repositorio, así que el próximo despliegue fallará. Elige otra rama."
         },
         "title": "Qué ejecuta un despliegue",
         "subtitle": "La rama que se descarga y los comandos que construyen la aplicación después."
@@ -3845,7 +3849,8 @@
         "title": "Historial de despliegues",
         "subtitle": "Todos los despliegues, del más reciente al más antiguo. Abre uno para leer su registro.",
         "busy": "Ya hay un despliegue en curso. Espera a que termine.",
-        "pushStarted": "Nuevo despliegue iniciado por un push a {branch}."
+        "pushStarted": "Nuevo despliegue iniciado por un push a {branch}.",
+        "loadFailed": "No se pudieron cargar el historial de despliegues ni los ajustes."
       },
       "tabs": {
         "history": "Historial",

@@ -62,6 +62,16 @@ test("only a real attempt that failed says anything", () => {
     branchFieldNotice({ application: { ...LINKED, git_account_missing: true }, state: "ready" }),
     "unlinked",
   );
+  // What the API actually sends: deleting the account nulls the id.
+  assert.equal(
+    branchFieldNotice({ application: { ...LINKED, git_account_id: null, git_account_missing: true }, state: "idle" }),
+    "unlinked",
+  );
+});
+
+test("a saved branch the repository no longer has is flagged", () => {
+  assert.equal(branchFieldNotice({ application: LINKED, state: "ready", branches: ["main"], current: "release/2.0" }), "missing");
+  assert.equal(branchFieldNotice({ application: LINKED, state: "ready", branches: [{ name: "main" }], current: "main" }), null);
 });
 
 test("the saved branch survives being deleted upstream", () => {

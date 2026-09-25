@@ -92,7 +92,7 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
   const branchesState = linked ? (resolved?.state ?? "loading") : "idle";
   const branches = resolved?.branches ?? [];
   const mode = branchFieldMode({ application, state: branchesState, branches });
-  const notice = branchFieldNotice({ application, state: branchesState });
+  const notice = branchFieldNotice({ application, state: branchesState, branches, current: settings.branch });
 
   const form = useForm({
     resolver: zodResolver(deploySettingsFormSchema),
@@ -155,6 +155,10 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
     "{path}": application?.document_root,
     "{branch}": branchNow || "main",
     "{domain}": application?.domain,
+    // What the deploy substitutes: the bare `php` command on a site without a
+    // version, otherwise that version's binary, whose path depends on the web
+    // server — so it is named rather than guessed.
+    "{php}": application?.php_version ? `PHP ${application.php_version}` : "php",
   };
 
   async function save(values) {
@@ -229,8 +233,8 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
                    * one. Rewriting this card onto Row dropped the distinction
                    * entirely and made all four muted.
                    */
-                  hint={notice && notice !== "unlinked" ? t(`branchNotice.${notice}`) : t("branchHint")}
-                  error={notice === "unlinked" ? t("branchNotice.unlinked") : undefined}
+                  hint={notice && notice !== "unlinked" && notice !== "missing" ? t(`branchNotice.${notice}`) : t("branchHint")}
+                  error={notice === "unlinked" || notice === "missing" ? t(`branchNotice.${notice}`) : undefined}
                 >
                   {/* The list when we can be sure of it, free text when we
                       cannot — see lib/applications/branch-picker.js. The one
@@ -324,9 +328,9 @@ export function DeploySettingsCard({ applicationId, application, settings, canMa
  * tokens are buttons: clicking one drops it at the cursor, so the one string
  * on this card that has to be exact never has to be typed.
  *
- * A token the panel cannot resolve (`{php}` on a site with no PHP) keeps its
- * row and simply has no value beside it. In the old stacked layout that left a
- * dangling arrow pointing at nothing.
+ * A token the panel cannot resolve keeps its row and simply has no value
+ * beside it. In the old stacked layout that left a dangling arrow pointing at
+ * nothing.
  */
 function TokenList({ label, tokens, values, onInsert }) {
   return (

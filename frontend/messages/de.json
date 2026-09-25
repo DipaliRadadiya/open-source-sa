@@ -3669,7 +3669,8 @@
         "removed": "Das Zertifikat wurde entfernt. Diese Anwendung läuft wieder über einfaches HTTP.",
         "removedAlready": "Das Zertifikat wurde bereits entfernt.",
         "rateLimitedMethod": "Let's Encrypt hat diese Domain für etwa eine Woche gedrosselt. Wählen Sie in der Zwischenzeit „Selbst signiert“ oder laden Sie ein eigenes hoch.",
-        "dryRunPartial": "Bereit für {ready} von {total} Domains. {count, plural, one {{names} wird nicht in das Zertifikat aufgenommen.} other {{names} werden nicht in das Zertifikat aufgenommen.}}"
+        "dryRunPartial": "Bereit für {ready} von {total} Domains. {count, plural, one {{names} wird nicht in das Zertifikat aufgenommen.} other {{names} werden nicht in das Zertifikat aufgenommen.}}",
+        "dryRunStalled": "Der Testlauf ist nach 10 Minuten noch nicht fertig, deshalb prüfen wir nicht weiter. Es wurde nichts ausgestellt. Starten Sie ihn erneut oder richten Sie SSL ohne ihn ein."
       },
       "issueCertificate": "SSL einrichten",
       "description": "Namen, die diese Anwendung erreichen, und ihr Zertifikat.",
@@ -3783,7 +3784,9 @@
         "urlHint": "Fügen Sie dies in die Webhook-Einstellungen Ihres Repositorys ein. Es ist die Adresse, die Ihr Git-Dienst bei neuem Code aufruft.",
         "disabledBodyNamed": "Beim Aktivieren wird Ihrem {provider}-Repository ein Webhook hinzugefügt. Kann das Panel ihn nicht selbst eintragen, erhalten Sie eine URL und ein Secret zum Einfügen.",
         "added": "Webhook zum Repository hinzugefügt",
-        "addedBody": "Das Panel hat ihn für Sie bei {provider} eingetragen, es gibt also nichts einzufügen. Ein Push auf {branch} wird automatisch deployt."
+        "addedBody": "Das Panel hat ihn für Sie bei {provider} eingetragen, es gibt also nichts einzufügen. Ein Push auf {branch} wird automatisch deployt.",
+        "rotateConfirmBodyRegistered": "Ein neues Secret wird erzeugt und das aktuelle funktioniert nicht mehr. Das Panel aktualisiert den Webhook bei {provider} für Sie, das automatische Deployen läuft also weiter.",
+        "tokenTooShort": "Das Signing-Token muss mindestens 16 Zeichen lang sein."
       },
       "cancel": "Abbrechen",
       "runtime": {
@@ -3821,7 +3824,8 @@
           "loading": "Branches werden aus dem Repository geladen…",
           "empty": "Das Repository hat keine Branches gemeldet — tippen Sie den Namen stattdessen ein.",
           "error": "Die Branches konnten nicht aus dem Repository geladen werden. Tippen Sie den Namen stattdessen ein.",
-          "unlinked": "Diese Anwendung hat kein funktionierendes Git-Konto, daher lassen sich keine Branches auflisten. Verbinden Sie sie auf der Anwendungsseite neu."
+          "unlinked": "Diese Anwendung hat kein funktionierendes Git-Konto, daher lassen sich keine Branches auflisten. Verbinden Sie sie auf der Anwendungsseite neu.",
+          "missing": "Dieser Branch ist nicht mehr im Repository, daher schlägt das nächste Deployment fehl. Wählen Sie einen anderen Branch."
         },
         "title": "Was bei einer Bereitstellung läuft",
         "subtitle": "Der Branch, der ausgecheckt wird, und die Befehle, die die Anwendung danach bauen."
@@ -3845,7 +3849,8 @@
         "title": "Deploy-Verlauf",
         "subtitle": "Jedes Deployment, neueste zuerst. Öffnen Sie eines, um sein Build-Protokoll zu lesen.",
         "busy": "Es läuft bereits ein Deployment. Warten Sie, bis es fertig ist.",
-        "pushStarted": "Neues Deployment durch einen Push auf {branch} gestartet."
+        "pushStarted": "Neues Deployment durch einen Push auf {branch} gestartet.",
+        "loadFailed": "Der Deploy-Verlauf und die Einstellungen konnten nicht geladen werden."
       },
       "tabs": {
         "history": "Verlauf",

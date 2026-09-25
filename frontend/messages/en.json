@@ -3669,7 +3669,8 @@
         "removed": "The certificate was removed. This application is back on plain HTTP.",
         "removedAlready": "The certificate had already been removed.",
         "rateLimitedMethod": "Let's Encrypt has rate-limited this domain for about a week. Choose Self-signed or upload your own in the meantime.",
-        "dryRunPartial": "Ready for {ready} of {total} domains. {count, plural, one {{names} will be left off the certificate.} other {{names} will be left off the certificate.}}"
+        "dryRunPartial": "Ready for {ready} of {total} domains. {count, plural, one {{names} will be left off the certificate.} other {{names} will be left off the certificate.}}",
+        "dryRunStalled": "The dry run is still not finished after 10 minutes, so we stopped checking. Nothing was issued. Run it again, or set up SSL without it."
       },
       "issueCertificate": "Set up SSL",
       "description": "Names that reach this application, and its certificate.",
@@ -3783,7 +3784,9 @@
         "urlHint": "Paste this into your repository's webhook settings. It is the address your Git service calls when there is new code.",
         "disabledBodyNamed": "Turning this on adds a webhook to your {provider} repository. If the panel can't add it for you, you'll get a URL and secret to paste instead.",
         "added": "Webhook added to the repository",
-        "addedBody": "The panel added it to {provider} for you, so there is nothing to paste. Pushing to {branch} deploys automatically."
+        "addedBody": "The panel added it to {provider} for you, so there is nothing to paste. Pushing to {branch} deploys automatically.",
+        "rotateConfirmBodyRegistered": "A new secret is generated and the current one stops working. The panel updates the webhook in {provider} for you, so deploy on push keeps working.",
+        "tokenTooShort": "The signing token must be at least 16 characters."
       },
       "cancel": "Cancel",
       "runtime": {
@@ -3821,7 +3824,8 @@
           "loading": "Loading branches from the repository…",
           "empty": "The repository reported no branches — type the name instead.",
           "error": "Couldn't load branches from the repository. Type the name instead.",
-          "unlinked": "This application has no working Git account, so branches can't be listed. Reconnect it on the application page."
+          "unlinked": "This application has no working Git account, so branches can't be listed. Reconnect it on the application page.",
+          "missing": "This branch is no longer in the repository, so the next deploy will fail. Pick another branch."
         },
         "title": "What a deploy runs",
         "subtitle": "The branch to check out, and the commands that build the application afterwards."
@@ -3845,7 +3849,8 @@
         "title": "Deploy history",
         "subtitle": "Every deploy, newest first. Open one to read its build log.",
         "busy": "A deployment is already running. Wait for it to finish.",
-        "pushStarted": "New deploy started from a push to {branch}."
+        "pushStarted": "New deploy started from a push to {branch}.",
+        "loadFailed": "The deploy history and settings could not be loaded."
       },
       "tabs": {
         "history": "History",

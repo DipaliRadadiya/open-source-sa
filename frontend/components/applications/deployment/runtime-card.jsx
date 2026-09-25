@@ -62,9 +62,8 @@ export function RuntimeCard({ application, canManage }) {
       form.reset(values);
       router.refresh();
     } catch (error) {
-      handleValidationError(error, form, () =>
-        toast.error(apiMessage(error, t("saveFailed"))),
-      );
+      if (error.response?.data?.errors) handleValidationError(error, form);
+      else toast.error(apiMessage(error, t("saveFailed")));
     } finally {
       setSaving(false);
     }

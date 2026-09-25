@@ -30,6 +30,9 @@ import {
 // seconds; the certbot stage is a round trip to the CA and takes a good deal
 // longer, which is why the stage is named while it runs.
 const DRY_RUN_POLL_MS = 3000;
+// The same ten minutes the SSL card allows an issuance. A run still going
+// after that has lost its worker, and polling on costs 20 requests a minute.
+const DRY_RUN_POLL_LIMIT = (10 * 60 * 1000) / DRY_RUN_POLL_MS;
 
 const FALLBACK_TYPES = [
   { type: "letsencrypt", available: true, recommended: true },
@@ -106,9 +109,10 @@ export function IssueCertDialog({
   // state, not a pending one.
   const [dryRun, setDryRun] = useState(null);
   const [starting, setStarting] = useState(false);
+  const [stalled, setStalled] = useState(false);
 
   const selected = types.find((entry) => entry.type === type);
-  const dryRunning = starting || dryRun?.status === "running";
+  const dryRunning = starting || (dryRun?.status === "running" && !stalled);
   // A pass needs only one name to pass. The rest are issued without, so the
   // headline has to say which names the certificate will not cover.
   const leftOff = dryRun?.status === "passed" ? (dryRun.domains ?? []).filter((entry) => !entry.ok) : [];
@@ -120,6 +124,7 @@ export function IssueCertDialog({
     setRefusals([]);
     setDryRun(null);
     setStarting(false);
+    setStalled(false);
     setSubmitting(false);
   }
 
@@ -135,9 +140,15 @@ export function IssueCertDialog({
   // `open` being a dependency, and the `live` flag drops a reply that lands
   // after that.
   useEffect(() => {
-    if (!open || dryRun?.status !== "running") return undefined;
+    if (!open || dryRun?.status !== "running" || stalled) return undefined;
     let live = true;
+    let ticks = 0;
     const timer = setInterval(async () => {
+      if (++ticks > DRY_RUN_POLL_LIMIT) {
+        clearInterval(timer);
+        if (live) setStalled(true);
+        return;
+      }
       try {
         const next = await fetchCertificateDryRun(appId);
         if (live) setDryRun(next);
@@ -149,10 +160,11 @@ export function IssueCertDialog({
       live = false;
       clearInterval(timer);
     };
-  }, [open, dryRun?.status, appId]);
+  }, [open, dryRun?.status, appId, stalled]);
 
   async function runDryRun() {
     setStarting(true);
+    setStalled(false);
     // Last run's verdict is cleared first. Leaving it on screen beside a fresh
     // spinner shows a stale answer next to the question that supersedes it.
     setDryRun(null);
@@ -352,6 +364,10 @@ export function IssueCertDialog({
             <p className="text-sm text-muted-foreground">
               {t(`ssl.dryRunStage_${dryRun?.stage ?? "reachability"}`)}
             </p>
+          ) : null}
+
+          {stalled ? (
+            <Caution size="md">{t("ssl.dryRunStalled")}</Caution>
           ) : null}
 
           {dryRun && dryRun.status !== "running" ? (

@@ -3669,7 +3669,8 @@
         "removed": "Le certificat a été supprimé. Cette application repasse en HTTP simple.",
         "removedAlready": "Le certificat avait déjà été supprimé.",
         "rateLimitedMethod": "Let's Encrypt a limité le débit pour ce domaine pendant environ une semaine. En attendant, choisissez Auto-signé ou téléversez le vôtre.",
-        "dryRunPartial": "Domaines prêts : {ready} sur {total}. {count, plural, one {{names} ne figurera pas sur le certificat.} other {{names} ne figureront pas sur le certificat.}}"
+        "dryRunPartial": "Domaines prêts : {ready} sur {total}. {count, plural, one {{names} ne figurera pas sur le certificat.} other {{names} ne figureront pas sur le certificat.}}",
+        "dryRunStalled": "La simulation n'est toujours pas terminée après 10 minutes, nous avons donc arrêté de vérifier. Rien n'a été émis. Relancez-la, ou configurez le SSL sans elle."
       },
       "issueCertificate": "Configurer le SSL",
       "description": "Noms qui atteignent cette application, et son certificat.",
@@ -3783,7 +3784,9 @@
         "urlHint": "Collez ceci dans les paramètres webhook de votre dépôt. C’est l’adresse que votre service Git appelle lorsqu’il y a du nouveau code.",
         "disabledBodyNamed": "L’activer ajoute un webhook à votre dépôt {provider}. Si le panneau ne peut pas l’ajouter pour vous, vous obtiendrez une URL et un secret à coller.",
         "added": "Webhook ajouté au dépôt",
-        "addedBody": "Le panneau l'a ajouté pour vous sur {provider} : il n'y a rien à coller. Chaque push sur {branch} est déployé automatiquement."
+        "addedBody": "Le panneau l'a ajouté pour vous sur {provider} : il n'y a rien à coller. Chaque push sur {branch} est déployé automatiquement.",
+        "rotateConfirmBodyRegistered": "Un nouveau secret est généré et l'ancien cesse de fonctionner. Le panneau met à jour le webhook dans {provider} pour vous, le déploiement automatique continue donc de fonctionner.",
+        "tokenTooShort": "Le jeton de signature doit comporter au moins 16 caractères."
       },
       "cancel": "Annuler",
       "runtime": {
@@ -3821,7 +3824,8 @@
           "loading": "Chargement des branches depuis le dépôt…",
           "empty": "Le dépôt n'a signalé aucune branche — saisissez le nom à la place.",
           "error": "Impossible de charger les branches depuis le dépôt. Saisissez le nom à la place.",
-          "unlinked": "Cette application n'a pas de compte Git fonctionnel, donc les branches ne peuvent pas être listées. Reconnectez-la sur la page de l'application."
+          "unlinked": "Cette application n'a pas de compte Git fonctionnel, donc les branches ne peuvent pas être listées. Reconnectez-la sur la page de l'application.",
+          "missing": "Cette branche n'existe plus dans le dépôt, le prochain déploiement échouera donc. Choisissez une autre branche."
         },
         "title": "Ce qu’exécute un déploiement",
         "subtitle": "La branche extraite, et les commandes qui construisent l'application ensuite."
@@ -3845,7 +3849,8 @@
         "title": "Historique des déploiements",
         "subtitle": "Chaque déploiement, du plus récent au plus ancien. Ouvrez-en un pour lire son journal de build.",
         "busy": "Un déploiement est déjà en cours. Attendez qu'il se termine.",
-        "pushStarted": "Nouveau déploiement lancé par un push sur {branch}."
+        "pushStarted": "Nouveau déploiement lancé par un push sur {branch}.",
+        "loadFailed": "L'historique et les paramètres de déploiement n'ont pas pu être chargés."
       },
       "tabs": {
         "history": "Historique",

@@ -61,3 +61,17 @@ test("domain rows bleed to the card's own padding", () => {
   assert.match(section, /-mx-\(--card-spacing\) -mb-\(--card-spacing\) divide-y/);
   assert.doesNotMatch(section, /-mx-6 -mb-6/);
 });
+
+test("the Make primary confirm wraps the names it asks about instead of cutting them", () => {
+  const section = read("components/applications/domains/domains-section.jsx");
+  assert.match(section, /font-mono text-sm break-all text-muted-foreground">\s*\{promoteTarget\.from\}/);
+  assert.match(section, /font-mono text-sm break-all">\s*\{promoteTarget\?\.domain\}/);
+});
+
+test("the dry-run poll gives up after ten minutes and says so", () => {
+  const dialog = read("components/applications/domains/issue-cert-dialog.jsx");
+  assert.match(dialog, /const DRY_RUN_POLL_LIMIT = \(10 \* 60 \* 1000\) \/ DRY_RUN_POLL_MS;/);
+  assert.match(dialog, /if \(\+\+ticks > DRY_RUN_POLL_LIMIT\) \{\s*clearInterval\(timer\);\s*if \(live\) setStalled\(true\);/);
+  assert.match(dialog, /t\("ssl\.dryRunStalled"\)/);
+  for (const l of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) assert.ok(JSON.parse(read(`messages/${l}.json`)).applications.domains.ssl.dryRunStalled, l);
+});

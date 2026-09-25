@@ -3669,7 +3669,8 @@
         "removed": "O certificado foi removido. Esta aplicação voltou a HTTP simples.",
         "removedAlready": "O certificado já tinha sido removido.",
         "rateLimitedMethod": "A Let's Encrypt limitou este domínio por cerca de uma semana. Enquanto isso, escolha Autoassinado ou envie o seu próprio.",
-        "dryRunPartial": "Pronto para {ready} de {total} domínios. {count, plural, one {{names} ficará fora do certificado.} other {{names} ficarão fora do certificado.}}"
+        "dryRunPartial": "Pronto para {ready} de {total} domínios. {count, plural, one {{names} ficará fora do certificado.} other {{names} ficarão fora do certificado.}}",
+        "dryRunStalled": "A simulação ainda não terminou após 10 minutos, então paramos de verificar. Nada foi emitido. Execute-a novamente ou configure o SSL sem ela."
       },
       "issueCertificate": "Configurar SSL",
       "description": "Nomes que acessam esta aplicação e seu certificado.",
@@ -3783,7 +3784,9 @@
         "urlHint": "Cole isso nas configurações de webhook do seu repositório. É o endereço que seu serviço de Git chama quando há novo código.",
         "disabledBodyNamed": "Ativar isso adiciona um webhook ao seu repositório no {provider}. Se o painel não conseguir adicioná-lo por você, você receberá uma URL e um secret para colar.",
         "added": "Webhook adicionado ao repositório",
-        "addedBody": "O painel o adicionou no {provider} para você, então não há nada para colar. Cada push para {branch} faz o deploy automaticamente."
+        "addedBody": "O painel o adicionou no {provider} para você, então não há nada para colar. Cada push para {branch} faz o deploy automaticamente.",
+        "rotateConfirmBodyRegistered": "Um novo segredo é gerado e o atual para de funcionar. O painel atualiza o webhook no {provider} para você, então o auto-deploy continua funcionando.",
+        "tokenTooShort": "O token de assinatura deve ter pelo menos 16 caracteres."
       },
       "cancel": "Cancelar",
       "runtime": {
@@ -3821,7 +3824,8 @@
           "loading": "Carregando branches do repositório…",
           "empty": "O repositório não reportou branches — digite o nome.",
           "error": "Não foi possível carregar as branches do repositório. Digite o nome.",
-          "unlinked": "Esta aplicação não tem uma conta Git funcional, então as branches não podem ser listadas. Reconecte na página da aplicação."
+          "unlinked": "Esta aplicação não tem uma conta Git funcional, então as branches não podem ser listadas. Reconecte na página da aplicação.",
+          "missing": "Esta branch não está mais no repositório, então o próximo deploy vai falhar. Escolha outra branch."
         },
         "title": "O que uma implantação executa",
         "subtitle": "O branch que é baixado e os comandos que constroem a aplicação depois."
@@ -3845,7 +3849,8 @@
         "title": "Histórico de deploy",
         "subtitle": "Cada deploy, mais recente primeiro. Abra um para ler seu log de build.",
         "busy": "Já há uma implantação em andamento. Aguarde terminar.",
-        "pushStarted": "Novo deploy iniciado por um push para {branch}."
+        "pushStarted": "Novo deploy iniciado por um push para {branch}.",
+        "loadFailed": "Não foi possível carregar o histórico e as configurações de deploy."
       },
       "tabs": {
         "history": "Histórico",

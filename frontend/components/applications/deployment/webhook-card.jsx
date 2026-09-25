@@ -42,6 +42,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// The backend's `min:16` on a webhook secret.
+const TOKEN_MIN = 16;
+
 function ReadOnlyField({ label, value, hint, secret = false }) {
   const tc = useTranslations("common");
   const [reveal, setReveal] = useState(false);
@@ -152,6 +155,10 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
   const activeProvider = providers.find((p) => p.name === webhook.provider) ?? null;
   const wantsToken = selectedProvider?.secret_source === "either";
   const verifiedBySignature = webhook.verification === "signature";
+  // The API refuses a secret under 16 characters; said before sending, beside
+  // the field, rather than as a toast after the round trip.
+  const typedToken = gitlabToken.trim();
+  const tokenTooShort = typedToken.length > 0 && typedToken.length < TOKEN_MIN;
 
   async function save(payload, { successKey, failKey }) {
     setBusy(true);
@@ -275,8 +282,12 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
            * chosen first; that picker stays in the body where the choice is.
            */
           <CardAction>
-            <ReasonTooltip reason={!providerName && !busy ? tc("chooseAnOption") : null}>
-              <Button onClick={enable} disabled={!providerName || busy}>
+            <ReasonTooltip
+              reason={
+                busy ? null : !providerName ? tc("chooseAnOption") : wantsToken && tokenTooShort ? t("webhook.tokenTooShort") : null
+              }
+            >
+              <Button onClick={enable} disabled={!providerName || busy || (wantsToken && tokenTooShort)}>
                 {busy ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
@@ -329,12 +340,12 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                       className="w-full max-w-xs font-mono text-xs"
                     />
                     <ReasonTooltip
-                      reason={!gitlabToken.trim() && !busy ? tc("enterAValue") : null}
+                      reason={busy ? null : !typedToken ? tc("enterAValue") : tokenTooShort ? t("webhook.tokenTooShort") : null}
                     >
                       <Button
                         size="sm"
                         onClick={applyToken}
-                        disabled={!gitlabToken.trim() || busy}
+                        disabled={!typedToken || tokenTooShort || busy}
                       >
                         {busy ? <Loader2 className="size-4 animate-spin" /> : null}
                         {t("webhook.saveToken")}
@@ -535,7 +546,11 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
         onOpenChange={setRotateOpen}
         icon={RefreshCw}
         title={t("webhook.rotateConfirmTitle")}
-        description={t("webhook.rotateConfirmBody")}
+        description={
+          webhook.registered
+            ? t("webhook.rotateConfirmBodyRegistered", { provider: activeProvider?.title ?? webhook.provider ?? "" })
+            : t("webhook.rotateConfirmBody")
+        }
         cancelLabel={t("cancel")}
         confirmLabel={busy ? t("webhook.rotating") : t("webhook.rotate")}
         pending={busy}
