@@ -184,13 +184,8 @@ class ApplicationResource extends JsonResource
             // said so: the site looked exactly like a public-repository one
             // until the next deploy ran `git remote add origin ""` and failed.
             //
-            // Derived, not stored — an account-sourced site is the one with a
-            // `repository` and no `repository_url`, so a public-URL site is
-            // never mistaken for a broken one.
-            'git_account_missing' => $this->site_type === 'git'
-                && $this->git_account_id === null
-                && $this->repository !== null
-                && $this->repository_url === null,
+            // Derived, not stored — see Application::gitAccountMissing().
+            'git_account_missing' => $this->resource->gitAccountMissing(),
 
             // Deploy-on-push. The secret is shown because the user has to paste
             // it into their repository settings and will come back for it — the

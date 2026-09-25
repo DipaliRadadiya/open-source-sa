@@ -106,4 +106,7 @@ return [
         'writable' => 'Otras cuentas pueden escribir en la carpeta del sitio :path, así que un bloqueo no se mantendría. Quita el permiso de escritura del grupo y público (por ejemplo `chmod 755`) y vuelve a intentarlo.',
         'locks_out_user' => 'Bloquear la carpeta del sitio :path impediría que el usuario de este sitio la abra: sus permisos solo le dan acceso como propietario. Da al grupo de la carpeta permiso de lectura y apertura (por ejemplo `chmod 750`), asegúrate de que el usuario esté en ese grupo y vuelve a intentarlo.',
     ],
+
+    // A git site whose account was disconnected: no credential, no URL.
+    'git_account_missing' => 'Esta cuenta de git ya no está conectada, así que no hay desde dónde desplegar. Vuelve a conectarla en la pantalla de Despliegue y despliega de nuevo.',
 ];

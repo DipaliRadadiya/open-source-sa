@@ -106,4 +106,7 @@ return [
         'writable' => 'The site folder :path can be written to by other accounts, so a lock would not hold. Remove the group and public write permission (for example `chmod 755`), then try again.',
         'locks_out_user' => 'Locking the site folder :path would stop this site\'s user from opening it: its permissions give the user access only as its owner. Give the folder\'s group read and open permission (for example `chmod 750`) and make sure the user is in that group, then try again.',
     ],
+
+    // A git site whose account was disconnected: no credential, no URL.
+    'git_account_missing' => 'This git account is no longer connected, so there is nothing to deploy from. Reconnect it on the Deployment screen, then deploy again.',
 ];

@@ -106,4 +106,7 @@ return [
         'writable' => 'D\'autres comptes peuvent écrire dans le dossier du site :path, un verrou ne tiendrait donc pas. Retirez le droit d\'écriture du groupe et de tous (par exemple `chmod 755`), puis réessayez.',
         'locks_out_user' => 'Verrouiller le dossier du site :path empêcherait l\'utilisateur de ce site de l\'ouvrir : ses permissions ne lui donnent accès qu\'en tant que propriétaire. Donnez au groupe du dossier le droit de lecture et d\'ouverture (par exemple `chmod 750`), vérifiez que l\'utilisateur fait partie de ce groupe, puis réessayez.',
     ],
+
+    // A git site whose account was disconnected: no credential, no URL.
+    'git_account_missing' => 'Ce compte git n’est plus connecté : il n’y a rien à partir de quoi déployer. Reconnectez-le depuis l’écran Déploiement, puis déployez à nouveau.',
 ];

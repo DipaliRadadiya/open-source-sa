@@ -157,6 +157,7 @@ class ApplicationController extends Controller
     public function deploy(Application $application): JsonResponse
     {
         abort_unless($application->site_type === 'git', 422, __('errors/application.not_a_git_application'));
+        abort_if($application->gitAccountMissing(), 422, __('errors/application.git_account_missing'));
 
         // Records like any other deploy. This endpoint predates the
         // Deployment screen and stays for compatibility, but a deploy that

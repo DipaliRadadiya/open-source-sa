@@ -76,6 +76,8 @@ class DeploymentController extends Controller
      */
     public function store(Application $application, DeploymentRecorder $recorder): JsonResponse
     {
+        $this->refuseWithoutAccount($application);
+
         $deployment = $recorder->open($application, DeploymentTrigger::Manual, Auth::id());
 
         DeployApplication::dispatch($application->id, Auth::id(), $deployment->id);
@@ -96,6 +98,7 @@ class DeploymentController extends Controller
     public function redeploy(Application $application, Deployment $deployment, DeploymentRecorder $recorder): JsonResponse
     {
         abort_unless($deployment->application_id === $application->id, 404);
+        $this->refuseWithoutAccount($application);
 
         $fresh = $recorder->open($application, DeploymentTrigger::Redeploy, Auth::id());
 
@@ -194,5 +197,17 @@ class DeploymentController extends Controller
         $scripts = (array) config('server.deployments.default_scripts', []);
 
         return (string) ($scripts[$application->serving_profile] ?? $scripts['php'] ?? '');
+    }
+
+    /**
+     * A site whose git account was disconnected has no credential and no URL
+     * to fetch from, so its deploy could only fail on `git remote add origin
+     * ""`. Refused here, before a row and a job are made, with the one thing
+     * the user can do about it. The Deployment screen disables the button too;
+     * this is for every caller that is not the screen.
+     */
+    private function refuseWithoutAccount(Application $application): void
+    {
+        abort_if($application->gitAccountMissing(), 422, __('errors/application.git_account_missing'));
     }
 }

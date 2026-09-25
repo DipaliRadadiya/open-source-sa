@@ -952,7 +952,7 @@ Re-run provisioning after a failure. Dispatches `ProvisionApplication` job.
 ### POST `/applications/{application}/deploy`
 **Permission:** `app_deployment` (manage)
 
-Trigger a git deploy (git-deploy apps only). `422` for one-click types.
+Trigger a git deploy (git-deploy apps only). `422` for one-click types, and when the site's git account was disconnected (`git_account_missing`).
 
 **Response `202`:** `{"application": {"id": 1, "status": "deploying"}}`
 
@@ -1499,6 +1499,8 @@ Start a deploy.
 
 **Response `202`:** `{"deployment": {"id": 13, "status": "queued", "in_flight": true, …}}`
 
+**Response `422`** when the site's git account was disconnected (`git_account_missing: true`): `{"message": "This git account is no longer connected, …"}` (translated). Nothing is queued and no history row is made. Relink with `PUT /applications/{application}/git-account`, then deploy again.
+
 ---
 
 ### GET `/applications/{application}/deployments/{deployment}`
@@ -1514,6 +1516,8 @@ The same deployment object as the list, plus **`output`** — the full build log
 Re-run the same deployment (re-fetches current branch tip, re-runs build script).
 
 **Response `202`:** `{"deployment": {"id": 14, "status": "pending"}}`
+
+**Response `422`** when the site's git account was disconnected (`git_account_missing: true`): `{"message": "This git account is no longer connected, …"}` (translated). Nothing is queued and no history row is made. Relink with `PUT /applications/{application}/git-account`, then deploy again.
 
 ---
 
@@ -1598,6 +1602,14 @@ looked exactly like a public-repository one until the next deploy ran
 Derived, never stored: an account-sourced site is the one with a `repository`
 and no `repository_url`, so a public-URL site is never flagged. Show a
 re-integrate prompt on this, pointing at the endpoint above.
+
+While it is `true`, every deploy path refuses: `POST …/deployments`,
+`…/redeploy` and the older `POST …/deploy` answer **422** with a translated
+`message`, and a push delivery answers `202 {"deployed": false, "reason":
+"git_account_missing"}` (a success, so the provider does not disable the
+hook). Disconnecting an account that applications still use is now refused
+(see `DELETE /integrations/git/accounts/{account}`), so this state only
+remains on sites stranded before that.
 
 ---
 
@@ -5592,6 +5604,13 @@ Verify the token is still valid with the provider.
 **Permission:** `git` (manage)
 
 **Response `200`:** `{"deleted": true}`
+
+**Response `422`** while any application still deploys with the account — deleting it would leave those sites unable to deploy. A validation error on `git_account` that names them (first 5, then a count):
+```json
+{"message": "Cannot disconnect Work GitHub — it is still used by Blog, Shop. Link those applications to another account first.",
+ "errors": {"git_account": ["Cannot disconnect Work GitHub — it is still used by Blog, Shop. …"]}}
+```
+Show `message` in the delete dialog. Nothing is deleted and nothing is logged.
 
 ---
 

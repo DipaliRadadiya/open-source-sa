@@ -106,4 +106,7 @@ return [
         'writable' => 'Andere Konten können in den Website-Ordner :path schreiben, daher würde eine Sperre nicht halten. Entferne die Schreibrechte für Gruppe und Alle (zum Beispiel `chmod 755`) und versuche es erneut.',
         'locks_out_user' => 'Das Sperren des Website-Ordners :path würde den Benutzer dieser Website aussperren: Seine Rechte geben ihm nur als Eigentümer Zugriff. Gib der Gruppe des Ordners Lese- und Öffnungsrechte (zum Beispiel `chmod 750`), stelle sicher, dass der Benutzer in dieser Gruppe ist, und versuche es erneut.',
     ],
+
+    // A git site whose account was disconnected: no credential, no URL.
+    'git_account_missing' => 'Dieses Git-Konto ist nicht mehr verbunden, daher gibt es nichts zum Bereitstellen. Verbinden Sie es auf der Seite „Bereitstellung“ erneut und stellen Sie dann erneut bereit.',
 ];

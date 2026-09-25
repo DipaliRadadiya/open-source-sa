@@ -106,4 +106,7 @@ return [
         'writable' => 'Outras contas podem escrever na pasta do site :path, por isso um bloqueio não se manteria. Retire a permissão de escrita do grupo e de todos (por exemplo `chmod 755`) e tente novamente.',
         'locks_out_user' => 'Bloquear a pasta do site :path impediria o utilizador deste site de a abrir: as permissões só lhe dão acesso como proprietário. Dê ao grupo da pasta permissão de leitura e abertura (por exemplo `chmod 750`), confirme que o utilizador pertence a esse grupo e tente novamente.',
     ],
+
+    // A git site whose account was disconnected: no credential, no URL.
+    'git_account_missing' => 'Esta conta git não está mais conectada, então não há de onde implantar. Reconecte-a na tela de Implantação e implante novamente.',
 ];

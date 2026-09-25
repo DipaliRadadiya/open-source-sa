@@ -70,6 +70,14 @@ class ReceiveDeployWebhook
             return ['deployed' => false, 'reason' => 'not_a_git_application'];
         }
 
+        // Its account was disconnected: a deploy would have no credential and
+        // no URL. Authentic, just nothing we can do — so a success, like the
+        // checks around it, or the provider disables the hook and it stays
+        // off after the account is reconnected.
+        if ($application->gitAccountMissing()) {
+            return ['deployed' => false, 'reason' => 'git_account_missing'];
+        }
+
         if (! $driver->isPush($request)) {
             return ['deployed' => false, 'reason' => 'not_a_push'];
         }

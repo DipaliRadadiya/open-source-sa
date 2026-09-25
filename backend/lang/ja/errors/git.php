@@ -6,4 +6,8 @@ return [
     'unsupported_provider' => 'プロバイダー :provider はサポートされていません。',
     'invalid_host' => 'セルフホストインスタンスの有効な https:// URL を入力してください。',
     'blocked_host' => 'このアドレスは許可されていません。',
+
+    // Disconnecting an account that applications still deploy with.
+    'in_use' => ':name を切断できません — :applications がまだこのアカウントを使用しています。先にそれらのアプリケーションを別のアカウントに紐付けてください。',
+    'and_more' => '他 :count 件',
 ];

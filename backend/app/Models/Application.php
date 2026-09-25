@@ -126,6 +126,23 @@ class Application extends Model
     }
 
     /**
+     * Deployed from a git account that is no longer connected.
+     *
+     * An account-sourced site is the one with a `repository` and no
+     * `repository_url`, so a public-URL site is never mistaken for a broken
+     * one. Such a site cannot deploy: its remote would be `""`. The resource
+     * reports it and every path that starts a deploy refuses on it, so both
+     * read this one rule.
+     */
+    public function gitAccountMissing(): bool
+    {
+        return $this->site_type === 'git'
+            && $this->git_account_id === null
+            && $this->repository !== null
+            && $this->repository_url === null;
+    }
+
+    /**
      * Every name this application answers to.
      *
      * `$this->domain` remains the primary one — the vhost filename and the log
