@@ -788,7 +788,15 @@
     "rootFormat": "Verwenden Sie nur Buchstaben, Zahlen, Punkte, Bindestriche, Unterstriche und Schrägstriche.",
     "rootTraversal": "Der Ordner darf kein .. enthalten",
     "noEnvironmentLine": "environment= setzt das Panel für diesen Worker bereits. Eine zweite Zeile verhindert den Start.",
-    "sftpAuthRequired": "Geben Sie ein Passwort oder einen privaten Schlüssel ein."
+    "sftpAuthRequired": "Geben Sie ein Passwort oder einen privaten Schlüssel ein.",
+    "maxLines100": "Höchstens 100 Zeilen",
+    "rangeSeconds3600": "Geben Sie 0 bis 3600 Sekunden ein.",
+    "rangeInputTime": "Geben Sie -1 für kein Limit oder 0 bis 3600 Sekunden ein.",
+    "rangeInputVars": "Geben Sie eine Zahl von 100 bis 100000 ein.",
+    "rangeSession": "Geben Sie 60 bis 604800 Sekunden (7 Tage) ein.",
+    "rangeWorkers": "Geben Sie eine Zahl von 1 bis 100 ein.",
+    "rangeMaxRequests": "Geben Sie 0 bis 100000 ein. Bei 0 wird ein Worker nie neu gestartet.",
+    "pathNoTraversal": "Der Pfad darf kein .. enthalten"
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -4776,7 +4784,7 @@
         "timezonePlaceholder": "Die des Servers verwenden",
         "autoPrepend": "Datei, die vor jeder Seite läuft",
         "directives": "Zusätzliche Direktiven",
-        "directivesPlaceholder": "opcache.enable = 1"
+        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
       },
       "hints": {
         "postTooSmall": "Das ist kleiner als das Upload-Limit, Uploads dieser Größe scheitern also trotzdem.",
@@ -4787,7 +4795,7 @@
         "sessionLifetime": "Sekunden, die eine Sitzungsdatei behalten wird, bevor sie aufgeräumt werden darf.",
         "timezone": "Betrifft nur Datumsangaben, die PHP erzeugt, nicht die Serveruhr.",
         "autoPrepend": "Ein Pfad innerhalb dieser Anwendung. Leer lassen, sofern Ihnen nichts anderes gesagt wurde.",
-        "directives": "Eine pro Zeile, wie in einer php.ini. Was hier steht, gewinnt gegen die Felder oben.",
+        "directives": "Eine pro Zeile, im Format eines PHP-FPM-Pools: php_admin_value[name] = wert. Was hier steht, gewinnt gegen die Felder oben.",
         "openBasedir": "Verhindert, dass PHP Dateien außerhalb des Ordners dieser Anwendung liest oder schreibt.",
         "allowUrlFopen": "Erlaubt PHP, entfernte URLs abzurufen. Ausschalten blockiert einen verbreiteten Weg, auf dem Malware nach Hause telefoniert.",
         "upload": "Hebt auch das eigene Limit des Webservers an, der große Uploads ablehnt, bevor PHP sie sieht. Eine früher eingerichtete Anwendung übernimmt das beim ersten Speichern.",
@@ -4821,7 +4829,7 @@
         "over": "Mehr als die {total} dieses Servers",
         "legend": "{sites, plural, =0 {Keine andere Anwendung nutzt Speicher} one {Eine andere Anwendung hat {value} beansprucht} other {# andere Anwendungen haben {value} beansprucht}}",
         "equation": "{limit} × {workers} Worker = {total} bei voller Last",
-        "overDetail": "{required} erforderlich, aber dieser Server hat {total}. Senken Sie das Speicherlimit oder die Zahl der Worker."
+        "overDetail": "Alle Anwendungen zusammen brauchen {required}, aber dieser Server hat {total}. Senken Sie das Speicherlimit oder die Zahl der Worker."
       },
       "custom": "Eigene",
       "seconds": "{count} s",
@@ -4857,14 +4865,16 @@
         "remove": "{name} entfernen",
         "empty": "Nichts ist gesperrt. Jede PHP-Funktion, die auf dieser Anwendung installiert ist, darf laufen.",
         "presetsLabel": "Beginnen mit",
-        "presetsCustom": "Ihre eigene Liste."
+        "presetsCustom": "Ihre eigene Liste.",
+        "invalidName": "Nicht hinzugefügt, kein Funktionsname: {names}. Nur Buchstaben, Ziffern und _ verwenden."
       },
       "saveNote": "Beim Speichern wird der PHP-Pool dieser Anwendung neu geschrieben und neu geladen. Laufende Anfragen werden vorher beendet.",
       "tabs": {
         "basic": "Grundeinstellungen",
         "security": "Sicherheit",
         "advanced": "Erweitert",
-        "unsavedHere": "Nicht gespeicherte Änderungen in diesem Tab"
+        "unsavedHere": "Nicht gespeicherte Änderungen in diesem Tab",
+        "errorsHere": "Einstellungen in diesem Tab korrigieren"
       },
       "sections": {
         "runtime": "Laufzeit",
@@ -4900,7 +4910,8 @@
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
       "versionUnsupported": "{type} unterstützt PHP {range}. Diese Anwendung auf eine andere Version zu bringen macht sie wahrscheinlich kaputt.",
-      "presetsLabelHint": "Fertige Einstellungen, zugeschnitten auf kleine, mittlere und große Seiten. Ein Ausgangspunkt — Sie können danach jeden Wert weiterhin ändern."
+      "presetsLabelHint": "Fertige Einstellungen, zugeschnitten auf kleine, mittlere und große Seiten. Ein Ausgangspunkt — Sie können danach jeden Wert weiterhin ändern.",
+      "fixErrors": "Einige Einstellungen müssen korrigiert werden. Der betroffene Tab ist markiert."
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
@@ -5821,7 +5832,15 @@
       "refreshFound": "Speicherliste aktualisiert.",
       "refreshNoneNew": "Noch kein neuer Speicher gefunden.",
       "refreshFailed": "Die Speicherliste konnte nicht aktualisiert werden.",
-      "optionsFailed": "Die Backup-Optionen konnten nicht geladen werden."
+      "optionsFailed": "Die Backup-Optionen konnten nicht geladen werden.",
+      "subtitleSite": "Wählen Sie, was gesichert wird, wie oft und wo es gespeichert wird.",
+      "savedTitleManual": "Backups sind für {name} eingerichtet",
+      "savedTitleNoName": "Backups sind an",
+      "savedTitleManualNoName": "Backups sind eingerichtet",
+      "discardTitle": "Diese Backup-Einstellungen verwerfen?",
+      "discardDescription": "Ihre Änderungen sind nicht gespeichert. Wenn Sie jetzt schließen, gehen sie verloren.",
+      "discardKeep": "Weiter bearbeiten",
+      "discardConfirm": "Änderungen verwerfen"
     },
     "form": {
       "applicationPlaceholder": "Anwendung auswählen",
@@ -5881,14 +5900,15 @@
       "automaticHint": "Führt die Sicherung nach einem Zeitplan aus, statt nur auf Knopfdruck.",
       "fileExcludesHint": "Pfade, die von der Sicherung ausgeschlossen werden, einer pro Zeile. Caches und Protokolle lohnen sich auszuschließen; Uploads nicht.",
       "databaseExcludesHint": "Datenbanken, die von der Sicherung ausgeschlossen werden, eine pro Zeile. Nützlich für Caches und alles, was sich neu aufbauen lässt.",
-      "scheduleTimeZone": "Läuft in Projektzeit ({timezone})",
+      "scheduleTimeZone": "Zeiten in {timezone}",
       "destinationNotConnected": "{name} ist noch nicht mit Ihrem Google-Konto verbunden — dorthin gesendete Sicherungen schlagen fehl.",
       "optionsFailed": "Die Backup-Optionen konnten nicht geladen werden, daher lassen sich diese Einstellungen noch nicht speichern.",
       "optionsRetry": "Erneut versuchen",
       "scheduleMinute": "Zu welcher Minute",
       "scheduleMinuteHint": "Minuten nach jeder vollen Stunde, 0 bis 59.",
       "retentionHintHours": "Etwa {hours, plural, one {# Stunde} other {# Stunden}} Verlauf. Ältere werden gelöscht.",
-      "retentionHintCount": "Behält {count, plural, one {das neueste Backup} other {die neuesten # Backups}}. Ältere werden gelöscht."
+      "retentionHintCount": "Behält {count, plural, one {das neueste Backup} other {die neuesten # Backups}}. Ältere werden gelöscht.",
+      "excludeLineError": "Zeile {line}: {message}"
     },
     "history": {
       "allApplications": "Alle Anwendungen",
@@ -6079,8 +6099,12 @@
         },
         "unprotected": {
           "title": "Diese Anwendung wird nicht gesichert",
-          "body": "Geht der Server verloren, geht diese Anwendung mit. Legen Sie unten einen Zeitplan fest.",
+          "body": "Geht der Server verloren, geht diese Anwendung mit. Legen Sie einen Zeitplan fest, um sie zu schützen.",
           "bodyReadOnly": "Geht der Server verloren, geht diese Anwendung mit. Bitten Sie eine Administratorin oder einen Administrator, Backups einzurichten."
+        },
+        "empty": {
+          "title": "Noch kein Backup zum Wiederherstellen",
+          "body": "Backups sind geplant, aber im Moment gibt es keins. Starten Sie eins, um sicherzugehen, dass es funktioniert."
         }
       },
       "lastRun": "Zuletzt ausgeführt {when}",
@@ -6159,7 +6183,10 @@
         "done": "Backups für {name} abgeschaltet.",
         "doneWithBackups": "{count, plural, one {Backups für {name} abgeschaltet und # Backup gelöscht.} other {Backups für {name} abgeschaltet und # Backups gelöscht.}}",
         "failed": "Die Backups konnten nicht abgeschaltet werden."
-      }
+      },
+      "restoreRunning": "Eine Wiederherstellung läuft. Warten Sie, bis sie fertig ist.",
+      "historyForbidden": "Ihre Rolle darf den Backup-Verlauf nicht sehen. Bitten Sie eine Administratorin oder einen Administrator um die Berechtigung „Backups“.",
+      "noneKept": "Keins aufbewahrt"
     },
     "empty": {
       "title": "Auf diesem Server wird noch nichts gesichert",

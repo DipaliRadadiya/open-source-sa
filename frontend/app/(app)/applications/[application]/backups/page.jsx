@@ -67,7 +67,7 @@ export default async function ApplicationBackupsPage({ params }) {
    * dropped `failed` entirely, so an unanswered request rendered as
    * "No backups have run for this site yet."
    */
-  const [{ target }, { destinations }, { backups, meta, failed: backupsFailed }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes, { options: backupOptions }] = await Promise.all([
+  const [{ target }, { destinations }, { backups, meta, failed: backupsFailed, status: backupsStatus }, activeRestore, databases, siteDbs, spareDbs, engineList, siteTypes, { options: backupOptions }] = await Promise.all([
     settled ? getBackupTarget(id) : Promise.resolve({ target: null }),
     getStorageDestinations(),
     settled
@@ -119,6 +119,7 @@ export default async function ApplicationBackupsPage({ params }) {
           backups={backups}
           total={meta.total}
           backupsFailed={backupsFailed}
+          backupsForbidden={backupsFailed && backupsStatus === 403}
           siteDatabasesKnown={!siteDbs.failed}
           databaseCounts={databases.counts}
           databasesKnown={databases.known}

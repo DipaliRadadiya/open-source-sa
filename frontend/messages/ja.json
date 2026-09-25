@@ -788,7 +788,15 @@
     "rootFormat": "英数字、ドット、ハイフン、アンダースコア、スラッシュのみ使用できます。",
     "rootTraversal": "フォルダーに .. を含めることはできません",
     "noEnvironmentLine": "environment= はパネルがこのワーカーに既に設定しています。2 行目があると起動しません。",
-    "sftpAuthRequired": "パスワードまたは秘密鍵を入力してください。"
+    "sftpAuthRequired": "パスワードまたは秘密鍵を入力してください。",
+    "maxLines100": "100 行まで",
+    "rangeSeconds3600": "0〜3600 秒で入力してください。",
+    "rangeInputTime": "無制限は -1、それ以外は 0〜3600 秒で入力してください。",
+    "rangeInputVars": "100〜100000 の数値を入力してください。",
+    "rangeSession": "60〜604800 秒（7 日）で入力してください。",
+    "rangeWorkers": "1〜100 の数値を入力してください。",
+    "rangeMaxRequests": "0〜100000 で入力してください。0 の場合、ワーカーは再起動されません。",
+    "pathNoTraversal": "パスに .. を含めることはできません"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -4776,7 +4784,7 @@
         "timezonePlaceholder": "サーバーに合わせる",
         "autoPrepend": "各ページの前に実行するファイル",
         "directives": "追加ディレクティブ",
-        "directivesPlaceholder": "opcache.enable = 1"
+        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
       },
       "hints": {
         "postTooSmall": "アップロード上限より小さいため、そのサイズのアップロードは失敗します。",
@@ -4787,7 +4795,7 @@
         "sessionLifetime": "セッションデータがクリーンアップされるまで保持される秒数です。",
         "timezone": "PHP が出力する日付にのみ影響し、サーバー時刻には影響しません。",
         "autoPrepend": "アプリケーション内のパスを指定してください。特に指示がない場合は空欄にしてください。",
-        "directives": "php.ini と同様に 1 行ずつ記述します。ここの内容は上記のフィールドより優先されます。",
+        "directives": "PHP-FPM プールの形式で 1 行ずつ記述します: php_admin_value[名前] = 値。ここの内容は上記のフィールドより優先されます。",
         "openBasedir": "PHP がアプリケーションフォルダ外のファイルを読み書きするのを防ぎます。",
         "allowUrlFopen": "PHP がリモート URL を取得できるようにします。マルウェアがよく利用する経路のため、無効化を推奨します。",
         "upload": "Web サーバー自体のアップロード上限も上がります。PHP が処理する前に大きなアップロードを拒否するのは Web サーバー側の役割です。以前に作成されたアプリケーションでは、最初に保存したときからこの値が適用されます。",
@@ -4821,7 +4829,7 @@
         "over": "このサーバーの {total} を超えています",
         "legend": "{sites, plural, =0 {メモリを使用している他のアプリケーションはありません} one {他の 1 アプリケーションが {value} を確保しています} other {他の # アプリケーションが合わせて {value} を確保しています}}",
         "equation": "{limit} × {workers} workers = 最大 {total}",
-        "overDetail": "{required} 必要ですが、このサーバーの上限は {total} です。メモリ上限またはワーカー数を減らしてください。"
+        "overDetail": "すべてのアプリケーションの合計で {required} 必要ですが、このサーバーは {total} です。メモリ上限またはワーカー数を減らしてください。"
       },
       "custom": "カスタム",
       "seconds": "{count} 秒",
@@ -4857,14 +4865,16 @@
         "remove": "{name} を解除",
         "empty": "何もブロックされていません。このアプリケーションにインストールされているすべての PHP 関数を実行できます。",
         "presetsLabel": "プリセットから選択",
-        "presetsCustom": "独自のリスト"
+        "presetsCustom": "独自のリスト",
+        "invalidName": "関数名ではないため追加しませんでした: {names}。英数字と _ のみ使用できます。"
       },
       "saveNote": "保存すると、このアプリケーションの PHP プールが書き換えられ再読込されます。実行中のリクエストは先に完了します。",
       "tabs": {
         "basic": "基本設定",
         "security": "セキュリティ",
         "advanced": "詳細設定",
-        "unsavedHere": "このタブに未保存の変更があります"
+        "unsavedHere": "このタブに未保存の変更があります",
+        "errorsHere": "このタブに修正が必要な設定があります"
       },
       "sections": {
         "runtime": "ランタイム",
@@ -4900,7 +4910,8 @@
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
       "versionUnsupported": "{type} は PHP {range} に対応しています。このアプリケーションを別のバージョンに移動すると動作しなくなる可能性があります。",
-      "presetsLabelHint": "小・中・大のアプリケーションに合わせた設定です。出発点として利用し、その後も各値は変更できます。"
+      "presetsLabelHint": "小・中・大のアプリケーションに合わせた設定です。出発点として利用し、その後も各値は変更できます。",
+      "fixErrors": "修正が必要な設定があります。問題のあるタブに印が付いています。"
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
@@ -5821,7 +5832,15 @@
       "refreshFound": "ストレージ一覧が更新されました。",
       "refreshNoneNew": "新しいストレージはまだ見つかりません。",
       "refreshFailed": "ストレージ一覧を更新できませんでした。",
-      "optionsFailed": "バックアップの選択肢を読み込めませんでした。"
+      "optionsFailed": "バックアップの選択肢を読み込めませんでした。",
+      "subtitleSite": "バックアップの対象、頻度、保存先を選択してください。",
+      "savedTitleManual": "{name} のバックアップを設定しました",
+      "savedTitleNoName": "バックアップが有効です",
+      "savedTitleManualNoName": "バックアップを設定しました",
+      "discardTitle": "このバックアップ設定を破棄しますか？",
+      "discardDescription": "変更は保存されていません。今閉じると失われます。",
+      "discardKeep": "編集を続ける",
+      "discardConfirm": "変更を破棄"
     },
     "form": {
       "applicationPlaceholder": "アプリケーションを選択",
@@ -5881,14 +5900,15 @@
       "automaticHint": "ボタンを押したときだけでなく、スケジュールでバックアップを実行します。",
       "fileExcludesHint": "バックアップから除外するパスを1行ずつ指定します。キャッシュやログは除外する価値がありますが、アップロードは除外しないでください。",
       "databaseExcludesHint": "バックアップから除外するデータベースを1行ずつ指定します。キャッシュや再構築可能なものに便利です。",
-      "scheduleTimeZone": "プロジェクト時刻 ({timezone}) で実行されます",
+      "scheduleTimeZone": "時刻は {timezone} です",
       "destinationNotConnected": "{name} はまだ Google アカウントに接続されていないため、そこへのバックアップは失敗します。",
       "optionsFailed": "バックアップの選択肢を読み込めなかったため、この設定はまだ保存できません。",
       "optionsRetry": "再試行",
       "scheduleMinute": "実行する分",
       "scheduleMinuteHint": "毎時の何分に実行するか（0〜59）。",
       "retentionHintHours": "約 {hours, plural, one {# 時間} other {# 時間}} 分の履歴を保持します。古いものは削除されます。",
-      "retentionHintCount": "最新の {count, plural, one {# 件} other {# 件}} を保持します。古いものは削除されます。"
+      "retentionHintCount": "最新の {count, plural, one {# 件} other {# 件}} を保持します。古いものは削除されます。",
+      "excludeLineError": "{line} 行目: {message}"
     },
     "history": {
       "allApplications": "すべてのアプリケーション",
@@ -6079,8 +6099,12 @@
         },
         "unprotected": {
           "title": "このアプリケーションはバックアップされていません",
-          "body": "サーバーを失った場合、このアプリケーションも失われます。以下でスケジュールを設定してください。",
+          "body": "サーバーを失った場合、このアプリケーションも失われます。保護するにはスケジュールを設定してください。",
           "bodyReadOnly": "サーバーを失った場合、このアプリケーションも失われます。管理者にバックアップの設定を依頼してください。"
+        },
+        "empty": {
+          "title": "復元できるバックアップはまだありません",
+          "body": "バックアップはスケジュールされていますが、現在ひとつもありません。動作を確認するために実行してください。"
         }
       },
       "lastRun": "最終実行: {when}",
@@ -6159,7 +6183,10 @@
         "done": "{name} のバックアップをオフにしました。",
         "doneWithBackups": "{count, plural, other {{name} のバックアップをオフにし、# 件のバックアップを削除しました。}}",
         "failed": "バックアップをオフにできませんでした。"
-      }
+      },
+      "restoreRunning": "復元を実行中です。完了するまでお待ちください。",
+      "historyForbidden": "現在のロールではバックアップ履歴を表示できません。管理者にバックアップの権限を依頼してください。",
+      "noneKept": "保持なし"
     },
     "empty": {
       "title": "このサーバーではまだ何もバックアップされていません",

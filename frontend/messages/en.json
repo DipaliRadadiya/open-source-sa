@@ -788,7 +788,15 @@
     "rootFormat": "Use letters, numbers, dots, dashes, underscores and slashes only.",
     "rootTraversal": "The folder cannot contain ..",
     "noEnvironmentLine": "environment= is already set by the panel for this worker. A second line stops it starting.",
-    "sftpAuthRequired": "Enter a password or a private key."
+    "sftpAuthRequired": "Enter a password or a private key.",
+    "maxLines100": "Up to 100 lines",
+    "rangeSeconds3600": "Enter 0 to 3600 seconds.",
+    "rangeInputTime": "Enter -1 for no limit, or 0 to 3600 seconds.",
+    "rangeInputVars": "Enter a number from 100 to 100000.",
+    "rangeSession": "Enter 60 to 604800 seconds (7 days).",
+    "rangeWorkers": "Enter a number from 1 to 100.",
+    "rangeMaxRequests": "Enter 0 to 100000. 0 never restarts a worker.",
+    "pathNoTraversal": "The path can't contain .."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -4776,7 +4784,7 @@
         "timezonePlaceholder": "Use the server's",
         "autoPrepend": "File to run before every page",
         "directives": "Extra directives",
-        "directivesPlaceholder": "opcache.enable = 1"
+        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
       },
       "hints": {
         "postTooSmall": "This is smaller than the upload limit, so uploads that size will still fail.",
@@ -4787,7 +4795,7 @@
         "sessionLifetime": "Seconds a session file is kept before it can be cleaned up.",
         "timezone": "Only affects dates PHP produces, not the server clock.",
         "autoPrepend": "A path inside this application. Leave empty unless you were told otherwise.",
-        "directives": "One per line, like a php.ini file. Anything here wins over the fields above.",
+        "directives": "One per line, in PHP-FPM pool form: php_admin_value[name] = value. Anything here wins over the fields above.",
         "openBasedir": "Stops PHP reading or writing files outside this application's folder.",
         "allowUrlFopen": "Lets PHP fetch remote URLs. Turning it off blocks a common way malware phones home.",
         "upload": "Also raises the web server's own limit, which refuses large uploads before PHP sees them. An application set up earlier picks this up the first time you save.",
@@ -4821,7 +4829,7 @@
         "over": "More than this server's {total}",
         "legend": "{sites, plural, =0 {No other applications are using memory} one {One other application has claimed {value}} other {# other applications have claimed {value}}}",
         "equation": "{limit} × {workers} workers = {total} at full load",
-        "overDetail": "{required} required, but this server has {total}. Lower the memory limit or the number of workers."
+        "overDetail": "All applications together need {required}, but this server has {total}. Lower the memory limit or the number of workers."
       },
       "custom": "Custom",
       "seconds": "{count}s",
@@ -4857,14 +4865,16 @@
         "remove": "Remove {name}",
         "empty": "Nothing is blocked. Every PHP function this application has installed can run.",
         "presetsLabel": "Start from",
-        "presetsCustom": "Your own list."
+        "presetsCustom": "Your own list.",
+        "invalidName": "Not added, not a function name: {names}. Use letters, numbers and _ only."
       },
       "saveNote": "Saving rewrites this application's PHP pool and reloads it. Requests already running finish first.",
       "tabs": {
         "basic": "Basic settings",
         "security": "Security",
         "advanced": "Advanced",
-        "unsavedHere": "Unsaved changes on this tab"
+        "unsavedHere": "Unsaved changes on this tab",
+        "errorsHere": "Settings to fix on this tab"
       },
       "sections": {
         "runtime": "Runtime",
@@ -4900,7 +4910,8 @@
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
       "versionUnsupported": "{type} supports PHP {range}. Moving this application to another version is likely to break it.",
-      "presetsLabelHint": "Ready-made settings sized for small, medium and large applications. A starting point — you can still change any value afterwards."
+      "presetsLabelHint": "Ready-made settings sized for small, medium and large applications. A starting point — you can still change any value afterwards.",
+      "fixErrors": "Some settings need fixing. The tab with the problem is marked."
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
@@ -5821,7 +5832,15 @@
       "refreshFound": "Storage list updated.",
       "refreshNoneNew": "No new storage found yet.",
       "refreshFailed": "The storage list could not be refreshed.",
-      "optionsFailed": "The backup choices could not be loaded."
+      "optionsFailed": "The backup choices could not be loaded.",
+      "subtitleSite": "Choose what to back up, how often, and where it is stored.",
+      "savedTitleManual": "Backups are set up for {name}",
+      "savedTitleNoName": "Backups are on",
+      "savedTitleManualNoName": "Backups are set up",
+      "discardTitle": "Discard these backup settings?",
+      "discardDescription": "Your changes haven't been saved. Closing now will lose them.",
+      "discardKeep": "Keep editing",
+      "discardConfirm": "Discard changes"
     },
     "form": {
       "applicationPlaceholder": "Choose an application",
@@ -5881,14 +5900,15 @@
       "automaticHint": "Runs the backup on a schedule instead of only when you press the button.",
       "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not.",
       "databaseExcludesHint": "Databases to leave out of the backup, one per line. Useful for caches and anything you can rebuild.",
-      "scheduleTimeZone": "Runs in project time ({timezone})",
+      "scheduleTimeZone": "Times are in {timezone}",
       "destinationNotConnected": "{name} has not been connected to your Google account yet, so backups sent there will fail.",
       "optionsFailed": "The backup choices could not be loaded, so these settings cannot be saved yet.",
       "optionsRetry": "Try again",
       "scheduleMinute": "At what minute",
       "scheduleMinuteHint": "Minutes past each hour, 0 to 59.",
       "retentionHintHours": "About {hours, plural, one {# hour} other {# hours}} of history. Older ones are deleted.",
-      "retentionHintCount": "Keeps the newest {count, plural, one {# backup} other {# backups}}. Older ones are deleted."
+      "retentionHintCount": "Keeps the newest {count, plural, one {# backup} other {# backups}}. Older ones are deleted.",
+      "excludeLineError": "Line {line}: {message}"
     },
     "history": {
       "allApplications": "All applications",
@@ -6079,8 +6099,12 @@
         },
         "unprotected": {
           "title": "This application is not backed up",
-          "body": "If the server is lost, so is this application. Set a schedule below.",
+          "body": "If the server is lost, so is this application. Set up a schedule to protect it.",
           "bodyReadOnly": "If the server is lost, so is this application. Ask an administrator to set up backups."
+        },
+        "empty": {
+          "title": "No backup to restore from yet",
+          "body": "Backups are scheduled, but none exists right now. Run one to be sure it works."
         }
       },
       "lastRun": "Last run {when}",
@@ -6159,7 +6183,10 @@
         "done": "Backups turned off for {name}.",
         "doneWithBackups": "{count, plural, one {Backups turned off for {name}, and # backup deleted.} other {Backups turned off for {name}, and # backups deleted.}}",
         "failed": "Backups could not be turned off."
-      }
+      },
+      "restoreRunning": "A restore is running. Wait for it to finish.",
+      "historyForbidden": "Your role can't see backup history. Ask an administrator for the Backups permission.",
+      "noneKept": "None kept"
     },
     "empty": {
       "title": "Nothing on this server is backed up yet",

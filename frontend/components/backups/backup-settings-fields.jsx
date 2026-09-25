@@ -129,6 +129,22 @@ export function BackupSettingsFields({
   const retention = useWatch({ control: form.control, name: "retention_count" });
   const type = useWatch({ control: form.control, name: "type" });
   const applicationId = useWatch({ control: form.control, name: "application_id" });
+  /*
+   * A list field's errors are per line (`file_excludes.3`), with no message on
+   * the field itself — so FormMessage found nothing to say, the box turned red
+   * and Save did nothing. Name the first bad line instead.
+   */
+  const lineError = (error) => {
+    if (!error) return undefined;
+    if (error.message) return tv.has(error.message) ? tv(error.message) : error.message;
+    const index = Array.isArray(error) ? error.findIndex((item) => item?.message) : -1;
+    if (index < 0) return undefined;
+    const message = error[index].message;
+    return t("excludeLineError", {
+      line: index + 1,
+      message: tv.has(message) ? tv(message) : message,
+    });
+  };
   const usage = timeUsage(options, frequency);
   const span = historySpan(frequency, Number(retention));
 
@@ -603,7 +619,7 @@ export function BackupSettingsFields({
             <FormField
               control={form.control}
               name="file_excludes"
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel hint={t("fileExcludesHint")}>{t("fileExcludes")}</FormLabel>
                   <FormControl>
@@ -621,7 +637,7 @@ export function BackupSettingsFields({
                       onChange={(event) => field.onChange(toLines(event.target.value))}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage>{lineError(fieldState.error)}</FormMessage>
                 </FormItem>
               )}
             />
@@ -631,7 +647,7 @@ export function BackupSettingsFields({
             <FormField
               control={form.control}
               name="database_excludes"
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel hint={t("databaseExcludesHint")}>{t("databaseExcludes")}</FormLabel>
                   <FormControl>
@@ -649,7 +665,7 @@ export function BackupSettingsFields({
                       onChange={(event) => field.onChange(toLines(event.target.value))}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage>{lineError(fieldState.error)}</FormMessage>
                 </FormItem>
               )}
             />

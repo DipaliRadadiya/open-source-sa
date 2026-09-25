@@ -43,13 +43,15 @@ import {
 export function RestoreDialog({ backup, open, onOpenChange, onStarted }) {
   const t = useTranslations("backups.restore");
   const format = useFormatter();
-  const [type, setType] = useState(backup?.type ?? "full");
+  const allowed = restorableTypes(backup?.type);
+  const [type, setType] = useState(
+    allowed.includes(backup?.preferred_type) ? backup.preferred_type : (backup?.type ?? "full"),
+  );
   const [confirm, setConfirm] = useState("");
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState(null);
 
   const domain = backup?.application_domain ?? "";
-  const allowed = restorableTypes(backup?.type);
 
   async function onConfirm() {
     setPending(true);

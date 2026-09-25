@@ -147,6 +147,8 @@ export const backupSchema = z
     application_name: z.string().nullish(),
     application_domain: z.string().nullish(),
     reference: z.string().nullish(),
+    // The run's last heartbeat — what decides whether Clear can work.
+    progress_at: z.string().nullish(),
     started_at: z.string().nullish(),
     finished_at: z.string().nullish(),
     verified_at: z.string().nullish(),
@@ -365,8 +367,8 @@ export function backupTargetFormSchema(options) {
       .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "scheduleTime")
       .default(BACKUP_DEFAULT_TIME),
     enabled: z.boolean().default(true),
-    file_excludes: z.array(z.string().max(255, "max255")).max(100, "max100").default([]),
-    database_excludes: z.array(z.string().max(64, "max64")).max(100, "max100").default([]),
+    file_excludes: z.array(z.string().max(255, "max255")).max(100, "maxLines100").default([]),
+    database_excludes: z.array(z.string().max(64, "max64")).max(100, "maxLines100").default([]),
   });
 }
 

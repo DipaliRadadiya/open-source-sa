@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { CircleAlert, History, RotateCw } from "lucide-react";
+import { CircleAlert, History, RotateCw, Trash2 } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
 import { apiDuration } from "@/lib/format/api-date";
 import { reasonText } from "@/lib/backups/reason";
+import { isBackupStale } from "@/lib/backups/stale";
+import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { Button } from "@/components/ui/button";
 import { ActionIcon } from "@/components/ui/action-icon";
 import { CardFact, CardFacts, CardList, CardListItem } from "@/components/data-table/card-list";
@@ -10,6 +13,7 @@ import { BackupStatusBadge, SafetyBadge } from "@/components/backups/backup-stat
 import { DownloadBackupButton } from "@/components/backups/download-backup-button";
 import { restoreBlocker } from "@/components/backups/restore-dialog";
 import { sizeNote } from "@/components/backups/backups-history-table";
+import { DeleteBackupsDialog } from "@/components/backups/delete-backups-dialog";
 
 /**
  * Backup rows on a phone, where a five-column table cannot go.
@@ -31,12 +35,19 @@ export function BackupsCards({
   canClear = false,
   showSite = true,
   restoreInFlight = false,
+  // The desktop table deletes through row selection, which a card has no room
+  // for — so phones had no way to delete a backup at all. One button per card
+  // opens the same dialog with that one backup.
+  canDelete = false,
+  onDeleted,
 }) {
   const t = useTranslations("backups.history");
   const tr = useTranslations("backups.restore");
   const format = useFormatter();
+  const [deleting, setDeleting] = useState(null);
 
   return (
+    <>
     <CardList>
       {backups.map((backup) => {
         const duration = apiDuration(backup.started_at, backup.finished_at);
@@ -57,7 +68,9 @@ export function BackupsCards({
                   </p>
                 </div>
               ) : (
-                <p className="min-w-0 truncate font-medium">
+                // Wraps rather than truncating: "Dateien und Datenbank" lost its
+                // last word at 390px, and the type is the card's title.
+                <p className="min-w-0 break-words font-medium">
                   {backup.type_title ?? backup.type}
                 </p>
               )}
@@ -112,10 +125,21 @@ export function BackupsCards({
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {/* Labelled here rather than an icon: on a phone there is room
                     for the word, and no hover to explain a lone glyph. */}
+                {canDelete && !BACKUP_IN_FLIGHT.includes(backup.status) ? (
+                  <Button
+                    size="icon-sm"
+                    variant="outline"
+                    aria-label={t("delete.action")}
+                    onClick={() => setDeleting(backup)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                ) : null}
+
                 <DownloadBackupButton backup={backup} canDownload={canRestore} label />
 
                 {["pending", "running"].includes(backup.status) ? (
-                  canClear ? (
+                  canClear && isBackupStale(backup) ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -157,5 +181,13 @@ export function BackupsCards({
         );
       })}
     </CardList>
+
+    <DeleteBackupsDialog
+      open={Boolean(deleting)}
+      onOpenChange={(open) => (open ? null : setDeleting(null))}
+      backups={deleting ? [deleting] : []}
+      onDeleted={(ids) => onDeleted?.(ids)}
+    />
+    </>
   );
 }

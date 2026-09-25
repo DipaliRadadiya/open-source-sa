@@ -18,6 +18,9 @@ import {
 // a finished action rather than ask for one — a blue tick over "…is ready"
 // says "information", and the moment deserves the colour the rest of the panel
 // already uses for a good outcome.
+const FOCUSABLE =
+  "input:not([type=hidden]), textarea, select, button, a[href], [tabindex]:not([tabindex='-1'])";
+
 const ICON_TONES = {
   primary: "bg-primary/10 text-primary",
   success: "bg-success/10 text-success",
@@ -84,17 +87,25 @@ export function FormModal({
           "flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg",
           className,
         )}
-        // Land on the first real field, not the first focusable node. Left to
-        // Radix, a dialog whose opening label carries a "?" hint focused that
-        // hint button — which sits before the input — and opened its note over
-        // the field the reader came to fill in. Falls back to Radix's own
-        // behaviour when there is no such field (e.g. a body of switches).
+        // Land on the first control, never on a label's "?" hint. Left to
+        // Radix, a dialog whose opening label carries a hint focused that
+        // button and opened its note over the field the reader came to fill in.
+        //
+        // It used to look for the first text input instead, which skipped
+        // whatever came before one: the backup setup dialog opened in its third
+        // section, on "At what time", past the choice it leads with. Radix's
+        // hidden native radios and selects are aria-hidden and untabbable, so
+        // they fall out of the tabbable filter on their own.
         onOpenAutoFocus={(event) => {
-          // Radix radio groups and selects keep a native input/select in the
-          // DOM for forms — aria-hidden and untabbable. Landing there put
-          // focus on nothing visible (Files → Bulk compress).
-          const field = event.currentTarget.querySelector(
-            "input:not([type=hidden]):not([type=radio]):not([type=checkbox]):not([readonly]):not([aria-hidden=true]):not([tabindex='-1']), textarea:not([readonly]):not([aria-hidden=true])",
+          const field = [...event.currentTarget.querySelectorAll(FOCUSABLE)].find(
+            (element) =>
+              element.getAttribute("data-slot") !== "info-hint" &&
+              element.getAttribute("data-slot") !== "dialog-close" &&
+              element.getAttribute("aria-hidden") !== "true" &&
+              element.getAttribute("tabindex") !== "-1" &&
+              !element.disabled &&
+              !element.readOnly &&
+              element.getClientRects().length > 0,
           );
           if (field) {
             event.preventDefault();

@@ -788,7 +788,15 @@
     "rootFormat": "Use apenas letras, números, pontos, hífens, sublinhados e barras.",
     "rootTraversal": "A pasta não pode conter ..",
     "noEnvironmentLine": "O painel já define environment= para este worker. Uma segunda linha impede que ele inicie.",
-    "sftpAuthRequired": "Informe uma senha ou uma chave privada."
+    "sftpAuthRequired": "Informe uma senha ou uma chave privada.",
+    "maxLines100": "No máximo 100 linhas",
+    "rangeSeconds3600": "Informe de 0 a 3600 segundos.",
+    "rangeInputTime": "Informe -1 para sem limite, ou de 0 a 3600 segundos.",
+    "rangeInputVars": "Informe um número de 100 a 100000.",
+    "rangeSession": "Informe de 60 a 604800 segundos (7 dias).",
+    "rangeWorkers": "Informe um número de 1 a 100.",
+    "rangeMaxRequests": "Informe de 0 a 100000. Com 0, um worker nunca é reiniciado.",
+    "pathNoTraversal": "O caminho não pode conter .."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -4776,7 +4784,7 @@
         "timezonePlaceholder": "Usar o do servidor",
         "autoPrepend": "Arquivo a executar antes de cada página",
         "directives": "Diretivas extras",
-        "directivesPlaceholder": "opcache.enable = 1"
+        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
       },
       "hints": {
         "postTooSmall": "Isso é menor que o limite de upload, então uploads desse tamanho ainda falharão.",
@@ -4787,7 +4795,7 @@
         "sessionLifetime": "Segundos que um arquivo de sessão é mantido antes de poder ser limpo.",
         "timezone": "Afeta apenas datas que o PHP produz, não o relógio do servidor.",
         "autoPrepend": "Um caminho dentro desta aplicação. Deixe vazio a menos que tenha sido instruído contrário.",
-        "directives": "Uma por linha, como um arquivo php.ini. Qualquer coisa aqui se sobrepõe aos campos acima.",
+        "directives": "Uma por linha, no formato de pool do PHP-FPM: php_admin_value[nome] = valor. Qualquer coisa aqui se sobrepõe aos campos acima.",
         "openBasedir": "Impede o PHP de ler ou escrever arquivos fora da pasta desta aplicação.",
         "allowUrlFopen": "Permite que o PHP busque URLs remotas. Desativar bloqueia uma forma comum de malware se comunicar.",
         "upload": "Também aumenta o próprio limite do servidor web, que recusa uploads grandes antes do PHP vê-los. Uma aplicação configurada antes pega isso na primeira vez que você salva.",
@@ -4821,7 +4829,7 @@
         "over": "Mais que o {total} deste servidor",
         "legend": "{sites, plural, =0 {Nenhuma outra aplicação está usando memória} one {Uma outra aplicação já reivindicou {value}} other {# outras aplicações já reivindicaram {value}}}",
         "equation": "{limit} × {workers} workers = {total} em carga total",
-        "overDetail": "{required} necessário, mas este servidor tem {total}. Diminua o limite de memória ou o número de workers."
+        "overDetail": "Todas as aplicações juntas precisam de {required}, mas este servidor tem {total}. Diminua o limite de memória ou o número de workers."
       },
       "custom": "Personalizado",
       "seconds": "{count}s",
@@ -4857,14 +4865,16 @@
         "remove": "Remover {name}",
         "empty": "Nenhuma função bloqueada. Toda função PHP instalada nesta aplicação pode rodar.",
         "presetsLabel": "Começar de",
-        "presetsCustom": "Sua própria lista."
+        "presetsCustom": "Sua própria lista.",
+        "invalidName": "Não adicionado, não é um nome de função: {names}. Use apenas letras, números e _."
       },
       "saveNote": "Salvar reescreve o pool PHP desta aplicação e o recarrega. As requisições em andamento terminam primeiro.",
       "tabs": {
         "basic": "Configurações básicas",
         "security": "Segurança",
         "advanced": "Avançado",
-        "unsavedHere": "Alterações não salvas nesta aba"
+        "unsavedHere": "Alterações não salvas nesta aba",
+        "errorsHere": "Configurações a corrigir nesta aba"
       },
       "sections": {
         "runtime": "Runtime",
@@ -4900,7 +4910,8 @@
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
       "versionUnsupported": "{type} suporta PHP {range}. Mover esta aplicação para outra versão provavelmente irá quebrá-la.",
-      "presetsLabelHint": "Configurações prontas dimensionadas para aplicações pequenas, médias e grandes. Um ponto de partida — você ainda pode alterar qualquer valor depois."
+      "presetsLabelHint": "Configurações prontas dimensionadas para aplicações pequenas, médias e grandes. Um ponto de partida — você ainda pode alterar qualquer valor depois.",
+      "fixErrors": "Algumas configurações precisam ser corrigidas. A aba com o problema está marcada."
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
@@ -5821,7 +5832,15 @@
       "refreshFound": "Lista de armazenamento atualizada.",
       "refreshNoneNew": "Nenhum armazenamento novo encontrado ainda.",
       "refreshFailed": "Não foi possível atualizar a lista de armazenamento.",
-      "optionsFailed": "Não foi possível carregar as opções de backup."
+      "optionsFailed": "Não foi possível carregar as opções de backup.",
+      "subtitleSite": "Escolha o que fazer backup, com que frequência e onde guardar.",
+      "savedTitleManual": "Backups configurados para {name}",
+      "savedTitleNoName": "Backups ativados",
+      "savedTitleManualNoName": "Backups configurados",
+      "discardTitle": "Descartar estas configurações de backup?",
+      "discardDescription": "Suas alterações não foram salvas. Se fechar agora, elas serão perdidas.",
+      "discardKeep": "Continuar editando",
+      "discardConfirm": "Descartar alterações"
     },
     "form": {
       "applicationPlaceholder": "Escolha uma aplicação",
@@ -5881,14 +5900,15 @@
       "automaticHint": "Executa a cópia de segurança de forma agendada em vez de apenas quando você aperta o botão.",
       "fileExcludesHint": "Caminhos a serem deixados fora da cópia de segurança, um por linha. Caches e logs valem a pena excluir; uploads, não.",
       "databaseExcludesHint": "Bancos de dados a serem excluídos da cópia de segurança, um por linha. Útil para caches e qualquer coisa que você possa reconstruir.",
-      "scheduleTimeZone": "Executa no horário do projeto ({timezone})",
+      "scheduleTimeZone": "Horários em {timezone}",
       "destinationNotConnected": "{name} ainda não foi conectado à sua conta Google, então os backups enviados para lá vão falhar.",
       "optionsFailed": "Não foi possível carregar as opções de backup, então estas configurações ainda não podem ser salvas.",
       "optionsRetry": "Tentar novamente",
       "scheduleMinute": "Em que minuto",
       "scheduleMinuteHint": "Minutos depois de cada hora, de 0 a 59.",
       "retentionHintHours": "Cerca de {hours, plural, one {# hora} other {# horas}} de histórico. Os mais antigos são excluídos.",
-      "retentionHintCount": "Mantém {count, plural, one {o backup mais recente} other {os # backups mais recentes}}. Os mais antigos são excluídos."
+      "retentionHintCount": "Mantém {count, plural, one {o backup mais recente} other {os # backups mais recentes}}. Os mais antigos são excluídos.",
+      "excludeLineError": "Linha {line}: {message}"
     },
     "history": {
       "allApplications": "Todas as aplicações",
@@ -6079,8 +6099,12 @@
         },
         "unprotected": {
           "title": "Esta aplicação não está com backup",
-          "body": "Se o servidor for perdido, esta aplicação também será. Defina um agendamento abaixo.",
+          "body": "Se o servidor for perdido, esta aplicação também será. Defina um agendamento para protegê-la.",
           "bodyReadOnly": "Se o servidor for perdido, esta aplicação também será. Peça a um administrador para configurar os backups."
+        },
+        "empty": {
+          "title": "Ainda não há backup para restaurar",
+          "body": "Os backups estão agendados, mas nenhum existe agora. Execute um para ter certeza de que funciona."
         }
       },
       "lastRun": "Última execução {when}",
@@ -6159,7 +6183,10 @@
         "done": "Backups desativados para {name}.",
         "doneWithBackups": "{count, plural, one {Backups desativados para {name}, e # backup excluído.} other {Backups desativados para {name}, e # backups excluídos.}}",
         "failed": "Não foi possível desativar os backups."
-      }
+      },
+      "restoreRunning": "Há uma restauração em andamento. Aguarde até que termine.",
+      "historyForbidden": "Seu papel não pode ver o histórico de backups. Peça a um administrador a permissão de Backups.",
+      "noneKept": "Nenhum mantido"
     },
     "empty": {
       "title": "Nada neste servidor está com backup ainda",

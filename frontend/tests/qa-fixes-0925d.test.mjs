@@ -41,13 +41,17 @@ test("a site type with no workers is not found, not refused", () => {
   assert.match(page, /import \{ notFound, redirect \}/);
 });
 
-test("a form dialog lands on its first field, not a hint button", () => {
+test("a form dialog lands on its first control, not a hint button", () => {
   const modal = read("components/ui/form-modal.jsx");
   assert.match(modal, /onOpenAutoFocus=\{\(event\) =>/);
-  // Never Radix's hidden native radio / select (aria-hidden, untabbable).
-  assert.match(modal, /:not\(\[type=radio\]\)/);
-  assert.match(modal, /:not\(\[aria-hidden=true\]\)/);
-  assert.doesNotMatch(modal, /, select"/);
+  // The "?" hint is skipped by its slot, not by skipping every non-text control
+  // (that jumped the backup dialog to its third section).
+  assert.match(modal, /"info-hint"/);
+  assert.match(read("components/ui/info-hint.jsx"), /data-slot="info-hint"/);
+  // Radix's hidden native radio / select stay out: aria-hidden and untabbable.
+  assert.match(modal, /aria-hidden"\) !== "true"/);
+  assert.match(modal, /tabindex"\) !== "-1"/);
+  assert.doesNotMatch(modal, /:not\(\[type=radio\]\)/);
 });
 
 test("the worker validation messages are real sentences in every locale", () => {

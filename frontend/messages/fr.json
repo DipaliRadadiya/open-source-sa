@@ -788,7 +788,15 @@
     "rootFormat": "Utilisez uniquement des lettres, chiffres, points, tirets, tirets bas et barres obliques.",
     "rootTraversal": "Le dossier ne peut pas contenir ..",
     "noEnvironmentLine": "Le panneau définit déjà environment= pour ce worker. Une seconde ligne l'empêche de démarrer.",
-    "sftpAuthRequired": "Saisissez un mot de passe ou une clé privée."
+    "sftpAuthRequired": "Saisissez un mot de passe ou une clé privée.",
+    "maxLines100": "100 lignes maximum",
+    "rangeSeconds3600": "Saisissez de 0 à 3600 secondes.",
+    "rangeInputTime": "Saisissez -1 pour aucune limite, ou de 0 à 3600 secondes.",
+    "rangeInputVars": "Saisissez un nombre de 100 à 100000.",
+    "rangeSession": "Saisissez de 60 à 604800 secondes (7 jours).",
+    "rangeWorkers": "Saisissez un nombre de 1 à 100.",
+    "rangeMaxRequests": "Saisissez de 0 à 100000. Avec 0, un worker n'est jamais redémarré.",
+    "pathNoTraversal": "Le chemin ne peut pas contenir .."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -4776,7 +4784,7 @@
         "timezonePlaceholder": "Utiliser celui du serveur",
         "autoPrepend": "Fichier à exécuter avant chaque page",
         "directives": "Directives supplémentaires",
-        "directivesPlaceholder": "opcache.enable = 1"
+        "directivesPlaceholder": "php_admin_value[opcache.enable] = 1"
       },
       "hints": {
         "postTooSmall": "C'est plus petit que la limite d'upload, donc les envois de cette taille échoueront.",
@@ -4787,7 +4795,7 @@
         "sessionLifetime": "Secondes pendant lesquelles un fichier de session est conservé avant de pouvoir être nettoyé.",
         "timezone": "N'affecte que les dates que PHP produit, pas l'horloge du serveur.",
         "autoPrepend": "Un chemin dans cette application. Laissez vide sauf indication contraire.",
-        "directives": "Une par ligne, comme un fichier php.ini. Tout ce qui est ici l'emporte sur les champs ci-dessus.",
+        "directives": "Une par ligne, au format d'un pool PHP-FPM : php_admin_value[nom] = valeur. Tout ce qui est ici l'emporte sur les champs ci-dessus.",
         "openBasedir": "Empêche PHP de lire ou écrire des fichiers hors du dossier de cette application.",
         "allowUrlFopen": "Permet à PHP de récupérer des URL distantes. Le désactiver bloque un moyen courant pour les malwares de communiquer.",
         "upload": "Augmente aussi la limite du serveur web lui-même, qui refuse les gros envois avant que PHP ne les voie. Une application configurée plus tôt le prend en compte la première fois que vous enregistrez.",
@@ -4821,7 +4829,7 @@
         "over": "Plus que les {total} de ce serveur",
         "legend": "{sites, plural, =0 {Aucune autre application n'utilise de mémoire} one {Une autre application a réclamé {value}} other {# autres applications ont réclamé {value}}}",
         "equation": "{limit} × {workers} workers = {total} à pleine charge",
-        "overDetail": "{required} requis, mais ce serveur a {total}. Baissez la limite de mémoire ou le nombre de workers."
+        "overDetail": "Toutes les applications réunies ont besoin de {required}, mais ce serveur a {total}. Baissez la limite de mémoire ou le nombre de workers."
       },
       "custom": "Personnalisé",
       "seconds": "{count} s",
@@ -4857,14 +4865,16 @@
         "remove": "Retirer {name}",
         "empty": "Rien n'est bloqué. Toute fonction PHP installée pour cette application peut s'exécuter.",
         "presetsLabel": "Partir de",
-        "presetsCustom": "Votre propre liste."
+        "presetsCustom": "Votre propre liste.",
+        "invalidName": "Non ajouté, ce n'est pas un nom de fonction : {names}. Utilisez uniquement des lettres, des chiffres et _."
       },
       "saveNote": "L'enregistrement réécrit le pool PHP de l'application et le recharge. Les requêtes en cours se terminent d'abord.",
       "tabs": {
         "basic": "Paramètres de base",
         "security": "Sécurité",
         "advanced": "Avancé",
-        "unsavedHere": "Modifications non enregistrées sur cet onglet"
+        "unsavedHere": "Modifications non enregistrées sur cet onglet",
+        "errorsHere": "Paramètres à corriger dans cet onglet"
       },
       "sections": {
         "runtime": "Exécution",
@@ -4900,7 +4910,8 @@
       "autoPrependPlaceholder": "/home/site/app/prepend.php",
       "postMaxSizePlaceholder": "128M",
       "versionUnsupported": "{type} prend en charge PHP {range}. Faire passer cette application à une autre version risque de la casser.",
-      "presetsLabelHint": "Réglages prêts à l’emploi dimensionnés pour des applications petites, moyennes ou grandes. Un point de départ — vous pouvez encore modifier n’importe quelle valeur ensuite."
+      "presetsLabelHint": "Réglages prêts à l’emploi dimensionnés pour des applications petites, moyennes ou grandes. Un point de départ — vous pouvez encore modifier n’importe quelle valeur ensuite.",
+      "fixErrors": "Certains paramètres sont à corriger. L'onglet concerné est signalé."
     },
     "fail2ban": {
       "pageTitle": "Fail2ban",
@@ -5821,7 +5832,15 @@
       "refreshFound": "Liste de stockage mise à jour.",
       "refreshNoneNew": "Aucun nouveau stockage trouvé pour l'instant.",
       "refreshFailed": "La liste de stockage n'a pas pu être actualisée.",
-      "optionsFailed": "Les options de sauvegarde n'ont pas pu être chargées."
+      "optionsFailed": "Les options de sauvegarde n'ont pas pu être chargées.",
+      "subtitleSite": "Choisissez quoi sauvegarder, à quelle fréquence et où le stocker.",
+      "savedTitleManual": "Les sauvegardes sont configurées pour {name}",
+      "savedTitleNoName": "Les sauvegardes sont activées",
+      "savedTitleManualNoName": "Les sauvegardes sont configurées",
+      "discardTitle": "Abandonner ces paramètres de sauvegarde ?",
+      "discardDescription": "Vos modifications ne sont pas enregistrées. Si vous fermez maintenant, elles seront perdues.",
+      "discardKeep": "Continuer à modifier",
+      "discardConfirm": "Abandonner les modifications"
     },
     "form": {
       "applicationPlaceholder": "Choisissez une application",
@@ -5881,14 +5900,15 @@
       "automaticHint": "Lance la sauvegarde selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
       "fileExcludesHint": "Chemins à exclure de la sauvegarde, un par ligne. Les caches et les logs méritent de l’être ; les téléversements, non.",
       "databaseExcludesHint": "Bases de données à exclure de la sauvegarde, une par ligne. Utile pour les caches et tout ce que vous pouvez reconstruire.",
-      "scheduleTimeZone": "S’exécute à l’heure du projet ({timezone})",
+      "scheduleTimeZone": "Heures en {timezone}",
       "destinationNotConnected": "{name} n’est pas encore connecté à votre compte Google : les sauvegardes envoyées là échoueront.",
       "optionsFailed": "Les options de sauvegarde n'ont pas pu être chargées : ces réglages ne peuvent pas encore être enregistrés.",
       "optionsRetry": "Réessayer",
       "scheduleMinute": "À quelle minute",
       "scheduleMinuteHint": "Minutes après chaque heure, de 0 à 59.",
       "retentionHintHours": "Environ {hours, plural, one {# heure} other {# heures}} d'historique. Les plus anciennes sont supprimées.",
-      "retentionHintCount": "Conserve {count, plural, one {la sauvegarde la plus récente} other {les # sauvegardes les plus récentes}}. Les plus anciennes sont supprimées."
+      "retentionHintCount": "Conserve {count, plural, one {la sauvegarde la plus récente} other {les # sauvegardes les plus récentes}}. Les plus anciennes sont supprimées.",
+      "excludeLineError": "Ligne {line} : {message}"
     },
     "history": {
       "allApplications": "Toutes les applications",
@@ -6079,8 +6099,12 @@
         },
         "unprotected": {
           "title": "Cette application n'est pas sauvegardée",
-          "body": "Si le serveur est perdu, cette application l'est aussi. Définissez une planification ci-dessous.",
+          "body": "Si le serveur est perdu, cette application l'est aussi. Définissez une planification pour la protéger.",
           "bodyReadOnly": "Si le serveur est perdu, cette application l'est aussi. Demandez à un administrateur de configurer les sauvegardes."
+        },
+        "empty": {
+          "title": "Aucune sauvegarde à restaurer pour l'instant",
+          "body": "Les sauvegardes sont planifiées, mais il n'en existe aucune pour le moment. Lancez-en une pour vérifier que tout fonctionne."
         }
       },
       "lastRun": "Dernière exécution {when}",
@@ -6159,7 +6183,10 @@
         "done": "Sauvegardes désactivées pour {name}.",
         "doneWithBackups": "{count, plural, one {Sauvegardes désactivées pour {name}, et # sauvegarde supprimée.} other {Sauvegardes désactivées pour {name}, et # sauvegardes supprimées.}}",
         "failed": "Les sauvegardes n'ont pas pu être désactivées."
-      }
+      },
+      "restoreRunning": "Une restauration est en cours. Attendez qu'elle se termine.",
+      "historyForbidden": "Votre rôle ne peut pas voir l'historique des sauvegardes. Demandez à un administrateur l'autorisation Sauvegardes.",
+      "noneKept": "Aucune conservée"
     },
     "empty": {
       "title": "Rien n'est encore sauvegardé sur ce serveur",

@@ -182,7 +182,6 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", time
             canManage={canManage}
             saving={saving}
             setSaving={setSaving}
-            onIsolate={isolate}
           />
         ) : (
           /** Shared mode — clean locked state */
@@ -375,14 +374,21 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
 
 // ─── Dedicated PHP mode ──────────────────────────────────────────────────────
 
-function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", timezones, canManage, saving, setSaving, onIsolate }) {
+function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", timezones, canManage, saving, setSaving }) {
   const t = useTranslations("applications.php");
   const router = useRouter();
   const [tab, setTab] = useState("basic");
-  // The API's own sentence, kept when it refuses a save because the pool file
-  // is gone. Null the rest of the time.
-  const [needsPool, setNeedsPool] = useState(null);
+  // The server's own sentence when it refuses the whole save (`errors.settings`):
+  // PHP-FPM rejected the config, or the pool has gone. Null the rest of the time.
+  const [rejected, setRejected] = useState(null);
   const settings = php.settings;
+  // A read-only role used to be able to change every dropdown and preset;
+  // only Save was blocked, so the page claimed "Not saved yet" for edits it
+  // could never save.
+  const locked = !canManage || saving;
+  // Bumped on Discard and after a save: remounts the tabs so per-control UI
+  // state (an open "Custom" box, a half-typed function name) resets with the form.
+  const [resetKey, setResetKey] = useState(0);
 
   const defaults = {
     php_version: php.php_version ?? "",
@@ -435,10 +441,27 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
 
   const budget = budgetWith(php.memory, memoryLimit, maxChildren);
 
-  const { dirtyFields } = form.formState;
+  const { dirtyFields, errors } = form.formState;
   const dirtyTabs = new Set(
     TABS.map(({ key }) => key).filter((key) => TAB_FIELDS[key].some((field) => dirtyFields[field])),
   );
+  const errorTabs = TABS.map(({ key }) => key).filter((key) =>
+    TAB_FIELDS[key].some((field) => errors[field]),
+  );
+
+  /*
+   * A refusal on a tab nobody is looking at showed nothing at all: no toast, no
+   * marker, and Save just seemed to do nothing. Go to the first tab holding
+   * one, and say so.
+   */
+  function showErrors(fields) {
+    const withErrors = TABS.map(({ key }) => key).filter((key) =>
+      TAB_FIELDS[key].some((field) => fields[field]),
+    );
+    if (withErrors.length === 0) return;
+    if (!withErrors.includes(tab)) setTab(withErrors[0]);
+    toast.error(t("fixErrors"));
+  }
 
   const postTooSmall = phpSizeToBytes(post) < phpSizeToBytes(upload);
 
@@ -455,22 +478,42 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
 
   async function save(values) {
     setSaving(true);
-    setNeedsPool(null);
+    setRejected(null);
     try {
-      await updateApplicationPhp(appId, values);
+      /*
+       * Only what changed. Sending the whole form turned every value it held —
+       * defaults the site was merely inheriting — into a site override: one
+       * edit to Memory made twelve fields "set here", a Reset appeared on each,
+       * and a later change to the server default no longer reached this site.
+       * The version always rides along; the API validates it on every save.
+       */
+      const payload = Object.fromEntries(
+        Object.entries(values).filter(([key]) => key === "php_version" || dirtyFields[key]),
+      );
+      await updateApplicationPhp(appId, payload);
       toast.success(t("saved"));
       form.reset(values);
+      setResetKey((key) => key + 1);
       router.refresh();
     } catch (error) {
-      const errors = error.response?.data?.errors;
-      // `settings` is not a field on this form, so setError would file it
-      // against nothing and the save would fail in silence. It means the pool
-      // went away underneath us — every limit here is written by that file, so
-      // the answer is not a red input, it is restoring the pool.
-      if (errors?.settings) {
-        setNeedsPool(errors.settings[0]);
-      } else if (errors) {
+      const refused = error.response?.data?.errors;
+      /*
+       * `settings` is not a field on this form, so setError would file it
+       * against nothing. It is the server refusing the save as a whole — most
+       * often PHP-FPM rejecting the config (a directive it cannot parse), rarely
+       * the pool file having gone. It used to be drawn as "the pool is gone"
+       * with a dedicated-PHP button, at the top of a page scrolled to the
+       * Advanced tab. Now it is said where Save is, and the page re-reads: a
+       * site that really lost its pool comes back in the shared state, which
+       * carries the way to fix that.
+       */
+      if (refused?.settings) {
+        setRejected(refused.settings[0]);
+        toast.error(refused.settings[0]);
+        router.refresh();
+      } else if (refused) {
         handleValidationError(error, form);
+        showErrors(refused);
       } else {
         toast.error(apiMessage(error, t("saveFailed")));
       }
@@ -504,26 +547,11 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
       value={{ appId, overridden: php.overridden ?? {}, disabled: !canManage || saving, onReset }}
     >
     <Form {...form}>
-      <form noValidate onSubmit={form.handleSubmit(save)} className="space-y-3">
-        {/* The pool vanished between loading this screen and pressing save, so
-            nothing here can be applied. Persistent rather than a toast: it is
-            not a message about the click, it is the state the site is in until
-            someone fixes it. */}
-        {needsPool ? (
-          <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
-            <p className="flex min-w-0 items-start gap-2.5 text-sm">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
-              <span>{needsPool}</span>
-            </p>
-            {canManage && onIsolate ? (
-              <Button type="button" size="sm" onClick={onIsolate} disabled={saving}>
-                {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-                {t("isolation.isolateAction")}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-
+      <form
+        noValidate
+        onSubmit={form.handleSubmit(save, (invalid) => showErrors(invalid))}
+        className="space-y-3"
+      >
         {/* Its own strip above the form, not the form's first row: it is what
             the site IS, not something you edit. It still tracks the fields,
             so an unsaved change is visible as the value it would become. */}
@@ -542,7 +570,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
               panels stay mounted — an unmounting tab throws away a half-typed
               value, and a form that loses your work when you look at something
               else is the same bug as a dialog that closes itself. */}
-          <Tabs value={tab} onValueChange={setTab} className="gap-0">
+          <Tabs key={resetKey} value={tab} onValueChange={setTab} className="gap-0">
             <div className="border-b px-5 py-3">
               {/* Wraps rather than clips: at 390px the third trigger ran off
                   the card edge with no scroll affordance to say so. */}
@@ -558,7 +586,12 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                       {/* A change hidden behind another tab still has to be
                           findable — otherwise "Not saved yet" points at nothing
                           on screen. */}
-                      {dirtyTabs.has(key) ? (
+                      {errorTabs.includes(key) ? (
+                        <span
+                          className="size-1.5 rounded-full bg-destructive"
+                          aria-label={t("tabs.errorsHere")}
+                        />
+                      ) : dirtyTabs.has(key) ? (
                         <span
                           className="size-1.5 rounded-full bg-warning"
                           aria-label={t("tabs.unsavedHere")}
@@ -599,7 +632,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   <ValueSelect
                     form={form}
                     name="php_version"
-                    disabled={!canManage || saving}
+                    disabled={locked}
                     options={php.available_versions}
                     render={(value) => t("versionLabel", { version: value })}
                   />
@@ -610,7 +643,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                     form={form}
                     name="memory_limit"
                     placeholder={t("memoryLimitPlaceholder")}
-                    disabled={saving}
+                    disabled={locked}
                     options={MEMORY_SIZES}
                     customLabel={t("custom")}
                   />
@@ -621,7 +654,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                     form={form}
                     name="pm_max_children"
                     placeholder={t("pmMaxChildrenPlaceholder")}
-                    disabled={saving}
+                    disabled={locked}
                     options={WORKERS}
                     numeric
                     customLabel={t("custom")}
@@ -638,7 +671,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                           type="button"
                           variant={activePreset?.key === preset.key ? "default" : "outline"}
                           size="sm"
-                          disabled={saving}
+                          disabled={locked}
                           onClick={() => {
                             form.setValue("pm_type", preset.pm_type, { shouldDirty: true });
                             form.setValue("pm_max_children", preset.pm_max_children, {
@@ -686,7 +719,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                     form={form}
                     name="upload_max_filesize"
                     placeholder={t("uploadMaxFilesizePlaceholder")}
-                    disabled={saving}
+                    disabled={locked}
                     options={UPLOAD_SIZES}
                     onPick={setUpload}
                     customLabel={t("custom")}
@@ -698,7 +731,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                     form={form}
                     name="max_execution_time"
                     placeholder={t("maxExecutionTimePlaceholder")}
-                    disabled={saving}
+                    disabled={locked}
                     options={EXECUTION_TIMES}
                     render={(value) => t("seconds", { count: value })}
                     numeric
@@ -711,7 +744,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                     form={form}
                     name="max_input_vars"
                     placeholder={t("maxInputVarsPlaceholder")}
-                    disabled={saving}
+                    disabled={locked}
                     options={INPUT_VARS}
                     numeric
                     customLabel={t("custom")}
@@ -729,7 +762,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
               {/* Promoted out of the toggle pair: it is the only setting here
                   that has a value, a state the server may disagree with, and a
                   state we cannot read at all. A switch could say none of that. */}
-              <OpenBasedir form={form} php={php} disabled={saving} />
+              <OpenBasedir form={form} php={php} disabled={locked} />
 
               <ToggleRow
                 form={form}
@@ -737,10 +770,10 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                 label={t("fields.allowUrlFopen")}
                 directive="allow_url_fopen"
                 explain={t("hints.allowUrlFopen")}
-                disabled={saving}
+                disabled={locked}
               />
 
-              <BlockedFunctions form={form} php={php} disabled={saving} />
+              <BlockedFunctions form={form} php={php} disabled={locked} />
             </TabsContent>
 
             <TabsContent
@@ -770,7 +803,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                           }))}
                           value={field.value}
                           onChange={field.onChange}
-                          disabled={saving}
+                          disabled={locked}
                         />
                       </FormControl>
                       <FormMessage />
@@ -785,7 +818,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   label={t("fields.maxRequests")}
                   directive="pm.max_requests"
                   explain={t("hints.maxRequests")}
-                  disabled={saving}
+                  disabled={locked}
                   min={0}
                   max={100000}
                 />
@@ -796,7 +829,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   label={t("fields.inputTime")}
                   directive="max_input_time"
                   explain={t("hints.inputTime")}
-                  disabled={saving}
+                  disabled={locked}
                   min={-1}
                   max={3600}
                 />
@@ -807,7 +840,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   label={t("fields.sessionLifetime")}
                   directive="session.gc_maxlifetime"
                   explain={t("hints.sessionLifetime")}
-                  disabled={saving}
+                  disabled={locked}
                   min={60}
                   max={604800}
                 />
@@ -832,7 +865,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                           options={timezoneOptionsWith(timezones, field.value)}
                           value={field.value}
                           onChange={field.onChange}
-                          disabled={saving}
+                          disabled={locked}
                           placeholder={t("fields.timezonePlaceholder")}
                         />
                       </FormControl>
@@ -848,7 +881,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   label={t("fields.autoPrepend")}
                   directive="auto_prepend_file"
                   explain={t("hints.autoPrepend")}
-                  disabled={saving}
+                  disabled={locked}
                   mono
                 />
 
@@ -862,7 +895,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                   label={t("fields.post")}
                   directive="post_max_size"
                   explain={t("hints.post")}
-                  disabled={saving}
+                  disabled={locked}
                   mono
                 />
               </div>
@@ -883,7 +916,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                         {...field}
                         rows={4}
                         spellCheck={false}
-                        disabled={saving}
+                        disabled={locked}
                         className="font-mono text-xs"
                         placeholder={t("fields.directivesPlaceholder")}
                       />
@@ -895,6 +928,16 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
             </TabsContent>
           </Tabs>
 
+          {rejected ? (
+            <p
+              role="alert"
+              className="flex items-start gap-2.5 border-t bg-destructive/5 px-5 py-3 text-sm text-destructive"
+            >
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+              <span>{rejected}</span>
+            </p>
+          ) : null}
+
           <CardSaveFooter
             submit
             saving={saving}
@@ -902,7 +945,11 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
             saveReason={
               !canManage ? t("noPermission") : !form.formState.isDirty ? t("nothingToSave") : null
             }
-            onDiscard={() => form.reset(defaults)}
+            onDiscard={() => {
+              form.reset(defaults);
+              setRejected(null);
+              setResetKey((key) => key + 1);
+            }}
             saveLabel={t("saveAction")}
             note={t("saveNote")}
             showReason
@@ -934,9 +981,14 @@ function ValueSelect({
   placeholder,
 }) {
   const tValidation = useTranslations("validation");
+  const tCommon = useTranslations("common");
   const value = useWatch({ control: form.control, name });
   const inList = options.some((option) => String(option) === String(value));
-  const [custom, setCustom] = useState(!inList);
+  // Chosen by hand. The panel remounts these on Discard and after a save, so it
+  // cannot outlive the edit it belongs to — it used to: Discard put 256M back
+  // and left the box open around it, as if a custom value were still set.
+  const [customPicked, setCustomPicked] = useState(false);
+  const custom = !inList || customPicked;
 
   /*
    * Read here rather than through <FormMessage>, because the dropdown branch is
@@ -954,7 +1006,15 @@ function ValueSelect({
    * finished sentences, and running a sentence through t() returns the key.
    */
   const raw = form.formState.errors?.[name]?.message;
-  const error = raw ? (tValidation.has(raw) ? tValidation(raw) : raw) : null;
+  // `requiredField` lives in `common`, as FormMessage reads it; checking only
+  // the validation namespace printed the key itself when the box was emptied.
+  const error = raw
+    ? raw === "requiredField"
+      ? tCommon("requiredField")
+      : tValidation.has(raw)
+        ? tValidation(raw)
+        : raw
+    : null;
 
   return (
     <div className="space-y-1.5">
@@ -963,10 +1023,10 @@ function ValueSelect({
         disabled={disabled}
         onValueChange={(next) => {
           if (next === CUSTOM) {
-            setCustom(true);
+            setCustomPicked(true);
             return;
           }
-          setCustom(false);
+          setCustomPicked(false);
           const parsed = numeric ? Number(next) : next;
           if (onPick) onPick(parsed);
           else form.setValue(name, parsed, { shouldDirty: true });
@@ -1165,7 +1225,7 @@ function MemoryBudget({ budget, workers, limit }) {
           <TriangleAlert className="mt-px size-3.5 shrink-0" />
           <span>
             {t("overDetail", {
-              required: formatBytes(budget.thisSite),
+              required: formatBytes(budget.committed),
               total: formatBytes(budget.total),
             })}
           </span>
@@ -1234,10 +1294,13 @@ function Label({ label, name, directive, explain }) {
         {/* Tied to the directive rather than left to the `hint` prop, which
             appends it last: "Restart a worker after this many requests
             (pm.max_requests)" fills the column, and the ⓘ alone would drop to a
-            second line with nothing beside it. */}
+            second line with nothing beside it. It wraps rather than staying one
+            nowrap run: "(upload_max_filesize + post_max_size)" was wider than a
+            390px column in German and pushed Reset and the inputs past the
+            card's edge. */}
         {directive ? (
-          <span className="inline-flex items-center gap-1 whitespace-nowrap">
-            <span className="font-mono text-xs font-normal text-muted-foreground">
+          <span className="inline-flex min-w-0 items-center gap-1">
+            <span className="font-mono text-xs font-normal break-all text-muted-foreground">
               ({directive})
             </span>
             {explain ? <LabelHint>{explain}</LabelHint> : null}
@@ -1630,6 +1693,9 @@ function BlockedFunctions({ form, php, disabled }) {
   const t = useTranslations("applications.php");
   const tb = useTranslations("applications.php.blocked");
   const [draft, setDraft] = useState("");
+  // Names from the last Add that were not function names, said by name rather
+  // than added as chips the save would then refuse.
+  const [refused, setRefused] = useState([]);
 
   const value = useWatch({ control: form.control, name: "disable_functions" }) ?? "";
   const names = value
@@ -1674,14 +1740,14 @@ function BlockedFunctions({ form, php, disabled }) {
 
   function add() {
     // A pasted list is a list — splitting it here saves adding five names one
-    // at a time, and drops the duplicates that produces.
-    const added = draft
-      .split(/[,\s]+/)
-      .map((name) => name.trim())
-      .filter(Boolean)
-      .filter((name) => !names.includes(name));
+    // at a time. The Set drops duplicates inside the paste as well as ones
+    // already listed; "exec, system exec" used to add exec twice.
+    const typed = [...new Set(draft.split(/[,\s]+/).map((name) => name.trim()).filter(Boolean))];
+    const valid = typed.filter((name) => /^[A-Za-z0-9_]+$/.test(name));
+    const added = valid.filter((name) => !names.includes(name));
 
     if (added.length) write([...names, ...added]);
+    setRefused(typed.filter((name) => !valid.includes(name)));
     setDraft("");
   }
 
@@ -1754,6 +1820,12 @@ function BlockedFunctions({ form, php, disabled }) {
               {tb("count", { count: names.length })}
             </p>
           </div>
+
+          {refused.length ? (
+            <p role="alert" className="text-sm text-destructive">
+              {tb("invalidName", { names: refused.join(", ") })}
+            </p>
+          ) : null}
 
           {/* One button per starting point, same shape as the FPM presets
               above: the matching one is filled in, and its description is read

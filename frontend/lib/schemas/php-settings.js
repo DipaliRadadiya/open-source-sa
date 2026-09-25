@@ -198,13 +198,13 @@ export const phpSettingsFormSchema = z.object({
   memory_limit: size,
   upload_max_filesize: size,
   post_max_size: size,
-  max_execution_time: z.coerce.number().int("integer").min(0, "range").max(3600, "range"),
-  max_input_time: z.coerce.number().int("integer").min(-1, "range").max(3600, "range"),
-  max_input_vars: z.coerce.number().int("integer").min(100, "range").max(100000, "range"),
-  session_gc_maxlifetime: z.coerce.number().int("integer").min(60, "range").max(604800, "range"),
+  max_execution_time: z.coerce.number().int("integer").min(0, "rangeSeconds3600").max(3600, "rangeSeconds3600"),
+  max_input_time: z.coerce.number().int("integer").min(-1, "rangeInputTime").max(3600, "rangeInputTime"),
+  max_input_vars: z.coerce.number().int("integer").min(100, "rangeInputVars").max(100000, "rangeInputVars"),
+  session_gc_maxlifetime: z.coerce.number().int("integer").min(60, "rangeSession").max(604800, "rangeSession"),
   pm_type: z.enum(PM_TYPES),
-  pm_max_children: z.coerce.number().int("integer").min(1, "range").max(MAX_CHILDREN, "range"),
-  pm_max_requests: z.coerce.number().int("integer").min(0, "range").max(100000, "range"),
+  pm_max_children: z.coerce.number().int("integer").min(1, "rangeWorkers").max(MAX_CHILDREN, "rangeWorkers"),
+  pm_max_requests: z.coerce.number().int("integer").min(0, "rangeMaxRequests").max(100000, "rangeMaxRequests"),
   open_basedir_enabled: z.boolean().default(false),
   /**
    * Extra folders, one per line. The rules are the backend's own
@@ -253,7 +253,7 @@ export const phpSettingsFormSchema = z.object({
     .trim()
     .max(255, "max255")
     // `not_regex:/\.\./` on the backend.
-    .refine((value) => !value.includes(".."), "noTraversal")
+    .refine((value) => !value.includes(".."), "pathNoTraversal")
     .default(""),
   // Ini, so newlines are fine; a `[section]` header is not — it would start a
   // second pool inside this file.

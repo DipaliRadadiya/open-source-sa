@@ -11,6 +11,7 @@ import { RestoreProgress } from "@/components/backups/restore-progress";
  */
 export function ActiveRestore({ restore, applicationDomain, scrollIntoView = false,
   restoredSafetyCopy = false,
+  onStatusChange,
 }) {
   const [dismissed, setDismissed] = useState(false);
   const box = useRef(null);
@@ -39,6 +40,7 @@ export function ActiveRestore({ restore, applicationDomain, scrollIntoView = fal
       // never be satisfied — the undo was unusable exactly where it mattered.
       applicationDomain={applicationDomain ?? restore?.application_domain}
       restoredSafetyCopy={restoredSafetyCopy}
+      onStatusChange={onStatusChange}
       onDismiss={() => setDismissed(true)}
     />
     </div>

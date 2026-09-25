@@ -55,6 +55,9 @@ export function RestoreProgress({
   // True when the run that is on screen restored a safety copy — i.e. it was
   // itself an undo. Supplied by the page so a reload mid-undo says so too.
   restoredSafetyCopy = false,
+  // Told each status this banner learns, so the page can block the actions
+  // that must wait for a restore.
+  onStatusChange,
   onDismiss,
 }) {
   const t = useTranslations("backups.progress");
@@ -99,6 +102,7 @@ export function RestoreProgress({
         const next = response.data?.restore;
         if (!next) return;
         setRestore(next);
+        onStatusChange?.(next.status);
         // The site's files and database just changed underneath every other
         // panel screen; refresh so nothing keeps showing the old world.
         if (!RESTORE_IN_FLIGHT.includes(next.status)) router.refresh();
@@ -125,7 +129,7 @@ export function RestoreProgress({
       clearInterval(timer.current);
       clearTimeout(stop);
     };
-  }, [inFlight, id, queued, router]);
+  }, [inFlight, id, queued, router, onStatusChange]);
 
   if (!restore) return null;
 
@@ -139,7 +143,9 @@ export function RestoreProgress({
       const response = await fetchBackup(restore.safety_backup_id);
       const backup = response.data?.backup;
       if (!backup) throw new Error("missing");
-      setUndoBackup({ ...backup, application_domain: applicationDomain });
+      // Put back what this restore replaced, no more: undoing a database-only
+      // restore defaulted to "Files and database" and would also rewind files.
+      setUndoBackup({ ...backup, application_domain: applicationDomain, preferred_type: restore.type });
     } catch (error) {
       toast.error(apiMessage(error, t("undoFailed")));
     } finally {
@@ -207,6 +213,7 @@ export function RestoreProgress({
             // again, under a word that means the opposite.
             setWasUndo(true);
             setRestore(next);
+            onStatusChange?.(next.status);
           }}
         />
       </>

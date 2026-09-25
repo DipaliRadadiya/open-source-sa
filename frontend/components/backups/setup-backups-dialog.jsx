@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, Loader2, PlayCircle, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Loader2, PlayCircle, ShieldCheck, TriangleAlert } from "lucide-react";
 import {
   BACKUP_DEFAULT_TIME,
   backupTargetFormSchema,
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Form } from "@/components/ui/form";
 import { FormModal } from "@/components/ui/form-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BackupSettingsFields } from "@/components/backups/backup-settings-fields";
 
 /**
@@ -52,10 +53,16 @@ export function SetupBackupsDialog({
   databasesKnown = false,
   // `GET /backup-targets/options`, read by the page. Null when that failed.
   options: initialOptions = null,
+  // The site's name when the dialog is fixed to one site (the application
+  // page), which passes no `applications` list to look it up in.
+  applicationName = null,
+  // Called after the saved step's "Back up now" is accepted.
+  onStarted,
 }) {
   const t = useTranslations("backups.setup");
   const router = useRouter();
   const [saved, setSaved] = useState(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [running, setRunning] = useState(false);
   /*
    * The destinations, as of the last time we asked.
@@ -141,7 +148,11 @@ export function SetupBackupsDialog({
       const application = applications.find(
         (candidate) => candidate.id === Number(values.application_id),
       );
-      setSaved({ id: Number(values.application_id), name: application?.name ?? "", ...values });
+      setSaved({
+        id: Number(values.application_id),
+        name: application?.name ?? applicationName ?? "",
+        ...values,
+      });
       router.refresh();
     } catch (error) {
       if (error.response?.data?.errors) {
@@ -157,6 +168,7 @@ export function SetupBackupsDialog({
     try {
       await runBackupNow(saved.id);
       toast.success(t("started"));
+      onStarted?.();
       close();
       router.refresh();
     } catch (error) {
@@ -166,7 +178,18 @@ export function SetupBackupsDialog({
     }
   }
 
+  // Esc, the X and Cancel all come through here. With edits in the form they
+  // ask first — they used to drop a half-filled schedule without a word.
+  function requestClose() {
+    if (!saved && form.formState.isDirty && !form.formState.isSubmitting) {
+      setConfirmDiscard(true);
+      return;
+    }
+    close();
+  }
+
   function close() {
+    setConfirmDiscard(false);
     setSaved(null);
     // Back to the prop: the page behind this dialog re-reads on navigation, so
     // its list is the fresher one once we are no longer holding a form open.
@@ -244,7 +267,11 @@ export function SetupBackupsDialog({
         open={open}
         onOpenChange={(next) => (next ? onOpenChange?.(true) : close())}
         icon={CheckCircle2}
-        title={t("savedTitle", { name: saved.name })}
+        title={
+          saved.name
+            ? t(saved.enabled ? "savedTitle" : "savedTitleManual", { name: saved.name })
+            : t(saved.enabled ? "savedTitleNoName" : "savedTitleManualNoName")
+        }
         description={
           saved.enabled ? t("savedScheduled") : t("savedManual")
         }
@@ -272,13 +299,15 @@ export function SetupBackupsDialog({
     <Form {...form}>
       <FormModal
         open={open}
-        onOpenChange={(next) => (next ? onOpenChange?.(true) : close())}
+        onOpenChange={(next) => (next ? onOpenChange?.(true) : requestClose())}
         asForm
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
         icon={ShieldCheck}
         className="sm:max-w-xl"
         title={target ? t("editTitle") : t("title")}
-        description={target ? t("editSubtitle") : t("subtitle")}
+        description={
+          target ? t("editSubtitle") : applications.length ? t("subtitle") : t("subtitleSite")
+        }
         footer={
           <>
             {blocker ? (
@@ -288,7 +317,7 @@ export function SetupBackupsDialog({
                 {blocker}
               </span>
             ) : null}
-            <Button type="button" variant="outline" onClick={close} disabled={submitting}>
+            <Button type="button" variant="outline" onClick={requestClose} disabled={submitting}>
               {t("cancel")}
             </Button>
             {/* The blocker is already printed above the button; the tooltip
@@ -321,8 +350,27 @@ export function SetupBackupsDialog({
         {/* What pressing Save will actually do, in one line. Reading your own
             answers back is the cheapest way to catch the wrong site or a
             schedule you did not mean. */}
-        <SummaryLine values={values} applications={applications} destinations={available} options={options} />
+        <SummaryLine
+          values={values}
+          applications={applications}
+          applicationName={applicationName}
+          destinations={available}
+          options={options}
+        />
       </FormModal>
+
+      <ConfirmDialog
+        open={confirmDiscard}
+        onOpenChange={setConfirmDiscard}
+        icon={TriangleAlert}
+        tone="warning"
+        confirmVariant="destructive"
+        title={t("discardTitle")}
+        description={t("discardDescription")}
+        cancelLabel={t("discardKeep")}
+        confirmLabel={t("discardConfirm")}
+        onConfirm={close}
+      />
     </Form>
   );
 }
@@ -335,16 +383,19 @@ export function SetupBackupsDialog({
  * set one at a time; this is the only place the answers appear together, which
  * is where a wrong site or an unintended `manual` becomes obvious.
  */
-function SummaryLine({ values, applications, destinations, options }) {
+function SummaryLine({ values, applications, applicationName = null, destinations, options }) {
   const t = useTranslations("backups.setup");
   const tf = useTranslations("backups.form");
 
-  const site = applications.find((a) => a.id === Number(values.application_id));
+  // On the application page there is no list to look the site up in, and the
+  // whole line used to disappear with it.
+  const siteName =
+    applications.find((a) => a.id === Number(values.application_id))?.name ?? applicationName;
   const destination = destinations.find((d) => d.id === Number(values.storage_destination_id));
-  if (!site || !values.type) return null;
+  if (!siteName || !values.type) return null;
 
   const parts = [
-    site.name,
+    siteName,
     options?.types.find((type) => type.value === values.type)?.label,
     values.enabled ? frequencyOption(options, values.frequency)?.label : tf("automaticOffShort"),
     values.enabled ? t("keep", { count: Number(values.retention_count) || 0 }) : null,

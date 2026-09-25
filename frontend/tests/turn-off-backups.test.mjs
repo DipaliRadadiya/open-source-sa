@@ -26,5 +26,6 @@ test("pausing sends the target back unchanged apart from enabled", () => {
 test("gated on backup manage, and blocked while a run is in flight", () => {
   assert.match(PAGE, /canTurnOff=\{canRestore\}/);
   assert.match(PAGE, /const canRestore = can\(permissions, "backup", "manage"\)/);
-  assert.match(PANEL, /turnOffBlockedReason=\{running \|\| queued \|\| busy \? t\("turnOff\.running"\) : null\}/);
+  // A restore blocks it too, and says so first.
+  assert.match(PANEL, /restoreRunning \? t\("restoreRunning"\) : running \|\| queued \|\| busy \? t\("turnOff\.running"\) : null/);
 });

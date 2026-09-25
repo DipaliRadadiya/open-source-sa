@@ -15,10 +15,11 @@ import {
   Pencil,
   PlayCircle,
   PowerOff,
+  ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
+import { BACKUP_IN_FLIGHT, RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
 import { isBackupQueued, newestBackupId } from "@/lib/backups/queued";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { clearStuckBackup, retryBackup, runBackupNow } from "@/lib/api/backups";
@@ -75,6 +76,9 @@ export function BackupsPanel({
   // The history request came back empty because it failed, not because the
   // site has never been backed up.
   backupsFailed = false,
+  // The read was refused (403) rather than broken: the history needs the
+  // server-level Backups permission, which a site-only role may not have.
+  backupsForbidden = false,
   // `GET /backup-targets/options`; null when it could not be read.
   backupOptions = null,
 }) {
@@ -92,6 +96,12 @@ export function BackupsPanel({
   // Whether this restore was started here, which is the only case that should
   // move the viewport. Restore is pressed from a table row well below the fold.
   const [restoreStartedHere, setRestoreStartedHere] = useState(false);
+  // The banner polls the restore itself; this is its latest status, so the
+  // rest of the page knows when the site is being overwritten. The table used
+  // to keep offering Restore and Back up now all the way through — the API
+  // refused the one, and accepted the other: a backup of a half-restored site.
+  const [restoreStatus, setRestoreStatus] = useState(null);
+  const restoreRunning = RESTORE_IN_FLIGHT.includes(restoreStatus ?? restore?.status);
   // The newest backup id at the moment a run was started here, or null.
   //
   // `POST /applications/{id}/backups` answers 202 with the *target* — the
@@ -198,6 +208,7 @@ export function BackupsPanel({
         <ActiveRestore
           key={restore.id}
           restore={restore}
+          onStatusChange={setRestoreStatus}
           applicationDomain={application.domain}
           restoredSafetyCopy={Boolean(restore.restored_safety_copy)}
           scrollIntoView={restoreStartedHere}
@@ -250,6 +261,10 @@ export function BackupsPanel({
         // failed history read renders as "No backup has run yet" — the
         // reassuring answer, produced by not knowing.
         lastBackupUnknown={backupsFailed}
+        // Known to hold nothing — not "could not ask". A deleted history still
+        // leaves `last_run_at` on the target, and the card went on saying
+        // "Last backup 28 minutes ago" in green beside an empty list.
+        noneKept={!backupsFailed && total === 0}
         canManage={canManage}
         // A spinner only for a run this page is actually waiting on — our POST,
         // or the queue window after it. A run that is merely *listed* as in
@@ -258,13 +273,21 @@ export function BackupsPanel({
         // forever if its worker died, and a spinner that never stops is a
         // promise of progress nothing here can keep.
         running={running || queued}
-        blockedReason={!running && !queued && busy ? t("alreadyRunning") : null}
+        blockedReason={
+          restoreRunning
+            ? t("restoreRunning")
+            : !running && !queued && busy
+              ? t("alreadyRunning")
+              : null
+        }
         onBackUpNow={backUpNow}
         onEdit={() => setEditing(true)}
         canTurnOff={canTurnOff}
         // The API refuses while a run is in flight: its archive would belong
         // to a schedule that no longer exists.
-        turnOffBlockedReason={running || queued || busy ? t("turnOff.running") : null}
+        turnOffBlockedReason={
+          restoreRunning ? t("restoreRunning") : running || queued || busy ? t("turnOff.running") : null
+        }
         onTurnOff={() => setTurningOff(true)}
       />
 
@@ -272,6 +295,7 @@ export function BackupsPanel({
         backups={backups}
         total={total}
         failed={backupsFailed}
+        forbidden={backupsForbidden}
         applicationId={application.id}
         canRestore={canRestore}
         canManage={canManage}
@@ -285,7 +309,10 @@ export function BackupsPanel({
         // answers 422. Say so on the button instead of letting the click
         // discover it. Every row here belongs to this site, so the answer is
         // the same for all of them.
-        retryBlockedReason={queued || busy ? t("alreadyRunning") : null}
+        retryBlockedReason={
+          restoreRunning ? t("restoreRunning") : queued || busy ? t("alreadyRunning") : null
+        }
+        restoreInFlight={restoreRunning}
       />
 
       {/* The same modal the Backups screen opens, in edit mode when a target
@@ -296,10 +323,18 @@ export function BackupsPanel({
         onOpenChange={setEditing}
         applicationId={application.id}
         destinations={destinations}
+        applicationName={application.name}
         target={target}
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
         options={backupOptions}
+        // "Back up now" in the saved step starts the same invisible queue
+        // window as the card's button, so it needs the same bookkeeping —
+        // without it the run never appeared until a manual reload.
+        onStarted={() => {
+          setStalled(false);
+          setQueuedAfter(newestId);
+        }}
       />
 
       {/* Kept while open: a successful turn-off refreshes the page to no
@@ -344,6 +379,7 @@ export function BackupsPanel({
           setRestoring(null);
           if (started) {
             setRestore(started);
+            setRestoreStatus(null);
             setRestoreStartedHere(true);
           }
           router.refresh();
@@ -355,6 +391,7 @@ export function BackupsPanel({
 
 const STATE = {
   protected: { icon: ShieldCheck, tone: "bg-success/10 text-success", ring: "border-success/30" },
+  empty: { icon: ShieldAlert, tone: "bg-warning/15 text-warning", ring: "border-warning/30" },
   paused: { icon: PauseCircle, tone: "bg-warning/15 text-warning", ring: "border-warning/30" },
   unprotected: {
     icon: CircleSlash,
@@ -363,12 +400,14 @@ const STATE = {
   },
 };
 
-function stateOf(target) {
+function stateOf(target, noneKept) {
   if (!target) return "unprotected";
   // A disabled target and a manual one both run on no schedule. That state
   // looks configured on any screen that only asks "is there a target?", and
   // backs up nothing — so it is never reported as protected.
   if (!target.enabled || target.frequency === "manual") return "paused";
+  // Scheduled, but nothing to restore from: not what "backed up" promises.
+  if (noneKept) return "empty";
   return "protected";
 }
 
@@ -377,9 +416,10 @@ function stateOf(target) {
  * facts, and the two actions. No form — the answer to "am I covered?" should
  * not require reading a set of inputs.
  */
-function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
+function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown = false, noneKept = false, canManage, running, blockedReason, onBackUpNow, onEdit, canTurnOff = false, turnOffBlockedReason = null, onTurnOff }) {
   const t = useTranslations("backups.application");
-  const state = stateOf(target);
+  const tHistory = useTranslations("backups.history");
+  const state = stateOf(target, noneKept);
   const { icon: Icon, tone, ring } = STATE[state];
   // The stored time is 24-hour; the picker that sets it renders in the
   // browser's locale. Formatting here is what stops the card and the picker
@@ -459,10 +499,13 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
           // minutes ago is the opposite of the truth.
           // "—" rather than "Never" when the history read failed: the crashed-run
           // fallback below cannot be checked, so neither answer is known.
-          value:
-            target.last_run_at_human ??
-            lastBackup?.created_at_human ??
-            (lastBackupUnknown ? "—" : t("neverRun")),
+          value: noneKept
+            ? target.last_run_at
+              ? t("noneKept")
+              : t("neverRun")
+            : (target.last_run_at_human ??
+              lastBackup?.created_at_human ??
+              (lastBackupUnknown ? "—" : t("neverRun"))),
         },
         {
           label: t("summary.nextBackup"),
@@ -478,6 +521,7 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
     : [];
 
   const excludes = (target?.file_excludes?.length ?? 0) + (target?.database_excludes?.length ?? 0);
+  const noPermission = tHistory("noPermission");
 
   return (
     <Card className={cn("gap-0 overflow-hidden py-0 shadow-sm", ring)}>
@@ -508,29 +552,36 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
             these buttons never wrap their labels — so at a larger text size
             the pair simply ran past the card's edge and clipped. A column
             cannot overflow no matter how wide the labels get. */}
-        {canManage ? (
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <Button variant="outline" onClick={onEdit} className="w-full sm:w-auto">
-              <Pencil className="size-4" />
-              {target ? t("editSettings") : t("setUp")}
+        {/* Shown to a read-only role too, disabled with the reason, as every
+            other page does — they used to vanish, which reads as a missing
+            feature rather than a permission. */}
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Button
+            variant="outline"
+            onClick={onEdit}
+            disabled={!canManage}
+            disabledReason={canManage ? null : noPermission}
+            className="w-full sm:w-auto"
+          >
+            <Pencil className="size-4" />
+            {target ? t("editSettings") : t("setUp")}
+          </Button>
+          {target ? (
+            <Button
+              onClick={onBackUpNow}
+              disabled={!canManage || running || Boolean(blockedReason)}
+              disabledReason={canManage ? blockedReason : noPermission}
+              className="w-full sm:w-auto"
+            >
+              {running ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <PlayCircle className="size-4" />
+              )}
+              {t("backUpNow")}
             </Button>
-            {target ? (
-              <Button
-                onClick={onBackUpNow}
-                disabled={running || Boolean(blockedReason)}
-                disabledReason={blockedReason}
-                className="w-full sm:w-auto"
-              >
-                {running ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <PlayCircle className="size-4" />
-                )}
-                {t("backUpNow")}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       {target ? (
@@ -555,20 +606,20 @@ function ProtectionCard({ target, options = null, lastBackup, lastBackupUnknown 
 
           {/* Exclusions change what a restore gives you back, so their
               existence belongs here even when the patterns do not. */}
-          {excludes > 0 || canTurnOff ? (
+          {excludes > 0 || target ? (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3">
               <p className="text-xs text-muted-foreground">
                 {excludes > 0 ? t("summary.excludes", { count: excludes }) : null}
               </p>
               {/* Quiet and last: a way out, not something to press by accident
                   beside "Back up now". The dialog carries the weight. */}
-              {canTurnOff ? (
+              {target ? (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={onTurnOff}
-                  disabled={Boolean(turnOffBlockedReason)}
-                  disabledReason={turnOffBlockedReason}
+                  disabled={!canTurnOff || Boolean(turnOffBlockedReason)}
+                  disabledReason={canTurnOff ? turnOffBlockedReason : noPermission}
                   className="ml-auto [--destructive-ink:color-mix(in_oklch,var(--destructive),var(--foreground)_22%)] text-(--destructive-ink) hover:bg-destructive/10 hover:text-(--destructive-ink) dark:text-destructive dark:hover:text-destructive"
                 >
                   <PowerOff className="size-4" />
@@ -608,13 +659,15 @@ function RecentBackups({
   stalled = false,
   retryBlockedReason = null,
   failed = false,
+  forbidden = false,
+  restoreInFlight = false,
 }) {
   const t = useTranslations("backups.application");
   const router = useRouter();
 
   // "No backups have run for this site yet" is a claim about this site's
   // history, and a request that did not come back is not evidence for it.
-  const emptyMessage = failed ? t("historyFailed") : t("noRuns");
+  const emptyMessage = forbidden ? t("historyForbidden") : failed ? t("historyFailed") : t("noRuns");
 
   const listProps = {
     backups,
@@ -630,6 +683,7 @@ function RecentBackups({
     canClear: canManage,
     busyId,
     retryBlockedFor: retryBlockedReason ? () => retryBlockedReason : null,
+    restoreInFlight,
     showSite: false,
   };
 
@@ -653,12 +707,16 @@ function RecentBackups({
             text rather than the second half of a pair. */}
         <div className="flex shrink-0 items-center gap-2">
           <RefreshButton />
-          <Button asChild variant="outline">
-            <Link href={`/backups/history?application=${applicationId}`}>
-              <History className="size-4" />
-              {t("viewAll")}
-            </Link>
-          </Button>
+          {/* The full history needs the same permission this list was refused
+              for, so the link would only lead to "no access". */}
+          {forbidden ? null : (
+            <Button asChild variant="outline">
+              <Link href={`/backups/history?application=${applicationId}`}>
+                <History className="size-4" />
+                {t("viewAll")}
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -685,14 +743,16 @@ function RecentBackups({
       ) : null}
 
       <CardContent className="p-0">
-        <div className="lg:hidden p-4">
+        {/* Cards below xl: with a site's columns the table needs ~930px,
+            and at 1024 that pushed Size, Download and Restore off the card. */}
+        <div className="xl:hidden p-4">
           {backups.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>
           ) : (
             <BackupsCards {...listProps} />
           )}
         </div>
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
           <BackupsHistoryTable {...listProps} emptyMessage={emptyMessage} bare />
         </div>
       </CardContent>
