@@ -4325,7 +4325,7 @@
       },
       "edit": {
         "title": "Editar worker",
-        "subtitle": "As alterações se aplicam na próxima vez que este worker reiniciar.",
+        "subtitle": "Ao salvar, as alterações se aplicam na hora — o worker reinicia com elas, a menos que esteja desativado.",
         "submit": "Salvar alterações",
         "failed": "Não foi possível aplicar estas alterações. Verifique se o comando funciona nesta aplicação e tente novamente.",
         "failedStopped": "Estas alterações não puderam ser aplicadas, então o worker foi parado. Corrija o comando e salve novamente."
@@ -4382,7 +4382,7 @@
         "autoStart": "Iniciar com o servidor",
         "autoStartHint": "Desativado significa que só executa quando você inicia manualmente.",
         "extraConfig": "Configurações extras do supervisord",
-        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "Uma configuração por linha, adicionada apenas a este worker. Cabeçalhos de seção entre [colchetes] são recusados.",
         "kind": "Tipo",
         "kindHint": "Decide como ele é reiniciado. Queue e Horizon são solicitados a terminar o job em andamento primeiro; Personalizado é parado e iniciado.",

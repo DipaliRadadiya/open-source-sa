@@ -4325,7 +4325,7 @@
       },
       "edit": {
         "title": "ワーカーを編集",
-        "subtitle": "変更は次回ワーカーが再起動したときに適用されます。",
+        "subtitle": "保存するとすぐに変更が適用され、無効になっていない限りワーカーはその設定で再起動します。",
         "submit": "変更を保存",
         "failed": "変更を適用できませんでした。このアプリケーションでコマンドが実行できるか確認してから、もう一度お試しください。",
         "failedStopped": "この変更を適用できなかったため、ワーカーは停止しました。コマンドを修正して再度保存してください。"
@@ -4382,7 +4382,7 @@
         "autoStart": "サーバー起動時に開始",
         "autoStartHint": "オフにすると、手動で開始したときのみ実行されます。",
         "extraConfig": "追加の supervisord 設定",
-        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "1 行に 1 つの設定で、このワーカーにのみ追加されます。[角括弧] のセクションヘッダーは使用できません。",
         "kind": "種類",
         "kindHint": "再起動の方法を決めます。Queue と Horizon は現在の jobsの完了を待ってから再起動され、Custom は停止して起動します。",

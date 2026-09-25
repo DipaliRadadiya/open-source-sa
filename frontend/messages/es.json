@@ -4325,7 +4325,7 @@
       },
       "edit": {
         "title": "Editar worker",
-        "subtitle": "Los cambios se aplican la próxima vez que este worker se reinicie.",
+        "subtitle": "Al guardar, los cambios se aplican de inmediato: el worker se reinicia con ellos, salvo que esté desactivado.",
         "submit": "Guardar cambios",
         "failed": "No se pudieron aplicar estos cambios. Comprueba que el comando funciona en esta aplicación y vuelve a intentarlo.",
         "failedStopped": "No se pudieron aplicar estos cambios, así que el worker se detuvo. Corrige el comando y guarda de nuevo."
@@ -4382,7 +4382,7 @@
         "autoStart": "Iniciar con el servidor",
         "autoStartHint": "Desactivado, solo se ejecuta cuando lo inicias a mano.",
         "extraConfig": "Ajustes adicionales de supervisord",
-        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "Un ajuste por línea, solo para este worker. No se admiten encabezados entre [corchetes].",
         "kind": "Tipo",
         "kindHint": "Decide cómo se reinicia. A Queue y Horizon se les pide que terminen primero el trabajo en curso; Custom se detiene y se inicia.",

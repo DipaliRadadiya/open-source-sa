@@ -62,3 +62,13 @@ test("the name placeholder does not imply a kind the app may not run", () => {
     assert.ok(!("userPlaceholder" in JSON.parse(read(`messages/${l}.json`)).applications.workers.form), l);
   }
 });
+
+test("the extra-config example is one that works, and edit says saving applies now", () => {
+  for (const l of LOCALES) {
+    const w = JSON.parse(read(`messages/${l}.json`)).applications.workers;
+    // The template already writes `environment=PATH=…`; a second environment=
+    // line is a duplicate key and the worker never starts.
+    assert.doesNotMatch(w.form.extraConfigPlaceholder, /^\s*environment\s*=/m, l);
+    assert.doesNotMatch(w.edit.subtitle, /next time|próxima vez|nächste Mal|prochain|次回|следующем|अगली बार/i, l);
+  }
+});

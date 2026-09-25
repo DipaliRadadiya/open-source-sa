@@ -4325,7 +4325,7 @@
       },
       "edit": {
         "title": "Edit worker",
-        "subtitle": "Changes apply the next time this worker restarts.",
+        "subtitle": "Saving applies the changes right away — the worker restarts with them unless it is turned off.",
         "submit": "Save changes",
         "failed": "These changes could not be applied. Check that the command runs for this application, then try again.",
         "failedStopped": "These changes could not be applied, so the worker was stopped. Fix the command and save again."
@@ -4382,7 +4382,7 @@
         "autoStart": "Start with the server",
         "autoStartHint": "Off means it only runs when you start it by hand.",
         "extraConfig": "Extra supervisord settings",
-        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "One setting per line, added to this worker only. Section headers in [brackets] are refused.",
         "kind": "Type",
         "kindHint": "Decides how it gets restarted. Queue and Horizon are asked to finish the job they're on first; Custom is stopped and started.",

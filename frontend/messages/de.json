@@ -4325,7 +4325,7 @@
       },
       "edit": {
         "title": "Worker bearbeiten",
-        "subtitle": "Die Änderungen greifen, wenn dieser Worker das nächste Mal neu startet.",
+        "subtitle": "Beim Speichern greifen die Änderungen sofort — der Worker startet damit neu, außer er ist ausgeschaltet.",
         "submit": "Änderungen speichern",
         "failed": "Diese Änderungen konnten nicht übernommen werden. Prüfen Sie, ob der Befehl für diese Anwendung läuft, und versuchen Sie es erneut.",
         "failedStopped": "Diese Änderungen konnten nicht angewendet werden, daher wurde der Worker gestoppt. Korrigieren Sie den Befehl und speichern Sie erneut."
@@ -4382,7 +4382,7 @@
         "autoStart": "Mit dem Server starten",
         "autoStartHint": "Aus heißt, er läuft nur, wenn Sie ihn von Hand starten.",
         "extraConfig": "Zusätzliche supervisord-Einstellungen",
-        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "Eine Einstellung pro Zeile, nur für diesen Worker. Abschnittsköpfe in [Klammern] werden abgelehnt.",
         "kind": "Typ",
         "kindHint": "Bestimmt, wie er neu gestartet wird. Queue und Horizon werden gebeten, den laufenden Job zuerst zu beenden; Eigener wird gestoppt und gestartet.",

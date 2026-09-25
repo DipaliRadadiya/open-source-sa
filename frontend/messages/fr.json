@@ -4325,7 +4325,7 @@
       },
       "edit": {
         "title": "Modifier le worker",
-        "subtitle": "Les modifications s'appliquent au prochain redémarrage de ce worker.",
+        "subtitle": "L'enregistrement applique les modifications tout de suite : le worker redémarre avec elles, sauf s'il est désactivé.",
         "submit": "Enregistrer les modifications",
         "failed": "Ces modifications n'ont pas pu être appliquées. Vérifiez que la commande fonctionne pour cette application, puis réessayez.",
         "failedStopped": "Ces modifications n'ont pas pu être appliquées, le worker a donc été arrêté. Corrigez la commande et enregistrez à nouveau."
@@ -4382,7 +4382,7 @@
         "autoStart": "Démarrer avec le serveur",
         "autoStartHint": "Désactivé signifie qu'il ne tourne que si vous le lancez manuellement.",
         "extraConfig": "Paramètres supervisord supplémentaires",
-        "extraConfigPlaceholder": "environment=APP_ENV=\"production\"",
+        "extraConfigPlaceholder": "startsecs=5",
         "extraConfigHint": "Un paramètre par ligne, ajouté uniquement à ce worker. Les en-têtes de section [entre crochets] sont refusés.",
         "kind": "Type",
         "kindHint": "Détermine la façon dont il est redémarré. Queue et Horizon terminent d'abord la tâche en cours ; Personnalisé est arrêté puis redémarré.",
