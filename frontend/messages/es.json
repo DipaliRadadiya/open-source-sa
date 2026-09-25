@@ -4000,7 +4000,8 @@
         "rootPlaceholder": "Raíz de la aplicación",
         "pathLabelHint": "Dónde colocarlo, contado desde la raíz de la carpeta de la aplicación.",
         "destination": "Se extrae en",
-        "copyDestination": "Copiar esta ruta"
+        "copyDestination": "Copiar esta ruta",
+        "folderMissing": "La carpeta «{folder}» no existe. Créala primero o elige otra."
       },
       "rename": {
         "title": "Renombrar o mover «{name}»",

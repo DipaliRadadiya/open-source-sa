@@ -59,7 +59,15 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
       // Wider than a yes/no confirmation: the body is a list to pick from.
       className="sm:!max-w-lg"
     >
-      <div className="space-y-2">
+      {/* A choice of one, so a radio group — plain buttons told a screen
+          reader nothing about which version was picked. Same shape as the
+          Environment restore dialog. Bounded so a long list keeps the
+          buttons in view. */}
+      <div
+        role="radiogroup"
+        aria-label={t("restore.title")}
+        className="-m-1 max-h-[min(20rem,45dvh)] space-y-2 overflow-y-auto p-1"
+      >
         {backups.map((backup) => {
           const active = selected === backup.name;
           const when = parseApiWallClock(backup.created_at);
@@ -67,6 +75,8 @@ export function RestoreFileBackupDialog({ appId, path, backups = [], open, onOpe
             <button
               key={backup.name}
               type="button"
+              role="radio"
+              aria-checked={active}
               onClick={() => setSelected(backup.name)}
               className={cn(
                 "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors",

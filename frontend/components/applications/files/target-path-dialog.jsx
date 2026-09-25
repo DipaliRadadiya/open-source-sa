@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Folder, Loader2 } from "lucide-react";
 import { apiMessage } from "@/lib/api/error-message";
+import { destinationMissing } from "@/lib/files/missing-folder";
+import { dirname } from "@/lib/files/path-helpers";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -51,6 +53,9 @@ export function TargetPathDialog({
   // else (the listing's own `path=` convention) — every other use of this
   // dialog genuinely requires a non-empty target.
   allowEmpty = false,
+  // Extract's value is the folder itself; everywhere else the folder is the
+  // value minus its last part.
+  targetIsFolder = false,
   emptyPlaceholder,
   // Rendered above the path field, and handed the field's own state — Compress
   // uses it for the format choice, which has to rewrite the extension in the
@@ -143,6 +148,8 @@ export function TargetPathDialog({
       const targetError = err.response?.data?.errors?.target?.[0];
       if (targetError) {
         setError(targetError);
+      } else if (await destinationMissing(appId, err, targetIsFolder ? trimmed : dirname(trimmed))) {
+        setError(t("targetDialog.folderMissing", { folder: targetIsFolder ? trimmed : dirname(trimmed) }));
       } else if (REFUSED_HERE.has(err.response?.status)) {
         // "Something already exists at that path", "could not be found": the
         // API sends these with no field key, and a toast fading out beside a

@@ -65,8 +65,9 @@ export const logReadSchema = z.object({
   label: z.string(),
   group: z.string(),
   lines: z.array(z.string()),
-  // Byte offset to pass back as `after` when tailing.
-  cursor: z.number(),
+  // Byte offset to pass back as `after` when tailing. Null for sources that
+  // cannot be tailed by offset (journal, privileged reads, worker logs).
+  cursor: z.number().nullable(),
   truncated: z.boolean().optional(),
 });
 

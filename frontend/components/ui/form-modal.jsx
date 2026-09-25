@@ -90,8 +90,11 @@ export function FormModal({
         // the field the reader came to fill in. Falls back to Radix's own
         // behaviour when there is no such field (e.g. a body of switches).
         onOpenAutoFocus={(event) => {
+          // Radix radio groups and selects keep a native input/select in the
+          // DOM for forms — aria-hidden and untabbable. Landing there put
+          // focus on nothing visible (Files → Bulk compress).
           const field = event.currentTarget.querySelector(
-            "input:not([type=hidden]):not([readonly]), textarea:not([readonly]), select",
+            "input:not([type=hidden]):not([type=radio]):not([type=checkbox]):not([readonly]):not([aria-hidden=true]):not([tabindex='-1']), textarea:not([readonly]):not([aria-hidden=true])",
           );
           if (field) {
             event.preventDefault();

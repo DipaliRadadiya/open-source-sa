@@ -4000,7 +4000,8 @@
         "rootPlaceholder": "Application folder",
         "pathLabelHint": "Where to put it, counted from the top of the application's folder.",
         "destination": "Extracts into",
-        "copyDestination": "Copy this path"
+        "copyDestination": "Copy this path",
+        "folderMissing": "The folder “{folder}” doesn't exist. Create it first, or pick another one."
       },
       "rename": {
         "title": "Rename or move \"{name}\"",

@@ -24,6 +24,7 @@ export function ExtractDialog({ appId, file, open, onOpenChange }) {
       submitLabel={t("extractDialog.submit")}
       savingLabel={t("saving")}
       defaultTarget={dirname(file.path)}
+      targetIsFolder
       allowEmpty
       emptyPlaceholder={t("targetDialog.rootPlaceholder")}
       apply={extractFile}

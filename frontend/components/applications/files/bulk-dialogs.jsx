@@ -18,7 +18,8 @@ import {
 } from "@/lib/api/files";
 import { bulkResult } from "@/lib/files/bulk-result";
 import { apiMessage } from "@/lib/api/error-message";
-import { compressSuggestion, dirname, joinPath } from "@/lib/files/path-helpers";
+import { destinationMissing } from "@/lib/files/missing-folder";
+import { compressSuggestion, dirname, inFolder, joinPath } from "@/lib/files/path-helpers";
 import { sharedMode, selectedFiles } from "@/lib/files/shared-mode";
 import { symbolicMode } from "@/lib/files/describe-mode";
 
@@ -133,8 +134,11 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
         err.response?.data?.errors?.target_directory?.[0] ??
         err.response?.data?.errors?.mode?.[0] ??
         err.response?.data?.errors?.paths?.[0];
+      const folder = action === "compress" ? dirname(inFolder(target.trim(), dirname(paths[0]))) : target.trim();
       if (field) setError(field);
-      else if ([404, 409, 422].includes(err.response?.status)) setError(apiMessage(err, t("bulk.failed")));
+      else if ((action === "move" || action === "copy" || action === "compress") && (await destinationMissing(appId, err, folder))) {
+        setError(t("targetDialog.folderMissing", { folder }));
+      } else if ([404, 409, 422].includes(err.response?.status)) setError(apiMessage(err, t("bulk.failed")));
       else toast.error(apiMessage(err, t("bulk.failed")));
     } finally {
       setBusy(false);
@@ -201,7 +205,9 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
     },
     compress: {
       icon: FileArchive,
-      submit: () => compressFiles(appId, paths, archiveFormat.complete(target.trim())),
+      // A bare name lands beside the selection, as the hint says — it went to
+      // the site's top folder, which on WordPress is the public web root.
+      submit: () => compressFiles(appId, paths, archiveFormat.complete(inFolder(target.trim(), dirname(paths[0])))),
       label: t("bulk.archiveName"),
       placeholder: t("bulk.archiveNamePlaceholder"),
       hint: t("bulk.compressHint", { folder: dirname(paths[0]) || "/" }),
@@ -221,7 +227,7 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
       onSubmit={(event) => {
         event.preventDefault();
         if (action === "compress") {
-          const invalid = archiveFormat.validate(archiveFormat.complete(target.trim()));
+          const invalid = archiveFormat.validate(archiveFormat.complete(inFolder(target.trim(), dirname(paths[0]))));
           if (invalid) {
             setError(invalid);
             return;

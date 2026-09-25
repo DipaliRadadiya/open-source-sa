@@ -4000,7 +4000,8 @@
         "rootPlaceholder": "Anwendungswurzel",
         "pathLabelHint": "Wo die Datei abgelegt wird, ausgehend vom obersten Verzeichnis der Seite.",
         "destination": "Entpackt nach",
-        "copyDestination": "Diesen Pfad kopieren"
+        "copyDestination": "Diesen Pfad kopieren",
+        "folderMissing": "Der Ordner „{folder}“ existiert nicht. Legen Sie ihn zuerst an oder wählen Sie einen anderen."
       },
       "rename": {
         "title": "„{name}“ umbenennen oder verschieben",

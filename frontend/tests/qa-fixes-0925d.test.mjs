@@ -44,7 +44,10 @@ test("a site type with no workers is not found, not refused", () => {
 test("a form dialog lands on its first field, not a hint button", () => {
   const modal = read("components/ui/form-modal.jsx");
   assert.match(modal, /onOpenAutoFocus=\{\(event\) =>/);
-  assert.match(modal, /input:not\(\[type=hidden\]\):not\(\[readonly\]\), textarea:not\(\[readonly\]\), select/);
+  // Never Radix's hidden native radio / select (aria-hidden, untabbable).
+  assert.match(modal, /:not\(\[type=radio\]\)/);
+  assert.match(modal, /:not\(\[aria-hidden=true\]\)/);
+  assert.doesNotMatch(modal, /, select"/);
 });
 
 test("the worker validation messages are real sentences in every locale", () => {

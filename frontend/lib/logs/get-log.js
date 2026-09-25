@@ -23,9 +23,12 @@ export async function getLog(key, { lines = 200 } = {}) {
     if (!res.ok) return failedRead(res);
 
     const parsed = logReadResponseSchema.safeParse(await res.json());
+    // A shape this page can't read is a failed read. As "ok" with no log it
+    // said "This log is empty" over a log with lines in it, until the browser
+    // read it again seconds later.
     return parsed.success
       ? { status: "ok", log: parsed.data.log }
-      : { status: "ok", log: null };
+      : { status: "failed", log: null };
   } catch {
     return { status: "failed", log: null };
   }

@@ -1198,7 +1198,7 @@
     "orderNewestFirst": "新しい順",
     "orderOldestFirst": "古い順",
     "clear": "ログをクリア",
-    "clearTitle": "{label} ログをクリアしますか?",
+    "clearTitle": "{label} ログをクリアしますか？",
     "clearBody": "サーバー上のファイルを空にします。これまでに記録された内容はすべて削除され、復元できません。今後はログの記録が継続されます。",
     "clearCancel": "キャンセル",
     "clearSubmit": "ログをクリア",
@@ -3080,7 +3080,7 @@
         "body": "このアプリケーションにはまだ読み取り可能なログソースがありません。"
       },
       "clear": {
-        "title": "{label} をクリアしますか？",
+        "title": "{label}をクリアしますか？",
         "body": "サーバー上のファイルを空にします。これまでに記録された内容はすべて削除され、復元できません。今後はログの記録が継続されます。",
         "cancel": "キャンセル",
         "submit": "ログをクリア",
@@ -4000,7 +4000,8 @@
         "rootPlaceholder": "アプリケーションルート",
         "pathLabelHint": "アプリケーションのフォルダの最上位からの位置で、保存先を指定します。",
         "destination": "展開先",
-        "copyDestination": "このパスをコピー"
+        "copyDestination": "このパスをコピー",
+        "folderMissing": "フォルダー「{folder}」は存在しません。先に作成するか、別のフォルダーを選んでください。"
       },
       "rename": {
         "title": "\"{name}\" の名前を変更 / 移動",

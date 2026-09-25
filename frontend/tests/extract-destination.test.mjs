@@ -58,7 +58,9 @@ test("each dialog names the right part of the path", () => {
    * say nothing.
    */
   const compress = read("components/applications/files/compress-dialog.jsx");
-  assert.match(compress, /destinationOf=\{dirname\}/);
+  // The folder part of the value — after a bare name is placed in the
+  // file's own folder, so the line says where it really lands.
+  assert.match(compress, /destinationOf=\{\(value\) => dirname\(inFolder\(value, folder\)\)\}/);
   assert.doesNotMatch(
     read("components/applications/files/extract-dialog.jsx"),
     /destinationOf=/,

@@ -15,6 +15,12 @@ export function joinPath(base, name) {
   return base ? `${base}/${name}` : name;
 }
 
+// A bare name typed where a path is expected stays in `folder` — the folder
+// the reader is looking at. Anything with a slash is a path from the site root.
+export function inFolder(value, folder) {
+  return !value || value.includes("/") ? value : joinPath(folder, value);
+}
+
 // "photo.jpg" -> ["photo", ".jpg"]; "archive.tar.gz" -> ["archive", ".tar.gz"]
 // (the two extensions this feature ever cares about compressing/extracting);
 // "README" -> ["README", ""].

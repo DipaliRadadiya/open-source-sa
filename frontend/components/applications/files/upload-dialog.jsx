@@ -266,10 +266,44 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
     setUploading(false);
     const uploaded = succeededNames.length;
     const clean = !stopped && !failedCount && uploaded > 0 && !skippedCount;
+    const report = () => {
+      // Say what happened. Previously nothing did: the only completion signal
+      // was a row's spinner turning into a tick, which is invisible if the list
+      // has scrolled, and the auto-close never fired at all — it tested the
+      // `items` closure captured before the run, where every item is still
+      // "pending", so the "everything finished" condition could never be true.
+      if (stopped) {
+        toast.info(t("uploadDialog.stopped", { done: uploaded, count: items.filter((i) => !i.nameTaken).length }));
+        return;
+      }
+
+      if (!failedCount && uploaded && skippedCount) {
+        // Stays open: the skipped rows say which files, and why.
+        toast.success(t("uploadDialog.skipped", { done: uploaded, skipped: skippedCount }));
+      } else if (!failedCount && uploaded) {
+        toast.success(
+          uploaded === 1
+            ? t("uploadDialog.uploadedOne", { name: succeededNames[0] })
+            : t("uploadDialog.uploadedMany", { count: uploaded }),
+        );
+      } else if (uploaded) {
+        toast.warning(
+          skippedCount
+            ? t("uploadDialog.partialSkipped", { done: uploaded, skipped: skippedCount, failed: failedCount })
+            : t("uploadDialog.partial", { done: uploaded, failed: failedCount }),
+        );
+      } else if (failedCount) {
+        toast.error(t("uploadDialog.allFailed"));
+      }
+    };
+
     if (anySucceeded) {
       // After the list has re-read, not before: closing first showed a list
       // without the new file for seconds on a real server.
       refreshThen(() => {
+        // Said once the list shows the files: the toast used to land ~1.5 s
+        // before the rows did.
+        report();
         // Only unambiguous with exactly one file — a multi-file batch has no
         // single row that "the" upload landed at.
         if (succeededNames.length === 1) onSuccess?.(joinPath(path, succeededNames[0]));
@@ -277,35 +311,8 @@ export function UploadDialog({ appId, path, open, onOpenChange, initialFiles = n
         // since the per-file reason is only shown here.
         if (clean) handleOpenChange(false);
       });
-    }
-
-    // Say what happened. Previously nothing did: the only completion signal
-    // was a row's spinner turning into a tick, which is invisible if the list
-    // has scrolled, and the auto-close never fired at all — it tested the
-    // `items` closure captured before the run, where every item is still
-    // "pending", so the "everything finished" condition could never be true.
-    if (stopped) {
-      toast.info(t("uploadDialog.stopped", { done: uploaded, count: items.filter((i) => !i.nameTaken).length }));
-      return;
-    }
-
-    if (!failedCount && uploaded && skippedCount) {
-      // Stays open: the skipped rows say which files, and why.
-      toast.success(t("uploadDialog.skipped", { done: uploaded, skipped: skippedCount }));
-    } else if (!failedCount && uploaded) {
-      toast.success(
-        uploaded === 1
-          ? t("uploadDialog.uploadedOne", { name: succeededNames[0] })
-          : t("uploadDialog.uploadedMany", { count: uploaded }),
-      );
-    } else if (uploaded) {
-      toast.warning(
-        skippedCount
-          ? t("uploadDialog.partialSkipped", { done: uploaded, skipped: skippedCount, failed: failedCount })
-          : t("uploadDialog.partial", { done: uploaded, failed: failedCount }),
-      );
-    } else if (failedCount) {
-      toast.error(t("uploadDialog.allFailed"));
+    } else {
+      report();
     }
   }
 
