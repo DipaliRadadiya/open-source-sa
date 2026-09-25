@@ -136,10 +136,14 @@ export function DeployCard({
           {t("deploy.title")}
         </CardTitle>
         <CardDescription>{t("deploy.subtitle")}</CardDescription>
-        {canManage ? (
-          <CardAction>
-            <ReasonTooltip reason={unlinked && !deploying ? tSource("accountMissing") : null}>
-            <Button onClick={onDeploy} disabled={deploying || unlinked}>
+        {/* Shown to a read-only role too, disabled with the reason — the same
+            answer the history's own Deploy again buttons give, rather than a
+            card whose one action silently is not there. */}
+        <CardAction>
+            <ReasonTooltip
+              reason={deploying ? null : !canManage ? t("history.noPermission") : unlinked ? tSource("accountMissing") : null}
+            >
+            <Button onClick={onDeploy} disabled={deploying || unlinked || !canManage}>
               {deploying ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
@@ -152,8 +156,7 @@ export function DeployCard({
                   : t("deploy.action")}
             </Button>
             </ReasonTooltip>
-          </CardAction>
-        ) : null}
+        </CardAction>
       </CardHeader>
       <CardContent className="space-y-4">
         {unlinked ? (

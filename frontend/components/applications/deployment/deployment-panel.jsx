@@ -49,6 +49,14 @@ export function DeploymentPanel({
   const ts = useTranslations("applications.details");
   const router = useRouter();
   const [application, setApplication] = useState(initial);
+  // Held in state so a poll can move it between server renders, but a new
+  // render must still win: a saved branch refreshed the page and the Deploy
+  // card went on naming the old one until a reload.
+  const [renderedFrom, setRenderedFrom] = useState(initial);
+  if (initial !== renderedFrom) {
+    setRenderedFrom(initial);
+    setApplication(initial);
+  }
   const [deploying, setDeploying] = useState(false);
   const searchParams = useSearchParams();
   const [tab, setTabState] = useState(() => (TABS.includes(searchParams.get("tab")) ? searchParams.get("tab") : "history"));

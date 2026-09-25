@@ -38,7 +38,7 @@ test("a failed history read is said, not shown as an empty history", () => {
 test("a disconnected account is shown on the Deploy card with the way back", () => {
   const card = read("components/applications/deployment/deploy-card.jsx");
   assert.match(card, /const unlinked = Boolean\(application\.git_account_missing\);/);
-  assert.match(card, /disabled=\{deploying \|\| unlinked\}/);
+  assert.match(card, /disabled=\{deploying \|\| unlinked \|\| !canManage\}/);
   assert.match(card, /<RelinkGitAccountDialog/);
   assert.match(page(), /application\.git_account_id \|\| application\.git_account_missing/);
 });

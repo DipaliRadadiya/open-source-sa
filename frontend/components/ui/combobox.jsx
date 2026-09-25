@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, ChevronsUpDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,9 @@ export function Combobox({
   // thinks — see hooks/use-chrome-offset.js.
   const [chromeOffset, measureChrome] = useChromeOffset();
   const [query, setQuery] = useState("");
+  // The highlighted row for the keyboard, as an index into `filtered`.
+  const [active, setActive] = useState(0);
+  const listId = useId();
   const searchRef = useRef(null);
   const triggerRef = useRef(null);
   /*
@@ -75,6 +78,34 @@ export function Combobox({
     }
     setOpen(next);
     if (!next) setQuery("");
+    setActive(0);
+  }
+
+  function choose(option) {
+    if (!option || option.disabledReason) return;
+    onChange?.(String(option.value));
+    handleOpenChange(false);
+  }
+
+  // Typing narrows the list, so Enter should take what is left rather than do
+  // nothing; the arrows move over the rows that can actually be chosen.
+  function onSearchKeyDown(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const current = filtered[active];
+      choose(current && !current.disabledReason ? current : filtered.find((option) => !option.disabledReason));
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!filtered.length) return;
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      let next = active;
+      for (let i = 0; i < filtered.length; i++) {
+        next = (next + step + filtered.length) % filtered.length;
+        if (!filtered[next].disabledReason) break;
+      }
+      setActive(next);
+      document.getElementById(`${listId}-${next}`)?.scrollIntoView({ block: "nearest" });
+    }
   }
 
   return (
@@ -114,7 +145,14 @@ export function Combobox({
           <Input
             ref={searchRef}
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setActive(0);
+            }}
+            onKeyDown={onSearchKeyDown}
+            role="searchbox"
+            aria-controls={listId}
+            aria-activedescendant={filtered[active] ? `${listId}-${active}` : undefined}
             placeholder={searchPlaceholder ?? t("search")}
             className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
           />
@@ -140,9 +178,9 @@ export function Combobox({
             </button>
           ) : null}
         </div>
-        <div className="max-h-64 min-h-0 flex-1 overflow-y-auto p-1">
+        <div id={listId} role="listbox" className="max-h-64 min-h-0 flex-1 overflow-y-auto p-1">
           {filtered.length ? (
-            filtered.map((option) => {
+            filtered.map((option, index) => {
               const isSelected = String(option.value) === String(value);
               // Shown greyed with the reason rather than hidden: an option that
               // silently is not there reads as a bug in the list, and the
@@ -151,19 +189,21 @@ export function Combobox({
               return (
                 <button
                   key={option.value}
+                  id={`${listId}-${index}`}
                   type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  tabIndex={-1}
                   disabled={blocked}
-                  onClick={() => {
-                    if (blocked) return;
-                    onChange?.(String(option.value));
-                    handleOpenChange(false);
-                  }}
+                  onClick={() => choose(option)}
+                  onMouseEnter={() => setActive(index)}
                   className={cn(
                     "flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm",
                     blocked
                       ? "cursor-not-allowed opacity-60"
                       : "hover:bg-accent hover:text-accent-foreground",
                     isSelected && "bg-accent/60",
+                    index === active && !blocked && "bg-accent text-accent-foreground",
                   )}
                 >
                   <Check className={cn("mt-0.5 size-4 shrink-0", isSelected ? "opacity-100 text-primary" : "opacity-0")} />
