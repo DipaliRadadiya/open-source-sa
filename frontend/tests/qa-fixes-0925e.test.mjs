@@ -29,9 +29,10 @@ test("a bare archive name stays in the folder being looked at", () => {
   assert.equal(inFolder("other/backup.zip", "wp-content"), "other/backup.zip");
   assert.equal(inFolder("backup.zip", ""), "backup.zip");
   assert.match(read(`${F}/bulk-dialogs.jsx`), /compressFiles\(appId, paths, archiveFormat\.complete\(inFolder\(target\.trim\(\), dirname\(paths\[0\]\)\)\)\)/);
-  const single = read(`${F}/compress-dialog.jsx`);
-  assert.match(single, /normalize=\{\(value\) => format\.complete\(inFolder\(value, folder\)\)\}/);
-  assert.match(single, /destinationOf=\{\(value\) => dirname\(inFolder\(value, folder\)\)\}/);
+  // Rename / Copy / Compress / Extract share one rule, in the path dialog.
+  assert.match(read(`${F}/target-path-dialog.jsx`), /const trimmed = normalize\(place\(value\.trim\(\)\)\);/);
+  // A leading slash means the application's top folder.
+  assert.equal(inFolder("/backup.zip", "wp-content"), "backup.zip");
 });
 
 test("a missing destination folder is named, not blamed on the item", () => {

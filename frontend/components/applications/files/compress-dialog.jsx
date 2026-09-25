@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Archive } from "lucide-react";
 import { compressFile } from "@/lib/api/files";
-import { compressSuggestion, dirname, inFolder } from "@/lib/files/path-helpers";
+import { compressSuggestion, dirname } from "@/lib/files/path-helpers";
 import { TargetPathDialog } from "@/components/applications/files/target-path-dialog";
 import { ArchiveFormatField, useArchiveFormat } from "@/components/applications/files/archive-format-field";
 
@@ -10,7 +10,6 @@ export function CompressDialog({ appId, file, existingPaths, open, onOpenChange,
   const format = useArchiveFormat();
   if (!file) return null;
   const suggest = (ext) => compressSuggestion(file.path, ext, new Set(existingPaths));
-  const folder = dirname(file.path);
 
   return (
     <TargetPathDialog
@@ -25,7 +24,7 @@ export function CompressDialog({ appId, file, existingPaths, open, onOpenChange,
       savingLabel={t("saving")}
       defaultTarget={suggest(".zip")}
       renderExtra={(field) => <ArchiveFormatField {...format} {...field} suggest={suggest} />}
-      normalize={(value) => format.complete(inFolder(value, folder))}
+      normalize={format.complete}
       validate={format.validate}
       apply={compressFile}
       successMessage={() => t("compressDialog.done", { name: file.name })}
@@ -42,7 +41,7 @@ export function CompressDialog({ appId, file, existingPaths, open, onOpenChange,
        * field; repeating it here would say nothing.
        */
       destinationLabel={t("compressDialog.savesTo")}
-      destinationOf={(value) => dirname(inFolder(value, folder))}
+      destinationOf={dirname}
       warning={t("compressDialog.folderMustExist")}
     />
   );

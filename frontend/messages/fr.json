@@ -772,7 +772,23 @@
     "required_type": "Choisissez ce qu'il faut sauvegarder",
     "hostnameLabelTooLong": "Chaque partie d'un domaine entre deux points peut comporter au maximum 63 caractères.",
     "absolutePath": "Saisissez un chemin complet commençant par /",
-    "invalidUser": "Utilisez des minuscules, des chiffres, - et _"
+    "invalidUser": "Utilisez des minuscules, des chiffres, - et _",
+    "integer": "Saisissez un nombre entier.",
+    "portRange": "Saisissez un port entre 1 et 65535.",
+    "stagingDomainRequired": "Saisissez le domaine de la copie de préproduction.",
+    "stagingDomainInvalid": "Saisissez un domaine complet, comme staging.example.com",
+    "max12": "12 caractères maximum",
+    "max4000": "4000 caractères maximum",
+    "max16384": "16384 caractères maximum",
+    "phpSize": "Utilisez une taille comme 128M, 1G ou 512K — ou -1 pour aucune limite.",
+    "range": "Cette valeur dépasse ce que ce réglage autorise.",
+    "functionList": "Utilisez des noms de fonctions séparés par des virgules.",
+    "noSections": "Ne peut pas contenir de ligne [section].",
+    "hostIsUrl": "Saisissez seulement le nom d'hôte, comme ftp.example.com — sans ftp://, chemin ni nom d'utilisateur.",
+    "rootFormat": "Utilisez uniquement des lettres, chiffres, points, tirets, tirets bas et barres obliques.",
+    "rootTraversal": "Le dossier ne peut pas contenir ..",
+    "noEnvironmentLine": "Le panneau définit déjà environment= pour ce worker. Une seconde ligne l'empêche de démarrer.",
+    "sftpAuthRequired": "Saisissez un mot de passe ou une clé privée."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -1715,7 +1731,8 @@
       "invalidPort": "Saisissez un port entre 1 et 65535.",
       "invalidTime": "Utilisez une heure sur 24 heures, comme 03:00.",
       "invalidMemory": "Utilisez une taille comme 256mb ou 1gb — ou 0 pour aucune limite.",
-      "passwordTooShort": "Utilisez au moins 8 caractères."
+      "passwordTooShort": "Utilisez au moins 8 caractères.",
+      "invalidHour": "Choisissez une heure entre 0 et 23."
     },
     "server": {
       "title": "Serveur",
@@ -3938,7 +3955,8 @@
         "name": "Nom du dossier",
         "submit": "Créer le dossier",
         "created": "« {name} » créé.",
-        "failed": "Impossible de créer le dossier."
+        "failed": "Impossible de créer le dossier.",
+        "taken": "Il y a déjà un élément nommé « {name} » dans ce dossier."
       },
       "newFile": {
         "action": "Nouveau fichier",
@@ -3998,7 +4016,7 @@
       "targetDialog": {
         "pathLabel": "Chemin",
         "rootPlaceholder": "Racine de l'application",
-        "pathLabelHint": "L'endroit où le placer, compté depuis la racine du dossier de l'application.",
+        "pathLabelHint": "Un nom seul reste dans ce dossier. Un chemin est compté depuis la racine du dossier de l'application.",
         "destination": "Extrait dans",
         "copyDestination": "Copier ce chemin",
         "folderMissing": "Le dossier « {folder} » n'existe pas. Créez-le d'abord ou choisissez-en un autre."
@@ -4272,7 +4290,7 @@
         "stopped": "Arrêté"
       },
       "processCount": "{running}/{total}",
-      "disabledTag": "Ne démarrera pas au boot",
+      "disabledTag": "Désactivé",
       "noRestartOnDeployTag": "Ne redémarrera pas après un déploiement",
       "noAutoRestartTag": "Ne redémarrera pas s'il s'arrête",
       "addedAgo": "Ajouté {time}",

@@ -23,7 +23,7 @@ const LOCALES = read("i18n/routing.js")
 test("the destination is spelled out, and named even when it is the root", () => {
   // Routed through `destinationOf` so each dialog names its own part of the
   // path — the whole value for Extract, the folder for Compress.
-  assert.match(dialog, /const trimmedTarget = destinationOf\(value\.trim\(\)\)\.replace\(/);
+  assert.match(dialog, /const trimmedTarget = destinationOf\(place\(value\.trim\(\)\)\)\.replace\(/);
   // Empty is the site's own root everywhere in this feature — it gets the
   // breadcrumb's word rather than rendering as nothing.
   assert.match(dialog, /: t\("root"\)/);
@@ -60,7 +60,9 @@ test("each dialog names the right part of the path", () => {
   const compress = read("components/applications/files/compress-dialog.jsx");
   // The folder part of the value — after a bare name is placed in the
   // file's own folder, so the line says where it really lands.
-  assert.match(compress, /destinationOf=\{\(value\) => dirname\(inFolder\(value, folder\)\)\}/);
+  assert.match(compress, /destinationOf=\{dirname\}/);
+  // A bare name is placed in the item's folder once, in the shared dialog.
+  assert.match(dialog, /const place = \(typed\) => inFolder\(typed, dirname\(file\.path\)\);/);
   assert.doesNotMatch(
     read("components/applications/files/extract-dialog.jsx"),
     /destinationOf=/,

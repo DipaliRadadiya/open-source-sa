@@ -17,7 +17,7 @@ function joinPath(base, name) {
   return base ? `${base}/${name}` : name;
 }
 
-export function NewFolderDialog({ appId, path, open, onOpenChange, onSuccess }) {
+export function NewFolderDialog({ appId, path, existingNames = [], open, onOpenChange, onSuccess }) {
   const t = useTranslations("applications.files");
   const { pending: refreshing, refreshThen } = useRefresh();
   const form = useForm({
@@ -26,6 +26,13 @@ export function NewFolderDialog({ appId, path, open, onOpenChange, onSuccess }) 
   });
 
   async function onSubmit(values) {
+    // The API answers 200 for a folder that already exists (mkdir -p), so a
+    // taken name "succeeded" and nothing was made. Checked against the list
+    // on screen before sending.
+    if (existingNames.includes(values.name.trim())) {
+      form.setError("name", { message: t("newFolder.taken", { name: values.name.trim() }) });
+      return;
+    }
     try {
       await createDirectory(appId, joinPath(path, values.name.trim()));
       const name = values.name.trim();

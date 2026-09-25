@@ -772,7 +772,23 @@
     "required_type": "Choose what to back up",
     "hostnameLabelTooLong": "Each part of a domain between dots can be at most 63 characters.",
     "absolutePath": "Enter a full path that starts with /",
-    "invalidUser": "Use lowercase letters, numbers, - and _"
+    "invalidUser": "Use lowercase letters, numbers, - and _",
+    "integer": "Enter a whole number.",
+    "portRange": "Enter a port between 1 and 65535.",
+    "stagingDomainRequired": "Enter the domain for the staging copy.",
+    "stagingDomainInvalid": "Enter a full domain, like staging.example.com",
+    "max12": "Must be 12 characters or fewer",
+    "max4000": "Must be 4000 characters or fewer",
+    "max16384": "Must be 16384 characters or fewer",
+    "phpSize": "Use a size like 128M, 1G or 512K — or -1 for no limit.",
+    "range": "That value is outside what this setting allows.",
+    "functionList": "Use function names separated by commas.",
+    "noSections": "Can't contain a [section] line.",
+    "hostIsUrl": "Enter just the host name, like ftp.example.com — no ftp://, path or user name.",
+    "rootFormat": "Use letters, numbers, dots, dashes, underscores and slashes only.",
+    "rootTraversal": "The folder cannot contain ..",
+    "noEnvironmentLine": "environment= is already set by the panel for this worker. A second line stops it starting.",
+    "sftpAuthRequired": "Enter a password or a private key."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -1715,7 +1731,8 @@
       "invalidPort": "Enter a port between 1 and 65535.",
       "invalidTime": "Use a 24-hour time, like 03:00.",
       "invalidMemory": "Use a size like 256mb or 1gb — or 0 for no limit.",
-      "passwordTooShort": "Use 8 characters or more."
+      "passwordTooShort": "Use 8 characters or more.",
+      "invalidHour": "Pick an hour from 0 to 23."
     },
     "server": {
       "title": "Server",
@@ -3938,7 +3955,8 @@
         "name": "Folder name",
         "submit": "Create folder",
         "created": "\"{name}\" created.",
-        "failed": "Couldn't create the folder."
+        "failed": "Couldn't create the folder.",
+        "taken": "Something named “{name}” is already in this folder."
       },
       "newFile": {
         "action": "New file",
@@ -3998,7 +4016,7 @@
       "targetDialog": {
         "pathLabel": "Path",
         "rootPlaceholder": "Application folder",
-        "pathLabelHint": "Where to put it, counted from the top of the application's folder.",
+        "pathLabelHint": "A name on its own stays in this folder. A path is counted from the top of the application's folder.",
         "destination": "Extracts into",
         "copyDestination": "Copy this path",
         "folderMissing": "The folder “{folder}” doesn't exist. Create it first, or pick another one."
@@ -4272,7 +4290,7 @@
         "stopped": "Stopped"
       },
       "processCount": "{running}/{total}",
-      "disabledTag": "Won't start on boot",
+      "disabledTag": "Turned off",
       "noRestartOnDeployTag": "Won't restart after deploy",
       "noAutoRestartTag": "Won't restart if it stops",
       "addedAgo": "Added {time}",

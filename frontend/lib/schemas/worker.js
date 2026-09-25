@@ -103,6 +103,9 @@ export const workerFormSchema = z.object({
     .trim()
     .max(2000, "max2000")
     .refine((v) => !v.includes("["), "noSectionHeader")
+    // The panel already writes an `environment=` line for every worker; a
+    // second one is a duplicate key and the worker never starts (500).
+    .refine((v) => !/^\s*environment\s*=/im.test(v), "noEnvironmentLine")
     .optional()
     .or(z.literal("")),
   auto_start: z.boolean().optional(),

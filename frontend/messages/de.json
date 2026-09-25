@@ -772,7 +772,23 @@
     "required_type": "Wählen Sie, was gesichert wird",
     "hostnameLabelTooLong": "Jeder Teil einer Domain zwischen zwei Punkten darf höchstens 63 Zeichen lang sein.",
     "absolutePath": "Geben Sie einen vollständigen Pfad ein, der mit / beginnt",
-    "invalidUser": "Verwenden Sie Kleinbuchstaben, Zahlen, - und _"
+    "invalidUser": "Verwenden Sie Kleinbuchstaben, Zahlen, - und _",
+    "integer": "Geben Sie eine ganze Zahl ein.",
+    "portRange": "Geben Sie einen Port zwischen 1 und 65535 ein.",
+    "stagingDomainRequired": "Geben Sie die Domain für die Staging-Kopie ein.",
+    "stagingDomainInvalid": "Geben Sie eine vollständige Domain ein, etwa staging.example.com",
+    "max12": "Darf höchstens 12 Zeichen lang sein",
+    "max4000": "Darf höchstens 4000 Zeichen lang sein",
+    "max16384": "Darf höchstens 16384 Zeichen lang sein",
+    "phpSize": "Verwenden Sie eine Größe wie 128M, 1G oder 512K — oder -1 für kein Limit.",
+    "range": "Dieser Wert liegt außerhalb dessen, was diese Einstellung erlaubt.",
+    "functionList": "Verwenden Sie durch Kommas getrennte Funktionsnamen.",
+    "noSections": "Darf keine [Abschnitt]-Zeile enthalten.",
+    "hostIsUrl": "Geben Sie nur den Hostnamen ein, etwa ftp.example.com — ohne ftp://, Pfad oder Benutzernamen.",
+    "rootFormat": "Verwenden Sie nur Buchstaben, Zahlen, Punkte, Bindestriche, Unterstriche und Schrägstriche.",
+    "rootTraversal": "Der Ordner darf kein .. enthalten",
+    "noEnvironmentLine": "environment= setzt das Panel für diesen Worker bereits. Eine zweite Zeile verhindert den Start.",
+    "sftpAuthRequired": "Geben Sie ein Passwort oder einen privaten Schlüssel ein."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -1715,7 +1731,8 @@
       "invalidPort": "Geben Sie einen Port zwischen 1 und 65535 ein.",
       "invalidTime": "Verwenden Sie eine 24-Stunden-Zeit, etwa 03:00.",
       "invalidMemory": "Verwenden Sie eine Größe wie 256mb oder 1gb — oder 0 für kein Limit.",
-      "passwordTooShort": "Verwenden Sie 8 Zeichen oder mehr."
+      "passwordTooShort": "Verwenden Sie 8 Zeichen oder mehr.",
+      "invalidHour": "Wählen Sie eine Stunde von 0 bis 23."
     },
     "server": {
       "title": "Server",
@@ -3938,7 +3955,8 @@
         "name": "Ordnername",
         "submit": "Ordner erstellen",
         "created": "„{name}“ erstellt.",
-        "failed": "Der Ordner konnte nicht erstellt werden."
+        "failed": "Der Ordner konnte nicht erstellt werden.",
+        "taken": "In diesem Ordner gibt es bereits etwas namens „{name}“."
       },
       "newFile": {
         "action": "Neue Datei",
@@ -3998,7 +4016,7 @@
       "targetDialog": {
         "pathLabel": "Pfad",
         "rootPlaceholder": "Anwendungswurzel",
-        "pathLabelHint": "Wo die Datei abgelegt wird, ausgehend vom obersten Verzeichnis der Seite.",
+        "pathLabelHint": "Ein Name allein bleibt in diesem Ordner. Ein Pfad zählt vom obersten Ordner der Anwendung.",
         "destination": "Entpackt nach",
         "copyDestination": "Diesen Pfad kopieren",
         "folderMissing": "Der Ordner „{folder}“ existiert nicht. Legen Sie ihn zuerst an oder wählen Sie einen anderen."
@@ -4272,7 +4290,7 @@
         "stopped": "Gestoppt"
       },
       "processCount": "{running}/{total}",
-      "disabledTag": "Startet nicht beim Systemstart",
+      "disabledTag": "Ausgeschaltet",
       "noRestartOnDeployTag": "Startet nach dem Deployment nicht neu",
       "noAutoRestartTag": "Startet nach einem Stopp nicht neu",
       "addedAgo": "Hinzugefügt {time}",

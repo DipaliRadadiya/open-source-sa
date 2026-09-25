@@ -235,8 +235,8 @@ test("an archive name typed without an extension gets the format picked above it
   assert.match(archiveField, /const \[chosen, setChosen\] = useState\(ARCHIVE_FORMATS\[0\]\);/);
   assert.match(archiveField, /complete: \(value\) => \(!value \|\| value\.endsWith\("\/"\) \|\| archiveFormatOf\(value\) \? value : `\$\{value\}\$\{chosen\}`\)/);
   assert.match(bulkSrc, /compressFiles\(appId, paths, archiveFormat\.complete\(inFolder\(target\.trim\(\), dirname\(paths\[0\]\)\)\)\)/);
-  assert.match(read("components/applications/files/compress-dialog.jsx"), /normalize=\{\(value\) => format\.complete\(inFolder\(value, folder\)\)\}/);
-  assert.match(read("components/applications/files/target-path-dialog.jsx"), /const trimmed = normalize\(value\.trim\(\)\);/);
+  assert.match(read("components/applications/files/compress-dialog.jsx"), /normalize=\{format\.complete\}/);
+  assert.match(read("components/applications/files/target-path-dialog.jsx"), /const trimmed = normalize\(place\(value\.trim\(\)\)\);/);
 });
 
 test("saved versions are listed by when, not by backup file name", async () => {

@@ -45,7 +45,7 @@
       "back": "アプリケーション一覧に戻る",
       "visit": "{domain} を新しいタブで開く"
     },
-    "unsavedTitle": "保存せずに離れますか?",
+    "unsavedTitle": "保存せずに離れますか？",
     "unsavedDescription": "このページの変更は保存されていません。変更は失われます。",
     "unsavedStay": "このページに留まる",
     "unsavedLeave": "離れて変更を失う",
@@ -96,7 +96,7 @@
     "saving": "保存中…",
     "noPassword": "パスワードなし",
     "sudoConfirm": {
-      "title": "root 権限を付与しますか?",
+      "title": "root 権限を付与しますか？",
       "description": "{username} を sudo グループに追加し、root としてコマンドを実行できるようにします。後から取り消すこともできます。",
       "confirm": "sudo を付与"
     },
@@ -157,7 +157,7 @@
     "sshKeysAction": "SSH 鍵",
     "apps": "アプリケーション",
     "delete": {
-      "title": "システムユーザーを削除しますか?",
+      "title": "システムユーザーを削除しますか？",
       "description": "{username} とそのホームディレクトリ、cron ジョブを完全に削除します (userdel -r を実行)。元に戻せません。",
       "confirmLabel": "確認のため {username} を入力してください",
       "cancel": "キャンセル",
@@ -184,7 +184,7 @@
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
       "submit": "鍵を追加",
       "remove": "鍵を削除",
-      "removeTitle": "SSH 鍵を削除しますか?",
+      "removeTitle": "SSH 鍵を削除しますか？",
       "removeDescription": "ユーザーの authorized keys から「{name}」を削除します。",
       "removeConfirm": "解除",
       "publicKeyHint": "SSH鍵ペアの.pub側です。共有しても安全で、サーバーがあなたを認識するために使われます。秘密鍵をここに貼り付けないでください。",
@@ -516,7 +516,7 @@
         "app_staging": "変更を試すためのアプリケーションのコピー。",
         "app_clone": "このアプリケーションのコピーを別の場所に作成します。"
       },
-      "unsavedTitle": "未保存の変更を破棄しますか?",
+      "unsavedTitle": "未保存の変更を破棄しますか？",
       "unsavedDescription": "このロールには未保存の変更があります。今離れると変更は失われます。",
       "unsavedStay": "編集を続ける",
       "unsavedLeave": "変更を破棄",
@@ -556,7 +556,7 @@
       "namePlaceholder": "フルネーム",
       "usernamePlaceholder": "your-username",
       "usernameHint": "英数字、ハイフン、アンダースコアが使用できます。",
-      "unsavedTitle": "未保存の変更を破棄しますか?",
+      "unsavedTitle": "未保存の変更を破棄しますか？",
       "unsavedDesc": "未保存のプロフィール変更があります。このままタブを切り替えると、変更は失われます。",
       "unsavedDiscard": "変更を破棄",
       "unsavedKeep": "編集を続ける"
@@ -772,7 +772,23 @@
     "required_type": "バックアップの対象を選択してください",
     "hostnameLabelTooLong": "ドメインのドットで区切られた各部分は 63 文字までです。",
     "absolutePath": "/ で始まる完全なパスを入力してください",
-    "invalidUser": "小文字、数字、-、_ を使用してください"
+    "invalidUser": "小文字、数字、-、_ を使用してください",
+    "integer": "整数を入力してください。",
+    "portRange": "1 から 65535 のポートを入力してください。",
+    "stagingDomainRequired": "ステージングコピーのドメインを入力してください。",
+    "stagingDomainInvalid": "staging.example.com のような完全なドメインを入力してください",
+    "max12": "12文字以下",
+    "max4000": "4000文字以下",
+    "max16384": "16384文字以下",
+    "phpSize": "128M、1G、512K のようなサイズで指定してください。制限なしの場合は -1 です。",
+    "range": "この設定で使用できる範囲外の値です。",
+    "functionList": "関数名をカンマ区切りで指定してください。",
+    "noSections": "[セクション] 行は使用できません。",
+    "hostIsUrl": "ftp.example.com のようにホスト名だけを入力してください（ftp://、パス、ユーザー名は不要）。",
+    "rootFormat": "英数字、ドット、ハイフン、アンダースコア、スラッシュのみ使用できます。",
+    "rootTraversal": "フォルダーに .. を含めることはできません",
+    "noEnvironmentLine": "environment= はパネルがこのワーカーに既に設定しています。2 行目があると起動しません。",
+    "sftpAuthRequired": "パスワードまたは秘密鍵を入力してください。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -865,7 +881,7 @@
     "kill": {
       "action": "このプロセスを停止",
       "noPermission": "現在のロールにはダッシュボードの管理権限が含まれていません。管理者に権限の付与を依頼してください。",
-      "title": "{command} を停止しますか?",
+      "title": "{command} を停止しますか？",
       "description": "PID {pid}、実行ユーザー {user}。これに依存するプロセスもすべて停止し、元に戻すことはできません。",
       "forceDescription": "停止しませんでした。強制停止はファイルを保存・閉じる猶予なく直ちにプロセスを終了します。",
       "confirm": "停止",
@@ -1236,11 +1252,11 @@
     "confirm": {
       "cancel": "キャンセル",
       "stop": {
-        "title": "{name} を停止しますか?",
+        "title": "{name} を停止しますか？",
         "description": "このサービスに依存しているものは、再び開始するまで動作しなくなります。"
       },
       "disable": {
-        "title": "{name} の自動起動を停止しますか?",
+        "title": "{name} の自動起動を停止しますか？",
         "description": "今は動作していますが、次回の再起動後は自動的に開始されません。"
       }
     },
@@ -1377,7 +1393,7 @@
       "failed": "変更できませんでした。",
       "lockoutHint": "自身のアドレスがブロック除外リストにない場合、この Jail によって自分自身がブロックされる可能性があります。",
       "explainerBody": "攻撃者は何度もパスワードの入力を行います。Jail は SSH やウェブサイト、メールなどを1つ監視し、誤入力が続く接続元をブロックします。無効になっている Jail は何も監視していません。",
-      "whatIs": "Jail とは何ですか?",
+      "whatIs": "Jail とは何ですか？",
       "stateOff": "未監視",
       "stateQuiet": "監視中 — 異常なし",
       "stateFailing": "{count, plural, one {現在 # 件のアドレスが誤入力中} other {現在 # 件のアドレスが誤入力中}}",
@@ -1417,9 +1433,9 @@
       "failed": "実行できませんでした。",
       "emptyTitle": "ブロック中のアドレスはありません",
       "emptyBody": "アドレスはブロックされるとここに表示されます。",
-      "unbanAllTitle": "{count, plural, one {このアドレスのブロックを解除しますか?} other {# 件すべてのアドレスのブロックを解除しますか?}}",
+      "unbanAllTitle": "{count, plural, one {このアドレスのブロックを解除しますか？} other {# 件すべてのアドレスのブロックを解除しますか？}}",
       "unbanAllDescription": "対象のアドレスはすぐにサーバーにアクセスできるようになります。同じルールに再び違反した場合は、Fail2ban によって再度ブロックされます。",
-      "unbanIpTitle": "{ip} のブロックを解除しますか?",
+      "unbanIpTitle": "{ip} のブロックを解除しますか？",
       "unbanIpDescription": "このアドレスはすぐにサーバーにアクセスできるようになります。{jail} のルールに再び違反した場合は、Fail2ban によって再度ブロックされます。",
       "cancel": "キャンセル",
       "unknownLeft": "不明",
@@ -1480,7 +1496,7 @@
       "humanHours": "{count, plural, one {# 時間} other {# 時間}}",
       "humanDays": "{count, plural, one {# 日} other {# 日}}",
       "invalidIp": "有効な IP アドレスまたは範囲ではありません。",
-      "removeYouTitle": "自身のアドレスを削除しますか?",
+      "removeYouTitle": "自身のアドレスを削除しますか？",
       "removeYouDescription": "{ip} は現在接続に使用されているアドレスです。このリストから削除すると Jail にブロックされる可能性があり、サーバーへのアクセスができなくなります。",
       "removeYouConfirm": "削除する",
       "cancel": "キャンセル",
@@ -1538,11 +1554,11 @@
       "secured": "受信トラフィックは再びデフォルトでブロックされます。"
     },
     "confirmOn": {
-      "title": "ファイアウォールを有効化しますか?",
+      "title": "ファイアウォールを有効化しますか？",
       "description": "以降、ルール一覧にないものはすべてブロックされます。SSH とこのパネルに必要なポートは先に追加されるため、アクセスできなくなることはありません。"
     },
     "confirmOff": {
-      "title": "ファイアウォールを無効化しますか?",
+      "title": "ファイアウォールを無効化しますか？",
       "description": "プログラムが開いているすべてのポートが、再びインターネットから到達可能になります。ルールは保持され、再度有効にすると復元されます。"
     },
     "rules": {
@@ -1560,7 +1576,7 @@
       "emptyBody": "通信を許可するルールを追加してください — 443 の Web サイトや、オフィスからの SSH のみなどです。",
       "protectedHint": "サーバーから締め出されないよう、自動で追加されています。",
       "protectedReason": "接続を維持するためのルールです。無効にするとサーバーから締め出されたり、アプリケーションが一時停止したりする可能性があります。",
-      "confirmTitle": "このルールを削除しますか?",
+      "confirmTitle": "このルールを削除しますか？",
       "confirmBodyOn": "{rule} — すぐに反映されます。このルールで許可されていた通信はブロックされます。",
       "confirmBodyOff": "{rule} — ファイアウォールが無効のため本日は変更されません。ただし、再度有効にしてもこのルールは復元されません。",
       "name": "名前",
@@ -1678,7 +1694,7 @@
     },
     "noPermission": "現在のロールには、ファイアウォールの管理権限が含まれていません。管理者に付与を依頼してください。",
     "confirmSecure": {
-      "title": "受信トラフィックをデフォルトでブロックしますか?",
+      "title": "受信トラフィックをデフォルトでブロックしますか？",
       "description": "以下に記載されたルールのみが許可されます。SSH とパネル自身のポートは先に許可されるため、サーバーから締め出されることはありません。"
     }
   },
@@ -1715,7 +1731,8 @@
       "invalidPort": "1 から 65535 のポートを入力してください。",
       "invalidTime": "03:00 のように24時間制で指定してください。",
       "invalidMemory": "256mb や 1gb のような形式で指定してください。制限なしの場合は 0 を指定します。",
-      "passwordTooShort": "8文字以上で指定してください。"
+      "passwordTooShort": "8文字以上で指定してください。",
+      "invalidHour": "0 から 23 の時間を選んでください。"
     },
     "server": {
       "title": "サーバー",
@@ -1741,7 +1758,7 @@
         "hint": "22 がデフォルトで、攻撃のスキャン対象でもあります。"
       },
       "rootLogin": {
-        "label": "root ユーザーが直接サインインできますか?",
+        "label": "root ユーザーが直接サインインできますか？",
         "hint": "root は何でもできるため、攻撃の標的になります。",
         "option": {
           "yes": {
@@ -1776,7 +1793,7 @@
       },
       "rootPasswordWarning": "現在、root がパスワードでログインできます。自動攻撃が最初に試すアカウントです — root ログインを「鍵のみ」に設定してください。",
       "signIn": {
-        "label": "サインインの方法は?",
+        "label": "サインインの方法は？",
         "hint": "ここのアカウントを持つ全員に適用されます。",
         "option": {
           "password": {
@@ -1802,7 +1819,7 @@
         "size": "サイズ",
         "sizeHint": "多くのサーバーでは 1〜2 GB で十分です。オフにすると削除されます。",
         "saved": "スワップを更新しました。",
-        "confirmTitle": "スワップをオフにしますか?",
+        "confirmTitle": "スワップをオフにしますか？",
         "confirmDescription": "現在 {used} が使用中です。これは RAM に収まる必要があり、収まらない場合カーネルがプロセスを強制終了し始めます。",
         "confirmCancel": "スワップを維持",
         "confirmSubmit": "スワップをオフにする",
@@ -1842,7 +1859,7 @@
         "passwordLocked": "このインストールでは Redis パスワードを変更できません — パネルが自身の設定ファイルを更新できません。",
         "description": "Redis が使用できるメモリ量と、上限到達時に削除する対象。",
         "removePassword": "パスワードを解除",
-        "removeTitle": "Redis のパスワードを解除しますか?",
+        "removeTitle": "Redis のパスワードを解除しますか？",
         "removeDescription": "Redis はパスワードなしで接続を受け付けます。このサーバーの外部から到達できない場合にのみ行ってください。",
         "removeCancel": "維持する",
         "removeSubmit": "パスワードを解除",
@@ -1893,7 +1910,7 @@
         "runNothing": "保留中のセキュリティ更新はありませんでした。その他の更新はここではインストールされません。",
         "runFailedAt": "前回の手動更新は {when} に失敗しました",
         "runRebootRequired": "インストールされたパッチは有効化に再起動が必要です。",
-        "runConfirmTitle": "今すぐセキュリティ更新をインストールしますか?",
+        "runConfirmTitle": "今すぐセキュリティ更新をインストールしますか？",
         "runConfirmBody": "すでに保留中のセキュリティ更新のみをインストールします — 自動化で行われるのと同じものです。サービスが再起動され、サーバー全体の再起動が必要になる場合もあります。パネル自体が一時的に到達不能になる可能性があります。",
         "runConfirmCancel": "キャンセル",
         "runConfirmSubmit": "今すぐインストール",
@@ -1917,7 +1934,7 @@
         "now": "今すぐ",
         "inMinutes": "{minutes} 分後",
         "action": "サーバーを再起動",
-        "confirmTitle": "このサーバーを再起動しますか?",
+        "confirmTitle": "このサーバーを再起動しますか？",
         "confirmNow": "このマシン上のすべてのアプリケーション、データベース、サービスがすぐに停止し、起動後に復帰します。再起動中はパネルに到達できません。",
         "confirmDelayed": "サーバーは {minutes} 分後に再起動されます。すべてのアプリケーション、データベース、サービスは復旧するまで停止します。",
         "confirmCancel": "キャンセル",
@@ -1963,7 +1980,7 @@
         "pendingYes": "再起動が必要"
       }
     },
-    "unsavedTitle": "保存せずに離れますか?",
+    "unsavedTitle": "保存せずに離れますか？",
     "unsavedDescription": "このページの変更は保存されていません。変更は失われます。",
     "unsavedStay": "このページに留まる",
     "unsavedLeave": "離れて変更を失う"
@@ -2145,7 +2162,7 @@
       "unsupported": "ionCube は PHP {version} 用のローダーを公開していません。それを必要とするソフトウェアには別のバージョンをご使用ください。",
       "external": "パネル外でインストールされています（以前のバージョンまたはシステムパッケージによる）。PHP {version} と一緒に削除されます。",
       "loadFailed": "ionCube Loader の状態を読み取れませんでした。",
-      "removeConfirmTitle": "ionCube Loader を削除しますか?",
+      "removeConfirmTitle": "ionCube Loader を削除しますか？",
       "removeConfirmBody": "PHP {version} で動作している暗号化ソフトウェアをご利用のアプリケーションは、再インストールするまで動作しなくなります。",
       "hint": "apt パッケージではなく、ionCube のクローズドソースファイルです。そのため拡張機能の一覧の行ではなく、独立したタブになっています。",
       "onShort": "オン",
@@ -2294,7 +2311,7 @@
       "cleanSized": "{size} をクリーンアップ"
     },
     "confirm": {
-      "title": "これらの項目をクリーンアップしますか?",
+      "title": "これらの項目をクリーンアップしますか？",
       "description": "この操作は取り消せません。アクティブなログファイルは削除ではなく空にされます。",
       "cancel": "キャンセル",
       "submit": "クリーンアップ",
@@ -2357,7 +2374,7 @@
   "rebootBanner": {
     "message": "インストール済みの更新を適用するために、このサーバーの再起動が必要です。",
     "action": "今すぐ再起動",
-    "confirmTitle": "今すぐこのサーバーを再起動しますか?",
+    "confirmTitle": "今すぐこのサーバーを再起動しますか？",
     "confirmDescription": "復旧するまでホストされているすべてのアプリケーションにアクセスできません。通常は 1 分以内です。",
     "confirmCancel": "キャンセル",
     "confirmSubmit": "サーバーを再起動",
@@ -2568,7 +2585,7 @@
     },
     "delete": {
       "action": "削除",
-      "title": "{name} を削除しますか?",
+      "title": "{name} を削除しますか？",
       "description": "データベースとその中のすべてのデータを完全に削除します。元に戻せません。",
       "descriptionWithUsers": "{count, plural, one {データベース、その中のすべてのデータ、および接続している # 人のユーザーを完全に削除します。} other {データベース、その中のすべてのデータ、および接続している # 人のユーザーを完全に削除します。}} 元に戻せません。",
       "confirmLabel": "確認のために {name} を入力してください",
@@ -3053,7 +3070,7 @@
       "tokenLabelHint": "現在のアクセストークンを置き換える新しいトークンです。保存すると古いトークンはすぐに使えなくなります。"
     },
     "disconnect": {
-      "title": "{label} の接続を解除しますか?",
+      "title": "{label} の接続を解除しますか？",
       "description": "このアカウントからデプロイしているアプリケーションは、コードを取得できなくなります。アプリケーション自体は削除されません。",
       "stillValid": "これは {brand} からトークンを削除します。{provider} 側では、削除するまで有効な状態のままです。",
       "revokeLink": "{provider} のトークンを管理",
@@ -3448,7 +3465,7 @@
       "visitNamed": "{domain} を新しいタブで開く"
     },
     "delete": {
-      "title": "{name} を削除しますか?",
+      "title": "{name} を削除しますか？",
       "description": "アプリケーション設定が削除され、{domain} への配信が停止します。これは元に戻せません。",
       "removeFiles": "アプリケーションのファイルとバックアップも削除する",
       "removeFilesOn": "アプリケーションのディレクトリとすべてのバックアップが削除されます。ストレージ内のアーカイブも含みます。",
@@ -3768,7 +3785,7 @@
         "noDeliveries": "まだ配信はありません",
         "rotate": "シークレットを再生成",
         "rotating": "再生成中…",
-        "rotateConfirmTitle": "Webhook のシークレットを再生成しますか?",
+        "rotateConfirmTitle": "Webhook のシークレットを再生成しますか？",
         "rotateConfirmBody": "新しいシークレットが生成され、現在のシークレットは使えなくなります。Git プロバイダーでシークレットを更新するまで、自動デプロイは一時停止します。",
         "rotated": "シークレットを再生成しました。",
         "saved": "プッシュ時のデプロイ設定を更新しました。",
@@ -3938,7 +3955,8 @@
         "name": "フォルダ名",
         "submit": "フォルダを作成",
         "created": "\"{name}\" を作成しました。",
-        "failed": "フォルダを作成できませんでした。"
+        "failed": "フォルダを作成できませんでした。",
+        "taken": "このフォルダーには「{name}」という名前の項目が既にあります。"
       },
       "newFile": {
         "action": "新しいファイル",
@@ -3982,7 +4000,7 @@
         "saveFailed": "このファイルを保存できませんでした。",
         "save": "保存",
         "copy": "内容をコピー",
-        "discardTitle": "未保存の変更を破棄しますか?",
+        "discardTitle": "未保存の変更を破棄しますか？",
         "discardDescription": "このファイルへの編集は保存されていません。このまま閉じると編集内容が失われます。",
         "keepEditing": "編集を続ける",
         "discardConfirm": "変更を破棄"
@@ -3998,7 +4016,7 @@
       "targetDialog": {
         "pathLabel": "パス",
         "rootPlaceholder": "アプリケーションルート",
-        "pathLabelHint": "アプリケーションのフォルダの最上位からの位置で、保存先を指定します。",
+        "pathLabelHint": "名前だけの場合はこのフォルダーに置かれます。パスはアプリケーションフォルダーの最上位から数えます。",
         "destination": "展開先",
         "copyDestination": "このパスをコピー",
         "folderMissing": "フォルダー「{folder}」は存在しません。先に作成するか、別のフォルダーを選んでください。"
@@ -4063,7 +4081,7 @@
         "subtitleWithCurrentBoth": "現在 {mode} ({symbolic})。このファイルまたはフォルダを読み取り・書き込み・実行できる対象です。"
       },
       "delete": {
-        "title": "\"{name}\" を削除しますか?",
+        "title": "\"{name}\" を削除しますか？",
         "description": "ごみ箱に移動します。そこから復元できます。",
         "descriptionDir": "フォルダと中身すべてがごみ箱に移動します。そこから復元できます。",
         "confirm": "削除",
@@ -4079,7 +4097,7 @@
       },
       "fixPermissions": {
         "action": "権限を修正",
-        "title": "このアプリケーションのファイル権限をリセットしますか?",
+        "title": "このアプリケーションのファイル権限をリセットしますか？",
         "description": "すべてのファイルとフォルダの所有者と権限を標準の初期値にリセットします。",
         "foldersLabel": "フォルダ",
         "filesLabel": "ファイル",
@@ -4272,7 +4290,7 @@
         "stopped": "停止しました"
       },
       "processCount": "{running}/{total}",
-      "disabledTag": "サーバー起動時に自動起動しない",
+      "disabledTag": "オフ",
       "noRestartOnDeployTag": "デプロイ時に再起動しない",
       "noAutoRestartTag": "停止時に再起動しない",
       "addedAgo": "{time} に追加",
@@ -4314,7 +4332,7 @@
       },
       "confirm": {
         "stop": {
-          "title": "{name} を停止しますか?",
+          "title": "{name} を停止しますか？",
           "description": "停止中は処理が実行されません。キューにたまったものは再度起動するまで待機します。"
         }
       },
@@ -5320,12 +5338,12 @@
     "notReady": "更新する前に上記のチェックをすべて解消してください。",
     "updateNow": "今すぐ更新",
     "dryRun": "ドライラン",
-    "dryRunHint": "迷っていますか? まずはドライランを実行してください — 何も変更せず、すべての手順を確認できます。",
+    "dryRunHint": "迷っていますか？ まずはドライランを実行してください — 何も変更せず、すべての手順を確認できます。",
     "safeToLeave": "このページを離れても問題ありません — 更新はサーバーで継続します。",
     "checkAgain": "再確認",
     "couldNotCheck": "更新を確認できませんでした",
     "couldNotCheckBody": "リリースサーバーに接続できませんでした。パネルに問題はありません — しばらくしてから再試行してください。",
-    "confirmTitle": "パネルを更新しますか?",
+    "confirmTitle": "パネルを更新しますか？",
     "confirmBody": "更新中は数分間パネルがオフラインになり、その後再起動します。ホストされているアプリケーションには影響しません。",
     "cancel": "キャンセル",
     "working": "処理中…",
@@ -5481,7 +5499,7 @@
       "title": "ストレージ送信先",
       "subtitle": "このサーバーがバックアップを書き込める S3 互換バケット。",
       "add": "保存先を追加",
-      "whatTestDoes": "テストは何をしますか?",
+      "whatTestDoes": "テストは何をしますか？",
       "testExplained": "バケットに小さなファイルを書き戻し、読み出して削除します。これでキーが機能すること、かつ書き込み権限があることが証明されます。読み取り専用キーは必ず失敗します。"
     },
     "empty": {
@@ -5611,7 +5629,7 @@
       "testPassed": "接続をテストしました — 正常です。",
       "testFailed": "保存は完了しましたが、接続テストは失敗しました。キーとバケットを確認してください。",
       "permissionsNote": "このバケットでオブジェクトのアップロード、ダウンロード、削除の権限が必要です。削除権限も重要で、設定された保持期間を超えた古いバックアップは削除されます。",
-      "keyDocs": "これらのキーはどこで確認できますか?",
+      "keyDocs": "これらのキーはどこで確認できますか？",
       "permissionsNoteRemote": "そのディレクトリでファイルを作成・読み取り・削除できる権限が必要です。バックアップは保持数を超えた古いアーカイブを削除するため、読み取り専用では機能しません。",
       "addedNeedsConnect": "保存先を追加しました。完了するには、下の行の「接続」から Google アカウントへのアクセスを承認してください。"
     },
@@ -5637,7 +5655,7 @@
       "onlyWhatYouChange": "変更する項目だけを入力してください。空欄のままにした項目は現在の値を保持します。"
     },
     "delete": {
-      "title": "この送信先を削除しますか?",
+      "title": "この送信先を削除しますか？",
       "description": "{name} をパネルから削除します。",
       "warning": "ここへのバックアップを設定しているアプリケーションはバックアップを停止します。バケット内の既存バックアップは削除されません。",
       "cancel": "キャンセル",
@@ -5927,7 +5945,7 @@
       "retryFailed": "バックアップを再試行できませんでした。",
       "clear": {
         "action": "停止中の処理を解除",
-        "title": "停止中のバックアップをクリアしますか?",
+        "title": "停止中のバックアップをクリアしますか？",
         "description": "これは {name} のバックアップが動作していない場合にのみ使用してください。実行中の worker は停止できません。実行が続いている可能性がある場合、サーバーは拒否します。",
         "cancel": "待機を続ける",
         "confirm": "停止中の処理を解除",
@@ -5944,7 +5962,7 @@
         "clearSelection": "クリア",
         "selectAll": "すべてのバックアップを選択",
         "selectRow": "バックアップを選択",
-        "title": "{count, plural, one {このバックアップ} other {# 件のバックアップ}}を削除しますか?",
+        "title": "{count, plural, one {このバックアップ} other {# 件のバックアップ}}を削除しますか？",
         "description": "アーカイブはストレージとレコードの両方から削除されます。元に戻すことはできません。",
         "safetyWarning": "{count, plural, one {このうち1件は復元の前に自動的に取得された safety copy です} other {このうち # 件は復元の前に自動的に取得された safety copy です}}。",
         "confirm": "削除",
@@ -6109,7 +6127,7 @@
       "retryFailed": "バックアップを再試行できませんでした。",
       "clear": {
         "action": "停止中の処理を解除",
-        "title": "停止中のバックアップをクリアしますか?",
+        "title": "停止中のバックアップをクリアしますか？",
         "description": "これはバックアップが動作していない場合にのみ使用してください。実行中の worker は停止できません。実行が続いている可能性がある場合、サーバーは拒否します。",
         "cancel": "待機を続ける",
         "confirm": "停止中の処理を解除",

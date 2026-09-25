@@ -579,6 +579,7 @@ export function FilesPanel({
       <NewFolderDialog
         appId={appId}
         path={path}
+        existingNames={files.map((f) => f.name)}
         open={newFolderOpen}
         onOpenChange={setNewFolderOpen}
         onSuccess={flashPath}

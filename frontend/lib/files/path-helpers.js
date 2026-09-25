@@ -16,9 +16,12 @@ export function joinPath(base, name) {
 }
 
 // A bare name typed where a path is expected stays in `folder` — the folder
-// the reader is looking at. Anything with a slash is a path from the site root.
+// the reader is looking at. A path with a slash is counted from the top of the
+// application folder, and a leading slash means the top itself.
 export function inFolder(value, folder) {
-  return !value || value.includes("/") ? value : joinPath(folder, value);
+  if (!value) return value;
+  if (value.startsWith("/")) return value.replace(/^\/+/, "");
+  return value.includes("/") ? value : joinPath(folder, value);
 }
 
 // "photo.jpg" -> ["photo", ".jpg"]; "archive.tar.gz" -> ["archive", ".tar.gz"]

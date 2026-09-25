@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Folder, Loader2 } from "lucide-react";
 import { apiMessage } from "@/lib/api/error-message";
 import { destinationMissing } from "@/lib/files/missing-folder";
-import { dirname } from "@/lib/files/path-helpers";
+import { dirname, inFolder } from "@/lib/files/path-helpers";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -99,7 +99,11 @@ export function TargetPathDialog({
    * everywhere else in this feature — so it gets the same words the breadcrumb
    * uses rather than rendering as nothing at all.
    */
-  const trimmedTarget = destinationOf(value.trim()).replace(/^\/+|\/+$/g, "");
+  // A bare name stays in the item's own folder (Rename, Copy, Compress,
+  // Extract alike) — typed on its own it used to land in the application's
+  // top folder, which on WordPress is the public web root.
+  const place = (typed) => inFolder(typed, dirname(file.path));
+  const trimmedTarget = destinationOf(place(value.trim())).replace(/^\/+|\/+$/g, "");
   const destinationValue = trimmedTarget;
   const destinationText = trimmedTarget
     ? trimmedTarget.split("/").filter(Boolean).join(" / ")
@@ -128,7 +132,7 @@ export function TargetPathDialog({
 
   async function onSubmit(e) {
     e.preventDefault();
-    const trimmed = normalize(value.trim());
+    const trimmed = normalize(place(value.trim()));
     if ((!trimmed && !allowEmpty) || busy) return;
     const invalid = validate?.(trimmed);
     if (invalid) {

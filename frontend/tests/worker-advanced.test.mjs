@@ -174,7 +174,10 @@ test("extra config may not open a second program block", () => {
   assert.ok(
     codes({ ...base, extra_config: "[program:secret]\ncommand=/bin/sh" }).includes("noSectionHeader"),
   );
-  assert.deepEqual(codes({ ...base, extra_config: 'environment=APP_ENV="production"' }), []);
+  // The panel already writes `environment=PATH=…`; a second environment= line
+  // is a duplicate key and supervisord refuses the program (proved 09-25).
+  assert.ok(codes({ ...base, extra_config: 'environment=APP_ENV="production"' }).includes("noEnvironmentLine"));
+  assert.deepEqual(codes({ ...base, extra_config: "startsecs=5" }), []);
 });
 
 test("a log file is an absolute path, with no traversal and no second line", () => {
