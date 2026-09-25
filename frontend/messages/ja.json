@@ -796,7 +796,8 @@
     "rangeSession": "60〜604800 秒（7 日）で入力してください。",
     "rangeWorkers": "1〜100 の数値を入力してください。",
     "rangeMaxRequests": "0〜100000 で入力してください。0 の場合、ワーカーは再起動されません。",
-    "pathNoTraversal": "パスに .. を含めることはできません"
+    "pathNoTraversal": "パスに .. を含めることはできません",
+    "securityUsernameSpaces": "スペースは使用できません。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -4460,7 +4461,9 @@
       "savedCredentials": "今すぐ保存してください。二度と表示されません:",
       "openSite": "アプリケーションを開く",
       "showPassword": "パスワードを表示",
-      "hidePassword": "パスワードを隠す"
+      "hidePassword": "パスワードを隠す",
+      "unsupportedProtected": "このアプリケーションは Authorization ヘッダーでサインインするため、パスワード保護によってアクセスできなくなる場合があります。アプリケーションが動作することを確認していない限り、オフにしてください。",
+      "passwordAgainHint": "パスワードを再入力するか、新しいパスワードを入力してください。変更を保存するには必要です。"
     },
     "botBlocker": {
       "pageTitle": "AI ボットブロッカー",

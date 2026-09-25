@@ -5,7 +5,8 @@ import fs from "node:fs";
 const read = (p) => fs.readFileSync(p, "utf8");
 
 test("an off state is a filled grey pill, not bare text", () => {
-  assert.match(read("components/applications/security/security-section.jsx"), /variant=\{field\.value \? "success" : "muted"\}/);
+  // From the saved state since PP-A (2026-09-25); off is still the grey pill.
+  assert.match(read("components/applications/security/security-section.jsx"), /variant=\{alreadyProtected \? "success" : "muted"\}/);
   assert.match(read("components/applications/firewall/firewall-section.jsx"), /blocking \? "success" : enabled \? "warning" : "muted"/);
   assert.match(read("components/services/service-status-badge.jsx"), /inactive: \{ icon: CircleMinus, variant: "muted" \}/);
   assert.match(read("lib/activity-log/labels.js"), /if \(!action\) return "muted";/);

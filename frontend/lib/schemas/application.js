@@ -419,15 +419,24 @@ export const securityFormSchema = z
   })
   .superRefine((data, ctx) => {
     if (!data.enabled) return;
-    if (!data.username.trim()) {
+    // Mirrors UpdateBasicAuthRequest (`regex:/^[^:\s]+$/`, `max:255`). A space
+    // used to pass here and come back from the server in English.
+    const username = data.username.trim();
+    if (!username) {
       ctx.addIssue({ path: ["username"], code: "custom", message: "required_username" });
-    } else if (data.username.includes(":")) {
+    } else if (username.includes(":")) {
       ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameColon" });
+    } else if (/\s/.test(username)) {
+      ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameSpaces" });
+    } else if (username.length > 255) {
+      ctx.addIssue({ path: ["username"], code: "custom", message: "max255" });
     }
     if (!data.password) {
       ctx.addIssue({ path: ["password"], code: "custom", message: "required_password" });
     } else if (data.password.length < 8) {
       ctx.addIssue({ path: ["password"], code: "custom", message: "min8" });
+    } else if (data.password.length > 255) {
+      ctx.addIssue({ path: ["password"], code: "custom", message: "max255" });
     }
   });
 

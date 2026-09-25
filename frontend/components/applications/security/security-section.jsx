@@ -62,6 +62,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   });
 
   const enabled = useWatch({ control: form.control, name: "enabled" });
+  const passwordValue = useWatch({ control: form.control, name: "password" });
 
   // Any edit after a save invalidates the "here's what you just set" panel —
   // it must not go on showing a password that no longer matches what's saved.
@@ -84,6 +85,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
         : { enabled: false };
       await updateApplicationSecurity(appId, payload);
       toast.success(values.enabled ? t("enabledToast") : t("disabledToast"));
+      setSavedProtected(values.enabled);
       setJustSaved(values.enabled ? { username: values.username.trim(), password: values.password } : null);
       form.reset({ enabled: values.enabled, username: values.enabled ? values.username.trim() : "", password: "" });
       router.refresh();
@@ -112,7 +114,13 @@ export function SecuritySection({ appId, application, domain, canManage }) {
   // Turning protection OFF stays available: an application protected before
   // this was known must not be stuck that way.
   const conflicts = application.basic_auth_supported === false;
-  const alreadyProtected = application.basic_auth_enabled ?? false;
+  // The saved state, as of our own last save until the refreshed page agrees —
+  // otherwise the badge kept the old answer for the second or two the re-read
+  // takes, beside a toast saying the opposite.
+  const serverProtected = application.basic_auth_enabled ?? false;
+  const [savedProtected, setSavedProtected] = useState(null);
+  if (savedProtected !== null && savedProtected === serverProtected) setSavedProtected(null);
+  const alreadyProtected = savedProtected ?? serverProtected;
   const cannotEnable = conflicts && !alreadyProtected;
 
   const controlReason = !canManage ? t("noPermission") : cannotEnable ? t("unsupportedForType") : null;
@@ -140,7 +148,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                     <label
                       className={cn(
                         "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
-                        field.value ? "border-success/30 bg-success/5" : "bg-muted/40",
+                        alreadyProtected ? "border-success/30 bg-success/5" : "bg-muted/40",
                         !canManage || submitting ? "cursor-not-allowed" : "cursor-pointer",
                       )}
                     >
@@ -148,7 +156,7 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         <span
                           className={cn(
                             "mt-0.5 hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex",
-                            field.value ? "bg-success/15 text-success" : "bg-muted-foreground/10 text-muted-foreground",
+                            alreadyProtected ? "bg-success/15 text-success" : "bg-muted-foreground/10 text-muted-foreground",
                           )}
                         >
                           <Lock className="size-4" />
@@ -156,14 +164,18 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{t("enable")}</span>
-                            <Badge variant={field.value ? "success" : "muted"}>
-                              {field.value ? t("statusProtected") : t("statusNotProtected")}
+                            {/* What the site IS, from the last save — not the
+                                switch. Flicking it used to turn this green
+                                "Protected" while the site was still public; the
+                                footer's "Not saved yet" says what is pending. */}
+                            <Badge variant={alreadyProtected ? "success" : "muted"}>
+                              {alreadyProtected ? t("statusProtected") : t("statusNotProtected")}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {cannotEnable
                               ? t("unsupportedForType")
-                              : field.value
+                              : alreadyProtected
                                 ? t("enableHint")
                                 : t("disabledHint")}
                           </p>
@@ -180,9 +192,22 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                         </FormControl>
                       </div>
                     </label>
+                    {/* A 422 on `enabled` (the Authorization-header rule) was
+                        filed against a field with no message slot, so the save
+                        failed without a word. */}
+                    <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Protected before the conflict was known: the switch stays
+                  usable so it can be turned off, and this says why it should. */}
+              {conflicts && alreadyProtected ? (
+                <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+                  <p>{t("unsupportedProtected")}</p>
+                </div>
+              ) : null}
   
               {/* Framed as guidance, not just a warning — answers "should I turn
                   this on" before anyone has to guess from the toggle alone. */}
@@ -261,6 +286,13 @@ export function SecuritySection({ appId, application, domain, canManage }) {
                                 {...field}
                               />
                             </FormControl>
+                            {/* The API takes both fields together and the saved
+                                password is never sent back, so changing only
+                                the username meets "Enter a password." with no
+                                reason given. */}
+                            {alreadyProtected && isDirty && !passwordValue ? (
+                              <p className="text-xs text-muted-foreground">{t("passwordAgainHint")}</p>
+                            ) : null}
                             <Button
                               type="button"
                               variant="link"

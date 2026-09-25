@@ -796,7 +796,8 @@
     "rangeSession": "Saisissez de 60 à 604800 secondes (7 jours).",
     "rangeWorkers": "Saisissez un nombre de 1 à 100.",
     "rangeMaxRequests": "Saisissez de 0 à 100000. Avec 0, un worker n'est jamais redémarré.",
-    "pathNoTraversal": "Le chemin ne peut pas contenir .."
+    "pathNoTraversal": "Le chemin ne peut pas contenir ..",
+    "securityUsernameSpaces": "Ne peut pas contenir d'espaces."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -4460,7 +4461,9 @@
       "savedCredentials": "Enregistrez-les maintenant — ils ne seront plus affichés :",
       "openSite": "Ouvrir l'application",
       "showPassword": "Afficher le mot de passe",
-      "hidePassword": "Masquer le mot de passe"
+      "hidePassword": "Masquer le mot de passe",
+      "unsupportedProtected": "Cette application se connecte avec l'en-tête Authorization, donc la protection par mot de passe peut la rendre inaccessible. Désactivez-la, sauf si vous avez vérifié que l'application fonctionne toujours.",
+      "passwordAgainHint": "Saisissez de nouveau le mot de passe, ou un nouveau. Il est nécessaire pour enregistrer toute modification."
     },
     "botBlocker": {
       "pageTitle": "Bloqueur de bots IA",

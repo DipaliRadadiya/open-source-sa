@@ -274,7 +274,8 @@
     "rangeSession": "Introduce de 60 a 604800 segundos (7 días).",
     "rangeWorkers": "Introduce un número de 1 a 100.",
     "rangeMaxRequests": "Introduce de 0 a 100000. Con 0 no se reinicia nunca un worker.",
-    "pathNoTraversal": "La ruta no puede contener .."
+    "pathNoTraversal": "La ruta no puede contener ..",
+    "securityUsernameSpaces": "No puede contener espacios."
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -4460,7 +4461,9 @@
       "savedCredentials": "Guarda esto ahora: no se volverá a mostrar:",
       "openSite": "Abrir aplicación",
       "showPassword": "Mostrar contraseña",
-      "hidePassword": "Ocultar contraseña"
+      "hidePassword": "Ocultar contraseña",
+      "unsupportedProtected": "Esta aplicación inicia sesión con la cabecera Authorization, así que la protección con contraseña puede dejarla inaccesible. Desactívala salvo que hayas comprobado que la aplicación sigue funcionando.",
+      "passwordAgainHint": "Vuelve a escribir la contraseña, o una nueva. Hace falta para guardar cualquier cambio."
     },
     "botBlocker": {
       "pageTitle": "Bloqueador de bots de IA",

@@ -796,7 +796,8 @@
     "rangeSession": "Informe de 60 a 604800 segundos (7 dias).",
     "rangeWorkers": "Informe um número de 1 a 100.",
     "rangeMaxRequests": "Informe de 0 a 100000. Com 0, um worker nunca é reiniciado.",
-    "pathNoTraversal": "O caminho não pode conter .."
+    "pathNoTraversal": "O caminho não pode conter ..",
+    "securityUsernameSpaces": "Não pode conter espaços."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -4460,7 +4461,9 @@
       "savedCredentials": "Salve agora — não serão mostradas novamente:",
       "openSite": "Abrir aplicação",
       "showPassword": "Mostrar senha",
-      "hidePassword": "Ocultar senha"
+      "hidePassword": "Ocultar senha",
+      "unsupportedProtected": "Esta aplicação faz login com o cabeçalho Authorization, então a proteção por senha pode deixá-la inacessível. Desative-a, a menos que você tenha verificado que a aplicação ainda funciona.",
+      "passwordAgainHint": "Digite a senha novamente, ou uma nova. Ela é necessária para salvar qualquer alteração."
     },
     "botBlocker": {
       "pageTitle": "Bloqueador de bots de IA",

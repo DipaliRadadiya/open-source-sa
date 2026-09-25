@@ -796,7 +796,8 @@
     "rangeSession": "Geben Sie 60 bis 604800 Sekunden (7 Tage) ein.",
     "rangeWorkers": "Geben Sie eine Zahl von 1 bis 100 ein.",
     "rangeMaxRequests": "Geben Sie 0 bis 100000 ein. Bei 0 wird ein Worker nie neu gestartet.",
-    "pathNoTraversal": "Der Pfad darf kein .. enthalten"
+    "pathNoTraversal": "Der Pfad darf kein .. enthalten",
+    "securityUsernameSpaces": "Darf keine Leerzeichen enthalten."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -4460,7 +4461,9 @@
       "savedCredentials": "Sichern Sie diese jetzt — sie werden nicht wieder angezeigt:",
       "openSite": "Anwendung öffnen",
       "showPassword": "Passwort anzeigen",
-      "hidePassword": "Passwort verbergen"
+      "hidePassword": "Passwort verbergen",
+      "unsupportedProtected": "Diese Anwendung meldet sich über den Authorization-Header an, daher kann der Passwortschutz sie unerreichbar machen. Schalten Sie ihn aus, sofern Sie nicht geprüft haben, dass die Anwendung weiter funktioniert.",
+      "passwordAgainHint": "Geben Sie das Passwort erneut ein oder ein neues. Es wird zum Speichern jeder Änderung gebraucht."
     },
     "botBlocker": {
       "pageTitle": "KI-Bot-Blocker",

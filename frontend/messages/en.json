@@ -796,7 +796,8 @@
     "rangeSession": "Enter 60 to 604800 seconds (7 days).",
     "rangeWorkers": "Enter a number from 1 to 100.",
     "rangeMaxRequests": "Enter 0 to 100000. 0 never restarts a worker.",
-    "pathNoTraversal": "The path can't contain .."
+    "pathNoTraversal": "The path can't contain ..",
+    "securityUsernameSpaces": "Can't contain spaces."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -4460,7 +4461,9 @@
       "savedCredentials": "Save these now — they won't be shown again:",
       "openSite": "Open application",
       "showPassword": "Show password",
-      "hidePassword": "Hide password"
+      "hidePassword": "Hide password",
+      "unsupportedProtected": "This application signs in with the Authorization header, so password protection can make it unreachable. Turn it off unless you've checked the application still works.",
+      "passwordAgainHint": "Enter the password again, or a new one. It's needed to save any change."
     },
     "botBlocker": {
       "pageTitle": "AI Bot Blocker",
