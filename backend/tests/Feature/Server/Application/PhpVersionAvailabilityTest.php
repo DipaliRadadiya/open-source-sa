@@ -436,3 +436,30 @@ describe('the version the application itself can run on', function () {
         });
     });
 });
+
+it('offers only the PHP versions the site type runs on, keeping the current one', function () {
+    // Measured on a real server: WordPress (7.4+) listed an installed 7.0,
+    // and choosing it was refused with a 422 — the menu offered what the
+    // endpoint rejects.
+    installLsphpBuild('7.0');
+    installLsphpBuild('8.2');
+
+    $site = Application::forceCreate([
+        'system_user_id' => $this->su->id,
+        'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.example.com',
+        'site_type' => 'wordpress', 'serving_profile' => 'php',
+        'php_version' => '8.3', 'web_root' => '/', 'status' => 'active',
+    ]);
+
+    $versions = $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+        ->getJson("/api/applications/{$site->id}/php")
+        ->assertOk()
+        ->json('php.available_versions');
+
+    expect($versions)->toContain('8.3')->toContain('8.2')->not->toContain('7.0');
+
+    // And the one it lists is one the endpoint accepts.
+    $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+        ->putJson("/api/applications/{$site->id}/php", ['php_version' => '7.0'])
+        ->assertStatus(422);
+});
