@@ -898,6 +898,55 @@ it('sends a redirect name on before forcing HTTPS on OpenLiteSpeed', function (s
         ->and($redirect)->toBeLessThan($force);
 })->with(['php', 'static', 'node']);
 
+it('sends an alias the certificate does not cover to the primary when forcing HTTPS', function (string $driver, string $profile) {
+    config(['server.web_server' => $driver]);
+    $this->application->update(['serving_profile' => $profile]);
+    activeCertificate($this->application)->update([
+        'force_https' => true,
+        'domains' => ['shop.example.com', 'www.shop.example.com'],
+    ]);
+
+    foreach (['www.shop.example.com', 'new.example.com'] as $alias) {
+        $this->application->domains()->create(['domain' => $alias, 'type' => DomainType::Alias]);
+    }
+
+    $config = renderedCertVhost($this->application->fresh(), $driver);
+
+    // new.example.com is not on the certificate: https://new.example.com was a
+    // TLS error. www is covered and keeps its own host.
+    if ($driver === 'nginx') {
+        $location = substr($config, strpos($config, 'location / {'));
+        $location = substr($location, 0, strpos($location, "\n    }") + 6);
+
+        expect($location)->toContain('if ($host = new.example.com)')
+            ->and($location)->toContain('return 301 https://shop.example.com$request_uri;')
+            ->and($location)->toContain('return 301 https://$host$request_uri;')
+            ->and($location)->not->toContain('www.shop.example.com')
+            // Server-level would also swallow the ACME challenge for the name,
+            // and the certificate could never be reissued to include it.
+            ->and(strpos($config, 'if ($host = new.example.com)'))->toBeGreaterThan(strpos($config, 'location ^~ /.well-known/acme-challenge/'));
+    } else {
+        $alias = strpos($config, 'RewriteCond %{HTTP_HOST} ^new\\.example\\.com$ [NC]');
+        $general = strpos($config, 'RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]');
+
+        expect($alias)->not->toBeFalse()
+            ->and($alias)->toBeLessThan($general)
+            ->and(substr($config, $alias, $general - $alias))->toContain('!^/\\.well-known/acme-challenge/')
+            ->and(substr($config, $alias, $general - $alias))->toContain('https://shop.example.com/$1 [R=301,L]')
+            ->and($config)->not->toContain('^www\\.shop\\.example\\.com$');
+    }
+})->with(['nginx', 'openlitespeed'])->with(['php', 'static', 'node']);
+
+it('adds no alias redirect when HTTPS is not forced', function (string $driver) {
+    config(['server.web_server' => $driver]);
+    activeCertificate($this->application);
+    $this->application->domains()->create(['domain' => 'new.example.com', 'type' => DomainType::Alias]);
+
+    expect(renderedCertVhost($this->application->fresh(), $driver))
+        ->not->toContain('https://shop.example.com$request_uri')
+        ->not->toContain('https://shop.example.com/$1');
+})->with(['nginx', 'openlitespeed']);
+
 it('renders TLS on all three web servers', function (string $driver) {
     config(['server.web_server' => $driver]);
 

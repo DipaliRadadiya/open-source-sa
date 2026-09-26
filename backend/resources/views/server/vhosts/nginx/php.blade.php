@@ -25,6 +25,15 @@ server {
     }
 
     location / {
+@foreach ($uncoveredNames as $name)
+        {{-- Not on the certificate: https://{{ $name }} is a TLS error, so
+             send it to the primary. Inside `location /`, never at server
+             level, so the ACME location above still answers for this name
+             and the certificate can be reissued to include it. --}}
+        if ($host = {{ $name }}) {
+            return 301 https://{{ $serverNames[0] }}$request_uri;
+        }
+@endforeach
         return 301 https://$host$request_uri;
     }
 }

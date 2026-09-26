@@ -314,7 +314,19 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // can reject the request; this reserved-name pair identifies no
             // user application and is generated lazily on brownfield boxes.
             'tlsFallback' => $this->certificateFiles->fallbackPaths(),
-            'forceHttps' => (bool) ($application->scheme() === 'https' && $application->certificate?->force_https),
+            'forceHttps' => $forceHttps = (bool) ($application->scheme() === 'https' && $application->certificate?->force_https),
+            // Names the certificate does not cover, while HTTPS is forced.
+            // Sending one to https://<that name> lands the visitor on a
+            // certificate error, so they go to the primary instead — which a
+            // forced-HTTPS certificate always covers, since forcing needs the
+            // site's own scheme to be https. Apache already sends every name
+            // to the primary; nginx and OLS keep each covered name's own host.
+            'uncoveredNames' => $forceHttps
+                ? array_values(array_filter(
+                    $application->serverNames(),
+                    fn (string $name): bool => ! $application->certificate->covers($name),
+                ))
+                : [],
             // The shared ACME webroot, aliased into every profile. Per-site
             // document roots cannot work for node and proxy sites — they serve
             // nothing from disk, so there is nowhere for certbot to drop the

@@ -142,6 +142,15 @@ rewrite {
   {{-- Force HTTPS. The ACME exclusion is not optional: without it renewal
        stops working, and the redirect goes on pointing confidently at a
        certificate that has expired. --}}
+@foreach ($uncoveredNames as $name)
+  {{-- Not on the certificate: https://{{ $name }} is a TLS error, so send it
+       to the primary. ACME stays excluded so the certificate can still be
+       reissued to include this name. --}}
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP_HOST} ^{{ preg_quote($name, '/') }}$ [NC]
+  RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+  RewriteRule ^/?(.*)$ https://{{ $serverNames[0] }}/$1 [R=301,L]
+@endforeach
   RewriteCond %{HTTPS} !=on
   RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
   RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
