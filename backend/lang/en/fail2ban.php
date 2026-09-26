@@ -24,5 +24,7 @@ return [
         'filter_content_required' => 'The filter configuration is required.',
         'filter_content_string' => 'The filter configuration must be a text string.',
         'filter_content_max' => 'The filter configuration is too large (max 65535 characters).',
+        'foreign_jail' => 'This jail may only configure this site\'s own jail. Replace [:section] with [{name}] (it becomes :name).',
+        'foreign_filter' => 'This jail may only use this site\'s own filter. Replace filter = :filter with filter = {filter} (it becomes :name).',
     ],
 ];

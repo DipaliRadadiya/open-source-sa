@@ -2711,19 +2711,19 @@ Response when configured — `fail2ban` carries the saved values, and the templa
 
 ```json
 {"fail2ban": {
-  "jail_name": "shop",
-  "jail_content": "[shop]\nenabled  = true\nport     = http,https\nfilter   = shop\nlogpath  = /home/siteowner/shop/logs/access.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\n",
-  "filter_content": "[shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n"
-}, "jail_template": "[shop]\nenabled  = true\nport     = http,https\n...", "filter_template": "[shop]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n..."}
+  "jail_name": "panel-site-shop",
+  "jail_content": "[{name}]\nenabled  = true\nport     = http,https\nfilter   = {filter}\nlogpath  = /home/siteowner/shop/logs/access.log\nmaxretry = 3\nbantime  = 3600\nfindtime = 600\n",
+  "filter_content": "[Definition]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n           ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n"
+}, "jail_template": "[panel-site-shop]\nenabled  = true\nport     = http,https\n...", "filter_template": "[Definition]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n..."}
 ```
 
 The jail file template:
 
 ```ini
-[{slug}]
+[{name}]
 enabled  = true
 port     = http,https
-filter   = {slug}
+filter   = {filter}
 logpath  = {app_root}/logs/access.log
 maxretry = 3
 bantime  = 3600
@@ -2733,7 +2733,7 @@ findtime = 600
 The filter file template:
 
 ```ini
-[{slug}]
+[Definition]
 failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
            ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
            ^<HOST> .* "(POST|PUT|DELETE) .*wp-admin.*
@@ -2741,6 +2741,8 @@ ignoreregex =
 ```
 
 `{slug}`, `{name}`, `{filter}`, `{logpath}` are replaced with the resolved values when the file is written. Any other content the user submits is left untouched, so a custom regex or action is preserved end-to-end.
+
+**Names are always prefixed `panel-site-`** (since 2026-09-26): `{name}` and `{filter}` resolve to `panel-site-{slug}`, and the files are `/etc/fail2ban/jail.d/panel-site-{slug}.conf` and `filter.d/panel-site-{slug}.conf`. Before, they were the bare slug, so a site called `sshd` or `recidive` overwrote fail2ban's own filter and replaced the server's jail. Existing jails are moved by `artisan fail2ban:resync` (run on every panel update).
 
 ---
 
@@ -2751,10 +2753,12 @@ Validate, dry-run against `fail2ban-client -t`, save, write to disk, reload. The
 
 **Request:**
 ```json
-{"jail_config_content": "[shop]\nenabled  = true\n...\n", "filter_config_content": "[shop]\nfailregex = ^<HOST>\n...\n"}
+{"jail_config_content": "[{name}]\nenabled  = true\nfilter   = {filter}\n...\n", "filter_config_content": "[Definition]\nfailregex = ^<HOST>\n...\n"}
 ```
 
 Both fields are required, must be strings, and are capped at 65,535 characters.
+
+**The jail may only be the site's own.** Every `[section]` in `jail_config_content` must be `[{name}]` or the site's jail name (`[panel-site-shop]`), and every `filter =` must be `{filter}` or that same name. `[sshd]`, `[DEFAULT]` (which changes every jail on the server) or `filter = sshd` are valid fail2ban config, so `-t` accepts them, and are refused here with **`422`** and a validation error on `jail_config_content` naming the replacement.
 
 **Response `200`** — test passed, configuration applied:
 ```json
@@ -2771,7 +2775,7 @@ Both fields are required, must be strings, and are capped at 65,535 characters.
 ### DELETE `/applications/{application}/fail2ban`
 **Permission:** `app_fail2ban` (manage) | **Throttle:** 10/min
 
-Remove the jail file from `/etc/fail2ban/jail.d/`, reload the daemon, and clear the saved content. The filter file is left in place — dropping it would invalidate every other jail that referenced the same filter, and there is no clean way to know whether the filter is shared with another application.
+Remove the site's jail file from `/etc/fail2ban/jail.d/` **and its filter** from `filter.d/`, reload the daemon, and clear the saved content. The filter used to be kept in case another jail shared it; under the `panel-site-` prefix it belongs to this site alone, and a filter left behind under a colliding name is what made that collision permanent. Files a site still has under its old unprefixed name are removed too, except a filter the fail2ban package itself owns (checked with `dpkg-query -S`), which is never deleted.
 
 **Response `200`** — disabled:
 ```json

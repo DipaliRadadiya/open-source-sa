@@ -27,6 +27,18 @@ use Illuminate\Support\Str;
  */
 class ApplicationFail2banManager
 {
+    /**
+     * Every name this feature writes — jail, filter, both files — starts
+     * here. They used to be the bare site slug, so a site called `sshd`,
+     * `recidive` or `nginx-http-auth` overwrote fail2ban's own filter of that
+     * name and replaced the server's jail: SSH protection gone, the panel
+     * saying "configured successfully". A list of reserved names would be
+     * out of date with the next fail2ban release; nothing fail2ban ships
+     * starts with `panel-`, and the panel's own shipped filters are
+     * `panel-app-*`, so this cannot collide with either.
+     */
+    public const NAME_PREFIX = 'panel-site-';
+
     public function __construct(
         private ServerOps $serverOps,
         private WebServerManager $webServers,
@@ -60,7 +72,7 @@ class ApplicationFail2banManager
      */
     public function jailName(Application $application): string
     {
-        return $this->slug($application);
+        return self::NAME_PREFIX.$this->slug($application);
     }
 
     /**
@@ -70,16 +82,22 @@ class ApplicationFail2banManager
      */
     public function getJailPath(Application $application): string
     {
-        $directory = rtrim((string) config('server.fail2ban_apps.jail_d', '/etc/fail2ban/jail.d'), '/');
-
-        return "{$directory}/{$this->jailName($application)}.conf";
+        return $this->jailPathFor($this->jailName($application));
     }
 
     public function getFilterPath(Application $application): string
     {
-        $directory = rtrim((string) config('server.fail2ban_apps.filter_d', '/etc/fail2ban/filter.d'), '/');
+        return $this->filterPathFor($this->jailName($application));
+    }
 
-        return "{$directory}/{$this->jailName($application)}.conf";
+    private function jailPathFor(string $name): string
+    {
+        return rtrim((string) config('server.fail2ban_apps.jail_d', '/etc/fail2ban/jail.d'), '/')."/{$name}.conf";
+    }
+
+    private function filterPathFor(string $name): string
+    {
+        return rtrim((string) config('server.fail2ban_apps.filter_d', '/etc/fail2ban/filter.d'), '/')."/{$name}.conf";
     }
 
     /**
@@ -292,20 +310,28 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Remove the jail file (which also unloads it from the live daemon on
-     * the next reload) and reload so the change is visible immediately.
+     * Remove the site's jail and filter, and reload so the change is visible
+     * immediately.
      *
-     * The filter file is left in place: dropping it would invalidate every
-     * other jail that referenced the same filter, and there is no clean way
-     * to know whether the filter is shared with another application. If the
-     * user later adds another jail that wants the same filter, it is still
-     * there; if not, the file is harmless.
+     * The filter goes too. It used to stay, because under the bare slug there
+     * was no telling whether another jail shared it — and a filter left behind
+     * under a name like `sshd` was what made a collision permanent. Under the
+     * prefix it belongs to this site alone.
+     *
+     * A site that still has files under its old, unprefixed name (enabled
+     * before the prefix, not yet moved by `fail2ban:resync`) loses those as
+     * well, with the same care `migrateLegacy()` takes over a filter the
+     * fail2ban package owns.
      */
     public function disableForApp(Application $application): void
     {
+        $context = ['feature' => 'application', 'application' => $application->id];
+
+        $this->removeLegacyFiles($application);
+
         $remove = $this->serverOps->run(
-            ['rm', '-f', $this->getJailPath($application)],
-            ['feature' => 'application', 'op' => 'fail2ban_remove_jail', 'application' => $application->id],
+            ['rm', '-f', $this->getJailPath($application), $this->getFilterPath($application)],
+            $context + ['op' => 'fail2ban_remove_jail'],
         );
 
         if ($remove->failed()) {
@@ -317,6 +343,130 @@ class ApplicationFail2banManager
         if ($reload->failed()) {
             throw new Fail2banOperationException($reload->reference);
         }
+    }
+
+    /**
+     * Move a jail enabled under the bare slug to the prefixed name.
+     *
+     * Rewrites the saved content so a literal old name in it follows (a
+     * section `[shop]`, `filter = shop` — what the old structured form
+     * generated), writes the new files through `enableForApp()` (tested
+     * reload, rolled back on failure), then removes the old jail file. The
+     * old filter is removed only when the fail2ban package does not own it:
+     * a package-owned file under that name means the site had already
+     * overwritten fail2ban's own filter (`sshd.conf`), and deleting it would
+     * leave the server jail referencing a filter that is gone — fail2ban
+     * would not start. That one is reported, not touched.
+     *
+     * @return array{moved: bool, damaged_filter: string|null}
+     */
+    public function migrateLegacy(Application $application): array
+    {
+        $legacy = $this->legacyName($application);
+
+        if ($legacy === null || $application->fail2ban_jail_content === null) {
+            return ['moved' => false, 'damaged_filter' => null];
+        }
+
+        $jail = $this->placeholderize((string) $application->fail2ban_jail_content, $legacy);
+        $filter = $this->placeholderize((string) $application->fail2ban_filter_content, $legacy, filter: true);
+
+        $this->enableForApp($application, $jail, $filter);
+        $damaged = $this->removeLegacyFiles($application);
+        $this->must($this->client(['reload']));
+
+        $application->forceFill([
+            'fail2ban_jail_name' => $this->jailName($application),
+            'fail2ban_jail_content' => $jail,
+            'fail2ban_filter_content' => $filter,
+        ])->save();
+
+        return ['moved' => true, 'damaged_filter' => $damaged];
+    }
+
+    /**
+     * Remove the files a site still has under its old, unprefixed name.
+     * No reload: every caller reloads once for all of its changes.
+     *
+     * The old filter only when the fail2ban package does not own it — see
+     * `migrateLegacy()`. Returns that filter's path when it was kept for that
+     * reason, so the caller can say so.
+     *
+     * @throws Fail2banOperationException
+     */
+    public function removeLegacyFiles(Application $application): ?string
+    {
+        $legacy = $this->legacyName($application);
+
+        if ($legacy === null) {
+            return null;
+        }
+
+        $context = ['feature' => 'application', 'application' => $application->id];
+        $oldFilter = $this->filterPathFor($legacy);
+        $damaged = $this->packageOwns($oldFilter, $context) ? $oldFilter : null;
+
+        $this->must($this->serverOps->run(
+            ['rm', '-f', $this->jailPathFor($legacy), ...($damaged === null ? [$oldFilter] : [])],
+            $context + ['op' => 'fail2ban_remove_legacy'],
+        ));
+
+        return $damaged;
+    }
+
+    public function hasLegacyFiles(Application $application): bool
+    {
+        return $this->legacyName($application) !== null;
+    }
+
+    /**
+     * @throws Fail2banOperationException
+     */
+    public function reload(): void
+    {
+        $this->must($this->client(['reload']));
+    }
+
+    /**
+     * The unprefixed name this site's files were written under, when it has
+     * any. Null for a site with no jail or one already on the prefix.
+     */
+    private function legacyName(Application $application): ?string
+    {
+        $stored = $application->fail2ban_jail_name;
+
+        return $stored === null || $stored === '' || str_starts_with($stored, self::NAME_PREFIX) ? null : $stored;
+    }
+
+    /**
+     * Whether a file under /etc/fail2ban came from the fail2ban package.
+     * Asked of dpkg rather than a list: a list is out of date with the next
+     * release. When dpkg cannot answer, the file is treated as owned — the
+     * cost of keeping a stray file is nothing, the cost of deleting a real
+     * one is fail2ban not starting.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function packageOwns(string $path, array $context): bool
+    {
+        $result = $this->serverOps->probe(['dpkg-query', '-S', $path], $context + ['op' => 'fail2ban_package_owner']);
+
+        return ! $result->answered || $result->ok;
+    }
+
+    /**
+     * Put the placeholders back where saved content spelled the old name.
+     * A jail section `[old]` becomes `[{name}]`, `filter = old` becomes
+     * `filter = {filter}`; in a filter, a section `[old]` was never valid —
+     * fail2ban reads `[Definition]` — so it becomes that.
+     */
+    private function placeholderize(string $content, string $legacy, bool $filter = false): string
+    {
+        $name = preg_quote($legacy, '/');
+
+        $content = (string) preg_replace('/^(\s*)\['.$name.'\](\s*)$/m', $filter ? '$1[Definition]$2' : '$1[{name}]$2', $content);
+
+        return $filter ? $content : (string) preg_replace('/^(\s*filter\s*=\s*)'.$name.'(\s*)$/m', '$1{filter}$2', $content);
     }
 
     /** `/etc/fail2ban` — the tree `jail.d` sits in. */
