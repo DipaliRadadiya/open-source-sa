@@ -34,11 +34,11 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->dir));
 
-function fakeSettings(bool $swapActive = false, bool $swapoffOk = true): void
+function fakeSettings(bool $swapActive = false, bool $swapoffOk = true, bool $sshSocket = false): void
 {
     $redis = test()->redisCli;
     $swapFile = test()->swapFile;
-    Process::fake(function ($process) use ($redis, $swapActive, $swapoffOk, $swapFile) {
+    Process::fake(function ($process) use ($redis, $swapActive, $swapoffOk, $swapFile, $sshSocket) {
         $cmd = $process->command;
         // ServerOps prefixes privileged operations with sudo in this test
         // environment; fakes assert the underlying command semantics.
@@ -53,7 +53,6 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true): void
         if ($bin === 'test' && ($cmd[1] ?? '') === '-s' && str_ends_with((string) end($cmd), '/.ssh/authorized_keys')) {
             return Process::result(exitCode: 1);
         }
-
 
         // Checked before the `swapon` case below, which is the activation
         // call rather than the query and shares its binary.
@@ -95,6 +94,9 @@ function fakeSettings(bool $swapActive = false, bool $swapoffOk = true): void
         }
         if ($bin === 'hostnamectl' && ($cmd[1] ?? '') === '--static') {
             return Process::result(output: 'server.example');
+        }
+        if ($cmd === ['systemctl', 'is-active', 'ssh.socket']) {
+            return Process::result(output: $sshSocket ? "active\n" : "inactive\n", exitCode: $sshSocket ? 0 : 3);
         }
         if ($bin === 'sshd' && ($cmd[1] ?? '') === '-T') {
             return Process::result(output: "port 22\npermitrootlogin prohibit-password\npasswordauthentication yes\n");
@@ -298,6 +300,42 @@ it('writes the ssh drop-in, tests then reloads', function () {
     Process::assertRan(fn ($p) => in_array('sshd', $p->command, true) && in_array('-t', $p->command, true));
     Process::assertRan(fn ($p) => in_array('rm', $p->command, true) && in_array($this->dir.'/99-panel.conf', $p->command, true));
     Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('reload', $p->command, true) && in_array('ssh', $p->command, true));
+});
+
+describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
+    // The port sshd listens on belongs to ssh.socket, generated from
+    // sshd_config at daemon-reload. Reloading ssh alone left the 26.04 test
+    // server answering on 22 while every screen said 2222.
+    it('moves the socket when the port changes', function () {
+        fakeSettings(sshSocket: true);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        Process::assertRan(fn ($p) => array_slice($p->command, -2) === ['systemctl', 'daemon-reload']);
+        Process::assertRan(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket']);
+    });
+
+    it('leaves the socket alone when the port stays the same', function () {
+        fakeSettings(sshSocket: true);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        Process::assertDidntRun(fn ($p) => in_array('ssh.socket', $p->command, true) && in_array('restart', $p->command, true));
+    });
+
+    it('does not touch a socket that is not in use', function () {
+        fakeSettings();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        Process::assertDidntRun(fn ($p) => in_array('restart', $p->command, true));
+    });
 });
 
 it('blocks disabling password auth with no ssh key (lockout guard)', function () {

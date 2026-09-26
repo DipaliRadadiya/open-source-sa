@@ -90,6 +90,10 @@ class SecuritySettings implements SettingGroup
             ]);
         }
 
+        // Read before the drop-in changes it: only a port move needs the
+        // socket moved too (moveSocket()).
+        $previousPort = (int) ($this->effectiveConfig()['port'] ?? config('server.ssh_port', 22));
+
         $rootLogin = in_array($data['permit_root_login'], self::ROOT_LOGIN, true)
             ? $data['permit_root_login']
             : 'prohibit-password';
@@ -151,6 +155,45 @@ class SecuritySettings implements SettingGroup
         $reload = $this->serverOps->run(['systemctl', 'reload', 'ssh'], ['feature' => 'setting', 'group' => 'security', 'op' => 'reload']);
         if ($reload->failed()) {
             throw new SettingOperationException($reload->reference);
+        }
+
+        if ((int) $data['port'] !== $previousPort) {
+            $this->moveSocket();
+        }
+    }
+
+    /**
+     * Move a socket-activated SSH to the new port.
+     *
+     * Ubuntu 24.04 and later start sshd from `ssh.socket`, and the port it
+     * listens on is the *socket's*, generated from sshd_config by
+     * `sshd-socket-generator` at daemon-reload. Reloading ssh re-reads the
+     * config and changes nothing about where it listens. Found on the 26.04
+     * test server: the screen, `sshd -T`, the firewall and the fail2ban jail
+     * all said 2222 while SSH went on answering on 22 only — so the SSH
+     * lockout guard was protecting a port nothing listened on.
+     *
+     * daemon-reload regenerates the socket's addresses and a restart of the
+     * socket applies them. Sessions already open stay open (ssh.service is
+     * KillMode=process; measured with a session held across the restart).
+     * The firewall has already been opened for the new port above.
+     */
+    private function moveSocket(): void
+    {
+        $context = ['feature' => 'setting', 'group' => 'security', 'op' => 'ssh_socket'];
+
+        $active = $this->serverOps->run(['systemctl', 'is-active', 'ssh.socket'], $context);
+
+        if (trim($active->output()) !== 'active') {
+            return;
+        }
+
+        foreach ([['systemctl', 'daemon-reload'], ['systemctl', 'restart', 'ssh.socket']] as $command) {
+            $result = $this->serverOps->run($command, $context);
+
+            if ($result->failed()) {
+                throw new SettingOperationException($result->reference);
+            }
         }
     }
 
