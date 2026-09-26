@@ -1129,6 +1129,22 @@ it('creates the Uptime Kuma admin through its own setup event, credentials on st
         ->and(ranCommands())->not->toContain('Owner-Pass-2026');
 });
 
+it('sends the Kuma setup only after Kuma has attached its handlers', function () {
+    app(ApplicationProvisioner::class)->provision(claimableApp('uptimekuma', ['admin_username' => 'boss']));
+
+    $script = (string) collect(test()->ran->first(fn ($p) => is_array($p->command)
+        && str_contains(implode(' ', $p->command), 'socket.io-client'))->command)->last();
+
+    // Found on a real server: sent on connect, seconds after Kuma's first
+    // start, the event reached Kuma before its handler existed, was dropped,
+    // and the install failed after 30 s. `loginRequired` is emitted last.
+    expect($script)->toContain('socket.on("loginRequired", send)')
+        ->not->toContain('socket.on("connect", () => socket.emit("setup"')
+        // Kuma's own needs-setup signal is computed during startup and is
+        // silent on an early connection: never read as "already has an admin".
+        ->not->toContain('socket.on("setup"');
+});
+
 it('asks for the administrator when creating n8n and Uptime Kuma', function (string $type, array $admin, string $weakField) {
     $post = fn (array $extra) => $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->postJson('/api/applications', array_merge([
