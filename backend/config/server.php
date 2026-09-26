@@ -2161,6 +2161,9 @@ return [
         // reboot landing on top of a backup is how you get a half-written
         // archive. ServerAvatar's docs advise the same buffer.
         'minute' => (int) env('SERVER_REBOOT_SCHEDULE_MINUTE', 10),
+        // Where a switched-off schedule's day/hour are kept, so switching it
+        // back on offers what the administrator had. Panel-owned, never cron.
+        'remembered' => env('SERVER_REBOOT_SCHEDULE_REMEMBERED', storage_path('app/reboot-schedule.json')),
     ],
 
     'runtimes' => [

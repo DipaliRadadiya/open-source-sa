@@ -67,7 +67,7 @@ class RebootScheduleSettings implements SettingGroup
         ];
 
         if ($expression === null) {
-            return $values;
+            return [...$values, ...$this->remembered()];
         }
 
         return [...$values, ...$this->describe($expression), ...$this->nextRun($expression)];
@@ -81,6 +81,8 @@ class RebootScheduleSettings implements SettingGroup
         $path = $this->path();
 
         if (! ($data['enabled'] ?? false)) {
+            $this->remember($data);
+
             // Removed, not commented out: a disabled schedule that still sits
             // in /etc/cron.d is one uncomment away from an unexpected reboot.
             $result = $this->files->delete($path, ['feature' => 'setting', 'group' => 'reboot_schedule']);
@@ -183,6 +185,73 @@ class RebootScheduleSettings implements SettingGroup
             'monthly' => sprintf('%d %d %d * *', $minute, $hour, (int) ($data['day_of_month'] ?? 1)),
             default => sprintf('%d %d * * *', $minute, $hour),
         };
+    }
+
+    /**
+     * Keep a schedule's day and hour when it is switched off.
+     *
+     * The cron file is the only record of an enabled schedule and it is
+     * deleted on disable (see apply()), so without this the screen fell back
+     * to "daily at 03:00" and the administrator had to re-enter their
+     * maintenance window. What they sent wins; a client that sends only
+     * `enabled: false` keeps what the file said. Best effort: failing to
+     * remember must never stop the reboot from being switched off.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function remember(array $data): void
+    {
+        $expression = $this->currentExpression();
+        $values = $expression !== null ? $this->describe($expression) : [];
+
+        if (in_array($data['frequency'] ?? null, self::FREQUENCIES, true)) {
+            $values = array_filter([
+                'frequency' => $data['frequency'],
+                'hour' => isset($data['hour']) ? (int) $data['hour'] : ($values['hour'] ?? null),
+                'day_of_week' => isset($data['day_of_week']) ? (int) $data['day_of_week'] : ($values['day_of_week'] ?? null),
+                'day_of_month' => isset($data['day_of_month']) ? (int) $data['day_of_month'] : ($values['day_of_month'] ?? null),
+            ], fn ($value) => $value !== null);
+        }
+
+        if ($values === []) {
+            return;
+        }
+
+        try {
+            File::ensureDirectoryExists(dirname($this->rememberedPath()));
+            File::put($this->rememberedPath(), (string) json_encode($values));
+        } catch (Throwable) {
+            // Forgetting a preference is not worth failing the switch-off.
+        }
+    }
+
+    /**
+     * The day/hour of the last switched-off schedule, validated again on the
+     * way out: the file is ours, but a hand edit must not put an hour of 99
+     * on the screen.
+     *
+     * @return array<string, mixed>
+     */
+    private function remembered(): array
+    {
+        $path = $this->rememberedPath();
+        $saved = is_file($path) ? json_decode((string) File::get($path), true) : null;
+
+        if (! is_array($saved)) {
+            return [];
+        }
+
+        return array_filter([
+            'frequency' => in_array($saved['frequency'] ?? null, self::FREQUENCIES, true) ? $saved['frequency'] : null,
+            'hour' => is_int($saved['hour'] ?? null) && $saved['hour'] >= 0 && $saved['hour'] <= 23 ? $saved['hour'] : null,
+            'day_of_week' => is_int($saved['day_of_week'] ?? null) && $saved['day_of_week'] >= 0 && $saved['day_of_week'] <= 6 ? $saved['day_of_week'] : null,
+            'day_of_month' => is_int($saved['day_of_month'] ?? null) && $saved['day_of_month'] >= 1 && $saved['day_of_month'] <= 28 ? $saved['day_of_month'] : null,
+        ], fn ($value) => $value !== null);
+    }
+
+    private function rememberedPath(): string
+    {
+        return (string) config('server.reboot_schedule.remembered', storage_path('app/reboot-schedule.json'));
     }
 
     /**
