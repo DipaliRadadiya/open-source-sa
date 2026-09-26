@@ -134,6 +134,36 @@ class ProcessSupervisor
         $this->daemonReload();
     }
 
+    /**
+     * Rewrite the unit if the template has moved on, without touching the
+     * process: no enable, no restart. systemd applies the new file on
+     * daemon-reload, so a running app keeps running and a disabled one stays
+     * disabled. Units are otherwise only written when a site is created or its
+     * process changes, so a template fix (the crash-loop limit that sat where
+     * systemd ignored it) reached new sites only. True when it was rewritten.
+     */
+    public function refreshUnit(Application $application, string $documentRoot): bool
+    {
+        $path = $this->unitPath($application);
+        $wanted = $this->render($application, $documentRoot);
+        $context = ['feature' => 'application', 'op' => 'unit_refresh', 'application' => $application->id];
+
+        $current = $this->serverOps->run(['cat', $path], $context);
+
+        // No unit on the box: not this method's job to create one.
+        if ($current->failed() || $current->output() === $wanted) {
+            return false;
+        }
+
+        if ($this->files->put($path, $wanted, $context)->failed()) {
+            return false;
+        }
+
+        $this->daemonReload();
+
+        return true;
+    }
+
     public function start(Application $application): ServerOpsResult
     {
         return $this->systemctl('start', $application);

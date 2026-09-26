@@ -405,3 +405,60 @@ describe('the endpoint', function () {
             ->assertNotFound();
     });
 });
+
+describe('refreshing a unit to the current template', function () {
+    it('rewrites a stale unit and reloads systemd, without restarting or enabling anything', function () {
+        // Units were only written on create, so the crash-loop fix reached new
+        // sites only — and a refresh that restarted apps would do it on every
+        // deploy, and one that enabled units would switch disabled sites on.
+        $app = nodeApp();
+        $written = [];
+
+        Process::fake(function ($process) use (&$written) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            if (($args[0] ?? '') === 'cat') {
+                return Process::result(output: "[Service]\nStartLimitIntervalSec=60\n");
+            }
+            if (($args[0] ?? '') === 'tee') {
+                $written[] = (string) $process->input;
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        expect(app(ProcessSupervisor::class)->refreshUnit($app, '/home/appuser/api.test'))->toBeTrue()
+            ->and($written)->toHaveCount(1);
+
+        Process::assertRan(fn ($p) => in_array('daemon-reload', $p->command, true));
+        Process::assertNotRan(fn ($p) => in_array('systemctl', $p->command, true)
+            && (in_array('restart', $p->command, true) || in_array('enable', $p->command, true) || in_array('start', $p->command, true)));
+
+        // The same unit again: nothing to write, nothing to reload.
+        // (Counted here: a second Process::fake keeps the first one's record.)
+        $current = $written[0];
+        $changes = 0;
+        Process::fake(function ($process) use ($current, &$changes) {
+            if (in_array('cat', $process->command, true)) {
+                return Process::result(output: $current);
+            }
+            if (in_array('tee', $process->command, true) || in_array('daemon-reload', $process->command, true)) {
+                $changes++;
+            }
+
+            return Process::result(exitCode: 0);
+        });
+
+        expect(app(ProcessSupervisor::class)->refreshUnit($app, '/home/appuser/api.test'))->toBeFalse()
+            ->and($changes)->toBe(0);
+    });
+
+    it('does not create a unit that is not there', function () {
+        Process::fake(fn ($process) => in_array('cat', $process->command, true)
+            ? Process::result(errorOutput: 'No such file', exitCode: 1)
+            : Process::result(exitCode: 0));
+
+        expect(app(ProcessSupervisor::class)->refreshUnit(nodeApp(), '/home/appuser/api.test'))->toBeFalse();
+        Process::assertNotRan(fn ($p) => in_array('tee', $p->command, true));
+    });
+});

@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Application;
 use App\Models\SystemUser;
+use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\SiteConfigResyncer;
 use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\SystemUsers\HomeDirectoryAccess;
@@ -60,8 +62,32 @@ class ResyncSiteConfigs extends Command
 
         $this->lockSiteRoots($rootLock);
         $this->closeHomes($homeAccess);
+        $this->refreshUnits(app(ProcessSupervisor::class), app(ApplicationProvisioner::class));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Bring every application's systemd unit up to the current template —
+     * see ProcessSupervisor::refreshUnit(). Never restarts anything.
+     */
+    private function refreshUnits(ProcessSupervisor $supervisor, ApplicationProvisioner $provisioner): void
+    {
+        $refreshed = 0;
+
+        foreach (Application::query()->with('systemUser')->get() as $application) {
+            if ($application->systemUser === null || ! $supervisor->runs($application)) {
+                continue;
+            }
+
+            if ($supervisor->refreshUnit($application, $provisioner->documentRoot($application))) {
+                $refreshed++;
+            }
+        }
+
+        if ($refreshed > 0) {
+            $this->info("Process units: {$refreshed} updated to the current template (nothing restarted).");
+        }
     }
 
     /**
