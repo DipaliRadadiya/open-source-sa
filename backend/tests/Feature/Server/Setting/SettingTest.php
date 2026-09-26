@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ActivityLog;
+use App\Models\FirewallRule;
 use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\PermissionSeeder;
@@ -315,6 +316,19 @@ describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
 
         Process::assertRan(fn ($p) => array_slice($p->command, -2) === ['systemctl', 'daemon-reload']);
         Process::assertRan(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket']);
+    });
+
+    it('lets the rule for the port SSH left be removed, and keeps the new one protected', function () {
+        fakeSettings(sshSocket: true);
+        $old = FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+        $web = FirewallRule::create(['port_from' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'default']);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        expect($old->fresh()->isProtected())->toBeFalse()
+            ->and($web->fresh()->isProtected())->toBeTrue();
     });
 
     it('leaves the socket alone when the port stays the same', function () {

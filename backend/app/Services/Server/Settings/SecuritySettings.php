@@ -159,7 +159,36 @@ class SecuritySettings implements SettingGroup
 
         if ((int) $data['port'] !== $previousPort) {
             $this->moveSocket();
+            $this->releaseOldPortRule($previousPort);
         }
+    }
+
+    /**
+     * Let the user remove the rule for the port SSH has just left.
+     *
+     * The rule opened for SSH is marked as the panel's, and the panel's rules
+     * cannot be removed while the firewall is on — right for the port SSH is
+     * on, wrong for the one it left. On the 26.04 test server, moving SSH to
+     * 2222 and back left 2222 open with no way to close it short of turning
+     * the firewall off. The rule is kept (closing a port someone may still
+     * be connected through is theirs to decide) but becomes an ordinary one.
+     * SshLockoutGuard still refuses removing whatever covers the port SSH is
+     * on now.
+     */
+    private function releaseOldPortRule(int $port): void
+    {
+        if (in_array($port, [80, 443], true)) {
+            return;
+        }
+
+        FirewallRule::query()
+            ->where('port_from', $port)
+            ->whereNull('port_to')
+            ->where('protocol', 'tcp')
+            ->where('action', 'allow')
+            ->whereNull('source_ip')
+            ->where('origin', '!=', 'user')
+            ->update(['origin' => 'user']);
     }
 
     /**
