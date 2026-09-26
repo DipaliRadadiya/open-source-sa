@@ -3691,7 +3691,7 @@ Drops the database and cascades its users. No orphans.
 
 Server databases not yet under panel management (brownfield discovery).
 
-**Query:** `?engine=mariadb`
+**Query:** `?engine=mariadb` (required; missing or unknown → `422` on `engine`)
 
 **Response `200`:** `{"untracked": ["legacy_app_db", "old_cms"]}`
 
@@ -3972,7 +3972,7 @@ Signing in this way writes a `database.phpmyadmin_signed_in` row to the activity
 
 Live process list for the active SQL engine.
 
-**Query:** `?engine=mariadb`
+**Query:** `?engine=mariadb` (required; missing or unknown → `422` on `engine`)
 
 ```json
 {"processes": [{
@@ -3989,7 +3989,7 @@ Live process list for the active SQL engine.
 
 Kill a process/op (`KILL`).
 
-**Query:** `?engine=mariadb`
+**Query:** `?engine=mariadb` (required; missing or unknown → `422` on `engine`)
 
 **Response `204`:**
 
@@ -4017,7 +4017,7 @@ Today: `slow_queries` is `null` on **PostgreSQL** (no counter without `pg_stat_s
 
 24h QPS + connection history for the **Setup page / Database Metrics** chart.
 
-**Query:** `?engine=mariadb`
+**Query:** `?engine=mariadb` (required; missing or unknown → `422` on `engine`)
 
 ```json
 {"metrics": [

@@ -9,6 +9,7 @@ use App\Actions\Server\Database\DeleteDatabase;
 use App\Enums\ExportStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Database\AdoptDatabasesRequest;
+use App\Http\Requests\Server\Database\DatabaseEngineRequest;
 use App\Http\Requests\Server\Database\IndexDatabasesRequest;
 use App\Http\Requests\Server\Database\StoreDatabaseRequest;
 use App\Http\Requests\Server\Database\UpdateDatabaseApplicationRequest;
@@ -290,10 +291,9 @@ class DatabaseController extends Controller
     /**
      * Server databases not yet tracked by the panel (brownfield discovery).
      */
-    public function untracked(Request $request, DatabaseManager $manager): JsonResponse
+    public function untracked(DatabaseEngineRequest $request, DatabaseManager $manager): JsonResponse
     {
-        $engineName = (string) $request->query('engine');
-        abort_unless(in_array($engineName, $manager->engineNames(), true), 404);
+        $engineName = $request->engine();
 
         $onServer = $manager->engine($engineName)->listDatabases();
         $tracked = Database::query()->where('engine', $engineName)->pluck('name')->all();
