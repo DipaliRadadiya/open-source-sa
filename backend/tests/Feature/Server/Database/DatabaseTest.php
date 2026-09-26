@@ -587,6 +587,26 @@ it('answers 422 naming engine, not 404, when a per-engine endpoint has no or an 
     'history' => ['GET', '/api/databases/metrics/history'],
 ]);
 
+it('records the charset the engine picked when none was asked for', function () {
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->postJson('/api/databases', ['name' => 'nocharset', 'engine' => 'mysql'])
+        ->assertCreated()
+        ->assertJsonPath('database.charset', 'utf8mb4')
+        ->assertJsonPath('database.collation', 'utf8mb4_uca1400_ai_ci');
+});
+
+it('keeps an asked-for charset rather than asking the engine', function () {
+    fakeDb();
+
+    test()->withHeaders(dbAuth())->postJson('/api/databases', ['name' => 'latin', 'engine' => 'mysql', 'charset' => 'latin1', 'collation' => 'latin1_swedish_ci'])
+        ->assertCreated()
+        ->assertJsonPath('database.charset', 'latin1')
+        ->assertJsonPath('database.collation', 'latin1_swedish_ci');
+
+    Process::assertDidntRun(fn ($p) => str_contains((string) ($p->input ?? ''), 'default_character_set_name'));
+});
+
 it('kills a database process (guarded) and logs it', function () {
     fakeDb();
 

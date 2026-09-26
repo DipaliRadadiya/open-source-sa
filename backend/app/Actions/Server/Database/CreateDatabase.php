@@ -31,6 +31,17 @@ class CreateDatabase
 
             $engine->createDatabase($data['name'], $charset, $collation);
 
+            // Left blank, the engine picked its own default — record what it
+            // picked, or the screen shows an empty charset for every database
+            // made without one (seen on the nginx test box: MariaDB used
+            // utf8mb4, the panel said nothing). Same question AdoptDatabases
+            // asks; a failed answer leaves the field as it was.
+            if ($charset === null || $collation === null) {
+                $described = $engine->describeDatabase($data['name']);
+                $charset ??= $described['charset'];
+                $collation ??= $described['collation'];
+            }
+
             $database = null;
 
             try {
