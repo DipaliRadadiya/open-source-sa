@@ -37,14 +37,14 @@
 ### POST `/auth/register`
 Create the first admin account. Registration closes after this call.
 
-**Request:**
+**Request:** `name`, `username` and a confirmed `password` are all required (422 otherwise).
 ```json
-{"username": "admin", "password": "…"}
+{"name": "Admin", "username": "admin", "password": "…", "password_confirmation": "…"}
 ```
 
-**Response `201`:**
+**Response `201`:** the user and an API `token` for it.
 ```json
-{"user": {"id": 1, "username": "admin", "is_admin": true, "created_at": "23-07-2026 10:00:00", "created_at_human": "3 weeks ago"}}
+{"user": {"id": 1, "username": "admin", "is_admin": true, "created_at": "23-07-2026 10:00:00", "created_at_human": "3 weeks ago"}, "token": "1|…"}
 ```
 
 ---
@@ -1813,13 +1813,13 @@ Fix file/directory ownership and permissions for this site.
 
 Browse a directory.
 
-**Query:** `?path=/wp-content/plugins` (defaults to `/`)
+**Query:** `?path=wp-content/plugins` (relative to the site root; defaults to `""`, the root itself — a leading `/` is refused with 422)
 
-**`/` is the site's code root — `{home}/{slug}/public_html` — not its document root.** They are the same directory for a site with no web root. For Statamic (`/public`), Craft (`/web`) or any git site serving from a subdirectory they are not, and rooting here is what lets the file manager show the application itself: its `.env`, `composer.json`, `vendor/` and config, rather than only the served folder. Every path in this section is relative to that root, and nothing above it is reachable — `.panel/` (Basic Auth hash, PHP sessions, pre-push database dumps) is a sibling of `public_html`, which is precisely why the panel writes there.
+**The root (`""`) is the site's code root — `{home}/{slug}/public_html` — not its document root.** They are the same directory for a site with no web root. For Statamic (`/public`), Craft (`/web`) or any git site serving from a subdirectory they are not, and rooting here is what lets the file manager show the application itself: its `.env`, `composer.json`, `vendor/` and config, rather than only the served folder. Every path in this section is relative to that root, and nothing above it is reachable — `.panel/` (Basic Auth hash, PHP sessions, pre-push database dumps) is a sibling of `public_html`, which is precisely why the panel writes there.
 
 **Response `200`:**
 ```json
-{"path": "/wp-content/plugins", "files": [
+{"path": "wp-content/plugins", "files": [
   {"name": "seo-pack", "type": "dir", "size": 4096, "size_human": "4 KB",
    "modified_at": "27-07-2026 10:00:00", "modified_at_human": "2 weeks ago",
    "mode": "drwxr-xr-x", "owner": "siteowner", "group": "siteowner",
@@ -1848,14 +1848,14 @@ On a **symlink**, `mode`/`owner`/`group` are `null` — a link's own mode is alw
 
 Recursive filename search.
 
-**Query:** `?q=config&path=/`
+**Query:** `?q=config&path=` (empty = site root)
 
 `q` is **required** (1–255 chars) — the parameter is `q`, not `search`. `path` is optional and defaults to the site root; it scopes the search to a subtree. Glob metacharacters in `q` are escaped, so the query matches literally rather than as a wildcard pattern.
 
 **Response `200`:**
 ```json
-{"path": "/", "query": "config", "files": [
-  {"path": "/wp-config.php", "name": "wp-config.php", "type": "file",
+{"path": "", "query": "config", "files": [
+  {"path": "wp-config.php", "name": "wp-config.php", "type": "file",
    "size": 4096, "size_human": "4 KB",
    "modified_at": "25-07-2026 14:30:00", "modified_at_human": "3 weeks ago",
    "mode": "-rw-r--r--", "owner": "siteowner", "group": "siteowner",
@@ -1874,9 +1874,9 @@ Each entry is the **same shape as a browse entry** (see `GET …/files` above) w
 
 Folder size on disk.
 
-**Query:** `?path=/wp-content`
+**Query:** `?path=wp-content`
 
-**Response `200`:** `{"path": "/wp-content", "size": 52428800, "size_human": "50 MB"}`
+**Response `200`:** `{"path": "wp-content", "size": 52428800, "size_human": "50 MB"}`
 
 ---
 
@@ -1885,11 +1885,11 @@ Folder size on disk.
 
 Read a file.
 
-**Query:** `?path=/wp-config.php`
+**Query:** `?path=wp-config.php`
 
 **Response `200`:**
 ```json
-{"path": "/wp-config.php", "content": "<?php\ndefine('DB_NAME', 'shop');\n…", "size": 4096, "backups": ["2026-07-28-141530"]}
+{"path": "wp-config.php", "content": "<?php\ndefine('DB_NAME', 'shop');\n…", "size": 4096, "backups": ["2026-07-28-141530"]}
 ```
 
 Binary files return `422`.
@@ -1901,7 +1901,7 @@ Binary files return `422`.
 
 Write/edit a file.
 
-**Request:** `{"path": "/wp-config.php", "content": "<?php\n…"}`
+**Request:** `{"path": "wp-config.php", "content": "<?php\n…"}`
 
 **Response `200`:** `{"saved": true}`
 
@@ -1912,7 +1912,7 @@ Write/edit a file.
 
 Restore a file from an automatic backup.
 
-**Request:** `{"path": "/wp-config.php", "backup": "2026-07-28-141530"}`
+**Request:** `{"path": "wp-config.php", "backup": "2026-07-28-141530"}`
 
 **Response `200`:** `{"restored": true}`
 
@@ -3011,8 +3011,10 @@ Uptime Kuma) clone generically and are unaffected.
 
 **Request:**
 ```json
-{"name": "shop-backup", "domain": "backup.example.com", "system_user_id": 1, "site_user_password": "…"}
+{"name": "shop-backup", "domain": "backup.example.com"}
 ```
+
+Only `name` and `domain`. The clone always lands under the **source site's own system user** — a `system_user_id` or `site_user_password` sent here is not accepted and has no effect (it used to be documented, and was silently dropped).
 
 **Response `202`:**
 ```json
