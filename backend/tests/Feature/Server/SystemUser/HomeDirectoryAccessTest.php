@@ -148,7 +148,9 @@ it('closes every home on sites:resync, installing acl first', function () {
         ->expectsOutputToContain('Home directories: 2 closed to other users')
         ->assertSuccessful();
 
-    expect(collect(setfaclRuns())->pluck(3)->all())->toBe(['/home/alice', '/home/bob']);
+    // The panel's own checkout is closed by the same run (PanelDirectoryAccessTest).
+    expect(collect(setfaclRuns())->pluck(3)->filter(fn ($path) => str_starts_with($path, '/home/'))->values()->all())
+        ->toBe(['/home/alice', '/home/bob']);
 });
 
 it('closes a new user\'s home at creation, and falls back to the old o+x without setfacl', function () {

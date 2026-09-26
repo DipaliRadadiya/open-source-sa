@@ -62,6 +62,9 @@ class ResyncSiteConfigs extends Command
 
         $this->lockSiteRoots($rootLock);
         $this->closeHomes($homeAccess);
+        // The panel's own checkout, closed for the same reason as the homes
+        // and by the same means — see PanelDirectoryAccess.
+        $this->call('panel:close-directory');
         $this->refreshUnits(app(ProcessSupervisor::class), app(ApplicationProvisioner::class));
 
         return self::SUCCESS;

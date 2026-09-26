@@ -3416,6 +3416,15 @@ finish() {
     run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan route:cache' -- "$backend" "${PANEL_PHP_BIN}"
     ok "configuration cached"
 
+    # Close the checkout to every local account but the web server's. It is
+    # 755 all the way down, and config:cache has just written the APP_KEY and
+    # the Redis password into a 644 file inside it -- readable by every site
+    # and SSH user the panel will create. As APP_USER like every artisan call
+    # here (setfacl goes through the panel's sudo grant, configured above);
+    # the same command runs on every update through sites:resync. Never fatal;
+    # the command reports what it did.
+    run sudo -u "$APP_USER" -H sh -c 'cd "$1" && exec "$2" artisan panel:close-directory' -- "$backend" "${PANEL_PHP_BIN}"
+
     # Prove the panel actually works before claiming the install succeeded.
     # Everything above this line only shows that commands ran as *root*; the
     # panel runs as an unprivileged account, and the gap between those two is
