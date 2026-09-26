@@ -146,3 +146,64 @@ it('refuses without manage permission', function () {
         ->postJson(disableUrl())
         ->assertStatus(403);
 });
+
+/*
+| The unavailable page answered 200, so every monitor and crawler read a
+| disabled site as up; and a disabled Node app went on running behind it
+| (both measured on a real server).
+*/
+
+it('serves the unavailable page as 503 on every web server, ACME still answering', function (string $driver, array $expect) {
+    config(['server.web_server' => $driver]);
+    $this->application->forceFill(['disabled_at' => now(), 'serving_profile' => 'static'])->save();
+
+    $config = app((string) config("server.web_server_drivers.{$driver}.driver"))
+        ->renderConfig($this->application->fresh(['domains', 'certificate', 'systemUser']), '/var/lib/panel/disabled');
+
+    foreach ($expect as $line) {
+        expect($config)->toContain($line);
+    }
+
+    expect($config)->toContain('acme-challenge');
+})->with([
+    'nginx' => ['nginx', ['return 503;', 'error_page 503 @unavailable;', 'add_header Retry-After 3600 always;']],
+    'apache' => ['apache', ['ErrorDocument 503 /index.html', 'RewriteRule ^ - [R=503,L]', 'Header always set Retry-After "3600"']],
+    'openlitespeed' => ['openlitespeed', ['errorpage 503 {', 'RewriteRule ^ - [R=503,L]']],
+]);
+
+it('serves an enabled static site normally', function (string $driver) {
+    config(['server.web_server' => $driver]);
+    $this->application->forceFill(['serving_profile' => 'static'])->save();
+
+    $config = app((string) config("server.web_server_drivers.{$driver}.driver"))
+        ->renderConfig($this->application->fresh(['domains', 'certificate', 'systemUser']), '/home/siteowner/shop/public_html');
+
+    expect($config)->not->toContain('503');
+})->with(['nginx', 'apache', 'openlitespeed']);
+
+it('stops a disabled Node app for good and starts it again on enable', function () {
+    // A process the panel runs is one with a start command.
+    $this->application->forceFill(['serving_profile' => 'node', 'site_type' => 'nodered', 'app_port' => 3300, 'start_command' => 'node red.js'])->save();
+    fakeWebServer();
+
+    $this->withHeaders(availabilityHeaders())->postJson(disableUrl())->assertOk();
+
+    // Disabled as well as stopped: `stop` alone lasts until the next reboot.
+    Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('disable', $p->command, true));
+    Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('stop', $p->command, true));
+
+    fakeWebServer();
+
+    $this->withHeaders(availabilityHeaders())->postJson(enableUrl())->assertOk();
+
+    Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('enable', $p->command, true));
+    Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('start', $p->command, true));
+});
+
+it('touches no process for a PHP site', function () {
+    fakeWebServer();
+
+    $this->withHeaders(availabilityHeaders())->postJson(disableUrl())->assertOk();
+
+    Process::assertNotRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('stop', $p->command, true));
+});

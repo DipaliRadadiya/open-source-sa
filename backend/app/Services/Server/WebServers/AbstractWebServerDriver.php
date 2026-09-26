@@ -332,6 +332,10 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'tlsFallback' => $this->certificateFiles->fallbackPaths(),
             // Paths the site type ships `.htaccess` deny rules for. Apache
             // reads those itself; nginx and OpenLiteSpeed render these.
+            // A disabled site: its vhost serves the shared "unavailable" page,
+            // and serves it as 503 — a 200 told monitors and crawlers the site
+            // was up.
+            'disabled' => $application->disabled_at !== null,
             'deniedPaths' => $siteType?->deniedPaths() ?? [],
             // Directories with their own front controller, which Apache gets
             // from the application's own `.htaccess`.

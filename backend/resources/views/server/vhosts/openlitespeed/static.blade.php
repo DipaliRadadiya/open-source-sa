@@ -100,7 +100,15 @@ context exp:^/\.(git|svn|hg|bzr|env|panel) {
      HTTPS-force, or an active bot policy. OLS routes redirect names here as
      aliases, so they must be sent on explicitly or they would serve the
      site under a second name. --}}
-@if (! $certificate || $redirects->isNotEmpty() || $forceHttps || $botBlock)
+@if ($disabled)
+{{-- Disabled: served as 503 with the unavailable page. It was a 200 — "up"
+     to every monitor and crawler. --}}
+errorpage 503 {
+  url                     /index.html
+}
+
+@endif
+@if (! $certificate || $redirects->isNotEmpty() || $forceHttps || $botBlock || $disabled)
 rewrite {
   enable                  1
 @if (! $certificate)
@@ -138,6 +146,12 @@ rewrite {
   RewriteCond %{HTTPS} !=on
   RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
   RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+@endif
+@if ($disabled)
+  {{-- Every path but the ACME challenge (renewal) and the page itself. --}}
+  RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+  RewriteCond %{REQUEST_URI} !^/index\.html$
+  RewriteRule ^ - [R=503,L]
 @endif
 }
 @endif

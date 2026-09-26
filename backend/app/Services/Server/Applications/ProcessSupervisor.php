@@ -144,6 +144,28 @@ class ProcessSupervisor
         return $this->systemctl('stop', $application);
     }
 
+    /**
+     * Stop the process and keep it stopped across a reboot — for a disabled
+     * site. `stop` alone lasts until the next boot: the unit is enabled, so
+     * the application came back behind a page saying it was unavailable.
+     */
+    public function suspend(Application $application): ServerOpsResult
+    {
+        $disabled = $this->systemctl('disable', $application);
+
+        return $disabled->failed() ? $disabled : $this->stop($application);
+    }
+
+    /**
+     * Undo suspend(): enable the unit again and start it.
+     */
+    public function resume(Application $application): ServerOpsResult
+    {
+        $enabled = $this->systemctl('enable', $application);
+
+        return $enabled->failed() ? $enabled : $this->start($application);
+    }
+
     public function restart(Application $application): ServerOpsResult
     {
         return $this->systemctl('restart', $application);

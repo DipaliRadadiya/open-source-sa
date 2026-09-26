@@ -161,9 +161,25 @@ server {
     access_log {{ $logDir }}/access.log;
     error_log  {{ $logDir }}/error.log;
 
+@if ($disabled)
+    {{-- Disabled: every path answers 503 with the unavailable page, which is
+         self-contained. It was a 200 — "up" to every monitor and crawler.
+         The ACME location above still answers, so renewal keeps working. --}}
+    location / {
+        return 503;
+    }
+
+    error_page 503 @unavailable;
+
+    location @unavailable {
+        rewrite ^ /index.html break;
+        add_header Retry-After 3600 always;
+    }
+@else
     location / {
         try_files $uri $uri/ =404;
     }
+@endif
 
     location ~ /\.(?!well-known) {
         deny all;

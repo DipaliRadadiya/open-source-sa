@@ -21,6 +21,18 @@
     ServerAlias {{ implode(' ', array_slice($serverNames, 1)) }}
 @endif
     DocumentRoot {{ $documentRoot }}
+@if ($disabled)
+    {{-- Disabled: every path answers 503 with the unavailable page. It was a
+         200 — "up" to every monitor and crawler. The ACME alias is exempt so
+         renewal keeps working; REDIRECT_STATUS keeps the error document's own
+         internal request from being rewritten again. --}}
+    ErrorDocument 503 /index.html
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteCond %{ENV:REDIRECT_STATUS} ^$
+    RewriteRule ^ - [R=503,L]
+    Header always set Retry-After "3600"
+@endif
 
 @if ($waf)
     {{-- The six category env vars (`waf_query`/`waf_uri`/`waf_agent`/

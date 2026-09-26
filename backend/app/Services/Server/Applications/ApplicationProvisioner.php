@@ -566,17 +566,23 @@ class ApplicationProvisioner
         $driver = $this->webServers->driver();
         $realProfile = $application->serving_profile;
 
+        // Set before rendering, unsaved: the template reads it to serve the
+        // page as 503. Cleared again on every way out that fails.
+        $application->disabled_at = now();
         $application->serving_profile = 'static';
         $applied = $driver->apply($application, $this->disabledPageRoot());
         $application->serving_profile = $realProfile;
 
         if ($applied->failed()) {
+            $application->disabled_at = null;
+
             throw new ApplicationAvailabilityException($applied->reference);
         }
 
         if ($driver->test()->failed()) {
             // Put the real vhost back before failing — a disable must never
             // leave a live site's config pointed nowhere useful.
+            $application->disabled_at = null;
             $restored = $driver->apply($application, $this->documentRoot($application));
 
             throw new ApplicationAvailabilityException($restored->reference);
@@ -584,8 +590,19 @@ class ApplicationProvisioner
 
         $driver->reload();
 
-        $application->disabled_at = now();
         $application->save();
+
+        // A Node app went on running behind the unavailable page — listening,
+        // using memory, and on Uptime Kuma reachable on its port past the
+        // vhost. Stopped — and kept stopped across a reboot — once the page is
+        // live; started again by enable().
+        if ($this->supervisor->runs($application)) {
+            $stopped = $this->supervisor->suspend($application);
+
+            if ($stopped->failed()) {
+                throw new ApplicationAvailabilityException($stopped->reference);
+            }
+        }
     }
 
     public function enable(Application $application): void
@@ -594,16 +611,30 @@ class ApplicationProvisioner
 
         $driver = $this->webServers->driver();
         $documentRoot = $this->documentRoot($application);
+        $disabledAt = $application->disabled_at;
 
+        // The process first: the real vhost proxies to it.
+        if ($this->supervisor->runs($application)) {
+            $started = $this->supervisor->resume($application);
+
+            if ($started->failed()) {
+                throw new ApplicationAvailabilityException($started->reference);
+            }
+        }
+
+        $application->disabled_at = null;
         $applied = $driver->apply($application, $documentRoot);
 
         if ($applied->failed()) {
+            $application->disabled_at = $disabledAt;
+
             throw new ApplicationAvailabilityException($applied->reference);
         }
 
         if ($driver->test()->failed()) {
             // Put the disabled page back before failing, for the same reason
             // disable()'s rollback exists — never strand the vhost mid-swap.
+            $application->disabled_at = $disabledAt;
             $realProfile = $application->serving_profile;
             $application->serving_profile = 'static';
             $restored = $driver->apply($application, $this->disabledPageRoot());
@@ -614,7 +645,6 @@ class ApplicationProvisioner
 
         $driver->reload();
 
-        $application->disabled_at = null;
         $application->save();
     }
 
