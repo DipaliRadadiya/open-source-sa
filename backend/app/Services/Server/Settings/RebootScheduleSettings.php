@@ -5,6 +5,7 @@ namespace App\Services\Server\Settings;
 use App\Contracts\SettingGroup;
 use App\Exceptions\Server\Setting\SettingOperationException;
 use App\Services\Server\ManagedFile;
+use App\Support\ServerTimezone;
 use Carbon\CarbonImmutable;
 use Cron\CronExpression;
 use Illuminate\Support\Facades\File;
@@ -322,9 +323,15 @@ class RebootScheduleSettings implements SettingGroup
         ];
     }
 
+    /**
+     * The zone cron reads this file in. ServerTimezone, not /etc/timezone
+     * alone: Ubuntu 26.04 no longer ships that file, and the fallback to the
+     * app's UTC labelled a 04:10 IST reboot "04:10 UTC" (seen on the nginx
+     * test box, 2026-09-26).
+     */
     private function timezone(): string
     {
-        return trim((string) @file_get_contents('/etc/timezone')) ?: (string) config('app.timezone', 'UTC');
+        return ServerTimezone::get();
     }
 
     private function path(): string

@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\Server\Settings\SettingsManager;
+use App\Support\ServerTimezone;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -323,4 +324,25 @@ it('ignores a remembered value that is out of range', function () {
         ->getJson('/api/settings')->assertOk()
         ->assertJsonPath('settings.reboot_schedule.frequency', 'daily')
         ->assertJsonPath('settings.reboot_schedule.hour', 3);
+});
+
+it('labels the schedule with the zone cron runs in when /etc/timezone is absent', function () {
+    // Ubuntu 26.04 ships no /etc/timezone; /etc/localtime is the only record.
+    $link = test()->cronDir.'/localtime';
+    symlink('/usr/share/zoneinfo/Asia/Kolkata', $link);
+    config([
+        'server.timezone_file' => test()->cronDir.'/no-such-timezone',
+        'server.localtime_link' => $link,
+    ]);
+    ServerTimezone::forget();
+
+    schedule(['enabled' => true, 'frequency' => 'daily', 'hour' => 4])->assertOk();
+
+    $response = test()->withHeader('Authorization', 'Bearer '.test()->token)
+        ->getJson('/api/settings')->assertOk()
+        ->assertJsonPath('settings.reboot_schedule.timezone', 'Asia/Kolkata');
+
+    expect($response->json('settings.reboot_schedule.next_run'))->toEndWith('04:10:00');
+
+    ServerTimezone::forget();
 });
