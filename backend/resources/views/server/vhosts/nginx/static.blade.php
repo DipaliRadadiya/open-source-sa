@@ -41,13 +41,20 @@ server {
 
 server {
 @if ($certificate)
-    {{-- `listen ... http2` rather than the newer `http2 on;`. The new form is
-         a hard error on nginx before 1.25, which is what Ubuntu 24.04 ships;
-         this form is merely deprecated on newer builds. A deprecation warning
-         is survivable, a config test that fails takes every site on the box
-         down with it. --}}
+    {{-- `http2 on;` where this nginx has it (1.25.1+), `listen ... http2`
+         elsewhere — chosen by NginxDriver::supportsHttp2Directive(). The new
+         form is a hard error before 1.25 (Ubuntu 24.04 ships 1.24), and a
+         failed config test takes every site on the box down; the old one is
+         only deprecated after it, but printed a warning per site on every
+         `nginx -t` (36 on an 18-site Ubuntu 26.04 box). --}}
+@if ($http2On)
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+@else
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
+@endif
 
     ssl_certificate     {{ $certificate->certificate_path }};
     ssl_certificate_key {{ $certificate->private_key_path }};
@@ -195,8 +202,14 @@ server {
     {{-- A redirect needs its own HTTPS listener. `http://old` → `https://new`
          looks like it needs no certificate, but a browser that has seen HSTS
          for `old` refuses the plaintext hop and never reaches the redirect. --}}
+@if ($http2On)
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+@else
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
+@endif
 
     ssl_certificate     {{ $certificate->certificate_path }};
     ssl_certificate_key {{ $certificate->private_key_path }};

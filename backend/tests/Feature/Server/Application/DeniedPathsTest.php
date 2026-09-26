@@ -1,10 +1,14 @@
 <?php
 
+use App\Enums\CertificateStatus;
+use App\Enums\CertificateType;
 use App\Enums\DomainType;
 use App\Models\Application;
+use App\Models\Certificate;
 use App\Models\SystemUser;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\WebServers\NginxDriver;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -178,3 +182,38 @@ it('adds no well-known routing or types for other site types', function (string 
 
     expect($config)->not->toContain('/remote.php/dav/')->not->toContain('default_type text/javascript');
 })->with(['nginx', 'openlitespeed']);
+
+it('uses `http2 on;` on an nginx that has it, and the old listen flag on one that does not', function (string $version, bool $modern) {
+    // 1.28 printed a deprecation warning per site on every `nginx -t` (36 on
+    // an 18-site box); on 1.24 the new directive is a hard error.
+    Process::fake(fn ($process) => in_array('-v', $process->command, true)
+        ? Process::result(errorOutput: "nginx version: nginx/{$version} (Ubuntu)\n")
+        : Process::result(exitCode: 0));
+
+    $application = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id, 'name' => 'tls', 'slug' => 'tls', 'domain' => 'tls.example.com',
+        'site_type' => 'php', 'serving_profile' => 'php', 'php_version' => '8.4', 'web_root' => '/', 'status' => 'active',
+    ]);
+    $application->domains()->create(['domain' => 'tls.example.com', 'type' => DomainType::Primary]);
+    Certificate::create([
+        'application_id' => $application->id, 'type' => CertificateType::LetsEncrypt,
+        'status' => CertificateStatus::Active, 'domains' => ['tls.example.com'],
+        'certificate_path' => '/etc/letsencrypt/live/tls/fullchain.pem', 'private_key_path' => '/etc/letsencrypt/live/tls/privkey.pem',
+    ]);
+    config(['server.web_server' => 'nginx']);
+
+    $config = app(NginxDriver::class)->renderConfig(
+        $application->fresh(['domains', 'certificate', 'systemUser']),
+        app(ApplicationProvisioner::class)->documentRoot($application),
+    );
+
+    if ($modern) {
+        expect($config)->toContain("listen 443 ssl;\n    listen [::]:443 ssl;\n    http2 on;")->not->toContain('ssl http2');
+    } else {
+        expect($config)->toContain('listen 443 ssl http2;')->not->toContain('http2 on;');
+    }
+})->with([
+    'nginx 1.28 (Ubuntu 26.04)' => ['1.28.3', true],
+    'nginx 1.25.1' => ['1.25.1', true],
+    'nginx 1.24 (Ubuntu 24.04)' => ['1.24.0', false],
+]);
