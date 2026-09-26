@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Server\Firewall;
 
+use App\Models\FirewallRule;
 use App\Support\ListSort;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -56,7 +57,7 @@ class IndexFirewallRulesRequest extends FormRequest
             // that came from a remote database user. Validated against the real
             // set so a typo is a 422 and not an empty list reading as "you have
             // no rules".
-            'filter.origin' => ['sometimes', 'nullable', Rule::in(['user', 'default', 'db_user'])],
+            'filter.origin' => ['sometimes', 'nullable', Rule::in([FirewallRule::ORIGIN_USER, FirewallRule::ORIGIN_DEFAULT, FirewallRule::ORIGIN_DATABASE])],
 
             'sort' => ListSort::rule(self::SORTS),
 

@@ -58,12 +58,19 @@ class EditDatabaseUser
             $engine->setPassword($newUsername, $newHost, $newPassword, $database->name);
         }
 
+        $oldPreference = $user->connection_preference;
+        $oldHost = $user->host;
+
         $user->update([
             'username' => $newUsername,
             'host' => $newHost,
             'connection_preference' => $newPreference,
             'password' => $newPassword,
         ]);
+
+        if ($oldPreference !== $newPreference || $oldHost !== $newHost) {
+            $this->firewall->release($database->engine, $oldPreference, $oldHost);
+        }
 
         $this->activityLogger->log('database.user_updated', $user, [
             'username' => $newUsername,

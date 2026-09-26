@@ -29,6 +29,19 @@ class FirewallRule extends Model
 
     public const PORT_MAX = 65535;
 
+    /** Written by the administrator. Theirs to change at any time. */
+    public const ORIGIN_USER = 'user';
+
+    /** Seeded for the panel's own reach (SSH, HTTP, HTTPS). Locked while enforcing. */
+    public const ORIGIN_DEFAULT = 'default';
+
+    /**
+     * Opened for a remote database user. The panel closes it when the last
+     * user needing it goes, and the administrator may remove it any time —
+     * it can cut off a database client, never the server.
+     */
+    public const ORIGIN_DATABASE = 'db_user';
+
     /**
      * Mirrors the `enabled` column default so a freshly created rule says the
      * same thing as the row behind it.
@@ -77,6 +90,11 @@ class FirewallRule extends Model
      */
     public function isProtected(): bool
     {
-        return $this->origin !== 'user';
+        return self::originIsProtected($this->origin);
+    }
+
+    public static function originIsProtected(?string $origin): bool
+    {
+        return ! in_array($origin, [self::ORIGIN_USER, self::ORIGIN_DATABASE], true);
     }
 }

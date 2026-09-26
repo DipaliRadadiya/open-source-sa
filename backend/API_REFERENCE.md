@@ -3883,7 +3883,7 @@ The password is returned in full, deliberately: the user has to paste it into th
 
 **Request:** `{"username": "shopuser2", "password": "…", "connection_preference": "localhost"}`
 
-`connection_preference`: `localhost | remote | anywhere`. Remote/anywhere opens the engine port in the firewall.
+`connection_preference`: `localhost | remote | anywhere`. Remote/anywhere opens the engine port in the firewall (`origin: db_user`); the rule is closed again when the last user needing it is deleted, moved, or its database deleted.
 
 **Response `201`:** `{"user": {...}}`
 
@@ -4561,7 +4561,7 @@ Ports are **1–65535** on both create and edit. 65535 is a real port and ufw ac
 
 `enabled: false` means kept but not applied; disabling is not deleting.
 
-`protected: true` marks system-seeded rules (`origin` other than `user`). **While the firewall is enabled, such a rule is description-only**: delete, and any `PUT` touching `port_from`, `port_to`, `protocol`, `action`, `source_ip` or `enabled`, answer `422` with a message naming the port and the way out. Disable the firewall and it is fully editable again — that is the escape hatch, and the reason the lock is not permanent.
+`protected: true` marks system-seeded rules (`origin: default` — SSH, HTTP, HTTPS). `origin: db_user` is a rule opened for a remote database user: not protected, and closed by the panel when the last database user needing that port and address is deleted or moved. **While the firewall is enabled, such a rule is description-only**: delete, and any `PUT` touching `port_from`, `port_to`, `protocol`, `action`, `source_ip` or `enabled`, answer `422` with a message naming the port and the way out. Disable the firewall and it is fully editable again — that is the escape hatch, and the reason the lock is not permanent.
 
 Treat that as one rule in the UI: **disable the edit control and the enable/disable toggle on a protected row, not just the delete action.** Until now only delete was refused, so hiding delete alone left the toggle as the one control nothing checked — and switching off the seeded port-443 rule is `ufw delete allow 443/tcp`, which on a deny-incoming server takes every site on the box offline. Renaming stays available, so an edit dialog that only submits `description` should still be offered.
 
