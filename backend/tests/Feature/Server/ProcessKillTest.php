@@ -154,3 +154,55 @@ it('denies a user with view-only access', function () {
     $this->withHeader('Authorization', "Bearer {$token}")
         ->deleteJson('/api/server/processes/4321')->assertForbidden();
 });
+
+describe('processes inside a unit the server needs', function () {
+    // On the nginx test server this screen stopped the SSH daemon and the
+    // panel's own queue worker with a 200: neither name is on the configured
+    // list, so the name check let both through.
+    function fakeProcessInUnit(string $command, string $unit): ArrayObject
+    {
+        $runs = new ArrayObject;
+
+        Process::fake(function ($process) use ($runs, $command, $unit) {
+            $runs[] = $process->command;
+
+            if ($process->command[0] === 'ps') {
+                return in_array('unit=', $process->command, true)
+                    ? Process::result(output: "{$unit}\n")
+                    : Process::result(output: "{$command} root 1\n");
+            }
+
+            return Process::result();
+        });
+
+        return $runs;
+    }
+
+    it('refuses to stop the SSH daemon', function () {
+        $runs = fakeProcessInUnit('sshd', 'ssh.service');
+
+        killPid(1026)->assertUnprocessable();
+
+        expect(collect($runs)->contains(fn ($c) => $c[0] === 'kill'))->toBeFalse();
+    });
+
+    it('refuses to stop the panel\'s own queue worker', function () {
+        fakeProcessInUnit('php8.4', 'panel-queue.service');
+
+        killPid(2000)->assertUnprocessable();
+    });
+
+    it('refuses a process of the web server the Services screen protects', function () {
+        fakeProcessInUnit('redis-server', 'redis-server.service');
+
+        killPid(3000)->assertUnprocessable();
+    });
+
+    it('still stops a process in a login session or a site app', function () {
+        fakeProcessInUnit('sleep', 'session-4.scope');
+        killPid(4000)->assertOk();
+
+        fakeProcessInUnit('node', 'sv-app-shop.service');
+        killPid(4001)->assertOk();
+    });
+});

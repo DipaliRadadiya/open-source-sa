@@ -285,7 +285,7 @@ class ServiceManager
      *
      * @return array<int, string>
      */
-    private function protectedUnits(): array
+    public function protectedUnits(): array
     {
         // Redis backs the panel's queues and cache. It may be optional for a
         // user app, but it is not optional for the panel itself.
