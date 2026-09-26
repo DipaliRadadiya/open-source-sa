@@ -840,6 +840,27 @@ it('needs manage on app_domain to change anything', function () {
         ->assertForbidden();
 });
 
+it('validates force HTTPS in its form request', function (mixed $value) {
+    activeCertificate($this->application);
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$this->application->id}/certificate/force-https", ['force_https' => $value])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('force_https');
+})->with(['missing' => null, 'not a boolean' => 'sometimes']);
+
+it('needs manage on app_domain to force HTTPS', function () {
+    activeCertificate($this->application);
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'app_domain');
+
+    $this->actingAs($viewer)
+        ->putJson("/api/applications/{$this->application->id}/certificate/force-https", ['force_https' => true])
+        ->assertForbidden();
+
+    expect($this->application->fresh()->certificate->force_https)->toBeFalse();
+});
+
 it('lets a self-signed certificate cover a name Let\'s Encrypt could never reach', function () {
     Queue::fake();
 

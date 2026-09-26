@@ -344,9 +344,30 @@ it('turns a redirect into an alias and drops the target it no longer has', funct
         ->assertJsonPath('domain.type', 'alias')
         // An alias serves the site itself. A target left behind would be a
         // value nothing reads and every screen shows.
-        ->assertJsonPath('domain.redirect_to', null);
+        ->assertJsonPath('domain.redirect_to', null)
+        ->assertJsonPath('domain.redirect_status', null);
 
     expect(renderedVhost($this->application))->not->toContain('https://example.com');
+});
+
+it('reports a redirect status only on a redirect', function () {
+    $this->application->domains()->create([
+        'domain' => 'old.example.com',
+        'type' => DomainType::Redirect,
+        'redirect_to' => 'https://example.com',
+        'redirect_status' => 302,
+    ]);
+    $this->application->domains()->create(['domain' => 'www.example.com', 'type' => DomainType::Alias]);
+
+    $domains = collect($this->actingAs($this->admin)
+        ->getJson("/api/applications/{$this->application->id}/domains")
+        ->assertOk()
+        ->json('domains'))->keyBy('domain');
+
+    // The column defaults to 301, so every alias and primary used to report one.
+    expect($domains['old.example.com']['redirect_status'])->toBe(302)
+        ->and($domains['www.example.com']['redirect_status'])->toBeNull()
+        ->and($domains['shop.example.com']['redirect_status'])->toBeNull();
 });
 
 it('refuses to make a name a redirect with nowhere to redirect to', function () {
