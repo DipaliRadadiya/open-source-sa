@@ -1164,10 +1164,15 @@ it('waits out n8n\'s start-up before creating the owner', function () {
             return Process::result(output: '{"data":{}}');
         }
 
-        // Three starting-up pages, then the real settings.
-        return ++$calls <= 3
-            ? Process::result(output: 'n8n is starting up. Please wait')
-            : Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => ! $owner]]]));
+        // The real sequence, measured: nothing listening, the starting-up
+        // page with a 200, the API answering 404 while its routes register,
+        // then the settings.
+        return match (++$calls) {
+            1 => Process::result(errorOutput: 'curl: (7) Failed to connect', exitCode: 7),
+            2 => Process::result(output: 'n8n is starting up. Please wait'),
+            3 => Process::result(errorOutput: 'curl: (22) The requested URL returned error: 404', exitCode: 22),
+            default => Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => ! $owner]]])),
+        };
     });
 
     app(N8nInstaller::class)->afterStart($app, '/home/apps/n8n/public_html');

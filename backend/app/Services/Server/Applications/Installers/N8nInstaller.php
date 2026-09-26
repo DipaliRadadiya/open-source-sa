@@ -123,8 +123,19 @@ class N8nInstaller extends AbstractNodeInstaller
         $attempts = max(1, (int) config('server.installers.n8n.ready_attempts', 60));
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
-            $response = $this->run('create_admin', ['curl', '-sS', '--fail', '--max-time', '10', $base.'/rest/settings'], $application);
-            $open = $this->decode($response->output())['data']['userManagement']['showSetupOnFirstLoad'] ?? null;
+            // Not `run()`, which fails the install on the first non-2xx: on
+            // its way up n8n refuses the connection, then serves the
+            // starting-up page, then answers its API with 404 for a moment
+            // while the routes register (all measured). Every one of those
+            // means "not yet", not "failed".
+            $response = $this->serverOps->run(
+                ['curl', '-sS', '--fail', '--max-time', '10', $base.'/rest/settings'],
+                ['feature' => 'application', 'op' => 'installer.create_admin_wait', 'application' => $application->id],
+                timeout: 20,
+            );
+            $open = $response->ok
+                ? ($this->decode($response->output())['data']['userManagement']['showSetupOnFirstLoad'] ?? null)
+                : null;
 
             if (is_bool($open)) {
                 return $open;
