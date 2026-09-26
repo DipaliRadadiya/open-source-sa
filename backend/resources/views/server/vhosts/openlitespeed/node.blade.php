@@ -130,6 +130,14 @@ rewrite {
   RewriteCond %{HTTP_USER_AGENT} ({{ $botBlock }}) [NC]
   RewriteRule ^ - [F,L]
 @endif
+{{-- Redirect names before HTTPS-force. The other way round, a plain-HTTP
+     request for a redirect name was first sent to https://<that name> — a
+     name the certificate usually does not cover — so the visitor got a TLS
+     error and the redirect never fired. --}}
+@foreach ($redirects as $redirect)
+  RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
+  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: $canonicalUrl }}/$1 [R={{ $redirect->redirect_status }},L]
+@endforeach
 @if ($forceHttps)
   {{-- Force HTTPS. The ACME exclusion is not optional: without it renewal
        stops working, and the redirect goes on pointing confidently at a
@@ -138,9 +146,5 @@ rewrite {
   RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
   RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 @endif
-@foreach ($redirects as $redirect)
-  RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
-  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: $canonicalUrl }}/$1 [R={{ $redirect->redirect_status }},L]
-@endforeach
 }
 @endif

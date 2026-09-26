@@ -772,6 +772,29 @@ it('lets a self-signed certificate cover a name Let\'s Encrypt could never reach
         ->assertJsonPath('certificate.renewable', false);
 });
 
+it('sends a redirect name on before forcing HTTPS on OpenLiteSpeed', function (string $profile) {
+    config(['server.web_server' => 'openlitespeed']);
+    $this->application->update(['serving_profile' => $profile]);
+    activeCertificate($this->application)->update(['force_https' => true]);
+
+    $this->application->domains()->create([
+        'domain' => 'old.example.com',
+        'type' => DomainType::Redirect,
+        'redirect_to' => 'https://shop.example.com',
+        'redirect_status' => 301,
+    ]);
+
+    $config = renderedCertVhost($this->application->fresh(), 'openlitespeed');
+    $redirect = strpos($config, 'RewriteCond %{HTTP_HOST} ^old\.example\.com$');
+    $force = strpos($config, 'RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1');
+
+    // Forcing first sent http://old.example.com to https://old.example.com,
+    // a name the certificate does not cover: a TLS error, never the redirect.
+    expect($redirect)->not->toBeFalse()
+        ->and($force)->not->toBeFalse()
+        ->and($redirect)->toBeLessThan($force);
+})->with(['php', 'static', 'node']);
+
 it('renders TLS on all three web servers', function (string $driver) {
     config(['server.web_server' => $driver]);
 

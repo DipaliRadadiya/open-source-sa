@@ -216,6 +216,16 @@ rewrite {
        .htaccess a user drops in should not silently start costing restarts. --}}
   autoLoadHtaccess        0
 @endif
+{{-- Redirect names first, before HTTPS-force and the front controller.
+     OLS routes them here as aliases, so without these they would serve the
+     site instead of sending a 301. The other way round, a plain-HTTP request
+     for a redirect name was first sent to https://<that name> — which the
+     certificate usually does not cover — so the visitor got a TLS error and
+     the redirect never fired. --}}
+@foreach ($redirects as $redirect)
+  RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
+  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: $canonicalUrl }}/$1 [R={{ $redirect->redirect_status }},L]
+@endforeach
 @if ($forceHttps)
   {{-- Force HTTPS. The ACME exclusion is not optional: without it renewal
        stops working, and the redirect goes on pointing confidently at a
@@ -224,13 +234,6 @@ rewrite {
   RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
   RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 @endif
-{{-- Redirect names first, before the front controller sees them: OLS routes
-     them here as aliases, so without these they would serve the site instead
-     of sending a 301. --}}
-@foreach ($redirects as $redirect)
-  RewriteCond %{HTTP_HOST} ^{{ preg_quote($redirect->domain, '/') }}$ [NC]
-  RewriteRule ^/?(.*)$ {{ $redirect->redirect_to ?: $canonicalUrl }}/$1 [R={{ $redirect->redirect_status }},L]
-@endforeach
   RewriteRule ^/index\.php$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
