@@ -173,4 +173,19 @@ interface SiteType
      * generically.
      */
     public function cloneStrategy(): ?CloneStrategy;
+
+    /**
+     * URL paths this type's web root holds that must never be served,
+     * as PCRE patterns matched against the request path (leading `/`).
+     *
+     * For an application that ships its protection as Apache `.htaccess`
+     * files. Apache reads them; nginx never does, and OpenLiteSpeed only
+     * where the vhost turns it on — so on those two the logs, sessions and
+     * source those files deny were downloadable by anyone. Written without
+     * lookaheads: OpenLiteSpeed's regex contexts are not documented as
+     * supporting them.
+     *
+     * @return array<int, string>
+     */
+    public function deniedPaths(): array;
 }

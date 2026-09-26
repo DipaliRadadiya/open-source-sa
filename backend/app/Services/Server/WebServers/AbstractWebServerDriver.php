@@ -8,6 +8,7 @@ use App\Enums\DomainType;
 use App\Enums\WafMode;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
+use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationLogDirectory;
 use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\Certificates\CertbotClient;
@@ -314,6 +315,9 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // can reject the request; this reserved-name pair identifies no
             // user application and is generated lazily on brownfield boxes.
             'tlsFallback' => $this->certificateFiles->fallbackPaths(),
+            // Paths the site type ships `.htaccess` deny rules for. Apache
+            // reads those itself; nginx and OpenLiteSpeed render these.
+            'deniedPaths' => app(SiteTypeManager::class)->find((string) $application->site_type)?->deniedPaths() ?? [],
             'forceHttps' => $forceHttps = (bool) ($application->scheme() === 'https' && $application->certificate?->force_https),
             // Names the certificate does not cover, while HTTPS is forced.
             // Sending one to https://<that name> lands the visitor on a

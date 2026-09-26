@@ -172,6 +172,17 @@ server {
         try_files $uri $uri/ /index.php?$query_string;
     }
 
+@foreach ($deniedPaths as $pattern)
+    {{-- The application ships this as an Apache `.htaccess` rule, which nginx
+         never reads: without it, logs, sessions and source under the web root
+         were downloadable. Before the PHP location on purpose — regex
+         locations are tried in order and the first match wins, so placed
+         after it a denied `.php` would still run. --}}
+    location ~* {{ $pattern }} {
+        deny all;
+    }
+@endforeach
+
     {{-- `[^/]\.php(/|$)`, not `\.php$`. Several applications address their own
          scripts with a path appended — Moodle's slash arguments are the loudest
          case, where every stylesheet and script is requested as

@@ -241,6 +241,17 @@ abstract class AbstractSiteType implements SiteType
         return $within === [] ? $installed : $within;
     }
 
+    /**
+     * Nothing by default: most types either keep their private files outside
+     * the web root or narrow the web root to a public folder.
+     *
+     * @return array<int, string>
+     */
+    public function deniedPaths(): array
+    {
+        return [];
+    }
+
     public function defaultWebRoot(): string
     {
         return '/';

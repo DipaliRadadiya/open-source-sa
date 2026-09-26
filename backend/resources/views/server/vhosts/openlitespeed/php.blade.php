@@ -261,3 +261,12 @@ rewrite {
 context exp:^/\.(git|svn|hg|bzr|env|panel) {
   allowBrowse             0
 }
+@foreach ($deniedPaths as $pattern)
+
+{{-- The application ships this as an Apache `.htaccess` rule, which this vhost
+     does not read for it: without it, logs, sessions and source under the web
+     root were downloadable. --}}
+context exp:{{ $pattern }} {
+  allowBrowse             0
+}
+@endforeach

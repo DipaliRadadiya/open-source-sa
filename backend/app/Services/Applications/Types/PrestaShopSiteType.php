@@ -146,4 +146,24 @@ class PrestaShopSiteType extends AbstractSiteType
             'table_prefix' => ['nullable', 'string', 'max:10', 'regex:/^[a-z0-9_]+$/'],
         ];
     }
+
+    /**
+     * PrestaShop's own nginx configuration, as published in its developer
+     * documentation (devdocs.prestashop-project.org, "Configure Nginx"):
+     * source folders — `var/` holds the logs, cache and sessions — vendor
+     * code inside modules, template and log files, and no PHP from the two
+     * upload folders. On Apache the same comes from the `.htaccess` it ships
+     * in each of those folders.
+     *
+     * @return array<int, string>
+     */
+    public function deniedPaths(): array
+    {
+        return [
+            '^/(app|bin|cache|classes|config|controllers|docs|localization|override|src|tests|tools|translations|var|vendor)/',
+            '^/modules/.*/vendor/',
+            '\\.(log|tpl|twig|sass|yml)$',
+            '^/(img|upload)/.*\\.php',
+        ];
+    }
 }
