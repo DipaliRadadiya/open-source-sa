@@ -68,15 +68,14 @@ class MauticInstaller extends AbstractPhpInstaller
                 'admin_firstname' => (string) ($settings['admin_first_name'] ?? 'Admin'),
                 'admin_lastname' => (string) ($settings['admin_last_name'] ?? 'User'),
                 'site_title' => (string) ($settings['site_title'] ?? $application->name),
-                'mailer_transport' => 'smtp',
-                'mailer_from_email' => (string) ($settings['mailer_email'] ?? ''),
-                'mailer_from_name' => (string) ($settings['mailer_name'] ?? ''),
-                'mailer_host' => (string) ($settings['mailer_host'] ?? ''),
-                'mailer_port' => (int) ($settings['mailer_port'] ?? 587),
-                'mailer_user' => (string) ($settings['mailer_username'] ?? ''),
-                'mailer_password' => (string) ($settings['mailer_password'] ?? ''),
-                'mailer_auth_mode' => null,
-                'mailer_encryption' => null,
+                // Mautic 5+ reads one DSN. It used to get the Mautic 4 keys
+                // (mailer_transport/host/port/user/password), which it ignores:
+                // every SMTP detail a user typed was dropped and Mautic mailed
+                // through its own default, smtp://localhost:1025 (measured on
+                // Mautic 7.2.1). See mailerDsn().
+                'mailer_dsn' => $this->mailerDsn($settings),
+                'mailer_from_email' => (string) (($settings['mailer_email'] ?? '') ?: ($settings['admin_email'] ?? '')),
+                'mailer_from_name' => (string) (($settings['mailer_name'] ?? '') ?: ($settings['site_title'] ?? $application->name)),
             ],
         ])->render());
 
@@ -171,5 +170,30 @@ class MauticInstaller extends AbstractPhpInstaller
         }
 
         return $url;
+    }
+
+    /**
+     * The Symfony Mailer DSN for the SMTP details given, or `null://null` —
+     * sending off — when there are none, so a site can be created before its
+     * SMTP account exists. `smtps://` on 465, where the connection is TLS from
+     * the first byte; `smtp://` elsewhere, which upgrades with STARTTLS when
+     * the server offers it. Credentials are URL-encoded: a password with `@`
+     * or `/` in it would otherwise be read as part of the host.
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    private function mailerDsn(array $settings): string
+    {
+        $host = trim((string) ($settings['mailer_host'] ?? ''));
+
+        if ($host === '') {
+            return 'null://null';
+        }
+
+        $port = (int) ($settings['mailer_port'] ?? 587) ?: 587;
+        $user = (string) ($settings['mailer_username'] ?? '');
+        $auth = $user === '' ? '' : rawurlencode($user).':'.rawurlencode((string) ($settings['mailer_password'] ?? '')).'@';
+
+        return ($port === 465 ? 'smtps' : 'smtp').'://'.$auth.$host.':'.$port;
     }
 }

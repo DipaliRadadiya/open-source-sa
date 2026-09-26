@@ -119,7 +119,11 @@ it('keeps the pre-install config incomplete and preserves special characters', f
         ->and($parameters['admin_lastname'])->toBe("O'Reilly")
         ->and($parameters['site_title'])->toBe("Growth & O'Reilly")
         ->and($parameters['mailer_from_name'])->toBe("Ada & O'Reilly")
-        ->and($parameters['mailer_password'])->toBe("SMTP&<Pass>'\"1!");
+        // Mautic 5+ reads one DSN; the Mautic 4 keys it was given were ignored
+        // and it mailed through smtp://localhost:1025 (measured on 7.2.1). The
+        // password is URL-encoded inside it, special characters and all.
+        ->and($parameters['mailer_dsn'])->toBe('smtp://mailer-user:'.rawurlencode("SMTP&<Pass>'\"1!").'@smtp.example.com:587')
+        ->and($parameters)->not->toHaveKeys(['mailer_host', 'mailer_password', 'mailer_transport']);
 });
 
 it('unzips, because Mautic publishes no tarball', function () {
@@ -185,4 +189,24 @@ it('rejects Mautic already installed exit zero when the schema is empty', functi
     } catch (ProvisioningFailedException $exception) {
         expect($exception->step)->toBe('verify_install');
     }
+});
+
+it('installs with sending off when no SMTP server is given', function () {
+    // Requiring SMTP kept a user without an account from creating the site.
+    $settings = $this->application->settings;
+    unset($settings['mailer_host'], $settings['mailer_port'], $settings['mailer_username'], $settings['mailer_password'], $settings['mailer_name']);
+    $this->application->forceFill(['settings' => $settings])->save();
+
+    $parameters = mauticLocalParameters(installMautic());
+
+    expect($parameters['mailer_dsn'])->toBe('null://null')
+        // Something sensible to send as, for when SMTP is added later.
+        ->and($parameters['mailer_from_name'])->toBe("Growth & O'Reilly")
+        ->and($parameters['mailer_from_email'])->toBe('mailer@example.com');
+});
+
+it('uses implicit TLS on port 465', function () {
+    $this->application->forceFill(['settings' => array_merge($this->application->settings, ['mailer_port' => 465])])->save();
+
+    expect(mauticLocalParameters(installMautic())['mailer_dsn'])->toStartWith('smtps://');
 });

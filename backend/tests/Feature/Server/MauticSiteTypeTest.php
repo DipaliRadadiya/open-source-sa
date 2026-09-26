@@ -43,18 +43,20 @@ describe('MauticSiteType', function () {
             }
         });
 
-        it('mailer_name is required', function () {
+        it('mailer_name is optional', function () {
+            // Mail is optional: Mautic installs with sending off until SMTP
+            // exists. Requiring it kept users without SMTP from creating one.
             $type = new MauticSiteType;
             $fields = collect($type->fields());
             $field = $fields->firstWhere('name', 'mailer_name');
-            expect($field['required'] ?? false)->toBeTrue();
+            expect($field['required'] ?? true)->toBeFalse();
         });
 
-        it('mailer_host is required', function () {
+        it('mailer_host is optional', function () {
             $type = new MauticSiteType;
             $fields = collect($type->fields());
             $field = $fields->firstWhere('name', 'mailer_host');
-            expect($field['required'] ?? false)->toBeTrue();
+            expect($field['required'] ?? true)->toBeFalse();
         });
 
         it('mailer_port is a number field', function () {
@@ -100,10 +102,10 @@ describe('MauticSiteType', function () {
             expect($rules['mailer_email'])->toContain('nullable');
         });
 
-        it('mailer_password has required and max constraints', function () {
+        it('mailer_password is required with a username, and bounded', function () {
             $type = new MauticSiteType;
             $rules = $type->rules();
-            expect($rules['mailer_password'])->toContain('required');
+            expect($rules['mailer_password'])->toContain('required_with:mailer_username');
             expect($rules['mailer_password'])->toContain('string');
             expect($rules['mailer_password'])->toContain('max:500');
         });

@@ -51,26 +51,29 @@ class MauticSiteType extends AbstractSiteType
             $this->field('admin_user', 'text', required: true, extra: ['default' => 'admin']),
             $this->field('admin_email', 'email', required: true, extra: ['placeholder' => __('application.placeholders.admin_email')]),
             $this->field('admin_password', 'password', required: true, extra: ['generate' => true]),
-            // Mailer / email delivery configuration
-            $this->field('mailer_name', 'text', required: true,
+            // Mail delivery. Optional: Mautic runs without it (sending off)
+            // until SMTP is set up — requiring it kept a user with no SMTP
+            // details from creating the site at all. A host given needs the
+            // rest of the connection with it; see rules().
+            $this->field('mailer_name', 'text', required: false,
                 extra: ['autocomplete' => 'name', 'autocapitalize' => 'words',
                     'placeholder' => __('application.placeholders.mailer_name')]),
             $this->field('mailer_email', 'email', required: false,
                 extra: ['placeholder' => __('application.placeholders.mailer_email')]),
-            $this->field('mailer_host', 'text', required: true,
+            $this->field('mailer_host', 'text', required: false,
                 extra: ['autocomplete' => 'off', 'autocapitalize' => 'none', 'spellcheck' => 'false',
                     // Was the literal 'e.g. smtp.example.com'. The prefix sat
                     // inside the value, so this one field said "e.g." while
                     // its nine neighbours showed a bare example — and being a
                     // literal it stayed English while the rest translated.
                     'placeholder' => __('application.placeholders.mailer_host')]),
-            $this->field('mailer_port', 'number', required: true,
+            $this->field('mailer_port', 'number', required: false,
                 extra: ['min' => 1, 'max' => 65535,
                     'placeholder' => __('application.placeholders.mailer_port')]),
-            $this->field('mailer_username', 'text', required: true,
+            $this->field('mailer_username', 'text', required: false,
                 extra: ['autocomplete' => 'username', 'autocapitalize' => 'none', 'spellcheck' => 'false',
                     'placeholder' => __('application.placeholders.mailer_username')]),
-            $this->field('mailer_password', 'password', required: true,
+            $this->field('mailer_password', 'password', required: false,
                 extra: ['autocomplete' => 'current-password']),
         ], $this->phpFields());
     }
@@ -84,12 +87,12 @@ class MauticSiteType extends AbstractSiteType
             'admin_user' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9._@-]+$/'],
             'admin_email' => ['required', 'email', 'max:255'],
             'admin_password' => ['required', 'string', 'min:10'],
-            'mailer_name' => ['required', 'string', 'max:255'],
+            'mailer_name' => ['nullable', 'string', 'max:255'],
             'mailer_email' => ['nullable', 'email', 'max:255'],
-            'mailer_host' => ['required', 'string', 'max:255'],
-            'mailer_port' => ['required', 'integer', 'min:1', 'max:65535'],
-            'mailer_username' => ['required', 'string', 'max:255'],
-            'mailer_password' => ['required', 'string', 'max:500'],
+            'mailer_host' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9.-]+$/'],
+            'mailer_port' => ['nullable', 'required_with:mailer_host', 'integer', 'min:1', 'max:65535'],
+            'mailer_username' => ['nullable', 'string', 'max:255'],
+            'mailer_password' => ['nullable', 'required_with:mailer_username', 'string', 'max:500'],
         ];
     }
 
