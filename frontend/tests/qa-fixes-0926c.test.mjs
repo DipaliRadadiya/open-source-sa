@@ -58,3 +58,8 @@ test("Discard also clears a half-typed name and its error", () => {
   assert.match(section, /key=\{`allowed-\$\{editorKey\}`\}/);
   assert.match(section, /setEditorKey\(\(key\) => key \+ 1\);/);
 });
+
+test("the traffic table's headers and bot names wrap on a phone", () => {
+  assert.match(traffic, /h-auto px-2 py-2 whitespace-normal sm:px-4">\{t\("columns\.status"\)\}/);
+  assert.match(traffic, /bot\.bot\.length > 24 && "min-w-20 break-all whitespace-normal"/);
+});

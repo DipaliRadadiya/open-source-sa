@@ -118,17 +118,26 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                         answers "is this bot getting in?" — the two least
                         urgent drop out below `sm` and reappear above it. */}
                     <TableHead className="hidden sm:table-cell">{t("columns.kind")}</TableHead>
-                    <TableHead className="px-2 text-right sm:px-4">{t("columns.requests")}</TableHead>
+                    <TableHead className="h-auto px-2 py-2 text-right whitespace-normal sm:px-4">{t("columns.requests")}</TableHead>
                     {/* From xl, not md: at 768 and 1024 in French and Portuguese this
                         column pushed the settings column past the table's edge. */}
                     <TableHead className="hidden xl:table-cell">{t("columns.lastSeen")}</TableHead>
-                    <TableHead className="px-2 sm:px-4">{t("columns.status")}</TableHead>
+                    {/* Allowed to wrap: "Suas configurações" / "Tu configuración"
+                        ran 40px past a 390px screen on one line. */}
+                    <TableHead className="h-auto px-2 py-2 whitespace-normal sm:px-4">{t("columns.status")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {bots.map((bot) => (
                     <TableRow key={bot.bot}>
-                      <TableCell className="px-2 font-mono text-xs sm:px-4">
+                      {/* Only a name too long for any screen may break: on
+                          every row, `break-all` split "Bytespider" mid-word. */}
+                      <TableCell
+                        className={cn(
+                          "px-2 font-mono text-xs sm:px-4",
+                          bot.bot.length > 24 && "min-w-20 break-all whitespace-normal",
+                        )}
+                      >
                         {bot.bot}
                         {/* The kind still has to be readable once its own
                             column is gone, so it rides along under the name. */}
