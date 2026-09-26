@@ -4605,7 +4605,8 @@
         "count": "{count, plural, one {# Anfrage} other {# Anfragen}}",
         "empty": "Bisher wurde nichts erfasst. Die Liste füllt sich, sobald Besucher kommen.",
         "unreadable": "Das konnte nicht gelesen werden. Ihre Einstellungen sind davon unberührt."
-      }
+      },
+      "detectUnknown": "Was erfasst wurde, konnte nicht gelesen werden. Prüfen Sie die Liste unten, bevor Sie auf Blockieren umstellen."
     },
     "clone": {
       "pageTitle": "Anwendung klonen",

@@ -4605,7 +4605,8 @@
         "count": "{count, plural, one {# solicitud} other {# solicitudes}}",
         "empty": "Todavía no se ha detectado nada. La lista se irá llenando conforme lleguen visitas.",
         "unreadable": "No se pudo leer. Tus ajustes no se han visto afectados."
-      }
+      },
+      "detectUnknown": "No se pudo leer lo detectado; revisa la lista de abajo antes de pasar a bloquear."
     },
     "clone": {
       "pageTitle": "Clonar aplicación",

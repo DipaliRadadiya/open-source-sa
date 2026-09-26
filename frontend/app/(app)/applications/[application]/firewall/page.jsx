@@ -43,6 +43,10 @@ export default async function ApplicationFirewallPage({ params }) {
   // The site is gone. Land on the list — the only place left to go — and say
   // why on arrival, rather than parking on a dead end that offers one link.
   if (result.status === 404) redirect("/applications?gone=1");
+  // The app is read through the firewall endpoint, which answers 403 for a role
+  // without Web Firewall — before the check below could run. That rendered a
+  // raw "Error 403 … 8G Firewall" box instead of the page every other screen shows.
+  if (result.status === 403) return <PermissionDenied title={t("pageTitle")} />;
   if (result.failed || !result.application) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
   const application = result.application;
@@ -121,6 +125,7 @@ export default async function ApplicationFirewallPage({ params }) {
             modes={modes}
             canManage={canManage}
             detectCount={detectRows.length}
+            detectFailed={detectFailed}
           />
           {watching ? (
             <DetectLogCard rows={detectRows} failed={detectFailed} />

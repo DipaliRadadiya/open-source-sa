@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { RestoreProgress } from "@/components/backups/restore-progress";
+import { RESTORE_IN_FLIGHT } from "@/lib/schemas/backup";
+import { rememberDismissedRestore } from "@/lib/backups/dismissed-restores";
 
 /**
  * The restore currently rewriting a site, seeded from the server.
@@ -14,6 +16,10 @@ export function ActiveRestore({ restore, applicationDomain, scrollIntoView = fal
   onStatusChange,
 }) {
   const [dismissed, setDismissed] = useState(false);
+  // The status as the banner last saw it. Dismissing a FINISHED restore is
+  // remembered, so the page stops bringing it back; hiding one still running
+  // is not — its outcome and its Undo must still show up.
+  const [latest, setLatest] = useState({ id: restore?.id, status: restore?.status });
   const box = useRef(null);
 
   // The banner lives at the top of the page, but Restore is pressed from a row
@@ -40,8 +46,14 @@ export function ActiveRestore({ restore, applicationDomain, scrollIntoView = fal
       // never be satisfied — the undo was unusable exactly where it mattered.
       applicationDomain={applicationDomain ?? restore?.application_domain}
       restoredSafetyCopy={restoredSafetyCopy}
-      onStatusChange={onStatusChange}
-      onDismiss={() => setDismissed(true)}
+      onStatusChange={(status, id) => {
+        setLatest({ id: id ?? latest.id, status });
+        onStatusChange?.(status);
+      }}
+      onDismiss={() => {
+        if (!RESTORE_IN_FLIGHT.includes(latest.status)) rememberDismissedRestore(latest.id);
+        setDismissed(true);
+      }}
     />
     </div>
   );

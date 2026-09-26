@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { read } from "@/lib/api/read";
+import { parseApiWallClock } from "@/lib/format/api-date";
 import { PER_PAGE_OPTIONS } from "@/lib/schemas/user";
 import { classify } from "@/lib/backups/coverage-state";
 import { getAllApplications } from "@/lib/applications/get-applications";
@@ -16,6 +17,9 @@ import {
   backupsResponseSchema,
   restoresResponseSchema,
 } from "@/lib/schemas/backup";
+
+// How long a finished restore keeps its banner (and its Undo) across reloads.
+const FINISHED_RESTORE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
  * `per_page` from the URL, held to the four values the selector offers.
@@ -178,11 +182,29 @@ export async function getRestores(searchParams = {}) {
  * undo. Without it, pressing Restore on a site page looks like nothing
  * happened while the site is being overwritten.
  */
-export async function getActiveRestore(applicationId) {
+export async function getActiveRestore(applicationId, { dismissed = [] } = {}) {
   const { restores } = await getRestores({ application: applicationId, per_page: 5 });
   const active = restores.find((restore) => RESTORE_IN_FLIGHT.includes(restore.status)) ?? null;
 
-  if (active === null) return null;
+  /*
+   * Or the newest one, finished within the last day and not dismissed.
+   *
+   * Only in-flight restores used to come back, so the finished banner — the
+   * one carrying "Undo this restore" — vanished on the first reload, and the
+   * way back became an unlabelled row somewhere in the history.
+   */
+  const latest = restores[0] ?? null;
+  const finishedAt = parseApiWallClock(latest?.finished_at);
+  const recent =
+    active ??
+    (latest &&
+    !dismissed.includes(latest.id) &&
+    finishedAt &&
+    Date.now() - finishedAt.getTime() < FINISHED_RESTORE_WINDOW_MS
+      ? latest
+      : null);
+
+  if (recent === null) return null;
 
   /*
    * Whether this run is putting a safety copy back — i.e. it is an undo.
@@ -192,12 +214,22 @@ export async function getActiveRestore(applicationId) {
    * safety copy carries `is_safety`. Without this a page loaded while an undo
    * was running finished by offering to undo the undo, which is the first
    * restore again under a word that means the opposite.
-   *
-   * One extra request, and only while a restore is actually in flight.
    */
-  const { data } = await read(`/backups/${active.backup_id}`, backupResponseSchema);
+  const { data } = await read(`/backups/${recent.backup_id}`, backupResponseSchema);
 
-  return { ...active, restored_safety_copy: Boolean(data?.backup?.is_safety) };
+  // A finished restore's safety copy may since have been pruned (only the
+  // newest two are kept). Offering Undo for it would end in "not found".
+  let safetyBackupId = recent.safety_backup_id ?? null;
+  if (recent !== active && safetyBackupId) {
+    const safety = await read(`/backups/${safetyBackupId}`, backupResponseSchema);
+    if (!safety.data?.backup) safetyBackupId = null;
+  }
+
+  return {
+    ...recent,
+    safety_backup_id: safetyBackupId,
+    restored_safety_copy: Boolean(data?.backup?.is_safety),
+  };
 }
 
 /**

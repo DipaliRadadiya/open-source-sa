@@ -57,7 +57,7 @@ function sameList(a, b) {
  * per-section Save buttons would imply an independence the endpoint does not
  * have.
  */
-export function FirewallSection({ appId, application, categories: catalog, modes, canManage, detectCount = 0 }) {
+export function FirewallSection({ appId, application, categories: catalog, modes, canManage, detectCount = 0, detectFailed = false }) {
   const t = useTranslations("applications.firewall");
   const router = useRouter();
 
@@ -93,12 +93,22 @@ export function FirewallSection({ appId, application, categories: catalog, modes
   useWatchUnsaved("app-firewall", isDirty);
 
   const saveReason = !canManage ? t("noPermission") : !isDirty ? t("nothingToSave") : null;
-  const blocking = enabled && mode === "enforce";
+
+  /*
+   * The badge, tint and hint describe what the site IS — the last save, not
+   * the switch. They used to say "Blocking" the moment "Actually block" was
+   * picked, while nothing had been applied. Our own save is held until the
+   * refreshed page agrees, so they do not lag a second behind the toast.
+   */
+  const [justSaved, setJustSaved] = useState(null);
+  if (justSaved && justSaved.enabled === saved.enabled && justSaved.mode === saved.mode) setJustSaved(null);
+  const live = justSaved ?? saved;
+  const blocking = live.enabled && live.mode === "enforce";
   // Watch mode is not protection, so it must not borrow protection's colour —
   // the same rule that stopped "nothing blocked" rendering as a green shield
   // on the bot blocker.
-  const statusVariant = blocking ? "success" : enabled ? "warning" : "muted";
-  const statusLabel = blocking ? t("statusBlocking") : enabled ? t("statusWatching") : t("statusOff");
+  const statusVariant = blocking ? "success" : live.enabled ? "warning" : "muted";
+  const statusLabel = blocking ? t("statusBlocking") : live.enabled ? t("statusWatching") : t("statusOff");
   // The log only exists once the site has actually been running in watch mode —
   // linking to it off an unsaved selection would point at a file that isn't there.
   const showDetectLog = saved.enabled && saved.mode === "detect";
@@ -125,6 +135,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
         custom_rules: blocks,
       });
       toast.success(t("saved"));
+      setJustSaved({ enabled, mode });
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("saveFailed")));
@@ -155,8 +166,8 @@ export function FirewallSection({ appId, application, categories: catalog, modes
               className={cn(
                 "flex flex-col gap-3 rounded-xl border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4",
                 blocking && "border-success/30 bg-success/5",
-                enabled && !blocking && "border-warning/30 bg-warning/5",
-                !enabled && "bg-muted/40",
+                live.enabled && !blocking && "border-warning/30 bg-warning/5",
+                !live.enabled && "bg-muted/40",
                 locked ? "cursor-not-allowed" : "cursor-pointer",
               )}
             >
@@ -165,8 +176,8 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                   className={cn(
                     "mt-0.5 hidden size-9 shrink-0 items-center justify-center rounded-full sm:flex",
                     blocking && "bg-success/15 text-success",
-                    enabled && !blocking && "bg-warning/15 text-warning",
-                    !enabled && "bg-muted-foreground/10 text-muted-foreground",
+                    live.enabled && !blocking && "bg-warning/15 text-warning",
+                    !live.enabled && "bg-muted-foreground/10 text-muted-foreground",
                   )}
                 >
                   <ShieldCheck className="size-4" />
@@ -177,7 +188,7 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                     <Badge variant={statusVariant}>{statusLabel}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {blocking ? t("blockingHint") : enabled ? t("watchingHint") : t("offHint")}
+                    {blocking ? t("blockingHint") : live.enabled ? t("watchingHint") : t("offHint")}
                   </p>
                 </div>
               </div>
@@ -223,9 +234,14 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                       // switch, so turning blocking on is a decision with a
                       // figure in front of it instead of a guess.
                       <p className="pt-1 text-xs text-muted-foreground">
-                        {detectCount > 0
-                          ? t("detectCaught", { count: detectCount })
-                          : t("detectNothingYet")}
+                        {/* "Nothing caught yet" on an unread log was the
+                            reassuring answer produced by not knowing, shown
+                            right where blocking gets switched on. */}
+                        {detectFailed
+                          ? t("detectUnknown")
+                          : detectCount > 0
+                            ? t("detectCaught", { count: detectCount })
+                            : t("detectNothingYet")}
                       </p>
                     ) : null}
                   </div>

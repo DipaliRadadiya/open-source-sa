@@ -52,7 +52,7 @@ test("BK-E: a running restore blocks Restore, Back up now, Retry and Turn off", 
   const panel = read("components/applications/backups/backups-panel.jsx");
   assert.match(panel, /restoreInFlight=\{restoreRunning\}/);
   assert.match(panel, /onStatusChange=\{setRestoreStatus\}/);
-  assert.match(read("components/backups/restore-progress.jsx"), /onStatusChange\?\.\(next\.status\)/);
+  assert.match(read("components/backups/restore-progress.jsx"), /statusRef\.current\?\.\(next\.status, next\.id\)/);
 });
 
 test("BK-H/I: the setup dialog names the site and hands 'Back up now' back to the page", () => {

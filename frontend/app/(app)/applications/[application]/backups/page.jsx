@@ -5,7 +5,9 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication, getSiteTypes } from "@/lib/applications/get-applications";
 import { getStorageDestinations } from "@/lib/storage/get-storage";
+import { cookies } from "next/headers";
 import { getActiveRestore, getBackupTarget, getBackupTargetOptions, getBackups } from "@/lib/backups/get-backups";
+import { DISMISSED_RESTORES_COOKIE, parseDismissedRestores } from "@/lib/backups/dismissed-restores";
 import { getDatabaseCounts, getApplicationDatabases, getEngines, getUnattachedDatabases } from "@/lib/databases/get-databases";
 import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { BackupsPanel } from "@/components/applications/backups/backups-panel";
@@ -75,7 +77,11 @@ export default async function ApplicationBackupsPage({ params }) {
       : Promise.resolve({ backups: [], meta: { total: 0 } }),
     // Seeded from the server so a reload — or a colleague's browser — still
     // shows a restore that is rewriting this site right now.
-    settled && canRestore ? getActiveRestore(id) : Promise.resolve(null),
+    settled && canRestore
+      ? getActiveRestore(id, {
+          dismissed: parseDismissedRestores((await cookies()).get(DISMISSED_RESTORES_COOKIE)?.value),
+        })
+      : Promise.resolve(null),
     // Only to tell the form whether a database backup of this site would hold
     // anything. A failure here leaves it unknown, and unknown says nothing.
     settled ? getDatabaseCounts() : Promise.resolve({ counts: null, known: false }),

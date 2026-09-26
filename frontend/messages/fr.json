@@ -4605,7 +4605,8 @@
         "count": "{count, plural, one {# requête} other {# requêtes}}",
         "empty": "Rien n'a encore été capturé. La liste se remplit à mesure que les visiteurs arrivent.",
         "unreadable": "Impossible de lire ceci. Vos paramètres ne sont pas affectés."
-      }
+      },
+      "detectUnknown": "Impossible de lire ce qui a été capturé : vérifiez la liste ci-dessous avant de passer au blocage."
     },
     "clone": {
       "pageTitle": "Cloner l'application",

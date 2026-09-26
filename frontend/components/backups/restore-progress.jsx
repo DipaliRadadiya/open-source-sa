@@ -82,6 +82,12 @@ export function RestoreProgress({
   // as the API is concerned, but nothing has moved for a long time.
   const [stalled, setStalled] = useState(false);
   const timer = useRef(null);
+  // Through a ref: callers pass an inline function, and as an effect
+  // dependency it restarted the polling (and its give-up timer) every render.
+  const statusRef = useRef(onStatusChange);
+  useEffect(() => {
+    statusRef.current = onStatusChange;
+  });
 
   const inFlight = RESTORE_IN_FLIGHT.includes(restore?.status);
 
@@ -102,7 +108,7 @@ export function RestoreProgress({
         const next = response.data?.restore;
         if (!next) return;
         setRestore(next);
-        onStatusChange?.(next.status);
+        statusRef.current?.(next.status, next.id);
         // The site's files and database just changed underneath every other
         // panel screen; refresh so nothing keeps showing the old world.
         if (!RESTORE_IN_FLIGHT.includes(next.status)) router.refresh();
@@ -129,7 +135,7 @@ export function RestoreProgress({
       clearInterval(timer.current);
       clearTimeout(stop);
     };
-  }, [inFlight, id, queued, router, onStatusChange]);
+  }, [inFlight, id, queued, router]);
 
   if (!restore) return null;
 
@@ -213,7 +219,7 @@ export function RestoreProgress({
             // again, under a word that means the opposite.
             setWasUndo(true);
             setRestore(next);
-            onStatusChange?.(next.status);
+            onStatusChange?.(next.status, next.id);
           }}
         />
       </>

@@ -4605,7 +4605,8 @@
         "count": "{count, plural, one {# request} other {# requests}}",
         "empty": "Nothing has been caught yet. The list fills in as visitors arrive.",
         "unreadable": "This could not be read. Your settings are unaffected."
-      }
+      },
+      "detectUnknown": "Couldn't read what has been caught, so check the list below before you switch to blocking."
     },
     "clone": {
       "pageTitle": "Application Clone",
