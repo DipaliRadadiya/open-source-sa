@@ -235,7 +235,7 @@ it('queues provisioning when an application is created', function () {
 
 it('can retry a failed provision explicitly', function () {
     Queue::fake();
-    $app = makeApp(['status' => 'failed', 'failed_step' => 'reload', 'reference' => 'abc']);
+    $app = makeApp(['status' => 'failed', 'failed_step' => 'reload', 'failed_reason' => 'not_answering', 'reference' => 'abc']);
 
     $this->withHeaders(provisionHeaders())
         ->postJson("/api/applications/{$app->id}/provision")
@@ -244,7 +244,10 @@ it('can retry a failed provision explicitly', function () {
 
     Queue::assertPushed(ProvisionApplication::class);
     // The previous failure is cleared so the UI doesn't show a stale error.
-    expect($app->fresh()->failed_step)->toBeNull();
+    expect($app->fresh()->failed_step)->toBeNull()
+        // Measured on a real server: a retried n8n came up Active still
+        // saying "not answering".
+        ->and($app->fresh()->failed_reason)->toBeNull();
 });
 
 it('does not queue a second provision while one is already running', function () {

@@ -139,7 +139,9 @@ class ApplicationController extends Controller
 
         // Persist before dispatch. A fast worker can otherwise finish and mark
         // the site active before this request overwrites it as provisioning.
-        $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'reference' => null]);
+        // `failed_reason` too: it was added after this line was written, and a
+        // retried site that then succeeded went on showing the old reason.
+        $application->update(['status' => ApplicationStatus::Provisioning, 'failed_step' => null, 'failed_reason' => null, 'reference' => null]);
 
         ProvisionApplication::dispatch($application->id, Auth::id());
 
