@@ -13,6 +13,7 @@ use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * PHP versions, managed with apt.
@@ -439,6 +440,9 @@ class PhpRuntime implements Runtime
      */
     public function install(string $version, ?callable $onOutput = null): void
     {
+        // Read before apt runs: see keepDefault().
+        $previousDefault = $this->default();
+
         // 🔴 Before the existence checks, not after, and this is the whole
         // point of it being here.
         //
@@ -496,6 +500,40 @@ class PhpRuntime implements Runtime
                 $result->reference,
                 $this->classifier->classify('php', $result),
             );
+        }
+
+        $this->keepDefault($previousDefault, $version);
+    }
+
+    /**
+     * Put the server default back if installing another version moved it.
+     *
+     * Debian keeps the `php` group in auto mode, where the highest priority
+     * wins — and a newer PHP has a higher one. So installing 8.5 on a server
+     * defaulting to 8.4 silently made 8.5 the default (found on the nginx test
+     * server): every user's cron and shell `php`, and every site created
+     * afterwards, moved to a version nobody chose. Setting it back also pins
+     * the group to manual mode, so the next install cannot do it again.
+     *
+     * Never fatal: the install itself succeeded, and failing it over the
+     * default would report the opposite of what happened.
+     */
+    private function keepDefault(?string $previous, string $installed): void
+    {
+        if ($previous === null || $previous === $installed || $this->default() === $previous) {
+            return;
+        }
+
+        try {
+            $this->setDefault($previous);
+        } catch (Throwable $e) {
+            Log::channel('server-ops')->warning('php.default_not_restored', [
+                'feature' => 'runtime',
+                'op' => 'php_default_restore',
+                'version' => $previous,
+                'installed' => $installed,
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 

@@ -733,3 +733,50 @@ it('still reports the failure while the version is incomplete', function () {
 
     expect(collect(phpSettings()['versions'])->firstWhere('version', '8.3')['status'])->toBe('failed');
 });
+
+it('keeps the server default when installing a newer PHP', function () {
+    // Debian's `php` group is in auto mode and the newest version has the
+    // highest priority, so apt moved the default to 8.5 on install (nginx
+    // test server) — cron, shells and every new site with it.
+    $runs = new ArrayObject;
+    $state = new ArrayObject(['default' => '8.4']);
+    $phpDir = $this->phpDir;
+
+    Process::fake(function ($process) use ($runs, $state, $phpDir) {
+        $command = $process->command;
+        $runs[] = $command;
+
+        if (($command[0] ?? '') === 'update-alternatives' && in_array('--query', $command, true)) {
+            return Process::result(output: "Name: php\nStatus: auto\nValue: /usr/bin/php{$state['default']}\n");
+        }
+
+        if (($command[0] ?? '') === 'update-alternatives' && ($command[1] ?? '') === '--set' && ($command[2] ?? '') === 'php') {
+            $state['default'] = substr($command[3], strlen('/usr/bin/php'));
+        }
+
+        if (($command[0] ?? '') === 'apt-get' && ($command[1] ?? '') === 'install') {
+            File::makeDirectory("{$phpDir}/8.5/fpm", 0755, true, true);
+            $state['default'] = '8.5';
+        }
+
+        if (($command[0] ?? '') === 'apt-cache' && ($command[1] ?? '') === 'policy') {
+            return Process::result(output: collect(array_slice($command, 2))
+                ->map(fn ($package) => "{$package}:\n  Installed: (none)\n  Candidate: 1.0\n")->implode(''));
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    app(PhpRuntime::class)->install('8.5');
+
+    expect($state['default'])->toBe('8.4')
+        ->and(collect($runs)->contains(fn ($c) => $c === ['update-alternatives', '--set', 'php', '/usr/bin/php8.4']))->toBeTrue();
+});
+
+it('leaves the default alone when an install does not move it', function () {
+    $runs = fakePhp(default: '8.4');
+
+    app(PhpRuntime::class)->install('8.2');
+
+    expect(collect($runs)->contains(fn ($r) => ($r['command'][0] ?? '') === 'update-alternatives' && ($r['command'][1] ?? '') === '--set'))->toBeFalse();
+});
