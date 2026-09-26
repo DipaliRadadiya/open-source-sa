@@ -62,6 +62,12 @@ abstract class AbstractSqlEngineInstaller implements EngineInstaller
     /** The other SQL engine, which cannot coexist with this one. */
     abstract protected function conflictsWith(): string;
 
+    /** Public for EngineInstallerManager::unavailableReason(). */
+    public function conflictingEngine(): string
+    {
+        return $this->conflictsWith();
+    }
+
     public function installed(): bool
     {
         // dpkg-query rather than "does the binary exist": the client packages are
