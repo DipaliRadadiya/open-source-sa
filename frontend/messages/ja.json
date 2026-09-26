@@ -4960,7 +4960,9 @@
       "createAction": "Fail2ban を有効化",
       "removeBodyDirty": "jail と filter のファイルが削除され、fail2ban の監視が停止します。すでにブロックされているアドレスも解除されます — 加えて {count, plural, other {未保存の # ファイルも一緒に削除されます}}。",
       "tooLong": "設定が長すぎます。各ファイルは 65,535 文字未満である必要があります。",
-      "invalidConfig": "設定を保存できません。両方のファイルに内容が入力されているか確認してください。"
+      "invalidConfig": "設定を保存できません。両方のファイルに内容が入力されているか確認してください。",
+      "outputShowAll": "fail2ban の出力をすべて表示",
+      "outputErrorsOnly": "エラーのみ表示"
     },
     "staging": {
       "pageTitle": "ステージング環境",

@@ -4960,7 +4960,9 @@
       "createAction": "Fail2ban einschalten",
       "removeBodyDirty": "Die Jail- und Filterdateien werden gelöscht und fail2ban beobachtet diese Anwendung nicht mehr. Bereits gesperrte Adressen werden freigegeben — und {count, plural, one {die Datei, die Sie bearbeitet, aber nicht gespeichert haben, geht mit} other {die # Dateien, die Sie bearbeitet, aber nicht gespeichert haben, gehen mit}}.",
       "tooLong": "Diese Konfiguration ist zu lang. Jede Datei muss unter 65.535 Zeichen bleiben.",
-      "invalidConfig": "Diese Konfiguration kann nicht gespeichert werden. Prüfen Sie, ob beide Dateien gefüllt sind."
+      "invalidConfig": "Diese Konfiguration kann nicht gespeichert werden. Prüfen Sie, ob beide Dateien gefüllt sind.",
+      "outputShowAll": "Alles anzeigen, was fail2ban gemeldet hat",
+      "outputErrorsOnly": "Nur die Fehler anzeigen"
     },
     "staging": {
       "pageTitle": "Staging-Bereich",

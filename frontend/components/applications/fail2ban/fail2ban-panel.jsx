@@ -14,6 +14,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { fail2banConfigFormSchema, missingPlaceholders } from "@/lib/schemas/application-fail2ban";
 import { deleteApplicationFail2ban, saveApplicationFail2ban } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
@@ -40,6 +41,16 @@ const CodeEditor = dynamic(
   },
 );
 
+/*
+ * fail2ban opens every refusal with a warning about `allowipv6`, which has
+ * nothing to do with the file; the line that names the problem came second, in
+ * a scroll box. The ERROR lines alone, when there are any.
+ */
+function errorLines(output) {
+  const errors = output.split("\n").filter((line) => /\bERROR\b/.test(line));
+  return errors.length > 0 ? errors.join("\n") : output;
+}
+
 const FILES = [
   { key: "jail", icon: ScrollText, filename: "jail.conf" },
   { key: "filter", icon: FileCode2, filename: "filter.conf" },
@@ -62,9 +73,22 @@ const FILES = [
  * important thing this screen can render, and it is shown verbatim next to
  * the editor rather than in a toast that takes the reason away with it.
  */
-export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, canManage }) {
+export function Fail2banPanel({ appId, config: serverConfig, jailTemplate, filterTemplate, canManage }) {
   const t = useTranslations("applications.fail2ban");
   const router = useRouter();
+
+  /*
+   * What the last create or remove did, until the refreshed props agree:
+   * `null` = removed here, an object = created here. The toast lands ~1.7 s
+   * before `router.refresh()` does, and in between the setup form stayed live
+   * — a second click sent another save, and Discard showed "not set up" over
+   * a jail that was running.
+   */
+  const [override, setOverride] = useState(undefined);
+  if (override !== undefined && (override === null ? !serverConfig : Boolean(serverConfig))) {
+    setOverride(undefined);
+  }
+  const config = override === undefined ? serverConfig : override;
 
   const [editing, setEditing] = useState(Boolean(config));
   const [tab, setTab] = useState("jail");
@@ -74,6 +98,7 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
   // The config test's own words, kept until the next attempt. A rejected
   // regex is read, not glanced at.
   const [testError, setTestError] = useState(null);
+  const [fullOutput, setFullOutput] = useState(false);
 
   const saved = {
     jail: config?.jail_content ?? jailTemplate,
@@ -106,6 +131,7 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
   const changed = unsavedFiles > 0;
   const dirty = isSetup || changed;
   const empty = !draft.jail.trim() || !draft.filter.trim();
+  useWatchUnsaved("app-fail2ban", canManage && changed);
 
   // Warned about, not blocked: the backend fills these in when it writes the
   // files, but a config that names a second logpath outright is legitimate.
@@ -145,6 +171,9 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
       // The server took it, so this is the saved state from here on — whatever
       // it stored after trimming.
       setSavedBaseline({ ...draft });
+      if (!config) {
+        setOverride({ jail_name: null, jail_content: draft.jail, filter_content: draft.filter });
+      }
       toast.success(t("saved"));
       router.refresh();
     } catch (error) {
@@ -157,6 +186,7 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
         // that was just pressed, so a toast would say the same thing twice and
         // then take the half of it that matters away again.
         setTestError({ message: data.message ?? t("testFailed"), output: data.output ?? "" });
+        setFullOutput(false);
       } else {
         toast.error(apiMessage(error, t("saveFailed")));
       }
@@ -169,22 +199,30 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
     setRemoving(true);
     try {
       await deleteApplicationFail2ban(appId);
-      setConfirmRemove(false);
-      setTestError(null);
-      // `editing` was true because a config existed. Leaving it set drops the
-      // user into the setup form the moment the config disappears — still
-      // holding the text they just deleted. Back to the empty state, with the
-      // shipped templates ready if they change their mind.
-      setEditing(false);
-      setSavedBaseline(null);
-      setDraft({ jail: jailTemplate, filter: filterTemplate });
-      toast.success(t("removed"));
-      router.refresh();
+      removed();
     } catch (error) {
-      toast.error(apiMessage(error, t("removeFailed")));
+      // 422 is the API's "already disabled": removed from another tab. What
+      // the user asked for is true, so it is not a failure to report.
+      if (error.response?.status === 422) removed();
+      else toast.error(apiMessage(error, t("removeFailed")));
     } finally {
       setRemoving(false);
     }
+  }
+
+  function removed() {
+    setConfirmRemove(false);
+    setTestError(null);
+    // `editing` was true because a config existed. Leaving it set drops the
+    // user into the setup form the moment the config disappears — still
+    // holding the text they just deleted. Back to the empty state, with the
+    // shipped templates ready if they change their mind.
+    setEditing(false);
+    setSavedBaseline(null);
+    setDraft({ jail: jailTemplate, filter: filterTemplate });
+    setOverride(null);
+    toast.success(t("removed"));
+    router.refresh();
   }
 
   // Never set up, and not being set up right now: one thing to read, one
@@ -205,7 +243,9 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
               <Button className="mt-1" onClick={() => setEditing(true)}>
                 {t("empty.action")}
               </Button>
-            ) : null}
+            ) : (
+              <p className="mx-auto max-w-md text-xs text-muted-foreground">{t("noPermission")}</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -228,7 +268,9 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
               <ShieldOff className="size-4.5 text-muted-foreground" />
             )}
           </span>
-          <div className="min-w-0 flex-1 space-y-1">
+          {/* min-w-48, not min-w-0: beside the Remove button on a phone the
+              text shrank to one word per line instead of the button wrapping. */}
+          <div className="min-w-48 flex-1 space-y-1">
             <p className="flex flex-wrap items-center gap-2 font-semibold">
               {config ? t("state.on") : t("state.setup")}
               {config?.jail_name ? (
@@ -254,7 +296,9 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
               variant="destructive"
               className="shrink-0"
               onClick={() => setConfirmRemove(true)}
-              disabled={removing}
+              // Not during a save: both requests went out and whichever the
+              // server finished last decided whether protection was on.
+              disabled={removing || saving}
             >
               {removing ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -348,9 +392,22 @@ export function Fail2banPanel({ appId, config, jailTemplate, filterTemplate, can
               <div className="min-w-0 space-y-1.5">
                 <p className="text-sm font-medium text-destructive">{testError.message}</p>
                 {testError.output ? (
-                  <p className="max-h-40 overflow-auto whitespace-pre-wrap border-l-2 border-destructive/30 pl-3 font-mono text-xs leading-relaxed text-destructive/90">
-                    {testError.output}
-                  </p>
+                  <>
+                    <p className="max-h-40 overflow-auto whitespace-pre-wrap border-l-2 border-destructive/30 pl-3 font-mono text-xs leading-relaxed text-destructive/90">
+                      {fullOutput ? testError.output : errorLines(testError.output)}
+                    </p>
+                    {errorLines(testError.output) !== testError.output ? (
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-xs"
+                        onClick={() => setFullOutput((open) => !open)}
+                      >
+                        {fullOutput ? t("outputErrorsOnly") : t("outputShowAll")}
+                      </Button>
+                    ) : null}
+                  </>
                 ) : null}
               </div>
             </div>

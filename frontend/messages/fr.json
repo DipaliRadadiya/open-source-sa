@@ -4960,7 +4960,9 @@
       "createAction": "Activer Fail2ban",
       "removeBodyDirty": "Les fichiers jail et filter sont supprimés et fail2ban arrête de surveiller cette application. Toute adresse déjà bannie est libérée — et {count, plural, one {le fichier que vous avez modifié mais pas enregistré disparaît avec eux} other {les # fichiers que vous avez modifiés mais pas enregistrés disparaissent avec eux}}.",
       "tooLong": "Cette configuration est trop longue. Chaque fichier doit rester sous 65 535 caractères.",
-      "invalidConfig": "Cette configuration ne peut pas être enregistrée. Vérifiez que les deux fichiers sont remplis."
+      "invalidConfig": "Cette configuration ne peut pas être enregistrée. Vérifiez que les deux fichiers sont remplis.",
+      "outputShowAll": "Afficher tout ce que fail2ban a renvoyé",
+      "outputErrorsOnly": "Afficher uniquement les erreurs"
     },
     "staging": {
       "pageTitle": "Zone de préproduction",

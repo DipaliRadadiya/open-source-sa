@@ -4960,7 +4960,9 @@
       "createAction": "Activar Fail2ban",
       "removeBodyDirty": "Se eliminan los archivos de jail y filtro, y fail2ban deja de vigilar esta aplicación. Quien esté bloqueado quedará liberado, y {count, plural, one {el archivo que has editado sin guardar se perderá} other {los # archivos que has editado sin guardar se perderán}}.",
       "tooLong": "Esa configuración es demasiado larga. Cada archivo debe tener menos de 65.535 caracteres.",
-      "invalidConfig": "Esa configuración no se puede guardar. Comprueba que ambos archivos estén completos."
+      "invalidConfig": "Esa configuración no se puede guardar. Comprueba que ambos archivos estén completos.",
+      "outputShowAll": "Mostrar todo lo que dijo fail2ban",
+      "outputErrorsOnly": "Mostrar solo los errores"
     },
     "staging": {
       "pageTitle": "Área de pruebas",

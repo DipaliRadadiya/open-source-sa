@@ -136,6 +136,9 @@ export async function getApplicationFail2ban(id) {
     filterTemplate: result.data?.filter_template ?? "",
     failed: result.failed,
     status: result.status,
+    failure: result.failure,
+    message: result.message,
+    debug: result.debug,
   };
 }
 

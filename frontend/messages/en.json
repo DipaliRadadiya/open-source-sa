@@ -4960,7 +4960,9 @@
       "createAction": "Turn on Fail2ban",
       "removeBodyDirty": "The jail and filter files are deleted and fail2ban stops watching this application. Anyone already banned is released — and {count, plural, one {the file you have edited but not saved goes with them} other {the # files you have edited but not saved go with them}}.",
       "tooLong": "That config is too long. Each file has to stay under 65,535 characters.",
-      "invalidConfig": "That config cannot be saved. Check both files are filled in."
+      "invalidConfig": "That config cannot be saved. Check both files are filled in.",
+      "outputShowAll": "Show everything fail2ban said",
+      "outputErrorsOnly": "Show only the errors"
     },
     "staging": {
       "pageTitle": "Staging Area",
