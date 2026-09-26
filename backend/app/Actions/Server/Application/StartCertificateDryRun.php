@@ -6,6 +6,7 @@ use App\Enums\CertificateStatus;
 use App\Jobs\DryRunCertificate;
 use App\Models\Application;
 use App\Services\ActivityLogger;
+use App\Services\Panel\QueueWorker;
 use App\Services\Server\Certificates\CertificateDryRunStore;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -77,7 +78,8 @@ class StartCertificateDryRun
             'domain' => $application->domain,
         ]);
 
-        DryRunCertificate::dispatch($application->id, Auth::id());
+        DryRunCertificate::dispatch($application->id, Auth::id())
+            ->onQueue(app(QueueWorker::class)->priorityQueue());
 
         return $state;
     }

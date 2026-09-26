@@ -44,6 +44,7 @@ class UpdateScript
         'optimize',
         'frontend_build',
         'sync_privileges',
+        'configure_queue_worker',
         'restart_services',
         'maintenance_off',
         'health_check',
@@ -401,6 +402,15 @@ class UpdateScript
         # failure, and panel:doctor names the drift afterwards.
         note sync_privileges
         {$run}{$php} {$backend}/artisan panel:sudoers || echo "WARNING: sudoers not synced; run 'artisan panel:sudoers' as root"
+
+        # Servers installed before the priority queue run a bare queue:work,
+        # which reads `default` only. This adds `--queue=high,default` to the
+        # unit so certificates stop waiting behind every queued install. Only
+        # rewrites the unit and reloads systemd; the restart below applies it.
+        # Never fatal: jobs go to `high` only once the running worker reads it,
+        # so a unit left as it was loses nothing.
+        note configure_queue_worker
+        {$run}{$php} {$backend}/artisan panel:queue-worker || echo "WARNING: queue worker unit not updated; run 'artisan panel:queue-worker' as root"
 
         note restart_services
         # The checkout keeps the same backend path. A graceful reload can keep

@@ -9,6 +9,7 @@ use App\Jobs\IssueCertificate;
 use App\Models\Application;
 use App\Models\Certificate;
 use App\Services\ActivityLogger;
+use App\Services\Panel\QueueWorker;
 use App\Services\Server\Certificates\AcmeReachabilityCheck;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -91,7 +92,8 @@ class RequestCertificate
             'type' => $type->value,
         ]);
 
-        IssueCertificate::dispatch($certificate->id, Auth::id(), $previousCertName, $previousFiles);
+        IssueCertificate::dispatch($certificate->id, Auth::id(), $previousCertName, $previousFiles)
+            ->onQueue(app(QueueWorker::class)->priorityQueue());
 
         return $certificate->refresh();
     }

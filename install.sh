@@ -2921,11 +2921,12 @@ Type=simple
 User=${APP_USER}
 Group=${APP_USER}
 WorkingDirectory=${backend}
-# No --queue, so this consumes the default queue and nothing else. Jobs must
-# therefore not name a queue: one sent elsewhere is accepted, stored and
-# never run -- no error, no failed_jobs row, it simply never happens.
-# Backups shipped that way and never once executed on a real install.
-ExecStart=${PANEL_PHP_BIN} ${backend}/artisan queue:work --sleep=3 --tries=1 --max-time=3600
+# Reads `high` before `default`: still one job at a time, but a certificate
+# waits for the job that is running rather than for every job queued. These
+# are the ONLY queues drained: a job sent anywhere else is accepted, stored
+# and never run -- no error, no failed_jobs row. Backups shipped that way and
+# never once executed on a real install. Must match QueueWorker::QUEUES.
+ExecStart=${PANEL_PHP_BIN} ${backend}/artisan queue:work --queue=high,default --sleep=3 --tries=1 --max-time=3600
 Restart=always
 RestartSec=5
 # Longer than the longest job, so a stop during a 30-minute install waits
