@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Panel\PanelUpdateRunner;
 use App\Services\Panel\UpdateScript;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -16,6 +17,9 @@ beforeEach(function () {
 
     // The state dir must not be the real /var/lib path in tests.
     config()->set('panel_update.state_dir', storage_path('framework/testing/panel-update'));
+    // A state file left by an earlier run is read by reconcile() as the
+    // outcome of whichever row now has that id.
+    File::deleteDirectory(storage_path('framework/testing/panel-update'));
 
     Http::fake(['api.github.com/*' => Http::response(['tag_name' => 'v99.0.0'])]);
 });
