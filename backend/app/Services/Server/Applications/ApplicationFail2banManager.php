@@ -451,7 +451,16 @@ class ApplicationFail2banManager
     {
         $result = $this->serverOps->probe(['dpkg-query', '-S', $path], $context + ['op' => 'fail2ban_package_owner']);
 
-        return ! $result->answered || $result->ok;
+        if ($result->ok) {
+            return true;
+        }
+
+        // "Not owned" is exit 1 *with* a line on stderr — measured on Ubuntu
+        // 26.04 — so the generic `answered` (exit 1 and silent) never sees it,
+        // and reading that as "could not find out" made every file look
+        // package-owned. Anything else, sudo refusing included, stays unknown.
+        return ! ($result->exitCode() === 1
+            && str_contains($result->errorOutput(), 'no path found matching pattern'));
     }
 
     /**

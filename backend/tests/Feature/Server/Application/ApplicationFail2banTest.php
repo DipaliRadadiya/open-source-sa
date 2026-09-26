@@ -129,9 +129,14 @@ function fakeAppFail2ban(
             return Process::result(exitCode: 0);
         }
 
-        // `dpkg-query -S <path>`: 0 when the fail2ban package owns the file.
+        // `dpkg-query -S <path>`, answered the way the real one does: 0 when
+        // the package owns the file, otherwise exit 1 *and* a line on stderr.
+        // An earlier fake answered "not owned" silently, and passed code that
+        // read every real "not owned" as "could not find out".
         if (($args[0] ?? '') === 'dpkg-query') {
-            return Process::result(exitCode: in_array($args[2] ?? '', $packageOwned, true) ? 0 : 1);
+            return in_array($args[2] ?? '', $packageOwned, true)
+                ? Process::result(output: 'fail2ban: '.($args[2] ?? '')."\n")
+                : Process::result(errorOutput: 'dpkg-query: no path found matching pattern '.($args[2] ?? '')."\n", exitCode: 1);
         }
 
         if (($args[0] ?? '') === 'fail2ban-client') {
@@ -706,4 +711,37 @@ it('keeps a filter the fail2ban package owns when moving a colliding jail, and s
     expect(file_exists($this->filterD.'/sshd.conf'))->toBeTrue()
         ->and(file_exists($this->jailD.'/sshd.conf'))->toBeFalse()
         ->and($this->application->fresh()->fail2ban_jail_name)->toBe('panel-site-sshd');
+});
+
+it('treats a filter as package-owned when dpkg cannot be asked', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test', 'php', [
+        'fail2ban_jail_name' => 'shop',
+        'fail2ban_jail_content' => "[{name}]\nenabled = true\n",
+        'fail2ban_filter_content' => "[Definition]\nfailregex = ^<HOST>\n",
+    ]);
+    file_put_contents($this->filterD.'/shop.conf', "[Definition]\n");
+
+    fakeAppFail2ban();
+    // sudo refusing dpkg-query: exit 1 with a different line. Unknown is
+    // treated as owned — keeping a stray file costs nothing, deleting a real
+    // one stops fail2ban from starting.
+    Process::fake(function ($process) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'dpkg-query') {
+            return Process::result(errorOutput: "sudo: a password is required\n", exitCode: 1);
+        }
+
+        if (($args[0] ?? '') === 'rm') {
+            foreach (array_slice($args, 2) as $target) {
+                @unlink($target);
+            }
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->artisan('fail2ban:resync')->assertSuccessful();
+
+    expect(file_exists($this->filterD.'/shop.conf'))->toBeTrue();
 });
