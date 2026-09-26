@@ -285,7 +285,12 @@ describe('version validation', function () {
 
 describe('starting an update', function () {
     it('refuses when the panel is already on the newest version', function () {
-        Http::fake(['api.github.com/*' => Http::response(['tag_name' => 'v0.0.1'])]);
+        // Its own release URL. `beforeEach` already faked api.github.com with
+        // v99, and the first matching stub wins, so faking the same host again
+        // here changed nothing — the test passed only while the dev `.env`
+        // pointed PANEL_RELEASES_URL somewhere the fakes did not cover.
+        config(['panel_update.releases_url' => 'https://releases.test/latest']);
+        Http::fake(['releases.test/*' => Http::response(['tag_name' => 'v0.0.1'])]);
 
         $this->withHeaders(applyHeader())->postJson('/api/admin/panel-update')
             ->assertUnprocessable()->assertJsonValidationErrors('version');
