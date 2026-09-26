@@ -203,6 +203,31 @@ class CertificateFiles
      */
     public function remove(array $paths, int $applicationId): ServerOpsResult
     {
+        $files = $this->managedFiles($paths);
+
+        if ($files === []) {
+            return new ServerOpsResult(true, 'certificate-files-already-absent');
+        }
+
+        return $this->serverOps->run(
+            ['rm', '-f', '--', ...$files],
+            ['feature' => 'certificate', 'op' => 'delete_files', 'application' => $applicationId],
+        );
+    }
+
+    /**
+     * The filled paths, each confirmed to be a direct child of the private
+     * certificate directory. Aborts otherwise.
+     *
+     * Public so a caller can run the same check *before* it changes anything:
+     * refusing only at the `rm` would leave a site already taken off HTTPS
+     * with a row that fails the same way on every retry.
+     *
+     * @param  array<int, string|null>  $paths
+     * @return array<int, string>
+     */
+    public function managedFiles(array $paths): array
+    {
         $directory = rtrim((string) config('server.certificates.custom_dir'), '/');
         $files = array_values(array_unique(array_filter($paths, fn (?string $path): bool => filled($path))));
 
@@ -213,14 +238,7 @@ class CertificateFiles
             abort_unless(dirname($path) === $directory, 500);
         }
 
-        if ($files === []) {
-            return new ServerOpsResult(true, 'certificate-files-already-absent');
-        }
-
-        return $this->serverOps->run(
-            ['rm', '-f', '--', ...$files],
-            ['feature' => 'certificate', 'op' => 'delete_files', 'application' => $applicationId],
-        );
+        return $files;
     }
 
     /**

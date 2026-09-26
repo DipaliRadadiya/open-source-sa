@@ -38,6 +38,15 @@ class RemoveCertificate
         $previousStatus = $certificate->status;
         $previousUrl = $application->fresh(['certificate'])->url();
 
+        // The pair only. An uploaded certificate's chain is bundled into its
+        // `.crt`, so `chain_path` names nothing the panel wrote — and on a
+        // site that had Let's Encrypt first it still pointed into
+        // /etc/letsencrypt, which the directory guard rightly refused, after
+        // HTTPS was already off. Checked here, before anything changes.
+        $files = $type === CertificateType::LetsEncrypt
+            ? []
+            : $this->files->managedFiles([$certificate->certificate_path, $certificate->private_key_path]);
+
         try {
             // Change the application's own canonical URL first. `syncUrl()` is
             // not necessarily one operation: WordPress updates two options,
@@ -76,11 +85,7 @@ class RemoveCertificate
             CertificateType::LetsEncrypt => $domains === []
                 ? null
                 : $this->certbot->revoke($domains[0], $application->id),
-            CertificateType::Custom, CertificateType::SelfSigned => $this->files->remove([
-                $certificate->certificate_path,
-                $certificate->private_key_path,
-                $certificate->chain_path,
-            ], $application->id),
+            CertificateType::Custom, CertificateType::SelfSigned => $this->files->remove($files, $application->id),
         };
 
         if ($cleanup?->failed()) {

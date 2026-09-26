@@ -446,6 +446,70 @@ it('refuses a stored certificate path that escapes the private certificate direc
     Process::assertNotRan(fn ($process) => in_array('rm', $process->command, true));
 });
 
+it('does not carry a Let\'s Encrypt chain path over into an uploaded certificate', function () {
+    activeCertificate($this->application)
+        ->update(['chain_path' => '/etc/letsencrypt/live/shop.example.com/chain.pem']);
+
+    [$pem, $key] = generateKeyPair('shop.example.com');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+        ])
+        ->assertCreated();
+
+    expect($this->application->fresh()->certificate->chain_path)->toBeNull();
+});
+
+it('deletes an uploaded certificate whose row still names an old Let\'s Encrypt chain', function () {
+    // The state every site that went Let's Encrypt -> upload was left in before
+    // the upload cleared it. Deleting used to 500 with no message after HTTPS
+    // was already off, and every retry did the same.
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::Custom,
+        'status' => CertificateStatus::Active,
+        'domains' => ['shop.example.com'],
+        'certificate_path' => '/etc/ssl/sv-oss/shop.example.com.crt',
+        'private_key_path' => '/etc/ssl/sv-oss/shop.example.com.key',
+        'chain_path' => '/etc/letsencrypt/live/shop.example.com/chain.pem',
+    ]);
+
+    $this->actingAs($this->admin)
+        ->deleteJson("/api/applications/{$this->application->id}/certificate")
+        ->assertNoContent();
+
+    Process::assertRan(fn ($process) => in_array('rm', $process->command, true)
+        && in_array('/etc/ssl/sv-oss/shop.example.com.crt', $process->command, true));
+    Process::assertNotRan(fn ($process) => in_array('rm', $process->command, true)
+        && in_array('/etc/letsencrypt/live/shop.example.com/chain.pem', $process->command, true));
+
+    expect($certificate->fresh())->toBeNull();
+});
+
+it('refuses a corrupted certificate path before taking HTTPS off the site', function () {
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::Custom,
+        'status' => CertificateStatus::Active,
+        'domains' => ['shop.example.com'],
+        'certificate_path' => '/etc/ssl/sv-oss/../../passwd',
+        'private_key_path' => '/etc/ssl/sv-oss/shop.example.com.key',
+    ]);
+
+    $this->actingAs($this->admin)
+        ->deleteJson("/api/applications/{$this->application->id}/certificate")
+        ->assertStatus(500);
+
+    // Nothing changed: still active, still HTTPS, nothing removed.
+    expect($certificate->fresh()->status)->toBe(CertificateStatus::Active)
+        ->and($this->application->fresh()->url())->toBe('https://shop.example.com');
+
+    Process::assertNotRan(fn ($process) => in_array('rm', $process->command, true));
+});
+
 it('rolls a partial application URL downgrade back when synchronization fails', function () {
     $certificate = activeCertificate($this->application);
 

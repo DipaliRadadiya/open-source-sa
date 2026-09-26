@@ -83,6 +83,10 @@ class UploadCertificate
                     'domains' => $domains,
                     'certificate_path' => $paths['certificate'],
                     'private_key_path' => $paths['private_key'],
+                    // The chain is bundled into the `.crt` above. A path left
+                    // over from a previous Let's Encrypt certificate points
+                    // into a lineage this certificate has nothing to do with.
+                    'chain_path' => null,
                     'uploaded_private_key' => (string) $data['private_key'],
                     // Nothing can renew an uploaded certificate. Saying otherwise
                     // would be a promise the panel cannot keep.
