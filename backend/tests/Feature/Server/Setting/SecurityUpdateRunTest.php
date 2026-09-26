@@ -5,12 +5,15 @@ use App\Jobs\InstallSecurityUpdates;
 use App\Models\ActivityLog;
 use App\Models\SecurityUpdateRun;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use App\Services\Server\Settings\SecurityUpdateOutput;
+use App\Services\Server\Settings\SecurityUpdateRunner;
 use App\Services\Server\Settings\SecurityUpdateTracker;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Testing\TestResponse;
 
 /**
  * Installing the waiting security updates on demand.
@@ -50,7 +53,7 @@ function runHeaders(): array
     return ['Authorization' => 'Bearer '.test()->token];
 }
 
-function startRun(): \Illuminate\Testing\TestResponse
+function startRun(): TestResponse
 {
     return test()->withHeaders(runHeaders())->postJson('/api/settings/updates/run');
 }
@@ -134,9 +137,9 @@ it('records the packages it upgraded and that a reboot is now wanted', function 
 
     $run = app(SecurityUpdateTracker::class)->start($this->admin->id);
     (new InstallSecurityUpdates($run->getKey(), $this->admin->id))->handle(
-        app(\App\Services\Server\Settings\SecurityUpdateRunner::class),
+        app(SecurityUpdateRunner::class),
         app(SecurityUpdateTracker::class),
-        app(\App\Services\ActivityLogger::class),
+        app(ActivityLogger::class),
     );
 
     $run->refresh();
@@ -167,9 +170,9 @@ it('classifies a dpkg failure rather than calling it unknown', function () {
 
     $run = app(SecurityUpdateTracker::class)->start(null);
     (new InstallSecurityUpdates($run->getKey()))->handle(
-        app(\App\Services\Server\Settings\SecurityUpdateRunner::class),
+        app(SecurityUpdateRunner::class),
         app(SecurityUpdateTracker::class),
-        app(\App\Services\ActivityLogger::class),
+        app(ActivityLogger::class),
     );
 
     $run->refresh();
@@ -203,9 +206,9 @@ it('says apt was busy rather than blaming the upgrade', function () {
 
     $run = app(SecurityUpdateTracker::class)->start(null);
     (new InstallSecurityUpdates($run->getKey()))->handle(
-        app(\App\Services\Server\Settings\SecurityUpdateRunner::class),
+        app(SecurityUpdateRunner::class),
         app(SecurityUpdateTracker::class),
-        app(\App\Services\ActivityLogger::class),
+        app(ActivityLogger::class),
     );
 
     // apt's own timer running the very thing being asked for is the common
@@ -303,9 +306,9 @@ it('runs unattended-upgrades own binary, not apt-get upgrade', function () {
 
     $run = app(SecurityUpdateTracker::class)->start(null);
     (new InstallSecurityUpdates($run->getKey()))->handle(
-        app(\App\Services\Server\Settings\SecurityUpdateRunner::class),
+        app(SecurityUpdateRunner::class),
         app(SecurityUpdateTracker::class),
-        app(\App\Services\ActivityLogger::class),
+        app(ActivityLogger::class),
     );
 
     $invoked = collect($runs)->first(fn ($call) => in_array($binary, $call['command'], true));
@@ -360,4 +363,28 @@ it('reports no package count when the run did not say', function () {
     // Null, not zero: "it did not report" and "it upgraded nothing" are
     // different answers and only the second is a claim.
     expect($output->packagesUpgraded())->toBeNull();
+});
+
+describe('counting the packages of a real-sized run', function () {
+    // The line comes near the start and the buffer keeps the last 8 KB, so a
+    // 109-package run on the Apache test server reported null.
+    it('still counts them after the line has scrolled out of the buffer', function () {
+        $output = new SecurityUpdateOutput;
+        $output->push("Packages that will be upgraded: curl libc6 openssl\n");
+
+        for ($i = 0; $i < 400; $i++) {
+            $output->push("Setting up package-{$i} (1.0-{$i}) ...\n");
+        }
+
+        expect($output->text())->not->toContain('Packages that will be upgraded')
+            ->and($output->packagesUpgraded())->toBe(3);
+    });
+
+    it('waits for the whole line when a chunk ends inside the list', function () {
+        $output = new SecurityUpdateOutput;
+        $output->push('Packages that will be upgraded: curl lib');
+        $output->push("c6 openssl zlib1g\nSetting up curl ...\n");
+
+        expect($output->packagesUpgraded())->toBe(4);
+    });
 });
