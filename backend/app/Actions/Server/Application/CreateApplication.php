@@ -99,7 +99,13 @@ class CreateApplication
                     'system_user_id' => $data['system_user_id'],
                     'name' => $data['name'],
                     'domain' => $data['domain'],
-                    'php_version' => $data['php_version'] ?? null,
+                    // A blank version is the server default, resolved and
+                    // stored now. Left blank it was resolved again at every
+                    // render: the API had no version to show, and a change to
+                    // the default moved the site to another PHP unasked.
+                    'php_version' => $servingProfile === 'php'
+                        ? (($data['php_version'] ?? null) ?: ((string) config('server.default_php_version') ?: null))
+                        : ($data['php_version'] ?? null),
                     'node_version' => $data['node_version'] ?? null,
                     // Allocated when the app needs a process and the user did not pick
                     // one. A port the panel chose is checked against both the database

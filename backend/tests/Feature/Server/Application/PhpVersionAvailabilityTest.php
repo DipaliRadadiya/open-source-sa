@@ -120,6 +120,52 @@ it('still accepts a site that names no version at all', function () {
     createPhpVersionSite(['domain' => 'plain.example.com'])->assertSuccessful();
 });
 
+it('stores the server default for a PHP site that names no version', function () {
+    config(['server.default_php_version' => '8.3']);
+
+    createPhpVersionSite(['domain' => 'plain.example.com'])
+        ->assertSuccessful()
+        ->assertJsonPath('application.php_version', '8.3');
+
+    // Stored, not resolved at every render: the list showed "-" for it, and a
+    // later change to the default would have moved the site to another PHP.
+    config(['server.default_php_version' => '8.4']);
+
+    expect(Application::query()->value('php_version'))->toBe('8.3');
+});
+
+it('stores no PHP version for a site that does not run PHP', function () {
+    config(['server.default_php_version' => '8.3']);
+
+    createPhpVersionSite(['domain' => 'static.example.com', 'site_type' => 'static'])->assertSuccessful();
+
+    expect(Application::query()->value('php_version'))->toBeNull();
+});
+
+it('backfills the version a blank PHP site already runs, and only on PHP sites', function () {
+    config(['server.default_php_version' => '8.3']);
+    $make = fn (string $slug, string $profile, ?string $version) => Application::forceCreate([
+        'system_user_id' => $this->su->id, 'name' => $slug, 'slug' => $slug,
+        'domain' => "{$slug}.example.com", 'site_type' => $profile === 'php' ? 'wordpress' : 'static',
+        'serving_profile' => $profile, 'php_version' => $version, 'web_root' => '/', 'status' => 'active',
+    ]);
+
+    $blank = $make('blank', 'php', null);
+    $chosen = $make('chosen', 'php', '8.2');
+    $static = $make('flat', 'static', null);
+
+    $migration = require database_path('migrations/2026_09_26_110000_backfill_php_version_on_php_applications.php');
+    $migration->up();
+
+    expect($blank->fresh()->php_version)->toBe('8.3')
+        ->and($chosen->fresh()->php_version)->toBe('8.2')
+        ->and($static->fresh()->php_version)->toBeNull();
+
+    // A rollback keeps the value: it is what the blank version resolved to.
+    $migration->down();
+    expect($blank->fresh()->php_version)->toBe('8.3');
+});
+
 it('does not refuse anything when no versions could be detected', function () {
     // An empty list is also what an unreadable stack directory looks like.
     // Turning that into "no site may be created" would make a directory the
