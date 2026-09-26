@@ -348,6 +348,38 @@ it('updates the shop URL and the SSL flags when a certificate is issued', functi
         ->and($sync['command'])->not->toContain('shop.example.com');
 });
 
+it('counts matched rows, so re-applying the address a shop already has succeeds', function () {
+    $runs = new ArrayObject;
+
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+
+        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
+    });
+
+    app(PrestaShopInstaller::class)
+        ->syncUrl($this->application->fresh(['systemUser']), 'https://shop.example.com/');
+
+    $command = collect($runs)->first(fn ($command) => in_array('-r', $command, true));
+    $program = $command[array_search('-r', $command, true) + 1];
+
+    // MySQL counts changed rows by default. sites:resync re-applies the same
+    // address on every deploy, got 0, and failed a correct shop every time —
+    // measured against a real MariaDB before and after this change.
+    expect($program)->toContain('Pdo\\\\Mysql::ATTR_FOUND_ROWS')
+        ->and($program)->toContain('PDO::MYSQL_ATTR_FOUND_ROWS')
+        ->and($program)->toContain('$foundRows => true')
+        // Still refuses a shop whose rows were not found at all.
+        ->and($program)->toContain('rowCount() === 0');
+
+    $file = tempnam(sys_get_temp_dir(), 'ps-sync');
+    file_put_contents($file, "<?php\n".$program);
+    exec('php -l '.escapeshellarg($file).' 2>&1', $output, $exit);
+    unlink($file);
+
+    expect($exit)->toBe(0);
+});
+
 it('turns the SSL flags back off when the certificate goes away', function () {
     // RemoveCertificate calls syncUrl with the http:// URL. A shop left
     // claiming SSL after its certificate is gone redirects to an address that

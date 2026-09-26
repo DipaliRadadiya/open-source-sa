@@ -328,9 +328,19 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             [$host, $port] = explode(':', $host);
         }
         $dsn = 'mysql:host='.$host.($port !== '' ? ';port='.$port : '').';dbname='.$p['database_name'];
+        // Count rows matched, not rows changed. MySQL's default counts only
+        // rows whose value moved, so re-applying the address a shop already
+        // has — every sites:resync does — read as "nothing updated" and failed
+        // a correct shop on every deploy. The new name where PHP has it: the
+        // old constant is deprecated from 8.5, and a notice here lands in the
+        // server-ops log as though something went wrong.
+        $foundRows = defined('Pdo\\Mysql::ATTR_FOUND_ROWS')
+            ? constant('Pdo\\Mysql::ATTR_FOUND_ROWS')
+            : PDO::MYSQL_ATTR_FOUND_ROWS;
         try {
             $pdo = new PDO($dsn, $p['database_user'], (string) ($p['database_password'] ?? ''), [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                $foundRows => true,
             ]);
         } catch (Throwable $e) {
             fwrite(STDERR, "PrestaShop database is unreachable: ".$e->getMessage()."\n");
@@ -360,8 +370,8 @@ class PrestaShopInstaller extends AbstractPhpInstaller
             fwrite(STDERR, "PrestaShop tables could not be updated: ".$e->getMessage()."\n");
             exit(1);
         }
-        // A shop whose rows did not move is a shop this did nothing for, and
-        // silence would read as success to every caller above.
+        // A shop whose rows were not even found is a shop this did nothing
+        // for, and silence would read as success to every caller above.
         if ($shop->rowCount() === 0 && $conf->rowCount() === 0) {
             fwrite(STDERR, "PrestaShop shop_url and configuration were not updated.\n");
             exit(1);
