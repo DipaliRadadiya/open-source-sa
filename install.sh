@@ -2862,11 +2862,23 @@ CONF
         die "the generated Apache config failed its own test — see $LOG_FILE"
     fi
 
+    # Ubuntu 26.04's apache2.service mounts /home read-only for Apache
+    # (ProtectHome=read-only). Every site the panel creates lives in its owner's
+    # home and logs to <site>/logs, which the root master opens at start -- so
+    # the first site's reload failed with "Read-only file system: could not
+    # open error log file" and took Apache down, the panel included. Found on
+    # the 26.04 test server. ReadWritePaths=/home does not lift it (measured);
+    # ProtectHome=no does. The panel's ApacheDriver writes the same drop-in on
+    # servers installed before this.
+    mkdir -p /etc/systemd/system/apache2.service.d
+    printf '[Service]\nProtectHome=no\n' >/etc/systemd/system/apache2.service.d/${PANEL_SLUG}-site-logs.conf
+    run systemctl daemon-reload
+
     run systemctl enable apache2
-    # reload-or-restart, not reload: see the nginx path. A stopped Apache
-    # cannot be reloaded, and the installer's own port-80 advice is what
-    # stops it.
-    run systemctl reload-or-restart apache2
+    # restart, not reload: a running Apache keeps the sandbox it started with,
+    # and a stopped one (the installer's own port-80 advice stops it) cannot be
+    # reloaded at all.
+    run systemctl restart apache2
     ok "Apache serving ${PANEL_HOST}"
 }
 
