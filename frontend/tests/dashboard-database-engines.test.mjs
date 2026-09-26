@@ -32,7 +32,10 @@ test("the dashboard never publishes the `mysql` key from /server/facts", () => {
    * the right name on the wrong number, which is worse than the bug: a wrong
    * version that looks plausible is one nobody checks.
    */
-  assert.match(strip(card), /name !== "mysql"/, "the key has to be filtered out");
+  // Now one of the engine names filtered out of the runtimes row: the
+  // databases API lists every engine once, with its real version.
+  assert.match(strip(card), /DATABASE_ENGINES = new Set\(\[[^\]]*"mysql"/, "the key has to be filtered out");
+  assert.match(strip(card), /!DATABASE_ENGINES\.has\(name\)/);
 });
 
 test("the engines come from the databases API, not from the facts probe", () => {

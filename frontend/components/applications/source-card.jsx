@@ -13,6 +13,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { RelinkGitAccountDialog } from "@/components/applications/relink-git-account-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
@@ -22,7 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  * rather than behind the ⋯ menu. A failed redeploy leaves the old code serving,
  * so the card reports the last successful deploy, not "broken".
  */
-export function SourceCard({ application, gitAccounts = [], canDeploy = false, className }) {
+export function SourceCard({ application, gitAccounts = [], canDeploy = false, canSeeDeployment = true, deployInFlight = false, className }) {
   /*
    * Which provider this site deploys from.
    *
@@ -103,17 +104,26 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
             the eye already is after the title. */}
         <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
           {canDeploy ? (
-            <Button size="sm" onClick={deploy} disabled={deploying}>
-              {deploying ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
-              {deploying ? t("deploying") : deployFailed ? t("redeploy") : t("deploy")}
+            <Button
+              size="sm"
+              onClick={deploy}
+              disabled={deploying || deployInFlight}
+              disabledReason={!deploying && deployInFlight ? t("inFlightReason") : null}
+            >
+              {deploying || deployInFlight ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
+              {deploying || deployInFlight ? t("deploying") : deployFailed ? t("redeploy") : t("deploy")}
             </Button>
           ) : null}
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/applications/${application.id}/deployment`}>
-              <Settings2 className="size-4" />
-              {t("manage")}
-            </Link>
-          </Button>
+          {/* Only for someone who can open it — for anyone else it was a link
+              to a no-access page. */}
+          {canSeeDeployment ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/applications/${application.id}/deployment`}>
+                <Settings2 className="size-4" />
+                {t("manage")}
+              </Link>
+            </Button>
+          ) : null}
         </div>
       </CardHeader>
       {/* gap rather than space-y: space-y sets margin-top on children via a
@@ -123,6 +133,15 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
           foot, which read as a rendering fault on any site with little to
           report. */}
       <CardContent className="flex flex-1 flex-col gap-3">
+        {/* Re-reads the page while a deploy runs, so the button comes back and
+            "Last deployed" moves on without a reload. */}
+        {deployInFlight ? <AutoRefresh intervalMs={5000} stopAfterMs={900000} /> : null}
+        {deployInFlight ? (
+          <p role="status" className="flex items-start gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" aria-hidden />
+            {t("inFlightNote")}
+          </p>
+        ) : null}
         {/* The account this site deployed with was deleted. It keeps its
             repository and branch and has no credential, so it looks like a
             public-repository site right up until the next deploy fails. Said

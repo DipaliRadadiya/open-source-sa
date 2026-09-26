@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { PauseCircle } from "lucide-react";
@@ -30,7 +30,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  */
 export function PauseApplicationDialog({ application, open, onOpenChange }) {
   const t = useTranslations("applications.pause");
-  const router = useRouter();
+  const { refreshThen } = useRefresh();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
 
@@ -46,15 +46,18 @@ export function PauseApplicationDialog({ application, open, onOpenChange }) {
     setError(null);
     try {
       await disableApplication(application.id);
-      toast.success(t("paused", { name: application.name }));
-      onOpenChange(false);
-      router.refresh();
+      // Said once the refreshed page is on screen: the toast used to arrive
+      // 2.5 s before the badge stopped saying "Running".
+      refreshThen(() => {
+        toast.success(t("paused", { name: application.name }));
+        onOpenChange(false);
+        setPending(false);
+      });
     } catch (requestError) {
       // Stays open, carrying the reason. A 422 here usually means somebody
       // already paused it in another tab, and the API's own sentence says so
       // better than anything this component could guess.
       setError(apiMessage(requestError, t("failed")));
-    } finally {
       setPending(false);
     }
   }

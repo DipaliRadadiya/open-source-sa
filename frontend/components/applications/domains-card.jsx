@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Globe2, ShieldCheck, ShieldOff } from "lucide-react";
+import { ArrowRight, Globe2, Loader2, ShieldCheck, ShieldOff } from "lucide-react";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +34,11 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
   const t = useTranslations("applications.domains");
 
   const secure = certificate?.status === "active";
-  const promptCertificate = !failed && !secure;
+  // A new application gets its certificate automatically a few seconds after
+  // it goes live. Until then this said "No certificate" and offered Set up SSL
+  // for something already on its way.
+  const issuing = certificate?.status === "pending" || certificate?.status === "issuing";
+  const promptCertificate = !failed && !secure && !issuing;
 
   // Primary first, then aliases, then redirects — the order somebody reads them
   // in, not the order the API happened to return.
@@ -47,6 +52,9 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
 
   return (
     <Card>
+      {/* Re-reads until the certificate is issued or fails, so the card and the
+          attention strip move on without a reload. */}
+      {issuing ? <AutoRefresh intervalMs={5000} stopAfterMs={300000} /> : null}
       <CardHeader className="gap-1.5">
         <div className="min-w-0 space-y-1">
           <CardTitle as="h2" className="flex items-center gap-2 text-lg font-semibold">
@@ -55,7 +63,12 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
           </CardTitle>
           <CardDescription>{t("description")}</CardDescription>
         </div>
-        {failed ? null : secure ? (
+        {failed ? null : issuing ? (
+          <Badge variant="muted" className="w-fit gap-1.5 font-normal">
+            <Loader2 className="size-3 animate-spin" />
+            {t("ssl.issuing")}
+          </Badge>
+        ) : secure ? (
           <Badge
             variant={certificate.expiring_soon ? "warning" : "success"}
             className="w-fit gap-1.5 font-normal"
@@ -92,6 +105,9 @@ export function DomainsCard({ application, domains = [], certificate = null, fai
             ))}
             {extra > 0 ? (
               <li className="px-6 py-2.5 text-xs text-muted-foreground">{t("more", { count: extra })}</li>
+            ) : null}
+            {issuing ? (
+              <li className="px-6 py-2.5 text-xs text-muted-foreground">{t("ssl.issuingBody")}</li>
             ) : null}
             {secure && certificate.expires_at_human ? (
               <li className="px-6 py-2.5 text-xs text-muted-foreground">

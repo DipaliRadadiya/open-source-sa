@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
 import { toast } from "sonner";
@@ -82,8 +83,13 @@ export function ApplicationRowActions({
 }) {
   const t = useTranslations("applications");
   const router = useRouter();
+  const { refreshThen } = useRefresh();
   const [retrying, setRetrying] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Set by the items that open a dialog. Only then is focus kept off the ⋯
+  // button as the menu closes (the dialog takes it); an Escape or a click
+  // away used to drop keyboard focus at the top of the page.
+  const openingDialog = useRef(false);
   /*
    * One administrator signs straight in; none or several opens the picker.
    * The hook owns that decision and the tab, because the row menu and the site
@@ -141,13 +147,15 @@ export function ApplicationRowActions({
     setResuming(true);
     try {
       await enableApplication(application.id);
-      toast.success(t("pause.resumed", { name: application.name }));
-      router.refresh();
+      // After the refresh lands, so the badge and the toast agree.
+      refreshThen(() => {
+        toast.success(t("pause.resumed", { name: application.name }));
+        setResuming(false);
+      });
     } catch (error) {
       // Includes the 422 for a site somebody already resumed elsewhere; the
       // API's sentence says that better than a generic failure would.
       toast.error(apiMessage(error, t("pause.resumeFailed")));
-    } finally {
       setResuming(false);
     }
   }
@@ -177,7 +185,15 @@ export function ApplicationRowActions({
             <span className="sr-only">{t("actions.label")}</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52" onCloseAutoFocus={(e) => e.preventDefault()}>
+        <DropdownMenuContent
+          align="end"
+          className="w-52"
+          onCloseAutoFocus={(e) => {
+            if (!openingDialog.current) return;
+            openingDialog.current = false;
+            e.preventDefault();
+          }}
+        >
           {showNavigation ? (
             <>
               <DropdownMenuItem asChild>
@@ -232,6 +248,7 @@ export function ApplicationRowActions({
                 event.preventDefault();
                 setMenuOpen(false);
                 magicLogin.start();
+                openingDialog.current = true;
               }}
             >
               <KeyRound className="size-4" />
@@ -257,7 +274,7 @@ export function ApplicationRowActions({
                   here — there is no other editable field and no settings
                   screen to send anyone to. */}
               {canManage ? (
-                <DropdownMenuItem onSelect={() => setWebRootOpen(true)}>
+                <DropdownMenuItem onSelect={() => { openingDialog.current = true; setWebRootOpen(true); }}>
                   <Pencil className="size-4" />
                   {t("webRoot.title")}
                 </DropdownMenuItem>
@@ -314,12 +331,12 @@ export function ApplicationRowActions({
                   {resuming ? t("pause.resuming") : t("pause.resume")}
                 </DropdownMenuItem>
               ) : pauseAction === "pause" ? (
-                <DropdownMenuItem onSelect={() => setPauseOpen(true)}>
+                <DropdownMenuItem onSelect={() => { openingDialog.current = true; setPauseOpen(true); }}>
                   <PauseCircle className="size-4" />
                   {t("pause.action")}
                 </DropdownMenuItem>
               ) : null}
-              <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+              <DropdownMenuItem variant="destructive" onSelect={() => { openingDialog.current = true; setDeleteOpen(true); }}>
                 <Trash2 className="size-4" />
                 {t("actions.delete")}
               </DropdownMenuItem>

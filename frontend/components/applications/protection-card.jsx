@@ -104,7 +104,7 @@ export async function ProtectionCard({ application, items }) {
                   <Icon
                     className={`size-4 shrink-0 ${item.on ? "text-success" : "text-warning"}`}
                   />
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.label}</span>
+                  <span className="min-w-0 flex-1 text-sm font-medium break-words">{item.label}</span>
                   {/* The state in words. A coloured dot alone makes the reader
                       guess which colour means protected. */}
                   <span

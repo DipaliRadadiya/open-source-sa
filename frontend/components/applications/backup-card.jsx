@@ -49,6 +49,7 @@ export function BackupCard({
   target,
   backups = [],
   failed = false,
+  noneKept = false,
   canManage,
   href,
 }) {
@@ -161,7 +162,9 @@ export function BackupCard({
               <dt className="flex-1 font-medium">{t("lastRun")}</dt>
               {/* Never blank: an empty cell reads as a rendering fault, and
                   "never" is a real and important answer here. */}
-              <dd className="text-right text-muted-foreground">{target?.last_run_at_human ?? t("never")}</dd>
+              <dd className="text-right text-muted-foreground">
+                {!target?.last_run_at_human ? t("never") : noneKept ? t("noneKept") : target.last_run_at_human}
+              </dd>
             </div>
             {target?.next_run_at_human && state === "protected" ? (
               <div className="flex items-center gap-3 px-6 py-3">
@@ -217,9 +220,11 @@ export function BackupCard({
           ) : null}
           {/* Setting one up is the point of the card when there is no target;
               a ghost link for the only thing worth doing here buries it. */}
+          {/* A failed read is not "nothing set up" — offering Set up then was
+              a claim the card could not make. */}
           <Button asChild variant={!failed && !target ? "default" : "outline"} size="sm">
             <Link href={href} prefetch={false}>
-              {target ? t("manage") : t("setUp")}
+              {target || failed ? t("manage") : t("setUp")}
               <ArrowRight className="size-4" />
             </Link>
           </Button>

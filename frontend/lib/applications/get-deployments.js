@@ -1,5 +1,5 @@
 import { read } from "@/lib/api/read";
-import { deploymentsResponseSchema } from "@/lib/schemas/deploy-history";
+import { deploymentsResponseSchema, latestDeploymentResponseSchema } from "@/lib/schemas/deploy-history";
 
 /**
  * One site's deploy history and its settings.
@@ -17,4 +17,10 @@ export async function getDeployments(applicationId) {
     status: result.status,
     failure: result.failure, message: result.message, debug: result.debug,
   };
+}
+
+/** The newest deploy, to tell whether one is running right now. */
+export async function getLatestDeployment(applicationId) {
+  const result = await read(`/applications/${applicationId}/deployments/latest`, latestDeploymentResponseSchema);
+  return { latest: result.data?.latest ?? null, failed: result.failed };
 }

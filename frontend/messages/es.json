@@ -3237,7 +3237,9 @@
       "description": "De dónde viene el código y cómo se publica.",
       "failedAtStep": "El último despliegue falló en {step}.",
       "incomplete": "El último despliegue falló después de colocar el código nuevo, así que ese código está activo pero no desplegado del todo. Corrige el problema y vuelve a desplegar.",
-      "notFullyDeployed": "Despliegue incompleto"
+      "notFullyDeployed": "Despliegue incompleto",
+      "inFlightReason": "Ya hay un despliegue en curso.",
+      "inFlightNote": "Hay un despliegue en curso. Esta tarjeta se actualiza cuando termine."
     },
     "gitAccount": "Cuenta de Git",
     "gitAccountPlaceholder": "Elige una cuenta conectada",
@@ -3521,7 +3523,13 @@
       "stopped": "El proceso se ha detenido.",
       "restarted": "El proceso se ha reiniciado.",
       "failed": "No pudimos cambiar el proceso.",
-      "deployToStart": "Esta aplicación se inicia tras su primer despliegue correcto."
+      "deployToStart": "Esta aplicación se inicia tras su primer despliegue correcto.",
+      "alreadyRunning": "El proceso ya está en marcha.",
+      "notRunning": "El proceso no está en marcha.",
+      "stopTitle": "¿Detener {name}?",
+      "stopBody": "La aplicación queda fuera de servicio hasta que se vuelva a iniciar, y mientras tanto los visitantes ven una página de error.",
+      "stopping": "Deteniendo…",
+      "cancel": "Cancelar"
     },
     "domains": {
       "title": "Dominios y SSL",
@@ -5130,7 +5138,8 @@
       "runningNote": "Se está haciendo una copia de esta aplicación ahora. Esta tarjeta se actualiza sola.",
       "queuedNote": "Copia en cola. Empieza en cuanto el servidor la recoja.",
       "queuedStalled": "Esta copia aún no ha empezado. Si sigue así, puede que el proceso en segundo plano no esté funcionando.",
-      "alreadyRunning": "Ya se está haciendo una copia de esta aplicación."
+      "alreadyRunning": "Ya se está haciendo una copia de esta aplicación.",
+      "noneKept": "No se conserva ninguna"
     },
     "attention": {
       "title": "Requiere atención",
@@ -5150,7 +5159,8 @@
         "disk": "Liberar espacio"
       },
       "folderUnlocked": "Carpeta del sitio sin bloquear",
-      "reviewFolder": "Bloquearla"
+      "reviewFolder": "Bloquearla",
+      "checksFailed": "No se pudieron ejecutar las comprobaciones de esta aplicación, así que puede que falten problemas en esta lista."
     },
     "filters": {
       "allStatuses": "Todos los estados",

@@ -3237,7 +3237,9 @@
       "description": "D'où vient le code et comment il est livré.",
       "failedAtStep": "Le dernier déploiement a échoué à l'étape {step}.",
       "incomplete": "Le dernier déploiement a échoué après la mise en place du nouveau code : ce code est en ligne, mais pas entièrement déployé. Corrigez le problème et déployez à nouveau.",
-      "notFullyDeployed": "Déploiement incomplet"
+      "notFullyDeployed": "Déploiement incomplet",
+      "inFlightReason": "Un déploiement est déjà en cours.",
+      "inFlightNote": "Un déploiement est en cours. Cette carte se met à jour à la fin."
     },
     "gitAccount": "Compte Git",
     "gitAccountPlaceholder": "Choisir un compte connecté",
@@ -3521,7 +3523,13 @@
       "stopped": "Le processus a été arrêté.",
       "restarted": "Le processus a été redémarré.",
       "failed": "Nous n'avons pas pu modifier le processus.",
-      "deployToStart": "Cette application démarre après son premier déploiement réussi."
+      "deployToStart": "Cette application démarre après son premier déploiement réussi.",
+      "alreadyRunning": "Le processus est déjà en cours d'exécution.",
+      "notRunning": "Le processus n'est pas en cours d'exécution.",
+      "stopTitle": "Arrêter {name} ?",
+      "stopBody": "L'application est hors ligne jusqu'à son redémarrage, et les visiteurs voient une page d'erreur en attendant.",
+      "stopping": "Arrêt…",
+      "cancel": "Annuler"
     },
     "domains": {
       "title": "Domaines et SSL",
@@ -5130,7 +5138,8 @@
       "runningNote": "Une sauvegarde de cette application est en cours. Cette carte se met à jour toute seule.",
       "queuedNote": "Sauvegarde en file. Elle démarre dès que le serveur la prend.",
       "queuedStalled": "Cette sauvegarde n'a pas encore démarré. Si cela persiste, le worker en arrière-plan ne tourne peut-être pas.",
-      "alreadyRunning": "Une sauvegarde de cette application est déjà en cours."
+      "alreadyRunning": "Une sauvegarde de cette application est déjà en cours.",
+      "noneKept": "Aucune conservée"
     },
     "attention": {
       "title": "À vérifier",
@@ -5150,7 +5159,8 @@
         "disk": "Libérer de l'espace"
       },
       "folderUnlocked": "Dossier du site non verrouillé",
-      "reviewFolder": "Le verrouiller"
+      "reviewFolder": "Le verrouiller",
+      "checksFailed": "Les vérifications de cette application n'ont pas pu s'exécuter : des problèmes peuvent manquer à cette liste."
     },
     "filters": {
       "allStatuses": "Tous les statuts",

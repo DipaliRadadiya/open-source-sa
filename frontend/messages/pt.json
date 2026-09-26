@@ -3237,7 +3237,9 @@
       "description": "De onde vem o código e como ele é publicado.",
       "failedAtStep": "O último deploy falhou em {step}.",
       "incomplete": "O último deploy falhou depois que o código novo foi colocado, então esse código está ativo, mas não totalmente implantado. Corrija o problema e faça o deploy novamente.",
-      "notFullyDeployed": "Deploy incompleto"
+      "notFullyDeployed": "Deploy incompleto",
+      "inFlightReason": "Já há um deploy em andamento.",
+      "inFlightNote": "Um deploy está em andamento. Este cartão se atualiza quando terminar."
     },
     "gitAccount": "Conta Git",
     "gitAccountPlaceholder": "Escolha uma conta conectada",
@@ -3521,7 +3523,13 @@
       "stopped": "O processo foi parado.",
       "restarted": "O processo foi reiniciado.",
       "failed": "Não foi possível alterar o processo.",
-      "deployToStart": "Esta aplicação inicia após o primeiro deploy bem-sucedido."
+      "deployToStart": "Esta aplicação inicia após o primeiro deploy bem-sucedido.",
+      "alreadyRunning": "O processo já está em execução.",
+      "notRunning": "O processo não está em execução.",
+      "stopTitle": "Parar {name}?",
+      "stopBody": "A aplicação fica offline até ser iniciada de novo, e enquanto isso os visitantes veem uma página de erro.",
+      "stopping": "Parando…",
+      "cancel": "Cancelar"
     },
     "domains": {
       "title": "Domínios e SSL",
@@ -5130,7 +5138,8 @@
       "runningNote": "Um backup desta aplicação está rodando agora. Este card se atualiza sozinho.",
       "queuedNote": "Backup na fila. Ele inicia assim que o servidor pegá-lo.",
       "queuedStalled": "Este backup ainda não começou. Se continuar assim, o worker em segundo plano pode não estar rodando.",
-      "alreadyRunning": "Um backup desta aplicação já está rodando."
+      "alreadyRunning": "Um backup desta aplicação já está rodando.",
+      "noneKept": "Nenhum mantido"
     },
     "attention": {
       "title": "Precisa de atenção",
@@ -5150,7 +5159,8 @@
         "disk": "Liberar espaço"
       },
       "folderUnlocked": "Pasta do site não bloqueada",
-      "reviewFolder": "Bloquear"
+      "reviewFolder": "Bloquear",
+      "checksFailed": "As verificações desta aplicação não puderam ser executadas, então podem faltar problemas nesta lista."
     },
     "filters": {
       "allStatuses": "Todos os status",

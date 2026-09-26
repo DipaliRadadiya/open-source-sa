@@ -3237,7 +3237,9 @@
       "description": "Where the code comes from and how it ships.",
       "failedAtStep": "The last deploy failed at {step}.",
       "incomplete": "The last deploy failed after the new code was put in place, so that code is live but not fully deployed. Fix the problem and deploy again.",
-      "notFullyDeployed": "Not fully deployed"
+      "notFullyDeployed": "Not fully deployed",
+      "inFlightReason": "A deploy is already running.",
+      "inFlightNote": "A deploy is running. This card updates when it finishes."
     },
     "gitAccount": "Git account",
     "gitAccountPlaceholder": "Choose a connected account",
@@ -3521,7 +3523,13 @@
       "stopped": "The process was stopped.",
       "restarted": "The process was restarted.",
       "failed": "We could not change the process.",
-      "deployToStart": "This application starts after its first successful deployment."
+      "deployToStart": "This application starts after its first successful deployment.",
+      "alreadyRunning": "The process is already running.",
+      "notRunning": "The process isn't running.",
+      "stopTitle": "Stop {name}?",
+      "stopBody": "The application goes offline until it is started again, and visitors get an error page in the meantime.",
+      "stopping": "Stopping…",
+      "cancel": "Cancel"
     },
     "domains": {
       "title": "Domains and SSL",
@@ -5130,7 +5138,8 @@
       "runningNote": "A backup of this application is running now. This card updates on its own.",
       "queuedNote": "Backup queued. It starts as soon as the server picks it up.",
       "queuedStalled": "This backup has not started yet. If it stays this way, the background worker may not be running.",
-      "alreadyRunning": "A backup of this application is already running."
+      "alreadyRunning": "A backup of this application is already running.",
+      "noneKept": "None kept"
     },
     "attention": {
       "title": "Needs attention",
@@ -5150,7 +5159,8 @@
         "disk": "Free up space"
       },
       "folderUnlocked": "Site folder not locked",
-      "reviewFolder": "Lock it"
+      "reviewFolder": "Lock it",
+      "checksFailed": "This application's health checks could not be run, so problems may be missing from this list."
     },
     "filters": {
       "allStatuses": "All statuses",

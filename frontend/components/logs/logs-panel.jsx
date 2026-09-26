@@ -174,21 +174,25 @@ export function LogsPanel({
 
   // Catalog refresh. Failure is silent: a rail one interval out of date beats a
   // toast for something the reader never asked to happen.
+  const reloadSources = useCallback(async (isActive = () => true) => {
+    try {
+      const { data } = await listLogSources();
+      const parsed = logSourcesResponseSchema.safeParse(data);
+      if (isActive() && parsed.success) {
+        setPolledSources(parsed.data.logs);
+        setNow(Date.now());
+      }
+    } catch {
+      /* keep the last known catalog */
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
 
     async function tick() {
       if (document.hidden) return;
-      try {
-        const { data } = await listLogSources();
-        const parsed = logSourcesResponseSchema.safeParse(data);
-        if (active && parsed.success) {
-          setPolledSources(parsed.data.logs);
-          setNow(Date.now());
-        }
-      } catch {
-        /* keep the last known catalog */
-      }
+      await reloadSources(() => active);
     }
 
     const id = setInterval(tick, CATALOG_MS);
@@ -196,7 +200,7 @@ export function LogsPanel({
       active = false;
       clearInterval(id);
     };
-  }, []);
+  }, [reloadSources]);
 
   const load = useCallback(
     async ({ silent } = {}) => {
@@ -365,12 +369,15 @@ export function LogsPanel({
       cursor.current = 0;
       setConfirmClear(false);
       toast.success(t("clearDone", { label: source.label }));
+      // The rail's size for this log is from the last catalog read — up to 30 s
+      // old — so it went on showing the size of what was just emptied.
+      reloadSources();
     } catch (error) {
       toast.error(apiMessage(error, t("clearFailed")));
     } finally {
       setClearing(false);
     }
-  }, [source, t]);
+  }, [source, t, reloadSources]);
 
   const copy = useCallback(
     async (text, message) => {

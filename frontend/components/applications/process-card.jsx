@@ -10,6 +10,7 @@ import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatBytes } from "@/lib/format/bytes";
 
 const STATE_VARIANT = { active: "success", failed: "destructive", activating: "warning" };
@@ -36,9 +37,15 @@ export function ProcessCard({ application, canManage = false, className }) {
   const format = useFormatter();
   const router = useRouter();
   const [pending, setPending] = useState(null);
+  const [confirmStop, setConfirmStop] = useState(false);
+  // systemd records a stopped Node process as "failed" (it exits on SIGTERM),
+  // so the card called the Stop someone just pressed a crash. Remembered for
+  // this visit only; the server's own answer is still the one after a reload.
+  const [stoppedHere, setStoppedHere] = useState(false);
 
   const process = application.process ?? {};
-  const state = process.state ?? "unknown";
+  const rawState = process.state ?? "unknown";
+  const state = stoppedHere && rawState === "failed" ? "inactive" : rawState;
   const stateLabel =
     state === "active"
       ? tApp("status.active")
@@ -60,6 +67,8 @@ export function ProcessCard({ application, canManage = false, className }) {
     setPending(action);
     try {
       await controlApplicationProcess(application.id, action);
+      setStoppedHere(action === "stop");
+      setConfirmStop(false);
       toast.success(t(DONE_KEY[action]));
       router.refresh();
     } catch (error) {
@@ -71,7 +80,7 @@ export function ProcessCard({ application, canManage = false, className }) {
 
   const facts = [
     { label: t("state"), value: stateLabel },
-    { label: t("since"), value: process.since },
+    { label: t("since"), value: formatSince(process.since, format) },
     { label: t("memory"), value: memory },
     { label: t("restarts"), value: process.restarts },
   ].filter((fact) => fact.value !== null && fact.value !== undefined && fact.value !== "");
@@ -101,16 +110,20 @@ export function ProcessCard({ application, canManage = false, className }) {
         {canManage ? (
           <div className="flex flex-wrap gap-2">
             {[
-              { action: "start", icon: Play },
-              { action: "restart", icon: RotateCw },
-              { action: "stop", icon: Square },
-            ].map(({ action, icon: Icon }) => (
+              // Start only when it is not running; Restart and Stop only when
+              // it is — each disabled one says why.
+              { action: "start", icon: Play, reason: state === "active" ? t("alreadyRunning") : null },
+              { action: "restart", icon: RotateCw, reason: state === "active" ? null : t("notRunning") },
+              { action: "stop", icon: Square, reason: state === "active" ? null : t("notRunning") },
+            ].map(({ action, icon: Icon, reason }) => (
               <Button
                 key={action}
                 size="sm"
                 variant="outline"
-                onClick={() => run(action)}
-                disabled={Boolean(pending)}
+                // Stop takes the application offline, so it asks first.
+                onClick={() => (action === "stop" ? setConfirmStop(true) : run(action))}
+                disabled={Boolean(pending) || Boolean(reason)}
+                disabledReason={!pending ? reason : null}
               >
                 {pending === action ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -122,7 +135,31 @@ export function ProcessCard({ application, canManage = false, className }) {
             ))}
           </div>
         ) : null}
+        <ConfirmDialog
+          open={confirmStop}
+          onOpenChange={(next) => !pending && setConfirmStop(next)}
+          icon={Square}
+          tone="destructive"
+          title={t("stopTitle", { name: application.name })}
+          description={t("stopBody")}
+          cancelLabel={t("cancel")}
+          confirmLabel={pending === "stop" ? t("stopping") : t("stop")}
+          pending={pending === "stop"}
+          onConfirm={() => run("stop")}
+        />
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * systemd's "Sat 2026-09-26 13:18:19 UTC", in the reader's language. Left as
+ * it came when it is not that shape.
+ */
+function formatSince(since, format) {
+  const match = typeof since === "string" && since.match(/(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) UTC$/);
+  if (!match) return since;
+  const date = new Date(`${match[1]}T${match[2]}Z`);
+  if (Number.isNaN(date.getTime())) return since;
+  return format.dateTime(date, { dateStyle: "medium", timeStyle: "short" });
 }

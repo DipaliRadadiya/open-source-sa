@@ -449,7 +449,14 @@ export function SiteFactsCard({ application, canManage = false, siteTypes = [], 
       // The one fact on this card that is a setting rather than a record.
       onEdit: canManage ? () => setEditingWebRoot(true) : null,
     },
-    { icon: FileCode, label: t("facts.php"), value: application.php_version, mono: true },
+    // A Node or static site carries a php_version it never runs; showing it
+    // read as the runtime serving the site.
+    {
+      icon: FileCode,
+      label: t("facts.php"),
+      value: !application.serving_profile || application.serving_profile === "php" ? application.php_version : null,
+      mono: true,
+    },
     { icon: Hexagon, label: t("facts.node"), value: application.node_version, mono: true },
     { icon: Plug, label: t("facts.port"), value: application.app_port, mono: true, copy: true },
     {

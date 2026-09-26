@@ -3237,7 +3237,9 @@
       "description": "Woher der Code kommt und wie er ausgeliefert wird.",
       "failedAtStep": "Das letzte Deployment ist bei {step} gescheitert.",
       "incomplete": "Das letzte Deployment ist gescheitert, nachdem der neue Code bereits eingespielt war. Dieser Code ist live, aber nicht vollständig deployt. Beheben Sie das Problem und deployen Sie erneut.",
-      "notFullyDeployed": "Nicht vollständig deployt"
+      "notFullyDeployed": "Nicht vollständig deployt",
+      "inFlightReason": "Es läuft bereits ein Deploy.",
+      "inFlightNote": "Ein Deploy läuft. Diese Karte aktualisiert sich, wenn er fertig ist."
     },
     "gitAccount": "Git-Konto",
     "gitAccountPlaceholder": "Verbundenes Konto wählen",
@@ -3521,7 +3523,13 @@
       "stopped": "Der Prozess wurde gestoppt.",
       "restarted": "Der Prozess wurde neu gestartet.",
       "failed": "Der Prozess konnte nicht geändert werden.",
-      "deployToStart": "Diese Anwendung startet nach ihrem ersten erfolgreichen Deployment."
+      "deployToStart": "Diese Anwendung startet nach ihrem ersten erfolgreichen Deployment.",
+      "alreadyRunning": "Der Prozess läuft bereits.",
+      "notRunning": "Der Prozess läuft nicht.",
+      "stopTitle": "{name} stoppen?",
+      "stopBody": "Die Anwendung ist offline, bis sie wieder gestartet wird, und Besucher sehen so lange eine Fehlerseite.",
+      "stopping": "Wird gestoppt…",
+      "cancel": "Abbrechen"
     },
     "domains": {
       "title": "Domains und SSL",
@@ -5130,7 +5138,8 @@
       "runningNote": "Gerade läuft ein Backup dieser Anwendung. Diese Karte aktualisiert sich selbst.",
       "queuedNote": "Backup eingeplant. Es beginnt, sobald der Server es aufnimmt.",
       "queuedStalled": "Dieses Backup hat noch nicht begonnen. Bleibt es so, läuft möglicherweise der Hintergrund-Worker nicht.",
-      "alreadyRunning": "Es läuft schon ein Backup dieser Anwendung."
+      "alreadyRunning": "Es läuft schon ein Backup dieser Anwendung.",
+      "noneKept": "Keins aufbewahrt"
     },
     "attention": {
       "title": "Handlungsbedarf",
@@ -5150,7 +5159,8 @@
         "disk": "Platz freigeben"
       },
       "folderUnlocked": "Website-Ordner nicht gesperrt",
-      "reviewFolder": "Sperren"
+      "reviewFolder": "Sperren",
+      "checksFailed": "Die Zustandsprüfungen dieser Anwendung konnten nicht laufen, daher fehlen hier eventuell Probleme."
     },
     "filters": {
       "allStatuses": "Alle Status",
