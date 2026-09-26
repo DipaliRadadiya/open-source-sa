@@ -29,7 +29,7 @@ class UpdateApplication
             // A password sent here is for the installer (a retry after a
             // failed install), so it goes where the installer reads it, not
             // into the plain `settings` the API returns.
-            $incoming = (array) $data['settings'];
+            $incoming = array_diff_key((array) $data['settings'], array_flip(Application::INSTALLER_RECORDED_KEYS));
             $secrets = array_intersect_key($incoming, array_flip(Application::INSTALL_SECRET_KEYS));
 
             $data['settings'] = array_merge($application->settings ?? [], array_diff_key($incoming, $secrets));

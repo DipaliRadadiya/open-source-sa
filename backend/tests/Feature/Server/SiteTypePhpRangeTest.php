@@ -45,20 +45,17 @@ it('publishes the range its installed release declares', function (string $type,
         ->and($range['max'] ?? null)->toBe($max);
 })->with('published ranges');
 
-it('keeps PrestaShop capped at 8.1, because a real install died above it', function () {
-    // Not a documentation lookup. PrestaShopSiteType's own docblock records
-    // 2026-09-08: a shop installed on a box whose newest PHP was 8.5 — which
-    // the form pre-selected — died in ProxyCacheWarmer->warmUp() during kernel
-    // boot, after the archive had been downloaded, unpacked, chowned and given
-    // a database.
-    //
-    // The panel installs 8.2.1 (their stable channel feed carries no 9.x), and
-    // PrestaShop's own compatibility chart marks PHP >= 8.2 as not supported
-    // for 8.0~8.2. Raising this ceiling re-opens that incident.
+it('gives PrestaShop the union of the two branches it can install', function () {
+    // Measured from each release's install/install_version.php, 2026-09-26:
+    // 9.1.5 runs on 8.1 – 8.5, 8.2.8 on 7.2.5 – 8.1. The installer picks per
+    // site PHP (PrestaShopInstallTest), which is the only reason the old 8.1
+    // ceiling may go: on 2026-09-08 a shop on 8.5 died in
+    // ProxyCacheWarmer->warmUp() because it was given PrestaShop 8. 8.5 now
+    // gets 9. Raising this past 8.5 needs a release that says so.
     $range = app(SiteTypeManager::class)->find('prestashop')?->supportedPhpRange();
 
     expect($range['min'])->toBe('7.2')
-        ->and($range['max'])->toBe('8.1');
+        ->and($range['max'])->toBe('8.5');
 });
 
 it('leaves a blank PHP site with no opinion at all', function () {

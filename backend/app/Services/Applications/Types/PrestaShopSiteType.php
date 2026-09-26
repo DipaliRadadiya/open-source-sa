@@ -2,6 +2,8 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Models\Application;
+use App\Services\Server\Applications\Installers\PrestaShopInstaller;
 use App\Services\Timezones;
 use App\Support\FieldOptions;
 use Illuminate\Validation\Rule;
@@ -11,6 +13,11 @@ use Illuminate\Validation\Rule;
  */
 class PrestaShopSiteType extends AbstractSiteType
 {
+    /**
+     * PrestaShop 8.x, from its own `install_version.php` (7.2.5 – 8.1).
+     */
+    public const PRESTASHOP_8_RANGE = ['min' => '7.2', 'max' => '8.1'];
+
     public function name(): string
     {
         return 'prestashop';
@@ -42,26 +49,49 @@ class PrestaShopSiteType extends AbstractSiteType
     }
 
     /**
-     * PrestaShop 8 states PHP 8.1 as its recommendation and lists nothing
-     * above it: *"We recommend PHP 8.1. (Although compatible, PHP 7.2.5 to 8.0
-     * are not recommended since they reached their end of support.)"* —
-     * devdocs.prestashop-project.org, PrestaShop 8 system requirements, read
-     * 2026-09-08. The feed's current stable is 8.2.1.
+     * The union of the releases the installer can choose from, measured from
+     * each release's own `install/install_version.php` on 2026-09-26:
      *
-     * The ceiling is not pedantry. On 2026-09-08 a shop was installed on a box
-     * whose newest PHP was 8.5, which is what the form pre-selected, and
-     * PrestaShop 8 vendors the monolithic `symfony/symfony` — the install died
-     * in `ProxyCacheWarmer->warmUp()` during kernel boot, after the archive had
-     * been downloaded, unpacked, chowned and given a database.
+     *   9.1.5 (Classic, current stable)  PHP 8.1   – 8.5
+     *   8.2.8 (open source, last 8.x)    PHP 7.2.5 – 8.1
      *
-     * The floor is theirs too, and deliberately not raised to something
-     * tidier: 7.2.5 is what the requirements say, and refusing a version
-     * PrestaShop supports because we would not choose it is not this rule's
-     * job.
+     * The installer picks the newest stable release whose range holds the
+     * site's PHP ({@see PrestaShopInstaller::release()}), so an 8.4 shop
+     * gets 9.1 and a 7.4 shop gets 8.2 — this range is simply what at least
+     * one of them accepts.
+     *
+     * Until 2026-09-26 it was 7.2 – 8.1, because the panel followed the old
+     * `channel.xml` feed, which still names 8.2.1 as current and carries no
+     * 9.x. That ceiling was not pedantry: on 2026-09-08 a shop installed on
+     * PHP 8.5 died in `ProxyCacheWarmer->warmUp()` — PrestaShop 8 vendors the
+     * monolithic `symfony/symfony`. It is safe to raise now only because the
+     * release is chosen by PHP version: 8.5 gets PrestaShop 9, never 8.
+     *
+     * The floor stays theirs (7.2.5, compared here as 7.2), not something
+     * tidier: refusing a version PrestaShop supports is not this rule's job.
      */
     public function supportedPhpRange(): ?array
     {
-        return ['min' => '7.2', 'max' => '8.1'];
+        return ['min' => '7.2', 'max' => '8.5'];
+    }
+
+    /**
+     * What this shop's own release runs on, recorded by the installer.
+     *
+     * A shop with no record was installed before releases were chosen by PHP,
+     * from the old feed — so it is PrestaShop 8, and 8's ceiling of 8.1 still
+     * holds. Widening the type's range must not let the PHP screen move one of
+     * those onto 8.4: that is the 2026-09-08 crash again, on a live shop.
+     */
+    public function supportedPhpRangeFor(Application $application): ?array
+    {
+        $recorded = $application->settings['php_range'] ?? null;
+
+        if (is_array($recorded) && is_string($recorded['min'] ?? null) && is_string($recorded['max'] ?? null)) {
+            return ['min' => $recorded['min'], 'max' => $recorded['max']];
+        }
+
+        return self::PRESTASHOP_8_RANGE;
     }
 
     public function needsDatabase(): bool

@@ -2,6 +2,7 @@
 
 namespace App\Contracts;
 
+use App\Models\Application;
 use App\Rules\SupportedPhpVersion;
 
 /**
@@ -121,6 +122,19 @@ interface SiteType
      * @return array{min: ?string, max: ?string}|null
      */
     public function supportedPhpRange(): ?array;
+
+    /**
+     * The range for a site that already exists — which may not be the type's.
+     *
+     * The same for almost every type. Not for one whose installer picks a
+     * release by PHP: a PrestaShop shop installed as 8.x stops at PHP 8.1 for
+     * good, even though the type now reaches 8.5 by installing 9.x. The PHP
+     * screen asks this, so an existing site is never moved onto a version its
+     * own release cannot run.
+     *
+     * @return array{min: ?string, max: ?string}|null
+     */
+    public function supportedPhpRangeFor(Application $application): ?array;
 
     /**
      * The create-form fields, in display order.

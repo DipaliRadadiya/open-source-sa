@@ -628,7 +628,7 @@ way round — the sentence is translated and gets reworded.
 | `runtime` | The server has no PHP / no Node | Install it — `installable_runtime` names which |
 | `database` | The type takes an engine this server hasn't got (only NodeBB, which is MongoDB-only) | The Databases screen |
 | `web_server` | This web server does not offer the type | None — do not offer an action |
-| `php_version` | PHP is installed, but no version in the type's `php_version_range` (added 2026-09-26) | The PHP screen, when the reason names a version to install; none when it says no version in range can be installed from the server's repository (e.g. PrestaShop, 7.2 – 8.1, on OpenLiteSpeed / Ubuntu 26.04, where LiteSpeed publishes 8.2 – 8.5 only) |
+| `php_version` | PHP is installed, but no version in the type's `php_version_range` (added 2026-09-26) | The PHP screen, when the reason names a version to install; none when it says no version in range can be installed from the server's repository (e.g. a type whose range stops at 8.1 on OpenLiteSpeed / Ubuntu 26.04, where LiteSpeed publishes 8.2 – 8.5 only) |
 
 `installable_runtime` is set only for `runtime`, and is null for the others:
 nothing installable fixes them, so a card must not offer a button that cannot work.
@@ -741,7 +741,9 @@ Take the version list from `GET /site-types` (the `php_version` / `node_version`
 
 **Omitting `php_version` is checked too, as of 2026-09-11.** An empty field is not "no version" — provisioning resolves it to the server default, which is the newest PHP on the box and therefore the version a ceiling exists to exclude. If that default falls outside the type's range the request is a `422` on `php_version` naming both the range and the default, so send a version in range or leave the field only where the default fits.
 
-This closes the counterpart of the hole above: installed is not the same question as supported. A server whose newest PHP was 8.5 pre-selected 8.5 for PrestaShop, whose current release vendors the old monolithic `symfony/symfony` — the install died inside a Symfony cache warmer during kernel boot, after the archive had been downloaded, unpacked, chowned and handed a database. Ranges are published only where upstream states one: PrestaShop (`7.2`–`8.1`) and Statamic (`8.3`+) today. Every other type sends `null` and accepts any installed version, which is the honest answer for a blank PHP site or a git deployment running the user's own code.
+This closes the counterpart of the hole above: installed is not the same question as supported. A server whose newest PHP was 8.5 pre-selected 8.5 for PrestaShop, whose current release vendors the old monolithic `symfony/symfony` — the install died inside a Symfony cache warmer during kernel boot, after the archive had been downloaded, unpacked, chowned and handed a database. Ranges are published only where upstream states one: PrestaShop (`7.2`–`8.5`) and Statamic (`8.3`+) today.
+
+**PrestaShop's release follows the site's PHP** (2026-09-26). The installer reads PrestaShop's distribution API (`api.prestashop-project.org/prestashop`, override `SERVER_PRESTASHOP_RELEASES_API`) and takes the newest **stable** release whose own PHP range holds the site's version: PHP 8.1 – 8.5 → PrestaShop **9.1** (Classic edition, which bundles PrestaShop's own modules — Checkout, Account, Marketplace), PHP 7.2 – 8.0 → **8.2**. It used to follow `channel.xml`, which still names 8.2.1 as current and caps PHP at 8.1. `SERVER_PRESTASHOP_URL` still pins one package. Every other type sends `null` and accepts any installed version, which is the honest answer for a blank PHP site or a git deployment running the user's own code.
 
 Never send the raw field list — `GET /site-types` publishes the fields for each type, including this one, with localized labels and help text.
 

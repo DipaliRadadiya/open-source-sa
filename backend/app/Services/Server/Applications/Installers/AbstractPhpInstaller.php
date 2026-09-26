@@ -90,7 +90,7 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
      */
     protected function phpCommand(Application $application): array
     {
-        $version = (string) ($application->php_version ?: config('server.default_php_version', '8.4'));
+        $version = $this->phpVersion($application);
 
         return [
             $this->stack->binaryPath($version),
@@ -100,5 +100,15 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
             // them), so a scalar in there would become a one-click app.
             'memory_limit='.(string) config('server.installer_php_memory_limit', '512M'),
         ];
+    }
+
+    /**
+     * The PHP this site's installer runs under: its own version, or the server
+     * default a blank one resolves to. One place, so choosing a release for
+     * a version and running the installer on it cannot use two answers.
+     */
+    protected function phpVersion(Application $application): string
+    {
+        return (string) ($application->php_version ?: config('server.default_php_version', '8.4'));
     }
 }

@@ -497,7 +497,8 @@ describe('a version the application itself cannot run on', function () {
      */
     beforeEach(function () {
         // The fixture's `php` type declares no range, so it cannot exercise
-        // one. PrestaShop's ceiling is 8.1.
+        // one. A shop with no recorded release was installed as PrestaShop 8,
+        // whose ceiling is 8.1 — whatever the type now reaches by installing 9.
         $this->application->forceFill(['site_type' => 'prestashop'])->save();
     });
 
@@ -514,6 +515,39 @@ describe('a version the application itself cannot run on', function () {
         // Installed, and still refused: being on the box is a different
         // question from the application running on it.
         expect($this->application->fresh()->php_version)->toBe('8.4');
+    });
+
+    it('holds a shop to the range of the release it was given', function () {
+        // Installed as 9.x, so 8.3 is inside its own range even though it is
+        // above PrestaShop 8's.
+        $this->application->forceFill(['settings' => ['php_range' => ['min' => '8.1', 'max' => '8.5']]])->save();
+        fakePhpServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['php_version' => '8.3'])
+            ->assertOk();
+
+        expect($this->application->fresh()->php_version)->toBe('8.3');
+    });
+
+    it('does not let the API rewrite the recorded range', function () {
+        fakePhpServer();
+
+        // A client that could write this could move a PrestaShop 8 shop onto
+        // the PHP it dies on.
+        $this->actingAs($this->admin)
+            ->putJson("/api/applications/{$this->application->id}", [
+                'settings' => ['php_range' => ['min' => '7.2', 'max' => '8.5'], 'shop_name' => 'Renamed'],
+            ]);
+
+        // The request itself went through — only the recorded key was dropped.
+        expect($this->application->fresh()->settings)
+            ->toMatchArray(['shop_name' => 'Renamed'])
+            ->not->toHaveKey('php_range');
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['php_version' => '8.3'])
+            ->assertStatus(422);
     });
 
     it('accepts a version inside the range', function () {

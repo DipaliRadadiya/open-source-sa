@@ -143,7 +143,7 @@ class SavePhpSettingsRequest extends FormRequest
 
         $type = app(SiteTypeManager::class)->find((string) $application->site_type);
 
-        if ($type === null || ($range = $type->supportedPhpRange()) === null) {
+        if ($type === null || ($range = $type->supportedPhpRangeFor($application)) === null) {
             return [];
         }
 

@@ -45,23 +45,33 @@ beforeEach(function () {
 });
 
 /**
- * PrestaShop's own channel feed. Branches are listed oldest first, so the
- * last one is what upstream currently calls stable.
+ * PrestaShop's distribution API, in the shape it really answers with
+ * (api.prestashop-project.org/prestashop, read 2026-09-26) — trimmed, and
+ * deliberately NOT sorted: the real list is newest first today, and nothing
+ * promises it stays that way.
  */
-function fakePrestaShopFeed(bool $ok = true): void
+function fakePrestaShopReleases(bool $ok = true): void
 {
-    Http::fake(['api.prestashop.com/*' => $ok
-        ? Http::response(
-            '<prestashop><channel name="stable">'
-            .'<branch name="1.6"><link>http://download.prestashop.com/download/releases/prestashop_1.6.1.24.zip</link></branch>'
-            .'<branch name="1.7"><link>https://github.com/PrestaShop/PrestaShop/releases/download/1.7.8.11/prestashop_1.7.8.11.zip</link></branch>'
-            .'<branch name="8.2"><link>https://github.com/PrestaShop/PrestaShop/releases/download/8.2.1/prestashop_8.2.1.zip</link></branch>'
-            // Last in the real feed, and not PrestaShop: the autoupgrade
-            // module ships its own branch here. Absent from this fixture, the
-            // suite happily passed while every install downloaded the module.
-            .'<branch name="autoupgrade"><link>https://github.com/PrestaShop/autoupgrade/releases/download/v6.2.0/autoupgrade-v6.2.0.zip</link></branch>'
-            .'</channel></prestashop>'
-        )
+    $release = fn (string $version, string $stability, string $min, string $max, string $url) => [
+        'version' => $version, 'stability' => $stability,
+        'php_min_version' => $min, 'php_max_version' => $max,
+        'zip_download_url' => $url, 'zip_md5' => md5($version),
+    ];
+    $classic = fn (string $path) => "https://api.prestashop-project.org/assets/prestashop-classic/{$path}/prestashop.zip";
+    $open = fn (string $version) => "https://api.prestashop-project.org/assets/prestashop/{$version}/prestashop.zip";
+
+    Http::fake(['api.prestashop-project.org/*' => $ok
+        ? Http::response([
+            $release('8.2.8', 'stable', '7.2.5', '8.1', $open('8.2.8')),
+            $release('9.2.0-rc.1', 'rc', '8.1', '8.5', $classic('9.2.0-6.0-rc.1')),
+            $release('9.1.4', 'stable', '8.1', '8.5', $classic('9.1.4-5.0')),
+            // Newer than everything, and plain http: the download step refuses
+            // it, so choosing it would only fail later.
+            $release('9.1.9', 'stable', '8.1', '8.5', 'http://example.com/prestashop.zip'),
+            $release('9.1.5', 'stable', '8.1', '8.5', $classic('9.1.5-5.0')),
+            $release('9.0.3', 'stable', '8.1', '8.4', $classic('9.0.3-3.0')),
+            $release('1.7.8.11', 'stable', '7.1.3', '7.4', $open('1.7.8.11')),
+        ])
         : Http::response('', 500),
     ]);
 }
@@ -88,29 +98,95 @@ function installPrestaShop(?int $port = null): ArrayObject
     return $runs;
 }
 
-it('takes the current stable branch from PrestaShop\'s own feed', function () {
-    fakePrestaShopFeed();
-    $runs = installPrestaShop();
-
-    $curl = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'curl')['command'];
-
-    // Their 9.x tags publish no package at all, and the feed is what their
-    // own updater follows — so this picks up a new stable branch without a
-    // code change, and never resolves to a release that has no download.
-    expect(end($curl))->toBe('https://github.com/PrestaShop/PrestaShop/releases/download/8.2.1/prestashop_8.2.1.zip');
-});
-
-it('skips a branch that is not served over https', function () {
-    fakePrestaShopFeed();
+function prestaShopDownload(): string
+{
     $curl = collect(installPrestaShop())->first(fn ($run) => ($run['command'][0] ?? '') === 'curl')['command'];
 
-    // The 1.6 entry in the real feed is plain http; the download step refuses
-    // anything but https, so choosing it would fail at the fetch.
-    expect(end($curl))->not->toStartWith('http://');
+    return (string) end($curl);
+}
+
+it('takes the newest stable release that runs on the site\'s PHP', function () {
+    fakePrestaShopReleases();
+
+    // 8.4 is past PrestaShop 8's ceiling of 8.1 — the release the old feed
+    // named, and the one that died on 8.5 on 2026-09-08. Not the release
+    // candidate, not the http entry, and not simply the first in the list.
+    expect(prestaShopDownload())
+        ->toBe('https://api.prestashop-project.org/assets/prestashop-classic/9.1.5-5.0/prestashop.zip');
 });
 
-it('stops when the feed cannot be read', function () {
-    fakePrestaShopFeed(ok: false);
+it('gives an older PHP the last release that still runs on it', function () {
+    $this->application->forceFill(['php_version' => '7.4'])->save();
+    fakePrestaShopReleases();
+
+    expect(prestaShopDownload())
+        ->toBe('https://api.prestashop-project.org/assets/prestashop/8.2.8/prestashop.zip');
+});
+
+it('compares the floor as major.minor, so 7.2 meets 7.2.5', function () {
+    // The site holds `7.2`; version_compare('7.2', '7.2.5') says it is older.
+    $this->application->forceFill(['php_version' => '7.2'])->save();
+    fakePrestaShopReleases();
+
+    expect(prestaShopDownload())->toEndWith('/prestashop/8.2.8/prestashop.zip');
+});
+
+it('chooses for the server default when the site names no PHP', function () {
+    // Same resolution the installer's own `php` runs under, so the release and
+    // the interpreter cannot disagree.
+    $this->application->forceFill(['php_version' => null])->save();
+    config(['server.default_php_version' => '8.0']);
+    fakePrestaShopReleases();
+
+    expect(prestaShopDownload())->toEndWith('/prestashop/8.2.8/prestashop.zip');
+});
+
+it('records the release it installed, and that release\'s PHP range', function () {
+    fakePrestaShopReleases();
+    installPrestaShop();
+
+    // The type reaches 8.5 only because 9.x does; this shop has one release,
+    // and the PHP screen must hold it to that one.
+    expect($this->application->fresh()->settings)
+        ->toMatchArray(['prestashop_version' => '9.1.5', 'php_range' => ['min' => '8.1', 'max' => '8.5']]);
+});
+
+it('records PrestaShop 8\'s range for a shop given PrestaShop 8', function () {
+    $this->application->forceFill(['php_version' => '7.4'])->save();
+    fakePrestaShopReleases();
+    installPrestaShop();
+
+    expect($this->application->fresh()->settings['php_range'])->toBe(['min' => '7.2', 'max' => '8.1']);
+});
+
+it('records no range for a package pinned by the operator', function () {
+    // Nothing is known about a pinned package, so the shop keeps the
+    // PrestaShop 8 ceiling rather than a guess.
+    config(['server.installers.prestashop.download_url' => 'https://mirror.example.com/prestashop.zip']);
+    Http::fake();
+    installPrestaShop();
+
+    expect($this->application->fresh()->settings)->not->toHaveKey('php_range');
+    Http::assertNothingSent();
+});
+
+it('stops when no release runs on the site\'s PHP', function () {
+    $this->application->forceFill(['php_version' => '7.0'])->save();
+    fakePrestaShopReleases();
+    $runs = new ArrayObject;
+    Process::fake(function ($process) use ($runs) {
+        $runs[] = $process->command;
+
+        return fakeDatabaseAnswer($process) ?? Process::result(exitCode: 0);
+    });
+
+    expect(fn () => app(ApplicationProvisioner::class)->provision($this->application))
+        ->toThrow(ProvisioningFailedException::class);
+    expect(collect($runs)->contains(fn ($command) => ($command[0] ?? '') === 'curl'))->toBeFalse();
+});
+
+it('stops when the release list cannot be read', function () {
+    fakePrestaShopReleases(ok: false);
     Process::fake();
 
     // Rather than download whatever else answers and unpack it into a live
@@ -120,7 +196,7 @@ it('stops when the feed cannot be read', function () {
 });
 
 it('unpacks the archive inside the archive', function () {
-    fakePrestaShopFeed();
+    fakePrestaShopReleases();
     $commands = collect(installPrestaShop())->pluck('command');
 
     // The published zip contains a single `prestashop.zip`. One unzip leaves
@@ -130,7 +206,7 @@ it('unpacks the archive inside the archive', function () {
 });
 
 it('removes the install wizard once the shop is up', function () {
-    fakePrestaShopFeed();
+    fakePrestaShopReleases();
 
     // Upstream requires it: left in place, it is a working installer on a
     // public URL.
@@ -139,7 +215,7 @@ it('removes the install wizard once the shop is up', function () {
 });
 
 it('never lets a retry drop the tables of a shop that already installed', function () {
-    fakePrestaShopFeed();
+    fakePrestaShopReleases();
     $command = collect(installPrestaShop())
         ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
 
@@ -159,7 +235,7 @@ it('never passes --license, which prints the licence instead of accepting it', f
     // install exited 0 in a third of a second having created nothing, the
     // panel took that as success and removed `install/`, and the shop answered
     // `"install" directory is missing` for good.
-    fakePrestaShopFeed();
+    fakePrestaShopReleases();
     $command = collect(installPrestaShop())
         ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
 
@@ -169,7 +245,7 @@ it('never passes --license, which prints the licence instead of accepting it', f
 });
 
 it('passes the passwords as arguments, which is documented and deliberate', function () {
-    fakePrestaShopFeed();
+    fakePrestaShopReleases();
     $command = collect(installPrestaShop())
         ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
 
@@ -182,7 +258,7 @@ it('passes the passwords as arguments, which is documented and deliberate', func
 });
 
 it('puts a moved port in --db_server, which is where PrestaShop wants it', function () {
-    fakePrestaShopFeed();
+    fakePrestaShopReleases();
     $command = collect(installPrestaShop(25060))
         ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
 
@@ -194,27 +270,13 @@ it('puts a moved port in --db_server, which is where PrestaShop wants it', funct
 });
 
 it('leaves --db_server bare on a stock database', function () {
-    fakePrestaShopFeed();
+    fakePrestaShopReleases();
     $command = collect(installPrestaShop())
         ->first(fn ($run) => in_array('install/index_cli.php', $run['command'], true))['command'];
 
     // 3306 is the port PrestaShop assumes, and every shop the panel has
     // installed was given a bare host.
     expect($command)->toContain('--db_server=127.0.0.1');
-});
-
-it('ignores the autoupgrade module, which the feed lists last', function () {
-    // The feed carries more than PrestaShop. Taking the final branch — "oldest
-    // first, so the last one is current" — downloaded the autoupgrade module,
-    // an archive with no `prestashop.zip` inside it. The install then failed at
-    // the second unzip with "cannot find or open .../prestashop.zip", on a site
-    // whose files and database had already been created.
-    fakePrestaShopFeed();
-
-    $curl = collect(installPrestaShop())->first(fn ($run) => ($run['command'][0] ?? '') === 'curl')['command'];
-
-    expect(end($curl))->not->toContain('autoupgrade')
-        ->and(end($curl))->toBe('https://github.com/PrestaShop/PrestaShop/releases/download/8.2.1/prestashop_8.2.1.zip');
 });
 
 it('checks the shop was really installed before removing the wizard', function () {
@@ -226,7 +288,7 @@ it('checks the shop was really installed before removing the wizard', function (
     // So the config is checked before the irreversible step, and a failure
     // leaves `install/` alone: the difference between a site somebody can
     // rescue in a browser and one that can only be deleted.
-    fakePrestaShopFeed();
+    fakePrestaShopReleases();
 
     $runs = new ArrayObject;
     Process::fake(function ($process) use ($runs) {

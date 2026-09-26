@@ -53,6 +53,14 @@ class Application extends Model
     public const INSTALL_SECRET_KEYS = ['admin_password', 'mailer_password'];
 
     /**
+     * Settings the installer records about what it installed. Read-only to the
+     * API: `php_range` is what the PHP screen holds a PrestaShop shop to, so a
+     * client that could write it could move the shop onto a PHP its release
+     * dies on.
+     */
+    public const INSTALLER_RECORDED_KEYS = ['php_range', 'prestashop_version'];
+
+    /**
      * Never serialized: the installer's passwords are for the installer.
      *
      * @var list<string>

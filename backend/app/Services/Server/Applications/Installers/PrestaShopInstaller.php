@@ -4,6 +4,8 @@ namespace App\Services\Server\Applications\Installers;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Rules\SupportedPhpVersion;
+use App\Services\Applications\Types\PrestaShopSiteType;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -12,11 +14,12 @@ use Illuminate\Support\Str;
  *
  * Three things are unlike anything else here.
  *
- * **The version comes from PrestaShop's own update feed, not from GitHub.**
- * Their 9.x tags publish no downloadable package at all, and their feed still
- * names the 8 branch as current stable — so following the feed installs what
- * upstream considers current, and keeps doing so when that changes. Reading
- * "latest release" off GitHub would have produced a card that 404s.
+ * **The release comes from PrestaShop's distribution API, chosen by PHP.**
+ * Not GitHub — their 9.x tags publish no package at all — and no longer the
+ * `channel.xml` feed, which on 2026-09-26 still named 8.2.1 as current stable
+ * with 9.1.5 out since August. 8.x tops out at PHP 8.1, and LiteSpeed ships no
+ * lsphp81 for Ubuntu 26.04, so following the feed made PrestaShop impossible
+ * on every such server. {@see self::release()}
  *
  * **The download is a zip inside a zip.** The published archive contains a
  * single `prestashop.zip`; unpacking once leaves an archive in the web root
@@ -47,7 +50,9 @@ class PrestaShopInstaller extends AbstractPhpInstaller
     {
         $settings = $application->installSettings();
 
-        $this->downloadAndExtract($application, null, $documentRoot);
+        $release = $this->release($application);
+
+        $this->downloadAndExtract($application, $release['zip_download_url'], $documentRoot);
 
         // The second unzip. Without it the web root holds an archive.
         $this->run('extract', ['unzip', '-q', '-o', "{$documentRoot}/prestashop.zip", '-d', $documentRoot], $application);
@@ -104,6 +109,8 @@ class PrestaShopInstaller extends AbstractPhpInstaller
         // browser and one that can only be deleted.
         $this->assertInstalled($application, $documentRoot);
 
+        $this->recordRelease($application, $release);
+
         // The installer directory is a working install wizard left in a public
         // web root; upstream requires its removal before the shop is usable.
         $this->run('harden', ['rm', '-rf', "{$documentRoot}/install"], $application);
@@ -115,8 +122,8 @@ class PrestaShopInstaller extends AbstractPhpInstaller
      * PrestaShop writes its database credentials into `app/config/parameters.php`
      * as the last thing it does, so its presence is the one cheap signal that
      * the run got to the end. Older branches used `config/settings.inc.php`;
-     * both are accepted rather than pinning a version this installer does not
-     * choose — the feed does.
+     * both are accepted, since which branch is installed depends on the
+     * site's PHP.
      *
      * @throws ProvisioningFailedException
      */
@@ -138,50 +145,95 @@ class PrestaShopInstaller extends AbstractPhpInstaller
     }
 
     /**
-     * The current stable package, from PrestaShop's own channel feed.
+     * The newest stable release whose PHP range holds this site's PHP.
+     *
+     * From `api.prestashop-project.org/prestashop`, the list PrestaShop's own
+     * Docker images build from: every release with its stability, its PHP
+     * range and its package URL. Chosen per site rather than "latest", because
+     * the two branches do not overlap — 9.1 runs on 8.1 – 8.5 and 8.2 on
+     * 7.2.5 – 8.1 — so an 8.4 shop gets 9.1 and a 7.4 shop gets 8.2, and
+     * neither is handed a release that dies on its interpreter.
+     *
+     * Ranges are compared as major.minor ({@see SupportedPhpVersion}): the
+     * site holds `7.2`, and `7.2.5` as a floor would otherwise exclude it.
+     *
+     * The package layout is the same on both branches — a zip holding
+     * `prestashop.zip`, unpacked below — measured on 8.2.8 and 9.1.5.
+     *
+     * @return array{zip_download_url: string, version?: string, php_min_version?: string, php_max_version?: string}
      *
      * @throws ProvisioningFailedException
      */
-    protected function downloadUrl(): string
+    private function release(Application $application): array
     {
         $configured = (string) config('server.installers.prestashop.download_url', '');
 
         if ($configured !== '') {
-            return $configured;
+            // Pinned by the operator: nothing is known about its PHP range, so
+            // none is recorded and the shop keeps PrestaShop 8's.
+            return ['zip_download_url' => $configured];
         }
 
-        $response = Http::timeout(15)->get((string) config('server.installers.prestashop.channel_feed'));
+        $php = $this->phpVersion($application);
+        $response = Http::timeout(15)->get((string) config('server.installers.prestashop.releases_api'));
+        $releases = $response->successful() ? $response->json() : null;
 
-        // Branches are listed oldest first, so the last stable one is current
-        // — but only among branches that are PrestaShop itself. The feed also
-        // carries the autoupgrade module, whose branch is listed last, and
-        // taking the final link downloaded that instead: a module archive with
-        // no `prestashop.zip` inside it, so the second unzip failed with
-        // "cannot find or open .../prestashop.zip" on a site whose files had
-        // already been written.
-        //
-        // Matched on the release filename rather than by excluding the module
-        // by name. A deny-list is wrong the day they add a second one; this
-        // only ever accepts something that looks like the shop.
-        $url = null;
-        if ($response->successful() && preg_match_all(
-            '/<branch\s[^>]*>.*?<link>\s*([^<]+?)\s*<\/link>/s',
-            $response->body(),
-            $matches,
-        )) {
-            $url = collect($matches[1])
-                ->filter(fn (string $link) => str_starts_with($link, 'https://'))
-                ->filter(fn (string $link) => preg_match('#/prestashop_[\d.]+\.zip$#i', $link) === 1)
-                ->last();
-        }
+        $release = collect(is_array($releases) ? $releases : [])
+            ->filter(fn (mixed $release) => is_array($release)
+                && ($release['stability'] ?? null) === 'stable'
+                && is_string($release['version'] ?? null)
+                && is_string($release['zip_download_url'] ?? null)
+                // The download step refuses anything else, including on a
+                // redirect; choosing an http entry would only fail later.
+                && str_starts_with($release['zip_download_url'], 'https://')
+                && is_string($release['php_min_version'] ?? null)
+                && is_string($release['php_max_version'] ?? null)
+                && SupportedPhpVersion::within(
+                    $this->majorMinor($release['php_min_version']),
+                    $this->majorMinor($release['php_max_version']),
+                    $php,
+                ))
+            ->sort(fn (array $a, array $b) => version_compare($b['version'], $a['version']))
+            ->first();
 
-        if (! is_string($url)) {
-            // Their feed being unreachable must not turn into downloading
-            // whatever else answers and unpacking it into a live web root.
+        if ($release === null) {
+            // Unreachable, or nothing runs on this PHP. Either way nothing is
+            // downloaded — never whatever else answers, unpacked into a live
+            // web root.
             throw new ProvisioningFailedException('download', (string) Str::uuid());
         }
 
-        return $url;
+        return $release;
+    }
+
+    /**
+     * Keep the installed release's PHP range on the shop.
+     *
+     * The type's range is the union of every release the installer might
+     * choose; a shop has exactly one, and the PHP screen must hold it to that
+     * one. {@see PrestaShopSiteType::supportedPhpRangeFor()}
+     *
+     * @param  array<string, mixed>  $release
+     */
+    private function recordRelease(Application $application, array $release): void
+    {
+        if (! is_string($release['php_min_version'] ?? null) || ! is_string($release['php_max_version'] ?? null)) {
+            return;
+        }
+
+        $application->forceFill(['settings' => [
+            ...(array) $application->settings,
+            'prestashop_version' => $release['version'] ?? null,
+            'php_range' => [
+                'min' => $this->majorMinor($release['php_min_version']),
+                'max' => $this->majorMinor($release['php_max_version']),
+            ],
+        ]])->save();
+    }
+
+    private function majorMinor(string $version): string
+    {
+        return implode('.', array_slice(explode('.', $version), 0, 2));
     }
 
     /**

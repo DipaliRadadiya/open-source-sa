@@ -12,12 +12,15 @@ use Illuminate\Support\Facades\Queue;
 /**
  * A card whose PHP range nothing on the server can reach.
  *
- * Found on an OpenLiteSpeed server on Ubuntu 26.04, 2026-09-26: PrestaShop runs
- * on 7.2 – 8.1, LiteSpeed publishes lsphp82 – lsphp85 for that release, and the
- * card said "available". The form was filled in and refused with "choose a
+ * Found on an OpenLiteSpeed server on Ubuntu 26.04, 2026-09-26: PrestaShop then
+ * ran on 7.2 – 8.1, LiteSpeed publishes lsphp82 – lsphp85 for that release, and
+ * the card said "available". The form was filled in and refused with "choose a
  * version in the range". And `POST /php/versions {"version":"8.1"}` — the only
  * way out it pointed at — queued a job that failed minutes later saying the
  * repository was misconfigured, about a repository that was fine.
+ *
+ * PrestaShop itself now installs a release chosen by PHP and reaches 8.5, so
+ * these use Mautic (8.2 – 8.5) on a box that has only 8.1.
  */
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -33,7 +36,7 @@ beforeEach(function () {
 
     $this->phpDir = sys_get_temp_dir().'/sv-oss-php-avail-'.getmypid();
     config(['server.php_dir' => $this->phpDir]);
-    installedPhp(['8.4']);
+    installedPhp(['8.1']);
 });
 
 afterEach(function () {
@@ -86,33 +89,33 @@ function phpAvailabilityCatalog(): array
 }
 
 it('greys a type when no PHP in its range is installed or installable', function () {
-    phpIndexOffers(['8.4', '8.5']);
+    phpIndexOffers(['7.4', '8.0']);
 
-    $prestashop = phpAvailabilityCatalog()['prestashop'];
+    $mautic = phpAvailabilityCatalog()['mautic'];
 
-    expect($prestashop['available'])->toBeFalse()
-        ->and($prestashop['unavailable_code'])->toBe(SiteTypeManager::BLOCKED_PHP_VERSION)
-        ->and($prestashop['unavailable_reason'])->toContain('7.2 – 8.1')
-        ->and($prestashop['unavailable_reason'])->toContain('can be installed from this server')
+    expect($mautic['available'])->toBeFalse()
+        ->and($mautic['unavailable_code'])->toBe(SiteTypeManager::BLOCKED_PHP_VERSION)
+        ->and($mautic['unavailable_reason'])->toContain('8.2 – 8.5')
+        ->and($mautic['unavailable_reason'])->toContain('can be installed from this server')
         // Not an offer to install the PHP runtime: it is already here.
-        ->and($prestashop['installable_runtime'])->toBeNull();
+        ->and($mautic['installable_runtime'])->toBeNull();
 });
 
 it('names the version to install when the index has one in range', function () {
-    phpIndexOffers(['8.0', '8.1', '8.4', '8.5']);
+    phpIndexOffers(['8.0', '8.2', '8.5', '8.6']);
 
-    $prestashop = phpAvailabilityCatalog()['prestashop'];
+    $mautic = phpAvailabilityCatalog()['mautic'];
 
-    expect($prestashop['unavailable_code'])->toBe(SiteTypeManager::BLOCKED_PHP_VERSION)
-        // The newest in range, not the first the index happens to list.
-        ->and($prestashop['unavailable_reason'])->toContain('Install PHP 8.1');
+    expect($mautic['unavailable_code'])->toBe(SiteTypeManager::BLOCKED_PHP_VERSION)
+        // The newest in range, not the first the index lists nor one above it.
+        ->and($mautic['unavailable_reason'])->toContain('Install PHP 8.5');
 });
 
 it('offers the type once a version in its range is installed', function () {
     installedPhp(['8.1', '8.4']);
     phpIndexOffers([]);
 
-    expect(phpAvailabilityCatalog()['prestashop']['available'])->toBeTrue();
+    expect(phpAvailabilityCatalog()['mautic']['available'])->toBeTrue();
 });
 
 it('leaves a type with no PHP range alone', function () {
@@ -136,10 +139,10 @@ it('reads the package index only when nothing installed fits', function () {
 });
 
 it('refuses to create the type, with the reason the card showed', function () {
-    phpIndexOffers(['8.4', '8.5']);
+    phpIndexOffers(['7.4', '8.0']);
     $user = SystemUser::create(['username' => 'shopowner', 'home_path' => '/home/shopowner']);
 
-    $reason = phpAvailabilityCatalog()['prestashop']['unavailable_reason'];
+    $reason = phpAvailabilityCatalog()['mautic']['unavailable_reason'];
     // Without this, a catalog that blocks nothing gives null here and null in
     // the response, and the comparison below passes about nothing.
     expect($reason)->toBeString()->not->toBeEmpty();
@@ -147,11 +150,8 @@ it('refuses to create the type, with the reason the card showed', function () {
     $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->postJson('/api/applications', [
             'system_user_id' => $user->id,
-            'name' => 'Shop', 'domain' => 'shop.example.com',
-            'site_type' => 'prestashop',
-            'shop_name' => 'Shop',
-            'admin_first_name' => 'Admin', 'admin_last_name' => 'User',
-            'admin_email' => 'a@example.com', 'admin_password' => 'a-long-password',
+            'name' => 'Mail', 'domain' => 'mail.example.com',
+            'site_type' => 'mautic',
         ])
         ->assertUnprocessable()
         ->assertJsonPath('errors.site_type.0', $reason);
@@ -162,11 +162,11 @@ it('refuses to install a PHP version the package index does not have', function 
     phpIndexOffers(['8.2', '8.3', '8.4', '8.5']);
 
     $response = $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
-        ->postJson('/api/php/versions', ['version' => '8.1'])
+        ->postJson('/api/php/versions', ['version' => '8.0'])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('version');
 
-    expect($response->json('errors.version.0'))->toBe(__('php.not_installable', ['version' => '8.1']));
+    expect($response->json('errors.version.0'))->toBe(__('php.not_installable', ['version' => '8.0']));
     Queue::assertNothingPushed();
 });
 
@@ -186,6 +186,6 @@ it('accepts an installed version without asking the index', function () {
     phpIndexOffers([]);
 
     $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
-        ->postJson('/api/php/versions', ['version' => '8.4'])
+        ->postJson('/api/php/versions', ['version' => '8.1'])
         ->assertJsonMissingValidationErrors('version');
 });

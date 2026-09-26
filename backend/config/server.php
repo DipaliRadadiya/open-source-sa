@@ -1309,11 +1309,12 @@ return [
 
         'prestashop' => [
             'driver' => PrestaShopInstaller::class,
-            // PrestaShop's own channel feed, not GitHub: their 9.x tags ship
-            // no package, and this feed is what their updater follows — so a
-            // new stable branch is picked up without a code change.
+            // PrestaShop's distribution API, not GitHub and not channel.xml:
+            // their 9.x tags ship no package, and channel.xml still names
+            // 8.2.1 as current. This lists every release with its PHP range
+            // and package URL — the source their own Docker images build from.
             'download_url' => env('SERVER_PRESTASHOP_URL', ''),
-            'channel_feed' => env('SERVER_PRESTASHOP_FEED', 'https://api.prestashop.com/xml/channel.xml'),
+            'releases_api' => env('SERVER_PRESTASHOP_RELEASES_API', 'https://api.prestashop-project.org/prestashop'),
             'timeout' => (int) env('SERVER_PRESTASHOP_TIMEOUT', 1800),
         ],
 

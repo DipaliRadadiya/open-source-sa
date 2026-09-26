@@ -206,20 +206,24 @@ describe('the version the application itself can run on', function () {
      * install died inside `ProxyCacheWarmer->warmUp()` during kernel boot,
      * twenty-one frames into someone else's vendor directory, after the
      * archive had been downloaded, unpacked, chowned and given a database.
+     *
+     * Since 2026-09-26 PrestaShop installs 9.x on 8.1 – 8.5 and every range in
+     * the catalog tops out at 8.5, so the "very new" PHP here is 8.6: the
+     * shape of the bug, one version further on.
      */
 
     beforeEach(function () {
         // A box carrying the old and the very new, which is the shape that
         // produced the bug.
         installLsphpBuild('8.1');
-        installLsphpBuild('8.5');
+        installLsphpBuild('8.6');
     });
 
     it('refuses a PHP newer than the application supports', function () {
         createPhpVersionSite([
             'site_type' => 'prestashop',
             'domain' => 'shop-new.example.com',
-            'php_version' => '8.5',
+            'php_version' => '8.6',
             'admin_email' => 'admin@example.com',
             'admin_password' => 'a-long-password',
             'shop_name' => 'Shop',
@@ -234,7 +238,7 @@ describe('the version the application itself can run on', function () {
         $response = createPhpVersionSite([
             'site_type' => 'prestashop',
             'domain' => 'shop-msg.example.com',
-            'php_version' => '8.5',
+            'php_version' => '8.6',
             'admin_email' => 'admin@example.com',
             'admin_password' => 'a-long-password',
             'shop_name' => 'Shop',
@@ -244,7 +248,7 @@ describe('the version the application itself can run on', function () {
 
         // The user's next move is to pick a different version, so the message
         // has to say which ones would work.
-        expect($response->json('errors.php_version.0'))->toContain('7.2 – 8.1');
+        expect($response->json('errors.php_version.0'))->toContain('7.2 – 8.5');
     });
 
     it('accepts a PHP inside the range', function () {
@@ -264,7 +268,7 @@ describe('the version the application itself can run on', function () {
 
     it('refuses a PHP older than the application supports', function () {
         // The other direction, and the reason this is a range: Statamic 6
-        // requires 8.3 or above, so for it 8.1 is the wrong answer and 8.5 is
+        // requires 8.3 or above, so for it 8.1 is the wrong answer and 8.6 is
         // the right one -- the exact inverse of PrestaShop on the same box.
         createPhpVersionSite([
             'site_type' => 'statamic',
@@ -280,7 +284,7 @@ describe('the version the application itself can run on', function () {
         createPhpVersionSite([
             'site_type' => 'statamic',
             'domain' => 'flat2.example.com',
-            'php_version' => '8.5',
+            'php_version' => '8.6',
             'admin_email' => 'admin@example.com',
             'admin_password' => 'a-long-password',
             'shop_name' => 'Shop',
@@ -306,28 +310,30 @@ describe('the version the application itself can run on', function () {
 
     it('accepts a PHP Craft 5 actually supports', function () {
         // No ceiling: Craft states none, so the newest on the box is fine.
-        createPhpVersionSite(craftPayload(['domain' => 'craft-ok.example.com', 'php_version' => '8.5']))
+        createPhpVersionSite(craftPayload(['domain' => 'craft-ok.example.com', 'php_version' => '8.6']))
             ->assertSuccessful();
 
-        expect(Application::query()->where('site_type', 'craftcms')->value('php_version'))->toBe('8.5');
+        expect(Application::query()->where('site_type', 'craftcms')->value('php_version'))->toBe('8.6');
     });
 
     it('opens the form on a version the application can run, not the newest', function () {
         // The half that stops anyone meeting the rule at all. Left to itself
-        // the select pre-selected 8.5 for everything.
+        // the select pre-selected 8.6 for everything.
         $catalog = collect(app(SiteTypeManager::class)->catalog())->keyBy('name');
 
         $default = fn (string $type) => collect($catalog[$type]['fields'])
             ->firstWhere('name', 'php_version')['default'] ?? null;
 
-        expect($default('prestashop'))->toBe('8.1')
-            ->and($default('statamic'))->toBe('8.5')
+        // The box has 8.1, 8.3 (the file's own fixture) and 8.6: the newest
+        // inside PrestaShop's 7.2 – 8.5, never the 8.6 above it.
+        expect($default('prestashop'))->toBe('8.3')
+            ->and($default('statamic'))->toBe('8.6')
             // A type with no opinion still gets the newest, unchanged.
-            ->and($default('php'))->toBe('8.5');
+            ->and($default('php'))->toBe('8.6');
     });
 
     it('says nothing about a type that has no opinion', function () {
-        createPhpVersionSite(['php_version' => '8.5', 'domain' => 'blank.example.com'])
+        createPhpVersionSite(['php_version' => '8.6', 'domain' => 'blank.example.com'])
             ->assertSuccessful();
     });
 
@@ -339,7 +345,7 @@ describe('the version the application itself can run on', function () {
             // returned early on blank, so clearing the field walked past it:
             // green form, no error, install dead inside PrestaShop's vendored
             // Symfony.
-            config(['server.default_php_version' => '8.5']);
+            config(['server.default_php_version' => '8.6']);
 
             $response = createPhpVersionSite([
                 'site_type' => 'prestashop',
@@ -355,8 +361,8 @@ describe('the version the application itself can run on', function () {
             // anything, so an error about "the version you picked" is about
             // something they cannot see.
             expect($response->json('errors.php_version.0'))
-                ->toContain('8.5')
-                ->toContain('7.2 – 8.1');
+                ->toContain('8.6')
+                ->toContain('7.2 – 8.5');
 
             expect(Application::query()->where('site_type', 'prestashop')->count())->toBe(0);
         });
@@ -378,7 +384,7 @@ describe('the version the application itself can run on', function () {
         it('stays accepted for a type with no range at all', function () {
             // A server default out of *somebody's* range must not start
             // refusing types that never declared one.
-            config(['server.default_php_version' => '8.5']);
+            config(['server.default_php_version' => '8.6']);
 
             createPhpVersionSite(['domain' => 'plain-default.example.com'])->assertSuccessful();
         });

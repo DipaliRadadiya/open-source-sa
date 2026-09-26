@@ -5,6 +5,7 @@ namespace App\Services\Applications\Types;
 use App\Contracts\CloneStrategy;
 use App\Contracts\SiteType;
 use App\Contracts\StagingStrategy;
+use App\Models\Application;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Server\Php\PhpVersionManager;
 
@@ -320,6 +321,11 @@ abstract class AbstractSiteType implements SiteType
     public function supportedPhpRange(): ?array
     {
         return null;
+    }
+
+    public function supportedPhpRangeFor(Application $application): ?array
+    {
+        return $this->supportedPhpRange();
     }
 
     /**
