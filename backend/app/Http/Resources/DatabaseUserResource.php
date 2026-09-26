@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Server\Applications\DnsVerifier;
+use App\Services\Server\ServerPublicIp;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -40,7 +42,15 @@ class DatabaseUserResource extends JsonResource
         $engine = $this->database->engine;
         $scheme = (string) config("server.databases.engines.{$engine}.uri_scheme");
         $port = (int) config("server.databases.engines.{$engine}.default_port");
-        $host = in_array($this->host, ['localhost', '%'], true) ? '127.0.0.1' : $this->host;
+        // The address to connect TO. A remote user's `host` is where it may
+        // connect FROM, and printing that here (as this used to) handed
+        // someone a string pointing at their own machine. A local user
+        // connects over loopback; anyone else needs this server's public
+        // address, and when that cannot be found out, loopback is the
+        // honest fallback — it is at least this server.
+        $host = $this->connection_preference === 'localhost'
+            ? '127.0.0.1'
+            : (app(ServerPublicIp::class)->detect(fn () => app(DnsVerifier::class)->serverIp()) ?? '127.0.0.1');
 
         return sprintf(
             '%s://%s:%s@%s:%d/%s',

@@ -28,10 +28,16 @@ use Illuminate\Http\Request;
  */
 class RemoteAccessRestartRequiredException extends Exception
 {
+    /** The engine's display name: PostgreSQL, MySQL or MariaDB. */
+    public function __construct(private string $engine = 'PostgreSQL')
+    {
+        parent::__construct();
+    }
+
     public function render(Request $request): JsonResponse
     {
         return response()->json([
-            'message' => __('errors/database.remote_access_restart_required'),
+            'message' => __('errors/database.remote_access_restart_required', ['engine' => $this->engine]),
             // Stable, so the client can recognise this one case and show a
             // confirm dialog rather than matching on translated prose.
             'code' => 'restart_required',

@@ -3493,6 +3493,10 @@ To go ahead, re-send the same request with **`restart_cluster: true`** (or `crea
 
 A cluster that already listens remotely — because the panel widened it earlier, or an operator configured it themselves — skips all of this and never returns `409`.
 
+**MySQL and MariaDB answer the same `409` (added 2026-09-26).** Ubuntu ships both with `bind-address = 127.0.0.1`, so a remote user used to be created and could never connect. The first remote user on an engine bound to loopback now gets the same `409` / `code: restart_required` (the message names the engine), and `restart_cluster: true` makes the panel write `bind-address = 0.0.0.0` to a drop-in (`/etc/mysql/mariadb.conf.d/99-panel-remote.cnf` or `/etc/mysql/mysql.conf.d/99-panel-remote.cnf`) and restart the engine. Same dialog, same consent, one code path on the client.
+
+**`connection_string` of a remote or anywhere user** now points at this server's public address (it used to print the user's own allowed host, i.e. the client's machine). Local users still get `127.0.0.1`.
+
 **What the panel writes.** One `host <database> <role> <cidr> scram-sha-256` line per remote user, inside a marked block appended to `pg_hba.conf`. Everything outside the markers is left byte for byte; the block is re-rendered on every change, so rules never accumulate. `anywhere` writes **two** lines, `0.0.0.0/0` and `::0/0` — one would leave IPv6 clients unable to connect with no setting to blame. Dropping or renaming a user removes or moves its lines.
 
 **Safety.** The new file is validated with `pg_hba_file_rules` — which reports on the file *as it is on disk*, before the server has loaded it — and is only reloaded if every line parses. If any line does not, the previous file is put back and nothing is signalled.

@@ -3,6 +3,7 @@
 namespace App\Services\Server\Databases;
 
 use App\Contracts\DatabaseEngine;
+use App\Contracts\ListensRemotely;
 use App\Exceptions\Server\Database\DatabaseOperationException;
 use App\Models\DatabaseConnection;
 use App\Services\Server\ServerOps;
@@ -54,7 +55,7 @@ use App\Services\Server\ServerOpsResult;
  * ignored), never on argv. Identifiers are double-quoted and validated upstream
  * by the FormRequests; string literals are single-quoted and escaped.
  */
-class PgsqlEngine implements DatabaseEngine
+class PgsqlEngine implements DatabaseEngine, ListensRemotely
 {
     /**
      * The database `psql` connects *to* in order to run administrative

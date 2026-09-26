@@ -3,8 +3,10 @@
 namespace App\Services\Server\Databases;
 
 use App\Contracts\DatabaseEngine;
+use App\Contracts\ListensRemotely;
 use App\Exceptions\Server\Database\DatabaseOperationException;
 use App\Models\DatabaseConnection;
+use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 
@@ -15,12 +17,76 @@ use App\Services\Server\ServerOpsResult;
  * Identifiers are back-tick quoted; string literals are escaped; both are also
  * strict-regex validated by the FormRequests.
  */
-class SqlEngine implements DatabaseEngine
+class SqlEngine implements DatabaseEngine, ListensRemotely
 {
     public function __construct(
         private DatabaseConnection $connection,
         private ServerOps $serverOps,
+        private ?ManagedFile $files = null,
     ) {}
+
+    /**
+     * Whether a remote user could connect at all.
+     *
+     * Ubuntu's MariaDB and MySQL packages ship `bind-address = 127.0.0.1`,
+     * so without this a user saved as "remote" or "anywhere" was an account
+     * that existed, had the right grants and could never be reached — found on
+     * the 26.04 test server, where the panel even opened 3306 in the firewall
+     * for a server listening on loopback only. Anything other than loopback
+     * counts: an operator who bound a specific interface decided that
+     * themselves, and restarting to widen it further is not ours to do.
+     */
+    public function listensRemotely(): bool
+    {
+        $result = $this->run('SELECT @@bind_address;');
+
+        $addresses = array_filter(array_map('trim', explode(',', trim($result->output()))));
+
+        // Unreadable reads as "already listening": the alternative is a
+        // restart asked for, and made, on a guess.
+        if ($result->failed() || $addresses === []) {
+            return true;
+        }
+
+        return array_diff($addresses, ['127.0.0.1', 'localhost', '::1']) !== [];
+    }
+
+    /**
+     * A drop-in after the package's own file (`50-server.cnf` /
+     * `mysqld.cnf`), so the operator's configuration stays theirs and the
+     * override sits in one obvious, removable place. Then a restart:
+     * `bind_address` is read-only at runtime on both engines.
+     *
+     * Binding is not granting: the account's host and the firewall rule the
+     * panel opens are the other two locks.
+     */
+    public function openRemoteListening(): void
+    {
+        $engine = $this->connection->engine;
+        $dropIn = (string) config("server.databases.engines.{$engine}.remote_bind_file");
+        $service = (string) config("server.databases.engines.{$engine}.service");
+        $context = ['feature' => 'database', 'engine' => $engine, 'op' => 'open_remote_listening'];
+
+        if ($dropIn === '' || $service === '') {
+            throw new DatabaseOperationException(null);
+        }
+
+        $written = ($this->files ?? app(ManagedFile::class))->put(
+            $dropIn,
+            "# Managed by the panel: lets remote database users connect.\n[mysqld]\nbind-address = 0.0.0.0\n",
+            $context,
+        );
+
+        if ($written->failed()) {
+            throw new DatabaseOperationException($written->reference);
+        }
+
+        $restart = $this->serverOps->run(['systemctl', 'restart', $service], $context, 120);
+
+        if ($restart->failed()) {
+            throw new DatabaseOperationException($restart->reference);
+        }
+    }
 
     public function engine(): string
     {

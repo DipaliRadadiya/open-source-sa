@@ -2,16 +2,18 @@
 
 namespace App\Services\Server\Databases;
 
+use App\Contracts\ListensRemotely;
 use App\Exceptions\Server\Database\RemoteAccessRestartRequiredException;
 use App\Models\Database;
 
 /**
- * Makes the cluster able to accept a remote user at all, before one is created.
+ * Makes the engine able to accept a remote user at all, before one is created.
  *
- * Only PostgreSQL needs this. MySQL and MongoDB are already listening off-box
- * by the time the panel has finished installing them, so `CREATE USER` is the
- * whole grant; PostgreSQL binds to loopback by default and cannot be widened
- * without a restart.
+ * PostgreSQL, MySQL and MariaDB all bind to loopback as Ubuntu ships them and
+ * cannot be widened without a restart ({@see ListensRemotely}). MySQL and
+ * MariaDB were once believed to listen off-box already; on the 26.04 test
+ * server MariaDB was on 127.0.0.1:3306, so every remote user the panel had
+ * created was unreachable. MongoDB is bound off-box by its installer.
  *
  * **Called before the engine, never after.** A role created first and then
  * refused a restart would be an account that exists, is stored as `remote`, and
@@ -33,10 +35,7 @@ class RemoteAccessPreparer
 
         $engine = $this->manager->engine($database->engine);
 
-        // Typed on the concrete engine rather than a new contract method:
-        // this is one engine's operational quirk, and widening the interface
-        // would make every other engine answer a question it does not have.
-        if (! $engine instanceof PgsqlEngine) {
+        if (! $engine instanceof ListensRemotely) {
             return;
         }
 
@@ -49,7 +48,9 @@ class RemoteAccessPreparer
         }
 
         if (! $consented) {
-            throw new RemoteAccessRestartRequiredException;
+            throw new RemoteAccessRestartRequiredException(
+                (string) config("server.databases.engines.{$database->engine}.label", $database->engine),
+            );
         }
 
         $engine->openRemoteListening();
