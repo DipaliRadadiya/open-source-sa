@@ -60,12 +60,27 @@ context / {
   allowBrowse             1
   realm                   {{ $basicAuth['realm'] }}
   authName                Restricted
+@if ($disabled)
+  extraHeaders            <<<END_extraHeaders
+set Retry-After 3600
+  END_extraHeaders
+@endif
 }
 
 realm {{ $basicAuth['realm'] }} {
   userDB {
     location               {{ $basicAuth['htpasswdPath'] }}
   }
+}
+@elseif ($disabled)
+{{-- Disabled: the 503 carries Retry-After, as on nginx and Apache — the
+     standard hint for monitors and crawlers to come back later. --}}
+context / {
+  location                {{ $documentRoot }}
+  allowBrowse             1
+  extraHeaders            <<<END_extraHeaders
+set Retry-After 3600
+  END_extraHeaders
 }
 @endif
 

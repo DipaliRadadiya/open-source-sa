@@ -168,7 +168,7 @@ it('serves the unavailable page as 503 on every web server, ACME still answering
 })->with([
     'nginx' => ['nginx', ['return 503;', 'error_page 503 @unavailable;', 'add_header Retry-After 3600 always;']],
     'apache' => ['apache', ['ErrorDocument 503 /index.html', 'RewriteRule ^ - [R=503,L]', 'Header always set Retry-After "3600"']],
-    'openlitespeed' => ['openlitespeed', ['errorpage 503 {', 'RewriteRule ^ - [R=503,L]']],
+    'openlitespeed' => ['openlitespeed', ['errorpage 503 {', 'RewriteRule ^ - [R=503,L]', 'set Retry-After 3600']],
 ]);
 
 it('serves an enabled static site normally', function (string $driver) {
