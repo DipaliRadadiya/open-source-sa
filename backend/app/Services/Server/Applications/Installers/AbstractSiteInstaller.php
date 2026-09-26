@@ -485,6 +485,11 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     }
 
     /**
+     * Nothing, for the installers that finish before the process starts.
+     */
+    public function afterStart(Application $application, string $documentRoot): void {}
+
+    /**
      * Run a command as the site's own user.
      *
      * @param  array<int, string>  $command

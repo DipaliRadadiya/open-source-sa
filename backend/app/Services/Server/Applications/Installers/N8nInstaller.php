@@ -27,8 +27,9 @@ use Illuminate\Support\Str;
  *
  * Its data lives in SQLite under that folder, so it needs no database.
  *
- * There is no admin account to create: n8n's owner account is set up by the
- * first person to open the site.
+ * **The owner account is created by the panel**, in `afterStart()`. n8n has
+ * no command for it: left alone, its owner is whoever opens the site first,
+ * and a fresh install is on a public URL from the moment it starts.
  *
  * **Licensing:** n8n is fair-code under the Sustainable Use License, not open
  * source. Self-hosting for your own use is exactly what it permits — but it is
@@ -58,6 +59,52 @@ class N8nInstaller extends AbstractNodeInstaller
         ], $documentRoot);
 
         $this->writeSecretFile($application, "{$documentRoot}/.env", $this->environment($application, $documentRoot));
+    }
+
+    /**
+     * Claim the instance: create its owner through n8n's own setup endpoint,
+     * from the server, before the site is reported ready.
+     *
+     * The same request n8n's first-run page sends, to 127.0.0.1 — n8n
+     * listens there only. Once an owner exists the endpoint refuses (400),
+     * which is what closes the page to a stranger. The password travels on
+     * stdin, never on the command line.
+     *
+     * Skipped when n8n already has an owner, so Retry Setup does not fail on
+     * an instance a previous attempt already claimed.
+     */
+    public function afterStart(Application $application, string $documentRoot): void
+    {
+        $base = 'http://127.0.0.1:'.((int) ($application->app_port ?: 5678));
+        $settings = $application->installSettings();
+
+        $current = $this->run('create_admin', ['curl', '-sS', '--fail', '--max-time', '30', $base.'/rest/settings'], $application);
+
+        if (($this->decode($current->output())['data']['userManagement']['showSetupOnFirstLoad'] ?? true) === false) {
+            return;
+        }
+
+        $this->run('create_admin', [
+            'curl', '-sS', '--fail-with-body', '--max-time', '30',
+            '-H', 'Content-Type: application/json',
+            '--data-binary', '@-',
+            $base.'/rest/owner/setup',
+        ], $application, json_encode([
+            'email' => (string) ($settings['admin_email'] ?? ''),
+            'firstName' => 'Admin',
+            'lastName' => 'Owner',
+            'password' => (string) ($settings['admin_password'] ?? ''),
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decode(string $json): array
+    {
+        $decoded = json_decode($json, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     private function environment(Application $application, string $documentRoot): string

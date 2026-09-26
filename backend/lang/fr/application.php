@@ -172,6 +172,7 @@ return [
         'dependencies' => 'Vérification des dépendances',
         'verify' => 'Vérification que le site répond',
         'verify_serving' => 'Vérification que le site répond',
+        'create_admin' => 'Création du compte administrateur',
         'worker' => 'Le processus en arrière-plan s\'est arrêté',
     ],
     /*

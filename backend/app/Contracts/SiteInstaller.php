@@ -89,4 +89,17 @@ interface SiteInstaller
      * @throws ProvisioningFailedException
      */
     public function install(Application $application, string $documentRoot, array $context): void;
+
+    /**
+     * Run once the application has started and answered its first request.
+     *
+     * For what only a running application can do. n8n and Uptime Kuma have
+     * no setup command: their first administrator is created by whoever
+     * opens the site first, so an install that stopped at "started" handed
+     * the site to the first stranger to find the URL. They create it here,
+     * from the server, before the site is reported ready.
+     *
+     * @throws ProvisioningFailedException
+     */
+    public function afterStart(Application $application, string $documentRoot): void;
 }

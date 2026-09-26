@@ -172,6 +172,7 @@ return [
         'dependencies' => 'Abhängigkeiten werden geprüft',
         'verify' => 'Prüfen, ob die Website antwortet',
         'verify_serving' => 'Prüfen, ob die Website antwortet',
+        'create_admin' => 'Administratorkonto wird angelegt',
         'worker' => 'Der Hintergrundprozess wurde beendet',
     ],
     /*

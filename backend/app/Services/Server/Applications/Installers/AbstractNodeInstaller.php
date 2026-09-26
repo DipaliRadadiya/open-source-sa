@@ -98,6 +98,7 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
         array $command,
         string $cwd,
         array $environment = [],
+        ?string $input = null,
     ): ServerOpsResult {
         $dir = $this->nodeDir($application);
         $path = ($dir === null ? '' : $dir.':').'/usr/local/bin:/usr/bin:/bin';
@@ -108,7 +109,7 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
             $prefix[] = "{$key}={$value}";
         }
 
-        return $this->runAsSiteUser($step, $application, array_merge($prefix, $command), null, $cwd);
+        return $this->runAsSiteUser($step, $application, array_merge($prefix, $command), $input, $cwd);
     }
 
     /**

@@ -486,6 +486,11 @@ class ApplicationProvisioner
             $this->readiness->verify($application);
 
             $this->progress->record('verify_serving');
+
+            // After the site answers and before it is reported ready: an
+            // application whose admin is created by the first visitor must
+            // not be Active for a moment while a stranger can still do that.
+            $this->installers->afterStart($application, $documentRoot);
         }
     }
 

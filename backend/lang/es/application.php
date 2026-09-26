@@ -172,6 +172,7 @@ return [
         'dependencies' => 'Comprobando las dependencias',
         'verify' => 'Comprobando que el sitio responde',
         'verify_serving' => 'Comprobando que el sitio responde',
+        'create_admin' => 'Creando la cuenta de administrador',
         'worker' => 'El proceso en segundo plano se detuvo',
     ],
     /*

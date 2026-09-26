@@ -17,13 +17,14 @@ use Illuminate\Support\Facades\Http;
  * It stores everything in SQLite under `data/` inside the application, so it
  * needs no database and no credentials written anywhere.
  *
- * **No admin account is created here.** Uptime Kuma has no setup CLI — the
- * first person to open the site creates the administrator, and until they do
- * anyone can. That is upstream's design, so the panel surfaces it in the site
- * type's tagline rather than pretending the site is finished.
+ * **The admin account is created by the panel**, in `afterStart()`. Uptime
+ * Kuma has no setup command: left alone, the first person to open the site
+ * chooses its database and creates the administrator — on a public URL, from
+ * the moment it starts.
  *
  * It reads `PORT`, which the unit already sets to the port the panel
- * allocated, so the process and the reverse proxy cannot disagree.
+ * allocated, so the process and the reverse proxy cannot disagree. Its `.env`
+ * (loaded by the unit) sets the rest: see `environment()`.
  */
 class UptimeKumaInstaller extends AbstractNodeInstaller
 {
@@ -50,7 +51,62 @@ class UptimeKumaInstaller extends AbstractNodeInstaller
         // dependencies, then build the frontend. Running `npm ci` here instead
         // would leave the app with no built assets and a blank page.
         $this->runWithNode('install_app', $application, ['npm', 'run', 'setup'], $documentRoot);
+
+        $this->writeSecretFile($application, "{$documentRoot}/.env", $this->environment());
     }
+
+    /**
+     * - `UPTIME_KUMA_HOST`: Kuma listens on every interface by default, unlike
+     *   every other Node app here. With the firewall off it answered on its
+     *   port directly, past the vhost and whatever Basic Auth or WAF the site
+     *   has. The reverse proxy reaches it on 127.0.0.1, so nothing else needs
+     *   it.
+     * - `UPTIME_KUMA_DB_TYPE`: SQLite, chosen here rather than on Kuma's public
+     *   first-run "set up the database" page, which anyone could answer.
+     */
+    private function environment(): string
+    {
+        return "UPTIME_KUMA_HOST=127.0.0.1\nUPTIME_KUMA_DB_TYPE=sqlite\n";
+    }
+
+    /**
+     * Create the administrator through Kuma's own `setup` event, from the
+     * server, before the site is reported ready.
+     *
+     * The event the first-run page sends, over socket.io with the client Kuma
+     * ships, run as the site user. Once an administrator exists Kuma refuses
+     * the event, which is what closes the page to a stranger. Credentials
+     * travel on stdin. "Already initialized" counts as done, so Retry Setup
+     * does not fail on an instance a previous attempt already set up.
+     */
+    public function afterStart(Application $application, string $documentRoot): void
+    {
+        $settings = $application->installSettings();
+
+        $this->runWithNode('create_admin', $application, ['node', '-e', self::SETUP_SCRIPT], $documentRoot, input: json_encode([
+            'port' => (int) ($application->app_port ?: 3001),
+            'username' => (string) ($settings['admin_username'] ?? 'admin'),
+            'password' => (string) ($settings['admin_password'] ?? ''),
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * Fixed text: every value it uses arrives on stdin.
+     */
+    private const SETUP_SCRIPT = <<<'JS'
+        const { io } = require("socket.io-client");
+        const input = JSON.parse(require("fs").readFileSync(0, "utf8"));
+        const socket = io("http://127.0.0.1:" + input.port, { transports: ["websocket"], reconnection: false, timeout: 15000 });
+        const done = (code, message) => { if (message) process.stderr.write(message + "\n"); socket.close(); process.exit(code); };
+        setTimeout(() => done(1, "Uptime Kuma did not answer the setup request."), 30000);
+        socket.on("connect_error", (e) => done(1, "Uptime Kuma refused the connection: " + e.message));
+        socket.on("connect", () => socket.emit("setup", input.username, input.password, (res) => {
+            if (res && res.ok) return done(0);
+            const message = String((res && res.msg) || "");
+            if (message.includes("has been initialized")) return done(0, "Uptime Kuma already has an administrator.");
+            done(1, "Uptime Kuma refused the administrator: " + message);
+        }));
+        JS;
 
     /**
      * The git ref to clone: an operator's pin, or the newest stable release.

@@ -494,6 +494,8 @@ describe('node version constraints', function () {
             'name' => 'Flows',
             'domain' => 'flows.example.com',
             'system_user_id' => test()->su->id,
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'Flows-Pass-2026',
             'node_version' => '25',
         ])->assertStatus(422)->assertJsonValidationErrors('node_version');
     });
@@ -515,6 +517,8 @@ describe('node version constraints', function () {
             'name' => 'Flows',
             'domain' => 'flows.example.com',
             'system_user_id' => test()->su->id,
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'Flows-Pass-2026',
             'node_version' => '25',
         ])->assertCreated();
     });
@@ -534,6 +538,8 @@ describe('node version constraints', function () {
             'name' => 'Flows',
             'domain' => 'flows.example.com',
             'system_user_id' => test()->su->id,
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'Flows-Pass-2026',
             'node_version' => '22',
         ])->assertStatus(422)->assertJsonValidationErrors('node_version');
     });
@@ -548,6 +554,8 @@ describe('node version constraints', function () {
             'name' => 'Flows',
             'domain' => 'flows.example.com',
             'system_user_id' => test()->su->id,
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'Flows-Pass-2026',
             'node_version' => '24.7.0',
         ])->assertCreated();
     });

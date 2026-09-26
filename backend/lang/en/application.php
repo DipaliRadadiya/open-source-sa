@@ -177,6 +177,7 @@ return [
         'dependencies' => 'Checking the dependencies',
         'verify' => 'Checking the site answers',
         'verify_serving' => 'Checking the site answers',
+        'create_admin' => 'Creating the admin account',
         'worker' => 'The background worker stopped',
     ],
     /*
