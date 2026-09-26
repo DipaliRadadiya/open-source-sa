@@ -142,6 +142,88 @@ it('issues, records the paths and puts TLS into the vhost', function () {
     $this->assertDatabaseHas('activity_logs', ['type' => 'application', 'action' => 'certificate_issued']);
 });
 
+it('removes the Let\'s Encrypt lineage a self-signed certificate replaced', function () {
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::SelfSigned,
+        'status' => CertificateStatus::Pending,
+        'domains' => ['shop.example.com'],
+    ]);
+
+    fakeCertbotSuccess();
+
+    // Left behind, certbot renews it forever for a certificate nothing uses.
+    runIssueJob(new IssueCertificate($certificate->id, null, 'shop.example.com'));
+
+    expect($certificate->fresh()->status)->toBe(CertificateStatus::Active);
+    Process::assertRan(fn ($process) => in_array('delete', $process->command, true)
+        && in_array('shop.example.com', $process->command, true));
+});
+
+it('keeps the lineage when Let\'s Encrypt reissues it under the same name', function () {
+    $certificate = Certificate::create([
+        'application_id' => $this->application->id,
+        'type' => CertificateType::LetsEncrypt,
+        'status' => CertificateStatus::Pending,
+        'domains' => ['shop.example.com'],
+    ]);
+
+    fakeCertbotSuccess();
+
+    runIssueJob(new IssueCertificate($certificate->id, null, 'shop.example.com'));
+
+    Process::assertNotRan(fn ($process) => in_array('delete', $process->command, true));
+});
+
+it('removes an uploaded key once Let\'s Encrypt replaces it', function () {
+    [$pem, $key] = generateKeyPair('shop.example.com');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom', 'certificate' => $pem, 'private_key' => $key,
+        ])
+        ->assertCreated();
+
+    Queue::fake();
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", ['type' => 'letsencrypt', 'force' => true])
+        ->assertStatus(202);
+
+    $pushed = null;
+    Queue::assertPushed(IssueCertificate::class, function (IssueCertificate $job) use (&$pushed) {
+        $pushed = $job;
+
+        return $job->previousFiles === ['/etc/ssl/sv-oss/shop.example.com.crt', '/etc/ssl/sv-oss/shop.example.com.key'];
+    });
+
+    fakeCertbotSuccess();
+    runIssueJob($pushed);
+
+    $certificate = $this->application->fresh()->certificate;
+    expect($certificate->type)->toBe(CertificateType::LetsEncrypt)
+        ->and($certificate->status)->toBe(CertificateStatus::Active)
+        ->and($certificate->uploaded_private_key)->toBeNull();
+
+    Process::assertRan(fn ($process) => in_array('rm', $process->command, true)
+        && in_array('/etc/ssl/sv-oss/shop.example.com.key', $process->command, true));
+});
+
+it('removes the Let\'s Encrypt lineage an uploaded certificate replaced', function () {
+    activeCertificate($this->application);
+    [$pem, $key] = generateKeyPair('shop.example.com');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom', 'certificate' => $pem, 'private_key' => $key,
+        ])
+        ->assertCreated();
+
+    Process::assertRan(fn ($process) => in_array('delete', $process->command, true)
+        && in_array('--cert-name', $process->command, true)
+        && in_array('shop.example.com', $process->command, true));
+});
+
 it('drives certbot through the webroot plugin, never the nginx one', function () {
     $certificate = Certificate::create([
         'application_id' => $this->application->id,
@@ -811,6 +893,17 @@ it('renders TLS on all three web servers', function (string $driver) {
  * supposedly wrote — the expiry is read off disk rather than assumed from a
  * lifetime, because Let's Encrypt has begun issuing shorter-lived certificates.
  */
+function runIssueJob(IssueCertificate $job): void
+{
+    $job->handle(
+        app(CertbotClient::class),
+        app(CertificateFiles::class),
+        app(ApplyVhost::class),
+        app(WebServerManager::class),
+        app(ActivityLogger::class),
+    );
+}
+
 function fakeCertbotSuccess(): void
 {
     Process::fake(function ($process) {

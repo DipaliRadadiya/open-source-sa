@@ -39,13 +39,14 @@ class IssueCertificate implements ShouldQueue
     public int $timeout = 600;
 
     /**
-     * @param  string|null  $previousCertName  the certbot lineage this replaces,
-     *                                         when reissuing changed its name
+     * @param  string|null  $previousCertName  the certbot lineage this replaces
+     * @param  array<int, string>  $previousFiles  the uploaded or self-signed pair this replaces
      */
     public function __construct(
         public int $certificateId,
         public ?int $actorId = null,
         public ?string $previousCertName = null,
+        public array $previousFiles = [],
     ) {}
 
     public function handle(
@@ -103,6 +104,9 @@ class IssueCertificate implements ShouldQueue
                 'certificate_path' => $paths['certificate'],
                 'private_key_path' => $paths['private_key'],
                 'chain_path' => $paths['chain'] ?? null,
+                // An uploaded key has nothing left to belong to once another
+                // certificate is serving the site.
+                'uploaded_private_key' => null,
                 'issued_at' => now(),
                 // Read off the file rather than assumed from the lifetime. Let's
                 // Encrypt has started issuing shorter-lived certificates, so a
@@ -131,15 +135,32 @@ class IssueCertificate implements ShouldQueue
 
         if ($certificate->type === CertificateType::LetsEncrypt) {
             $certbot->ensureRenewalHook(implode(' ', $webServers->driver()->reloadCommandForHook()));
+        }
 
-            // The lineage this one replaced, when reissuing renamed it —
-            // changing the primary domain does that, because certbot names a
-            // lineage after the first domain. Removed only now: the site is
-            // already serving the replacement, so nothing is left without a
-            // certificate at any point. Left behind, the old lineage renews
-            // itself forever for a name nothing answers to.
-            if ($this->previousCertName !== null && $this->previousCertName !== $domains[0]) {
-                $certbot->revoke($this->previousCertName, $certificate->application_id);
+        // What this certificate replaced, removed only now: the site is
+        // already serving the replacement, so nothing is left without a
+        // certificate at any point. A lineage left behind renews itself
+        // forever — spending rate limit and mailing the user about a name
+        // nothing uses — whether it was renamed by a primary-domain change or
+        // replaced by a self-signed certificate. Same lineage name and still
+        // Let's Encrypt means certbot reused it, and it is the one in use.
+        if ($this->previousCertName !== null
+            && ($certificate->type !== CertificateType::LetsEncrypt || $this->previousCertName !== $domains[0])) {
+            $certbot->revoke($this->previousCertName, $certificate->application_id);
+        }
+
+        // An uploaded pair — the private key especially — should not outlive
+        // the certificate it belonged to. A self-signed reissue for the same
+        // name writes to the same paths, so those are not touched.
+        $staleFiles = array_values(array_diff($this->previousFiles, [$paths['certificate'], $paths['private_key']]));
+
+        if ($staleFiles !== []) {
+            try {
+                $files->remove($staleFiles, $certificate->application_id);
+            } catch (Throwable) {
+                // A path outside the certificate directory is refused and left
+                // alone. The new certificate is already serving; tidying up the
+                // old one must not turn that into a failed job.
             }
         }
 

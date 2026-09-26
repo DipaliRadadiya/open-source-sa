@@ -65,6 +65,12 @@ class RequestCertificate
             ? ($existing->domains[0] ?? null)
             : null;
 
+        // Same reasoning for an uploaded or self-signed pair: the job removes
+        // it once the replacement is serving.
+        $previousFiles = $existing !== null && $existing->type !== CertificateType::LetsEncrypt
+            ? array_values(array_filter([$existing->certificate_path, $existing->private_key_path]))
+            : [];
+
         $certificate = Certificate::updateOrCreate(
             ['application_id' => $application->id],
             [
@@ -85,7 +91,7 @@ class RequestCertificate
             'type' => $type->value,
         ]);
 
-        IssueCertificate::dispatch($certificate->id, Auth::id(), $previousCertName);
+        IssueCertificate::dispatch($certificate->id, Auth::id(), $previousCertName, $previousFiles);
 
         return $certificate->refresh();
     }
