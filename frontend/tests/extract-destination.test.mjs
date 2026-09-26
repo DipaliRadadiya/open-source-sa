@@ -62,7 +62,7 @@ test("each dialog names the right part of the path", () => {
   // file's own folder, so the line says where it really lands.
   assert.match(compress, /destinationOf=\{dirname\}/);
   // A bare name is placed in the item's folder once, in the shared dialog.
-  assert.match(dialog, /const place = \(typed\) => inFolder\(typed, dirname\(file\.path\)\);/);
+  assert.match(dialog, /const place = \(typed\) => placeTarget\(typed, file\.path, defaultTarget\);/);
   assert.doesNotMatch(
     read("components/applications/files/extract-dialog.jsx"),
     /destinationOf=/,
