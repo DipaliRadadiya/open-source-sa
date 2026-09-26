@@ -279,7 +279,9 @@ it('does not hand out a name the engine already has', function () {
             $sql = (string) $process->input;
 
             // The availability probe -- statements go over stdin, never argv.
-            if (str_contains($sql, 'information_schema.schemata')) {
+            // Matched on its EXISTS, not on the table: describeDatabase()
+            // reads information_schema.schemata too, after the create.
+            if (str_contains($sql, 'CASE WHEN EXISTS') && str_contains($sql, 'information_schema.schemata')) {
                 preg_match("/schema_name = '([^']+)'/", $sql, $m);
                 $offered[] = $m[1] ?? '';
 
