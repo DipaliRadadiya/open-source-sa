@@ -164,6 +164,10 @@ class PrestaShopSiteType extends AbstractSiteType
             '^/modules/.*/vendor/',
             '\\.(log|tpl|twig|sass|yml)$',
             '^/(img|upload)/.*\\.php',
+            // Not in the nginx sample, but in the root `.htaccess` PrestaShop
+            // ships: the exact version of every dependency, for anyone
+            // matching them against published vulnerabilities.
+            '^/composer\\.lock$',
         ];
     }
 }
