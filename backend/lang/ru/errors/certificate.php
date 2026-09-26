@@ -6,6 +6,11 @@ return [
     'force_https_without_certificate' => 'Нельзя принудительно включить HTTPS без активного сертификата — сайт перестанет отвечать.',
     'not_pem' => 'Это не похоже на файл PEM. Он должен начинаться с -----BEGIN.',
     'key_mismatch' => 'Закрытый ключ не соответствует сертификату.',
+    'not_certificate' => 'Это не сертификат. Вставьте сюда сертификат (-----BEGIN CERTIFICATE-----), а закрытый ключ — в отдельное поле.',
+    'domain_not_covered' => 'Этот сертификат не покрывает ни один домен этого сайта (:domains).',
+    'expired' => 'Срок действия этого сертификата уже истёк.',
+    'not_yet_valid' => 'Этот сертификат ещё не действителен.',
+    'invalid_chain' => 'Цепочка должна содержать только сертификаты (блоки -----BEGIN CERTIFICATE-----).',
 
     // Why the reachability dry run said no, per domain. The dry run does
     // exactly what Let's Encrypt is about to do, so each of these is a

@@ -338,6 +338,115 @@ it('rejects something that is not a PEM file at all', function () {
         ->assertJsonValidationErrors(['certificate', 'private_key']);
 });
 
+it('refuses an uploaded certificate that covers no name on the site', function () {
+    activeCertificate($this->application);
+    [$pem, $key] = generateKeyPair('example.org');
+
+    // Used to be accepted, marked active and served in place of the working
+    // certificate, with every visitor getting a name-mismatch error.
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['certificate' => 'shop.example.com']);
+
+    expect($this->application->fresh()->certificate->type)->toBe(CertificateType::LetsEncrypt);
+    Process::assertNotRan(fn ($process) => in_array('tee', $process->command, true));
+});
+
+it('accepts an uploaded wildcard that covers the site', function () {
+    [$pem, $key] = generateKeyPair('*.example.com');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+        ])
+        ->assertCreated();
+});
+
+it('refuses an uploaded certificate that has already expired', function () {
+    [$pem, $key] = generateKeyPair('shop.example.com', days: 1);
+    $this->travel(2)->days();
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['certificate' => 'expired']);
+
+    expect(Certificate::count())->toBe(0);
+});
+
+it('refuses an uploaded certificate that is not valid yet', function () {
+    [$pem, $key] = generateKeyPair('shop.example.com');
+    $this->travel(-2)->days();
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['certificate' => 'not valid yet']);
+});
+
+it('refuses a chain that is not made of whole certificates', function (string $chain) {
+    [$pem, $key] = generateKeyPair('shop.example.com');
+
+    // OpenLiteSpeed quietly drops a block it cannot parse, so garbage here used
+    // to be served as though the site had its intermediates.
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+            'chain' => $chain,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('chain');
+})->with([
+    'not base64' => "-----BEGIN CERTIFICATE-----\n!!!garbage!!!\n-----END CERTIFICATE-----",
+    'a private key' => fn () => generateKeyPair('x.example.com')[1],
+    'trailing junk' => fn () => generateKeyPair('ca.example.com')[0]."\nnot a certificate",
+]);
+
+it('accepts a chain of real certificates', function () {
+    [$pem, $key] = generateKeyPair('shop.example.com');
+    [$intermediate] = generateKeyPair('Intermediate CA');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $pem,
+            'private_key' => $key,
+            'chain' => $intermediate,
+        ])
+        ->assertCreated();
+});
+
+it('says a private key pasted into the certificate field is not a certificate', function () {
+    [, $key] = generateKeyPair('shop.example.com');
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/certificate", [
+            'type' => 'custom',
+            'certificate' => $key,
+            'private_key' => $key,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['certificate' => 'not a certificate'])
+        ->assertJsonMissingValidationErrors('private_key');
+});
+
 it('names the domains that are on the site but not on the certificate', function () {
     activeCertificate($this->application);
 
@@ -722,11 +831,11 @@ function renderedCertVhost(Application $application, ?string $driverName = null)
  *
  * @return array{0: string, 1: string}
  */
-function generateKeyPair(string $commonName): array
+function generateKeyPair(string $commonName, int $days = 365): array
 {
     $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
     $csr = openssl_csr_new(['commonName' => $commonName], $key, ['digest_alg' => 'sha256']);
-    $cert = openssl_csr_sign($csr, null, $key, 365, ['digest_alg' => 'sha256']);
+    $cert = openssl_csr_sign($csr, null, $key, $days, ['digest_alg' => 'sha256']);
 
     openssl_x509_export($cert, $pem);
     openssl_pkey_export($key, $privateKey);

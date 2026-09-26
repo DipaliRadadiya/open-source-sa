@@ -59,7 +59,7 @@ class UploadCertificate
         }
 
         $paths = $this->files->paths($application->domain);
-        $domains = $this->subjectNames((string) $data['certificate']) ?: [$application->domain];
+        $domains = $this->files->subjectNames((string) $data['certificate']) ?: [$application->domain];
         $candidate = new Certificate(['domains' => $domains]);
         $targetUrl = ($candidate->covers((string) $application->domain) ? 'https://' : 'http://').$application->domain;
         $certificate = null;
@@ -130,39 +130,5 @@ class UploadCertificate
         ]);
 
         return $certificate->refresh();
-    }
-
-    /**
-     * Every name the uploaded certificate actually covers.
-     *
-     * Parsed rather than assumed so the panel can say "this domain is not on
-     * your certificate" — the failure that otherwise appears only in the
-     * visitor's browser, on a site whose panel says everything is fine.
-     *
-     * @return array<int, string>
-     */
-    private function subjectNames(string $pem): array
-    {
-        $parsed = @openssl_x509_parse($pem);
-
-        if ($parsed === false) {
-            return [];
-        }
-
-        $names = [];
-
-        if (isset($parsed['subject']['CN'])) {
-            $names[] = strtolower((string) $parsed['subject']['CN']);
-        }
-
-        foreach (explode(',', (string) ($parsed['extensions']['subjectAltName'] ?? '')) as $entry) {
-            $entry = trim($entry);
-
-            if (str_starts_with($entry, 'DNS:')) {
-                $names[] = strtolower(substr($entry, 4));
-            }
-        }
-
-        return array_values(array_unique(array_filter($names)));
     }
 }

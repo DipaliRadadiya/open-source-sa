@@ -6,6 +6,11 @@ return [
     'force_https_without_certificate' => 'सक्रिय प्रमाणपत्र के बिना HTTPS बाध्य नहीं किया जा सकता — साइट उत्तर देना बंद कर देगी।',
     'not_pem' => 'यह PEM फ़ाइल नहीं लगती। इसे -----BEGIN से शुरू होना चाहिए।',
     'key_mismatch' => 'निजी कुंजी प्रमाणपत्र से मेल नहीं खाती।',
+    'not_certificate' => 'यह सर्टिफ़िकेट नहीं है। सर्टिफ़िकेट (-----BEGIN CERTIFICATE-----) यहाँ पेस्ट करें और प्राइवेट की उसके अपने फ़ील्ड में।',
+    'domain_not_covered' => 'यह सर्टिफ़िकेट इस साइट के किसी भी डोमेन को कवर नहीं करता (:domains)।',
+    'expired' => 'इस सर्टिफ़िकेट की समय-सीमा पहले ही समाप्त हो चुकी है।',
+    'not_yet_valid' => 'यह सर्टिफ़िकेट अभी मान्य नहीं है।',
+    'invalid_chain' => 'चेन में केवल सर्टिफ़िकेट (-----BEGIN CERTIFICATE----- ब्लॉक) होने चाहिए।',
 
     // Why the reachability dry run said no, per domain. The dry run does
     // exactly what Let's Encrypt is about to do, so each of these is a

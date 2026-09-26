@@ -6,6 +6,11 @@ return [
     'force_https_without_certificate' => 'HTTPS kann ohne aktives Zertifikat nicht erzwungen werden — die Website wäre nicht mehr erreichbar.',
     'not_pem' => 'Das sieht nicht nach einer PEM-Datei aus. Sie sollte mit -----BEGIN beginnen.',
     'key_mismatch' => 'Der private Schlüssel passt nicht zum Zertifikat.',
+    'not_certificate' => 'Das ist kein Zertifikat. Fügen Sie hier das Zertifikat (-----BEGIN CERTIFICATE-----) ein und den privaten Schlüssel in sein eigenes Feld.',
+    'domain_not_covered' => 'Dieses Zertifikat deckt keine Domain dieser Website ab (:domains).',
+    'expired' => 'Dieses Zertifikat ist bereits abgelaufen.',
+    'not_yet_valid' => 'Dieses Zertifikat ist noch nicht gültig.',
+    'invalid_chain' => 'Die Kette darf nur Zertifikate enthalten (-----BEGIN CERTIFICATE-----Blöcke).',
 
     // Why the reachability dry run said no, per domain. The dry run does
     // exactly what Let's Encrypt is about to do, so each of these is a

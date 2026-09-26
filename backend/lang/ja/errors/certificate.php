@@ -6,6 +6,11 @@ return [
     'force_https_without_certificate' => '有効な証明書なしに HTTPS を強制することはできません。サイトが応答しなくなります。',
     'not_pem' => 'PEM ファイルではないようです。-----BEGIN で始まる必要があります。',
     'key_mismatch' => '秘密鍵が証明書と一致しません。',
+    'not_certificate' => 'これは証明書ではありません。ここには証明書（-----BEGIN CERTIFICATE-----）を、秘密鍵は専用の欄に貼り付けてください。',
+    'domain_not_covered' => 'この証明書はこのサイトのどのドメインも対象にしていません（:domains）。',
+    'expired' => 'この証明書はすでに期限切れです。',
+    'not_yet_valid' => 'この証明書はまだ有効になっていません。',
+    'invalid_chain' => 'チェーンには証明書（-----BEGIN CERTIFICATE----- ブロック）のみを含めてください。',
 
     // Why the reachability dry run said no, per domain. The dry run does
     // exactly what Let's Encrypt is about to do, so each of these is a
