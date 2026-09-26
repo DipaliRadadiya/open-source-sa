@@ -628,8 +628,9 @@ way round — the sentence is translated and gets reworded.
 | `runtime` | The server has no PHP / no Node | Install it — `installable_runtime` names which |
 | `database` | The type takes an engine this server hasn't got (only NodeBB, which is MongoDB-only) | The Databases screen |
 | `web_server` | This web server does not offer the type | None — do not offer an action |
+| `php_version` | PHP is installed, but no version in the type's `php_version_range` (added 2026-09-26) | The PHP screen, when the reason names a version to install; none when it says no version in range can be installed from the server's repository (e.g. PrestaShop, 7.2 – 8.1, on OpenLiteSpeed / Ubuntu 26.04, where LiteSpeed publishes 8.2 – 8.5 only) |
 
-`installable_runtime` is set only for `runtime`, and is null for the other two:
+`installable_runtime` is set only for `runtime`, and is null for the others:
 nothing installable fixes them, so a card must not offer a button that cannot work.
 
 ---
@@ -5305,6 +5306,8 @@ The `phar` groups are **best-effort**: a box that has the interpreter without th
 **Request:** `{"version": "8.3"}`
 
 **Response `202`:** queued (apt takes minutes). Already installed → `200`.
+
+**`422` on `version`** (added 2026-09-26) when the version is neither installed nor in the server's package index — the same list `GET /php` returns as `installable`. It used to be queued and fail minutes later as `package_not_found`.
 
 ---
 

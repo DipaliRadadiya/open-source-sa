@@ -13,6 +13,7 @@ use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Php\PhpExtensionManager;
 use App\Services\Server\Php\PhpOverview;
 use App\Services\Server\Php\PhpStackManager;
+use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Php\Stacks\LsphpPhpStack;
 use App\Services\Server\Runtimes\PhpRuntime;
 use App\Services\Server\WebServers\OlsDriver;
@@ -1376,7 +1377,16 @@ describe('the site type catalog', function () {
     // reachable SQL engine every type that needs one is greyed for a reason
     // that has nothing to do with OpenLiteSpeed, and the assertion below stops
     // measuring the thing it names.
-    beforeEach(fn () => fakeUsableSqlEngine());
+    beforeEach(function () {
+        fakeUsableSqlEngine();
+
+        // Same reasoning for PHP: a type is greyed when no installed version is
+        // in its range (PrestaShop stops at 8.1), and without this the answer
+        // came from whatever /etc/php the machine running the suite has.
+        $versions = Mockery::mock(PhpVersionManager::class)->makePartial();
+        $versions->shouldReceive('versions')->andReturn(['8.4', '8.1']);
+        app()->instance(PhpVersionManager::class, $versions);
+    });
 
     it('offers every site type, because nothing in them depends on the web server', function () {
         $catalog = collect(app(SiteTypeManager::class)->catalog());

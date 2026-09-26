@@ -66,6 +66,7 @@ it('shows an installed version as ready', function () {
 
 it('shows a queued version as installing, with no files on disk', function () {
     Queue::fake();
+    fakePhpPackageIndex();
 
     $this->withHeaders(progressHeaders())
         ->postJson('/api/php/versions', ['version' => '8.3'])
@@ -82,6 +83,7 @@ it('shows a queued version as installing, with no files on disk', function () {
 
 it('records the install before dispatching, so an immediate poll sees it', function () {
     Queue::fake();
+    fakePhpPackageIndex();
 
     // If the row were created inside the job, a client polling between the 202
     // and the worker picking the job up would see nothing — the exact blind
@@ -95,6 +97,7 @@ it('records the install before dispatching, so an immediate poll sees it', funct
 
 it('stops offering a version that is already installing', function () {
     Queue::fake();
+    fakePhpPackageIndex();
     $this->withHeaders(progressHeaders())->postJson('/api/php/versions', ['version' => '8.3']);
 
     // Otherwise the button starts a second apt run for the same package.

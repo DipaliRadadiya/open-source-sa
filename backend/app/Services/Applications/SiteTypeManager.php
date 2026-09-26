@@ -3,10 +3,13 @@
 namespace App\Services\Applications;
 
 use App\Contracts\SiteType;
+use App\Rules\SupportedPhpVersion;
 use App\Services\Server\Applications\EngineVersionSupport;
 use App\Services\Server\Applications\InstallerManager;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Databases\DatabaseManager;
+use App\Services\Server\Php\PhpVersionManager;
+use App\Services\Server\Runtimes\PhpRuntime;
 
 /**
  * The application catalog — resolves site types and describes them for the
@@ -32,6 +35,8 @@ class SiteTypeManager
         private InstallerManager $installers,
         private DatabaseManager $databases,
         private EngineVersionSupport $versions,
+        private PhpVersionManager $phpVersions,
+        private PhpRuntime $php,
     ) {}
 
     /**
@@ -81,6 +86,13 @@ class SiteTypeManager
 
     public const BLOCKED_WEB_SERVER = 'web_server';
 
+    /**
+     * PHP is here, but no version this application runs on. The way out is the
+     * PHP screen when the package index has one, and none when it does not —
+     * the reason says which.
+     */
+    public const BLOCKED_PHP_VERSION = 'php_version';
+
     public function catalog(): array
     {
         return array_map(function (SiteType $type) {
@@ -113,7 +125,7 @@ class SiteTypeManager
                 'accepted_engines' => $this->acceptedEngines($type),
                 'available' => $available,
                 'unavailable_reason' => $blocked['reason'] ?? null,
-                // The same block as a stable value: 'runtime' | 'database' |
+                // The same block as a stable value: 'runtime' | 'database' | 'php_version' |
                 // 'web_server', null when available. `unavailable_reason` is
                 // the sentence to show; this is the one to branch on, and the
                 // two must never be read the other way round.
@@ -170,6 +182,10 @@ class SiteTypeManager
                 'reason' => __("application.unavailable.{$runtime}"),
                 'runtime' => $runtime,
             ];
+        }
+
+        if (($blocked = $this->phpVersionBlock($type)) !== null) {
+            return $blocked;
         }
 
         $missing = $this->missingEngines($type);
@@ -365,6 +381,53 @@ class SiteTypeManager
         }
 
         return $this->usableEngines[$engine];
+    }
+
+    /**
+     * A type with a PHP range, on a server with no installed version inside it.
+     *
+     * Found on an OpenLiteSpeed server on Ubuntu 26.04: PrestaShop runs on
+     * 7.2 – 8.1, LiteSpeed publishes 8.2 – 8.5 for that release, and the card
+     * said "available". The form was filled in and then refused with "choose a
+     * version in the range" — a range nothing on the box could reach.
+     *
+     * The package index is read only when nothing installed fits, which is
+     * rare, so the catalog does not pay an `apt-cache` call per type.
+     *
+     * @return array{code: string, reason: string, runtime: ?string}|null
+     */
+    private function phpVersionBlock(SiteType $type): ?array
+    {
+        $range = $type->supportedPhpRange();
+
+        if ($range === null) {
+            return null;
+        }
+
+        $min = $range['min'] ?? null;
+        $max = $range['max'] ?? null;
+        $fits = fn (string $version): bool => SupportedPhpVersion::within($min, $max, $version);
+
+        if (array_filter($this->phpVersions->versions(), $fits) !== []) {
+            return null;
+        }
+
+        // Newest first, so the suggestion is the one with the longest life left.
+        $installable = array_values(array_filter($this->php->installable(), $fits));
+        $replace = [
+            'type' => __("application.types.{$type->name()}.title"),
+            'range' => SupportedPhpVersion::describe($min, $max),
+        ];
+
+        return [
+            'code' => self::BLOCKED_PHP_VERSION,
+            'reason' => $installable === []
+                ? __('application.unavailable.php_version_none', $replace)
+                : __('application.unavailable.php_version_install', [...$replace, 'version' => $installable[0]]),
+            // Not `php`: that would offer to install the runtime, which is
+            // already here. The version is chosen on the PHP screen.
+            'runtime' => null,
+        ];
     }
 
     /**

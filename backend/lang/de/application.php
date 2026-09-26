@@ -39,6 +39,8 @@ return [
     'unavailable' => [
         'database' => 'Diese Anwendung benötigt :engines, das auf diesem Server fehlt.',
         'php' => 'Auf diesem Server ist PHP nicht installiert.',
+        'php_version_install' => 'Auf diesem Server gibt es keine PHP-Version, auf der :type läuft (:range). Installiere zuerst PHP :version im PHP-Bereich.',
+        'php_version_none' => 'Auf diesem Server gibt es keine PHP-Version, auf der :type läuft (:range), und keine dieser Versionen lässt sich aus dem Paket-Repository des Servers installieren.',
         'node' => 'Auf diesem Server ist Node.js nicht installiert.',
         'web_server' => 'Diese Anwendung ist auf :web_server-Servern noch nicht verfügbar.',
     ],

@@ -39,6 +39,8 @@ return [
     'unavailable' => [
         'database' => 'このアプリケーションには :engines が必要ですが、このサーバーにはありません。',
         'php' => 'このサーバーには PHP がインストールされていません。',
+        'php_version_install' => 'このサーバーには :type が動作する PHP バージョン（:range）がありません。先に PHP 画面から PHP :version をインストールしてください。',
+        'php_version_none' => 'このサーバーには :type が動作する PHP バージョン（:range）がなく、サーバーのパッケージリポジトリからもインストールできません。',
         'node' => 'このサーバーには Node.js がインストールされていません。',
         'web_server' => 'このアプリケーションは :web_server サーバーではまだ利用できません。',
     ],

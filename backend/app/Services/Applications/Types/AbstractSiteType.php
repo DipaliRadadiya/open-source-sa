@@ -5,6 +5,7 @@ namespace App\Services\Applications\Types;
 use App\Contracts\CloneStrategy;
 use App\Contracts\SiteType;
 use App\Contracts\StagingStrategy;
+use App\Rules\SupportedPhpVersion;
 use App\Services\Server\Php\PhpVersionManager;
 
 /**
@@ -231,13 +232,10 @@ abstract class AbstractSiteType implements SiteType
             return $installed;
         }
 
-        $within = array_values(array_filter($installed, function (string $version) use ($range): bool {
-            $min = $range['min'] ?? null;
-            $max = $range['max'] ?? null;
-
-            return ($min === null || version_compare($version, $min, '>='))
-                && ($max === null || version_compare($version, $max, '<='));
-        }));
+        $within = array_values(array_filter(
+            $installed,
+            fn (string $version): bool => SupportedPhpVersion::within($range['min'] ?? null, $range['max'] ?? null, $version),
+        ));
 
         return $within === [] ? $installed : $within;
     }
