@@ -6,7 +6,7 @@ use App\Models\FirewallRule;
 use Illuminate\Contracts\Validation\Validator;
 
 /**
- * Refuse an *edit* that turns one rule into a copy of another.
+ * Refuse a rule — new or edited — that ufw would treat as one it already has.
  *
  * `CreateFirewallRule` has always rejected an identical new rule, with this
  * same `errors/firewall.duplicate` message. Updating had no equivalent: a rule
@@ -20,10 +20,21 @@ use Illuminate\Contracts\Validation\Validator;
  * send have to come from the stored row, and the rule being edited must not
  * count as a duplicate of itself.
  *
- * Identity is the four fields ufw acts on plus the source. `description` is
- * deliberately excluded: it is a label for people, and letting it distinguish
- * two rules would mean the server enforces one thing and the list explains it
- * twice.
+ * Identity is port, protocol and source — **not the action**, because that is
+ * how ufw counts. `ufw deny 22/tcp` beside an existing `allow 22/tcp` does not
+ * add a rule, it prints "Rule updated" and *replaces* the allow, while the
+ * panel went on listing both. Deleting either row then ran `ufw delete` on
+ * the one rule left, so the port lost both. Found live on 2026-09-26: a deny
+ * on the SSH port, then deleting it, left SSH with no rule at all and locked
+ * the server out, with the panel still showing "Allow 22/tcp". An opposite
+ * rule is refused with its own message: the way to turn an allow into a deny
+ * is to edit it, which UpdateFirewallRule and SshLockoutGuard already handle.
+ *
+ * `description` is deliberately excluded: it is a label for people, and
+ * letting it distinguish two rules would mean the server enforces one thing
+ * and the list explains it twice.
+ *
+ * Used by both the create and the update request.
  */
 trait RefusesDuplicateRules
 {
@@ -34,20 +45,25 @@ trait RefusesDuplicateRules
                 return;
             }
 
-            if ($this->duplicateExists()) {
-                $validator->errors()->add('port_from', __('errors/firewall.duplicate'));
+            $clash = $this->clashingRule();
+
+            if ($clash === null) {
+                return;
             }
+
+            $validator->errors()->add('port_from', $clash->action === (string) $this->resolved('action')
+                ? __('errors/firewall.duplicate')
+                : __('errors/firewall.conflict', ['ports' => $clash->portSpec(), 'action' => $clash->action]));
         });
     }
 
-    private function duplicateExists(): bool
+    private function clashingRule(): ?FirewallRule
     {
         $existing = $this->route('firewallRule');
 
         $query = FirewallRule::query()
             ->where('port_from', (int) $this->resolved('port_from'))
-            ->where('protocol', (string) $this->resolved('protocol'))
-            ->where('action', (string) $this->resolved('action'));
+            ->where('protocol', (string) $this->resolved('protocol'));
 
         // Spelled out rather than relying on `where($column, null)`. Laravel
         // does turn that into `whereNull`, so this is not a fix — it is the
@@ -68,7 +84,7 @@ trait RefusesDuplicateRules
             $query->whereKeyNot($existing->getKey());
         }
 
-        return $query->exists();
+        return $query->first();
     }
 
     /**

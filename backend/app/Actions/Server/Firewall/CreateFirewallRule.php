@@ -20,12 +20,13 @@ class CreateFirewallRule
      */
     public function execute(array $data): FirewallRule
     {
-        // Reject an identical rule (same port/proto/action/source).
+        // Backstop for callers that skip the request: one rule per
+        // port/proto/source, whatever the action — ufw replaces rather than
+        // adds an opposite rule. {@see \App\Http\Requests\Server\Firewall\RefusesDuplicateRules}
         $duplicate = FirewallRule::query()
             ->where('port_from', $data['port_from'])
             ->where('port_to', $data['port_to'] ?? null)
             ->where('protocol', $data['protocol'])
-            ->where('action', $data['action'])
             ->where('source_ip', $data['source_ip'] ?? null)
             ->exists();
 
