@@ -5014,7 +5014,7 @@ Manual + scheduled run history, paginated.
   "swap": {"enabled": true, "path": "/swapfile-panel", "size": 2147483648, "size_human": "2 GB", "used": 0, "used_human": "0 B", "free": 2147483648, "free_human": "2 GB"},
   "security": {"port": 22, "permit_root_login": "prohibit-password", "password_authentication": false, "has_ssh_key": true},
   "updates": {"security_updates_enabled": true, "auto_reboot": false, "reboot_time": "06:00", "reboot_required": false, "updates_available": 3, "security_updates_available": 1, "lists_refreshed_at": "29-07-2026 04:00:00", "unattended_last_run_at": "27-07-2026 06:18:00", "unattended_last_result": "success", "unattended_last_error": null, "unattended_last_log": null, "unattended_last_log_truncated": false, "unattended_log_readable": true},
-  "redis": {"maxmemory": "256mb", "maxmemory_policy": "allkeys-lru", "has_password": true, "password": "s3cr3t-redis", "password_out_of_sync": false, "password_manageable": true, "running": true, "memory_used": 8388608, "memory_used_human": "8 MB"}
+  "redis": {"maxmemory": "256mb", "maxmemory_policy": "volatile-lru", "unsafe_policies": ["allkeys-lru", "allkeys-lfu", "allkeys-random"], "has_password": true, "password": "s3cr3t-redis", "password_out_of_sync": false, "password_manageable": true, "running": true, "memory_used": 8388608, "memory_used_human": "8 MB"}
 ```
 
 **`swap.path` is `/swapfile-panel`, not `/swapfile`** (changed 2026-09-14). It is the file `install.sh` creates, and the panel manages exactly that one — `swap.enabled` is answered by looking for this path in the kernel's swap list. The two names used to disagree, so on a fresh install the installer's swap was live and this block read `enabled: false, size: 0`. A server whose swap was created through this screen before the change has it at `/swapfile`; that file is now reported under `unmanaged` / `system_total` and is no longer resizable from the screen. Don't hardcode the path — render `swap.path`.
@@ -5188,9 +5188,11 @@ Cancelling when nothing is scheduled is **not** an error: the caller wanted no p
 ### PUT `/settings/redis`
 **Permission:** `setting` (manage)
 
-**Request:** `{"maxmemory": "512mb", "maxmemory_policy": "allkeys-lru", "password": "newpassword"}`
+**Request:** `{"maxmemory": "512mb", "maxmemory_policy": "volatile-lru", "password": "newpassword"}`
 
 Omit `password` to leave it unchanged. `{"remove_password": true}` clears it.
+
+A policy listed in `unsafe_policies` (the `allkeys-*` ones, whenever the panel's own queue is on this Redis) is refused with `422` on `maxmemory_policy`: once Redis is full it can evict a pending job silently.
 
 **Response `200`:** settings applied. `{"message": "Password is being changed.", "reference": "…"}` + `202` when a password change is in progress (applied after response).
 

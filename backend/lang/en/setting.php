@@ -24,5 +24,6 @@ return [
     ],
     'redis' => [
         'password_applying' => 'The Redis password is being applied. Reload in a moment to confirm.',
+        'policy_evicts_panel_queue' => 'The panel keeps its queued jobs in this Redis. An allkeys policy can evict a pending job silently once Redis is full, so it is not allowed here. Use noeviction or a volatile policy.',
     ],
 ];

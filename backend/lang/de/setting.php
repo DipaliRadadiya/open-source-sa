@@ -24,5 +24,6 @@ return [
     ],
     'redis' => [
         'password_applying' => 'Das Redis-Passwort wird angewendet. Laden Sie gleich neu, um es zu bestätigen.',
+        'policy_evicts_panel_queue' => 'Das Panel speichert seine wartenden Jobs in diesem Redis. Eine allkeys-Richtlinie kann einen ausstehenden Job stillschweigend entfernen, sobald Redis voll ist, und ist hier daher nicht erlaubt. Verwenden Sie noeviction oder eine volatile-Richtlinie.',
     ],
 ];

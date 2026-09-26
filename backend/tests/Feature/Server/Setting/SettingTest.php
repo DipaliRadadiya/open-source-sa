@@ -476,6 +476,42 @@ it('applies redis settings via redis-cli', function () {
     Process::assertRan(fn ($p) => $p->command === [$this->redisCli, 'config', 'rewrite']);
 });
 
+it('refuses an allkeys policy while the panel queues its jobs in redis', function (string $policy) {
+    config(['queue.default' => 'redis']);
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/redis', ['maxmemory' => '256mb', 'maxmemory_policy' => $policy])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['maxmemory_policy' => __('setting.redis.policy_evicts_panel_queue')]);
+
+    Process::assertDidntRun(fn ($p) => ($p->command[1] ?? null) === 'config' && ($p->command[2] ?? null) === 'set');
+})->with(['allkeys-lru', 'allkeys-lfu', 'allkeys-random']);
+
+it('still accepts noeviction and volatile policies while the panel queues in redis', function (string $policy) {
+    config(['queue.default' => 'redis']);
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/redis', ['maxmemory' => '256mb', 'maxmemory_policy' => $policy])
+        ->assertOk();
+})->with(['noeviction', 'volatile-lru', 'volatile-ttl']);
+
+it('names the refused policies so the form can disable them', function () {
+    config(['queue.default' => 'redis']);
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/settings')->assertOk()
+        ->assertJsonPath('settings.redis.unsafe_policies', ['allkeys-lru', 'allkeys-lfu', 'allkeys-random']);
+
+    config(['queue.default' => 'database']);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/settings')->assertOk()
+        ->assertJsonPath('settings.redis.unsafe_policies', []);
+});
+
 it('omits redis and 404s its update when redis-cli is absent', function () {
     config(['server.redis_cli' => $this->dir.'/nope']);
     fakeSettings();

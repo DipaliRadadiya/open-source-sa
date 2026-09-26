@@ -116,6 +116,9 @@ class RedisSettings implements SettingGroup
         return [
             'maxmemory' => $this->configGet('maxmemory') ?: '0',
             'maxmemory_policy' => $this->configGet('maxmemory-policy') ?: 'noeviction',
+            // Policies apply() will refuse, so the form can disable them
+            // rather than offer them and answer 422.
+            'unsafe_policies' => self::unsafePolicies(),
             // Whether the panel is configured with one. No longer nullable:
             // "could not ask Redis" is now reported by `password_out_of_sync`,
             // which is a different question and deserved its own field.
@@ -128,6 +131,32 @@ class RedisSettings implements SettingGroup
             'password_manageable' => $this->env->writable(),
             ...$this->liveState(),
         ];
+    }
+
+    /**
+     * Eviction policies that could delete the panel's own pending jobs.
+     *
+     * install.sh puts the panel's queue on this Redis. A queued job is a list
+     * entry with no TTL: `volatile-*` never touches it, but `allkeys-*` picks
+     * victims from every key once `maxmemory` is reached — so a pending
+     * install or certificate simply vanishes, with no failure recorded
+     * anywhere. `noeviction` fails the write loudly instead, which is the
+     * right way for a full Redis to behave under a job queue.
+     *
+     * @return list<string>
+     */
+    public static function unsafePolicies(): array
+    {
+        $connection = (string) config('queue.default');
+
+        if (config("queue.connections.{$connection}.driver") !== 'redis') {
+            return [];
+        }
+
+        return array_values(array_filter(
+            (array) config('server.redis_maxmemory_policies', []),
+            fn (string $policy) => str_starts_with($policy, 'allkeys-'),
+        ));
     }
 
     /**

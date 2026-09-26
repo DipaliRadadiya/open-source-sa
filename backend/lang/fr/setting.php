@@ -24,5 +24,6 @@ return [
     ],
     'redis' => [
         'password_applying' => 'Le mot de passe Redis est en cours d\'application. Rechargez dans un instant pour confirmer.',
+        'policy_evicts_panel_queue' => 'Le panneau conserve ses tâches en file d\'attente dans ce Redis. Une politique allkeys peut supprimer sans avertissement une tâche en attente lorsque Redis est plein ; elle n\'est donc pas autorisée ici. Utilisez noeviction ou une politique volatile.',
     ],
 ];

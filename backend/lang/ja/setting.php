@@ -24,5 +24,6 @@ return [
     ],
     'redis' => [
         'password_applying' => 'Redis のパスワードを適用しています。少ししてから再読み込みして確認してください。',
+        'policy_evicts_panel_queue' => 'パネルはキュー内のジョブをこの Redis に保存しています。allkeys ポリシーでは Redis が満杯になると保留中のジョブが通知なく削除される可能性があるため、ここでは使用できません。noeviction または volatile ポリシーを使用してください。',
     ],
 ];
