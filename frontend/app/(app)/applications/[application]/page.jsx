@@ -8,6 +8,7 @@ import { siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { can } from "@/lib/permissions/can";
 import { getApplication, getApplicationIssues } from "@/lib/applications/get-applications";
 import { getBackupTarget, getBackups } from "@/lib/backups/get-backups";
+import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { getGitAccounts } from "@/lib/git/get-git";
 import { getLatestDeployment } from "@/lib/applications/get-deployments";
 import {
@@ -503,7 +504,7 @@ export default async function ApplicationDetailPage({ params }) {
               backups={backupRuns.backups}
               // The target keeps its last run time after every backup is
               // deleted, so the list decides whether one is actually kept.
-              noneKept={!backupRuns.failed && backupRuns.backups.length === 0}
+              noneKept={!backupRuns.failed && backupRuns.meta?.total === backupRuns.backups.filter((b) => BACKUP_IN_FLIGHT.includes(b.status)).length}
               failed={backup.failed}
               canManage={canRunBackup}
               href={`/applications/${id}/backups`}

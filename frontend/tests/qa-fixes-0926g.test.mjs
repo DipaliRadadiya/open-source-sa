@@ -35,7 +35,7 @@ test("AD-E: failed server checks are not an all-clear", () => {
 });
 
 test("AD-F / AD-N: backup card", () => {
-  assert.match(page, /noneKept=\{!backupRuns\.failed && backupRuns\.backups\.length === 0\}/);
+  assert.match(page, /noneKept=\{!backupRuns\.failed && backupRuns\.meta\?\.total === /);
   assert.match(backup, /noneKept \? t\("noneKept"\)/);
   assert.match(backup, /target \|\| failed \? t\("manage"\) : t\("setUp"\)/);
 });
@@ -85,4 +85,28 @@ test("Runtimes: database engines are listed once, from the databases API", () =>
 
 test("Logs: clearing a log re-reads the list so its size is current", () => {
   assert.match(read("components/logs/logs-panel.jsx"), /toast\.success\(t\("clearDone"[\s\S]{0,300}reloadSources\(\);/);
+});
+
+test("RP-1: the SSL tab takes the certificate the page re-reads", () => {
+  assert.match(read("components/applications/domains/ssl-section.jsx"), /if \(certFrom !== initialCertificate\) \{\s*setCertFrom\(initialCertificate\);\s*setCert\(initialCertificate\);/);
+});
+
+test("RP-2: a running backup is not a kept one", () => {
+  assert.match(read("components/applications/backups/backups-panel.jsx"), /noneKept=\{!backupsFailed && total - backups\.filter\(\(b\) => BACKUP_IN_FLIGHT\.includes\(b\.status\)\)\.length === 0\}/);
+  assert.match(page, /backupRuns\.meta\?\.total === backupRuns\.backups\.filter\(\(b\) => BACKUP_IN_FLIGHT\.includes\(b\.status\)\)\.length/);
+});
+
+test("RP-3: an unsaved PHP value shows as saved → new", () => {
+  const php = read("components/applications/php/php-panel.jsx");
+  assert.match(php, /function Stat\(\{ icon: Icon, label, value, saved = value, unsavedLabel \}\)/);
+  assert.match(php, /value=\{memoryLimit\} saved=\{defaults\.memory_limit\}/);
+});
+
+test("RP-4: the firewall's caught list keeps itself current while watching", () => {
+  assert.match(read("app/(app)/applications/[application]/firewall/page.jsx"), /<AutoRefresh intervalMs=\{30000\} stopAfterMs=\{600000\} \/>\s*<DetectLogCard/);
+});
+
+test("RP-5: the Applications list re-reads when the reader comes back", () => {
+  assert.match(read("app/(app)/applications/page.jsx"), /<RefreshOnReturn \/>/);
+  assert.match(read("components/ui/refresh-on-return.jsx"), /Date\.now\(\) - hiddenAt\.current >= afterMs\) router\.refresh\(\)/);
 });

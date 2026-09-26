@@ -36,7 +36,8 @@ test("BK-B: Clear is offered only once the server would accept it", () => {
 
 test("BK-A: an empty history is not reported as backed up or as a recent backup", () => {
   const panel = read("components/applications/backups/backups-panel.jsx");
-  assert.match(panel, /noneKept=\{!backupsFailed && total === 0\}/);
+  // Since RP-2 a run still in progress does not count as kept either.
+  assert.match(panel, /noneKept=\{!backupsFailed && total - backups\.filter\(\(b\) => BACKUP_IN_FLIGHT\.includes\(b\.status\)\)\.length === 0\}/);
   assert.match(panel, /if \(noneKept\) return "empty";/);
   for (const l of LOCALES) {
     assert.ok(at(messages[l], "backups.application.state.empty.title"), l);

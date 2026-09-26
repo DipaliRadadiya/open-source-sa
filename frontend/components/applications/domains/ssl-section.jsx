@@ -156,6 +156,14 @@ export function SslSection({
   const router = useRouter();
 
   const [cert, setCert] = useState(initialCertificate);
+  // Taken over again whenever the page re-reads it. Only the first read was
+  // ever used, so adding a domain on the Domains tab left this tab saying
+  // "1 of 1 secured" — without the reissue warning — until a reload.
+  const [certFrom, setCertFrom] = useState(initialCertificate);
+  if (certFrom !== initialCertificate) {
+    setCertFrom(initialCertificate);
+    setCert(initialCertificate);
+  }
   const [issueOpen, setIssueOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);

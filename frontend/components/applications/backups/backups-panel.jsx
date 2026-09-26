@@ -264,7 +264,10 @@ export function BackupsPanel({
         // Known to hold nothing — not "could not ask". A deleted history still
         // leaves `last_run_at` on the target, and the card went on saying
         // "Last backup 28 minutes ago" in green beside an empty list.
-        noneKept={!backupsFailed && total === 0}
+        // A run still in progress is not a kept backup either: with one
+        // running and none finished, the card fell back to the target's old
+        // `last_run_at` — the time of a backup already deleted.
+        noneKept={!backupsFailed && total - backups.filter((b) => BACKUP_IN_FLIGHT.includes(b.status)).length === 0}
         canManage={canManage}
         // A spinner only for a run this page is actually waiting on — our POST,
         // or the queue window after it. A run that is merely *listed* as in

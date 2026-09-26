@@ -376,6 +376,7 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
 
 function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", timezones, canManage, saving, setSaving }) {
   const t = useTranslations("applications.php");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState("basic");
   // The server's own sentence when it refuses the whole save (`errors.settings`):
@@ -556,10 +557,16 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
             the site IS, not something you edit. It still tracks the fields,
             so an unsaved change is visible as the value it would become. */}
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border bg-muted/30 px-4 py-2.5 text-xs">
-          <Stat icon={Cpu} label={t("summary.version")} value={version || "—"} />
-          <Stat icon={MemoryStick} label={t("summary.memory")} value={memoryLimit} />
-          <Stat icon={FileUp} label={t("summary.upload")} value={upload} />
-          <Stat icon={Timer} label={t("summary.time")} value={t("seconds", { count: execution })} />
+          <Stat icon={Cpu} label={t("summary.version")} value={version || "—"} saved={defaults.php_version || "—"} unsavedLabel={tCommon("saveFooter.unsaved")} />
+          <Stat icon={MemoryStick} label={t("summary.memory")} value={memoryLimit} saved={defaults.memory_limit} unsavedLabel={tCommon("saveFooter.unsaved")} />
+          <Stat icon={FileUp} label={t("summary.upload")} value={upload} saved={defaults.upload_max_filesize} unsavedLabel={tCommon("saveFooter.unsaved")} />
+          <Stat
+            icon={Timer}
+            label={t("summary.time")}
+            value={t("seconds", { count: execution })}
+            saved={t("seconds", { count: defaults.max_execution_time })}
+            unsavedLabel={tCommon("saveFooter.unsaved")}
+          />
           <Stat icon={User} label={t("summary.runsAs")} value={php.runs_as ?? "—"} />
         </div>
 
@@ -1083,12 +1090,26 @@ function ValueSelect({
  * site, so they are set as one — label and value on the same line, separated
  * by a dot from the next.
  */
-function Stat({ icon: Icon, label, value }) {
+/*
+ * A changed field shows as "saved → new", marked as not saved yet: showing the
+ * new value alone read as though it were already in effect.
+ */
+function Stat({ icon: Icon, label, value, saved = value, unsavedLabel }) {
+  const pending = saved !== value;
   return (
     <span className="flex items-center gap-1.5">
       <Icon className="size-3.5 shrink-0 text-muted-foreground/70" />
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium tabular-nums text-foreground">{value}</span>
+      {pending ? (
+        <span className="flex items-center gap-1 font-medium tabular-nums" title={unsavedLabel}>
+          <span className="text-muted-foreground line-through decoration-muted-foreground/50">{saved}</span>
+          <span aria-hidden className="text-muted-foreground">→</span>
+          <span className="text-warning">{value}</span>
+          <span className="sr-only">({unsavedLabel})</span>
+        </span>
+      ) : (
+        <span className="font-medium tabular-nums text-foreground">{value}</span>
+      )}
     </span>
   );
 }

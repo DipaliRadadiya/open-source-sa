@@ -11,6 +11,7 @@ import {
 } from "@/lib/applications/get-applications";
 import { FirewallSection } from "@/components/applications/firewall/firewall-section";
 import { DetectLogCard } from "@/components/applications/firewall/detect-log-card";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { getApplicationLog } from "@/lib/applications/get-application-logs";
 import { parseDetectLog } from "@/lib/firewall/parse-detect-log";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -128,7 +129,14 @@ export default async function ApplicationFirewallPage({ params }) {
             detectFailed={detectFailed}
           />
           {watching ? (
-            <DetectLogCard rows={detectRows} failed={detectFailed} />
+            <>
+              {/* Watching is how someone decides it is safe to start blocking,
+                  so the list keeps itself current: it stayed at what the page
+                  loaded with while new matches arrived. The form's unsaved
+                  edits live in its own state and survive the re-read. */}
+              <AutoRefresh intervalMs={30000} stopAfterMs={600000} />
+              <DetectLogCard rows={detectRows} failed={detectFailed} />
+            </>
           ) : null}
         </>
       )}
