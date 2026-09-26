@@ -60,6 +60,7 @@ use App\Services\Server\Doctor\Checks\DriverContentionCheck;
 use App\Services\Server\Doctor\Checks\DynamicResponseLimitCheck;
 use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
 use App\Services\Server\Doctor\Checks\HealthEndpointCheck;
+use App\Services\Server\Doctor\Checks\HomeAccessCheck;
 use App\Services\Server\Doctor\Checks\PhpIsolationCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
 use App\Services\Server\Doctor\Checks\QueueCheck;
@@ -529,6 +530,7 @@ return [
             DriverContentionCheck::class,
             PhpIsolationCheck::class,
             SiteRootLockCheck::class,
+            HomeAccessCheck::class,
             HealthEndpointCheck::class,
         ],
     ],

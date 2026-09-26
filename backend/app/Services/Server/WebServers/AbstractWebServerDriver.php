@@ -16,6 +16,7 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Illuminate\Support\Facades\View;
 
 abstract class AbstractWebServerDriver implements WebServerDriver
@@ -136,7 +137,14 @@ abstract class AbstractWebServerDriver implements WebServerDriver
         // The only step here whose effect a running web server cannot see
         // until it restarts, so it is the only one that answers. The two
         // above create directories, which every later config test reads fresh.
-        return $this->logDirectory->ensure($application);
+        $logs = $this->logDirectory->ensure($application);
+
+        // Not `||`: both grants have to be made, and a short-circuit would
+        // skip the second whenever the first had just been added.
+        $home = $application->systemUser !== null
+            && app(HomeDirectoryAccess::class)->admitReader($application->systemUser);
+
+        return $logs || $home;
     }
 
     /**
@@ -151,6 +159,19 @@ abstract class AbstractWebServerDriver implements WebServerDriver
     public function logWriterUser(): ?string
     {
         return null;
+    }
+
+    /**
+     * nginx and Apache workers run as the account the PHP-FPM pool sockets
+     * are already handed to ({@see PoolManager}) — `www-data` on the Debian
+     * packages install.sh uses. The same setting, so the two cannot name
+     * different accounts.
+     */
+    public function siteReaderUser(): ?string
+    {
+        $user = (string) config('server.web_server_user', 'www-data');
+
+        return $user === '' ? null : $user;
     }
 
     /**

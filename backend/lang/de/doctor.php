@@ -3,6 +3,7 @@
 return [
     'checks' => [
         'dynamic_response_limit' => 'Obergrenze für Datei-Downloads',
+        'home_access' => 'Zugriff auf Home-Verzeichnisse',
         'site_root_lock' => 'Sperre des Site-Ordners',
         'php_isolation' => 'PHP-Isolation pro Anwendung',
         'privilege' => 'Privilegierte Befehle',
@@ -19,6 +20,7 @@ return [
     ],
     'fixes' => [
         'dynamic_response_limit' => 'OpenLiteSpeed begrenzt die Größe dessen, was PHP zurückgibt, und der Standardwert ist für den Dateimanager zu niedrig: Jeder Download darüber wird mit einem 413 abgelehnt, bevor das Panel ihn sieht — in den Protokollen erscheint deshalb nichts. Setzen Sie `maxDynRespSize 1024G` in /usr/local/lsws/conf/httpd_config.conf und starten Sie mit `sudo /usr/local/lsws/bin/lswsctrl restart` neu. Neuinstallationen haben das bereits; ältere nicht, denn Updates liefern Code und keine Konfiguration. `0` bedeutet nicht unbegrenzt — es bedeutet null.',
+        'home_open' => 'Das Home-Verzeichnis eines Systembenutzers ist für alle anderen lokalen Konten offen, sodass jede Datei, die seine Sites mit normalen Rechten geschrieben haben – Sitzungen, .env-Dateien, Datenbankdateien –, vom Benutzer jeder anderen Site gelesen werden kann. Führen Sie `php artisan sites:resync` aus: Es lässt den Webserver über die Gruppe des Benutzers hinein und schließt dann das Verzeichnis. Bleibt ein Benutzer offen, weil eine seiner PHP-Sites im gemeinsamen Pool läuft, isolieren Sie diese Site zuerst über ihre PHP-Seite.',
         'site_root_unlocked' => 'Der Ordner einer Site kann von ihrem eigenen Benutzer umbenannt und durch einen eigenen ersetzt werden – damit werden die gesperrten PHP-Einstellungen der Site umgangen, und eine Panel-Aktion kann außerhalb der Site schreiben. Führen Sie `php artisan sites:resync` aus; es sperrt alle Site-Ordner und nennt die, bei denen es nicht ging. „Konnte nicht geprüft werden“ bedeutet meist, dass das Dateisystem kein Immutable-Attribut kennt (ZFS, manche Container); eine Site, die nach dem Resync weiterhin nicht gesperrt ist, hat einen Ordner, der nicht wie der vom Panel angelegte aussieht – prüfen Sie ihn, bevor Sie ihm vertrauen. Eine Website, die der Server-Sync übernommen hat, hat einen Ordner, der ihrem eigenen Benutzer gehört: Sperre ihn auf der Seite dieser Website mit der Schaltfläche Sperren.',
         'php_pool_orphaned' => 'Ein PHP-FPM-Pool nennt ein Linux-Konto, das nicht mehr existiert — meist eine Seite, die vor ihrem Pool gelöscht wurde und deren Benutzer danach entfernt wurde. PHP-FPM startet damit nicht, daher scheitert jede neue PHP-Seite bei der Bereitstellung und bekommt die Schuld. Löschen Sie die genannten Pool-Dateien, führen Sie dann `php-fpm -t` aus und starten Sie php-fpm neu.',
         'php_isolation_missing' => 'Eine Seite, die das Panel für isoliert hält, hat keine Pool-Datei. Sie wird weiterhin aus dem gemeinsamen Pool als www-data ausgeliefert, ohne ihre eigenen Einstellungen. Öffnen Sie die PHP-Seite und isolieren Sie sie erneut.',

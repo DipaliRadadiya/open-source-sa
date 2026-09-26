@@ -79,6 +79,14 @@ function fakeResyncServer(string $onDisk = 'stale config', bool $testPasses = tr
             return Process::result(exitCode: $testPasses ? 0 : 1, errorOutput: $testPasses ? '' : 'invalid');
         }
 
+        // An existing server: the web server is already in every site user's
+        // group, so the home grant has nothing to add and "already current"
+        // means exactly that. (A server where it is not is the case the grant
+        // exists for, and has its own tests.)
+        if (($args[0] ?? '') === 'id') {
+            return Process::result(output: 'www-data '.SystemUser::query()->pluck('username')->implode(' '));
+        }
+
         return Process::result(exitCode: 0);
     });
 

@@ -10,6 +10,7 @@ use App\Services\Server\AccountLock;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\SystemUsers\ChpasswdLine;
+use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use App\Services\Server\SystemUsers\SshUsersGroup;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -23,6 +24,7 @@ class CreateSystemUser
         private ActivityLogger $activityLogger,
         private AccountLock $accountLock,
         private SshUsersGroup $sshUsersGroup,
+        private HomeDirectoryAccess $homeAccess,
     ) {}
 
     /**
@@ -176,11 +178,11 @@ class CreateSystemUser
     }
 
     /**
-     * `useradd` and the one permission fix it needs, with no database writes.
+     * `useradd` and the home access it needs, with no database writes.
      *
      * Shared by `execute()` and `ensureOnServer()` so the account a
      * provisioning run creates is identical to the account the System Users
-     * screen creates — shell, home, groups and traversal bit.
+     * screen creates — shell, home, groups and who may enter the home.
      *
      * @param  array<int, string>  $groups
      */
@@ -218,16 +220,12 @@ class CreateSystemUser
             );
         }
 
-        // `useradd -m` on Ubuntu 22.04+ creates the home directory at 0750, so
-        // the web server cannot traverse into it.
-        $traversal = $this->serverOps->run(
-            ['chmod', 'o+x', $homePath],
-            ['feature' => 'system_user', 'op' => 'grant_web_server_traversal', 'system_user' => $username],
-        );
-
-        if ($traversal->failed()) {
-            throw new SystemUserCreateFailedException($traversal->reference);
-        }
+        // `useradd -m` on Ubuntu 22.04+ creates the home at 0750, which the
+        // web server cannot enter. This used to be `chmod o+x`, which let it in
+        // and every other local account with it — and with them, every file an
+        // application wrote with ordinary permissions. The web server is let in
+        // by group instead. {@see HomeDirectoryAccess}
+        $this->homeAccess->closeNewHome($username, $homePath);
     }
 
     /**

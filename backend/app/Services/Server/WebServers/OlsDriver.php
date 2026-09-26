@@ -446,4 +446,14 @@ class OlsDriver extends AbstractWebServerDriver
         return $this->shared->serverUser()
             ?? (string) config('server.web_server_drivers.openlitespeed.user', 'nobody');
     }
+
+    /**
+     * The same account as {@see logWriterUser()}: OpenLiteSpeed's workers run
+     * as it and read a site's static files themselves, and it is read from
+     * httpd_config.conf rather than assumed.
+     */
+    public function siteReaderUser(): ?string
+    {
+        return $this->logWriterUser();
+    }
 }
