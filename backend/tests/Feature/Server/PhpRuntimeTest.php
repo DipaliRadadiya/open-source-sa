@@ -8,6 +8,7 @@ use App\Models\Application;
 use App\Models\RuntimeInstall;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\IonCubeLoader;
 use App\Services\Server\Runtimes\PhpRuntime;
 use Database\Seeders\PermissionSeeder;
@@ -706,4 +707,29 @@ it('still treats a complete version as done', function () {
     $this->actingAs($admin)
         ->postJson('/api/php/versions', ['version' => '8.4'])
         ->assertStatus(200);
+});
+
+it('does not go on calling a version failed once it is installed and complete', function () {
+    // The nginx test server showed PHP 8.3 as "install failed" all day while
+    // it served WordPress: apt's start of php-fpm had failed mid-install, and
+    // the version was completed right after.
+    fakePhp();
+    $tracker = app(InstallTracker::class);
+    $tracker->start('php', '8.3');
+    $tracker->fail('php', '8.3', null, 'unknown', 'ref-1');
+
+    $row = collect(phpSettings()['versions'])->firstWhere('version', '8.3');
+
+    expect($row['missing_packages'])->toBe([])
+        ->and($row['status'])->toBe('ready')
+        ->and($row['reason'])->toBeNull();
+});
+
+it('still reports the failure while the version is incomplete', function () {
+    fakePhp(bare: true);
+    $tracker = app(InstallTracker::class);
+    $tracker->start('php', '8.3');
+    $tracker->fail('php', '8.3', null, 'unknown', 'ref-1');
+
+    expect(collect(phpSettings()['versions'])->firstWhere('version', '8.3')['status'])->toBe('failed');
 });

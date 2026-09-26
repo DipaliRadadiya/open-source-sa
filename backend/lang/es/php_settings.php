@@ -30,6 +30,7 @@ return [
     'errors' => [
         'missing_account' => 'La cuenta de Linux con la que se ejecuta este sitio no existe en el servidor, así que no se escribió ningún pool de PHP. PHP-FPM no arranca en absoluto con un pool cuyo usuario no puede resolver.',
         'version_not_installed' => 'PHP :version no está instalado en este servidor. Instálelo primero y luego selecciónelo aquí.',
+        'version_busy' => 'PHP :version todavía se está instalando o eliminando. Espere a que termine y luego cambie la versión.',
         'unsupported_stack' => 'Este servidor usa OpenLiteSpeed, que no utiliza pools de PHP-FPM.',
         'already_isolated' => 'Este sitio ya tiene su propio pool de PHP.',
         'not_isolated' => 'Este sitio no está aislado.',

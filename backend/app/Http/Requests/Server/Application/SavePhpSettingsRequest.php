@@ -2,10 +2,12 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Enums\InstallStatus;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Php\PhpVersionManager;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -46,6 +48,20 @@ class SavePhpSettingsRequest extends FormRequest
                 function (string $attribute, mixed $value, Closure $fail) {
                     if (! app(PhpVersionManager::class)->exists((string) $value)) {
                         $fail(__('php_settings.errors.version_not_installed', ['version' => $value]));
+
+                        return;
+                    }
+
+                    // Its directory exists as soon as apt starts, so "exists"
+                    // passed mid-install — and the site's pool, written into
+                    // it then, made apt's own start of php-fpm fail on a
+                    // socket the old version still held: the install was
+                    // marked failed and the switch refused (measured on a
+                    // real server, 09:19:40). Wait for the install instead.
+                    $install = app(InstallTracker::class)->versions('php')->get((string) $value);
+
+                    if (in_array($install?->status, [InstallStatus::Installing, InstallStatus::Removing], true)) {
+                        $fail(__('php_settings.errors.version_busy', ['version' => $value]));
                     }
                 },
             ], $this->supportedRangeRules()),

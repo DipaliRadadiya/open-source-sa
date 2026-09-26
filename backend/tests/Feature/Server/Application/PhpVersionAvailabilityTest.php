@@ -5,6 +5,7 @@ use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Applications\SiteTypeManager;
+use App\Services\Runtime\InstallTracker;
 use App\Services\Server\Doctor\Checks\PhpIsolationCheck;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\File;
@@ -462,4 +463,25 @@ it('offers only the PHP versions the site type runs on, keeping the current one'
     $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
         ->putJson("/api/applications/{$site->id}/php", ['php_version' => '7.0'])
         ->assertStatus(422);
+});
+
+it('refuses to move a site to a PHP that is still installing', function () {
+    // Its directory exists as soon as apt starts. Measured: a switch then
+    // wrote the site's pool into the half-installed PHP, apt's own start of
+    // php-fpm failed on the socket the old version still held, and both the
+    // install and the switch failed.
+    installLsphpBuild('8.2');
+    app(InstallTracker::class)->start('php', '8.2');
+
+    $site = Application::forceCreate([
+        'system_user_id' => $this->su->id,
+        'name' => 'Blog', 'slug' => 'blog', 'domain' => 'blog.example.com',
+        'site_type' => 'php', 'serving_profile' => 'php',
+        'php_version' => '8.3', 'web_root' => '/', 'status' => 'active',
+    ]);
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+        ->putJson("/api/applications/{$site->id}/php", ['php_version' => '8.2'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['php_version' => 'still being installed']);
 });
