@@ -24,8 +24,8 @@ beforeEach(function () {
         ['key' => 'nginx_error', 'label' => 'Nginx — Error', 'group' => 'web', 'path' => $this->logDir.'/nginx-error.log'],
         ['key' => 'syslog', 'label' => 'System — Syslog', 'group' => 'system', 'path' => $this->logDir.'/syslog'],
     ]]);
-    // No php-fpm logs bleeding in from the real /etc/php.
-    config(['server.php_dir' => $this->logDir.'/empty-php']);
+    // No php-fpm or PostgreSQL logs bleeding in from the real server.
+    config(['server.php_dir' => $this->logDir.'/empty-php', 'server.postgres_log_dir' => $this->logDir.'/postgresql']);
     File::ensureDirectoryExists($this->logDir.'/empty-php');
 });
 
@@ -72,6 +72,27 @@ it('orders cronjob log sources without case bias', function () {
 
     expect(collect($logs)->where('group', 'cronjob')->pluck('label')->all())
         ->toBe(['Cron — case apple', 'Cron — CASE Banana', 'Cron — Case Zebra']);
+});
+
+it('lists one log per PostgreSQL cluster, named as Debian names the file', function () {
+    // `postgresql-18-main.log`: versioned, so no fixed registry path could
+    // hold it, and a server running PostgreSQL had no log for it at all.
+    File::ensureDirectoryExists($this->logDir.'/postgresql');
+    File::put($this->logDir.'/postgresql/postgresql-18-main.log', "LOG:  database system is ready to accept connections\n");
+    File::put($this->logDir.'/postgresql/not-a-cluster.log', "x\n");
+
+    $logs = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/logs')->assertOk()->json('logs'))->keyBy('key');
+
+    expect($logs)->toHaveKey('postgresql_18_main')
+        ->and($logs['postgresql_18_main']['label'])->toBe('PostgreSQL 18 (main)')
+        ->and($logs['postgresql_18_main']['group'])->toBe('database')
+        ->and($logs->keys()->filter(fn ($k) => str_starts_with($k, 'postgresql'))->count())->toBe(1);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/logs/postgresql_18_main')
+        ->assertOk()
+        ->assertJsonPath('log.lines', ['LOG:  database system is ready to accept connections']);
 });
 
 it('tails the last N lines of a source', function () {
