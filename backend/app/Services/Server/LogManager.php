@@ -582,6 +582,13 @@ class LogManager
                 'key' => "php{$version}_fpm",
                 'label' => "PHP {$version} FPM",
                 'group' => 'php',
+                // php-fpm creates its log root:root 0600 — its own open() mode,
+                // and logrotate hands the same file back weekly — so the adm
+                // group that opens every other log here opens nothing. The
+                // screen listed it and answered 403 on click. Such a file is
+                // read through sudo `tail` like the Let's Encrypt log; one the
+                // panel can open stays a plain file, keeping follow/download.
+                'kind' => file_exists($path) && ! is_readable($path) ? 'privileged' : 'file',
                 'path' => $path,
                 'clearable' => true,
             ];

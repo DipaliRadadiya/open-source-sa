@@ -292,6 +292,38 @@ describe('sources the panel cannot open itself', function () {
             && in_array('/var/log/letsencrypt/letsencrypt.log', $p->command, true));
     });
 
+    it('reads a php-fpm log the panel account cannot open through sudo', function () {
+        if (posix_geteuid() === 0) {
+            $this->markTestSkipped('root can read a 0600 file, so there is nothing to prove.');
+        }
+
+        // php-fpm creates its log root:root 0600, and logrotate hands the same
+        // file back weekly: listed, then 403 on click. 0000 here, because this
+        // process owns the fixture and would pass a 0600 check itself.
+        $unreadable = fakeFpmLog('8.4', 0000);
+        $readable = fakeFpmLog('8.3', 0644);
+        fakePrivilegedLogs("NOTICE: ready to handle connections\n");
+
+        $logs = collect($this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs')->assertOk()->json('logs'))->keyBy('key');
+
+        expect($logs['php8.4_fpm']['kind'])->toBe('privileged')
+            ->and($logs['php8.4_fpm']['readable'])->toBeTrue()
+            // One the panel can open keeps what a privileged read gives up.
+            ->and($logs['php8.3_fpm']['kind'])->toBe('file')
+            ->and($logs['php8.3_fpm']['follow'])->toBeTrue()
+            ->and($logs['php8.3_fpm']['downloadable'])->toBeTrue();
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->getJson('/api/logs/php8.4_fpm')
+            ->assertOk()
+            ->assertJsonPath('log.lines', ['NOTICE: ready to handle connections']);
+
+        Process::assertRan(fn ($p) => in_array('tail', $p->command, true) && in_array($unreadable, $p->command, true));
+
+        chmod($unreadable, 0644);
+    });
+
     it('reads the journal without waiting on a pager', function () {
         fakePrivilegedLogs("kernel: started\n");
 
@@ -797,3 +829,26 @@ describe('sources the panel account cannot see, as configured for real', functio
         expect($keys->all())->not->toContain('mariadb');
     });
 });
+
+/**
+ * A detected php-fpm version whose log sits in the test's log dir, with the
+ * given mode. Returns the log path.
+ */
+function fakeFpmLog(string $version, int $mode): string
+{
+    $phpDir = test()->logDir.'/php';
+    File::ensureDirectoryExists("{$phpDir}/{$version}/fpm");
+    File::put(test()->logDir."/php-fpm{$version}", '');
+
+    config([
+        'server.php_dir' => $phpDir,
+        'server.php_fpm_binary_pattern' => test()->logDir.'/php-fpm{version}',
+        'server.php_fpm_log' => test()->logDir.'/php{version}-fpm.log',
+    ]);
+
+    $log = test()->logDir."/php{$version}-fpm.log";
+    File::put($log, "NOTICE: ready to handle connections\n");
+    chmod($log, $mode);
+
+    return $log;
+}
