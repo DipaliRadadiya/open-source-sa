@@ -102,16 +102,60 @@ class WordPressInstaller extends AbstractPhpInstaller
     public function syncUrl(Application $application, string $url): void
     {
         $documentRoot = $application->documentRoot();
+        $wp = [
+            ...$this->phpCommand($application),
+            (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
+        ];
+
+        // Constants first. A staging site pins WP_HOME/WP_SITEURL in
+        // wp-config.php so a copied database can never point it at
+        // production — and a constant overrides the option. Left alone, the
+        // pin kept the address it was created with (http://) through every
+        // certificate, and once the database already held the new address
+        // `option update` failed outright ("Could not update option"), so
+        // every resync of that site failed. Following the pin keeps its
+        // protection and lets the address change. A normal site defines
+        // neither, and nothing is written.
+        foreach (['WP_HOME', 'WP_SITEURL'] as $constant) {
+            if ($this->definesConstant($application, $wp, $constant, $documentRoot)) {
+                $this->runAsSiteUser('sync_url', $application, [
+                    ...$wp,
+                    'config', 'set', $constant, $url, '--type=constant',
+                    '--path='.$documentRoot,
+                ], null, $documentRoot);
+            }
+        }
 
         foreach (['home', 'siteurl'] as $option) {
             $this->runAsSiteUser('sync_url', $application, [
-                ...$this->phpCommand($application),
-                (string) config('server.installers.wordpress.wp_cli', '/usr/local/bin/wp'),
+                ...$wp,
                 'option', 'update', $option, $url,
                 '--path='.$documentRoot,
                 '--skip-plugins', '--skip-themes',
             ], null, $documentRoot);
         }
+    }
+
+    /**
+     * Whether wp-config.php defines this constant. `wp config has` answers
+     * with its exit status, so it is run without the installer's
+     * throw-on-failure wrapper: "no" is an answer here, not an error.
+     *
+     * @param  array<int, string>  $wp
+     */
+    private function definesConstant(Application $application, array $wp, string $constant, string $documentRoot): bool
+    {
+        return $this->serverOps->run(
+            [
+                'runuser', '-u', $application->systemUser->username, '--',
+                ...$wp,
+                'config', 'has', $constant, '--type=constant',
+                '--path='.$documentRoot,
+            ],
+            ['feature' => 'application', 'op' => 'installer.sync_url_check', 'application' => $application->id],
+            timeout: $this->timeout(),
+            cwd: $documentRoot,
+        )->ok;
     }
 
     /**
