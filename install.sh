@@ -2765,6 +2765,14 @@ configure_apache() {
     # hostnames depending on load order.
     run a2dissite 000-default
 
+    # Without a global ServerName every `apachectl configtest` -- the panel runs
+    # one before each reload and shows its output on the Services screen --
+    # opens with "AH00558: Could not reliably determine the server's fully
+    # qualified domain name". Harmless, and noise in every test. Every vhost
+    # the panel writes names itself, so this is only the fallback's name.
+    printf 'ServerName %s\n' "$(hostname)" >/etc/apache2/conf-available/${PANEL_SLUG}-servername.conf
+    run a2enconf "${PANEL_SLUG}-servername"
+
     local conf="/etc/apache2/sites-available/${PANEL_SLUG}.conf"
     local api_block panel_block
 
