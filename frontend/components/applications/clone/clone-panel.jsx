@@ -23,11 +23,12 @@ import {
 import { cn } from "@/lib/utils";
 import { PANEL_CARD } from "@/lib/theme/card-chrome";
 import {
-  CLONE_DROPS,
   CLONE_IN_FLIGHT,
   cloneBlockedReason,
   cloneCarries,
+  cloneDrops,
   cloneFormSchema,
+  defaultCloneName,
   suggestCloneDomain,
 } from "@/lib/schemas/clone";
 import { createClone, fetchClone } from "@/lib/api/clone";
@@ -94,6 +95,7 @@ export function CloneApplicationPanel({
   siteType,
   copies = [],
   takenDomains = [],
+  takenNames = [],
   canManage,
 }) {
   const t = useTranslations("applications.clone");
@@ -108,11 +110,14 @@ export function CloneApplicationPanel({
 
   const blocked = cloneBlockedReason(application, siteType);
   const suggestion = suggestCloneDomain(application.domain, takenDomains);
-  const defaultName = t("form.defaultName", { name: application.name });
+  const defaultName = defaultCloneName(application.name, takenNames);
 
   const form = useForm({
     resolver: zodResolver(cloneFormSchema),
-    mode: "onSubmit",
+    // onTouched, not onSubmit: the submit stays disabled until the domain is
+    // valid, so a message that only appeared on submit never appeared at all —
+    // "bad" just greyed the button out with no reason given.
+    mode: "onTouched",
     reValidateMode: "onChange",
     defaultValues: { name: "", domain: "" },
   });
@@ -198,6 +203,15 @@ export function CloneApplicationPanel({
     form.reset({ name: "", domain: "" });
   }
 
+  // After a failure the same domain is what they want to try again with; an
+  // empty form made them type it a second time.
+  function retry(failed) {
+    setClone(null);
+    setFinished(null);
+    forgetClone(application.id);
+    form.reset({ name: failed?.name ?? "", domain: failed?.domain ?? "" });
+  }
+
   function settled(next) {
     setFinished(next);
     forgetClone(application.id);
@@ -235,6 +249,7 @@ export function CloneApplicationPanel({
             sourceApplication={application}
             onDone={settled}
             onAgain={reset}
+            onRetry={retry}
           />
         </div>
         {hasNextSteps ? (
@@ -242,6 +257,7 @@ export function CloneApplicationPanel({
             <CloneNextSteps
               applicationId={completedClone.target_application_id}
               sourceProtected={application.basic_auth_enabled}
+              sourceHasRepository={Boolean(application.repository)}
               webhook={completedClone.target_webhook}
             />
           </div>
@@ -318,14 +334,17 @@ export function CloneApplicationPanel({
                           {/* A chip, not a sentence: it is a value to take, and one
                             tap is the whole interaction. Skips domains already in
                             use, so it never offers a rejection. */}
-                          {suggestion && !field.value ? (
+                          {canManage && suggestion && !field.value ? (
                             <button
                               type="button"
-                              onClick={() =>
+                              onClick={() => {
                                 form.setValue("domain", suggestion, {
                                   shouldDirty: true,
-                                })
-                              }
+                                });
+                                // The chip unmounts once the field has a value,
+                                // which dropped keyboard focus on the page.
+                                form.setFocus("domain");
+                              }}
                               className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted/60 px-2.5 py-1 font-mono text-xs transition-colors hover:bg-muted"
                             >
                               <Copy className="size-3 shrink-0 text-muted-foreground" />
@@ -419,6 +438,7 @@ export function CloneApplicationPanel({
 
           <ImpactCard
             siteType={siteType}
+            application={application}
             sourceProtected={application.basic_auth_enabled}
             className="min-w-0 lg:col-span-5"
           />
@@ -452,7 +472,9 @@ export function CloneApplicationPanel({
             </div>
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-muted-foreground">{t("confirm.domain")}</dt>
-              <dd className="min-w-0 truncate font-mono font-medium">
+              {/* Wraps: this is the one value being confirmed, and it was
+                  cut off at every width. */}
+              <dd className="min-w-0 font-mono font-medium break-all">
                 {target}
               </dd>
             </div>
@@ -519,10 +541,7 @@ function SiteChip({ name, domain, highlight = false }) {
       <span className="truncate text-sm font-medium" title={name}>
         {name}
       </span>
-      <span
-        className="truncate font-mono text-xs text-muted-foreground"
-        title={domain}
-      >
+      <span className="font-mono text-xs break-all text-muted-foreground">
         {domain}
       </span>
     </span>
@@ -563,7 +582,7 @@ function Resuming() {
  * lines is a fact about what you are about to get; as grey they read as
  * disabled options, which buried the only real surprise on the page.
  */
-function ImpactCard({ siteType, sourceProtected, className }) {
+function ImpactCard({ siteType, application, sourceProtected, className }) {
   const t = useTranslations("applications.clone.what");
 
   return (
@@ -578,14 +597,14 @@ function ImpactCard({ siteType, sourceProtected, className }) {
         <ImpactList
           ok
           title={t("carries")}
-          items={cloneCarries(siteType).map((key) => ({
+          items={cloneCarries(siteType, application).map((key) => ({
             key,
             label: t(`carriesItems.${key}`),
           }))}
         />
         <ImpactList
           title={t("drops")}
-          items={CLONE_DROPS.map((key) => ({
+          items={cloneDrops(application).map((key) => ({
             key,
             label: t(`dropsItems.${key}`),
           }))}
@@ -712,6 +731,25 @@ function Blocked({ reason, siteType }) {
               ? t("blocked.noRecipe.body", { type: siteType?.title ?? "" })
               : t(`blocked.${reason}.body`)}
           </p>
+        </div>
+      </CardContent>
+    </PanelCard>
+  );
+}
+
+/** Shown to an administrator on a site type that has no clone feature. */
+export function CloneTypeNotSupported({ typeTitle }) {
+  const t = useTranslations("applications.clone.blocked.typeNotSupported");
+
+  return (
+    <PanelCard>
+      <CardContent className="flex items-start gap-3.5">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning ring-1 ring-inset ring-warning/20">
+          <TriangleAlert className="size-5.5" />
+        </span>
+        <div className="min-w-0 space-y-1">
+          <p className="font-medium">{t("title")}</p>
+          <p className="text-sm text-muted-foreground">{t("body", { type: typeTitle })}</p>
         </div>
       </CardContent>
     </PanelCard>

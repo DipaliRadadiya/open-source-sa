@@ -2,9 +2,10 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/page-header";
 import { getPermissions } from "@/lib/permissions/get-permissions";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { can } from "@/lib/permissions/can";
 import { getApplication, getAllApplications, getSiteTypes } from "@/lib/applications/get-applications";
-import { CloneApplicationPanel } from "@/components/applications/clone/clone-panel";
+import { CloneApplicationPanel, CloneTypeNotSupported } from "@/components/applications/clone/clone-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
 
@@ -37,6 +38,10 @@ export default async function CloneApplicationPage({ params }) {
   // Granted per site type, the same contract as every other application
   // screen: no grant here means this screen should not exist for this site.
   if (!can(appPermissions, "app_clone", "view", "application")) {
+    // An administrator holds every feature a site type offers, so for them a
+    // missing grant means the type can't be cloned — "ask an administrator"
+    // said to the administrator was the wrong reason.
+    if ((await getCurrentUser().catch(() => null))?.is_admin) return <TypeNotSupported application={result.application} t={t} />;
     return <PermissionDenied title={t("pageTitle")} />;
   }
 
@@ -67,8 +72,20 @@ export default async function CloneApplicationPage({ params }) {
         siteType={siteType}
         copies={copies}
         takenDomains={applications.map((a) => a.domain).filter(Boolean)}
+        takenNames={applications.map((a) => a.name).filter(Boolean)}
         canManage={canManage}
       />
+    </div>
+  );
+}
+
+async function TypeNotSupported({ application, t }) {
+  const { siteTypes } = await getSiteTypes();
+  const type = siteTypes.find((candidate) => candidate.name === application.site_type);
+  return (
+    <div className="space-y-6">
+      <PageHeader title={t("pageTitle")} subtitle={t("pageSubtitle", { name: application.name })} />
+      <CloneTypeNotSupported typeTitle={type?.title ?? application.site_type} />
     </div>
   );
 }

@@ -4626,7 +4626,7 @@
           "repository": "Repository, Branch & Git-Konto"
         },
         "dropsItems": {
-          "ssl": "SSL-Zertifikat",
+          "ssl": "SSL-Zertifikat (die Kopie erhält ein eigenes)",
           "backups": "Backups",
           "cronJobs": "Cronjobs",
           "workers": "Queue-Worker",
@@ -4667,16 +4667,20 @@
         "deploying": {
           "title": "Ein Deploy läuft",
           "body": "Eine Kopie von jetzt könnte alte und neue Dateien mischen. Sobald der Deploy fertig ist, können Sie sie hier klonen."
+        },
+        "typeNotSupported": {
+          "title": "Dieser Anwendungstyp kann nicht geklont werden",
+          "body": "{type}-Anwendungen können nicht über das Panel kopiert werden."
         }
       },
       "result": {
         "next": {
           "title": "Bevor Sie sie nutzen",
-          "subtitle": "Vier Dinge, die die Kopie nicht erbt.",
+          "subtitle": "{count, plural, one {Eine Sache, die die Kopie nicht erbt.} other {# Dinge, die die Kopie nicht erbt.}}",
           "items": {
             "ssl": {
-              "title": "SSL einrichten",
-              "body": "Bis dahin wird die Kopie über einfaches HTTP ausgeliefert."
+              "title": "HTTPS prüfen",
+              "body": "Ein Zertifikat wird automatisch ausgestellt, sobald die Domain auf diesen Server zeigt. Hier prüfen."
             },
             "backups": {
               "title": "Backups einrichten",
@@ -4737,10 +4741,13 @@
           "copying_files": "Dateien werden kopiert",
           "cloning_database": "Datenbank wird geklont",
           "starting_process": "Anwendung wird gestartet"
-        }
+        },
+        "notStarting": "Dieser Klon hat nicht begonnen",
+        "notStartingBody": "Er wartet seit über zwei Minuten. Lief gleichzeitig ein anderer Klon dieser Anwendung, startet dieser womöglich nie.",
+        "stopWatching": "Nicht mehr verfolgen und neu beginnen"
       },
       "warnings": {
-        "dns": "Richten Sie die neue Domain auf diesen Server, bevor Sie ein Zertifikat ausstellen — solange das DNS nicht auflöst, wird die Kopie über einfaches HTTP ausgeliefert.",
+        "dns": "Richten Sie die neue Domain zuerst auf diesen Server — sobald sie dorthin zeigt, erhält die Kopie automatisch ein eigenes HTTPS-Zertifikat.",
         "password": "Der Passwortschutz wird nicht kopiert. Die Kopie ist öffentlich, bis Sie ihn einschalten.",
         "time": "Eine große Anwendung braucht einige Minuten zum Kopieren."
       },

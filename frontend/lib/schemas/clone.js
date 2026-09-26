@@ -17,13 +17,13 @@ export const cloneFormSchema = z.object({
   // (Clone)". Offered here because `name` has no unique constraint, so two
   // clones of one site are otherwise identically named and tellable apart
   // only by domain.
-  name: z.string().trim().max(255, "tooLong").optional(),
+  name: z.string().trim().max(255, "max255").optional(),
   domain: z
     .string()
     .trim()
     .toLowerCase()
     .min(1, "cloneDomainRequired")
-    .max(255, "tooLong")
+    .max(255, "max255")
     .regex(CLONE_DOMAIN_PATTERN, "cloneDomainInvalid"),
 });
 
@@ -116,9 +116,54 @@ export const CLONE_CARRIES = ["files", "phpVersion", "webRoot", "buildCommand", 
 
 export const CLONE_DROPS = ["ssl", "backups", "cronJobs", "workers", "passwordProtection", "deploys"];
 
-/** The database line only applies to types that have one. */
-export function cloneCarries(siteType) {
-  return siteType?.needs_database ? ["files", "database", ...CLONE_CARRIES.slice(1)] : CLONE_CARRIES;
+/**
+ * What this site's copy inherits: the database line only for types that have
+ * one, and build/repository only for a site that has a repository — a
+ * WordPress copy was told it would inherit a git account it never had.
+ */
+export function cloneCarries(siteType, application = null) {
+  const git = Boolean(application?.repository);
+  return [
+    "files",
+    ...(siteType?.needs_database ? ["database"] : []),
+    "phpVersion",
+    "webRoot",
+    ...(git ? ["buildCommand", "repository"] : []),
+  ];
+}
+
+/** Deploy-on-push is only something a copy "loses" when the source has a repository. */
+export function cloneDrops(application = null) {
+  return application?.repository ? CLONE_DROPS : CLONE_DROPS.filter((key) => key !== "deploys");
+}
+
+/**
+ * The name the backend will give a copy left unnamed: `{source} (Clone)`,
+ * then `(Clone) 2`, `(Clone) 3`… — `Application::uniqueName()`. Shown as-is
+ * (untranslated, like the backend writes it) so the dialog names the site
+ * that will actually appear, not "my-blog (Clone)" for a "my-blog (Clone) 3".
+ */
+export function defaultCloneName(sourceName, takenNames = []) {
+  const taken = new Set(takenNames.map((value) => String(value)));
+  const base = `${sourceName} (Clone)`;
+  if (!taken.has(base)) return base;
+  for (let suffix = 2; suffix < 1000; suffix += 1) {
+    if (!taken.has(`${base} ${suffix}`)) return `${base} ${suffix}`;
+  }
+  return base;
+}
+
+/**
+ * A failure reason worth showing. The backend stores raw exception text in
+ * `reason` and echoes it as `reason_title`, so a real failure read
+ * "clone.cloning_errors." or a raw SQL statement with the database's path in
+ * it. Anything shaped like that is replaced by the generic sentence.
+ */
+export function cloneFailureTitle(clone) {
+  const title = clone?.reason_title;
+  if (!title) return null;
+  if (/^clone\./.test(title) || /SQLSTATE|Connection:|\/var\/|\.php\b|Stack trace/i.test(title)) return null;
+  return title;
 }
 
 /**

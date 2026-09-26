@@ -4626,7 +4626,7 @@
           "repository": "Repositório, ramo e conta Git"
         },
         "dropsItems": {
-          "ssl": "Certificado SSL",
+          "ssl": "Certificado SSL (a cópia recebe o próprio)",
           "backups": "Backups",
           "cronJobs": "Tarefas cron",
           "workers": "Queue workers",
@@ -4667,16 +4667,20 @@
         "deploying": {
           "title": "Um deploy está em andamento",
           "body": "Uma cópia feita agora pode misturar arquivos antigos e novos. Quando o deploy terminar, esta página permitirá cloná-lo."
+        },
+        "typeNotSupported": {
+          "title": "Este tipo de aplicação não pode ser clonado",
+          "body": "Aplicações {type} não podem ser copiadas pelo painel."
         }
       },
       "result": {
         "next": {
           "title": "Antes de usar",
-          "subtitle": "Quatro coisas que a cópia não herda.",
+          "subtitle": "{count, plural, one {Uma coisa que a cópia não herda.} other {# coisas que a cópia não herda.}}",
           "items": {
             "ssl": {
-              "title": "Configurar SSL",
-              "body": "A cópia é servida via HTTP puro até você fazer isso."
+              "title": "Verificar HTTPS",
+              "body": "Um certificado é emitido automaticamente assim que o domínio aponta para este servidor. Verifique aqui."
             },
             "backups": {
               "title": "Configurar backups",
@@ -4737,10 +4741,13 @@
           "copying_files": "Copiando arquivos",
           "cloning_database": "Clonando o banco de dados",
           "starting_process": "Iniciando a aplicação"
-        }
+        },
+        "notStarting": "Esta clonagem não começou",
+        "notStartingBody": "Está aguardando há mais de dois minutos. Se outra clonagem desta aplicação estava em andamento ao mesmo tempo, esta pode nunca começar.",
+        "stopWatching": "Parar de acompanhar e recomeçar"
       },
       "warnings": {
-        "dns": "Aponte o novo domínio para este servidor antes de emitir um certificado — até o DNS resolver, a cópia é servida via HTTP puro.",
+        "dns": "Aponte primeiro o novo domínio para este servidor — assim que apontar, a cópia recebe automaticamente o próprio certificado HTTPS.",
         "password": "A proteção por senha não é copiada. A cópia está pública até você ativá-la.",
         "time": "Uma aplicação grande leva alguns minutos para ser copiada."
       },

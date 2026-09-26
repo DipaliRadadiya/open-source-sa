@@ -21,7 +21,7 @@ test("the schema keeps the field the API sends", () => {
 
 test("the result screen is handed the webhook", () => {
   assert.match(panel, /webhook=\{completedClone\.target_webhook\}/);
-  assert.match(progress, /export function CloneNextSteps\(\{ applicationId, sourceProtected, webhook = null \}\)/);
+  assert.match(progress, /export function CloneNextSteps\(\{ applicationId, sourceProtected, sourceHasRepository = false, webhook = null \}\)/);
 });
 
 test("the url is shown, copyable, only when there is one", () => {

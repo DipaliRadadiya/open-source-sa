@@ -4626,7 +4626,7 @@
           "repository": "Dépôt, branche et compte Git"
         },
         "dropsItems": {
-          "ssl": "Certificat SSL",
+          "ssl": "Certificat SSL (la copie reçoit le sien)",
           "backups": "Sauvegardes",
           "cronJobs": "Tâches cron",
           "workers": "Workers de file",
@@ -4667,16 +4667,20 @@
         "deploying": {
           "title": "Un déploiement est en cours",
           "body": "Une copie faite maintenant pourrait mélanger anciens et nouveaux fichiers. Une fois le déploiement terminé, cette page vous permettra de le cloner."
+        },
+        "typeNotSupported": {
+          "title": "Ce type d'application ne peut pas être cloné",
+          "body": "Les applications {type} ne peuvent pas être copiées depuis le panneau."
         }
       },
       "result": {
         "next": {
           "title": "Avant de l'utiliser",
-          "subtitle": "Quatre éléments que la copie n'hérite pas.",
+          "subtitle": "{count, plural, one {Un élément que la copie n'hérite pas.} other {# éléments que la copie n'hérite pas.}}",
           "items": {
             "ssl": {
-              "title": "Configurer le SSL",
-              "body": "La copie est servie en HTTP brut tant que vous ne le faites pas."
+              "title": "Vérifier le HTTPS",
+              "body": "Un certificat est délivré automatiquement dès que le domaine pointe vers ce serveur. Vérifiez-le ici."
             },
             "backups": {
               "title": "Configurer les sauvegardes",
@@ -4737,10 +4741,13 @@
           "copying_files": "Copie des fichiers",
           "cloning_database": "Clonage de la base de données",
           "starting_process": "Démarrage de l'application"
-        }
+        },
+        "notStarting": "Ce clonage n'a pas démarré",
+        "notStartingBody": "Il attend depuis plus de deux minutes. Si un autre clonage de cette application tournait en même temps, celui-ci risque de ne jamais démarrer.",
+        "stopWatching": "Arrêter le suivi et recommencer"
       },
       "warnings": {
-        "dns": "Faites pointer le nouveau domaine vers ce serveur avant de délivrer un certificat — tant que le DNS ne résout pas, la copie est servie en HTTP brut.",
+        "dns": "Faites d'abord pointer le nouveau domaine vers ce serveur — dès que c'est le cas, la copie reçoit automatiquement son propre certificat HTTPS.",
         "password": "La protection par mot de passe n'est pas copiée. La copie est publique jusqu'à ce que vous l'activiez.",
         "time": "Une grosse application prend quelques minutes à copier."
       },

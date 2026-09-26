@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,17 @@ export function ConfirmDialog({
     if (!next && pending) return;
     onOpenChange?.(next);
   }
+
+  /*
+   * A double-click on the button that opens this dialog confirmed it: the
+   * confirm button can open right under the cursor, and the second click
+   * landed on it (a real clone was started that way). A click in the first
+   * moments after opening can't be a decision about what the dialog says.
+   */
+  const openedAt = useRef(0);
+  useEffect(() => {
+    if (open) openedAt.current = Date.now();
+  }, [open]);
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
@@ -145,7 +157,10 @@ export function ConfirmDialog({
           <Button
             variant={confirmVariant ?? (tone === "destructive" ? "destructive" : "default")}
             disabled={pending || confirmDisabled}
-            onClick={() => onConfirm?.()}
+            onClick={() => {
+              if (Date.now() - openedAt.current < 400) return;
+              onConfirm?.();
+            }}
           >
             {pending && <Loader2 className="size-4 animate-spin" />}
             {confirmLabel}

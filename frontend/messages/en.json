@@ -4626,7 +4626,7 @@
           "repository": "Repository, branch & git account"
         },
         "dropsItems": {
-          "ssl": "SSL certificate",
+          "ssl": "SSL certificate (the copy gets its own)",
           "backups": "Backups",
           "cronJobs": "Cron jobs",
           "workers": "Queue workers",
@@ -4667,16 +4667,20 @@
         "deploying": {
           "title": "A deploy is running",
           "body": "A copy taken now could mix old and new files. Once the deploy finishes, this page will let you clone it."
+        },
+        "typeNotSupported": {
+          "title": "This application type can't be cloned",
+          "body": "{type} applications can't be copied from the panel."
         }
       },
       "result": {
         "next": {
           "title": "Before you use it",
-          "subtitle": "Four things the copy does not inherit.",
+          "subtitle": "{count, plural, one {One thing the copy does not inherit.} other {# things the copy does not inherit.}}",
           "items": {
             "ssl": {
-              "title": "Set up SSL",
-              "body": "The copy is served over plain HTTP until you do."
+              "title": "Check HTTPS",
+              "body": "A certificate is issued automatically once the domain points at this server. Check it here."
             },
             "backups": {
               "title": "Set up backups",
@@ -4737,10 +4741,13 @@
           "copying_files": "Copying files",
           "cloning_database": "Cloning the database",
           "starting_process": "Starting the application"
-        }
+        },
+        "notStarting": "This clone hasn't started",
+        "notStartingBody": "It has been waiting for over two minutes. If another clone of this application was running at the same time, this one may never start.",
+        "stopWatching": "Stop watching and start over"
       },
       "warnings": {
-        "dns": "Point the new domain at this server before issuing a certificate — until DNS resolves, the copy is served over plain HTTP.",
+        "dns": "Point the new domain at this server first — the copy gets its own HTTPS certificate automatically once it does.",
         "password": "Password protection is not copied. The copy is public until you turn it on.",
         "time": "A large application takes a few minutes to copy."
       },
