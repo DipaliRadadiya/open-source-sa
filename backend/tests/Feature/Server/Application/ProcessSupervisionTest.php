@@ -87,6 +87,14 @@ describe('the unit', function () {
             // A crash loop that restarts forever buries its own cause.
             ->toContain('StartLimitBurst=5')
             ->toContain('MemoryMax=512M');
+
+        // In [Unit]: under [Service] systemd ignores StartLimitIntervalSec
+        // ("Unknown key", seen on a real server) and the limit never trips.
+        $unitSection = substr($unit, 0, strpos($unit, '[Service]'));
+
+        expect($unitSection)->toContain('StartLimitBurst=5')
+            ->toContain('StartLimitIntervalSec=60')
+            ->and(substr($unit, strpos($unit, '[Service]')))->not->toContain('StartLimit');
     });
 
     it('loads the same .env the Environment screen edits', function () {
