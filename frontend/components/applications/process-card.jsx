@@ -80,7 +80,9 @@ export function ProcessCard({ application, canManage = false, className }) {
 
   const facts = [
     { label: t("state"), value: stateLabel },
-    { label: t("since"), value: formatSince(process.since, format) },
+    // `since` is when the process last started; on a stopped one it read as
+    // "Running since" a time it no longer is.
+    { label: t("since"), value: state === "active" ? formatSince(process.since, format) : null },
     { label: t("memory"), value: memory },
     { label: t("restarts"), value: process.restarts },
   ].filter((fact) => fact.value !== null && fact.value !== undefined && fact.value !== "");

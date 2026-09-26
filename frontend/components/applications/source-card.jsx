@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { isDeployIncomplete, liveCommit } from "@/lib/applications/code-on-disk";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
@@ -10,6 +9,7 @@ import { toast } from "sonner";
 import { GitBranch, Loader2, Rocket, Settings2, TriangleAlert, Unlink, Webhook } from "lucide-react";
 import { deployApplication } from "@/lib/api/applications";
 import { apiMessage } from "@/lib/api/error-message";
+import { useRefresh } from "@/hooks/use-refresh";
 import { RelinkGitAccountDialog } from "@/components/applications/relink-git-account-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
   const providerTitle = application.git_account_missing ? null : account?.provider_title;
   const t = useTranslations("applications.source");
   const td = useTranslations("applications.details");
-  const router = useRouter();
+  const { refreshThen } = useRefresh();
   const [deploying, setDeploying] = useState(false);
   const [relinking, setRelinking] = useState(false);
 
@@ -58,10 +58,12 @@ export function SourceCard({ application, gitAccounts = [], canDeploy = false, c
     try {
       await deployApplication(application.id);
       toast.info(t("started"));
-      router.refresh();
+      // Stay busy until the refreshed page reports the deploy in flight; until
+      // then the button was an enabled "Deploy now" for ~2 s, one click from a
+      // second deploy.
+      refreshThen(() => setDeploying(false));
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
-    } finally {
       setDeploying(false);
     }
   }

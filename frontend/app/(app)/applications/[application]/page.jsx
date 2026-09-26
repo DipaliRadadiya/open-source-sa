@@ -68,6 +68,10 @@ export default async function ApplicationDetailPage({ params }) {
   const canDeploy = can(appPermissions, "app_deployment", "manage", "application");
   const canSeeDeployment = can(appPermissions, "app_deployment", "view", "application");
   const canSeeDomains = can(appPermissions, "app_domain", "view", "application");
+  // `/issues` is gated by `app_dashboard`, not by the `application` permission
+  // that opens this page. Asking without it is a 403, which read as "health
+  // checks could not be run" on every application for that role.
+  const canSeeChecks = can(appPermissions, "app_dashboard", "view", "application");
   // Already site-type gated by the API: `app_magic_login` exists only in
   // WordPressSiteType::features(), and VisiblePermissions filters the
   // catalog by the site's features. A `site_type === "wordpress"` check
@@ -264,7 +268,7 @@ export default async function ApplicationDetailPage({ params }) {
    */
   // Live checks, so not cached with the rest: a certificate's remaining days
   // and the disk's percentage both move without anything on this page acting.
-  const issues = settled
+  const issues = settled && canSeeChecks
     ? await getApplicationIssues(id).catch(() => ({ issues: [], healthy: true, failed: true }))
     : { issues: [], healthy: true, failed: false };
   const superseded = localKeysSupersededBy(issues.issues);
