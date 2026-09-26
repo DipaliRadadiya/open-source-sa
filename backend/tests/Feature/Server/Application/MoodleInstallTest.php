@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Application;
+use App\Models\Cronjob;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
@@ -266,4 +267,14 @@ it('writes the port when only the PANEL\'s default has moved, not the applicatio
     config(['server.databases.engines.postgresql.default_port' => 5433]);
 
     expect(moodleConfig(installMoodle('postgresql')))->toContain("'dbport' => '5433'");
+});
+
+it('schedules Moodle\'s cron every minute, on the site\'s own PHP', function () {
+    installMoodle();
+
+    $job = Cronjob::query()->sole();
+
+    expect($job->command)->toEndWith('/admin/cli/cron.php')
+        ->and($job->command)->toStartWith('/usr/bin/php')
+        ->and($job->expression)->toBe('* * * * *');
 });

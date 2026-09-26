@@ -173,6 +173,7 @@ return [
         'verify' => 'A verificar se o site responde',
         'verify_serving' => 'A verificar se o site responde',
         'create_admin' => 'Criando a conta de administrador',
+        'schedule_cron' => 'Agendando as tarefas em segundo plano',
         'worker' => 'O processo em segundo plano parou',
     ],
     /*

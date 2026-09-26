@@ -173,6 +173,7 @@ return [
         'verify' => 'Vérification que le site répond',
         'verify_serving' => 'Vérification que le site répond',
         'create_admin' => 'Création du compte administrateur',
+        'schedule_cron' => 'Planification des tâches en arrière-plan',
         'worker' => 'Le processus en arrière-plan s\'est arrêté',
     ],
     /*

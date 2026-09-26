@@ -173,6 +173,7 @@ return [
         'verify' => 'Prüfen, ob die Website antwortet',
         'verify_serving' => 'Prüfen, ob die Website antwortet',
         'create_admin' => 'Administratorkonto wird angelegt',
+        'schedule_cron' => 'Hintergrundaufgaben werden eingeplant',
         'worker' => 'Der Hintergrundprozess wurde beendet',
     ],
     /*

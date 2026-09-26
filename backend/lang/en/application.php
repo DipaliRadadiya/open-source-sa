@@ -178,6 +178,7 @@ return [
         'verify' => 'Checking the site answers',
         'verify_serving' => 'Checking the site answers',
         'create_admin' => 'Creating the admin account',
+        'schedule_cron' => 'Scheduling background jobs',
         'worker' => 'The background worker stopped',
     ],
     /*

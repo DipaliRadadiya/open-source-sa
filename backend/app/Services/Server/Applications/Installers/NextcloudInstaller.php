@@ -130,6 +130,12 @@ class NextcloudInstaller extends AbstractPhpInstaller
             ...$php, 'occ', 'config:system:set', 'overwrite.cli.url',
             '--value='.$application->url(),
         ], null, $documentRoot);
+
+        // Background jobs by system cron, which Nextcloud recommends; its
+        // default (AJAX) only runs them when someone has a page open, and a
+        // fresh install reported "background jobs last ran 56 years ago".
+        $this->runAsSiteUser('schedule_cron', $application, [...$php, 'occ', 'background:cron'], null, $documentRoot);
+        $this->scheduleCron($application, $documentRoot, 'cron.php', '*/5 * * * *');
     }
 
     /**

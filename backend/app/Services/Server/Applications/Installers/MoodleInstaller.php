@@ -147,6 +147,10 @@ class MoodleInstaller extends AbstractPhpInstaller
             ...$php, '-d', 'max_input_vars='.self::MIN_INPUT_VARS,
             'admin/cli/reset_password.php', '--username='.$adminUser,
         ], ($settings['admin_password'] ?? '')."\n", $documentRoot);
+
+        // Moodle wants its cron every minute: without it, no mail, no
+        // backups, no cleanup, and a notice on every admin page.
+        $this->scheduleCron($application, $documentRoot, 'admin/cli/cron.php', '* * * * *');
     }
 
     public function syncUrl(Application $application, string $url): void

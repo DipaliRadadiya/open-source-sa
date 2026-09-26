@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Application;
+use App\Models\Cronjob;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
@@ -245,4 +246,24 @@ it('leaves a stock PostgreSQL command line without a port as well', function () 
 
     expect($command)->toContain('pgsql')
         ->not->toContain('--database-port');
+});
+
+it('schedules its background jobs on the site\'s own PHP, and only once', function () {
+    // A fresh install reported "background jobs last ran 56 years ago":
+    // nothing ever added the cron Nextcloud needs.
+    $runs = installNextcloud();
+
+    expect(occRun($runs, 'background:cron'))->not->toBeNull();
+
+    $job = Cronjob::query()->sole();
+
+    // The version's binary, not `php` — that is the server default.
+    expect($job->command)->toBe('/usr/bin/php8.4 -f '.$this->application->documentRoot().'/cron.php')
+        ->and($job->expression)->toBe('*/5 * * * *')
+        ->and($job->application_id)->toBe($this->application->id);
+
+    // Retry Setup runs the installer again.
+    installNextcloud();
+
+    expect(Cronjob::query()->count())->toBe(1);
 });
