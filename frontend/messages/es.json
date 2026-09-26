@@ -4977,6 +4977,7 @@
       "loadFailed": "No pudimos comprobar el área de pruebas de esta aplicación.",
       "provisioning": "Esta aplicación aún se está creando. Podrás hacer una copia de pruebas cuando termine.",
       "unsupported": "El área de pruebas solo está disponible para aplicaciones WordPress. Esta es una aplicación {type}.",
+      "noPermission": "Tu rol no incluye Área de pruebas de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
       "manageAction": "Abrir aplicación de pruebas",
       "empty": {
         "title": "Todavía no hay copia de pruebas",
@@ -4986,6 +4987,7 @@
       "push": {
         "title": "Copiar pruebas sobre producción",
         "body": "Sustituye {domain} por lo que hay en la aplicación de pruebas. No se puede deshacer.",
+        "notReady": "Esta copia de pruebas no está lista: todavía se está creando o no se pudo crear. Si sigue así, elimínala y vuelve a crearla.",
         "action": "Publicar en producción"
       },
       "createDialog": {
@@ -5006,26 +5008,27 @@
         "title": "¿Publicar pruebas sobre {domain}?",
         "description": "Todo lo que hay en {staging} se copia sobre {production}. No se puede deshacer.",
         "downtime": "Tu aplicación se queda fuera de servicio mientras se ejecuta, y los visitantes verán una página de mantenimiento hasta que termine.",
+        "failSafe": "Si la publicación falla a mitad, producción vuelve a quedar como estaba.",
         "whatToPush": "Qué se debe copiar",
         "modes": {
           "files": {
             "label": "Solo archivos",
             "replaces": "Los archivos de la aplicación",
-            "deletes": "Los archivos que solo existen en producción",
-            "undo": "Ninguno: no se copia nada antes"
+            "deletes": "Los archivos que solo existen en producción. Los archivos subidos se conservan.",
+            "undo": "Ninguno una vez terminada"
           },
           "database": {
             "label": "Solo base de datos",
             "replaces": "La base de datos",
             "deletes": "Todo lo escrito desde que se hizo la copia: pedidos, comentarios, entradas",
-            "undo": "La base de datos anterior se guarda antes",
+            "undo": "Ninguno desde el panel. La base de datos anterior se guarda en el servidor.",
             "note": "Producción necesita los mismos plugins y temas que staging. La base de datos los espera, y si falta alguno la aplicación puede quedarse en blanco."
           },
           "full": {
             "label": "Archivos y base de datos",
             "replaces": "Los archivos de la aplicación y la base de datos",
-            "deletes": "Los archivos que solo están en producción y todo lo escrito desde la copia",
-            "undo": "La base de datos anterior se guarda antes; los archivos no"
+            "deletes": "Los archivos que solo están en producción (los archivos subidos se conservan) y todo lo escrito desde la copia",
+            "undo": "Ninguno desde el panel. La base de datos anterior se guarda en el servidor; los archivos no."
           }
         },
         "backupFirst": "No hay vuelta atrás. <link>Haz antes una copia de seguridad</link> si aún no la tienes.",

@@ -63,6 +63,9 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
         handleValidationError(error, form);
       } else {
         toast.error(apiMessage(error, t("failed")));
+        // Most often another tab made a copy first; the page behind still
+        // offered to create one. Re-read so it shows the copy that exists.
+        router.refresh();
       }
     } finally {
       setPending(false);

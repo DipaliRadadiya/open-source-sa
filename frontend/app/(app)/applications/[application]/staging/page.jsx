@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/page-header";
 import { getPermissions } from "@/lib/permissions/get-permissions";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { can } from "@/lib/permissions/can";
 import { getApplication, getApplicationStaging } from "@/lib/applications/get-applications";
 import { StagingPanel } from "@/components/applications/staging/staging-panel";
@@ -37,6 +38,10 @@ export default async function ApplicationStagingPage({ params }) {
 
   const application = result.application;
   if (!can(appPermissions, "app_staging", "view", "application")) {
+    // The grant exists only for WordPress, and an administrator holds every
+    // feature a site type offers — so for them a missing grant means "not
+    // this site type", and "ask an administrator" was the wrong answer.
+    if ((await getCurrentUser().catch(() => null))?.is_admin) return <TypeNotSupported application={application} t={t} />;
     return <PermissionDenied title={t("pageTitle")} />;
   }
 
@@ -47,6 +52,9 @@ export default async function ApplicationStagingPage({ params }) {
   const settled = isSettled(application);
 
   const staging = settled ? await getApplicationStaging(id) : null;
+  // A 403 on the read is a permissions answer, so it gets the same page every
+  // other screen shows rather than an error box inside this one.
+  if (staging?.status === 403) return <PermissionDenied title={t("pageTitle")} />;
 
   return (
     <div className="space-y-6">
@@ -63,9 +71,7 @@ export default async function ApplicationStagingPage({ params }) {
         // Staging is WordPress-only. For every other site type the endpoint
         // answers 404, which is a fact about the site rather than a failure to
         // read it — so it reads as an answer, not an error.
-        <div className="rounded-2xl border bg-muted/30 p-6 text-sm text-muted-foreground">
-          {t("unsupported", { type: application.site_type_title ?? application.site_type })}
-        </div>
+        <Unsupported>{t("unsupported", { type: application.site_type_title ?? application.site_type })}</Unsupported>
       ) : staging.failed ? (
         <LoadFailed description={t("loadFailed")} status={staging.status} failure={staging.failure} message={staging.message} debug={staging.debug} />
       ) : (
@@ -77,6 +83,19 @@ export default async function ApplicationStagingPage({ params }) {
           canDelete={canDelete}
         />
       )}
+    </div>
+  );
+}
+
+function Unsupported({ children }) {
+  return <div className="rounded-2xl border bg-muted/30 p-6 text-sm text-muted-foreground">{children}</div>;
+}
+
+function TypeNotSupported({ application, t }) {
+  return (
+    <div className="space-y-6">
+      <PageHeader title={t("pageTitle")} subtitle={t("pageSubtitle")} />
+      <Unsupported>{t("unsupported", { type: application.site_type_title ?? application.site_type })}</Unsupported>
     </div>
   );
 }

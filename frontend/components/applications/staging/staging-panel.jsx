@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowUpFromLine, ExternalLink, FlaskConical, Trash2 } from "lucide-react";
+import { ArrowUpFromLine, ExternalLink, FlaskConical, Trash2, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +31,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
   const [creating, setCreating] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const ready = staging?.status === "active";
 
   // This site IS the copy. Offering to stage it would make a staging site of
   // a staging site — the API would allow it, and nothing about it is useful.
@@ -76,7 +77,9 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
               <Button className="mt-1" onClick={() => setCreating(true)}>
                 {t("empty.action")}
               </Button>
-            ) : null}
+            ) : (
+              <p className="mx-auto max-w-md text-xs text-muted-foreground">{t("noPermission")}</p>
+            )}
           </CardContent>
         </Card>
 
@@ -108,7 +111,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
                 {staging.status_title ?? staging.status}
               </Badge>
             </p>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               <a
                 // See application-row-actions: link to the URL the API
                 // reports, which is http:// until a certificate is servable.
@@ -122,12 +125,9 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
               </a>
               {/* How old the copy is, because that is the question before a
                   push: a three-week-old copy pushed over production takes
-                  three weeks of production with it. */}
-              {staging.created_at_human ? (
-                <span aria-hidden className="text-muted-foreground/40">
-                  ·
-                </span>
-              ) : null}
+                  three weeks of production with it. No "·" before it: on a
+                  phone the age wraps and the dot was left hanging at the end
+                  of the domain line. */}
               {staging.created_at_human ? (
                 <span>{t("copyAge", { age: staging.created_at_human })}</span>
               ) : null}
@@ -147,8 +147,19 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
             <p className="text-sm text-muted-foreground">
               {t("push.body", { domain: production.domain })}
             </p>
+            {/* A copy that never finished (the backend can leave one behind
+                when creating fails) has nothing to push — offering the most
+                destructive action in the panel on it was the wrong default. */}
+            {!ready ? (
+              <p className="flex items-start gap-2 pt-1 text-sm text-warning">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                <span>{t("push.notReady")}</span>
+              </p>
+            ) : !canManage ? (
+              <p className="pt-1 text-xs text-muted-foreground">{t("noPermission")}</p>
+            ) : null}
           </div>
-          {canManage ? (
+          {canManage && ready ? (
             <Button variant="destructive" onClick={() => setPushing(true)}>
               <ArrowUpFromLine className="size-4" />
               {t("push.action")}

@@ -34,7 +34,7 @@ export const createStagingFormSchema = z.object({
     .trim()
     .toLowerCase()
     .min(1, "stagingDomainRequired")
-    .max(255, "tooLong")
+    .max(255, "max255")
     .regex(STAGING_DOMAIN_PATTERN, "stagingDomainInvalid"),
 });
 
@@ -43,11 +43,12 @@ export const createStagingFormSchema = z.object({
  *
  * Deliberately no default. `PushStagingRequest` calls `files` "the only mode
  * that cannot lose data" and tells the form to pre-select it; that is wrong.
- * `files` takes no safety copy of anything and still runs `rsync --delete`, so
- * production-only files go. `full` does dump the database first, but replaces
- * production's database wholesale. Both destroy something, they just destroy
- * different things — so the screen makes you choose rather than shipping one
- * of them as the thoughtless click.
+ * `files` runs `rsync --delete`, so production-only files go (uploads are
+ * merged and kept). `database` and `full` dump the database first, to a folder
+ * the panel cannot restore from, and replace it wholesale. The snapshot every
+ * mode takes is only used when the push fails. Each destroys something
+ * different — so the screen makes you choose rather than shipping one of them
+ * as the thoughtless click.
  *
  * `database` is not the gentle middle option it looks like. It leaves
  * production's files alone and replaces the database underneath them, so if

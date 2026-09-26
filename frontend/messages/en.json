@@ -4977,6 +4977,7 @@
       "loadFailed": "We could not check this application's staging area.",
       "provisioning": "This application is still being set up. A staging copy can be made once it finishes.",
       "unsupported": "Staging is only available for WordPress applications. This one is a {type} application.",
+      "noPermission": "Your role does not include Staging Area for this application with Manage access. Ask an administrator to grant it.",
       "manageAction": "Open staging application",
       "empty": {
         "title": "No staging copy yet",
@@ -4986,6 +4987,7 @@
       "push": {
         "title": "Copy staging over production",
         "body": "Replaces {domain} with what is on the staging application. There is no undo.",
+        "notReady": "This staging copy isn't ready: it is still being created, or creating it failed. If it stays like this, delete it and create it again.",
         "action": "Push to production"
       },
       "createDialog": {
@@ -5006,26 +5008,27 @@
         "title": "Push staging over {domain}?",
         "description": "Everything on {staging} is copied over {production}. This cannot be undone.",
         "downtime": "Your application is taken offline while this runs, and visitors see a maintenance page until it finishes.",
+        "failSafe": "If the push fails partway, production is put back as it was.",
         "whatToPush": "What should be copied",
         "modes": {
           "files": {
             "label": "Files only",
             "replaces": "The application's files",
-            "deletes": "Files that exist only on production",
-            "undo": "None — nothing is copied first"
+            "deletes": "Files that exist only on production. Uploads are kept.",
+            "undo": "None once it finishes"
           },
           "database": {
             "label": "Database only",
             "replaces": "The database",
             "deletes": "Everything written since the copy — orders, comments, posts",
-            "undo": "The old database is saved first",
+            "undo": "None from the panel. The old database is kept on the server.",
             "note": "Production needs the same plugins and themes as staging. The database expects them, and a missing one can leave the application blank."
           },
           "full": {
             "label": "Files and database",
             "replaces": "The application's files and the database",
-            "deletes": "Files only on production, and everything written since the copy",
-            "undo": "The old database is saved first; the files are not"
+            "deletes": "Files only on production (uploads are kept), and everything written since the copy",
+            "undo": "None from the panel. The old database is kept on the server; the files are not."
           }
         },
         "backupFirst": "There is no way back from this. <link>Take a backup first</link> if you have not.",

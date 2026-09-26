@@ -4977,6 +4977,7 @@
       "loadFailed": "Não foi possível verificar a área de staging desta aplicação.",
       "provisioning": "Esta aplicação ainda está sendo configurada. Uma cópia de staging pode ser feita quando terminar.",
       "unsupported": "Staging está disponível apenas para aplicações WordPress. Esta é uma aplicação {type}.",
+      "noPermission": "Seu papel não inclui Área de Staging para esta aplicação com acesso de Gerenciar. Peça a um administrador para concedê-lo.",
       "manageAction": "Abrir aplicação de staging",
       "empty": {
         "title": "Ainda não há cópia de staging",
@@ -4986,6 +4987,7 @@
       "push": {
         "title": "Copiar staging sobre produção",
         "body": "Substitui {domain} pelo que está na aplicação de staging. Não tem como desfazer.",
+        "notReady": "Esta cópia de staging não está pronta: ainda está sendo criada, ou a criação falhou. Se continuar assim, exclua-a e crie de novo.",
         "action": "Enviar para produção"
       },
       "createDialog": {
@@ -5006,26 +5008,27 @@
         "title": "Enviar staging sobre {domain}?",
         "description": "Tudo em {staging} é copiado sobre {production}. Não tem como desfazer.",
         "downtime": "Sua aplicação fica offline durante o processo, e os visitantes veem uma página de manutenção até terminar.",
+        "failSafe": "Se o envio falhar no meio, a produção volta a ficar como estava.",
         "whatToPush": "O que deve ser copiado",
         "modes": {
           "files": {
             "label": "Apenas arquivos",
             "replaces": "Os arquivos da aplicação",
-            "deletes": "Os arquivos que só existem em produção",
-            "undo": "Nenhuma — nada é copiado antes"
+            "deletes": "Os arquivos que só existem em produção. Os uploads são mantidos.",
+            "undo": "Nenhuma depois de concluído"
           },
           "database": {
             "label": "Apenas banco de dados",
             "replaces": "O banco de dados",
             "deletes": "Tudo que foi escrito desde a cópia: pedidos, comentários, posts",
-            "undo": "O banco de dados antigo é salvo antes",
+            "undo": "Nenhuma pelo painel. O banco de dados antigo fica salvo no servidor.",
             "note": "A produção precisa dos mesmos plugins e temas do staging. O banco de dados conta com eles, e se faltar algum a aplicação pode ficar em branco."
           },
           "full": {
             "label": "Arquivos e banco de dados",
             "replaces": "Os arquivos da aplicação e o banco de dados",
-            "deletes": "Os arquivos que só existem em produção e tudo que foi escrito desde a cópia",
-            "undo": "O banco de dados antigo é salvo antes; os arquivos não"
+            "deletes": "Os arquivos que só existem em produção (os uploads são mantidos) e tudo que foi escrito desde a cópia",
+            "undo": "Nenhuma pelo painel. O banco de dados antigo fica salvo no servidor; os arquivos não."
           }
         },
         "backupFirst": "Não tem volta. <link>Faça um backup antes</link> se ainda não fez.",

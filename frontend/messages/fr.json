@@ -4977,6 +4977,7 @@
       "loadFailed": "Impossible de vérifier la zone de préproduction de cette application.",
       "provisioning": "Cette application est encore en cours de configuration. Une copie de préproduction pourra être créée une fois terminée.",
       "unsupported": "La préproduction est uniquement disponible pour les applications WordPress. Celle-ci est une application {type}.",
+      "noPermission": "Votre rôle n'inclut pas Zone de préproduction pour cette application avec l'accès Gérer. Demandez à un administrateur de l'accorder.",
       "manageAction": "Ouvrir l'application de préproduction",
       "empty": {
         "title": "Pas encore de copie de préproduction",
@@ -4986,6 +4987,7 @@
       "push": {
         "title": "Copier la préproduction vers la production",
         "body": "Remplace {domain} par ce qui se trouve sur l'application de préproduction. C'est irréversible.",
+        "notReady": "Cette copie de préproduction n'est pas prête : elle est encore en cours de création, ou sa création a échoué. Si cela dure, supprimez-la et recréez-la.",
         "action": "Pousser en production"
       },
       "createDialog": {
@@ -5006,26 +5008,27 @@
         "title": "Pousser la préproduction vers {domain} ?",
         "description": "Tout ce qui se trouve sur {staging} est copié vers {production}. C'est irréversible.",
         "downtime": "Votre application est mise hors ligne pendant l'opération, et les visiteurs voient une page de maintenance jusqu'à la fin.",
+        "failSafe": "Si l'envoi échoue en cours de route, la production est remise dans son état d'avant.",
         "whatToPush": "Que faut-il copier",
         "modes": {
           "files": {
             "label": "Fichiers uniquement",
             "replaces": "Les fichiers de l'application",
-            "deletes": "Les fichiers présents uniquement en production",
-            "undo": "Aucun : rien n'est copié au préalable"
+            "deletes": "Les fichiers présents uniquement en production. Les téléversements sont conservés.",
+            "undo": "Aucun une fois terminé"
           },
           "database": {
             "label": "Base de données uniquement",
             "replaces": "La base de données",
             "deletes": "Tout ce qui a été écrit depuis la copie : commandes, commentaires, articles",
-            "undo": "L'ancienne base de données est sauvegardée avant",
+            "undo": "Aucun depuis le panneau. L'ancienne base de données est conservée sur le serveur.",
             "note": "La production a besoin des mêmes extensions et thèmes que la préproduction. La base de données les attend, et s'il en manque un l'application peut rester blanche."
           },
           "full": {
             "label": "Fichiers et base de données",
             "replaces": "Les fichiers de l'application et la base de données",
-            "deletes": "Les fichiers présents uniquement en production, et tout ce qui a été écrit depuis la copie",
-            "undo": "L'ancienne base de données est sauvegardée avant, les fichiers non"
+            "deletes": "Les fichiers présents uniquement en production (les téléversements sont conservés), et tout ce qui a été écrit depuis la copie",
+            "undo": "Aucun depuis le panneau. L'ancienne base de données est conservée sur le serveur, pas les fichiers."
           }
         },
         "backupFirst": "C'est irréversible. <link>Faites d'abord une sauvegarde</link> si ce n'est pas fait.",

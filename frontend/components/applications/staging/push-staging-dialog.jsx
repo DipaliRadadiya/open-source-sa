@@ -12,6 +12,7 @@ import {
   Loader2,
   TriangleAlert,
   PowerOff,
+  ShieldCheck,
   Undo2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,17 +40,19 @@ import {
 /**
  * Copy staging over production.
  *
- * The most destructive action in the panel, and the only one with no undo for
- * files: the backend rsyncs with `--delete`, and `files` mode takes no safety
- * copy of anything. So this borrows the restore dialog's shape — icon header,
- * the facts as facts, and a typed domain before the button unlocks — because
- * the two actions carry the same weight and should not feel different.
+ * The most destructive action in the panel. The backend rsyncs with
+ * `--delete` (uploads excepted — they are merged, never removed), and the
+ * snapshot it takes first is only for putting production back if the push
+ * FAILS; once it succeeds there is no way back from the panel. So this borrows
+ * the restore dialog's shape — icon header, the facts as facts, and a typed
+ * domain before the button unlocks — because the two actions carry the same
+ * weight and should not feel different.
  *
  * The mode has no preselected value on purpose. `PushStagingRequest` calls
  * `files` "the only mode that cannot lose data" and asks the form to default
- * to it; that is not true, and defaulting to it would turn a claim the code
- * makes about itself into the click most people never think about. Each option
- * says what it destroys and the reader picks one.
+ * to it; it deletes production-only files, and defaulting to it would turn a
+ * claim the code makes about itself into the click most people never think
+ * about. Each option says what it destroys and the reader picks one.
  *
  * Callers MUST pass a `key` that changes when this opens. A dialog opened
  * from its own button never fires `onOpenChange` on the way in, so a mode
@@ -76,6 +79,9 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
       router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
+      // The usual cause is the copy having gone (deleted in another tab), and
+      // the page behind this dialog still showed it. Re-read, so it says so.
+      router.refresh();
     } finally {
       setPending(false);
     }
@@ -112,6 +118,13 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
             <p className="flex items-start gap-2.5">
               <PowerOff className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
               <span>{t("downtime")}</span>
+            </p>
+            {/* The one reassurance that is true of every mode: the backend
+                snapshots what it replaces and puts it back if the push fails
+                partway. It is the successful push that cannot be undone. */}
+            <p className="flex items-start gap-2.5">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+              <span>{t("failSafe")}</span>
             </p>
             <p className="flex items-start gap-2.5">
               <Undo2 className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
@@ -230,9 +243,10 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
  * Same three rows, same order, every mode. What differs between the options is
  * then the only thing on screen that differs.
  *
- * `undo` carries the weight because it is the row that decides it: "None —
- * nothing is copied first" is the most important fact about Files only, and as
- * the last clause of a 25-word sentence it read like a footnote.
+ * `undo` carries the weight because it is the row that decides it: whether
+ * anything can be had back once the push has finished. The database dump the
+ * backend keeps is named there, but it is not restorable from the panel, and
+ * the row says so rather than implying an undo that does not exist.
  */
 function ModeFacts({ t, mode }) {
   const note = mode === "database" ? t("modes.database.note") : null;

@@ -4977,6 +4977,7 @@
       "loadFailed": "Der Staging-Bereich dieser Anwendung konnte nicht geprüft werden.",
       "provisioning": "Diese Anwendung wird noch eingerichtet. Eine Staging-Kopie lässt sich anlegen, sobald das fertig ist.",
       "unsupported": "Staging gibt es nur für WordPress-Anwendungen. Diese ist eine {type}-Anwendung.",
+      "noPermission": "Ihre Rolle enthält nicht „Staging-Bereich“ für diese Anwendung mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
       "manageAction": "Staging-Anwendung öffnen",
       "empty": {
         "title": "Noch keine Staging-Kopie",
@@ -4986,6 +4987,7 @@
       "push": {
         "title": "Staging über die Produktion kopieren",
         "body": "Ersetzt {domain} durch das, was auf der Staging-Anwendung liegt. Es gibt kein Zurück.",
+        "notReady": "Diese Staging-Kopie ist nicht bereit: Sie wird noch erstellt, oder das Erstellen ist fehlgeschlagen. Bleibt das so, löschen Sie sie und erstellen Sie sie neu.",
         "action": "In die Produktion übertragen"
       },
       "createDialog": {
@@ -5006,26 +5008,27 @@
         "title": "Staging über {domain} übertragen?",
         "description": "Alles auf {staging} wird über {production} kopiert. Das lässt sich nicht zurücknehmen.",
         "downtime": "Ihre Anwendung wird währenddessen offline genommen, und Besucher sehen bis zum Ende eine Wartungsseite.",
+        "failSafe": "Schlägt die Übertragung mittendrin fehl, wird die Produktion wieder in den vorherigen Zustand versetzt.",
         "whatToPush": "Was kopiert werden soll",
         "modes": {
           "files": {
             "label": "Nur Dateien",
             "replaces": "Die Dateien der Anwendung",
-            "deletes": "Dateien, die es nur auf Produktion gibt",
-            "undo": "Keiner – vorher wird nichts kopiert"
+            "deletes": "Dateien, die es nur auf Produktion gibt. Uploads bleiben erhalten.",
+            "undo": "Keiner, sobald sie abgeschlossen ist"
           },
           "database": {
             "label": "Nur Datenbank",
             "replaces": "Die Datenbank",
             "deletes": "Alles seit der Kopie Geschriebene: Bestellungen, Kommentare, Beiträge",
-            "undo": "Die alte Datenbank wird vorher gesichert",
+            "undo": "Keiner über das Panel. Die alte Datenbank bleibt auf dem Server gespeichert.",
             "note": "Produktion braucht dieselben Plugins und Themes wie Staging. Die Datenbank erwartet sie, und fehlt eines, kann die Anwendung leer bleiben."
           },
           "full": {
             "label": "Dateien und Datenbank",
             "replaces": "Die Dateien der Anwendung und die Datenbank",
-            "deletes": "Dateien, die es nur auf Produktion gibt, und alles seit der Kopie Geschriebene",
-            "undo": "Die alte Datenbank wird vorher gesichert, die Dateien nicht"
+            "deletes": "Dateien, die es nur auf Produktion gibt (Uploads bleiben erhalten), und alles seit der Kopie Geschriebene",
+            "undo": "Keiner über das Panel. Die alte Datenbank bleibt auf dem Server gespeichert, die Dateien nicht."
           }
         },
         "backupFirst": "Von hier gibt es kein Zurück. <link>Machen Sie zuerst ein Backup</link>, falls noch nicht geschehen.",
