@@ -243,6 +243,14 @@ rewrite {
   RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
   RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 @endif
+@foreach ($subdirectoryFrontControllers as $front)
+  {{-- A directory with its own front controller (PrestaShop's back office),
+       which Apache routes with the `.htaccess` inside it. Before the shop's
+       own front controller, which would otherwise take these and 404. --}}
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^/({{ $front['directory'] }})/ /$1/{{ $front['script'] }} [L]
+@endforeach
   RewriteRule ^/index\.php$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

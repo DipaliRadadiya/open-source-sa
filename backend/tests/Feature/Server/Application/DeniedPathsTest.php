@@ -97,3 +97,51 @@ it('adds nothing for an application that needs nothing', function (string $drive
         // OLS: only the dotfile context it always had.
         ->and(substr_count($config, 'context exp:'))->toBe($driver === 'openlitespeed' ? 1 : 0);
 })->with(['nginx', 'openlitespeed']);
+
+/*
+| PrestaShop's back office is its own application in `admin<random>/`, and its
+| `.htaccess` sends every path there to that folder's index.php. nginx and OLS
+| sent `/admin…/login` to the shop's front controller instead: 404 (measured).
+*/
+
+it('routes PrestaShop\'s back office folder to its own front controller on nginx, after every other rule', function () {
+    $config = deniedPathsVhost('prestashop', 'nginx');
+
+    $admin = strpos($config, 'location ~ ^/(?<frontdir0>admin[a-z0-9]+)/ {');
+    $body = substr($config, $admin, 200);
+
+    expect($admin)->not->toBeFalse()
+        ->and($body)->toContain('try_files $uri $uri/ /$frontdir0/index.php$is_args$args;')
+        // First-match regex locations: placed before these, a .php file would
+        // be served as source and a .htaccess or log as plain text.
+        ->and($admin)->toBeGreaterThan(strpos($config, 'location ~ [^/]\.php(/|$)'))
+        ->and($admin)->toBeGreaterThan(strpos($config, 'location ~ /\.(?!well-known)'))
+        ->and($admin)->toBeGreaterThan(strpos($config, 'location ~* \.(log|tpl|twig|sass|yml)$'));
+});
+
+it('routes PrestaShop\'s back office folder before the shop\'s front controller on OpenLiteSpeed', function () {
+    $config = deniedPathsVhost('prestashop', 'openlitespeed');
+
+    $admin = strpos($config, 'RewriteRule ^/(admin[a-z0-9]+)/ /$1/index.php [L]');
+
+    expect($admin)->not->toBeFalse()
+        ->and($admin)->toBeLessThan(strpos($config, 'RewriteRule ^/index\.php$ - [L]'))
+        // Real files and folders are served as they are; only the rest goes
+        // to the back office's index.php.
+        ->and(substr($config, $admin - 120, 120))->toContain('RewriteCond %{REQUEST_FILENAME} !-f')
+        ->and(substr($config, $admin - 120, 120))->toContain('RewriteCond %{REQUEST_FILENAME} !-d');
+});
+
+it('leaves PrestaShop 9\'s admin-api folder to the shop', function () {
+    $front = app(SiteTypeManager::class)->find('prestashop')->subdirectoryFrontControllers()[0];
+
+    expect(preg_match('~^/('.$front['directory'].')/~', '/admin172vrcqtzvkqymg2kse/login'))->toBe(1)
+        ->and(preg_match('~^/('.$front['directory'].')/~', '/admin-api/index.php/x'))->toBe(0);
+});
+
+it('adds no front controller for a site type without one', function (string $driver) {
+    $config = deniedPathsVhost('wordpress', $driver);
+
+    expect($config)->not->toContain('frontdir')
+        ->not->toContain('RewriteRule ^/(admin');
+})->with(['nginx', 'openlitespeed']);

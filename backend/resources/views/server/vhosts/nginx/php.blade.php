@@ -208,6 +208,17 @@ server {
     location ~ /\.(?!well-known) {
         deny all;
     }
+@foreach ($subdirectoryFrontControllers as $i => $front)
+
+    {{-- A directory that is an application of its own (PrestaShop's back
+         office), which Apache routes with the `.htaccess` inside it. Last on
+         purpose: regex locations are first-match, so the PHP, dotfile and
+         denied-path rules above must see `.php`, `.htaccess` and logs first —
+         placed before them, this would serve those as plain files. --}}
+    location ~ ^/(?<frontdir{{ $i }}>{{ $front['directory'] }})/ {
+        try_files $uri $uri/ /$frontdir{{ $i }}/{{ $front['script'] }}$is_args$args;
+    }
+@endforeach
 }
 
 {{-- Redirects get their own server block. Serving the same content under a

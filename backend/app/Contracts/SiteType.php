@@ -188,4 +188,14 @@ interface SiteType
      * @return array<int, string>
      */
     public function deniedPaths(): array;
+
+    /**
+     * Top-level directories that are applications of their own, each with its
+     * own front controller — what the application's `.htaccess` in that
+     * directory does on Apache. `directory` is a regex for the directory name
+     * (no slashes, no lookaheads), `script` the file inside it.
+     *
+     * @return array<int, array{directory: string, script: string}>
+     */
+    public function subdirectoryFrontControllers(): array;
 }

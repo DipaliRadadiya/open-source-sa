@@ -170,4 +170,21 @@ class PrestaShopSiteType extends AbstractSiteType
             '^/composer\\.lock$',
         ];
     }
+
+    /**
+     * The back office is its own Symfony application in `admin<random>/`,
+     * and its `.htaccess` sends every path there to that folder's
+     * `index.php`. Without it, nginx and OpenLiteSpeed handed
+     * `/admin…/login` — where `/admin…/` redirects — to the shop's front
+     * controller, which answered 404: the back office only opened by typing
+     * `index.php` (measured on both). The folder name is random and the panel
+     * does not record it, so it is matched; PrestaShop 9's `admin-api` has a
+     * hyphen and is left alone.
+     *
+     * @return array<int, array{directory: string, script: string}>
+     */
+    public function subdirectoryFrontControllers(): array
+    {
+        return [['directory' => 'admin[a-z0-9]+', 'script' => 'index.php']];
+    }
 }

@@ -252,6 +252,14 @@ abstract class AbstractSiteType implements SiteType
         return [];
     }
 
+    /**
+     * @return array<int, array{directory: string, script: string}>
+     */
+    public function subdirectoryFrontControllers(): array
+    {
+        return [];
+    }
+
     public function defaultWebRoot(): string
     {
         return '/';

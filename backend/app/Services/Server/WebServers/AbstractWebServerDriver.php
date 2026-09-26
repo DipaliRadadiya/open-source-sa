@@ -278,6 +278,8 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      */
     protected function viewData(Application $application, string $documentRoot): array
     {
+        $siteType = app(SiteTypeManager::class)->find((string) $application->site_type);
+
         return [
             'application' => $application,
             'domain' => $application->domain,
@@ -317,7 +319,10 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             'tlsFallback' => $this->certificateFiles->fallbackPaths(),
             // Paths the site type ships `.htaccess` deny rules for. Apache
             // reads those itself; nginx and OpenLiteSpeed render these.
-            'deniedPaths' => app(SiteTypeManager::class)->find((string) $application->site_type)?->deniedPaths() ?? [],
+            'deniedPaths' => $siteType?->deniedPaths() ?? [],
+            // Directories with their own front controller, which Apache gets
+            // from the application's own `.htaccess`.
+            'subdirectoryFrontControllers' => $siteType?->subdirectoryFrontControllers() ?? [],
             'forceHttps' => $forceHttps = (bool) ($application->scheme() === 'https' && $application->certificate?->force_https),
             // Names the certificate does not cover, while HTTPS is forced.
             // Sending one to https://<that name> lands the visitor on a
