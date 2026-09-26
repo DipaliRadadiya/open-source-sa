@@ -172,6 +172,35 @@ server {
         try_files $uri $uri/ /index.php?$query_string;
     }
 
+@foreach ($wellKnown['redirects'] as $name => $target)
+    {{-- Service discovery the application's own .htaccess does on Apache —
+         Nextcloud's CalDAV/CardDAV. Answered 404 here, so calendar and
+         contact clients could not find the server. --}}
+    location = /.well-known/{{ $name }} {
+        return 301 {{ $target }};
+    }
+@endforeach
+@if ($wellKnown['fallback'])
+    {{-- Every other well-known URI to the application, as its .htaccess does.
+         The ACME location above is a longer prefix and still wins; PKI
+         validation files are served as they are. --}}
+    location ^~ /.well-known/ {
+        location ^~ /.well-known/pki-validation/ {
+            try_files $uri =404;
+        }
+
+        return 301 {{ $wellKnown['fallback'] }}$request_uri;
+    }
+@endif
+@foreach ($mimeTypes as $extension => $type)
+    {{-- A type the application sets in its .htaccess. `.mjs` went out as
+         application/octet-stream, which browsers refuse to run as a module. --}}
+    location ~* \.{{ $extension }}$ {
+        types { }
+        default_type {{ $type }};
+        try_files $uri =404;
+    }
+@endforeach
 @foreach ($deniedPaths as $pattern)
     {{-- The application ships this as an Apache `.htaccess` rule, which nginx
          never reads: without it, logs, sessions and source under the web root

@@ -260,6 +260,22 @@ abstract class AbstractSiteType implements SiteType
         return [];
     }
 
+    /**
+     * @return array{redirects: array<string, string>, fallback: string|null}
+     */
+    public function wellKnownRoutes(): array
+    {
+        return ['redirects' => [], 'fallback' => null];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function mimeTypes(): array
+    {
+        return [];
+    }
+
     public function defaultWebRoot(): string
     {
         return '/';

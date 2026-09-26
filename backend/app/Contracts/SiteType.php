@@ -198,4 +198,22 @@ interface SiteType
      * @return array<int, array{directory: string, script: string}>
      */
     public function subdirectoryFrontControllers(): array;
+
+    /**
+     * `/.well-known/<name>` URIs this application answers: `redirects` maps a
+     * name to a path it is sent to (301); `fallback`, when set, is where every
+     * other well-known URI goes — the ACME and PKI validation paths excepted.
+     * What the application's `.htaccess` does on Apache.
+     *
+     * @return array{redirects: array<string, string>, fallback: string|null}
+     */
+    public function wellKnownRoutes(): array;
+
+    /**
+     * File extensions the web server must serve with a specific type, which
+     * the application sets in its `.htaccess` on Apache.
+     *
+     * @return array<string, string>
+     */
+    public function mimeTypes(): array;
 }

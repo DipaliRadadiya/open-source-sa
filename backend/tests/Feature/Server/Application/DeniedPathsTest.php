@@ -145,3 +145,36 @@ it('adds no front controller for a site type without one', function (string $dri
     expect($config)->not->toContain('frontdir')
         ->not->toContain('RewriteRule ^/(admin');
 })->with(['nginx', 'openlitespeed']);
+
+/*
+| Nextcloud's .htaccess routes CalDAV/CardDAV discovery and the rest of
+| /.well-known, and serves .mjs as JavaScript. nginx and OLS answered 404 to
+| discovery and nginx sent .mjs as application/octet-stream (measured).
+*/
+
+it('routes Nextcloud\'s well-known URIs and module type on nginx, ACME still first', function () {
+    $config = deniedPathsVhost('nextcloud', 'nginx');
+
+    expect($config)->toContain("location = /.well-known/caldav {\n        return 301 /remote.php/dav/;")
+        ->toContain("location = /.well-known/carddav {\n        return 301 /remote.php/dav/;")
+        ->toContain('return 301 /index.php$request_uri;')
+        ->toContain('location ^~ /.well-known/pki-validation/')
+        ->toContain("location ~* \\.mjs$ {\n        types { }\n        default_type text/javascript;")
+        // A longer prefix than /.well-known/, so certificate issuance still
+        // reaches the challenge directory.
+        ->toContain('location ^~ /.well-known/acme-challenge/');
+});
+
+it('routes Nextcloud\'s well-known URIs on OpenLiteSpeed, ACME and PKI exempt', function () {
+    $config = deniedPathsVhost('nextcloud', 'openlitespeed');
+
+    expect($config)->toContain('RewriteRule ^/\.well-known/caldav$ /remote.php/dav/ [R=301,L]')
+        ->toContain('RewriteCond %{REQUEST_URI} !^/\.well-known/(acme-challenge|pki-validation)/')
+        ->toContain('RewriteRule ^/\.well-known/ /index.php [L]');
+});
+
+it('adds no well-known routing or types for other site types', function (string $driver) {
+    $config = deniedPathsVhost('wordpress', $driver);
+
+    expect($config)->not->toContain('/remote.php/dav/')->not->toContain('default_type text/javascript');
+})->with(['nginx', 'openlitespeed']);

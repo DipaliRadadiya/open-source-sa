@@ -243,6 +243,15 @@ rewrite {
   RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
   RewriteRule ^/?(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 @endif
+@foreach ($wellKnown['redirects'] as $name => $target)
+  {{-- Service discovery the application's .htaccess does on Apache
+       (Nextcloud CalDAV/CardDAV); this vhost does not read that file. --}}
+  RewriteRule ^/\.well-known/{{ preg_quote($name, '/') }}$ {{ $target }} [R=301,L]
+@endforeach
+@if ($wellKnown['fallback'])
+  RewriteCond %{REQUEST_URI} !^/\.well-known/(acme-challenge|pki-validation)/
+  RewriteRule ^/\.well-known/ {{ $wellKnown['fallback'] }} [L]
+@endif
 @foreach ($subdirectoryFrontControllers as $front)
   {{-- A directory with its own front controller (PrestaShop's back office),
        which Apache routes with the `.htaccess` inside it. Before the shop's

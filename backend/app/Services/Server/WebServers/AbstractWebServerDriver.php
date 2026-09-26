@@ -340,6 +340,10 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             // Directories with their own front controller, which Apache gets
             // from the application's own `.htaccess`.
             'subdirectoryFrontControllers' => $siteType?->subdirectoryFrontControllers() ?? [],
+            // /.well-known routing and file types the application sets in its
+            // own .htaccess — Nextcloud's CalDAV/CardDAV discovery and .mjs.
+            'wellKnown' => $siteType?->wellKnownRoutes() ?? ['redirects' => [], 'fallback' => null],
+            'mimeTypes' => $siteType?->mimeTypes() ?? [],
             'forceHttps' => $forceHttps = (bool) ($application->scheme() === 'https' && $application->certificate?->force_https),
             // Names the certificate does not cover, while HTTPS is forced.
             // Sending one to https://<that name> lands the visitor on a

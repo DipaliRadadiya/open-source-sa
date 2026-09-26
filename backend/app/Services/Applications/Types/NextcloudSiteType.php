@@ -79,4 +79,31 @@ class NextcloudSiteType extends AbstractSiteType
     {
         return ['min' => '8.3', 'max' => '8.5'];
     }
+
+    /**
+     * CalDAV/CardDAV discovery and the rest of `/.well-known`, as Nextcloud's
+     * own `.htaccess` routes them. On nginx and OpenLiteSpeed both answered
+     * 404, so calendar and contact clients could not find the server, and
+     * Nextcloud's own setup check failed on it (nginx test server).
+     *
+     * @return array{redirects: array<string, string>, fallback: string|null}
+     */
+    public function wellKnownRoutes(): array
+    {
+        return [
+            'redirects' => ['carddav' => '/remote.php/dav/', 'caldav' => '/remote.php/dav/'],
+            'fallback' => '/index.php',
+        ];
+    }
+
+    /**
+     * ES modules. nginx served `.mjs` as application/octet-stream, which a
+     * browser refuses to run as a module — some Nextcloud apps broke.
+     *
+     * @return array<string, string>
+     */
+    public function mimeTypes(): array
+    {
+        return ['mjs' => 'text/javascript'];
+    }
 }
