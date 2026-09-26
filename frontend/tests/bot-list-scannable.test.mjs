@@ -57,5 +57,5 @@ test("each group says how many it holds", () => {
 test("the chips sit on their own surface inside the tinted panel", () => {
   // Outline-only chips on `bg-muted/30` have almost no edge; a solid fill is
   // what separates 23 of them from the panel behind.
-  assert.match(code, /className="border-primary\/20 bg-primary\/5 font-mono font-normal text-primary"/);
+  assert.match(code, /className="h-auto max-w-full border-primary\/20 bg-primary\/5 font-mono font-normal break-all whitespace-normal text-primary"/);
 });

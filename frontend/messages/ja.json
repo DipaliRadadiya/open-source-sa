@@ -4484,16 +4484,16 @@
         "range": "{days} 日間",
         "unavailable": "このアプリケーションのアクセスログを読み取れなかったため、表示できるデータがありません。これはボットの訪問がなかったという意味ではありません。",
         "empty": "過去 {days} 日間に AI ボットの訪問はありません。",
-        "summary": "{bots, plural, other{# 件のボット}} · {hits, plural, other{# 件のリクエスト}} · {blocked, plural, other{# 件ブロック}}",
+        "summary": "{bots, plural, other{# 件のボット}} · {hits, plural, other{# 件のリクエスト}} · {blocked, plural, other{ブロック対象のボットから # 件}}",
         "partial": "ログの最新部分のみをスキャンしたため、アクセスの多いアプリケーションではさらに多くのボットがいた可能性があります。",
-        "blocked": "ブロック済み",
-        "allowed": "通過中",
+        "blocked": "ブロック",
+        "allowed": "許可",
         "columns": {
           "bot": "ボット",
           "kind": "種類",
           "requests": "リクエスト数",
           "lastSeen": "最終確認",
-          "status": "今すぐ"
+          "status": "現在の設定"
         },
         "kinds": {
           "training": "学習",

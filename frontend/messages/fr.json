@@ -4484,16 +4484,16 @@
         "range": "{days} jours",
         "unavailable": "Le journal d'accès de cette application n'a pas pu être lu, il n'y a donc rien à afficher pour l'instant. Ce n'est pas la même chose qu'aucun bot n'ait visité.",
         "empty": "Aucun bot IA n'a visité au cours des {days} derniers jours.",
-        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# requête} other {# requêtes}} · {blocked, plural, other {# bloqués}}",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# requête} other {# requêtes}} · {blocked, plural, other {# de bots que vous bloquez}}",
         "partial": "Seule la partie la plus récente du journal a été analysée ; les applications très actives peuvent en avoir eu davantage.",
-        "blocked": "Bloqué",
-        "allowed": "Passent",
+        "blocked": "Bloquer",
+        "allowed": "Autoriser",
         "columns": {
           "bot": "Bot",
           "kind": "Type",
           "requests": "Requêtes",
           "lastSeen": "Vu pour la dernière fois",
-          "status": "Maintenant"
+          "status": "Vos réglages"
         },
         "kinds": {
           "training": "Entraînement",

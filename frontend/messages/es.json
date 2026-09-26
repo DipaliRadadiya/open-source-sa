@@ -4484,16 +4484,16 @@
         "range": "{days} días",
         "unavailable": "No se pudo leer el registro de acceso de esta aplicación, así que todavía no hay nada que mostrar. No es lo mismo que no reciba visitas de bots.",
         "empty": "Ningún bot de IA ha visitado en los últimos {days} días.",
-        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# solicitud} other {# solicitudes}} · {blocked, plural, other {# bloqueadas}}",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# solicitud} other {# solicitudes}} · {blocked, plural, other {# de bots que bloqueas}}",
         "partial": "Solo se analizó la parte más reciente del registro, así que en aplicaciones con mucho tráfico puede haber más.",
-        "blocked": "Bloqueado",
-        "allowed": "Pasa",
+        "blocked": "Bloquear",
+        "allowed": "Permitir",
         "columns": {
           "bot": "Bot",
           "kind": "Tipo",
           "requests": "Solicitudes",
           "lastSeen": "Visto por última vez",
-          "status": "Ahora mismo"
+          "status": "Tu configuración"
         },
         "kinds": {
           "training": "Entrenamiento",

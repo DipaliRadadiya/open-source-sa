@@ -4484,16 +4484,16 @@
         "range": "{days} Tage",
         "unavailable": "Das Zugriffsprotokoll dieser Anwendung konnte nicht gelesen werden, daher gibt es noch nichts zu zeigen. Das ist nicht dasselbe wie „keine Bots waren da“.",
         "empty": "In den letzten {days} Tagen war kein KI-Bot hier.",
-        "summary": "{bots, plural, one {# Bot} other {# Bots}} · {hits, plural, one {# Anfrage} other {# Anfragen}} · {blocked, plural, other {# blockiert}}",
+        "summary": "{bots, plural, one {# Bot} other {# Bots}} · {hits, plural, one {# Anfrage} other {# Anfragen}} · {blocked, plural, other {# von Bots, die Sie blockieren}}",
         "partial": "Nur der neueste Teil des Protokolls wurde durchsucht, bei viel besuchten Anwendungen können es also mehr gewesen sein.",
-        "blocked": "Blockiert",
-        "allowed": "Kommt durch",
+        "blocked": "Blockieren",
+        "allowed": "Erlauben",
         "columns": {
           "bot": "Bot",
           "kind": "Art",
           "requests": "Anfragen",
           "lastSeen": "Zuletzt gesehen",
-          "status": "Jetzt"
+          "status": "Ihre Einstellung"
         },
         "kinds": {
           "training": "Training",

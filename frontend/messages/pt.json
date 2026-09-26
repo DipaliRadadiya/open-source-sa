@@ -4484,16 +4484,16 @@
         "range": "{days} dias",
         "unavailable": "Não foi possível ler o log de acesso desta aplicação, então ainda não há nada para mostrar. Isso não é o mesmo que nenhum bot ter visitado.",
         "empty": "Nenhum bot de IA visitou nos últimos {days} dias.",
-        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# requisição} other {# requisições}} · {blocked, plural, other {# bloqueados}}",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# requisição} other {# requisições}} · {blocked, plural, other {# de bots que você bloqueia}}",
         "partial": "Apenas a parte mais recente do log foi analisada, então aplicações movimentadas podem ter recebido mais.",
-        "blocked": "Bloqueado",
-        "allowed": "Passando",
+        "blocked": "Bloquear",
+        "allowed": "Permitir",
         "columns": {
           "bot": "Bot",
           "kind": "Tipo",
           "requests": "Requisições",
           "lastSeen": "Visto pela última vez",
-          "status": "Agora"
+          "status": "Suas configurações"
         },
         "kinds": {
           "training": "Treinamento",

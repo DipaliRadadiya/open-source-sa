@@ -4484,16 +4484,16 @@
         "range": "{days} days",
         "unavailable": "This application’s access log couldn’t be read, so there’s nothing to show yet. This isn’t the same as no bots visiting.",
         "empty": "No AI bots have visited in the last {days} days.",
-        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# request} other {# requests}} · {blocked, plural, other {# blocked}}",
+        "summary": "{bots, plural, one {# bot} other {# bots}} · {hits, plural, one {# request} other {# requests}} · {blocked, plural, other {# from bots you block}}",
         "partial": "Only the most recent part of the log was scanned, so busy applications may have had more.",
-        "blocked": "Blocked",
-        "allowed": "Getting through",
+        "blocked": "Block",
+        "allowed": "Allow",
         "columns": {
           "bot": "Bot",
           "kind": "Kind",
           "requests": "Requests",
           "lastSeen": "Last seen",
-          "status": "Right now"
+          "status": "Your settings"
         },
         "kinds": {
           "training": "Training",

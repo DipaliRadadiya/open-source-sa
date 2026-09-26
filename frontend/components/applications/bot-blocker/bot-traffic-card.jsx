@@ -114,12 +114,14 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                   <TableRow>
                     <TableHead className="px-2 sm:px-4">{t("columns.bot")}</TableHead>
                     {/* Five columns do not fit a phone. Rather than let the
-                        table clip — which hid "Right now", the one column that
+                        table clip — which hid the settings column, the one that
                         answers "is this bot getting in?" — the two least
                         urgent drop out below `sm` and reappear above it. */}
                     <TableHead className="hidden sm:table-cell">{t("columns.kind")}</TableHead>
                     <TableHead className="px-2 text-right sm:px-4">{t("columns.requests")}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t("columns.lastSeen")}</TableHead>
+                    {/* From xl, not md: at 768 and 1024 in French and Portuguese this
+                        column pushed the settings column past the table's edge. */}
+                    <TableHead className="hidden xl:table-cell">{t("columns.lastSeen")}</TableHead>
                     <TableHead className="px-2 sm:px-4">{t("columns.status")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -144,13 +146,14 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                       <TableCell className="px-2 text-right text-xs tabular-nums sm:px-4">
                         {format.number(bot.hits)}
                       </TableCell>
-                      <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
+                      <TableCell className="hidden text-xs text-muted-foreground xl:table-cell">
                         {bot.last_seen_human ?? "—"}
                       </TableCell>
                       <TableCell className="px-2 sm:px-4">
-                        {/* Says what your CURRENT settings do to this bot, so
-                            the table doubles as a preview of the policy above
-                            rather than a list to cross-reference by hand. */}
+                        {/* What your settings say to do with this bot — not
+                            what happened: the API decides this by name, not
+                            from the status codes in the log, so "Blocked" was
+                            shown beside requests that were answered 200. */}
                         {bot.blocked ? (
                           <Badge variant="muted">{t("blocked")}</Badge>
                         ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useWatchUnsaved } from "@/components/ui/unsaved-guard";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { useRouter } from "next/navigation";
@@ -54,6 +54,20 @@ function sameList(a, b) {
   if (a.length !== b.length) return false;
   const key = (list) => list.map((v) => String(v).toLowerCase()).sort().join("|");
   return key(a) === key(b);
+}
+
+/*
+ * The config lists `Meta-ExternalAgent` and `meta-externalagent`, which the
+ * vhost matches case-insensitively as one bot. Counted as sent, the badge said
+ * 23, the button 22 and the list showed 23 chips for the same choice.
+ */
+function dedupedPolicies(policies) {
+  return Object.fromEntries(
+    Object.entries(policies).map(([key, option]) => {
+      const bots = effectiveBlockedBots(option?.blocked_bots ?? []);
+      return [key, { ...option, blocked_bots: bots, blocked_count: bots.length }];
+    }),
+  );
 }
 
 function orderedKeys(policies) {
@@ -124,7 +138,7 @@ function BotList({ bots }) {
              panel's own tint had almost no edge, so 23 names read as one wash.
              These are reference data, not a status — the tint gives them a
              surface without claiming anything about each bot. */
-          className="border-primary/20 bg-primary/5 font-mono font-normal text-primary"
+          className="h-auto max-w-full border-primary/20 bg-primary/5 font-mono font-normal break-all whitespace-normal text-primary"
         >
           {bot}
         </Badge>
@@ -143,10 +157,21 @@ function BotList({ bots }) {
  * still standing in the field is the difference between a typo and a site
  * quietly falling out of search.
  */
-function RuleEditor({ kind, icon: Icon, bots, disabled, onAdd, onRemove }) {
+function RuleEditor({ kind, icon: Icon, bots, refused = {}, disabled, onAdd, onRemove }) {
   const t = useTranslations("applications.botBlocker.exceptions");
   const [draft, setDraft] = useState("");
   const [error, setError] = useState(null);
+  const listRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // The removed chip's button is gone, so focus would fall to the page.
+  function remove(bot, index) {
+    onRemove(bot);
+    requestAnimationFrame(() => {
+      const buttons = listRef.current?.querySelectorAll("button[data-chip-remove]") ?? [];
+      (buttons[index] ?? buttons[index - 1] ?? inputRef.current)?.focus();
+    });
+  }
 
   const blocking = kind === "blocked";
 
@@ -165,7 +190,7 @@ function RuleEditor({ kind, icon: Icon, bots, disabled, onAdd, onRemove }) {
   }
 
   return (
-    <div className="space-y-2 rounded-lg border p-3">
+    <div className="min-w-0 space-y-2 rounded-lg border p-3">
       <p className="flex items-center gap-1.5 text-sm font-medium">
         <Icon className={cn("size-4", blocking ? "text-destructive" : "text-success")} />
         {t(`${kind}.label`)}
@@ -173,16 +198,20 @@ function RuleEditor({ kind, icon: Icon, bots, disabled, onAdd, onRemove }) {
       <p className="text-xs text-muted-foreground">{t(`${kind}.description`)}</p>
 
       {bots.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5 pt-0.5">
-          {bots.map((bot) => (
+        <div ref={listRef} className="flex flex-wrap gap-1.5 pt-0.5">
+          {bots.map((bot, index) => (
             <span
               key={bot}
-              className="inline-flex items-center gap-1 rounded-md border bg-muted/40 py-0.5 pl-2 pr-1 font-mono text-xs"
+              className={cn(
+                "inline-flex max-w-full items-center gap-1 rounded-md border bg-muted/40 py-0.5 pl-2 pr-1 font-mono text-xs break-all",
+                refused[bot] && "border-destructive/60 bg-destructive/5 text-destructive",
+              )}
             >
               {bot}
               <button
                 type="button"
-                onClick={() => onRemove(bot)}
+                data-chip-remove
+                onClick={() => remove(bot, index)}
                 disabled={disabled}
                 aria-label={t("remove", { bot })}
                 className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
@@ -196,8 +225,17 @@ function RuleEditor({ kind, icon: Icon, bots, disabled, onAdd, onRemove }) {
         <p className="pt-0.5 text-xs text-muted-foreground">{t("none")}</p>
       )}
 
+      {/* The server names the entry by its index; said here, next to the chip,
+          because a toast could not tell which of several it meant. */}
+      {Object.entries(refused).map(([bot, message]) => (
+        <p key={bot} className="text-xs break-all text-destructive">
+          {bot}: {message}
+        </p>
+      ))}
+
       <div className="flex gap-2 pt-1">
         <Input
+          ref={inputRef}
           value={draft}
           onChange={(event) => {
             setDraft(event.target.value);
@@ -272,7 +310,7 @@ function BotGroup({ label, bots }) {
  */
 export function BotBlockerSection({
   appId,
-  policies,
+  policies: sentPolicies,
   currentPolicy,
   currentBlocked = [],
   currentAllowed = [],
@@ -280,6 +318,27 @@ export function BotBlockerSection({
 }) {
   const t = useTranslations("applications.botBlocker");
   const router = useRouter();
+  const policies = dedupedPolicies(sentPolicies);
+  /*
+   * What the last successful save wrote, until the refreshed props agree. The
+   * toast arrives before `router.refresh()` does, and for those seconds the
+   * card said "Not saved yet" about a saved choice with Save enabled — a click
+   * there sent the same PUT again.
+   */
+  const [justSaved, setJustSaved] = useState(null);
+  if (
+    justSaved &&
+    justSaved.policy === currentPolicy &&
+    sameList(justSaved.blocked, currentBlocked) &&
+    sameList(justSaved.allowed, currentAllowed)
+  ) {
+    setJustSaved(null);
+  }
+  const base = justSaved ?? { policy: currentPolicy, blocked: currentBlocked, allowed: currentAllowed };
+  const [refused, setRefused] = useState({ blocked: {}, allowed: {} });
+  // Remounts both editors on Discard: a half-typed name and its error live in
+  // the editor, and survived a Discard that reset everything else.
+  const [editorKey, setEditorKey] = useState(0);
   const [policy, setPolicy] = useState(currentPolicy);
   const [blocked, setBlocked] = useState(currentBlocked);
   const [allowed, setAllowed] = useState(currentAllowed);
@@ -288,11 +347,11 @@ export function BotBlockerSection({
 
   const keys = orderedKeys(policies);
   const selected = policies[policy] ?? null;
-  const savedPolicy = policies[currentPolicy] ?? null;
+  const savedPolicy = policies[base.policy] ?? null;
   const isDirty =
-    policy !== currentPolicy ||
-    !sameList(blocked, currentBlocked) ||
-    !sameList(allowed, currentAllowed);
+    policy !== base.policy ||
+    !sameList(blocked, base.blocked) ||
+    !sameList(allowed, base.allowed);
   const additions = additionsByPolicy(keys, policies);
   // Otherwise 31 bare user-agent names with nothing to tell them apart.
   const groups = botGroups(keys, policies, policy);
@@ -302,8 +361,8 @@ export function BotBlockerSection({
   const effective = effectiveBlockedBots(selected?.blocked_bots ?? [], blocked, allowed);
   const savedEffective = effectiveBlockedBots(
     savedPolicy?.blocked_bots ?? [],
-    currentBlocked,
-    currentAllowed,
+    base.blocked,
+    base.allowed,
   );
 
   // The expanded list has to agree with the number on the button above it, so
@@ -352,15 +411,30 @@ export function BotBlockerSection({
   function removeRule(kind, value) {
     const setList = kind === "blocked" ? setBlocked : setAllowed;
     setList((list) => list.filter((bot) => bot !== value));
+    setRefused((current) => {
+      const rest = { ...current[kind] };
+      delete rest[value];
+      return { ...current, [kind]: rest };
+    });
   }
 
   async function save() {
     setSaving(true);
+    setRefused({ blocked: {}, allowed: {} });
     try {
       await updateApplicationBotBlocker(appId, { policy, blocked, allowed });
+      setJustSaved({ policy, blocked, allowed });
       toast.success(t("saved"));
       router.refresh();
     } catch (error) {
+      const errors = error.response?.status === 422 ? error.response.data?.errors ?? {} : {};
+      const next = { blocked: {}, allowed: {} };
+      for (const [field, messages] of Object.entries(errors)) {
+        const match = field.match(/^(blocked|allowed)\.(\d+)$/);
+        const bot = match ? (match[1] === "blocked" ? blocked : allowed)[Number(match[2])] : null;
+        if (bot) next[match[1]][bot] = messages?.[0] ?? "";
+      }
+      setRefused(next);
       toast.error(apiMessage(error, t("saveFailed")));
     } finally {
       setSaving(false);
@@ -443,7 +517,7 @@ export function BotBlockerSection({
                               have merely clicked, said on the options themselves —
                               a separate "currently active" row above repeated the
                               selected card's own title and count word for word. */}
-                          {key === currentPolicy ? (
+                          {key === base.policy ? (
                             <Badge variant={isProtected ? "success" : "muted"}>
                               {t("activeNow")}
                             </Badge>
@@ -488,17 +562,21 @@ export function BotBlockerSection({
   
               <div className="grid gap-4 sm:grid-cols-2">
                 <RuleEditor
+                  key={`blocked-${editorKey}`}
                   kind="blocked"
                   icon={ShieldBan}
                   bots={blocked}
+                  refused={refused.blocked}
                   disabled={!canManage || saving}
                   onAdd={(value) => addRule("blocked", value)}
                   onRemove={(value) => removeRule("blocked", value)}
                 />
                 <RuleEditor
+                  key={`allowed-${editorKey}`}
                   kind="allowed"
                   icon={ShieldCheck}
                   bots={allowed}
+                  refused={refused.allowed}
                   disabled={!canManage || saving}
                   onAdd={(value) => addRule("allowed", value)}
                   onRemove={(value) => removeRule("allowed", value)}
@@ -570,9 +648,11 @@ export function BotBlockerSection({
             saveReason={saveReason}
             onSave={save}
             onDiscard={() => {
-              setPolicy(currentPolicy);
-              setBlocked(currentBlocked);
-              setAllowed(currentAllowed);
+              setPolicy(base.policy);
+              setBlocked(base.blocked);
+              setAllowed(base.allowed);
+              setRefused({ blocked: {}, allowed: {} });
+              setEditorKey((key) => key + 1);
             }}
             savingNote={t("savingNote")}
             showUnsaved={false}

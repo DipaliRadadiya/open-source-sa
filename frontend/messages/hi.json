@@ -4484,16 +4484,16 @@
         "range": "{days} दिन",
         "unavailable": "इस ऐप्लिकेशन का एक्सेस लॉग पढ़ा नहीं जा सका, इसलिए अभी दिखाने को कुछ नहीं है। इसका मतलब यह नहीं कि कोई बॉट नहीं आया।",
         "empty": "पिछले {days} दिनों में कोई AI बॉट नहीं आया।",
-        "summary": "{bots, plural, one {# बॉट} other {# बॉट}} · {hits, plural, one {# रिक्वेस्ट} other {# रिक्वेस्ट}} · {blocked, plural, other {# ब्लॉक}}",
+        "summary": "{bots, plural, one {# बॉट} other {# बॉट}} · {hits, plural, one {# रिक्वेस्ट} other {# रिक्वेस्ट}} · {blocked, plural, other {# उन बॉट से जिन्हें आप ब्लॉक करते हैं}}",
         "partial": "लॉग का सिर्फ़ हालिया हिस्सा ही जाँचा गया, इसलिए व्यस्त ऐप्लिकेशनों पर इससे ज़्यादा हो सकता है।",
-        "blocked": "ब्लॉक",
-        "allowed": "आ रहा है",
+        "blocked": "ब्लॉक करें",
+        "allowed": "अनुमति दें",
         "columns": {
           "bot": "बॉट",
           "kind": "प्रकार",
           "requests": "रिक्वेस्ट",
           "lastSeen": "आख़िरी बार",
-          "status": "अभी"
+          "status": "आपकी सेटिंग"
         },
         "kinds": {
           "training": "ट्रेनिंग",
