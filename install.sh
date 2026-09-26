@@ -957,7 +957,12 @@ install_packages() {
     # code, never packages, so this line only ever reaches *fresh* installs —
     # an existing panel upgrading to the code that prefers pigz will not have it
     # until somebody runs `apt install pigz` by hand. ~60 KB.
-    run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common build-essential pigz
+    #
+    # `acl` is setfacl: each site user's home is closed to every other local
+    # account and opened, by ACL, to the panel and the web server only (see
+    # HomeDirectoryAccess). Ubuntu 26.04 does not ship it. Unlike pigz, existing
+    # servers get it too: `sites:resync` installs it when it is missing.
+    run_progress "Installing installer prerequisites" apt-get install -y software-properties-common curl git unzip zip rsync ca-certificates gnupg update-notifier-common build-essential pigz acl
 
     local php_pkgs=()
 

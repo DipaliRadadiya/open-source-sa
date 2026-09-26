@@ -3,8 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Models\Application;
+use App\Models\SystemUser;
 use App\Services\Server\Applications\SiteConfigResyncer;
 use App\Services\Server\Applications\SiteRootLock;
+use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Illuminate\Console\Command;
 
 /**
@@ -26,7 +28,7 @@ class ResyncSiteConfigs extends Command
 
     protected $description = 'Re-render every live site config from the current templates and bot lists';
 
-    public function handle(SiteConfigResyncer $resyncer, SiteRootLock $rootLock): int
+    public function handle(SiteConfigResyncer $resyncer, SiteRootLock $rootLock, HomeDirectoryAccess $homeAccess): int
     {
         $result = $resyncer->run();
 
@@ -57,8 +59,64 @@ class ResyncSiteConfigs extends Command
         }
 
         $this->lockSiteRoots($rootLock);
+        $this->closeHomes($homeAccess);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Close every system user's home to other local accounts — see
+     * HomeDirectoryAccess. Here for the reason lockSiteRoots() is: a change
+     * made only when a user is created protects new accounts and none of the
+     * existing ones. Installs the `acl` package first when it is missing
+     * (Ubuntu 26.04 does not ship it); never fails the command.
+     */
+    private function closeHomes(HomeDirectoryAccess $homeAccess): void
+    {
+        $users = SystemUser::query()->orderBy('id')->get();
+
+        if ($users->isEmpty()) {
+            return;
+        }
+
+        if (! $homeAccess->ensureTools()) {
+            $this->warn('Home directories left open: the acl package could not be installed (setfacl is missing).');
+
+            return;
+        }
+
+        $counts = array_fill_keys([
+            HomeDirectoryAccess::SECURED, HomeDirectoryAccess::ALREADY, HomeDirectoryAccess::SKIPPED,
+            HomeDirectoryAccess::NO_ACL, HomeDirectoryAccess::NO_READER, HomeDirectoryAccess::FAILED,
+        ], 0);
+        $open = [];
+
+        foreach ($users as $user) {
+            $result = $homeAccess->secure($user);
+            $counts[$result]++;
+
+            if (in_array($result, [HomeDirectoryAccess::NO_ACL, HomeDirectoryAccess::NO_READER, HomeDirectoryAccess::FAILED], true)) {
+                $open[] = [$user, $result];
+            }
+        }
+
+        $this->info(sprintf(
+            'Home directories: %d closed to other users, %d already closed%s%s.',
+            $counts[HomeDirectoryAccess::SECURED],
+            $counts[HomeDirectoryAccess::ALREADY],
+            $counts[HomeDirectoryAccess::SKIPPED] > 0
+                ? sprintf(', %d left alone (outside %s, a link, or not the user\'s own)', $counts[HomeDirectoryAccess::SKIPPED], config('server.home_base', '/home'))
+                : '',
+            $open !== [] ? sprintf(', %d still open', count($open)) : '',
+        ));
+
+        foreach ($open as [$user, $result]) {
+            $this->warn(sprintf('Still open: %s — %s', $user->username, match ($result) {
+                HomeDirectoryAccess::NO_READER => 'the web server\'s account is not known',
+                HomeDirectoryAccess::NO_ACL => 'setfacl is missing',
+                default => 'the ACL did not take; see the server-ops log',
+            }));
+        }
     }
 
     /**

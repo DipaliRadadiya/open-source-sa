@@ -60,6 +60,7 @@ use App\Services\Server\Doctor\Checks\DriverContentionCheck;
 use App\Services\Server\Doctor\Checks\DynamicResponseLimitCheck;
 use App\Services\Server\Doctor\Checks\FrontendBuildCheck;
 use App\Services\Server\Doctor\Checks\HealthEndpointCheck;
+use App\Services\Server\Doctor\Checks\HomeAccessCheck;
 use App\Services\Server\Doctor\Checks\PhpIsolationCheck;
 use App\Services\Server\Doctor\Checks\PrivilegeCheck;
 use App\Services\Server\Doctor\Checks\QueueCheck;
@@ -165,6 +166,10 @@ return [
             // the site user can rename their root-owned site directory away
             // (it sits in their home) and substitute their own.
             'chattr', 'lsattr',
+            // Per-home ACLs — see HomeDirectoryAccess. A home is closed to
+            // every other local account and opened, by user id, to exactly
+            // the panel and the web server.
+            'setfacl', 'getfacl',
             // `openssl req` writes the key and certificate into /etc/ssl, and
             // `openssl x509 -enddate` reads out of /etc/letsencrypt/live —
             // both root-only. Without this, self-signed certificates cannot be
@@ -529,6 +534,7 @@ return [
             DriverContentionCheck::class,
             PhpIsolationCheck::class,
             SiteRootLockCheck::class,
+            HomeAccessCheck::class,
             HealthEndpointCheck::class,
         ],
     ],
@@ -636,6 +642,12 @@ return [
     */
 
     'home_base' => env('SERVER_HOME_BASE', '/home'),
+
+    // The Linux account the panel itself runs as — its PHP-FPM pool and queue
+    // worker. Empty: whoever this process runs as, which is that account in
+    // every place that matters (both run as it). HomeDirectoryAccess lets
+    // exactly this account through a closed home.
+    'panel_account' => env('SERVER_PANEL_ACCOUNT', ''),
 
     // One shared "site unavailable" page, served in place of a disabled
     // application's real vhost — same reasoning as the ACME challenge_root

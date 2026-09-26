@@ -149,6 +149,19 @@ abstract class AbstractWebServerDriver implements WebServerDriver
      * server inherits the answer that grants nothing, and has to say so
      * deliberately if its workers open their own logs.
      */
+    /**
+     * nginx and Apache workers run as the account PHP-FPM pool sockets are
+     * already handed to ({@see PoolManager}) —
+     * `www-data` on the Debian packages install.sh uses. The same setting, so
+     * the two cannot name different accounts.
+     */
+    public function siteReaderUser(): ?string
+    {
+        $user = (string) config('server.web_server_user', 'www-data');
+
+        return $user === '' ? null : $user;
+    }
+
     public function logWriterUser(): ?string
     {
         return null;

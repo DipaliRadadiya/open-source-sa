@@ -4,6 +4,7 @@ namespace App\Contracts;
 
 use App\Models\Application;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 
 /**
  * One web server the panel can configure. Only one runs on a server — they
@@ -109,4 +110,13 @@ interface WebServerDriver
      * driver returning a user is asking for that account to be let in.
      */
     public function logWriterUser(): ?string;
+
+    /**
+     * The account the web server's workers run as, which has to pass through
+     * a system user's home to serve the static files of the sites inside it.
+     * Homes are closed to every other account ({@see HomeDirectoryAccess})
+     * and opened to this one by ACL. Null: not known, and then homes are left
+     * open rather than closed on a guess.
+     */
+    public function siteReaderUser(): ?string;
 }

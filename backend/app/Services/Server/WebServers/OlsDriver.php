@@ -441,6 +441,16 @@ class OlsDriver extends AbstractWebServerDriver
      * stock OpenLiteSpeed install runs as, and admitting it to one site's log
      * group is no wider than the grant this method exists to make.
      */
+    /**
+     * The account OpenLiteSpeed's workers run as — the same one they write the
+     * vhost logs as, read from httpd_config.conf rather than assumed
+     * (`nobody` on a stock install, never `www-data`).
+     */
+    public function siteReaderUser(): ?string
+    {
+        return $this->logWriterUser();
+    }
+
     public function logWriterUser(): ?string
     {
         return $this->shared->serverUser()

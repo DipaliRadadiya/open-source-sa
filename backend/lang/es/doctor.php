@@ -4,6 +4,7 @@ return [
     'checks' => [
         'dynamic_response_limit' => 'Límite de descarga de archivos',
         'site_root_lock' => 'Bloqueo de la carpeta del sitio',
+        'home_access' => 'Acceso a carpetas personales',
         'php_isolation' => 'Aislamiento de PHP por aplicación',
         'privilege' => 'Comandos privilegiados',
         'services' => 'Servicios',
@@ -18,6 +19,7 @@ return [
         'driver_contention' => 'Contención de controladores',
     ],
     'fixes' => [
+        'home_open' => 'La carpeta personal de un usuario del sistema está abierta a todas las demás cuentas locales, así que cualquier archivo que sus sitios escribieron con permisos normales —sesiones, archivos .env, bases de datos— puede leerlo el usuario de cualquier otro sitio. Ejecute `php artisan sites:resync`: instala el paquete acl si falta y cierra cada carpeta personal a todos excepto al panel y al servidor web.',
         'dynamic_response_limit' => 'OpenLiteSpeed limita el tamaño de lo que devuelve PHP, y su valor por defecto es demasiado bajo para el gestor de archivos: cualquier descarga que lo supere se rechaza con un 413 antes de que el panel la vea, por lo que no aparece nada en los registros. Establece `maxDynRespSize 1024G` en /usr/local/lsws/conf/httpd_config.conf y reinicia con `sudo /usr/local/lsws/bin/lswsctrl restart`. Las instalaciones nuevas ya lo traen; las anteriores no, porque las actualizaciones envían código y no configuración. `0` no significa ilimitado: significa cero.',
         'site_root_unlocked' => 'Su propio usuario puede renombrar la carpeta de un sitio y sustituirla por otra que controle, anulando la configuración PHP bloqueada del sitio y permitiendo que una acción del panel escriba fuera del sitio. Ejecuta `php artisan sites:resync`, que bloquea todas las carpetas de sitios e indica las que no pudo. "No se pudo comprobar" suele significar que el sistema de archivos no admite el atributo inmutable (ZFS, algunos contenedores); un sitio que siga sin bloquear tras la resincronización tiene una carpeta que no parece la creada por el panel: revísala antes de confiar en ella. Un sitio que adoptó la sincronización del servidor tiene una carpeta propiedad de su propio usuario: bloquéala desde la página de ese sitio con el botón Bloquear.',
         'php_pool_orphaned' => 'Un pool de PHP-FPM nombra una cuenta de Linux que ya no existe: normalmente un sitio que se eliminó antes que su pool y cuyo usuario se borró después. PHP-FPM no arranca con él, así que todo sitio PHP nuevo falla al aprovisionarse y carga con la culpa. Elimine los archivos de pool indicados, ejecute `php-fpm -t` y reinicie php-fpm.',

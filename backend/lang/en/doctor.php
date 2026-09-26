@@ -4,6 +4,7 @@ return [
     'checks' => [
         'dynamic_response_limit' => 'File download ceiling',
         'site_root_lock' => 'Site folder lock',
+        'home_access' => 'Home folder access',
         'php_isolation' => 'Application PHP isolation',
         'privilege' => 'Privileged commands',
         'services' => 'Services',
@@ -18,6 +19,7 @@ return [
         'driver_contention' => 'Driver contention',
     ],
     'fixes' => [
+        'home_open' => 'A system user\'s home is open to every other local account, so any file its sites wrote with ordinary permissions — sessions, .env files, database files — can be read by every other site\'s user. Run `php artisan sites:resync`: it installs the acl package if it is missing and closes each home to everyone except the panel and the web server.',
         'dynamic_response_limit' => 'OpenLiteSpeed caps the size of anything PHP returns, and it ships too low for the file manager — any download over the limit is refused with a 413 before the panel sees it, so nothing appears in the panel\'s logs. Set `maxDynRespSize 1024G` in /usr/local/lsws/conf/httpd_config.conf and restart with `sudo /usr/local/lsws/bin/lswsctrl restart`. Fresh installs already have this; a panel installed before it does not, because updates ship code and not configuration. `0` does not mean unlimited — it means zero.',
         'site_root_unlocked' => 'A site\'s folder can be renamed by its own user and replaced with one they control — defeating the site\'s locked PHP settings and letting a panel action write outside the site. Run `php artisan sites:resync`, which locks every site folder and names any it could not. "Could not be checked" usually means the filesystem has no immutable flag (ZFS, some containers); a site listed as not locked after a resync has a folder that does not look like the one the panel created — inspect it before trusting it. A site that server sync adopted has a folder its own user owns: lock it from that site\'s page with the Lock button.',
         'php_pool_orphaned' => 'A PHP-FPM pool names a Linux account that no longer exists — usually a site that was deleted before its pool was, whose user was then removed. PHP-FPM refuses to start with it, so every new PHP site fails to provision and is blamed for it. Delete the listed pool file(s), then run `php-fpm -t` and restart php-fpm.',
