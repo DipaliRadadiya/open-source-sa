@@ -149,6 +149,14 @@ class SecuritySettings implements SettingGroup
                 ['port_from' => (int) $data['port'], 'port_to' => null, 'protocol' => 'tcp', 'action' => 'allow', 'source_ip' => null],
                 ['origin' => 'default', 'description' => 'SSH'],
             );
+
+            // Moving back to a port SSH left earlier finds that port's rule
+            // released as an ordinary one (releaseOldPortRule()). It is the
+            // SSH rule again, so it is the panel's again.
+            if ($rule->origin === 'user') {
+                $rule->forceFill(['origin' => 'default'])->save();
+            }
+
             $this->firewall->apply($rule);
         }
 

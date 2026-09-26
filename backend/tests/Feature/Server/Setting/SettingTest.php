@@ -331,6 +331,31 @@ describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
             ->and($web->fresh()->isProtected())->toBeTrue();
     });
 
+    it('protects the rule again when SSH moves back to a port it left', function () {
+        fakeSettings(sshSocket: true);
+        Process::fake(function ($process) {
+            $cmd = ($process->command[0] ?? null) === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            return match (true) {
+                ($cmd[0] ?? '') === 'ufw' => Process::result(output: "Status: active\n"),
+                ($cmd[0] ?? '') === 'sshd' && ($cmd[1] ?? '') === '-T' => Process::result(output: "port 2222\npermitrootlogin no\npasswordauthentication yes\n"),
+                ($cmd[0] ?? '') === 'tee' => (function () use ($cmd, $process) {
+                    File::put($cmd[1], (string) $process->input);
+
+                    return Process::result();
+                })(),
+                default => Process::result(),
+            };
+        });
+        $released = FirewallRule::create(['port_from' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'origin' => 'user']);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        expect($released->fresh()->isProtected())->toBeTrue();
+    });
+
     it('leaves the socket alone when the port stays the same', function () {
         fakeSettings(sshSocket: true);
 
