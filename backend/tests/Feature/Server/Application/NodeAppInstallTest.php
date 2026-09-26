@@ -246,6 +246,35 @@ it('keeps n8n inside the site, with a key generated before first start', functio
         ->toContain('N8N_RELEASE_TYPE="stable"');
 });
 
+it('keeps the encryption key n8n already has when the install runs again', function () {
+    // Retry Setup runs install() again. It wrote a fresh key every time, n8n
+    // compared it with the one in its own config and refused to start:
+    // "Mismatching encryption keys" — a retried n8n never came up (measured).
+    $key = str_repeat('ab12', 16);
+
+    Process::fake(function ($process) use ($key) {
+        test()->ran->push($process);
+
+        if (is_array($process->command) && in_array('/home/apps/n8n/public_html/.n8n/config', $process->command, true)) {
+            return Process::result(output: json_encode(['encryptionKey' => $key]));
+        }
+
+        $url = is_array($process->command) ? (string) end($process->command) : '';
+
+        if (str_ends_with($url, '/rest/owner/setup')) {
+            test()->n8nOwner = true;
+        }
+
+        return str_ends_with($url, '/rest/settings')
+            ? Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => ! test()->n8nOwner]]]))
+            : Process::result(output: '');
+    });
+
+    app(ApplicationProvisioner::class)->provision(claimableApp('n8n', ['admin_email' => 'owner@example.com']));
+
+    expect(writtenTo('/home/apps/n8n/public_html/.env'))->toContain('N8N_ENCRYPTION_KEY="'.$key.'"');
+});
+
 it('installs the release n8n calls current, not a pinned major', function () {
     /*
      * Held on `1` until 2026-09-18, by which point that resolved to 1.123.81 —

@@ -150,6 +150,34 @@ class N8nInstaller extends AbstractNodeInstaller
     }
 
     /**
+     * The key this instance already uses, when it has been started before.
+     *
+     * Generated once and never changed — but `install()` runs again on Retry
+     * Setup, and it used to write a fresh key every time. n8n keeps the key it
+     * first started with in `.n8n/config` and refuses to start when the
+     * environment disagrees ("Mismatching encryption keys"), so a retried n8n
+     * never came up again (found on a real server). Its own file is asked
+     * first, since that is what n8n compares against; the `.env` second.
+     */
+    private function existingEncryptionKey(Application $application, string $documentRoot): ?string
+    {
+        $read = fn (string $path) => $this->serverOps->run(
+            ['cat', $path],
+            ['feature' => 'application', 'op' => 'installer.read_encryption_key', 'application' => $application->id],
+        );
+
+        $config = $read($documentRoot.'/.n8n/config');
+        $key = $config->ok ? ($this->decode($config->output())['encryptionKey'] ?? null) : null;
+
+        if (! is_string($key) || $key === '') {
+            $env = $read($documentRoot.'/.env');
+            $key = $env->ok && preg_match('/^N8N_ENCRYPTION_KEY="?([^"\n]+)"?$/m', $env->output(), $m) ? $m[1] : null;
+        }
+
+        return is_string($key) && preg_match('/^[A-Za-z0-9+\/=_-]{16,}$/', $key) === 1 ? $key : null;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function decode(string $json): array
@@ -166,7 +194,7 @@ class N8nInstaller extends AbstractNodeInstaller
         $lines = [
             // Generated before first start — see the class note. 32 bytes of
             // randomness, hex, which is what n8n's own docs suggest.
-            'N8N_ENCRYPTION_KEY' => bin2hex(random_bytes(32)),
+            'N8N_ENCRYPTION_KEY' => $this->existingEncryptionKey($application, $documentRoot) ?? bin2hex(random_bytes(32)),
             'N8N_USER_FOLDER' => $documentRoot,
             'N8N_PORT' => (string) ($application->app_port ?: 5678),
             // Loopback only: the site is reached through the panel's reverse
