@@ -306,9 +306,7 @@ Throttled because each call shells out and makes an outbound HTTP request. It is
 }}
 ```
 
-Checks: `privilege`, `binaries`, `services`, `web_server`, `dynamic_response_limit`, `driver_contention`, `database`, `queue`, `writable_paths`, `health_endpoint`, `php_isolation`, `site_root_lock`, `home_access`, `account_locks`, `frontend_build`.
-
-**`home_access`** (added 2026-09-26) warns when a system user's home is open to other local accounts. Homes used to be `chmod o+x` so the web server could enter them, which let every other site's user read anything an application wrote with ordinary permissions — sessions, `.env` files, database files. The web server is now let in through the user's group and the home is closed (`o-rwx`) — at account creation, and for existing accounts by `sites:resync` after it has reloaded the web server. A home is left open, and named here, when a PHP site of that user runs in the shared pool (isolate it first) or the web server is not in the group yet.
+Twelve checks: `privilege`, `binaries`, `services`, `web_server`, `driver_contention`, `database`, `queue`, `writable_paths`, `health_endpoint`, `php_isolation`, `account_locks`, `frontend_build`.
 
 `status` is `pass`, `warn` or `fail`. **`healthy` counts failures only** — a warning is worth showing and not worth blocking on, so don't derive health from `warnings`. `title` and `fix` arrive localized; `fix` is `null` when there is nothing to do. A check that throws is reported as a `fail` rather than aborting the run.
 

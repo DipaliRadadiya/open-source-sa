@@ -3,10 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Application;
-use App\Models\SystemUser;
 use App\Services\Server\Applications\SiteConfigResyncer;
 use App\Services\Server\Applications\SiteRootLock;
-use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Illuminate\Console\Command;
 
 /**
@@ -28,7 +26,7 @@ class ResyncSiteConfigs extends Command
 
     protected $description = 'Re-render every live site config from the current templates and bot lists';
 
-    public function handle(SiteConfigResyncer $resyncer, SiteRootLock $rootLock, HomeDirectoryAccess $homeAccess): int
+    public function handle(SiteConfigResyncer $resyncer, SiteRootLock $rootLock): int
     {
         $result = $resyncer->run();
 
@@ -44,7 +42,7 @@ class ResyncSiteConfigs extends Command
             $result['unchanged'],
             count($result['failed']),
             $result['granted'] > 0
-                ? sprintf(' Web server access granted for %d site(s).', $result['granted'])
+                ? sprintf(' Log access granted for %d site(s).', $result['granted'])
                 : '',
             $result['reloaded'] ? ' Web server reloaded.' : '',
         ));
@@ -60,57 +58,7 @@ class ResyncSiteConfigs extends Command
 
         $this->lockSiteRoots($rootLock);
 
-        // After the reload, never before: a grant the running web server has
-        // not picked up yet is no grant, and closing a home against it is every
-        // site of that user answering 403 until something restarts it.
-        if ($result['granted'] > 0 && ! $result['reloaded']) {
-            $this->warn('Home directories left as they are: the web server was not reloaded after being granted access.');
-        } else {
-            $this->closeHomes($homeAccess);
-        }
-
         return self::SUCCESS;
-    }
-
-    /**
-     * Close every system user's home to other local accounts — see
-     * HomeDirectoryAccess. Here for the reason lockSiteRoots() is: a change
-     * made only at creation protects new accounts and none of the old ones.
-     */
-    private function closeHomes(HomeDirectoryAccess $homeAccess): void
-    {
-        $counts = array_fill_keys([
-            HomeDirectoryAccess::SECURED, HomeDirectoryAccess::ALREADY, HomeDirectoryAccess::SKIPPED,
-            HomeDirectoryAccess::SHARED_POOL, HomeDirectoryAccess::NO_READER, HomeDirectoryAccess::FAILED,
-        ], 0);
-        $open = [];
-
-        foreach (SystemUser::query()->with('applications')->get() as $user) {
-            $result = $homeAccess->secure($user);
-            $counts[$result]++;
-
-            if (in_array($result, [HomeDirectoryAccess::SHARED_POOL, HomeDirectoryAccess::NO_READER, HomeDirectoryAccess::FAILED], true)) {
-                $open[] = [$user, $result];
-            }
-        }
-
-        $this->info(sprintf(
-            'Home directories: %d closed to other users, %d already closed%s%s.',
-            $counts[HomeDirectoryAccess::SECURED],
-            $counts[HomeDirectoryAccess::ALREADY],
-            $counts[HomeDirectoryAccess::SKIPPED] > 0
-                ? sprintf(', %d left alone (outside %s, a link, or not the user\'s own)', $counts[HomeDirectoryAccess::SKIPPED], config('server.home_base', '/home'))
-                : '',
-            $open !== [] ? sprintf(', %d still open', count($open)) : '',
-        ));
-
-        foreach ($open as [$user, $result]) {
-            $this->warn(sprintf('Still open: %s — %s', $user->username, match ($result) {
-                HomeDirectoryAccess::SHARED_POOL => 'a PHP site of this user runs in the shared pool; isolate it from its PHP screen, then run sites:resync',
-                HomeDirectoryAccess::NO_READER => 'the web server is not in this user\'s group yet; run sites:resync again',
-                default => 'chmod failed; see the server-ops log',
-            }));
-        }
     }
 
     /**

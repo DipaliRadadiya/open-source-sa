@@ -4,7 +4,6 @@ namespace App\Contracts;
 
 use App\Models\Application;
 use App\Services\Server\ServerOpsResult;
-use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 
 /**
  * One web server the panel can configure. Only one runs on a server — they
@@ -110,15 +109,4 @@ interface WebServerDriver
      * driver returning a user is asking for that account to be let in.
      */
     public function logWriterUser(): ?string;
-
-    /**
-     * The account that has to enter a system user's home to serve its sites
-     * — static files, and on a shared PHP pool the scripts too.
-     *
-     * Homes are closed to everyone else ({@see HomeDirectoryAccess}), so this
-     * account is let in through the user's group. Null means nobody is known
-     * to need in, and then homes are left open rather than closed on a guess:
-     * a closed home the web server cannot enter is every site answering 403.
-     */
-    public function siteReaderUser(): ?string;
 }

@@ -3,7 +3,6 @@
 return [
     'checks' => [
         'dynamic_response_limit' => 'Limite de descarga de ficheiros',
-        'home_access' => 'Acesso à pasta pessoal',
         'site_root_lock' => 'Bloqueio da pasta do site',
         'php_isolation' => 'Isolamento de PHP por aplicação',
         'privilege' => 'Comandos privilegiados',
@@ -20,7 +19,6 @@ return [
     ],
     'fixes' => [
         'dynamic_response_limit' => 'O OpenLiteSpeed limita o tamanho do que o PHP devolve, e o valor por omissão é demasiado baixo para o gestor de ficheiros: qualquer descarga acima do limite é recusada com um 413 antes de o painel a ver, pelo que nada aparece nos registos. Defina `maxDynRespSize 1024G` em /usr/local/lsws/conf/httpd_config.conf e reinicie com `sudo /usr/local/lsws/bin/lswsctrl restart`. As instalações novas já o têm; as anteriores não, porque as atualizações entregam código e não configuração. `0` não significa ilimitado — significa zero.',
-        'home_open' => 'A pasta pessoal de um usuário do sistema está aberta a todas as outras contas locais, então qualquer arquivo que os sites dele gravaram com permissões comuns — sessões, arquivos .env, bancos de dados — pode ser lido pelo usuário de qualquer outro site. Execute `php artisan sites:resync`, que dá acesso ao servidor web pelo grupo do usuário e depois fecha a pasta. Se um usuário ficar aberto porque um site PHP dele usa o pool compartilhado, isole primeiro esse site na tela de PHP dele.',
         'site_root_unlocked' => 'A pasta de um site pode ser renomeada pelo próprio usuário e substituída por outra que ele controla — anulando as configurações PHP bloqueadas do site e permitindo que uma ação do painel grave fora do site. Execute `php artisan sites:resync`, que bloqueia todas as pastas de sites e aponta as que não conseguiu. "Não foi possível verificar" geralmente significa que o sistema de arquivos não suporta o atributo imutável (ZFS, alguns contêineres); um site ainda desbloqueado após a ressincronização tem uma pasta que não parece a criada pelo painel — examine-a antes de confiar nela. Um site adotado pela sincronização do servidor tem uma pasta que pertence ao seu próprio utilizador: bloqueie-a na página desse site com o botão Bloquear.',
         'php_pool_orphaned' => 'Um pool do PHP-FPM indica uma conta Linux que já não existe — normalmente um site eliminado antes do seu pool, cujo utilizador foi depois removido. O PHP-FPM não arranca com ele, por isso todos os novos sites PHP falham o aprovisionamento e levam a culpa. Elimine os ficheiros de pool listados, execute `php-fpm -t` e reinicie o php-fpm.',
         'php_isolation_missing' => 'Um site que o painel julga isolado não tem ficheiro de pool. Continua a ser servido pelo pool partilhado, como www-data e sem nenhuma das suas definições. Abra o ecrã de PHP do site e isole-o de novo.',
