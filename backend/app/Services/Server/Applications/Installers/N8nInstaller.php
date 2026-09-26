@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications\Installers;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 
 /**
@@ -70,6 +71,14 @@ class N8nInstaller extends AbstractNodeInstaller
      * which is what closes the page to a stranger. The password travels on
      * stdin, never on the command line.
      *
+     * **A 200 proves nothing here.** While it starts, n8n answers every path —
+     * its API included — with `200` and a "n8n is starting up" page. The
+     * readiness check passed on that page, and the setup request got the same
+     * page and a 200: the panel reported the owner created and the site went
+     * live unclaimed (measured on a real server). So this waits for the real
+     * settings JSON first, and afterwards reads the settings again and
+     * requires the first-run page to be closed. Nothing else counts as done.
+     *
      * Skipped when n8n already has an owner, so Retry Setup does not fail on
      * an instance a previous attempt already claimed.
      */
@@ -78,9 +87,7 @@ class N8nInstaller extends AbstractNodeInstaller
         $base = 'http://127.0.0.1:'.((int) ($application->app_port ?: 5678));
         $settings = $application->installSettings();
 
-        $current = $this->run('create_admin', ['curl', '-sS', '--fail', '--max-time', '30', $base.'/rest/settings'], $application);
-
-        if (($this->decode($current->output())['data']['userManagement']['showSetupOnFirstLoad'] ?? true) === false) {
+        if (! $this->waitForSetupState($application, $base)) {
             return;
         }
 
@@ -95,6 +102,40 @@ class N8nInstaller extends AbstractNodeInstaller
             'lastName' => 'Owner',
             'password' => (string) ($settings['admin_password'] ?? ''),
         ], JSON_THROW_ON_ERROR));
+
+        if ($this->waitForSetupState($application, $base)) {
+            throw new ProvisioningFailedException('create_admin', (string) Str::uuid(), 'owner_not_created');
+        }
+    }
+
+    /**
+     * Whether n8n's first-run page is still open, once n8n can say.
+     *
+     * Polls until `/rest/settings` returns the real settings — not the
+     * starting-up page — for up to `server.installers.n8n.ready_attempts`
+     * tries, two seconds apart. Fails the step if it never does: an install
+     * that cannot confirm its owner must not be reported ready.
+     *
+     * @throws ProvisioningFailedException
+     */
+    private function waitForSetupState(Application $application, string $base): bool
+    {
+        $attempts = max(1, (int) config('server.installers.n8n.ready_attempts', 60));
+
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            $response = $this->run('create_admin', ['curl', '-sS', '--fail', '--max-time', '10', $base.'/rest/settings'], $application);
+            $open = $this->decode($response->output())['data']['userManagement']['showSetupOnFirstLoad'] ?? null;
+
+            if (is_bool($open)) {
+                return $open;
+            }
+
+            if ($attempt < $attempts) {
+                Sleep::for(2)->seconds();
+            }
+        }
+
+        throw new ProvisioningFailedException('create_admin', (string) Str::uuid(), 'app_not_ready');
     }
 
     /**

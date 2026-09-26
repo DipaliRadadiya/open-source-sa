@@ -15,6 +15,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Sleep;
 
 /**
  * The four one-click Node applications.
@@ -58,8 +59,23 @@ beforeEach(function () {
             return Process::result(output: str_repeat('a', 40)."\trefs/tags/2.5.3");
         }
 
+        // n8n, answered as the real one does once it is up: the first-run
+        // page is open until an owner has been set up.
+        if (($args[0] ?? '') === 'curl' && str_ends_with((string) end($args), '/rest/owner/setup')) {
+            test()->n8nOwner = true;
+
+            return Process::result(output: '{"data":{"email":"owner@example.com"}}');
+        }
+
+        if (($args[0] ?? '') === 'curl' && str_ends_with((string) end($args), '/rest/settings')) {
+            return Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => ! test()->n8nOwner]]]));
+        }
+
         return Process::result(output: '');
     });
+
+    $this->n8nOwner = false;
+    Sleep::fake();
 });
 
 function oneClickApp(string $type, array $settings = []): Application
@@ -1098,11 +1114,66 @@ it('fails the install when n8n refuses the owner, rather than leaving it open', 
             return Process::result(errorOutput: 'The requested URL returned error: 400', exitCode: 22);
         }
 
-        return Process::result(output: '{}');
+        return Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => true]]]));
     });
 
     expect(fn () => app(N8nInstaller::class)->afterStart($app, '/home/apps/n8n/public_html'))
         ->toThrow(fn (ProvisioningFailedException $e) => expect($e->step)->toBe('create_admin'));
+});
+
+it('never takes n8n\'s starting-up page as an answer', function () {
+    /*
+     * Measured on a real server: while it starts, n8n answers EVERY path, its
+     * API included, with 200 and "n8n is starting up. Please wait". The
+     * readiness check passed on it, the setup request got it too, curl called
+     * both a success — and the site went live with its first-run page open.
+     */
+    $app = claimableApp('n8n', ['admin_email' => 'owner@example.com']);
+    $starting = 'n8n is starting up. Please wait';
+
+    Process::fake(fn () => Process::result(output: $starting));
+
+    expect(fn () => app(N8nInstaller::class)->afterStart($app, '/home/apps/n8n/public_html'))
+        ->toThrow(fn (ProvisioningFailedException $e) => expect($e->reason)->toBe('app_not_ready'));
+
+    // Up for the settings, but the setup request lands on a still-starting
+    // n8n and changes nothing: the page is still open afterwards.
+    Process::fake(function ($process) use ($starting) {
+        if (is_array($process->command) && in_array('http://127.0.0.1:3300/rest/owner/setup', $process->command, true)) {
+            return Process::result(output: $starting);
+        }
+
+        return Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => true]]]));
+    });
+
+    expect(fn () => app(N8nInstaller::class)->afterStart($app, '/home/apps/n8n/public_html'))
+        ->toThrow(fn (ProvisioningFailedException $e) => expect($e->reason)->toBe('owner_not_created'));
+});
+
+it('waits out n8n\'s start-up before creating the owner', function () {
+    $app = claimableApp('n8n', ['admin_email' => 'owner@example.com']);
+    $calls = 0;
+    $owner = false;
+
+    Process::fake(function ($process) use (&$calls, &$owner) {
+        $url = is_array($process->command) ? (string) end($process->command) : '';
+
+        if (str_ends_with($url, '/rest/owner/setup')) {
+            $owner = true;
+
+            return Process::result(output: '{"data":{}}');
+        }
+
+        // Three starting-up pages, then the real settings.
+        return ++$calls <= 3
+            ? Process::result(output: 'n8n is starting up. Please wait')
+            : Process::result(output: json_encode(['data' => ['userManagement' => ['showSetupOnFirstLoad' => ! $owner]]]));
+    });
+
+    app(N8nInstaller::class)->afterStart($app, '/home/apps/n8n/public_html');
+
+    expect($owner)->toBeTrue();
+    Sleep::assertSleptTimes(3);
 });
 
 it('keeps Uptime Kuma on 127.0.0.1 and off its public database page', function () {
