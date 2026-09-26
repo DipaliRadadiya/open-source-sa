@@ -2221,6 +2221,11 @@ return [
         ],
 
         'php' => [
+            // Offer PHP versions whose apt candidate is an alpha, beta, RC or
+            // dev build. Off: those showed up in the install list looking
+            // exactly like a release. For testing a pre-release on purpose.
+            'offer_prerelease' => (bool) env('SERVER_PHP_OFFER_PRERELEASE', false),
+
             /*
             | Why an install failed, matched against apt's output in order.
             |

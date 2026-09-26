@@ -36,11 +36,12 @@ beforeEach(function () {
 
 afterEach(fn () => File::deleteDirectory($this->phpDir));
 
-function fakePhp(string $default = '8.4', bool $ok = true, array $absent = [], bool $bare = false): ArrayObject
+function fakePhp(string $default = '8.4', bool $ok = true, array $absent = [], bool $bare = false, ?string $search = null, array $candidates = []): ArrayObject
 {
     $runs = new ArrayObject;
+    $search ??= "php8.2-fpm - server-side scripting\nphp8.3-fpm - server-side scripting\nphp8.4-fpm - server-side scripting\n";
 
-    Process::fake(function ($process) use ($runs, $default, $ok, $absent, $bare) {
+    Process::fake(function ($process) use ($runs, $default, $ok, $absent, $bare, $search, $candidates) {
         $runs[] = ['command' => $process->command, 'env' => $process->environment ?? []];
         $command = $process->command;
 
@@ -62,14 +63,14 @@ function fakePhp(string $default = '8.4', bool $ok = true, array $absent = [], b
             // exits 0, and a known-but-uninstallable one prints
             // `Candidate: (none)`. A fake that answered with an exit code
             // would prove the opposite of what happens on a server.
+            // Several packages in one call print one block each, as apt does.
             ($command[0] ?? '') === 'apt-cache' && ($command[1] ?? '') === 'policy' => Process::result(
-                output: in_array($command[2] ?? '', $absent, true)
-                    ? ''
-                    : "{$command[2]}:\n  Installed: (none)\n  Candidate: 1.0\n"
+                output: collect(array_slice($command, 2))
+                    ->reject(fn (string $package) => in_array($package, $absent, true))
+                    ->map(fn (string $package) => "{$package}:\n  Installed: (none)\n  Candidate: ".($candidates[$package] ?? '1.0')."\n  Version table:\n")
+                    ->implode('')
             ),
-            ($command[0] ?? '') === 'apt-cache' => Process::result(
-                output: "php8.2-fpm - server-side scripting\nphp8.3-fpm - server-side scripting\nphp8.4-fpm - server-side scripting\n"
-            ),
+            ($command[0] ?? '') === 'apt-cache' => Process::result(output: $search),
             // `dpkg-query -W` — which of the base packages are actually on the
             // box. A version the panel installed has all of them, which is the
             // default here; `$bare` models the case that prompted this, a
@@ -159,6 +160,42 @@ it('offers only versions that are not installed yet', function () {
 
     // apt-cache lists 8.2, 8.3 and 8.4; the last two are already here.
     expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.2']);
+});
+
+it('does not offer a PHP whose candidate is a pre-release', function () {
+    // Measured on a real server: `php8.6-fpm` sat at the top of the list,
+    // looking like any release, while apt's candidate was a beta.
+    fakePhp(
+        search: "php8.2-fpm - x\nphp8.3-fpm - x\nphp8.4-fpm - x\nphp8.5-fpm - x\nphp8.6-fpm - x\n",
+        candidates: [
+            'php8.5-fpm' => '8.5.11-1+0~20260924.26+ubuntu26.04~1.gbpbcb504',
+            'php8.6-fpm' => '8.6.0~beta3-1+0~20260923.2+ubuntu26.04~1.gbp664ce9',
+        ],
+    );
+
+    // 8.5's candidate also has `~` in it (the build date): only the pre-release
+    // marker counts, not the character.
+    expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.5', '8.2']);
+});
+
+it('offers a pre-release when told to', function () {
+    config(['server.runtimes.php.offer_prerelease' => true]);
+
+    fakePhp(
+        search: "php8.5-fpm - x\nphp8.6-fpm - x\n",
+        candidates: ['php8.6-fpm' => '8.6.0~RC1-1'],
+    );
+
+    expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.6', '8.5']);
+});
+
+it('refuses to install a pre-release through the API', function () {
+    fakePhp(
+        search: "php8.5-fpm - x\nphp8.6-fpm - x\n",
+        candidates: ['php8.6-fpm' => '8.6.0~beta3-1'],
+    );
+
+    phpCall('POST', '/api/php/versions', ['version' => '8.6'])->assertStatus(422);
 });
 
 it('marks the version the panel itself runs on', function () {

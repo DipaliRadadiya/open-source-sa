@@ -154,12 +154,59 @@ class PhpRuntime implements Runtime
 
         $installed = $this->versions->versions();
 
-        return collect($this->stack->installableVersions($output))
+        return collect($this->stack->installableVersions($this->withoutPrereleases($output)))
             ->unique()
             ->reject(fn (string $version) => in_array($version, $installed, true))
             ->sortByDesc(fn (string $version) => (float) $version)
             ->values()
             ->all();
+    }
+
+    /**
+     * The search output without the packages whose candidate is a pre-release.
+     *
+     * The package *name* says nothing about it: `php8.6-fpm` looked exactly
+     * like `php8.5-fpm` in the list, while apt's candidate was
+     * `8.6.0~beta3-1+0~20260923…` — so a site could be put on a beta PHP
+     * with nothing on the screen saying so (measured on a real server). The
+     * `~` is Debian's own marker for "sorts before the release"; alpha, beta,
+     * RC and dev builds all carry it. `SERVER_PHP_OFFER_PRERELEASE` shows
+     * them anyway, for someone testing one on purpose.
+     */
+    private function withoutPrereleases(string $output): string
+    {
+        if ((bool) config('server.runtimes.php.offer_prerelease', false)) {
+            return $output;
+        }
+
+        preg_match_all('/^(\S+)\s/m', $output, $matches);
+        $packages = array_values(array_unique($matches[1] ?? []));
+
+        if ($packages === []) {
+            return $output;
+        }
+
+        $policy = $this->serverOps->run(
+            ['apt-cache', 'policy', ...$packages],
+            ['feature' => 'runtime', 'op' => 'php_installable_candidates'],
+        );
+
+        // Unreadable: keep the list rather than empty it. A missing filter
+        // shows a beta; a failed one would offer nothing at all.
+        if ($policy->failed()) {
+            return $output;
+        }
+
+        preg_match_all('/^(\S+):\s*\n\s+Installed:.*\n\s+Candidate:\s*(\S+)/m', $policy->output(), $candidates, PREG_SET_ORDER);
+
+        $prerelease = collect($candidates)
+            ->filter(fn (array $c) => preg_match('/~(alpha|beta|rc|dev)/i', $c[2]) === 1)
+            ->map(fn (array $c) => $c[1])
+            ->all();
+
+        return collect(explode("\n", $output))
+            ->reject(fn (string $line) => in_array(strtok($line, " \t"), $prerelease, true))
+            ->implode("\n");
     }
 
     public function installed(string $version): bool
