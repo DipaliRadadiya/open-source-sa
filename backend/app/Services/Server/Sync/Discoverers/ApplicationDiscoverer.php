@@ -95,11 +95,20 @@ class ApplicationDiscoverer implements Discoverable
         $excludedDomains = array_map('strtolower', (array) config('server.sync.exclude.domains', []));
 
         $found = [];
+        $enabled = $this->enabledVhosts();
 
         foreach (preg_split('/\r?\n/', trim($listing->output())) ?: [] as $path) {
             $path = trim($path);
 
             if ($path === '') {
+                continue;
+            }
+
+            // Not enabled is not served. nginx's stock `default` sits in
+            // sites-available on every fresh install without being linked, and
+            // was reported as "being served, but its config is not in a shape
+            // the panel could read" (nginx test server).
+            if ($enabled !== null && ! in_array(basename($path), $enabled, true)) {
                 continue;
             }
 
@@ -387,6 +396,42 @@ class ApplicationDiscoverer implements Discoverable
         $directory = rtrim((string) config("server.web_server_drivers.{$driver}.sites_available_dir"), '/');
 
         return $directory === '' ? null : ['find', $directory, '-maxdepth', '1', '-type', 'f'];
+    }
+
+    /**
+     * The vhost files the web server actually reads, by name — the entries of
+     * its sites-enabled directory — for nginx and Apache. Null where that is
+     * not how the web server works (OpenLiteSpeed) or the directory could not
+     * be listed, and then nothing is filtered: an unreadable directory must
+     * not make every site look unserved.
+     *
+     * @return array<int, string>|null
+     */
+    private function enabledVhosts(): ?array
+    {
+        // The same answer listCommand() uses — the detected web server, not
+        // the configured one, which is unset on a server the installer set up.
+        $driver = $this->webServers->driver()->name();
+
+        if (! in_array($driver, ['nginx', 'apache'], true)) {
+            return null;
+        }
+
+        $directory = rtrim((string) config("server.web_server_drivers.{$driver}.sites_dir"), '/');
+
+        if ($directory === '') {
+            return null;
+        }
+
+        $result = $this->serverOps->run(
+            ['find', $directory, '-maxdepth', '1', '(', '-type', 'l', '-o', '-type', 'f', ')', '-printf', '%f\\n'],
+            ['feature' => 'sync', 'op' => 'discover_enabled_vhosts'],
+            timeout: 30,
+        );
+
+        return $result->failed()
+            ? null
+            : array_values(array_filter(array_map(fn (string $line) => basename(trim($line)), preg_split('/\r?\n/', trim($result->output())) ?: [])));
     }
 
     /**

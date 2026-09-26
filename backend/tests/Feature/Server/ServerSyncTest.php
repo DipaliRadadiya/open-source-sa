@@ -2069,3 +2069,38 @@ describe('discovering sites on OpenLiteSpeed', function () {
             ->and(ServerCapability::query()->value('ols_vhost_root'))->toBe('/etc/sureshcloud-ols');
     });
 });
+
+describe('vhosts that are not enabled', function () {
+    it('ignores a vhost nginx does not read, like the stock default', function () {
+        ServerCapability::create([
+            'stack' => 'lemp', 'web_server' => 'nginx',
+            'capabilities' => ['php' => true], 'source' => 'installer', 'verified_at' => now(),
+        ]);
+
+        // A fresh box: `default` sits in sites-available unlinked. It was
+        // reported as "being served, but its config is not in a shape the
+        // panel could read" (nginx test server) — nothing serves it.
+        Process::fake(function ($process) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $binary = $args[0] ?? '';
+            $path = (string) ($args[1] ?? '');
+
+            return match (true) {
+                $binary === 'getent' => Process::result(output: "brown:x:1001:1001::/home/brown:/bin/bash\n"),
+                $binary === 'find' && $path === '/etc/nginx/sites-enabled' => Process::result(output: "brownsite.conf\n"),
+                $binary === 'find' && $path === '/etc/nginx/sites-available' => Process::result(output: "/etc/nginx/sites-available/brownsite.conf\n/etc/nginx/sites-available/default\n"),
+                $binary === 'cat' && str_ends_with($path, 'brownsite.conf') => Process::result(output: nginxVhost('brown.example.com', '/home/brown/brownsite/public_html')),
+                $binary === 'cat' && str_ends_with($path, '/default') => Process::result(output: "server {\n    listen 80 default_server;\n    root /var/www/html;\n}\n"),
+                $binary === 'stat' => Process::result(output: 'brown'),
+                in_array($binary, ['cat', 'crontab', 'test', 'find'], true) => Process::result(exitCode: 1, errorOutput: 'nothing'),
+                default => Process::result(exitCode: 0),
+            };
+        });
+
+        $run = runSync(SyncMode::Preview);
+        $keys = $run->items()->where('resource_type', 'application')->pluck('resource_key')->all();
+
+        expect($keys)->toContain('brown.example.com')
+            ->and($keys)->not->toContain('default');
+    });
+});
