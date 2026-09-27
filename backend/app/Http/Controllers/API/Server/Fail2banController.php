@@ -145,6 +145,15 @@ class Fail2banController extends Controller
             return response()->json(['message' => __('errors/fail2ban.ip_own_address')], 422);
         }
 
+        // The address this request came from. Banned on `recidive` (every
+        // port), the person pressing the button loses the panel along with
+        // SSH, and the unban they would need runs through the panel. The
+        // lockout guard on the settings form already reasons about the
+        // caller's IP; a manual ban did not.
+        if ($ip === $request->ip()) {
+            return response()->json(['message' => __('errors/fail2ban.ip_your_address')], 422);
+        }
+
         // An address the user listed as trusted. Refused because they said so,
         // not because it would fail — a manual ban on an ignored address does
         // hold, verified on a live box across a fail2ban reload. The message

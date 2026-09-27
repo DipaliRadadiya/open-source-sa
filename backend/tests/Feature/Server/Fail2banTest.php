@@ -434,6 +434,18 @@ it('refuses any address inside the loopback range, not just the literal one', fu
         ->assertJsonPath('message', __('errors/fail2ban.ip_own_address'));
 });
 
+it('refuses to ban the address the request comes from', function (string $jail) {
+    fakeFail2ban(bans: ['sshd' => [], 'recidive' => []]);
+
+    test()->withServerVariables(['REMOTE_ADDR' => '203.0.113.9'])
+        ->withHeader('Authorization', 'Bearer '.test()->token)
+        ->postJson('/api/fail2ban/bans', ['ip' => '203.0.113.9', 'jail' => $jail])
+        ->assertUnprocessable()
+        ->assertJsonPath('message', __('errors/fail2ban.ip_your_address'));
+
+    Process::assertNotRan(fn ($p) => in_array('banip', $p->command, true));
+})->with(['sshd', 'recidive']);
+
 it('still bans an ordinary address, so the guard is not simply refusing everything', function () {
     // The counterweight. A guard that refuses real bans is a worse bug than
     // the one it replaced, and nothing else here would notice.
