@@ -6,6 +6,7 @@ return [
     'security_updates_unavailable' => 'このサーバーには unattended-upgrades がインストールされていないため、パネルが実行できるものがありません。unattended-upgrades パッケージをインストールしてから再試行してください。',
     'security_updates_in_progress' => 'セキュリティ更新はすでに実行中です。',
     'no_ssh_key' => 'パスワード認証を無効にする前にSSHキーを追加してください。ロックアウトの恐れがあります。',
+    'ssh_port_in_use' => 'ポート :port はこのサーバーで既に使用されているため、SSH はそこで待ち受けできません。空いているポートを選んでください。',
     'redis_credential_unusable' => 'パネルは保存しているパスワードでRedisに接続できないため、パスワードを変更できません。Redisは稼働していますが、パネルの認証情報を拒否しています。パネルの .env の REDIS_PASSWORD をRedisが実際に要求するパスワードに修正してから、再試行してください。',
     'env_not_writable' => 'パネルが自身の .env ファイルに書き込めないため、新しい Redis パスワードを保存できませんでした。先にファイルの権限を修正してください。そのままではパネルが Redis に接続できなくなります。',
     'swap_no_space' => ':size のスワップに必要なディスク容量がありません。空き容量は :available で、サーバーの他の処理のために :reserve を空けておく必要があります。サイズを小さくするか、ディスク容量を空けてください。',

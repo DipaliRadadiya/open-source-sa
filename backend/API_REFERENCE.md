@@ -5168,6 +5168,8 @@ Cancelling when nothing is scheduled is **not** an error: the caller wanted no p
 
 `422` if disabling password auth with no SSH key present (lockout guard).
 
+`422` on `port` when another program already listens on the new port (e.g. the web server on 80) — SSH could not bind it. If the socket still fails to bind the new port, the old port is restored and SSH brought back on it before the `500` is returned. Saving also restarts an `ssh.socket` that is in the failed state, whatever the port.
+
 **Response `200`:** `{"security": {...}}`
 
 ---

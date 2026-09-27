@@ -300,7 +300,7 @@ it('writes the ssh drop-in, tests then reloads', function () {
         ->toContain('AllowGroups ssh-users sudo root');
     Process::assertRan(fn ($p) => in_array('sshd', $p->command, true) && in_array('-t', $p->command, true));
     Process::assertRan(fn ($p) => in_array('rm', $p->command, true) && in_array($this->dir.'/99-panel.conf', $p->command, true));
-    Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('reload', $p->command, true) && in_array('ssh', $p->command, true));
+    Process::assertRan(fn ($p) => in_array('systemctl', $p->command, true) && in_array('try-reload-or-restart', $p->command, true) && in_array('ssh', $p->command, true));
 });
 
 describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
@@ -354,6 +354,77 @@ describe('a socket-activated SSH (Ubuntu 24.04+)', function () {
             ->assertOk();
 
         expect($released->fresh()->isProtected())->toBeTrue();
+    });
+
+    /**
+     * A socket-activated box: `ss` reports `$listeners`, the socket is in
+     * `$socketState`, and restarting it fails while the drop-in names
+     * `$unbindable`. The drop-in is really written, so a rollback is visible.
+     */
+    function fakeSocketBox(string $listeners = '', string $socketState = 'active', ?int $unbindable = null): void
+    {
+        $dir = test()->dir;
+
+        Process::fake(function ($process) use ($listeners, $socketState, $unbindable, $dir) {
+            $cmd = ($process->command[0] ?? null) === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            return match (true) {
+                ($cmd[0] ?? '') === 'ss' => Process::result(output: $listeners),
+                ($cmd[0] ?? '') === 'ufw' => Process::result(output: "Status: inactive\n"),
+                ($cmd[0] ?? '') === 'sshd' && ($cmd[1] ?? '') === '-T' => Process::result(output: "port 22\npermitrootlogin no\npasswordauthentication yes\n"),
+                $cmd === ['systemctl', 'is-active', 'ssh.socket'] => Process::result(output: "{$socketState}\n", exitCode: $socketState === 'active' ? 0 : 3),
+                $cmd === ['systemctl', 'restart', 'ssh.socket'] => $unbindable !== null && str_contains((string) @file_get_contents($dir.'/00-panel.conf'), "Port {$unbindable}\n")
+                    ? Process::result(errorOutput: 'Job for ssh.socket failed.', exitCode: 1)
+                    : Process::result(),
+                ($cmd[0] ?? '') === 'tee' => (function () use ($cmd, $process) {
+                    File::put($cmd[1], (string) $process->input);
+
+                    return Process::result();
+                })(),
+                default => Process::result(),
+            };
+        });
+    }
+
+    it('refuses a port another program already listens on', function () {
+        fakeSocketBox("tcp LISTEN 0 511 0.0.0.0:80 0.0.0.0:* users:((\"apache2\",pid=900,fd=4))\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 80, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['port' => __('errors/setting.ssh_port_in_use', ['port' => 80])]);
+
+        Process::assertDidntRun(fn ($p) => in_array('tee', $p->command, true));
+        Process::assertDidntRun(fn ($p) => in_array('ssh.socket', $p->command, true) && in_array('restart', $p->command, true));
+    });
+
+    it('does not count SSH itself as the program in the way', function () {
+        fakeSocketBox("tcp LISTEN 0 4096 0.0.0.0:2222 0.0.0.0:* users:((\"systemd\",pid=1,fd=60))\n");
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+    });
+
+    it('brings a failed socket back even when the port stays the same', function () {
+        fakeSocketBox(socketState: 'failed');
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 22, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertOk();
+
+        Process::assertRan(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket']);
+    });
+
+    it('puts the old port back when the socket will not bind the new one', function () {
+        fakeSocketBox(unbindable: 2222);
+
+        $this->withHeader('Authorization', "Bearer {$this->token}")
+            ->putJson('/api/settings/security', ['port' => 2222, 'permit_root_login' => 'no', 'password_authentication' => true])
+            ->assertServerError();
+
+        expect(File::get($this->dir.'/00-panel.conf'))->toContain("Port 22\n")->not->toContain('Port 2222');
+        Process::assertRanTimes(fn ($p) => array_slice($p->command, -3) === ['systemctl', 'restart', 'ssh.socket'], 2);
     });
 
     it('leaves the socket alone when the port stays the same', function () {
