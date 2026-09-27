@@ -196,7 +196,14 @@ return [
             // backups run `dump_client` from the engines list below, and a
             // client the panel will not elevate fails with "a password is
             // required" on a feature that looks configured.
-            'mysql', 'mysqldump', 'mariadb', 'mariadb-dump', 'redis-cli',
+            //
+            // Not `redis-cli`, deliberately. It reaches Redis over TCP like the
+            // panel itself does, so it needs no root — and elevating it put the
+            // Redis password on sudo's command line (`sudo -n env
+            // REDISCLI_AUTH=…`), where sudo logs it to auth.log and the journal
+            // on every call, and the Logs screen shows both to anyone who may
+            // view logs. Found on the nginx test box, 2026-09-27.
+            'mysql', 'mysqldump', 'mariadb', 'mariadb-dump',
             'mongosh', 'mongodump', 'mongorestore',
             // psql is a pg_wrapper symlink rather than the binary itself; sudo
             // matches it by the path given, the same way it already matches

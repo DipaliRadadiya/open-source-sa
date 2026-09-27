@@ -114,6 +114,32 @@ it('never puts the password in a command argument', function () {
         ->and($set['input'])->toBe('sup3r-secret-value');
 });
 
+it('keeps the password off the command line when commands are elevated', function () {
+    // The suite normally runs with sudo off, which hid this: with sudo on,
+    // an elevated command carries its environment as `sudo -n env VAR=value`
+    // arguments, and sudo writes the whole command line to auth.log and the
+    // journal. redis-cli needs no root, so it must never be elevated.
+    config([
+        'server.privilege.sudo' => true,
+        'database.redis.default.password' => 'current-secret-value',
+    ]);
+    $runs = fakeRedis();
+
+    test()->withHeader('Authorization', 'Bearer '.test()->token)->getJson('/api/settings')->assertOk();
+    saveRedisAndApply(['maxmemory' => '0', 'maxmemory_policy' => 'noeviction', 'password' => 'sup3r-secret-value']);
+
+    $cli = array_filter((array) $runs->getArrayCopy(), fn (array $run) => in_array(test()->redisCli, $run['command'], true));
+    expect($cli)->not->toBeEmpty();
+
+    foreach ($cli as $run) {
+        expect($run['command'][0])->toBe(test()->redisCli);
+    }
+
+    foreach ($runs as $run) {
+        expect(implode(' ', $run['command']))->not->toContain('secret-value');
+    }
+});
+
 it('authenticates the rewrite from the environment, not from argv', function () {
     $runs = fakeRedis();
 
