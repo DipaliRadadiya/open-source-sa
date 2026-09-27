@@ -27,7 +27,13 @@ class GeneralSettingsRequest extends FormRequest
             // form unsavable until you changed a field you had not come to
             // change.
             'timezone' => ['required', 'string', Rule::in(app(Timezones::class)->identifiers())],
-            'hostname' => ['required', 'string', 'max:253', 'regex:/^[a-zA-Z0-9]([a-zA-Z0-9\-\.]{0,251}[a-zA-Z0-9])?$/'],
+            // What the kernel will actually keep: 64 characters at most
+            // (HOST_NAME_MAX), dot-separated labels of 1–63 letters, digits
+            // and inner hyphens. The old rule allowed 253 characters and any
+            // run of dots, so `a..b` and a 70-character name were accepted:
+            // the kernel cut the long one to 64 while /etc/hosts got all 70,
+            // and the server's own name stopped resolving (Apache test box).
+            'hostname' => ['required', 'string', 'max:64', 'regex:/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/'],
             'ntp' => ['required', 'boolean'],
         ];
     }

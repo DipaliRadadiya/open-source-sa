@@ -663,6 +663,36 @@ it('keeps the existing swap when the new one cannot be allocated', function () {
     Process::assertNotRan(fn ($p) => $p->command === ['rm', '-f', test()->swapFile]);
 });
 
+it('refuses a hostname the kernel would not keep as given', function (string $hostname) {
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/general', ['timezone' => 'Etc/UTC', 'hostname' => $hostname, 'ntp' => true])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('hostname');
+
+    Process::assertDidntRun(fn ($p) => ($p->command[0] ?? '') === 'hostnamectl' && ($p->command[1] ?? '') === 'set-hostname');
+})->with([
+    'empty label' => 'a..b',
+    'trailing dot' => 'web.',
+    'longer than 64' => str_repeat('x', 70),
+    'label longer than 63' => str_repeat('a', 64).'.b',
+    'hyphen at label end' => 'web-.example',
+    'underscore' => 'web_01',
+]);
+
+it('accepts ordinary hostnames up to 64 characters', function (string $hostname) {
+    fakeSettings();
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->putJson('/api/settings/general', ['timezone' => 'Etc/UTC', 'hostname' => $hostname, 'ntp' => true])
+        ->assertOk();
+})->with([
+    'single label' => 'web-01',
+    'fqdn' => 'srv1.example.com',
+    'exactly 64' => str_repeat('a', 31).'.'.str_repeat('b', 32),
+]);
+
 it('makes the new hostname resolve, so sudo does not hang on it', function () {
     fakeSettings();
     File::put($this->dir.'/hosts', "127.0.0.1\tlocalhost\n127.0.1.1\tserver.example\n10.0.0.5\tinternal\n");
