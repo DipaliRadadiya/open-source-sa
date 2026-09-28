@@ -12,6 +12,9 @@ return [
     'types' => [
         'docker' => ['title' => 'Contenedor Docker', 'tagline' => 'Cualquier imagen, de cualquier registro, servida a través de nginx.'],
         'ghost' => ['title' => 'Ghost', 'tagline' => 'Publicación y boletines: funciona con su propio MySQL'],
+        'nocodb' => ['title' => 'NocoDB', 'tagline' => 'Interfaz de hoja de cálculo para una base de datos: funciona con su propio PostgreSQL'],
+        'metabase' => ['title' => 'Metabase', 'tagline' => 'Paneles y consultas sobre tus datos: funciona con su propio PostgreSQL'],
+        'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'Wiki de documentación: funciona con su propio PostgreSQL'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Creador de blogs y sitios web'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Gestione sus bases de datos en el navegador'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Monitorización de disponibilidad y páginas de estado'],

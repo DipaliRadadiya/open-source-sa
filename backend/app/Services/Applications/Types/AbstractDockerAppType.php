@@ -74,6 +74,25 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     }
 
     /**
+     * The environment key this app is told its own URL through, or null.
+     *
+     * Null is a real answer and three of the first four apps give it: Metabase
+     * and Wiki.js ask for their URL in their own setup wizard and keep it in the
+     * database, so passing one would be a second source for a value the app
+     * already owns.
+     *
+     * Declared here rather than inferred from the template, because two things
+     * need it and neither can read a blade file usefully: `syncUrl()` has nothing
+     * to reconcile when it is null, and the tests would otherwise be guessing at
+     * a key name — which they were, and they failed on the second app, looking
+     * for `URL` in a file that never had one.
+     */
+    public function urlEnvKey(): ?string
+    {
+        return null;
+    }
+
+    /**
      * The same two screens a plain container site does not get, and for the same
      * reasons: Clone copies served files, and a container's state is in its
      * volumes; Backup archives the document root and a database, and a container

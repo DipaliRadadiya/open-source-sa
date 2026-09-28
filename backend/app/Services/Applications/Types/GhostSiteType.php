@@ -36,6 +36,12 @@ class GhostSiteType extends AbstractDockerAppType
         return true;
     }
 
+    /** Ghost builds every link and redirect from this. */
+    public function urlEnvKey(): ?string
+    {
+        return 'url';
+    }
+
     public function composeTemplate(): string
     {
         return 'server.docker.apps.ghost';

@@ -66,6 +66,9 @@ function installDockerApp(Application $application): Application
 
 dataset('docker apps', [
     'ghost' => ['ghost', 2368, ['content', 'db']],
+    'nocodb' => ['nocodb', 8080, ['data', 'db']],
+    'metabase' => ['metabase', 3000, ['db']],
+    'wikijs' => ['wikijs', 3000, ['db']],
     // Strapi was the intended second app and publishes NO official image —
     // `strapi/strapi` and `strapi/base` are both gone from Docker Hub, and
     // upstream's own guidance is to build your own from a `create-strapi-app`
@@ -81,6 +84,9 @@ it('writes a compose file that parses, for each app', function (string $type, in
     $parsed = Yaml::parse((string) $application->compose);
 
     expect($parsed)->toBeArray()
+        // Every app here is app-plus-database. A single-service app is legitimate
+        // and would need this relaxed — at which point the assertion should come
+        // from the site type rather than being a magic 2.
         ->and($parsed['services'])->toHaveCount(2)
         // The app's own port is published, and the panel's allocated host port
         // is what nginx proxies to.
@@ -189,17 +195,32 @@ it('keeps the app and its database on separate credentials', function () {
         ->and($parsed['services']['ghost']['environment']['database__connection__user'])->not->toBe('root');
 });
 
-it('tells the app its own HTTPS url', function (string $type, int $port, array $roles) {
-    // Ghost and Strapi both build links and admin redirects from this. Wrong, and
-    // the site serves pages whose assets point at another host — which reads as a
-    // broken theme rather than a stale setting.
+it('tells the app its own HTTPS url, when it takes one', function (string $type, int $port, array $roles) {
+    // Ghost builds every link and redirect from this: wrong, and the site serves
+    // pages whose assets point at another host, which reads as a broken theme
+    // rather than a stale setting.
+    //
+    // Null is a real answer, and the test asks the TYPE rather than guessing a key
+    // name — guessing is what this did first, and it failed on the second app by
+    // looking for `URL` in a file that never had one.
+    $siteType = app(SiteTypeManager::class)->find($type);
+    $key = $siteType->urlEnvKey();
+
     $application = installDockerApp(dockerAppSite($type));
     $parsed = Yaml::parse((string) $application->compose);
+    $env = collect($parsed['services'])->first()['environment'] ?? [];
 
-    $env = collect($parsed['services'])->first()['environment'];
-    $url = $env['url'] ?? $env['URL'];
+    if ($key === null) {
+        // And it must not carry one under some other spelling either, or the app
+        // has two sources for its URL and they will disagree.
+        expect(collect($env)->keys()->filter(
+            fn (string $name): bool => str_contains(strtolower($name), 'url')
+        )->all())->toBe([]);
 
-    expect($url)->toBe('https://'.$application->domain);
+        return;
+    }
+
+    expect($env[$key] ?? null)->toBe('https://'.$application->domain);
 })->with('docker apps');
 
 it('survives the validator that every pasted compose goes through', function (string $type, int $port, array $roles) {
@@ -270,8 +291,14 @@ it('keeps the same secrets when the url changes', function (string $type, int $p
         expect($after->compose)->toContain($value);
     }
 
-    // And the url really did move, or this test passes for the wrong reason.
-    expect($after->compose)->toContain('https://moved.example.com');
+    // And the url really did move — for the apps that have one. An app whose URL
+    // lives in its own database has nothing to move, and asserting otherwise
+    // would be asserting that a no-op did something.
+    if (app(SiteTypeManager::class)->find($type)->urlEnvKey() !== null) {
+        expect($after->compose)->toContain('https://moved.example.com');
+    } else {
+        expect($after->compose)->toBe((string) $application->compose);
+    }
 })->with('docker apps');
 
 it('stores the secrets encrypted, not as readable json', function () {

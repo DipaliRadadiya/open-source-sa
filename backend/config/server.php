@@ -7,9 +7,11 @@ use App\Services\Applications\Types\GhostSiteType;
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
 use App\Services\Applications\Types\MauticSiteType;
+use App\Services\Applications\Types\MetabaseSiteType;
 use App\Services\Applications\Types\MoodleSiteType;
 use App\Services\Applications\Types\N8nSiteType;
 use App\Services\Applications\Types\NextcloudSiteType;
+use App\Services\Applications\Types\NocoDbSiteType;
 use App\Services\Applications\Types\NodeBbSiteType;
 use App\Services\Applications\Types\NodeRedSiteType;
 use App\Services\Applications\Types\PhpMyAdminSiteType;
@@ -18,6 +20,7 @@ use App\Services\Applications\Types\PrestaShopSiteType;
 use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
 use App\Services\Applications\Types\UptimeKumaSiteType;
+use App\Services\Applications\Types\WikiJsSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
@@ -1397,6 +1400,18 @@ return [
         // Every Docker app maps to the one installer: the differences between
         // them live entirely in the site type — template, port, volumes, secrets
         // — so a class per app would be five methods of delegation each.
+        'metabase' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'nocodb' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'wikijs' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
         'ghost' => [
             'driver' => DockerAppInstaller::class,
         ],
@@ -1570,6 +1585,23 @@ return [
     |
     */
     'docker_apps' => [
+        'metabase' => [
+            'image' => env('DOCKER_APP_METABASE_IMAGE', 'metabase/metabase:latest'),
+            'db_image' => env('DOCKER_APP_METABASE_DB_IMAGE', 'postgres:16-alpine'),
+        ],
+
+        'nocodb' => [
+            'image' => env('DOCKER_APP_NOCODB_IMAGE', 'nocodb/nocodb:latest'),
+            'db_image' => env('DOCKER_APP_NOCODB_DB_IMAGE', 'postgres:16-alpine'),
+        ],
+
+        'wikijs' => [
+            // Pinned to the 2 line: Wiki.js 3 is a rewrite still in beta, and
+            // `latest` would move a one-click onto it the day it ships.
+            'image' => env('DOCKER_APP_WIKIJS_IMAGE', 'ghcr.io/requarks/wiki:2'),
+            'db_image' => env('DOCKER_APP_WIKIJS_DB_IMAGE', 'postgres:16-alpine'),
+        ],
+
         'ghost' => [
             'image' => env('DOCKER_APP_GHOST_IMAGE', 'ghost:5-alpine'),
             // 8.0 rather than 8.4: Ghost 5 documents 8.0, and MySQL 8.4 changed
@@ -1582,6 +1614,9 @@ return [
     'site_types' => [
         DockerSiteType::class,
         GhostSiteType::class,
+        NocoDbSiteType::class,
+        MetabaseSiteType::class,
+        WikiJsSiteType::class,
         WordPressSiteType::class,
         NextcloudSiteType::class,
         JoomlaSiteType::class,

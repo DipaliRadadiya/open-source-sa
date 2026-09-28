@@ -17,6 +17,9 @@ return [
     'types' => [
         'docker' => ['title' => 'Docker container', 'tagline' => 'Any image, from any registry, proxied by nginx.'],
         'ghost' => ['title' => 'Ghost', 'tagline' => 'Publishing and newsletters — runs with its own MySQL'],
+        'nocodb' => ['title' => 'NocoDB', 'tagline' => 'Spreadsheet interface for a database — runs with its own PostgreSQL'],
+        'metabase' => ['title' => 'Metabase', 'tagline' => 'Dashboards and questions over your data — runs with its own PostgreSQL'],
+        'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'Documentation wiki — runs with its own PostgreSQL'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Blog and website builder'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Manage your databases in the browser'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Uptime monitoring and status pages'],

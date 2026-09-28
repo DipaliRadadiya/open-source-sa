@@ -101,7 +101,11 @@ class DockerAppInstaller implements SiteInstaller
     {
         $type = $this->typeFor($application);
 
-        if ($type === null) {
+        // Nothing to reconcile for an app that is never told its URL — Metabase
+        // and Wiki.js ask for theirs in their own setup wizard and keep it in the
+        // database, so a re-render would rewrite the file to say the same thing
+        // and restart a container for no reason.
+        if ($type === null || $type->urlEnvKey() === null) {
             return;
         }
 

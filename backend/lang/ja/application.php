@@ -12,6 +12,9 @@ return [
     'types' => [
         'docker' => ['title' => 'Docker コンテナ', 'tagline' => '任意のレジストリの任意のイメージを nginx 経由で公開します。'],
         'ghost' => ['title' => 'Ghost', 'tagline' => 'パブリッシングとニュースレター — 専用の MySQL 付きで動作'],
+        'nocodb' => ['title' => 'NocoDB', 'tagline' => 'データベースをスプレッドシートとして操作 — 専用の PostgreSQL 付きで動作'],
+        'metabase' => ['title' => 'Metabase', 'tagline' => 'データのダッシュボードと分析 — 専用の PostgreSQL 付きで動作'],
+        'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'ドキュメント Wiki — 専用の PostgreSQL 付きで動作'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ブログ・ウェブサイト作成'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ブラウザーからデータベースを管理'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => '稼働監視とステータスページ'],
