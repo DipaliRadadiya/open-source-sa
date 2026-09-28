@@ -324,7 +324,8 @@ it('refuses to delete a volume something is writing to', function () {
 
     $this->mock(DockerResources::class, function ($mock) {
         $mock->shouldReceive('volumes')->andReturn([[
-            'name' => 'sv-app-6_data', 'in_use' => true, 'containers' => 1, 'application_id' => 6,
+            'name' => 'sv-app-6_data', 'in_use' => true, 'containers' => 1,
+            'container_names' => ['sv-app-6-db-1'], 'application_id' => 6,
         ]]);
     });
 
@@ -364,4 +365,131 @@ it('translates every refusal in every locale', function () {
                 ->not->toBe("errors/docker.{$key}", "{$key} missing in {$locale}");
         }
     }
+});
+
+/*
+ * Which containers use a volume.
+ *
+ * "1 container(s)" is a number, and what somebody needs is the name of the thing
+ * to go and stop. The source has to be `container inspect`: see the test below
+ * about truncation for why `docker ps` cannot answer this.
+ */
+
+/** `docker container inspect --format '{{json .}}'` over two containers. */
+const INSPECT_JSON = '{"Name":"/sv-app-6-db-1","Mounts":[{"Type":"volume","Name":"sv-app-6_data"}]}'
+    ."\n".'{"Name":"/sv-app-6-worker-1","Mounts":[{"Type":"volume","Name":"sv-app-6_data"},'
+    .'{"Type":"bind","Source":"/home/six/six/public_html","Destination":"/app"}]}';
+
+it('names the containers using a volume', function () {
+    $volumes = collect((new DockerResources(dockerResourceOps([
+        'docker_volume_df' => fn () => dockerResourceOutput(VOLUME_JSON),
+        'docker_ps_ids' => fn () => dockerResourceOutput("abc123\ndef456\n"),
+        'docker_container_inspect' => fn () => dockerResourceOutput(INSPECT_JSON),
+    ])))->volumes());
+
+    expect($volumes->firstWhere('name', 'sv-app-6_data')['container_names'])
+        ->toBe(['sv-app-6-db-1', 'sv-app-6-worker-1'])
+        // And a volume nothing touches stays empty rather than inheriting a name.
+        ->and($volumes->firstWhere('name', 'probe-vol')['container_names'])->toBe([]);
+});
+
+it('does not count a bind mount as a volume user', function () {
+    // `sv-app-6-worker-1` above also bind-mounts its site directory. A site that
+    // mounts a host path is not a user of any volume, and listing it as one puts
+    // a name in the Used-by column of a volume it has nothing to do with.
+    $volumes = collect((new DockerResources(dockerResourceOps([
+        'docker_volume_df' => fn () => dockerResourceOutput(
+            '[{"Name":"public_html","Driver":"local","Mountpoint":"/x","Size":"0B","Links":"0"}]'
+        ),
+        'docker_ps_ids' => fn () => dockerResourceOutput("def456\n"),
+        'docker_container_inspect' => fn () => dockerResourceOutput(INSPECT_JSON),
+    ])))->volumes());
+
+    expect($volumes->firstWhere('name', 'public_html')['container_names'])->toBe([]);
+});
+
+it('asks inspect once, not once per volume', function () {
+    // Same rule `docker ps` follows for networks. A `--filter volume=` per row
+    // would be a process per row, and the volumes list is unbounded.
+    $ran = [];
+    (new DockerResources(dockerResourceOps([
+        'docker_volume_df' => fn () => dockerResourceOutput(VOLUME_JSON),
+        'docker_ps_ids' => fn () => dockerResourceOutput("abc123\n"),
+        'docker_container_inspect' => fn () => dockerResourceOutput(INSPECT_JSON),
+    ], $ran)))->volumes();
+
+    expect(collect($ran)->where('op', 'docker_container_inspect')->count())->toBe(1);
+});
+
+it('does not run inspect at all when there are no containers', function () {
+    // `docker container inspect` with no arguments is an ERROR — "requires at
+    // least 1 argument" — not an empty answer. Unguarded, every load of the
+    // volumes page on an idle box wrote a failed op to the log.
+    $ran = [];
+    $volumes = (new DockerResources(dockerResourceOps([
+        'docker_volume_df' => fn () => dockerResourceOutput(VOLUME_JSON),
+        'docker_ps_ids' => fn () => dockerResourceOutput("\n"),
+    ], $ran)))->volumes();
+
+    expect(collect($ran)->where('op', 'docker_container_inspect')->count())->toBe(0)
+        ->and(collect($volumes)->pluck('container_names')->flatten()->all())->toBe([]);
+});
+
+it('would match nothing if the names came from docker ps', function () {
+    // THE REASON `volumeContainers()` uses inspect. `docker ps --format`
+    // truncates the mount list: on a real box two different volumes both came
+    // back as `sv-app-7_ghost…`, ellipsis included. This is that string, and it
+    // must not match — a join on a truncated name either finds nothing or, with
+    // two volumes sharing a prefix, finds the wrong one.
+    $volumes = collect((new DockerResources(dockerResourceOps([
+        'docker_volume_df' => fn () => dockerResourceOutput(VOLUME_JSON),
+        'docker_ps_ids' => fn () => dockerResourceOutput("abc123\n"),
+        'docker_container_inspect' => fn () => dockerResourceOutput(
+            '{"Name":"/sv-app-6-db-1","Mounts":[{"Type":"volume","Name":"sv-app-6_dat…"}]}'
+        ),
+    ])))->volumes());
+
+    expect($volumes->firstWhere('name', 'sv-app-6_data')['container_names'])->toBe([]);
+});
+
+it('keeps refusing a volume in use even when it cannot name the containers', function () {
+    // `in_use` reads `Links` from `system df -v`, not the names. If inspect did
+    // not answer, the volume still has users and the delete must still be
+    // refused — falling back to the count rather than deleting data because the
+    // panel failed to name what is writing it.
+    $admin = dockerAdmin();
+
+    $this->mock(DockerResources::class, function ($mock) {
+        $mock->shouldReceive('volumes')->andReturn([[
+            'name' => 'sv-app-6_data', 'in_use' => true, 'containers' => 2,
+            'container_names' => [], 'application_id' => 6,
+        ]]);
+    });
+
+    $this->actingAs($admin)
+        ->deleteJson('/api/docker/volumes/sv-app-6_data')
+        ->assertStatus(409)
+        ->assertJsonFragment(['message' => __('errors/docker.volume_in_use', [
+            'name' => 'sv-app-6_data', 'count' => '2',
+        ])]);
+});
+
+it('names the containers when refusing to delete a volume', function () {
+    $admin = dockerAdmin();
+
+    $this->mock(DockerResources::class, function ($mock) {
+        $mock->shouldReceive('volumes')->andReturn([[
+            'name' => 'sv-app-6_data', 'in_use' => true, 'containers' => 2,
+            'container_names' => ['sv-app-6-db-1', 'sv-app-6-worker-1'],
+            'application_id' => 6,
+        ]]);
+    });
+
+    $this->actingAs($admin)
+        ->deleteJson('/api/docker/volumes/sv-app-6_data')
+        ->assertStatus(409)
+        ->assertJsonFragment(['message' => __('errors/docker.volume_in_use_by', [
+            'name' => 'sv-app-6_data',
+            'containers' => 'sv-app-6-db-1, sv-app-6-worker-1',
+        ])]);
 });

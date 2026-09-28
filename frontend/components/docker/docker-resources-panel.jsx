@@ -272,10 +272,33 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
                     </TableCell>
                     <TableCell className="text-sm">{volume.size || "—"}</TableCell>
                     <TableCell className="text-sm">
-                      {volume.in_use ? (
-                        <Badge>{t("volumes.inUse", { count: volume.containers })}</Badge>
-                      ) : (
+                      {/*
+                        Names, not a count. "1 container(s)" tells somebody a
+                        number; what they need before they can act — stop it,
+                        delete the volume — is which container to go and look at.
+                        The networks column beside this one already names them.
+
+                        The count is the fallback, not the default. The names
+                        come from `container inspect` and the count from `system
+                        df -v`, so an empty list beside a non-zero count means
+                        the panel could not ask — which is a different fact from
+                        "nothing is using it" and must not render as the same
+                        thing. The delete stays refused either way.
+                      */}
+                      {!volume.in_use ? (
                         <span className="text-muted-foreground">{t("volumes.unused")}</span>
+                      ) : volume.container_names.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {volume.container_names.map((container) => (
+                            <Badge key={container} className="font-mono text-xs font-normal">
+                              {container}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <Badge variant="outline">
+                          {t("volumes.inUseUnnamed", { count: volume.containers })}
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell>

@@ -6354,6 +6354,7 @@
       "hint": "In einem Volume bewahrt ein Container die Daten auf, die einen Neuaufbau überstehen müssen.",
       "empty": "Auf diesem Server gibt es noch keine Volumes.",
       "inUse": "{count} Container",
+      "inUseUnnamed": "{count} Container — Namen nicht verfügbar",
       "unused": "Nicht in Benutzung",
       "created": "Volume {name} erstellt.",
       "removed": "Volume {name} entfernt.",

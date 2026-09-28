@@ -6354,6 +6354,7 @@
       "hint": "A volume is where a container keeps data that has to survive being rebuilt.",
       "empty": "No volumes on this server yet.",
       "inUse": "{count} container(s)",
+      "inUseUnnamed": "{count} container(s) — names unavailable",
       "unused": "Not in use",
       "created": "Volume {name} created.",
       "removed": "Volume {name} removed.",

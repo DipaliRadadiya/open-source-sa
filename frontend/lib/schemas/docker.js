@@ -50,6 +50,13 @@ export const dockerVolumeSchema = z.object({
   // value is to be read.
   size: z.string().nullish(),
   containers: z.number().default(0),
+  // The names behind that count. Declared here or Zod strips it — silently, and
+  // looking exactly like an API that did not send it.
+  //
+  // Can be shorter than `containers`: the count comes from `system df -v` and
+  // the names from `container inspect`, so an empty list beside a non-zero count
+  // means "could not ask", not "nothing is using it". The cell says so.
+  container_names: z.array(z.string()).default([]),
   in_use: z.boolean(),
   dangling: z.boolean(),
   application_id: z.number().nullish(),

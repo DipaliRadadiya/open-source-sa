@@ -6354,6 +6354,7 @@
       "hint": "Un volume est l'endroit où un conteneur conserve les données qui doivent survivre à une reconstruction.",
       "empty": "Aucun volume sur ce serveur pour l'instant.",
       "inUse": "{count} conteneur(s)",
+      "inUseUnnamed": "{count} conteneur(s) — noms indisponibles",
       "unused": "Inutilisé",
       "created": "Volume {name} créé.",
       "removed": "Volume {name} supprimé.",

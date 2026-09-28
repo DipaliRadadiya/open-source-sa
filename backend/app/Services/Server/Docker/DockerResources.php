@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Collection;
 
 /**
  * Docker's networks and volumes, as the panel presents them.
@@ -141,11 +142,16 @@ class DockerResources
             return [];
         }
 
-        return array_map(function (array $row): array {
+        // Asked once for every volume, not once per row — the same rule
+        // `networks()` follows for `docker ps`.
+        $users = $this->volumeContainers();
+
+        return array_map(function (array $row) use ($users): array {
             $links = (int) ($row['Links'] ?? 0);
+            $name = (string) ($row['Name'] ?? '');
 
             return [
-                'name' => (string) ($row['Name'] ?? ''),
+                'name' => $name,
                 'driver' => (string) ($row['Driver'] ?? ''),
                 'mountpoint' => (string) ($row['Mountpoint'] ?? ''),
                 // As Docker renders it — "5.243MB". Not re-parsed into bytes:
@@ -153,14 +159,97 @@ class DockerResources
                 // for the value is to be read.
                 'size' => (string) ($row['Size'] ?? ''),
                 'containers' => $links,
+                // Named, because a count is not actionable: "1 container(s)"
+                // tells somebody a number, and what they need is which one to
+                // go and stop.
+                //
+                // `->get()` with a default, never `?? []` — see the note in
+                // `networks()` about what the null-coalesce hides.
+                'container_names' => $users->get($name, []),
+                // Deliberately still `$links`, not `count($container_names)`.
+                // This is what the delete guard reads, and `system df -v` is the
+                // stricter source: if `inspect` could not answer, a volume with
+                // users must still be refused rather than deleted because the
+                // panel failed to name them.
                 'in_use' => $links > 0,
                 // A volume with no container is not necessarily rubbish — it
                 // may belong to a stopped application — so it is labelled
                 // rather than swept up.
                 'dangling' => $links === 0,
-                'application_id' => $this->applicationIdFrom((string) ($row['Name'] ?? '')),
+                'application_id' => $this->applicationIdFrom($name),
             ];
         }, $rows);
+    }
+
+    /**
+     * The containers using each volume, keyed by volume name.
+     *
+     * **Not `docker ps`, and this is the whole reason the method exists.**
+     * `docker ps --format` TRUNCATES the mount list: on a real box two
+     * different volumes both came back as `sv-app-7_ghost…`, ellipsis included.
+     * Joining on that matches nothing — or, with two volumes sharing a prefix,
+     * matches the wrong one. `container inspect` returns the full name and also
+     * says `Type`, which is what lets a bind mount be excluded: a site whose
+     * compose mounts `/home/ghost/alpha/public_html` is not a user of any
+     * volume, and listing it as one would be a lie in the Used-by column.
+     *
+     * `-a`, so stopped containers count. `system df -v` reports `Links` over
+     * all of them, and names taken from running containers only would
+     * contradict the number beside them.
+     *
+     * Two processes, whatever the number of volumes — the rule `networks()`
+     * already follows. A `--filter volume=` per row would be a process per row.
+     *
+     * @return Collection<string, list<string>>
+     */
+    private function volumeContainers(): Collection
+    {
+        $ids = $this->serverOps->run(
+            ['docker', 'ps', '-aq'],
+            ['feature' => 'docker', 'op' => 'docker_ps_ids'],
+            timeout: 30,
+        );
+
+        if (! $ids->answered) {
+            return collect();
+        }
+
+        $list = array_values(array_filter(array_map('trim', explode("\n", $ids->output()))));
+
+        // `docker container inspect` with no arguments is an ERROR, not an
+        // empty answer — "requires at least 1 argument". On a box with no
+        // containers that would be a failed op in the log every time the
+        // volumes page loaded.
+        if ($list === []) {
+            return collect();
+        }
+
+        $map = [];
+
+        foreach ($this->jsonLines(
+            ['docker', 'container', 'inspect', '--format', '{{json .}}', ...$list],
+            'docker_container_inspect',
+        ) as $row) {
+            $name = ltrim((string) ($row['Name'] ?? ''), '/');
+
+            if ($name === '') {
+                continue;
+            }
+
+            foreach ((array) ($row['Mounts'] ?? []) as $mount) {
+                if (! is_array($mount) || ($mount['Type'] ?? null) !== 'volume') {
+                    continue;
+                }
+
+                $volume = (string) ($mount['Name'] ?? '');
+
+                if ($volume !== '' && ! in_array($name, $map[$volume] ?? [], true)) {
+                    $map[$volume][] = $name;
+                }
+            }
+        }
+
+        return collect($map);
     }
 
     /**

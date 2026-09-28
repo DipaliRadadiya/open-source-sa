@@ -178,3 +178,38 @@ test("every container card string exists in every locale", () => {
     );
   }
 });
+
+/*
+ * Which containers use a volume.
+ *
+ * "1 container(s)" is a number; the name is what somebody can act on.
+ */
+
+test("the volumes table names the containers using a volume", () => {
+  assert.match(panel, /volume\.container_names\.length > 0/);
+  assert.match(panel, /volume\.container_names\.map/);
+});
+
+test("the count survives as a fallback, not as the default", () => {
+  // Names come from `container inspect` and the count from `system df -v`, so an
+  // empty list beside a non-zero count means "could not ask" — a different fact
+  // from "nothing is using it", and it must not render as the same thing.
+  assert.match(panel, /volumes\.inUseUnnamed/);
+  for (const locale of LOCALES) {
+    assert.ok(
+      messages[locale].docker.volumes.inUseUnnamed,
+      `${locale} is missing docker.volumes.inUseUnnamed`,
+    );
+  }
+});
+
+test("the volume schema declares container_names, or Zod drops it", () => {
+  assert.match(schemas, /container_names: z\.array\(z\.string\(\)\)/);
+});
+
+test("an unused volume still reads as unused, not as unnamed", () => {
+  // The three states are distinct: not in use, in use and named, in use and
+  // unnameable. Collapsing the first two is what the old cell effectively did.
+  assert.match(panel, /!volume\.in_use \?/);
+  assert.match(panel, /volumes\.unused/);
+});

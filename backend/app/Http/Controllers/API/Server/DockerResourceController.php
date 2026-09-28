@@ -130,13 +130,23 @@ class DockerResourceController extends Controller
         // The one that matters. `docker volume rm -f` would do this happily,
         // and a volume is where a container's data lives — deleting one that
         // is attached is deleting a running database.
+        // Named when the panel could name them, counted when it could not.
+        // The two are different facts and must not read the same: an empty list
+        // beside a non-zero `Links` means `docker inspect` did not answer, which
+        // is not the same as "nothing is using it" — and the delete is refused
+        // either way, because `in_use` reads the stricter source.
         abort_if(
             $volume['in_use'],
             409,
-            __('errors/docker.volume_in_use', [
-                'name' => $name,
-                'count' => (string) $volume['containers'],
-            ]),
+            $volume['container_names'] !== []
+                ? __('errors/docker.volume_in_use_by', [
+                    'name' => $name,
+                    'containers' => implode(', ', $volume['container_names']),
+                ])
+                : __('errors/docker.volume_in_use', [
+                    'name' => $name,
+                    'count' => (string) $volume['containers'],
+                ]),
         );
 
         $result = $docker->removeVolume($name);

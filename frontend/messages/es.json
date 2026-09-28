@@ -6354,6 +6354,7 @@
       "hint": "Un volumen es donde un contenedor guarda los datos que deben sobrevivir a una reconstrucción.",
       "empty": "Aún no hay volúmenes en este servidor.",
       "inUse": "{count} contenedor(es)",
+      "inUseUnnamed": "{count} contenedor(es) — nombres no disponibles",
       "unused": "Sin usar",
       "created": "Volumen {name} creado.",
       "removed": "Volumen {name} eliminado.",
