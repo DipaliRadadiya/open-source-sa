@@ -12,7 +12,6 @@ return [
     'types' => [
         'docker' => ['title' => 'Conteneur Docker', 'tagline' => 'N\'importe quelle image, de n\'importe quel registre, servie via nginx.'],
         'ghost' => ['title' => 'Ghost', 'tagline' => 'Publication et newsletters — fonctionne avec son propre MySQL'],
-        'strapi' => ['title' => 'Strapi', 'tagline' => 'CMS headless et API — fonctionne avec son propre PostgreSQL'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Créateur de blogs et de sites web'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Gérez vos bases de données dans le navigateur'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Surveillance de disponibilité et pages de statut'],

@@ -66,7 +66,13 @@ function installDockerApp(Application $application): Application
 
 dataset('docker apps', [
     'ghost' => ['ghost', 2368, ['content', 'db']],
-    'strapi' => ['strapi', 1337, ['uploads', 'db']],
+    // Strapi was the intended second app and publishes NO official image —
+    // `strapi/strapi` and `strapi/base` are both gone from Docker Hub, and
+    // upstream's own guidance is to build your own from a `create-strapi-app`
+    // project. Verified against the registry, not assumed. A one-click that
+    // pulls a third-party rebuild is not something a server panel should ship,
+    // so the second app is a decision still to be made and the dataset has one
+    // entry rather than a card that 404s at `docker pull`.
 ]);
 
 it('writes a compose file that parses, for each app', function (string $type, int $port, array $roles) {

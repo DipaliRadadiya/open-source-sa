@@ -17,7 +17,6 @@ use App\Services\Applications\Types\PhpSiteType;
 use App\Services\Applications\Types\PrestaShopSiteType;
 use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
-use App\Services\Applications\Types\StrapiSiteType;
 use App\Services\Applications\Types\UptimeKumaSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
@@ -1402,10 +1401,6 @@ return [
             'driver' => DockerAppInstaller::class,
         ],
 
-        'strapi' => [
-            'driver' => DockerAppInstaller::class,
-        ],
-
         'uptimekuma' => [
             'driver' => UptimeKumaInstaller::class,
             'repository' => env('SERVER_UPTIME_KUMA_REPO', 'https://github.com/louislam/uptime-kuma.git'),
@@ -1575,15 +1570,6 @@ return [
     |
     */
     'docker_apps' => [
-        'strapi' => [
-            'image' => env('DOCKER_APP_STRAPI_IMAGE', 'strapi/strapi:latest'),
-            // 16, not `latest`: Strapi pins a Postgres client range, and a major
-            // Postgres upgrade is not something a container does in place — the
-            // data directory format changes and the server refuses to start on
-            // one written by an older major.
-            'db_image' => env('DOCKER_APP_STRAPI_DB_IMAGE', 'postgres:16-alpine'),
-        ],
-
         'ghost' => [
             'image' => env('DOCKER_APP_GHOST_IMAGE', 'ghost:5-alpine'),
             // 8.0 rather than 8.4: Ghost 5 documents 8.0, and MySQL 8.4 changed
@@ -1596,7 +1582,6 @@ return [
     'site_types' => [
         DockerSiteType::class,
         GhostSiteType::class,
-        StrapiSiteType::class,
         WordPressSiteType::class,
         NextcloudSiteType::class,
         JoomlaSiteType::class,
