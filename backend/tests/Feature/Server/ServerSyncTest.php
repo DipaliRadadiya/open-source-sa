@@ -54,7 +54,7 @@ beforeEach(function () {
  *
  * @param  array<string, string>  $authorizedKeys
  */
-function fakeServer(string $passwd = '', array $authorizedKeys = []): void
+function fakeServer(string $passwd = '', array $authorizedKeys = [], ?string $groups = null): void
 {
     $passwd = $passwd !== '' ? $passwd : implode("\n", [
         'root:x:0:0:root:/root:/bin/bash',
@@ -67,8 +67,14 @@ function fakeServer(string $passwd = '', array $authorizedKeys = []): void
         'mysql:x:1004:1004::/home/mysql:/bin/false',
     ]);
 
-    Process::fake(function ($process) use ($passwd, $authorizedKeys) {
+    Process::fake(function ($process) use ($passwd, $authorizedKeys, $groups) {
         $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        // `getent group sudo admin` — only when a test models it; the others
+        // get the passwd answer, as before, which names no such group.
+        if ($groups !== null && ($args[0] ?? '') === 'getent' && ($args[1] ?? '') === 'group') {
+            return Process::result(output: $groups, exitCode: str_contains($groups, 'admin:') ? 0 : 2);
+        }
 
         if (($args[0] ?? '') === 'getent') {
             return Process::result(output: $passwd);
@@ -135,6 +141,69 @@ describe('discovering system users', function () {
         expect(itemsWith(runSync(), 'system_user', SyncAction::Found))
             ->not->toContain('siteowner')
             ->toContain('shopuser');
+    });
+});
+
+describe('what an imported account may do', function () {
+    it('imports an account in the sudo group as having sudo', function () {
+        // It was always recorded as sudo: false, so an account with full sudo
+        // on the server was listed in the panel as having none.
+        fakeServer(groups: "sudo:x:27:ubuntu,siteowner\n");
+
+        runSync(SyncMode::Apply);
+
+        expect(SystemUser::where('username', 'siteowner')->value('sudo'))->toBeTrue()
+            ->and(SystemUser::where('username', 'shopuser')->value('sudo'))->toBeFalse();
+    });
+
+    it('counts the older admin group too', function () {
+        fakeServer(groups: "sudo:x:27:\nadmin:x:118:shopuser\n");
+
+        runSync(SyncMode::Apply);
+
+        expect(SystemUser::where('username', 'shopuser')->value('sudo'))->toBeTrue();
+    });
+
+    it('shows the sudo it found in a preview, without writing anything', function () {
+        fakeServer(groups: "sudo:x:27:siteowner\n");
+
+        $run = runSync();
+        $item = SyncItem::where('sync_run_id', $run->id)->where('resource_key', 'siteowner')->first();
+
+        expect($item->evidence['sudo'] ?? null)->toBeTrue()
+            ->and(SystemUser::count())->toBe(0);
+    });
+
+    it('brings an account already in the panel back in line with the server', function () {
+        $granted = SystemUser::create(['username' => 'granted', 'home_path' => '/home/granted', 'sudo' => false]);
+        $revoked = SystemUser::create(['username' => 'revoked', 'home_path' => '/home/revoked', 'sudo' => true]);
+        fakeServer(groups: "sudo:x:27:granted\n");
+
+        runSync(SyncMode::Apply);
+
+        expect($granted->fresh()->sudo)->toBeTrue()
+            ->and($revoked->fresh()->sudo)->toBeFalse();
+    });
+
+    it('leaves the record alone when a preview reads the groups', function () {
+        $granted = SystemUser::create(['username' => 'granted', 'home_path' => '/home/granted', 'sudo' => false]);
+        fakeServer(groups: "sudo:x:27:granted\n");
+
+        runSync();
+
+        expect($granted->fresh()->sudo)->toBeFalse();
+    });
+
+    it('does not strip everyone\'s sudo when the groups cannot be read', function () {
+        // No `sudo` line at all means the command failed — that group exists
+        // on every Debian-derived install. Correcting from an empty answer
+        // would have turned sudo off in the record for every account.
+        $user = SystemUser::create(['username' => 'granted', 'home_path' => '/home/granted', 'sudo' => true]);
+        fakeServer(groups: '');
+
+        runSync(SyncMode::Apply);
+
+        expect($user->fresh()->sudo)->toBeTrue();
     });
 });
 
