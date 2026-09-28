@@ -132,6 +132,19 @@ class GitDeployer
                 'git', '-C', $documentRoot, 'reset', '--hard', 'FETCH_HEAD',
             ]);
 
+            // Give the checked-out branch an upstream. `git init` + `fetch` +
+            // `reset` leaves none, so a deploy script that says a bare
+            // `git pull` — the commonest one there is — died on the first
+            // deploy with "There is no tracking information for the current
+            // branch". `fetch origin <branch>` has just written
+            // `origin/<branch>`, so this cannot point at a missing ref.
+            // Unchecked: the checkout above already succeeded, and a script
+            // that never mentions git does not need this.
+            $this->serverOps->run(
+                ['git', '-C', $documentRoot, 'branch', '--set-upstream-to=origin/'.$branch],
+                ['feature' => 'application', 'op' => 'git.set_upstream'],
+            );
+
             $commit = $this->currentCommit($documentRoot);
             $details = $this->commitDetails($documentRoot);
 
