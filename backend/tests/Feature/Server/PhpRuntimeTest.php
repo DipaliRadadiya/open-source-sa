@@ -198,7 +198,10 @@ it('offers nothing older than the configured floor for a new install', function 
 
     expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.2', '7.4']);
 
-    phpCall('POST', '/api/php/versions', ['version' => '7.3'])->assertStatus(422);
+    // Said as what it is — 7.3 is in the repository, it is just not offered.
+    phpCall('POST', '/api/php/versions', ['version' => '7.3'])
+        ->assertStatus(422)
+        ->assertJsonPath('errors.version.0', __('php.below_minimum', ['version' => '7.3', 'minimum' => '7.4']));
 });
 
 it('still lists and keeps an old version that is already installed', function () {

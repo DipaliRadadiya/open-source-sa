@@ -9,5 +9,6 @@ return [
     'uninstall_started' => 'A remover o PHP :version. Demora alguns minutos.',
     'already_installed' => 'O PHP :version já está instalado.',
     'not_installable' => 'O PHP :version não está no repositório de pacotes deste servidor, por isso não pode ser instalado.',
+    'below_minimum' => 'O PHP :version já não tem suporte e deixou de ser oferecido para novas instalações. Escolha PHP :minimum ou mais recente.',
     'extension_install_started' => 'A instalar :extension. Aparecerá assim que o apt terminar.',
 ];

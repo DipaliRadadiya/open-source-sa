@@ -155,7 +155,7 @@ class PhpRuntime implements Runtime
 
         $installed = $this->versions->versions();
 
-        $floor = (string) config('server.runtimes.php.min_offered', '7.4');
+        $floor = $this->minimumOffered();
 
         return collect($this->stack->installableVersions($this->withoutPrereleases($output)))
             ->unique()
@@ -167,6 +167,14 @@ class PhpRuntime implements Runtime
             ->sortByDesc(fn (string $version) => (float) $version)
             ->values()
             ->all();
+    }
+
+    /**
+     * The oldest PHP offered for a new install (`SERVER_PHP_MIN_OFFERED`).
+     */
+    public function minimumOffered(): string
+    {
+        return (string) config('server.runtimes.php.min_offered', '7.4');
     }
 
     /**

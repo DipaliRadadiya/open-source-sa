@@ -46,6 +46,15 @@ class PhpVersionRequest extends FormRequest
             return;
         }
 
+        // Said as what it is. "Not in this server's package repository" was
+        // untrue for 5.6-7.3: they are in it, the panel just no longer
+        // offers them.
+        if (version_compare($version, $php->minimumOffered(), '<')) {
+            $fail(__('php.below_minimum', ['version' => $version, 'minimum' => $php->minimumOffered()]));
+
+            return;
+        }
+
         $fail(__('php.not_installable', ['version' => $version]));
     }
 }
