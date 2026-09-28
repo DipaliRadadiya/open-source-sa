@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\Types\AbstractDockerAppType;
 use App\Services\Server\Applications\ContainerSupervisor;
+use App\Services\Server\ManagedFile;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
@@ -42,6 +43,7 @@ class DockerAppInstaller implements SiteInstaller
     public function __construct(
         private SiteTypeManager $siteTypes,
         private ContainerSupervisor $containers,
+        private ManagedFile $files,
     ) {}
 
     /**
@@ -174,6 +176,12 @@ class DockerAppInstaller implements SiteInstaller
         // which I wrote here first and caught only by running the union.
         $secrets = $this->storedSecrets($application) + $this->generate($type);
 
+        // Files the app cannot start without, written into the site's own directory
+        // and bind-mounted in. Written before the compose file, so a failure here
+        // stops provisioning rather than producing a container that crash-loops on
+        // a missing config — which is what Glance did.
+        $binds = $this->writeStarterFiles($type, $application, $documentRoot);
+
         $application->forceFill([
             'container_port' => $type->containerPort(),
             'volume_mounts' => $mounts,
@@ -186,6 +194,7 @@ class DockerAppInstaller implements SiteInstaller
                 $this->url($application),
                 $secrets,
                 $volumes,
+                $binds,
             ),
         ])->save();
     }
@@ -239,6 +248,7 @@ class DockerAppInstaller implements SiteInstaller
         string $url,
         array $secrets,
         array $volumes = [],
+        array $binds = [],
     ): string {
         if ($volumes === []) {
             foreach ($type->volumeRoles() as $role => $path) {
@@ -256,6 +266,13 @@ class DockerAppInstaller implements SiteInstaller
             if (isset($volumes[$role])) {
                 $mounts[$path] = $volumes[$role];
             }
+        }
+
+        // Bind mounts of the starter directories, alongside the named volumes.
+        // The template writes `source:target` either way; the difference is only
+        // whether the source is a volume name or a path.
+        foreach ($binds as $target => $source) {
+            $mounts[$target] = $source;
         }
 
         $environment = $type->environment($application);
@@ -286,6 +303,80 @@ class DockerAppInstaller implements SiteInstaller
             'image' => (string) config("server.docker_apps.{$type->name()}.image"),
             'dbImage' => (string) config("server.docker_apps.{$type->name()}.db_image"),
         ])->render();
+    }
+
+    /**
+     * Write the files an app cannot start without, and return their bind mounts.
+     *
+     * Inside the site's document root, so `ComposeValidator` accepts the bind and
+     * the File Manager can edit the result. Directories rather than single files:
+     * Docker creates a missing bind source as a DIRECTORY owned by root, so
+     * mounting a file that does not exist yet gives the container a directory
+     * where it wanted a config and an error that mentions neither.
+     *
+     * Never overwrites. A reinstall or a Retry Setup must not replace a
+     * configuration somebody has edited — which is the same rule as the secrets,
+     * for the same reason.
+     *
+     * @return array<string, string> container path of the directory => host path
+     */
+    private function writeStarterFiles(
+        AbstractDockerAppType $type,
+        Application $application,
+        string $documentRoot,
+    ): array {
+        $binds = [];
+        $root = rtrim($documentRoot, '/');
+
+        foreach ($type->starterFiles() as $containerPath => $contents) {
+            $directory = dirname($containerPath);
+            $host = $root.$directory;
+
+            $binds[$directory] = $host;
+
+            $file = $host.'/'.basename($containerPath);
+            $context = ['feature' => 'application', 'op' => 'docker_app_starter', 'application' => $application->id];
+
+            // `get()` rather than an `exists()` that ManagedFile does not have:
+            // a successful read IS the existence check, and it goes through the
+            // same elevated path as the write instead of asking PHP about a file
+            // in a directory PHP cannot see.
+            if (! $this->files->get($file, $context)->failed()) {
+                continue;
+            }
+
+            $this->files->put($file, $this->dedent($contents), $context);
+        }
+
+        return $binds;
+    }
+
+    /**
+     * Strip the indentation a heredoc inside a class body carries.
+     *
+     * PHP 7.3+ removes the closing marker's indentation from a `<<<'YAML'` body,
+     * so a starter file declared inside a method is already flush — but only if
+     * the closing marker is indented to match. This is belt and braces for a
+     * template somebody adds with the marker at column zero, where YAML would
+     * arrive with eight leading spaces and parse as one long string.
+     */
+    private function dedent(string $contents): string
+    {
+        $lines = explode("\n", $contents);
+        $indents = [];
+
+        foreach ($lines as $line) {
+            if (trim($line) !== '') {
+                $indents[] = strlen($line) - strlen(ltrim($line));
+            }
+        }
+
+        $strip = $indents === [] ? 0 : min($indents);
+
+        return implode("\n", array_map(
+            fn (string $line): string => substr($line, $strip),
+            $lines,
+        ));
     }
 
     /**

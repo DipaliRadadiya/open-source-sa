@@ -93,6 +93,30 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     }
 
     /**
+     * Files this app cannot start without, as path-inside-the-container => body.
+     *
+     * Glance is the reason this exists: it exits on boot with
+     * `reading /app/config/glance.yml: no such file or directory`, and a named
+     * volume starts empty. An app that needs a config file present cannot be
+     * handed an empty directory.
+     *
+     * These become a **bind mount inside the site's own directory**, not a named
+     * volume — which is better than seeding a volume would be, for three reasons:
+     * `ComposeValidator` already permits a bind whose source is inside the site
+     * root, the File Manager becomes the editor with no extra work, and the file
+     * lands somewhere a person can find it.
+     *
+     * The container path's parent directory is what gets mounted, so two files in
+     * one directory mount once.
+     *
+     * @return array<string, string>
+     */
+    public function starterFiles(): array
+    {
+        return [];
+    }
+
+    /**
      * The memory ceiling this app needs, or null to take the server default.
      *
      * **Measured on a real box, because the failure is invisible.** The panel's

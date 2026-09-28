@@ -32,10 +32,15 @@ services:
 @if ($mounts !== [])
 
     volumes:
-@foreach ($mounts as $path => $volume)
-      - {{ $volume }}:{{ $path }}
+@foreach ($mounts as $path => $source)
+      - {{ $source }}:{{ $path }}
 @endforeach
+@endif
+@if ($volumes !== [])
 
+{{-- Only NAMED volumes are declared here. A bind mount needs no declaration, and
+     gating this block on the mount list instead meant a bind-only app emitted a
+     `volumes:` key with nothing under it — which is not valid compose. --}}
 volumes:
 @foreach ($volumes as $name)
   {{ $name }}:

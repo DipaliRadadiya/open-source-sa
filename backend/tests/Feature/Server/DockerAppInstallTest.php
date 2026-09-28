@@ -76,7 +76,9 @@ dataset('docker apps', [
     'freshrss' => ['freshrss', 80, ['data']],
     'stirlingpdf' => ['stirlingpdf', 8080, ['data']],
     'ittools' => ['ittools', 80, []],
-    'glance' => ['glance', 8080, ['config']],
+    // No named volume: Glance's config is a bind mount inside the site directory,
+    // because it is a file somebody edits. See the starter-files tests below.
+    'glance' => ['glance', 8080, []],
     'homepage' => ['homepage', 3000, ['config']],
     // Strapi was the intended second app and publishes NO official image —
     // `strapi/strapi` and `strapi/base` are both gone from Docker Hub, and
@@ -395,4 +397,73 @@ it('still generates a secret the app has gained since install', function () {
 
     expect($after['MYSQL_ROOT_PASSWORD'])->toBe($partial['MYSQL_ROOT_PASSWORD'])
         ->and($after['GHOST_DB_PASSWORD'] ?? null)->not->toBeNull();
+});
+
+it('writes the files an app cannot start without', function () {
+    // Glance exits on boot with `reading /app/config/glance.yml: no such file or
+    // directory`, and a named volume starts empty — so an empty directory is not a
+    // usable start. Found by opening the site, not by any test.
+    $written = [];
+    Process::fake(function ($process) use (&$written) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        // `cat` is the existence probe; make it fail so the write happens.
+        if (($args[0] ?? '') === 'cat') {
+            return Process::result(exitCode: 1, errorOutput: 'No such file');
+        }
+
+        $written[] = $args;
+
+        return Process::result(exitCode: 0);
+    });
+
+    $application = installDockerApp(dockerAppSite('glance'));
+    $compose = (string) $application->compose;
+
+    // The file is bind-mounted from inside the site directory, which is what
+    // ComposeValidator permits and what makes the File Manager the editor.
+    expect($compose)->toContain(':/app/config')
+        ->and($compose)->toContain('/home/owner/site/public_html/app/config')
+        // And a named volume is NOT used for it.
+        ->and($application->volume_mounts)->toBe([]);
+
+    // Something actually wrote a glance.yml — asserting on the compose file alone
+    // would pass while nothing created the config, which is this exact bug.
+    expect(collect($written)->contains(
+        fn (array $args): bool => collect($args)->contains(fn ($a) => str_contains((string) $a, 'glance.yml'))
+    ))->toBeTrue('nothing wrote glance.yml');
+});
+
+it('does not overwrite a config somebody has edited', function () {
+    // A reinstall or Retry Setup must leave an edited configuration alone — the
+    // same rule as the secrets, for the same reason.
+    $writes = 0;
+    Process::fake(function ($process) use (&$writes) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        // The probe succeeds: the file is already there.
+        if (($args[0] ?? '') === 'cat') {
+            return Process::result(output: 'pages: [] # mine');
+        }
+
+        if (collect($args)->contains(fn ($a) => str_contains((string) $a, 'glance.yml'))) {
+            $writes++;
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    installDockerApp(dockerAppSite('glance'));
+
+    expect($writes)->toBe(0);
+});
+
+it('tells Homepage which host it is served on', function () {
+    // Homepage answers a request whose Host header it was not told about with a
+    // 400, so the container looks healthy and the site is unusable. Only opening
+    // it finds that.
+    $application = installDockerApp(dockerAppSite('homepage'));
+
+    expect(Yaml::parse((string) $application->compose)['services']['app']['environment'])
+        ->toHaveKey('HOMEPAGE_ALLOWED_HOSTS', $application->domain);
 });

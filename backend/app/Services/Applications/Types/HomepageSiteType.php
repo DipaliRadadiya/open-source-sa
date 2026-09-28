@@ -2,6 +2,8 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Models\Application;
+
 /**
  * Homepage — a start page for the services on a server.
  *
@@ -40,5 +42,23 @@ class HomepageSiteType extends AbstractDockerAppType
         return [
             'config' => '/app/config',
         ];
+    }
+
+    /**
+     * Homepage refuses a request whose Host header it was not told about:
+     *
+     *   error: Host validation failed for: homepage.example.com.
+     *   Hint: Set the HOMEPAGE_ALLOWED_HOSTS environment variable
+     *
+     * It answers with a 400 rather than failing to start, so the container looks
+     * healthy and the site is unusable — which is why this was only found by
+     * opening it. Every site the panel creates is reached through nginx on its own
+     * domain, so the domain is exactly what belongs here.
+     *
+     * @return array<string, string>
+     */
+    public function environment(Application $application): array
+    {
+        return ['HOMEPAGE_ALLOWED_HOSTS' => (string) $application->domain];
     }
 }
