@@ -1,5 +1,4 @@
 import { useFormatter, useNow, useTranslations } from "next-intl";
-import { Pause } from "lucide-react";
 import { serverTimeToEpoch } from "@/lib/cron-jobs/schedule";
 import { useScheduleText } from "@/components/cron-jobs/schedule-preview";
 import { cn } from "@/lib/utils";
@@ -43,14 +42,15 @@ export function CronjobName({ job }) {
   const t = useTranslations("cronJobs");
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <span className="font-medium">{job.name}</span>
+      {/* Wraps, even inside a word: a 255-character name with no spaces made
+          the table 2,700px wide and pushed ⋯ off the screen. */}
+      <span className="max-w-56 font-medium whitespace-normal [overflow-wrap:anywhere]">{job.name}</span>
       {/* Paused is the exception worth calling out — without a badge the only
           signal is a switch position you have to look for. */}
       {!job.active ? (
-        // Amber like a paused application: nothing is broken, but it must be
-        // seen at a glance — the quiet outline style read as part of the name.
-        <Badge variant="warning">
-          <Pause aria-hidden="true" />
+        // Amber like a paused application, and the same size: nothing is
+        // broken, but it must be seen at a glance.
+        <Badge variant="warning" className="font-normal">
           {t("paused")}
         </Badge>
       ) : null}
@@ -70,8 +70,9 @@ export function CronjobSchedule({ job, presets = [] }) {
   // would be a false claim about a preset schedule.
   return label ? (
     <div className="flex flex-col gap-0.5">
-      {/* A sentence wraps; only the short preset names stay on one line. */}
-      <span className={preset ? "whitespace-nowrap" : "max-w-44"}>{label}</span>
+      {/* A sentence wraps (table cells default to nowrap, which ran it into
+          the next column); only the short preset names stay on one line. */}
+      <span className={preset ? "whitespace-nowrap" : "max-w-44 whitespace-normal"}>{label}</span>
       <span className="font-mono text-xs text-muted-foreground">{job.expression}</span>
     </div>
   ) : (
@@ -99,7 +100,9 @@ export function CronjobNextRun({ job }) {
   // timezone while the page subtitle claims the server's.
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="whitespace-nowrap">{human}</span>
+      {/* The server renders this a moment before the browser takes over, so
+          "in 19 seconds" can hydrate as "in 18 seconds". Expected, not a bug. */}
+      <span className="whitespace-nowrap" suppressHydrationWarning>{human}</span>
       <span className="whitespace-nowrap text-xs text-muted-foreground">{at}</span>
     </div>
   );
@@ -118,6 +121,12 @@ export function CronjobRunAs({ job }) {
       ) : null}
     </div>
   );
+}
+
+// Headers may take two lines: "ВЫПОЛНЯЕТСЯ ОТ ИМЕНИ" on one line made the
+// Russian table 97px wider than the screen at 1280 and hid the ⋯ column.
+function Head({ children }) {
+  return <span className="block whitespace-normal">{children}</span>;
 }
 
 function NameCell({ row }) {
@@ -156,11 +165,11 @@ function CommandCell({ row }) {
 }
 
 function ActiveCell({ row, table }) {
-  return <CronjobActiveSwitch job={row.original} canManage={table.options.meta.canManage} />;
+  return <CronjobActiveSwitch job={row.original} canManage={table.options.meta.canManage} prevPage={table.options.meta.prevPage} />;
 }
 
 function ActionsCell({ row, table }) {
-  const { schedulePresets, commandPresets, applications, placeholder, timezone, onDuplicate, runAs } =
+  const { schedulePresets, commandPresets, applications, placeholder, timezone, onDuplicate, runAs, prevPage } =
     table.options.meta;
   return (
     <CronjobRowActions
@@ -172,6 +181,7 @@ function ActionsCell({ row, table }) {
       timezone={timezone}
       onDuplicate={onDuplicate}
       runAs={runAs}
+      prevPage={prevPage}
     />
   );
 }
@@ -179,6 +189,7 @@ function ActionsCell({ row, table }) {
 export function CronjobsTable({
   data,
   runAs,
+  prevPage = null,
   canManage = false,
   schedulePresets = [],
   commandPresets = [],
@@ -190,8 +201,8 @@ export function CronjobsTable({
   const t = useTranslations("cronJobs");
 
   const columns = [
-    { accessorKey: "name", header: t("columns.name"), cell: NameCell },
-    { accessorKey: "expression", header: t("columns.schedule"), cell: ScheduleCell },
+    { accessorKey: "name", header: () => <Head>{t("columns.name")}</Head>, cell: NameCell },
+    { accessorKey: "expression", header: () => <Head>{t("columns.schedule")}</Head>, cell: ScheduleCell },
     {
       accessorKey: "next_run_at",
       /*
@@ -204,12 +215,12 @@ export function CronjobsTable({
        * noise; a column header is exactly the place a table states the unit of
        * the values beneath it, once.
        */
-      header: timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun"),
+      header: () => <Head>{timezone ? t("columns.nextRunIn", { timezone }) : t("columns.nextRun")}</Head>,
       cell: NextRunCell,
     },
-    { accessorKey: "username", header: t("columns.runAs"), cell: RunAsCell },
-    { accessorKey: "command", header: t("columns.command"), cell: CommandCell },
-    { id: "active", header: t("columns.active"), cell: ActiveCell },
+    { accessorKey: "username", header: () => <Head>{t("columns.runAs")}</Head>, cell: RunAsCell },
+    { accessorKey: "command", header: () => <Head>{t("columns.command")}</Head>, cell: CommandCell },
+    { id: "active", header: () => <Head>{t("columns.active")}</Head>, cell: ActiveCell },
     ...(canManage
       ? [
           {
@@ -237,6 +248,7 @@ export function CronjobsTable({
           timezone={timezone}
           onDuplicate={onDuplicate}
           runAs={runAs}
+          prevPage={prevPage}
         />
       </div>
       <div className="hidden xl:block">
@@ -252,6 +264,7 @@ export function CronjobsTable({
             timezone,
             onDuplicate,
             runAs,
+            prevPage,
           }}
           emptyMessage={t("empty.title")}
           // De-emphasise the row's text, not the controls: the switch and actions

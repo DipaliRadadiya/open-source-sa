@@ -23,6 +23,7 @@ import {
  */
 export function CronjobsCards({
   runAs,
+  prevPage = null,
   jobs,
   canManage = false,
   schedulePresets = [],
@@ -62,6 +63,7 @@ export function CronjobsCards({
                   timezone={timezone}
                   onDuplicate={onDuplicate}
                   runAs={runAs}
+                  prevPage={prevPage}
                 />
               </div>
             ) : null}
@@ -86,7 +88,7 @@ export function CronjobsCards({
               </div>
             </CardFact>
             <CardFact label={t("columns.active")}>
-              <CronjobActiveSwitch job={job} canManage={canManage} />
+              <CronjobActiveSwitch job={job} canManage={canManage} prevPage={prevPage} />
             </CardFact>
           </CardFacts>
         </CardListItem>

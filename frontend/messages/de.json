@@ -1039,14 +1039,15 @@
       "alreadyGone": "„{name}“ war bereits entfernt."
     },
     "paused": "Pausiert",
+    "activeFor": "Aktiv: {name}",
     "duplicateName": "{name} (Kopie)",
     "loadFailed": "Ihre Cronjobs konnten nicht geladen werden. Sie wurden nicht geändert oder entfernt.",
     "noPermission": "Ihre Rolle enthält nicht „Cronjob“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
     "preview": {
       "everyMinute": "jede Minute",
       "everyMinutes": "{n, plural, one {jede Minute} other {alle # Minuten}}",
-      "hourly": "{minute, plural, =0 {jede volle Stunde} one {stündlich, # Minute nach der vollen Stunde} other {stündlich, # Minuten nach der vollen Stunde}}",
-      "everyHours": "{n, plural, one {stündlich} other {alle # Stunden}}, {minute, plural, =0 {zur vollen Stunde} one {# Minute nach der vollen Stunde} other {# Minuten nach der vollen Stunde}}",
+      "hourly": "stündlich ({examples}, …)",
+      "everyHours": "{n, plural, one {stündlich} other {alle # Stunden}} ({examples}, …)",
       "everyBetween": "{n, plural, one {jede Minute} other {alle # Minuten}} von {from} bis {to}",
       "at": "um {times}",
       "everyDay": "jeden Tag",

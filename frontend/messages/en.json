@@ -1039,14 +1039,15 @@
       "alreadyGone": "\"{name}\" had already been removed."
     },
     "paused": "Paused",
+    "activeFor": "Active: {name}",
     "duplicateName": "{name} (copy)",
     "loadFailed": "Your cron jobs could not be loaded. They have not been changed or removed.",
     "noPermission": "Your role does not include Cronjob with Manage access. Ask an administrator to grant it.",
     "preview": {
       "everyMinute": "every minute",
       "everyMinutes": "{n, plural, one {every minute} other {every # minutes}}",
-      "hourly": "{minute, plural, =0 {every hour, on the hour} one {every hour, # minute past the hour} other {every hour, # minutes past the hour}}",
-      "everyHours": "{n, plural, one {every hour} other {every # hours}}, {minute, plural, =0 {on the hour} one {# minute past the hour} other {# minutes past the hour}}",
+      "hourly": "every hour ({examples}, …)",
+      "everyHours": "{n, plural, one {every hour} other {every # hours}} ({examples}, …)",
       "everyBetween": "{n, plural, one {every minute} other {every # minutes}} from {from} to {to}",
       "at": "at {times}",
       "everyDay": "every day",

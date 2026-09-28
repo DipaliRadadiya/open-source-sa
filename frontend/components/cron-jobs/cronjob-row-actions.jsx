@@ -22,6 +22,7 @@ export function CronjobRowActions({
   timezone,
   onDuplicate,
   runAs,
+  prevPage = null,
 }) {
   const t = useTranslations("cronJobs");
   const [editOpen, setEditOpen] = useState(false);
@@ -105,7 +106,7 @@ export function CronjobRowActions({
           systemUsersFailed={runAs?.failed}
         />
       ) : null}
-      <DeleteCronjobDialog job={job} open={delOpen} onOpenChange={setDelOpen} />
+      <DeleteCronjobDialog job={job} open={delOpen} onOpenChange={setDelOpen} prevPage={prevPage} />
     </div>
   );
 }

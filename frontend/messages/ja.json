@@ -1039,14 +1039,15 @@
       "alreadyGone": "\"{name}\" はすでに削除されていました。"
     },
     "paused": "一時停止中",
+    "activeFor": "有効: {name}",
     "duplicateName": "{name}(コピー)",
     "loadFailed": "cron ジョブを読み込めませんでした。ジョブの変更や削除は行われていません。",
     "noPermission": "現在のロールには Cronjob の管理権限が含まれていません。管理者に権限の付与を依頼してください。",
     "preview": {
       "everyMinute": "毎分",
       "everyMinutes": "{n, plural, other {# 分ごと}}",
-      "hourly": "{minute, plural, other {毎時 # 分}}",
-      "everyHours": "{n, plural, other {# 時間ごと}}、{minute, plural, other {# 分}}",
+      "hourly": "毎時 ({examples}、…)",
+      "everyHours": "{n, plural, other {# 時間ごと}} ({examples}、…)",
       "everyBetween": "{from}〜{to} の間 {n, plural, =1 {毎分} other {# 分ごと}}",
       "at": "{times}",
       "everyDay": "毎日",

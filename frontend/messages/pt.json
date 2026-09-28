@@ -1039,14 +1039,15 @@
       "alreadyGone": "\"{name}\" já tinha sido excluído."
     },
     "paused": "Em pausa",
+    "activeFor": "Ativa: {name}",
     "duplicateName": "{name} (cópia)",
     "loadFailed": "Não foi possível carregar seus cron jobs. Eles não foram alterados nem removidos.",
     "noPermission": "Seu papel não inclui Cronjob com acesso de Gerenciamento. Peça a um administrador para concedê-lo.",
     "preview": {
       "everyMinute": "a cada minuto",
       "everyMinutes": "{n, plural, one {a cada minuto} other {a cada # minutos}}",
-      "hourly": "{minute, plural, =0 {a cada hora, em ponto} other {a cada hora, no minuto #}}",
-      "everyHours": "{n, plural, one {a cada hora} other {a cada # horas}}, {minute, plural, =0 {em ponto} other {no minuto #}}",
+      "hourly": "a cada hora ({examples}, …)",
+      "everyHours": "{n, plural, one {a cada hora} other {a cada # horas}} ({examples}, …)",
       "everyBetween": "{n, plural, one {a cada minuto} other {a cada # minutos}} das {from} às {to}",
       "at": "às {times}",
       "everyDay": "todo dia",

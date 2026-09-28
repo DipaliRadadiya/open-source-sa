@@ -1039,14 +1039,15 @@
       "alreadyGone": "\"{name}\" ya se había eliminado."
     },
     "paused": "Pausada",
+    "activeFor": "Activa: {name}",
     "duplicateName": "{name} (copia)",
     "loadFailed": "No se pudieron cargar tus tareas cron. No se han modificado ni eliminado.",
     "noPermission": "Tu rol no incluye Cron con acceso de gestión. Pide a un administrador que te lo conceda.",
     "preview": {
       "everyMinute": "cada minuto",
       "everyMinutes": "{n, plural, one {cada minuto} other {cada # minutos}}",
-      "hourly": "{minute, plural, =0 {cada hora, en punto} other {cada hora, en el minuto #}}",
-      "everyHours": "{n, plural, one {cada hora} other {cada # horas}}, {minute, plural, =0 {en punto} other {en el minuto #}}",
+      "hourly": "cada hora ({examples}, …)",
+      "everyHours": "{n, plural, one {cada hora} other {cada # horas}} ({examples}, …)",
       "everyBetween": "{n, plural, one {cada minuto} other {cada # minutos}} de {from} a {to}",
       "at": "a las {times}",
       "everyDay": "cada día",

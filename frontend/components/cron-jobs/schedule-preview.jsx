@@ -22,7 +22,8 @@ export function useScheduleText(expression, timezone) {
   if (!cron) return null;
 
   const time = ([h, m]) =>
-    format.dateTime(new Date(Date.UTC(2000, 0, 1, h, m)), { ...UTC, hour: "numeric", minute: "2-digit" });
+    // Kept whole so "12:00" and "AM" never land on different lines.
+    format.dateTime(new Date(Date.UTC(2000, 0, 1, h, m)), { ...UTC, hour: "numeric", minute: "2-digit" }).replace(/\s/g, "\u00a0");
   // 2 January 2000 was a Sunday, so day d of that week is weekday d.
   const weekday = (d) => format.dateTime(new Date(Date.UTC(2000, 0, 2 + d)), { ...UTC, weekday: "long" });
   const month = (m) => format.dateTime(new Date(Date.UTC(2000, m - 1, 1)), { ...UTC, month: "long" });
@@ -34,8 +35,11 @@ export function useScheduleText(expression, timezone) {
     const timeText = {
       everyMinute: () => t("everyMinute"),
       everyMinutes: () => t("everyMinutes", { n: d.time.n }),
-      hourly: () => t("hourly", { minute: d.time.minute }),
-      everyHours: () => t("everyHours", { n: d.time.n, minute: d.time.minute }),
+      // Example times, not "on the hour" / "past the hour": idioms that had to
+      // be decoded, where 12:00 AM, 1:00 AM, 2:00 AM cannot be misread.
+      hourly: () => t("hourly", { examples: [0, 1, 2].map((h) => time([h, d.time.minute])).join(", ") }),
+      everyHours: () =>
+        t("everyHours", { n: d.time.n, examples: [0, 1, 2].map((i) => time([i * d.time.n, d.time.minute])).join(", ") }),
       everyBetween: () => t("everyBetween", { n: d.time.n, from: time(d.time.from), to: time(d.time.to) }),
       at: () => t("at", { times: list(d.time.times.map(time)) }),
     }[d.time.kind]();

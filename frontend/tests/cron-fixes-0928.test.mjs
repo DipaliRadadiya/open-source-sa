@@ -85,7 +85,7 @@ test("CJ-6 + preview + badge + hint", () => {
   assert.match(f, /data-error=\{selectInvalid\}/);
   assert.match(f, /<FormControl aria-invalid=\{selectInvalid\}>/);
   assert.match(f, /showRawField \? <SchedulePreview expression=\{expression\} timezone=\{timezone\} \/> : null/);
-  assert.match(read("components/cron-jobs/cronjobs-table.jsx"), /<Badge variant="warning">\s*<Pause/);
+  assert.match(read("components/cron-jobs/cronjobs-table.jsx"), /<Badge variant="warning" className="font-normal">\s*\{t\("paused"\)\}/);
   assert.match(read("components/cron-jobs/command-field.jsx"), /t\.rich\("form\.commandHint"/);
 });
 
@@ -108,4 +108,31 @@ test("CJ-B2/B3 guard: the form refuses what Linux cron cannot read", async () =>
   for (const e of ["0 0 2 * *", "*/10 9-17 * * mon-fri", "15 3 * jan,jul sun", "0 0 1,15 * *", "5/15 * * * *", "@weekly"]) assert.equal(err(e), undefined, e);
   assert.equal(err("* * * *"), "cronExpression");
   assert.equal(parseCron("0 0 ? * *"), null);
+});
+
+test("next run countdown does not trip a hydration error", () => {
+  assert.match(read("components/cron-jobs/cronjobs-table.jsx"), /<span className="whitespace-nowrap" suppressHydrationWarning>\{human\}<\/span>/);
+});
+
+test("round 2: hourly wording shows example times, sentences wrap, rows keyed by id, last row leaves to the previous page", () => {
+  const en = JSON.parse(read("messages/en.json")).cronJobs.preview;
+  assert.equal(en.hourly, "every hour ({examples}, …)");
+  assert.doesNotMatch(JSON.stringify(en), /on the hour|past the hour/);
+  const table = read("components/cron-jobs/cronjobs-table.jsx");
+  assert.match(table, /"max-w-44 whitespace-normal"/);
+  const dt = read("components/ui/data-table.jsx");
+  assert.match(dt, /getRowId: rowId \?\? \(\(row\) => String\(row\.id\)\)/);
+  assert.match(dt, /new Set\(data\.map\(\(row\) => row\.id\)\)\.size === data\.length/);
+  assert.match(read("hooks/use-refresh.js"), /navigateThen: \(updates, fn\) =>/);
+  assert.match(read("components/cron-jobs/cronjobs-panel.jsx"), /prevPage=\{cronjobs\.length === 1 && meta\.current_page > 1 \? meta\.current_page - 1 : null\}/);
+  assert.match(read("components/cron-jobs/delete-cronjob-dialog.jsx"), /if \(prevPage\) navigateThen\(/);
+  assert.match(read("components/cron-jobs/cronjob-active-switch.jsx"), /statusFilter !== null && statusFilter !== String\(next\)/);
+});
+
+test("deep pass: switch keeps focus while saving, each switch named, long names wrap", () => {
+  const ps = read("components/ui/pending-switch.jsx");
+  assert.match(ps, /disabled=\{disabled\}/);
+  assert.match(ps, /onCheckedChange=\{pending \? undefined : onCheckedChange\}/);
+  assert.match(read("components/cron-jobs/cronjob-active-switch.jsx"), /aria-label=\{t\("activeFor", \{ name: job\.name \}\)\}/);
+  assert.match(read("components/cron-jobs/cronjobs-table.jsx"), /\[overflow-wrap:anywhere\]">\{job\.name\}/);
 });

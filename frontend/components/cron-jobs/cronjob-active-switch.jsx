@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { setCronjobActive } from "@/lib/api/cronjobs";
@@ -8,9 +9,10 @@ import { useRefresh } from "@/hooks/use-refresh";
 
 // Inline pause/resume. Deactivating removes the cron.d file server-side but
 // keeps the row, so it's reversible — no confirmation needed either way.
-export function CronjobActiveSwitch({ job, canManage = true }) {
+export function CronjobActiveSwitch({ job, canManage = true, prevPage = null }) {
   const t = useTranslations("cronJobs");
-  const { refresh, refreshThen } = useRefresh();
+  const { refresh, refreshThen, navigateThen } = useRefresh();
+  const statusFilter = useSearchParams().get("active");
   const [busy, setBusy] = useState(false);
   // The value we asked for, until the server agrees with it.
   const [asked, setAsked] = useState(null);
@@ -32,10 +34,15 @@ export function CronjobActiveSwitch({ job, canManage = true }) {
       await setCronjobActive(job.id, next);
       // Said once the row shows it: the Paused badge and the next run change
       // with the refresh, and a toast ahead of them read as a claim not yet true.
-      refreshThen(() => {
+      const after = () => {
         toast.success(next ? t("toast.resumed") : t("toast.paused"));
         setBusy(false);
-      });
+      };
+      // Switched out of the status filter as the page's only row: the page it
+      // leaves is empty, so go to the one before instead of redirecting there.
+      const leavesPage = prevPage && statusFilter !== null && statusFilter !== String(next);
+      if (leavesPage) navigateThen({ page: prevPage > 1 ? prevPage : undefined }, after);
+      else refreshThen(after);
     } catch (error) {
       // Put the knob back where it was: the change did not happen.
       setAsked(null);
@@ -58,7 +65,8 @@ export function CronjobActiveSwitch({ job, canManage = true }) {
       // mid-request, and "your role does not include…" would be a lie.
       disabledReason={canManage ? undefined : t("noPermission")}
       onCheckedChange={canManage ? onToggle : undefined}
-      aria-label={t("columns.active")}
+      // Every row's switch was just "Active": a screen reader could not say whose.
+      aria-label={t("activeFor", { name: job.name })}
     />
   );
 }

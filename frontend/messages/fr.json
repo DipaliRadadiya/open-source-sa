@@ -1039,14 +1039,15 @@
       "alreadyGone": "« {name} » avait déjà été supprimée."
     },
     "paused": "En pause",
+    "activeFor": "Active : {name}",
     "duplicateName": "{name} (copie)",
     "loadFailed": "Vos tâches cron n'ont pas pu être chargées. Elles n'ont pas été modifiées ni supprimées.",
     "noPermission": "Votre rôle n'inclut pas les tâches cron avec l'accès Manage. Demandez à un administrateur de l'accorder.",
     "preview": {
       "everyMinute": "toutes les minutes",
       "everyMinutes": "{n, plural, one {toutes les minutes} other {toutes les # minutes}}",
-      "hourly": "{minute, plural, =0 {toutes les heures pile} other {toutes les heures, à la minute #}}",
-      "everyHours": "{n, plural, one {toutes les heures} other {toutes les # heures}}, {minute, plural, =0 {pile} other {à la minute #}}",
+      "hourly": "toutes les heures ({examples}, …)",
+      "everyHours": "{n, plural, one {toutes les heures} other {toutes les # heures}} ({examples}, …)",
       "everyBetween": "{n, plural, one {toutes les minutes} other {toutes les # minutes}} de {from} à {to}",
       "at": "à {times}",
       "everyDay": "tous les jours",

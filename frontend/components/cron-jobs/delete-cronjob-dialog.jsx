@@ -10,19 +10,22 @@ import { useRefresh } from "@/hooks/use-refresh";
 // No type-the-name gate here (unlike system users): deleting a cron job removes
 // a schedule, not an account and its data, and it's re-creatable from the row's
 // own values. The confirm step alone is proportionate.
-export function DeleteCronjobDialog({ job, open, onOpenChange }) {
+export function DeleteCronjobDialog({ job, open, onOpenChange, prevPage = null }) {
   const t = useTranslations("cronJobs");
-  const { refreshThen } = useRefresh();
+  const { refreshThen, navigateThen } = useRefresh();
   const [pending, setPending] = useState(false);
 
   async function onConfirm() {
     setPending(true);
-    const done = (say) =>
-      refreshThen(() => {
+    const done = (say) => {
+      const after = () => {
         say();
         onOpenChange?.(false);
         setPending(false);
-      });
+      };
+      if (prevPage) navigateThen({ page: prevPage > 1 ? prevPage : undefined }, after);
+      else refreshThen(after);
+    };
     try {
       await deleteCronjob(job.id);
       done(() => toast.success(t("toast.deleted")));

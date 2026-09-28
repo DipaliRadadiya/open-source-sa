@@ -1039,14 +1039,15 @@
       "alreadyGone": "\"{name}\" पहले ही हटाई जा चुकी थी।"
     },
     "paused": "रुकी हुई",
+    "activeFor": "सक्रिय: {name}",
     "duplicateName": "{name} (प्रतिलिपि)",
     "loadFailed": "आपके क्रॉन जॉब लोड नहीं हो सके। उन्हें बदला या हटाया नहीं गया है।",
     "noPermission": "आपकी भूमिका में क्रॉनजॉब का Manage एक्सेस नहीं है। इसे देने के लिए किसी एडमिन से कहें।",
     "preview": {
       "everyMinute": "हर मिनट",
       "everyMinutes": "{n, plural, one {हर मिनट} other {हर # मिनट}}",
-      "hourly": "{minute, plural, =0 {हर घंटे, घंटे की शुरुआत में} other {हर घंटे, # मिनट पर}}",
-      "everyHours": "{n, plural, one {हर घंटे} other {हर # घंटे}}, {minute, plural, =0 {घंटे की शुरुआत में} other {# मिनट पर}}",
+      "hourly": "हर घंटे ({examples}, …)",
+      "everyHours": "{n, plural, one {हर घंटे} other {हर # घंटे}} ({examples}, …)",
       "everyBetween": "{from} से {to} तक {n, plural, one {हर मिनट} other {हर # मिनट}}",
       "at": "{times} पर",
       "everyDay": "हर दिन",

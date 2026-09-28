@@ -111,6 +111,7 @@ export function DataTable({
   const sortParam = useSearchParams().get("sort");
   const [sorting, setSorting] = useState(defaultSorting);
   const selectable = rowSelection !== undefined && onRowSelectionChange !== undefined;
+  const idsUnique = data.every((row) => row?.id != null) && new Set(data.map((row) => row.id)).size === data.length;
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table's useReactTable is a known false positive for the React Compiler lint
   const table = useReactTable({
     data,
@@ -138,9 +139,13 @@ export function DataTable({
           state: { ...(sortable ? { sorting } : null), rowSelection },
           onRowSelectionChange,
           enableRowSelection: true,
-          ...(rowId ? { getRowId: rowId } : null),
         }
       : null),
+    // Rows keyed by the record, not its position. Keyed by index, a row that
+    // left the list (a job switched out of the "Paused" filter) handed its
+    // cell state — a switch's pending value, an open menu — to whichever row
+    // moved up into its place.
+    ...(rowId || idsUnique ? { getRowId: rowId ?? ((row) => String(row.id)) } : null),
   });
 
   return (

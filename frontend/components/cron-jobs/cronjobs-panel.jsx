@@ -154,6 +154,9 @@ export function CronjobsPanel({
         <CronjobsTable
           data={cronjobs}
           runAs={{ users: systemUsers, failed: systemUsersFailed }}
+          // The page to land on when this page's only row leaves it (deleted,
+          // or switched out of the status filter); null when a refresh will do.
+          prevPage={cronjobs.length === 1 && meta.current_page > 1 ? meta.current_page - 1 : null}
           canManage={canManage}
           schedulePresets={schedulePresets}
           commandPresets={commandPresets}

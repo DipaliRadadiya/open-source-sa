@@ -68,5 +68,20 @@ export function useRefresh() {
       after.current = fn;
       refresh();
     },
+    /*
+     * Same, but lands on a different page of the list. For the last row of a
+     * page leaving it: a refresh re-renders the now-empty page, the server
+     * redirects to the previous one, and the reader watched the loading
+     * screen in between. Going straight there has nothing to redirect.
+     */
+    navigateThen: (updates, fn) => {
+      if (!nav) {
+        refresh();
+        fn();
+        return;
+      }
+      after.current = fn;
+      nav.setQuery(updates);
+    },
   };
 }
