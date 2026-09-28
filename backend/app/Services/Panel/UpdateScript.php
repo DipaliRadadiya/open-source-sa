@@ -118,6 +118,7 @@ class UpdateScript
         $healthUrl = rtrim((string) config('app.url'), '/').'/api/health';
 
         $run = $dryRun ? 'echo DRY-RUN: ' : '';
+        $forwardOnly = ForwardOnlyGuard::script($git, $tag, $rollbackTo);
 
         // Build steps run as the panel's own account, never as root.
         //
@@ -232,12 +233,7 @@ class UpdateScript
         # older code. The API prevents that now, and this second guard closes
         # the race between checking and executing.
         note fetch_release
-        {$run}{$git} fetch --depth 1 origin refs/tags/{$tag}:refs/tags/{$tag}
-        if {$git} merge-base --is-ancestor {$tag} {$rollbackTo}; then
-            echo "Refusing update: {$tag} is already contained in current commit {$rollbackTo}."
-            finish failed target_not_newer
-            exit 1
-        fi
+        {$forwardOnly}
 
         note maintenance_on
         {$asUser}{$php} {$backend}/artisan down --retry=60

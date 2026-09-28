@@ -81,7 +81,6 @@ class ReleaseUpdateScript
         $php = $this->phpBinary->path();
         $user = (string) config('panel_update.app_user');
         $node = (string) config('panel_update.node_bin_dir');
-        $currentCommit = escapeshellarg((string) $update->from_commit);
         $git = sprintf(
             'git -c %s -C %s',
             escapeshellarg('safe.directory='.$repository),
@@ -100,6 +99,7 @@ class ReleaseUpdateScript
         $liveBackend = $this->layout->currentLink().'/backend';
 
         $run = $dryRun ? 'echo DRY-RUN: ' : '';
+        $forwardOnly = ForwardOnlyGuard::script($git, $tag, (string) $update->from_commit);
         $asUser = $dryRun ? 'echo DRY-RUN: ' : "sudo -u {$user} -H ";
 
         $health = rtrim((string) config('app.url'), '/');
@@ -193,12 +193,7 @@ class ReleaseUpdateScript
         {$asUser}{$php} {$liveBackend}/artisan panel:backup-database
 
         note create_release
-        {$run}{$git} fetch --depth 1 origin refs/tags/{$tag}:refs/tags/{$tag}
-        if {$git} merge-base --is-ancestor {$tag} {$currentCommit}; then
-            echo "Refusing update: {$tag} is already contained in current commit {$currentCommit}."
-            finish failed target_not_newer
-            exit 1
-        fi
+        {$forwardOnly}
         {$this->releases->create($repository, $tag, $release)}
 
         note link_shared
