@@ -243,6 +243,12 @@ return [
         'incomplete' => '最後のデプロイは新しいコードを配置した後に失敗しました。そのため、サイトは完全にはデプロイされていないコミット :commit で動作しています。問題を修正して再度デプロイしてください。',
     ],
 
+    // A delivery for a site whose deploy-on-push is switched off. See
+    // ApplicationWebhookController::receive().
+    'webhook_delivery' => [
+        'disabled' => 'このサイトではパネルでプッシュ時のデプロイがオフになっているため、何もデプロイされませんでした。パネルで再度オンにするか、この Webhook を削除してください。',
+    ],
+
     // Why deploy-on-push still needs the webhook added by hand. See
     // WebhookRegistrar.
     'webhook_registration' => [

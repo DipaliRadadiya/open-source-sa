@@ -243,6 +243,12 @@ return [
         'incomplete' => 'Последний деплой завершился ошибкой уже после того, как новый код был выложен, поэтому сайт работает на коммите :commit, который развёрнут не полностью. Исправьте проблему и выполните деплой снова.',
     ],
 
+    // A delivery for a site whose deploy-on-push is switched off. See
+    // ApplicationWebhookController::receive().
+    'webhook_delivery' => [
+        'disabled' => 'Деплой при push для этого сайта отключён в панели, поэтому ничего не развёрнуто. Включите его снова в панели или удалите этот вебхук.',
+    ],
+
     // Why deploy-on-push still needs the webhook added by hand. See
     // WebhookRegistrar.
     'webhook_registration' => [

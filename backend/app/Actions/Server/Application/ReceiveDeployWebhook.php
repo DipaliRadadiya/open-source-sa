@@ -30,19 +30,38 @@ class ReceiveDeployWebhook
     ) {}
 
     /**
+     * Whether this delivery really comes from the provider the site's webhook
+     * was set up with: signed (or, for GitLab's legacy scheme, tokened) with
+     * the stored secret.
+     *
+     * Also asked of a site whose deploy-on-push is switched off — the secret
+     * is kept when it is switched off, so an authentic delivery can be told
+     * "this is off" while anyone else still gets the plain 404.
+     */
+    public function authentic(Request $request, Application $application): bool
+    {
+        $secret = (string) $application->webhook_secret;
+        $provider = (string) $application->webhook_provider;
+
+        if ($secret === '' || ! $this->webhooks->supports($provider)) {
+            return false;
+        }
+
+        return $this->webhooks->driver($provider)->verify($request, $secret, $request->getContent());
+    }
+
+    /**
      * @return array{deployed: bool, reason: string}
      */
     public function execute(Request $request, Application $application): array
     {
         $driver = $this->webhooks->driver((string) $application->webhook_provider);
-        $secret = (string) $application->webhook_secret;
-
         // The raw body, before Laravel has looked at it. The signature covers
         // the exact bytes sent, so re-encoding the parsed array — even into
         // JSON that means the same thing — produces a different digest.
         $body = $request->getContent();
 
-        if ($secret === '' || ! $driver->verify($request, $secret, $body)) {
+        if (! $this->authentic($request, $application)) {
             // Deliberately not written to the activity log. A rejected delivery
             // is the one thing an unauthenticated caller can cause at will, and
             // a row per attempt would let them flood the user's own history.

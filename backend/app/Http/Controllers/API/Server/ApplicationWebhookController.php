@@ -61,12 +61,27 @@ class ApplicationWebhookController extends Controller
         string $identifier,
         ReceiveDeployWebhook $receive,
     ): JsonResponse {
-        // A disabled webhook and an identifier that never existed answer
-        // identically: anything else would confirm which applications exist.
         $application = Application::query()
             ->where('webhook_identifier', $identifier)
-            ->where('webhook_enabled', true)
             ->firstOrFail();
+
+        // Deploy-on-push switched off in the panel while the hook still sits
+        // in the repository. A stranger — no valid signature — gets the same
+        // 404 as an identifier that never existed, so this cannot be used to
+        // learn which sites exist. The provider itself is told plainly, so
+        // its delivery log says why nothing deployed instead of "not found".
+        // 410 rather than a 2xx: the provider should count it as failing
+        // (GitLab disables a hook after a few failures), which is right for
+        // a hook nobody wants any more.
+        if (! $application->webhook_enabled) {
+            abort_unless($receive->authentic($request, $application), 404, __('errors/http.not_found'));
+
+            return response()->json([
+                'deployed' => false,
+                'reason' => 'webhook_disabled',
+                'message' => __('application.webhook_delivery.disabled'),
+            ], 410);
+        }
 
         $result = $receive->execute($request, $application);
 

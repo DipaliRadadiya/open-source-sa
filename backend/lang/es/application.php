@@ -243,6 +243,12 @@ return [
         'incomplete' => 'El último despliegue falló después de colocar el código nuevo, así que el sitio está ejecutando el commit :commit, que no está desplegado por completo. Corrige el problema y vuelve a desplegar.',
     ],
 
+    // A delivery for a site whose deploy-on-push is switched off. See
+    // ApplicationWebhookController::receive().
+    'webhook_delivery' => [
+        'disabled' => 'El despliegue al hacer push está desactivado para este sitio en el panel, así que no se desplegó nada. Vuelve a activarlo en el panel o elimina este webhook.',
+    ],
+
     // Why deploy-on-push still needs the webhook added by hand. See
     // WebhookRegistrar.
     'webhook_registration' => [

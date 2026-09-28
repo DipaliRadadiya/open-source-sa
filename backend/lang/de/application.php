@@ -243,6 +243,12 @@ return [
         'incomplete' => 'Das letzte Deployment ist fehlgeschlagen, nachdem der neue Code bereits eingespielt war. Die Website läuft daher mit Commit :commit, der nicht vollständig bereitgestellt ist. Behebe das Problem und deploye erneut.',
     ],
 
+    // A delivery for a site whose deploy-on-push is switched off. See
+    // ApplicationWebhookController::receive().
+    'webhook_delivery' => [
+        'disabled' => 'Deploy bei Push ist für diese Website im Panel ausgeschaltet, deshalb wurde nichts bereitgestellt. Schalte es im Panel wieder ein oder lösche diesen Webhook.',
+    ],
+
     // Why deploy-on-push still needs the webhook added by hand. See
     // WebhookRegistrar.
     'webhook_registration' => [

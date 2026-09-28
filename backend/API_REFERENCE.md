@@ -5891,7 +5891,9 @@ Not a frontend endpoint — documented so it isn't mistaken for a gap. The gener
 
 **Response `401`:** `{"deployed": false, "reason": "invalid_signature"}`
 
-A disabled webhook and an identifier that never existed both answer `404`, identically — anything else would confirm which applications exist.
+**Response `410`** — deploy-on-push is switched off in the panel, and the delivery is **authentic** (valid signature for the stored secret): `{"deployed": false, "reason": "webhook_disabled", "message": "Deploy on push is turned off for this site in the panel…"}`. Nothing is deployed. Meant for the provider's own delivery log, so whoever reads it knows why; a non-2xx on purpose, so the provider counts the hook as failing (GitLab disables it after a few).
+
+A disabled webhook receiving a delivery **without** a valid signature, and an identifier that never existed, both answer `404`, identically — anything else would confirm which applications exist.
 
 ---
 

@@ -243,6 +243,12 @@ return [
         'incomplete' => 'A última implementação falhou depois de o novo código ser colocado, por isso o site está a executar o commit :commit, que não está totalmente implementado. Corrija o problema e implemente novamente.',
     ],
 
+    // A delivery for a site whose deploy-on-push is switched off. See
+    // ApplicationWebhookController::receive().
+    'webhook_delivery' => [
+        'disabled' => 'O deploy ao fazer push está desligado para este site no painel, por isso nada foi implementado. Volte a ligá-lo no painel ou apague este webhook.',
+    ],
+
     // Why deploy-on-push still needs the webhook added by hand. See
     // WebhookRegistrar.
     'webhook_registration' => [

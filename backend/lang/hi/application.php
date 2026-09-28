@@ -243,6 +243,12 @@ return [
         'incomplete' => 'पिछला डिप्लॉय नया कोड लगाए जाने के बाद विफल हुआ, इसलिए साइट कमिट :commit पर चल रही है, जो पूरी तरह डिप्लॉय नहीं हुआ है। समस्या ठीक करें और फिर से डिप्लॉय करें।',
     ],
 
+    // A delivery for a site whose deploy-on-push is switched off. See
+    // ApplicationWebhookController::receive().
+    'webhook_delivery' => [
+        'disabled' => 'इस साइट के लिए पैनल में पुश पर डिप्लॉय बंद है, इसलिए कुछ भी डिप्लॉय नहीं हुआ। पैनल में इसे फिर से चालू करें, या यह वेबहुक हटा दें।',
+    ],
+
     // Why deploy-on-push still needs the webhook added by hand. See
     // WebhookRegistrar.
     'webhook_registration' => [
