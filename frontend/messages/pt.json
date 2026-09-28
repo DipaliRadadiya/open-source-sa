@@ -6377,7 +6377,28 @@
       "removed": "Volume {name} removido.",
       "removeTitle": "Remover o volume {name}?",
       "removeBody": "Isto apaga os dados lá dentro. Neste momento nada o usa, mas um contentor parado pode ainda precisar dele.",
-      "removeBusy": "Um contentor em execução está a usar este volume. Removê-lo apagaria dados que algo ainda está a escrever."
+      "removeBusy": "Um contentor em execução está a usar este volume. Removê-lo apagaria dados que algo ainda está a escrever.",
+      "removeUsedBySites": "Estes sites montam este volume: {sites}. Remova primeiro a montagem — apagá-lo agora destrói os dados que lá guardam."
+    },
+    "attach": {
+      "action": "Ligar um site",
+      "networkTitle": "Ligar um site a {name}",
+      "networkBody": "O site junta-se a esta rede e consegue alcançar pelo nome os outros contentores que lá estão.",
+      "volumeTitle": "Montar {name} num site",
+      "volumeBody": "O site monta este volume num caminho dentro do seu contentor e guarda lá dados entre reconstruções.",
+      "site": "Site",
+      "chooseSite": "Escolha um site",
+      "noSites": "Não há sites em contentor a correr neste servidor.",
+      "alreadyAttached": "{site} (já ligado)",
+      "path": "Caminho dentro do contentor",
+      "pathHint": "Onde o volume aparece dentro do contentor, por exemplo /var/lib/mysql. Não a pasta própria do site.",
+      "attach": "Anexar",
+      "attaching": "Anexando…",
+      "attached": "{name} ligado a {site}.",
+      "failed": "Não foi possível ligar.",
+      "cancel": "Cancelar",
+      "theSite": "o site",
+      "restartWarning": "Isto reescreve a configuração de {site} e recria o seu contentor, por isso o site fica em baixo alguns segundos."
     }
   }
 }

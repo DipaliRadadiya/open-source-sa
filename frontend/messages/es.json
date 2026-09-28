@@ -6377,7 +6377,28 @@
       "removed": "Volumen {name} eliminado.",
       "removeTitle": "¿Eliminar el volumen {name}?",
       "removeBody": "Esto borra los datos que contiene. Ahora mismo nadie lo usa, pero un contenedor detenido puede seguir esperándolo.",
-      "removeBusy": "Un contenedor en ejecución usa este volumen. Eliminarlo borraría datos que algo sigue escribiendo."
+      "removeBusy": "Un contenedor en ejecución usa este volumen. Eliminarlo borraría datos que algo sigue escribiendo.",
+      "removeUsedBySites": "Estos sitios montan este volumen: {sites}. Quita primero el montaje: si lo eliminas ahora, se destruyen los datos que guardan en él."
+    },
+    "attach": {
+      "action": "Conectar un sitio",
+      "networkTitle": "Conectar un sitio a {name}",
+      "networkBody": "El sitio se une a esta red y puede localizar por su nombre a los demás contenedores que hay en ella.",
+      "volumeTitle": "Montar {name} en un sitio",
+      "volumeBody": "El sitio monta este volumen en una ruta dentro de su contenedor y conserva ahí los datos entre reconstrucciones.",
+      "site": "Sitio",
+      "chooseSite": "Elige un sitio",
+      "noSites": "En este servidor no hay sitios en contenedor en ejecución.",
+      "alreadyAttached": "{site} (ya conectado)",
+      "path": "Ruta dentro del contenedor",
+      "pathHint": "Donde aparece el volumen dentro del contenedor, por ejemplo /var/lib/mysql. No la carpeta propia del sitio.",
+      "attach": "Vincular",
+      "attaching": "Vinculando…",
+      "attached": "{name} conectado a {site}.",
+      "failed": "No se ha podido conectar.",
+      "cancel": "Cancelar",
+      "theSite": "el sitio",
+      "restartWarning": "Esto reescribe la configuración de {site} y recrea su contenedor, así que el sitio estará caído unos segundos."
     }
   }
 }

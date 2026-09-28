@@ -6377,7 +6377,28 @@
       "removed": "Volume {name} supprimé.",
       "removeTitle": "Supprimer le volume {name} ?",
       "removeBody": "Cela efface les données qu'il contient. Rien ne l'utilise actuellement, mais un conteneur arrêté peut encore l'attendre.",
-      "removeBusy": "Un conteneur en cours d'exécution utilise ce volume. Le supprimer effacerait des données qu'un processus écrit encore."
+      "removeBusy": "Un conteneur en cours d'exécution utilise ce volume. Le supprimer effacerait des données qu'un processus écrit encore.",
+      "removeUsedBySites": "Ces sites montent ce volume : {sites}. Retirez d'abord le montage — le supprimer maintenant détruit les données qu'ils y conservent."
+    },
+    "attach": {
+      "action": "Rattacher un site",
+      "networkTitle": "Rattacher un site à {name}",
+      "networkBody": "Le site rejoint ce réseau et peut atteindre les autres conteneurs qui s'y trouvent par leur nom.",
+      "volumeTitle": "Monter {name} dans un site",
+      "volumeBody": "Le site monte ce volume à un chemin dans son conteneur et y conserve des données d'une reconstruction à l'autre.",
+      "site": "Site",
+      "chooseSite": "Choisir un site",
+      "noSites": "Aucun site en conteneur ne tourne sur ce serveur.",
+      "alreadyAttached": "{site} (déjà rattaché)",
+      "path": "Chemin dans le conteneur",
+      "pathHint": "Où le volume apparaît dans le conteneur, par exemple /var/lib/mysql. Pas le répertoire propre du site.",
+      "attach": "Attacher",
+      "attaching": "Attachement…",
+      "attached": "{name} rattaché à {site}.",
+      "failed": "Le rattachement a échoué.",
+      "cancel": "Annuler",
+      "theSite": "le site",
+      "restartWarning": "Cela réécrit la configuration de {site} et recrée son conteneur : le site est indisponible quelques secondes."
     }
   }
 }

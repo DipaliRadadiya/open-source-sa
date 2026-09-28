@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Network, HardDrive, Plus, Trash2, Lock } from "lucide-react";
+import { Network, HardDrive, Link2, Plus, Trash2, Lock } from "lucide-react";
 import {
   createDockerNetwork,
   createDockerVolume,
@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { AttachSiteDialog } from "@/components/docker/attach-site-dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -31,12 +32,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
  * worse state than a visible one, so the UI narrows what is offered and the
  * server decides what is allowed.
  */
-export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManage }) {
+export function DockerResourcesPanel({
+  initialNetworks,
+  initialVolumes,
+  sites = [],
+  canManage,
+  canManageSites = false,
+}) {
   const t = useTranslations("docker");
   const router = useRouter();
 
   const [pending, setPending] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  // `{ kind, name }` of the network or volume being attached to a site.
+  const [attaching, setAttaching] = useState(null);
   const [newNetwork, setNewNetwork] = useState("");
   const [newVolume, setNewVolume] = useState("");
 
@@ -182,7 +191,22 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
                         <Lock className="size-3" />
                         {t("networks.builtIn")}
                       </span>
-                    ) : canManage ? (
+                    ) : (
+                      <div className="flex items-center justify-end gap-1">
+                        {/* Attaching writes the SITE's config, so it is gated on
+                            the site permission rather than the Docker one. */}
+                        {canManageSites ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={pending !== null}
+                            aria-label={t("attach.action")}
+                            onClick={() => setAttaching({ kind: "network", name: network.name })}
+                          >
+                            <Link2 className="size-4" />
+                          </Button>
+                        ) : null}
+                        {canManage ? (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -203,7 +227,9 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
                       >
                         <Trash2 className="size-4" />
                       </Button>
-                    ) : null}
+                        ) : null}
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -302,18 +328,39 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
                       )}
                     </TableCell>
                     <TableCell>
-                      {canManage ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={pending !== null}
-                          onClick={() =>
-                            setConfirm({ kind: "volume", name: volume.name, busy: volume.in_use })
-                          }
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      ) : null}
+                      <div className="flex items-center justify-end gap-1">
+                        {canManageSites ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={pending !== null}
+                            aria-label={t("attach.action")}
+                            onClick={() => setAttaching({ kind: "volume", name: volume.name })}
+                          >
+                            <Link2 className="size-4" />
+                          </Button>
+                        ) : null}
+                        {canManage ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={pending !== null}
+                            onClick={() =>
+                              setConfirm({
+                                kind: "volume",
+                                name: volume.name,
+                                busy: volume.in_use,
+                                // Mirrors the endpoint's refusal for a volume a
+                                // stopped site still mounts, where `in_use` is
+                                // false and the data is still in there.
+                                sites: volume.sites.map((site) => site.name),
+                              })
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -341,7 +388,7 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
               ? t(`${confirm.kind}s.removeBusy`)
               : confirm.sites?.length
                 ? // Named, not counted — the site to go and change.
-                  t("networks.removeUsedBySites", { sites: confirm.sites.join(", ") })
+                  t(`${confirm.kind}s.removeUsedBySites`, { sites: confirm.sites.join(", ") })
                 : t(`${confirm.kind}s.removeBody`)
             : ""
         }
@@ -361,6 +408,14 @@ export function DockerResourcesPanel({ initialNetworks, initialVolumes, canManag
           );
           if (ok) setConfirm(null);
         }}
+      />
+
+      <AttachSiteDialog
+        open={attaching !== null}
+        onOpenChange={(open) => !open && setAttaching(null)}
+        kind={attaching?.kind}
+        name={attaching?.name ?? ""}
+        sites={sites}
       />
     </div>
   );

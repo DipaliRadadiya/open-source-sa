@@ -10,7 +10,9 @@ const textField = z.object({
   default: z.unknown().optional(),
   help: z.string().nullish(),
   placeholder: z.string().nullish(),
-  options: z.array(z.object({ value: z.string(), label: z.string() })).default([]),
+  options: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .default([]),
   source: z.string().nullish(),
   depends_on: z.string().nullish(),
   generate: z.boolean().default(false),
@@ -62,37 +64,45 @@ export const siteTypesResponseSchema = z.object({
   site_types: z.array(siteTypeSchema).default([]),
 });
 
-export const systemUserOptionSchema = z.object({
-  id: z.number(),
-  username: z.string(),
-}).passthrough();
+export const systemUserOptionSchema = z
+  .object({
+    id: z.number(),
+    username: z.string(),
+  })
+  .passthrough();
 
 export const systemUsersResponseSchema = z.object({
   system_users: z.array(systemUserOptionSchema).default([]),
   // `ssh_access_enforced`: whether the SSH switch keeps anyone out yet. Null
   // when sshd could not be asked, which is not the same as "no".
-  meta: listMetaSchema.extend({ ssh_access_enforced: z.boolean().nullable().optional() }),
+  meta: listMetaSchema.extend({
+    ssh_access_enforced: z.boolean().nullable().optional(),
+  }),
 });
 
 // Read live from systemd on every request, so it is never stale — and absent
 // entirely unless `has_process`.
-const processSchema = z.object({
-  state: z.string().nullish(),
-  sub_state: z.string().nullish(),
-  since: z.string().nullish(),
-  memory: z.union([z.number(), z.string()]).nullish(),
-  restarts: z.number().nullish(),
-}).passthrough();
+const processSchema = z
+  .object({
+    state: z.string().nullish(),
+    sub_state: z.string().nullish(),
+    since: z.string().nullish(),
+    memory: z.union([z.number(), z.string()]).nullish(),
+    restarts: z.number().nullish(),
+  })
+  .passthrough();
 
-const webhookSchema = z.object({
-  enabled: z.boolean().default(false),
-  provider: z.string().nullish(),
-  url: z.string().nullish(),
-  secret: z.string().nullish(),
-  verification: z.string().nullish(),
-  last_delivered_at: z.string().nullish(),
-  last_delivered_at_human: z.string().nullish(),
-}).passthrough();
+const webhookSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    provider: z.string().nullish(),
+    url: z.string().nullish(),
+    secret: z.string().nullish(),
+    verification: z.string().nullish(),
+    last_delivered_at: z.string().nullish(),
+    last_delivered_at_human: z.string().nullish(),
+  })
+  .passthrough();
 
 /**
  * One thing the server thinks is wrong with a site.
@@ -164,8 +174,19 @@ export const applicationSchema = z.object({
     })
     .nullish(),
   serving_profile: z.string().nullish(),
+  // What a container site is wired to. Declared here as well as on the detail
+  // payload because the Docker page's attach dialog reads the LIST: without
+  // these, Zod strips them and every site looks unattached — so the dialog would
+  // offer to attach a site to the network it is already on.
+  docker_network: z.string().nullish(),
+  volume_mounts: z
+    .array(z.object({ volume: z.string(), path: z.string() }))
+    .nullish()
+    .transform((mounts) => mounts ?? []),
   rendering_type: z.string().nullish(),
-  status: z.enum(["pending", "provisioning", "active", "failed"]).catch("pending"),
+  status: z
+    .enum(["pending", "provisioning", "active", "failed"])
+    .catch("pending"),
   status_title: z.string().nullish(),
   deployed: z.boolean().default(false),
   system_user: systemUserOptionSchema.nullish(),
@@ -266,7 +287,9 @@ export const applicationSchema = z.object({
   waf_categories: z.array(z.string()).default([]),
   waf_exceptions: z.array(z.string()).optional(),
   waf_custom_rules: z.array(z.string()).optional(),
-  last_commit: z.union([z.string(), z.record(z.string(), z.unknown())]).nullish(),
+  last_commit: z
+    .union([z.string(), z.record(z.string(), z.unknown())])
+    .nullish(),
   last_deployed_at: z.string().nullish(),
   last_deployed_at_human: z.string().nullish(),
   steps: z.array(z.string()).default([]),
@@ -406,23 +429,36 @@ export const securityFormSchema = z
   .superRefine((data, ctx) => {
     if (!data.enabled) return;
     if (!data.username.trim()) {
-      ctx.addIssue({ path: ["username"], code: "custom", message: "required_username" });
+      ctx.addIssue({
+        path: ["username"],
+        code: "custom",
+        message: "required_username",
+      });
     } else if (data.username.includes(":")) {
-      ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameColon" });
+      ctx.addIssue({
+        path: ["username"],
+        code: "custom",
+        message: "securityUsernameColon",
+      });
     }
     if (!data.password) {
-      ctx.addIssue({ path: ["password"], code: "custom", message: "required_password" });
+      ctx.addIssue({
+        path: ["password"],
+        code: "custom",
+        message: "required_password",
+      });
     } else if (data.password.length < 8) {
       ctx.addIssue({ path: ["password"], code: "custom", message: "min8" });
     }
   });
 
-const applicationDomainLabel =
-  /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+const applicationDomainLabel = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 /** A hostname only — no protocol, path, query, credentials, or port. */
 export function isValidApplicationDomain(value) {
-  const domain = String(value ?? "").trim().toLowerCase();
+  const domain = String(value ?? "")
+    .trim()
+    .toLowerCase();
   if (
     !domain ||
     domain.length > 253 ||
@@ -433,7 +469,10 @@ export function isValidApplicationDomain(value) {
     return false;
 
   const labels = domain.split(".");
-  return labels.length >= 2 && labels.every((label) => applicationDomainLabel.test(label));
+  return (
+    labels.length >= 2 &&
+    labels.every((label) => applicationDomainLabel.test(label))
+  );
 }
 
 /**
@@ -458,29 +497,38 @@ export function suggestApplicationDomain(value) {
   }
 }
 
-export const createApplicationSchema = z.object({
-  site_type: z.string().min(1, "applicationTypeRequired"),
-  name: z.string().trim().min(1, "applicationNameRequired").max(255, "tooLong"),
-  domain: z
-    .string()
-    .trim()
-    .min(1, "applicationDomainRequired")
-    .max(255, "tooLong")
-    .refine(isValidApplicationDomain, "hostnameInvalid"),
-  // Default true: a dedicated account per site is the right answer often
-  // enough to be the one the form starts on. Turned off for anyone who cannot
-  // create system users — see the form, which cannot offer what the API refuses.
-  generate_system_user: z.boolean().default(true),
-  // Required only when the caller is picking one. `superRefine` rather than a
-  // conditional field, because the message has to land on `system_user_id` —
-  // that is where the control is and where the form scrolls to.
-  system_user_id: z.union([z.coerce.number().int().positive(), z.literal("")]).optional(),
-}).passthrough().superRefine((values, ctx) => {
-  if (!values.generate_system_user && !values.system_user_id) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["system_user_id"],
-      message: "applicationSystemUserRequired",
-    });
-  }
-});
+export const createApplicationSchema = z
+  .object({
+    site_type: z.string().min(1, "applicationTypeRequired"),
+    name: z
+      .string()
+      .trim()
+      .min(1, "applicationNameRequired")
+      .max(255, "tooLong"),
+    domain: z
+      .string()
+      .trim()
+      .min(1, "applicationDomainRequired")
+      .max(255, "tooLong")
+      .refine(isValidApplicationDomain, "hostnameInvalid"),
+    // Default true: a dedicated account per site is the right answer often
+    // enough to be the one the form starts on. Turned off for anyone who cannot
+    // create system users — see the form, which cannot offer what the API refuses.
+    generate_system_user: z.boolean().default(true),
+    // Required only when the caller is picking one. `superRefine` rather than a
+    // conditional field, because the message has to land on `system_user_id` —
+    // that is where the control is and where the form scrolls to.
+    system_user_id: z
+      .union([z.coerce.number().int().positive(), z.literal("")])
+      .optional(),
+  })
+  .passthrough()
+  .superRefine((values, ctx) => {
+    if (!values.generate_system_user && !values.system_user_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["system_user_id"],
+        message: "applicationSystemUserRequired",
+      });
+    }
+  });

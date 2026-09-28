@@ -6377,7 +6377,28 @@
       "removed": "Volume {name} entfernt.",
       "removeTitle": "Volume {name} entfernen?",
       "removeBody": "Damit werden die darin enthaltenen Daten gelöscht. Gerade nutzt es nichts, aber ein gestoppter Container kann es noch erwarten.",
-      "removeBusy": "Ein laufender Container nutzt dieses Volume. Es zu entfernen würde Daten löschen, die gerade geschrieben werden."
+      "removeBusy": "Ein laufender Container nutzt dieses Volume. Es zu entfernen würde Daten löschen, die gerade geschrieben werden.",
+      "removeUsedBySites": "Diese Websites binden dieses Volume ein: {sites}. Entfernen Sie dort zuerst die Einbindung — eine Löschung vernichtet die darin gespeicherten Daten."
+    },
+    "attach": {
+      "action": "Website verbinden",
+      "networkTitle": "Website mit {name} verbinden",
+      "networkBody": "Die Website tritt diesem Netzwerk bei und erreicht die anderen Container darin über ihren Namen.",
+      "volumeTitle": "{name} in eine Website einbinden",
+      "volumeBody": "Die Website bindet dieses Volume unter einem Pfad in ihrem Container ein und behält dort Daten über Neuaufbauten hinweg.",
+      "site": "Website",
+      "chooseSite": "Website auswählen",
+      "noSites": "Auf diesem Server laufen keine Container-Websites.",
+      "alreadyAttached": "{site} (bereits verbunden)",
+      "path": "Pfad innerhalb des Containers",
+      "pathHint": "Wo das Volume im Container erscheint, zum Beispiel /var/lib/mysql. Nicht das eigene Verzeichnis der Website.",
+      "attach": "Verknüpfen",
+      "attaching": "Wird verknüpft…",
+      "attached": "{name} mit {site} verbunden.",
+      "failed": "Verbinden nicht möglich.",
+      "cancel": "Abbrechen",
+      "theSite": "die Website",
+      "restartWarning": "Dies ändert die Konfiguration von {site} und erstellt deren Container neu, die Website ist einige Sekunden nicht erreichbar."
     }
   }
 }

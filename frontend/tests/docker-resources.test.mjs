@@ -116,12 +116,17 @@ test("the delete gate matches the endpoint's second refusal", () => {
   // which is attached to no container. A button whose only outcome is that 409
   // is not a button.
   assert.match(panel, /confirm\?\.sites\?\.length/);
-  assert.match(panel, /networks\.removeUsedBySites/);
+  // One key per resource, chosen from `confirm.kind` — a volume a stopped site
+  // mounts has to refuse too, and it says something different: a network that
+  // goes away breaks a start, a volume that goes away destroys data.
+  assert.match(panel, /\$\{confirm\.kind\}s\.removeUsedBySites/);
   for (const locale of LOCALES) {
-    assert.ok(
-      messages[locale].docker.networks.removeUsedBySites,
-      `${locale} is missing docker.networks.removeUsedBySites`,
-    );
+    for (const resource of ["networks", "volumes"]) {
+      assert.ok(
+        messages[locale].docker[resource].removeUsedBySites,
+        `${locale} is missing docker.${resource}.removeUsedBySites`,
+      );
+    }
   }
 });
 
@@ -271,6 +276,80 @@ test("every volumes-list string exists in every locale", () => {
       Object.keys(messages[locale].applications.container.volumes ?? {}).slice().sort(),
       reference.slice().sort(),
       `${locale} disagrees with en on applications.container.volumes`,
+    );
+  }
+});
+
+/*
+ * Attaching from the Docker page.
+ *
+ * Someone who has just created a network is already on this page and should not
+ * have to go and find the site. Same endpoint as the Container card, so the two
+ * doors cannot disagree about what attaching means.
+ */
+
+const attachDialog = read("components/docker/attach-site-dialog.jsx");
+const dockerPage = read("app/(app)/docker/page.jsx");
+
+test("attaching goes through the same endpoint as the site's own card", () => {
+  // Not a second write path. A `docker network connect` here would be undone by
+  // the site's next deploy, which rebuilds the container from the compose file.
+  assert.match(attachDialog, /updateContainerSettings/);
+  assert.doesNotMatch(attachDialog, /connect/);
+});
+
+test("attaching a volume asks for the path, attaching a network does not", () => {
+  // A volume needs a path inside the container; a network does not. This is the
+  // whole reason the volume create dialog cannot just have a container picker.
+  assert.match(attachDialog, /isVolume \? \(/);
+  assert.match(attachDialog, /pathHint/);
+});
+
+test("a volume attach appends to the site's existing mounts", () => {
+  // Replacing them would silently unmount everything else the site has.
+  assert.match(attachDialog, /\.\.\.\(chosen\.volume_mounts \?\? \[\]\)/);
+});
+
+test("the dialog says the container will be recreated, before the click", () => {
+  assert.match(attachDialog, /restartWarning/);
+  for (const locale of LOCALES) {
+    assert.ok(
+      messages[locale].docker.attach.restartWarning,
+      `${locale} is missing docker.attach.restartWarning`,
+    );
+  }
+});
+
+test("attaching is gated on the site permission, not the docker one", () => {
+  // It writes the SITE's configuration and restarts it, so the permission that
+  // governs it is the one that governs the site.
+  assert.match(dockerPage, /can\(permissions, "application", "manage"\)/);
+  assert.match(panel, /canManageSites \? \(/);
+});
+
+test("only running container sites are offered", () => {
+  // Applying it brings the container up; on a pending site that would be
+  // provisioning it as a side effect of a click on a different screen.
+  assert.match(dockerPage, /serving_profile === "docker"/);
+  assert.match(dockerPage, /status === "active"/);
+});
+
+test("the list schema carries the docker fields, or every site looks unattached", () => {
+  // Zod strips what the schema does not name, and the dialog reads the LIST —
+  // without these it would offer to attach a site to the network it is already
+  // on.
+  const appSchema = read("lib/schemas/application.js");
+  assert.match(appSchema, /docker_network: z\.string\(\)\.nullish\(\)/);
+  assert.match(appSchema, /volume_mounts: z/);
+});
+
+test("every attach string exists in every locale", () => {
+  const reference = Object.keys(messages.en.docker.attach);
+  for (const locale of LOCALES) {
+    assert.deepEqual(
+      Object.keys(messages[locale].docker.attach ?? {}).slice().sort(),
+      reference.slice().sort(),
+      `${locale} disagrees with en on docker.attach`,
     );
   }
 });

@@ -6377,7 +6377,28 @@
       "removed": "Volume {name} removed.",
       "removeTitle": "Remove volume {name}?",
       "removeBody": "This deletes the data inside it. Nothing is using it right now, but a stopped container may still expect it.",
-      "removeBusy": "A running container is using this volume. Removing it would delete data something is still writing to."
+      "removeBusy": "A running container is using this volume. Removing it would delete data something is still writing to.",
+      "removeUsedBySites": "These sites mount this volume: {sites}. Remove the mount from them first — deleting it now destroys the data they keep in it."
+    },
+    "attach": {
+      "action": "Attach a site",
+      "networkTitle": "Attach a site to {name}",
+      "networkBody": "The site joins this network and can reach the other containers on it by name.",
+      "volumeTitle": "Mount {name} into a site",
+      "volumeBody": "The site mounts this volume at a path inside its container, and keeps data there across rebuilds.",
+      "site": "Site",
+      "chooseSite": "Choose a site",
+      "noSites": "No container sites are running on this server.",
+      "alreadyAttached": "{site} (already attached)",
+      "path": "Path inside the container",
+      "pathHint": "Where the volume appears inside the container, for example /var/lib/mysql. Not the site's own directory.",
+      "attach": "Attach",
+      "attaching": "Attaching…",
+      "attached": "{name} attached to {site}.",
+      "failed": "Couldn't attach it.",
+      "cancel": "Cancel",
+      "theSite": "the site",
+      "restartWarning": "This rewrites {site}'s configuration and recreates its container, so the site is down for a few seconds."
     }
   }
 }

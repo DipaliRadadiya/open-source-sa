@@ -3,6 +3,7 @@ import { Container } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getDockerResources } from "@/lib/docker/get-docker";
+import { getAllApplications } from "@/lib/applications/get-applications";
 import { DockerResourcesPanel } from "@/components/docker/docker-resources-panel";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -26,6 +27,22 @@ export default async function DockerPage() {
   const canManage = can(permissions, "docker", "manage");
 
   const { networks, volumes, failed, status, failure, message } = await getDockerResources();
+
+  // The container sites, for attaching one from this page. Only sites that are
+  // actually serving: the endpoint applies the change by rewriting the compose
+  // file and bringing the container up, which on a pending site would be
+  // provisioning it as a side effect of a click on a different screen.
+  //
+  // Gated on `application` manage, not `docker` manage: attaching writes the
+  // SITE's configuration and restarts it, so the permission that governs it is
+  // the one that governs the site.
+  const canManageSites = can(permissions, "application", "manage");
+  const sites = canManageSites
+    ? (await getAllApplications()).applications.filter(
+        (application) =>
+          application.serving_profile === "docker" && application.status === "active",
+      )
+    : [];
 
   return (
     <div className="space-y-6">
@@ -51,7 +68,9 @@ export default async function DockerPage() {
         <DockerResourcesPanel
           initialNetworks={networks}
           initialVolumes={volumes}
+          sites={sites}
           canManage={canManage}
+          canManageSites={canManageSites}
         />
       )}
     </div>
