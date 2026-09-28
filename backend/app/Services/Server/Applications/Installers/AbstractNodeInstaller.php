@@ -81,6 +81,21 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
     }
 
     /**
+     * npm 12 blocks every dependency's install scripts unless the project's
+     * package.json lists it under `allowScripts`, and it does so silently:
+     * the install "succeeds" and ends with a line saying what it skipped. No
+     * app the panel installs has that field, so a native module never gets
+     * built — n8n installed on a server whose npm had been updated from the
+     * Node screen crashed at start with "SQLite package has not been found".
+     *
+     * These installs are the panel's own, of packages it chose, and npm 11
+     * and older ran their scripts unconditionally; this restores exactly
+     * that. npm 11 ignores the variable. A user's own git deploy is not
+     * routed through here and keeps whatever policy its package.json sets.
+     */
+    private const NPM_ENVIRONMENT = ['npm_config_dangerously_allow_all_scripts' => 'true'];
+
+    /**
      * Run a command as the site user with the site's Node first on PATH.
      *
      * `env` rather than a shell: these commands are the panel's own, fixed and
@@ -104,6 +119,10 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
         $path = ($dir === null ? '' : $dir.':').'/usr/local/bin:/usr/bin:/bin';
 
         $prefix = ['env', "PATH={$path}", 'HOME='.$application->systemUser->home_path];
+
+        foreach (self::NPM_ENVIRONMENT as $key => $value) {
+            $prefix[] = "{$key}={$value}";
+        }
 
         foreach ($environment as $key => $value) {
             $prefix[] = "{$key}={$value}";
@@ -154,6 +173,7 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
 
         $script = 'set -a; . '.escapeshellarg($file).'; set +a; '
             .'export PATH='.escapeshellarg($path).':"$PATH"; '
+            .collect(self::NPM_ENVIRONMENT)->map(fn ($value, $key) => 'export '.$key.'='.escapeshellarg($value).'; ')->implode('')
             .'cd '.escapeshellarg($cwd).'; exec '
             .implode(' ', array_map(escapeshellarg(...), $command));
 

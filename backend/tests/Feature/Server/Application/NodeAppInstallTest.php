@@ -1280,3 +1280,33 @@ it('runs no after-start step for the Node apps that set up their own admin', fun
     'nodered' => NodeRedInstaller::class,
     'nodebb' => NodeBbInstaller::class,
 ]);
+
+it('lets npm 12 run the install scripts of the packages the panel installs', function (string $type) {
+    // npm 12 skips every dependency's install scripts unless package.json
+    // allows them, and says so only in a closing warning. n8n installed on
+    // the Apache test box after an npm update from the Node screen, then
+    // crashed at start: sqlite3's native module had never been built.
+    app(ApplicationProvisioner::class)->provision(oneClickApp($type));
+
+    $install = test()->ran
+        ->map(fn ($process) => implode(' ', (array) $process->command))
+        ->first(fn (string $c) => str_contains($c, 'npm install') || str_contains($c, 'npm run setup'));
+
+    expect($install)->toContain('npm_config_dangerously_allow_all_scripts=true');
+})->with(['n8n', 'nodered', 'uptimekuma']);
+
+it('lets npm 12 run install scripts during NodeBB setup too', function () {
+    // `./nodebb setup` runs npm itself, through the secret-environment path.
+    // Only the setup command matters; the steps after it need a config.json
+    // this fake does not model, so their failure is ignored.
+    rescue(fn () => app(NodeBbInstaller::class)->install(oneClickApp('nodebb'), '/home/apps/nodebb/public_html', [
+        'db_host' => '127.0.0.1', 'db_port' => 27017,
+        'db_user' => 'nodebb', 'db_password' => 'secret', 'database' => 'nodebb',
+    ]), report: false);
+
+    $setup = test()->ran
+        ->map(fn ($process) => implode(' ', (array) $process->command))
+        ->first(fn (string $c) => str_contains($c, './nodebb') && str_contains($c, 'setup'));
+
+    expect($setup)->toContain("export npm_config_dangerously_allow_all_scripts='true';");
+});
