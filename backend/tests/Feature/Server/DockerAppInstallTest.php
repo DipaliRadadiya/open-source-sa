@@ -69,6 +69,15 @@ dataset('docker apps', [
     'nocodb' => ['nocodb', 8080, ['data', 'db']],
     'metabase' => ['metabase', 3000, ['db']],
     'wikijs' => ['wikijs', 3000, ['db']],
+    // Group A: one container each, rendered from the shared template.
+    'vaultwarden' => ['vaultwarden', 80, ['data']],
+    'gitea' => ['gitea', 3000, ['data']],
+    'forgejo' => ['forgejo', 3000, ['data']],
+    'freshrss' => ['freshrss', 80, ['data']],
+    'stirlingpdf' => ['stirlingpdf', 8080, ['data']],
+    'ittools' => ['ittools', 80, []],
+    'glance' => ['glance', 8080, ['config']],
+    'homepage' => ['homepage', 3000, ['config']],
     // Strapi was the intended second app and publishes NO official image —
     // `strapi/strapi` and `strapi/base` are both gone from Docker Hub, and
     // upstream's own guidance is to build your own from a `create-strapi-app`
@@ -84,10 +93,11 @@ it('writes a compose file that parses, for each app', function (string $type, in
     $parsed = Yaml::parse((string) $application->compose);
 
     expect($parsed)->toBeArray()
-        // Every app here is app-plus-database. A single-service app is legitimate
-        // and would need this relaxed — at which point the assertion should come
-        // from the site type rather than being a magic 2.
-        ->and($parsed['services'])->toHaveCount(2)
+        // One service for a Group A app, two for an app with its own database.
+        // Asserted as a range rather than a magic number, and the "exactly one
+        // service publishes a port" test below is what actually pins the shape.
+        ->and(count($parsed['services']))->toBeGreaterThanOrEqual(1)
+        ->and(count($parsed['services']))->toBeLessThanOrEqual(2)
         // The app's own port is published, and the panel's allocated host port
         // is what nginx proxies to.
         ->and($application->container_port)->toBe($port);
@@ -139,6 +149,14 @@ it('records the volumes so the panel owns them', function (string $type, int $po
         expect($names->contains("sv-app-{$application->id}_{$role}"))->toBeTrue("missing volume for {$role}");
     }
 
+    if ($roles === []) {
+        // IT-Tools stores nothing. An empty `volumes:` key is not valid compose,
+        // so the block has to be absent rather than present and empty.
+        expect($parsed)->not->toHaveKey('volumes');
+
+        return;
+    }
+
     foreach ($parsed['volumes'] as $declared) {
         expect($declared['external'] ?? false)->toBeTrue();
     }
@@ -152,7 +170,14 @@ it('generates a different secret for every site', function (string $type, int $p
 
     $keys = app(SiteTypeManager::class)->find($type)->generatedSecrets();
 
-    expect($keys)->not->toBeEmpty();
+    // Group A apps bring no database and so need no credential. That is a real
+    // answer, not an oversight — but an app WITH a database must have secrets, or
+    // its password is a literal in a template.
+    if ($keys === []) {
+        expect(count(Yaml::parse((string) $first->compose)['services']))->toBe(1);
+
+        return;
+    }
 
     foreach ($keys as $key) {
         $a = $first->docker_secrets[$key] ?? null;

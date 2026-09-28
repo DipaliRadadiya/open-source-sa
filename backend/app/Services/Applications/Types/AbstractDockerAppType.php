@@ -2,6 +2,8 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Models\Application;
+
 /**
  * A one-click application that runs as containers.
  *
@@ -32,12 +34,29 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     /**
      * The blade template that renders this app's compose file.
      *
-     * A template per app rather than one template with conditionals: these
-     * files differ in service count, in environment, and in which volume holds
-     * what, and a single view covering all of them would be unreadable long
-     * before the third app.
+     * Defaults to the shared single-container template. An app overrides it when
+     * it has something structural to say — a second service, a database to wire —
+     * which is why Ghost and the rest have their own files and the eight
+     * one-container apps share one.
      */
-    abstract public function composeTemplate(): string;
+    public function composeTemplate(): string
+    {
+        return 'server.docker.apps.simple';
+    }
+
+    /**
+     * Environment this app needs beyond its URL, as key => value.
+     *
+     * Only for values the PANEL knows: a port, a public URL, a mode. Anything the
+     * user has to decide belongs on the Environment screen, and anything secret
+     * belongs in `generatedSecrets()`.
+     *
+     * @return array<string, string>
+     */
+    public function environment(Application $application): array
+    {
+        return [];
+    }
 
     /**
      * The port INSIDE the app's own container, which nginx is proxied to.

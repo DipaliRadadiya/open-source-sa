@@ -3,8 +3,14 @@
 use App\Services\Applications\Types\AkauntingSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\DockerSiteType;
+use App\Services\Applications\Types\ForgejoSiteType;
+use App\Services\Applications\Types\FreshRssSiteType;
 use App\Services\Applications\Types\GhostSiteType;
+use App\Services\Applications\Types\GiteaSiteType;
 use App\Services\Applications\Types\GitSiteType;
+use App\Services\Applications\Types\GlanceSiteType;
+use App\Services\Applications\Types\HomepageSiteType;
+use App\Services\Applications\Types\ItToolsSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
 use App\Services\Applications\Types\MauticSiteType;
 use App\Services\Applications\Types\MetabaseSiteType;
@@ -19,7 +25,9 @@ use App\Services\Applications\Types\PhpSiteType;
 use App\Services\Applications\Types\PrestaShopSiteType;
 use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
+use App\Services\Applications\Types\StirlingPdfSiteType;
 use App\Services\Applications\Types\UptimeKumaSiteType;
+use App\Services\Applications\Types\VaultwardenSiteType;
 use App\Services\Applications\Types\WikiJsSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
@@ -1412,6 +1420,38 @@ return [
             'driver' => DockerAppInstaller::class,
         ],
 
+        'forgejo' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'freshrss' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'gitea' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'glance' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'homepage' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'ittools' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'stirlingpdf' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'vaultwarden' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
         'ghost' => [
             'driver' => DockerAppInstaller::class,
         ],
@@ -1602,6 +1642,45 @@ return [
             'db_image' => env('DOCKER_APP_WIKIJS_DB_IMAGE', 'postgres:16-alpine'),
         ],
 
+        'forgejo' => [
+            // Pinned to a major line: `latest` did not resolve on the registry, and a
+            // one-click that follows a rolling tag moves sites onto a new major
+            // the day it ships.
+            'image' => env('DOCKER_APP_FORGEJO_IMAGE', 'codeberg.org/forgejo/forgejo:9'),
+        ],
+
+        'freshrss' => [
+            'image' => env('DOCKER_APP_FRESHRSS_IMAGE', 'freshrss/freshrss:latest'),
+        ],
+
+        'gitea' => [
+            // Major line, not `latest`: a Gitea major upgrade migrates its database and
+            // is not something a site should do because a tag moved.
+            'image' => env('DOCKER_APP_GITEA_IMAGE', 'gitea/gitea:1'),
+        ],
+
+        'glance' => [
+            'image' => env('DOCKER_APP_GLANCE_IMAGE', 'glanceapp/glance:latest'),
+        ],
+
+        'homepage' => [
+            'image' => env('DOCKER_APP_HOMEPAGE_IMAGE', 'ghcr.io/gethomepage/homepage:latest'),
+        ],
+
+        'ittools' => [
+            'image' => env('DOCKER_APP_ITTOOLS_IMAGE', 'corentinth/it-tools:latest'),
+        ],
+
+        'stirlingpdf' => [
+            'image' => env('DOCKER_APP_STIRLINGPDF_IMAGE', 'stirlingtools/stirling-pdf:latest'),
+        ],
+
+        'vaultwarden' => [
+            // `latest` on purpose here: Vaultwarden tracks Bitwarden's client protocol,
+            // and running behind on it breaks the apps rather than merely ageing.
+            'image' => env('DOCKER_APP_VAULTWARDEN_IMAGE', 'vaultwarden/server:latest'),
+        ],
+
         'ghost' => [
             'image' => env('DOCKER_APP_GHOST_IMAGE', 'ghost:5-alpine'),
             // 8.0 rather than 8.4: Ghost 5 documents 8.0, and MySQL 8.4 changed
@@ -1614,6 +1693,14 @@ return [
     'site_types' => [
         DockerSiteType::class,
         GhostSiteType::class,
+        VaultwardenSiteType::class,
+        GiteaSiteType::class,
+        ForgejoSiteType::class,
+        FreshRssSiteType::class,
+        StirlingPdfSiteType::class,
+        ItToolsSiteType::class,
+        GlanceSiteType::class,
+        HomepageSiteType::class,
         NocoDbSiteType::class,
         MetabaseSiteType::class,
         WikiJsSiteType::class,

@@ -117,11 +117,18 @@ class DockerAppInstaller implements SiteInstaller
         // from the record, so rendering it again cannot lose anything.
         $secrets = $this->storedSecrets($application);
 
-        // Nothing stored means this site predates the column or was not installed
-        // by this installer. Re-rendering with fresh secrets would rotate one half
-        // of a working pair, so leave the file alone and let the URL be wrong
-        // visibly rather than break the database invisibly.
-        if ($secrets === []) {
+        // Two different situations, and only one of them is a reason to stop.
+        //
+        // An app that HAS secrets and has none stored predates the column, or was
+        // not installed by this installer: re-rendering would generate fresh ones
+        // and rotate half a working pair, so the URL is left visibly wrong rather
+        // than the database broken invisibly.
+        //
+        // An app that declares no secrets at all — every Group A app — is
+        // legitimately empty forever. Treating that as the case above meant Gitea
+        // and Forgejo could never have their `ROOT_URL` corrected, so a renamed
+        // site kept producing clone commands for the old host. The tests caught it.
+        if ($type->generatedSecrets() !== [] && $secrets === []) {
             return;
         }
 
@@ -239,7 +246,27 @@ class DockerAppInstaller implements SiteInstaller
             }
         }
 
+        // `path => name` as well as `role => name`: the shared template writes a
+        // mount line per path, and a role is not a path. Both shapes are passed
+        // because the per-app templates name roles explicitly and the shared one
+        // cannot know them.
+        $mounts = [];
+
+        foreach ($type->volumeRoles() as $role => $path) {
+            if (isset($volumes[$role])) {
+                $mounts[$path] = $volumes[$role];
+            }
+        }
+
+        $environment = $type->environment($application);
+
+        if (($key = $type->urlEnvKey()) !== null) {
+            $environment[$key] = $url;
+        }
+
         return View::make($type->composeTemplate(), [
+            'mounts' => $mounts,
+            'environment' => $environment,
             'project' => $this->containers->project($application),
             'appPort' => (int) $application->app_port,
             'containerPort' => $type->containerPort(),
