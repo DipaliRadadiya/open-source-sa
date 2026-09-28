@@ -89,11 +89,33 @@ class ProvisioningFailedException extends Exception
         // A killed process may still have written something before it died,
         // and if it did that is the better explanation. Only claim
         // out-of-memory for the silent case this exists to describe.
-        if (trim($result->output()) !== '' || trim($result->errorOutput()) !== '') {
+        //
+        // npm's peer-dependency warnings do not count as saying something:
+        // npm prints hundreds of them before it does any work, so an npm
+        // install the OOM killer stopped was never silent and was never
+        // named. On the Apache test box `npm install n8n` was killed at
+        // 3.8 GB and the panel reported the step with no reason at all.
+        if (self::explainedItself($result->output()) || self::explainedItself($result->errorOutput())) {
             return null;
         }
 
         return 'out_of_memory';
+    }
+
+    /**
+     * Whether the output holds anything but blank lines and npm warnings.
+     */
+    private static function explainedItself(string $output): bool
+    {
+        foreach (preg_split('/\R/', $output) ?: [] as $line) {
+            $line = trim($line);
+
+            if ($line !== '' && ! preg_match('/^npm warn(ing)?\b/i', $line)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
