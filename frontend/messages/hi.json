@@ -190,6 +190,7 @@
     "unresolvedPath": "{path} को ऐप्लिकेशन डायरेक्टरी से बदलें",
     "required_expression": "शेड्यूल आवश्यक है",
     "cronExpression": "पाँच फ़ील्ड (मिनट घंटा दिन माह सप्ताह-दिन) या @daily जैसा मैक्रो दर्ज करें",
+    "cronUnsupported": "इस सर्वर का cron L, W, ? या # को सपोर्ट नहीं करता। संख्याएँ, *, रेंज (1-5), सूचियाँ (1,15) और स्टेप (*/10) उपयोग करें।",
     "required_runAs": "चुनें कि जॉब किस उपयोगकर्ता के रूप में चलेगी",
     "required_engine": "एक इंजन चुनें।",
     "databaseName": "केवल अक्षर, अंक और अंडरस्कोर का उपयोग करें।",
@@ -1000,7 +1001,6 @@
       "namePlaceholder": "जैसे रात की सफ़ाई",
       "runAs": "किस रूप में चलता है",
       "runAsPlaceholder": "उपयोगकर्ता चुनें",
-      "runAsLocked": "रन-ऐज़ उपयोगकर्ता बदला नहीं जा सकता। इसके बजाय जॉब हटाकर नई बनाएँ।",
       "otherUser": "अन्य OS उपयोगकर्ता…",
       "username": "सिस्टम उपयोगकर्ता",
       "usernameHint": "सर्वर पर पहले से मौजूद होना चाहिए, जैसे root या www-data।",
@@ -1023,11 +1023,10 @@
         "days": "दिन और सप्ताह",
         "custom": "कस्टम"
       },
-      "commandHintPath": "cron न्यूनतम PATH के साथ चलता है — पूर्ण पथ उपयोग करें, जैसे /usr/bin/php।",
-      "commandHintLog": "आउटपुट सहेजने के लिए >> /path/to/log 2>&1 जोड़ें।",
+      "commandHint": "Cron न्यूनतम <code>PATH</code> के साथ चलता है, इसलिए <code>/usr/bin/php</code> जैसे पूर्ण पथ उपयोग करें। आउटपुट को लॉग फ़ाइल में सहेजने के लिए <code>>> /path/to/log 2>&1</code> जोड़ें।",
       "serverTimeNote": "सर्वर समय ({timezone}) में चलता है",
       "runAsUnavailable": "खातों की सूची लोड नहीं हो सकी। «अन्य OS उपयोगकर्ता…» चुनें और नाम टाइप करें।",
-      "runAsHint": "वह Linux खाता जिसके अंतर्गत कमांड चलती है। यह तय करता है कि जॉब कौन सी फ़ाइलें पढ़ और लिख सकती है, और इसे बाद में बदला नहीं जा सकता।",
+      "runAsHint": "वह Linux खाता जिसके अंतर्गत कमांड चलती है। यह तय करता है कि जॉब कौन सी फ़ाइलें पढ़ और लिख सकती है।",
       "scheduleHint": "इसे कितनी बार चलाना है। सामान्य समय-सीमा में से कोई एक चुनें, या स्वयं शेड्यूल लिखने के लिए Custom चुनें।"
     },
     "toast": {
@@ -1036,12 +1035,32 @@
       "deleted": "क्रॉन जॉब हटाई गई",
       "paused": "क्रॉन जॉब रोकी गई",
       "resumed": "क्रॉन जॉब फिर से शुरू हुई",
-      "failed": "कुछ गलत हो गया"
+      "failed": "कुछ गलत हो गया",
+      "alreadyGone": "\"{name}\" पहले ही हटाई जा चुकी थी।"
     },
     "paused": "रुकी हुई",
     "duplicateName": "{name} (प्रतिलिपि)",
     "loadFailed": "आपके क्रॉन जॉब लोड नहीं हो सके। उन्हें बदला या हटाया नहीं गया है।",
-    "noPermission": "आपकी भूमिका में क्रॉनजॉब का Manage एक्सेस नहीं है। इसे देने के लिए किसी एडमिन से कहें।"
+    "noPermission": "आपकी भूमिका में क्रॉनजॉब का Manage एक्सेस नहीं है। इसे देने के लिए किसी एडमिन से कहें।",
+    "preview": {
+      "everyMinute": "हर मिनट",
+      "everyMinutes": "{n, plural, one {हर मिनट} other {हर # मिनट}}",
+      "hourly": "{minute, plural, =0 {हर घंटे, घंटे की शुरुआत में} other {हर घंटे, # मिनट पर}}",
+      "everyHours": "{n, plural, one {हर घंटे} other {हर # घंटे}}, {minute, plural, =0 {घंटे की शुरुआत में} other {# मिनट पर}}",
+      "everyBetween": "{from} से {to} तक {n, plural, one {हर मिनट} other {हर # मिनट}}",
+      "at": "{times} पर",
+      "everyDay": "हर दिन",
+      "onWeekdays": "हर {weekdays}",
+      "onWeekdayRange": "{from} से {to} तक",
+      "onDays": "हर महीने की {days} तारीख को",
+      "daysOrWeekdays": "{days} या {weekdays}",
+      "inMonths": "{months} में {days}",
+      "sentenceAt": "{days} {time} चलता है।",
+      "sentenceRepeat": "{time} चलता है।",
+      "sentenceRepeatOn": "{days}, {time} चलता है।",
+      "nextRuns": "अगली बार चलेगा: {runs}",
+      "never": "यह तारीख कभी नहीं आती, इसलिए जॉब कभी नहीं चलेगी।"
+    }
   },
   "errors": {
     "title": "कुछ गलत हो गया",

@@ -15,7 +15,10 @@ import {
 export function PerPageSelect({ label, value, onValueChange }) {
   const searchParams = useSearchParams();
   const setQuery = useSetQuery();
-  const current = value ?? searchParams.get("per_page") ?? "10";
+  // A `per_page` the list refuses (?per_page=7) is shown as 10 rows by the
+  // fetcher, so the control says 10 too rather than going blank.
+  const fromUrl = searchParams.get("per_page");
+  const current = value ?? (PER_PAGE_OPTIONS.includes(Number(fromUrl)) ? fromUrl : String(PER_PAGE_OPTIONS[0]));
   const change = onValueChange ?? ((next) => setQuery({ per_page: next }, { resetPage: true }));
 
   return (

@@ -12,8 +12,8 @@ import * as React from "react";
  * it can take focus — an `autoFocus` input moves it during commit, earlier
  * than Radix's own open-focus event, so reading it there found the input.
  *
- * Skipped when the caller handled it, and when that element is gone (a menu
- * item whose menu has closed) — Radix's own behaviour applies then.
+ * Skipped when the caller handled it, and when that element is gone — Radix's
+ * own behaviour applies then.
  */
 export function useReturnFocus(onCloseAutoFocus) {
   const opener = React.useRef(null);
@@ -32,10 +32,21 @@ export function useReturnFocus(onCloseAutoFocus) {
   );
 
   const capture = React.useCallback((element) => {
-    opener.current = element;
+    opener.current = menuTriggerOf(element) ?? element;
   }, []);
 
   return { capture, onCloseAutoFocus: onClose };
+}
+
+/*
+ * A dialog opened from a menu item is opened by an element that is about to
+ * disappear with its menu, so hand focus to the button that opened the menu.
+ * Radix labels the menu with its trigger's id, which is still in the page.
+ */
+function menuTriggerOf(element) {
+  const menu = element?.closest?.('[role="menu"]');
+  const id = menu?.getAttribute("aria-labelledby");
+  return id ? document.getElementById(id) : null;
 }
 
 /** Rendered first inside the content, so it mounts once per opening. */

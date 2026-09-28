@@ -712,6 +712,7 @@
     "unresolvedPath": "Replace {path} with the application directory",
     "required_expression": "Schedule is required",
     "cronExpression": "Enter five fields (minute hour day month weekday) or a macro like @daily",
+    "cronUnsupported": "This server's cron doesn't support L, W, ? or #. Use numbers, *, ranges (1-5), lists (1,15) and steps (*/10).",
     "required_runAs": "Select which user the job runs as",
     "required_engine": "Choose an engine.",
     "databaseName": "Use only letters, numbers and underscores.",
@@ -1000,7 +1001,6 @@
       "namePlaceholder": "e.g. Nightly cleanup",
       "runAs": "Runs as",
       "runAsPlaceholder": "Select a user",
-      "runAsLocked": "The run-as user cannot be changed. Delete the job and create a new one instead.",
       "otherUser": "Other system user…",
       "username": "System user",
       "usernameHint": "Must already exist on the server, e.g. root or www-data.",
@@ -1023,11 +1023,10 @@
         "days": "Days & weeks",
         "custom": "Custom"
       },
-      "commandHintPath": "cron runs with a minimal PATH — use absolute paths, e.g. /usr/bin/php.",
-      "commandHintLog": "Append >> /path/to/log 2>&1 to keep the output.",
+      "commandHint": "Cron runs with a minimal <code>PATH</code>, so use absolute paths such as <code>/usr/bin/php</code>. To save output to a log file, append <code>>> /path/to/log 2>&1</code>.",
       "serverTimeNote": "Runs in server time ({timezone})",
       "runAsUnavailable": "The account list could not be loaded. Choose \"Other system user…\" and type the username.",
-      "runAsHint": "The system user the command runs under. It decides which files the job can read and write, and it cannot be changed afterwards.",
+      "runAsHint": "The system user the command runs under. It decides which files the job can read and write.",
       "scheduleHint": "How often to run it. Pick one of the common timings, or choose Custom to write the schedule yourself."
     },
     "toast": {
@@ -1036,12 +1035,32 @@
       "deleted": "Cron job deleted",
       "paused": "Cron job paused",
       "resumed": "Cron job resumed",
-      "failed": "Something went wrong"
+      "failed": "Something went wrong",
+      "alreadyGone": "\"{name}\" had already been removed."
     },
     "paused": "Paused",
     "duplicateName": "{name} (copy)",
     "loadFailed": "Your cron jobs could not be loaded. They have not been changed or removed.",
-    "noPermission": "Your role does not include Cronjob with Manage access. Ask an administrator to grant it."
+    "noPermission": "Your role does not include Cronjob with Manage access. Ask an administrator to grant it.",
+    "preview": {
+      "everyMinute": "every minute",
+      "everyMinutes": "{n, plural, one {every minute} other {every # minutes}}",
+      "hourly": "{minute, plural, =0 {every hour, on the hour} one {every hour, # minute past the hour} other {every hour, # minutes past the hour}}",
+      "everyHours": "{n, plural, one {every hour} other {every # hours}}, {minute, plural, =0 {on the hour} one {# minute past the hour} other {# minutes past the hour}}",
+      "everyBetween": "{n, plural, one {every minute} other {every # minutes}} from {from} to {to}",
+      "at": "at {times}",
+      "everyDay": "every day",
+      "onWeekdays": "on {weekdays}",
+      "onWeekdayRange": "{from} to {to}",
+      "onDays": "on day {days} of the month",
+      "daysOrWeekdays": "{days} or {weekdays}",
+      "inMonths": "{days} in {months}",
+      "sentenceAt": "Runs {days} {time}.",
+      "sentenceRepeat": "Runs {time}.",
+      "sentenceRepeatOn": "Runs {time}, {days}.",
+      "nextRuns": "Next runs: {runs}",
+      "never": "This date never comes, so the job would never run."
+    }
   },
   "errors": {
     "title": "Something went wrong",

@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, CalendarCog } from "lucide-react";
-import { updateCronjobSchema } from "@/lib/schemas/cronjob";
+import { updateCronjobSchema, OTHER_USER } from "@/lib/schemas/cronjob";
 import { updateCronjob } from "@/lib/api/cronjobs";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { useRefresh } from "@/hooks/use-refresh";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -24,11 +24,27 @@ import {
 } from "@/components/ui/form";
 import { ScheduleField } from "@/components/cron-jobs/schedule-field";
 import { CommandField } from "@/components/cron-jobs/command-field";
+import { RunAsField } from "@/components/cron-jobs/run-as-field";
+
+// The form's view of who a job runs as: a panel account by id, or "other"
+// plus the raw username (root, www-data, anything the panel doesn't manage).
+function valuesOf(job) {
+  return {
+    name: job.name,
+    run_as: job.system_user ? String(job.system_user.id) : OTHER_USER,
+    username: job.system_user ? "" : job.username,
+    command: job.command,
+    expression: job.expression,
+    active: job.active,
+  };
+}
 
 export function EditCronjobDialog({
   job,
   open,
   onOpenChange,
+  systemUsers = [],
+  systemUsersFailed = false,
   schedulePresets = [],
   commandPresets = [],
   applications = [],
@@ -41,50 +57,54 @@ export function EditCronjobDialog({
 }) {
   const t = useTranslations("cronJobs");
   const tc = useTranslations("common");
-  const router = useRouter();
+  const { refresh, refreshThen } = useRefresh();
 
   const form = useForm({
     resolver: zodResolver(updateCronjobSchema),
-    defaultValues: {
-      name: job.name,
-      command: job.command,
-      expression: job.expression,
-      active: job.active,
-    },
+    defaultValues: valuesOf(job),
   });
 
   // The row's props change under us after router.refresh(); re-seed so the form
   // doesn't reopen holding pre-edit values.
   useEffect(() => {
-    if (open) {
-      form.reset({
-        name: job.name,
-        command: job.command,
-        expression: job.expression,
-        active: job.active,
-      });
-    }
-    // Depends on the fields, not just the id — the opposite of
-    // edit-worker-dialog, and deliberately so. Unlike workers, cron jobs are not
-    // polled: nothing in components/cron-jobs/ runs a timer, so these props only
-    // change when this dialog's own save calls router.refresh(). Re-seeding then
-    // is the point. Keying on the id alone would leave the reopened form holding
-    // pre-edit values.
+    if (open) form.reset(valuesOf(job));
+    // Depends on the job's own fields, not just the id, so a reopened form
+    // holds what was saved. The list does re-read when a job falls due, but
+    // that moves only `next_run_at`, which is not listed here — an edit in
+    // progress is not reset under the reader.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, job.id, job.name, job.command, job.expression, job.active]);
+  }, [open, job.id, job.name, job.command, job.expression, job.active, job.username, job.system_user?.id]);
 
   async function onSubmit(values) {
+    const before = valuesOf(job);
+    // Sent only when changed: an unchanged account needs no re-check on disk.
+    const runAsChanged =
+      values.run_as !== before.run_as ||
+      (values.run_as === OTHER_USER && values.username.trim() !== before.username);
     try {
       await updateCronjob(job.id, {
         name: values.name.trim(),
         command: values.command.trim(),
         expression: values.expression.trim(),
         active: values.active,
+        ...(runAsChanged
+          ? values.run_as === OTHER_USER
+            ? { system_user_id: null, username: values.username.trim() }
+            : { system_user_id: Number(values.run_as) }
+          : {}),
       });
+      // "Saving…" stays until the row shows the change.
+      await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("toast.updated"));
       onOpenChange?.(false);
-      router.refresh();
     } catch (error) {
+      // Removed from another tab: nothing left to edit, and the row must go.
+      if (error?.response?.status === 404) {
+        toast.info(t("toast.alreadyGone", { name: job.name }));
+        onOpenChange?.(false);
+        refresh();
+        return;
+      }
       handleValidationError(error, form);
     }
   }
@@ -137,13 +157,7 @@ export function EditCronjobDialog({
           )}
         />
 
-        {/* Run-as is fixed server-side (change = delete + recreate), so it's
-            shown as context rather than silently omitted. */}
-        <FormItem>
-          <FormLabel hint={t("form.runAsHint")}>{t("form.runAs")}</FormLabel>
-          <Input value={job.username} readOnly disabled className="font-mono" />
-          <p className="text-xs text-muted-foreground">{t("form.runAsLocked")}</p>
-        </FormItem>
+        <RunAsField form={form} systemUsers={systemUsers} systemUsersFailed={systemUsersFailed} />
 
         <CommandField
           form={form}

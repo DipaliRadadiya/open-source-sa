@@ -190,6 +190,7 @@
     "unresolvedPath": "Sustituye {path} por el directorio de la aplicación",
     "required_expression": "La programación es obligatoria",
     "cronExpression": "Introduce cinco campos (minuto hora día mes día-semana) o una macro como @daily",
+    "cronUnsupported": "El cron de este servidor no admite L, W, ? ni #. Usa números, *, rangos (1-5), listas (1,15) y pasos (*/10).",
     "required_runAs": "Selecciona con qué usuario se ejecuta la tarea",
     "required_engine": "Elige un motor.",
     "databaseName": "Usa solo letras, números y guiones bajos.",
@@ -1000,7 +1001,6 @@
       "namePlaceholder": "p. ej. Limpieza nocturna",
       "runAs": "Se ejecuta como",
       "runAsPlaceholder": "Selecciona un usuario",
-      "runAsLocked": "El usuario de ejecución no se puede cambiar. Elimina la tarea y crea una nueva.",
       "otherUser": "Otro usuario del sistema…",
       "username": "Usuario del sistema",
       "usernameHint": "Debe existir ya en el servidor, por ejemplo root o www-data.",
@@ -1023,11 +1023,10 @@
         "days": "Días y semanas",
         "custom": "Personalizado"
       },
-      "commandHintPath": "cron usa un PATH mínimo: usa rutas absolutas, p. ej. /usr/bin/php.",
-      "commandHintLog": "Añade >> /ruta/al/log 2>&1 para conservar la salida.",
+      "commandHint": "Cron usa un <code>PATH</code> mínimo, así que usa rutas absolutas como <code>/usr/bin/php</code>. Para guardar la salida en un archivo de log, añade <code>>> /ruta/al/log 2>&1</code>.",
       "serverTimeNote": "Se ejecuta en hora del servidor ({timezone})",
       "runAsUnavailable": "No se pudo cargar la lista de cuentas. Elige «Otro usuario del sistema…» y escribe el nombre.",
-      "runAsHint": "La cuenta de Linux con la que se ejecuta el comando. Decide qué archivos puede leer y escribir el trabajo, y no se puede cambiar después.",
+      "runAsHint": "La cuenta de Linux con la que se ejecuta el comando. Decide qué archivos puede leer y escribir la tarea.",
       "scheduleHint": "Cada cuánto se ejecuta. Elija uno de los intervalos comunes, o elija Personalizado para escribir la programación usted mismo."
     },
     "toast": {
@@ -1036,12 +1035,32 @@
       "deleted": "Tarea cron eliminada",
       "paused": "Tarea cron pausada",
       "resumed": "Tarea cron reanudada",
-      "failed": "Algo salió mal"
+      "failed": "Algo salió mal",
+      "alreadyGone": "\"{name}\" ya se había eliminado."
     },
     "paused": "Pausada",
     "duplicateName": "{name} (copia)",
     "loadFailed": "No se pudieron cargar tus tareas cron. No se han modificado ni eliminado.",
-    "noPermission": "Tu rol no incluye Cron con acceso de gestión. Pide a un administrador que te lo conceda."
+    "noPermission": "Tu rol no incluye Cron con acceso de gestión. Pide a un administrador que te lo conceda.",
+    "preview": {
+      "everyMinute": "cada minuto",
+      "everyMinutes": "{n, plural, one {cada minuto} other {cada # minutos}}",
+      "hourly": "{minute, plural, =0 {cada hora, en punto} other {cada hora, en el minuto #}}",
+      "everyHours": "{n, plural, one {cada hora} other {cada # horas}}, {minute, plural, =0 {en punto} other {en el minuto #}}",
+      "everyBetween": "{n, plural, one {cada minuto} other {cada # minutos}} de {from} a {to}",
+      "at": "a las {times}",
+      "everyDay": "cada día",
+      "onWeekdays": "los {weekdays}",
+      "onWeekdayRange": "de {from} a {to}",
+      "onDays": "el día {days} de cada mes",
+      "daysOrWeekdays": "{days} o {weekdays}",
+      "inMonths": "{days} en {months}",
+      "sentenceAt": "Se ejecuta {days} {time}.",
+      "sentenceRepeat": "Se ejecuta {time}.",
+      "sentenceRepeatOn": "Se ejecuta {time}, {days}.",
+      "nextRuns": "Próximas ejecuciones: {runs}",
+      "never": "Esa fecha nunca llega, así que la tarea no se ejecutaría nunca."
+    }
   },
   "errors": {
     "title": "Algo salió mal",

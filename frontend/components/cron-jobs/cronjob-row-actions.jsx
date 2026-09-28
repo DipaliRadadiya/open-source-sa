@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MoreHorizontal, Pencil, Copy, Trash2, ScrollText, SquareArrowOutUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -21,10 +21,14 @@ export function CronjobRowActions({
   placeholder,
   timezone,
   onDuplicate,
+  runAs,
 }) {
   const t = useTranslations("cronJobs");
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
+  // Only an item that opens a dialog keeps focus off the ⋯ button (the dialog
+  // takes it, then hands it back); Escape or a click away returns it there.
+  const openingDialog = useRef(false);
 
   return (
     <div className="text-right">
@@ -38,7 +42,11 @@ export function CronjobRowActions({
         <DropdownMenuContent
           align="end"
           className="w-64"
-          onCloseAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => {
+            if (!openingDialog.current) return;
+            openingDialog.current = false;
+            e.preventDefault();
+          }}
         >
           {/* What the job actually did, first. There's deliberately no
               "last run" field — cron keeps no such record — so the captured
@@ -67,16 +75,16 @@ export function CronjobRowActions({
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+          <DropdownMenuItem onSelect={() => { openingDialog.current = true; setEditOpen(true); }}>
             <Pencil className="size-4" />
             {t("actions.edit")}
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => onDuplicate?.(job)}>
+          <DropdownMenuItem onSelect={() => { openingDialog.current = true; onDuplicate?.(job); }}>
             <Copy className="size-4" />
             {t("actions.duplicate")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onSelect={() => setDelOpen(true)}>
+          <DropdownMenuItem variant="destructive" onSelect={() => { openingDialog.current = true; setDelOpen(true); }}>
             <Trash2 className="size-4" />
             {t("actions.delete")}
           </DropdownMenuItem>
@@ -93,6 +101,8 @@ export function CronjobRowActions({
           applications={applications}
           placeholder={placeholder}
           timezone={timezone}
+          systemUsers={runAs?.users}
+          systemUsersFailed={runAs?.failed}
         />
       ) : null}
       <DeleteCronjobDialog job={job} open={delOpen} onOpenChange={setDelOpen} />

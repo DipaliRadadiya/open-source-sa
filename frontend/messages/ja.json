@@ -712,6 +712,7 @@
     "unresolvedPath": "{path} はアプリケーションディレクトリに置き換えてください",
     "required_expression": "スケジュールは必須です",
     "cronExpression": "5つのフィールド（分 時 日 月 曜日）または @daily のようなマクロを入力してください",
+    "cronUnsupported": "このサーバーの cron は L、W、?、# に対応していません。数値、*、範囲 (1-5)、リスト (1,15)、ステップ (*/10) を使用してください。",
     "required_runAs": "ジョブの実行ユーザーを選択してください",
     "required_engine": "エンジンを選択してください。",
     "databaseName": "英数字とアンダースコアのみ使用できます。",
@@ -1000,7 +1001,6 @@
       "namePlaceholder": "例: 夜間クリーンアップ",
       "runAs": "実行ユーザー",
       "runAsPlaceholder": "ユーザーを選択",
-      "runAsLocked": "実行ユーザーは変更できません。代わりにこのジョブを削除して新しく作成してください。",
       "otherUser": "その他の OS ユーザー…",
       "username": "システムユーザー",
       "usernameHint": "サーバー上にすでに存在するユーザーである必要があります(例: root、www-data)。",
@@ -1023,11 +1023,10 @@
         "days": "日・曜日",
         "custom": "カスタム"
       },
-      "commandHintPath": "cron は最小限の PATH で実行されるため、必ず /usr/bin/php のような絶対パスを使用してください。",
-      "commandHintLog": "出力は >> /path/to/log 2>&1 を追記して保存してください。",
+      "commandHint": "cron は最小限の <code>PATH</code> で実行されるため、<code>/usr/bin/php</code> のような絶対パスを使用してください。出力をログファイルに保存するには <code>>> /path/to/log 2>&1</code> を追記します。",
       "serverTimeNote": "サーバー時刻 ({timezone}) で実行されます",
       "runAsUnavailable": "アカウント一覧を読み込めませんでした。「その他の OS ユーザー…」を選択してユーザー名を入力してください。",
-      "runAsHint": "コマンドを実行するLinuxアカウントです。ジョブが読み書きできるファイルが決まり、後から変更できません。",
+      "runAsHint": "コマンドを実行するLinuxアカウントです。ジョブが読み書きできるファイルが決まります。",
       "scheduleHint": "実行する頻度です。よくあるタイミングから選ぶか、「カスタム」を選んで自分でスケジュールを記述してください。"
     },
     "toast": {
@@ -1036,12 +1035,32 @@
       "deleted": "cron ジョブを削除しました",
       "paused": "cron ジョブを一時停止しました",
       "resumed": "cron ジョブを再開しました",
-      "failed": "問題が発生しました"
+      "failed": "問題が発生しました",
+      "alreadyGone": "\"{name}\" はすでに削除されていました。"
     },
     "paused": "一時停止中",
     "duplicateName": "{name}(コピー)",
     "loadFailed": "cron ジョブを読み込めませんでした。ジョブの変更や削除は行われていません。",
-    "noPermission": "現在のロールには Cronjob の管理権限が含まれていません。管理者に権限の付与を依頼してください。"
+    "noPermission": "現在のロールには Cronjob の管理権限が含まれていません。管理者に権限の付与を依頼してください。",
+    "preview": {
+      "everyMinute": "毎分",
+      "everyMinutes": "{n, plural, other {# 分ごと}}",
+      "hourly": "{minute, plural, other {毎時 # 分}}",
+      "everyHours": "{n, plural, other {# 時間ごと}}、{minute, plural, other {# 分}}",
+      "everyBetween": "{from}〜{to} の間 {n, plural, =1 {毎分} other {# 分ごと}}",
+      "at": "{times}",
+      "everyDay": "毎日",
+      "onWeekdays": "毎週 {weekdays}",
+      "onWeekdayRange": "{from}〜{to}",
+      "onDays": "毎月 {days} 日",
+      "daysOrWeekdays": "{days}または{weekdays}",
+      "inMonths": "{months}の{days}",
+      "sentenceAt": "{days} {time} に実行されます。",
+      "sentenceRepeat": "{time}に実行されます。",
+      "sentenceRepeatOn": "{days}、{time}に実行されます。",
+      "nextRuns": "次回の実行: {runs}",
+      "never": "この日付は存在しないため、ジョブは実行されません。"
+    }
   },
   "errors": {
     "title": "問題が発生しました",

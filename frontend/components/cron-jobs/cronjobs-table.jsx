@@ -1,4 +1,7 @@
-import { useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
+import { Pause } from "lucide-react";
+import { serverTimeToEpoch } from "@/lib/cron-jobs/schedule";
+import { useScheduleText } from "@/components/cron-jobs/schedule-preview";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
@@ -44,7 +47,10 @@ export function CronjobName({ job }) {
       {/* Paused is the exception worth calling out — without a badge the only
           signal is a switch position you have to look for. */}
       {!job.active ? (
-        <Badge variant="outline" className="font-normal">
+        // Amber like a paused application: nothing is broken, but it must be
+        // seen at a glance — the quiet outline style read as part of the name.
+        <Badge variant="warning">
+          <Pause aria-hidden="true" />
           {t("paused")}
         </Badge>
       ) : null}
@@ -53,14 +59,19 @@ export function CronjobName({ job }) {
 }
 
 export function CronjobSchedule({ job, presets = [] }) {
-  const label = scheduleLabel(job.expression, presets);
+  const custom = useScheduleText(job.expression, job.timezone);
+  const preset = scheduleLabel(job.expression, presets);
+  // A custom schedule gets its sentence, so "0 0 2 * *" is not left to be
+  // read as 2 AM daily.
+  const label = preset ?? custom?.sentence ?? null;
   // Plain language leads when we can name the schedule; the expression is the
   // supporting detail. With no match — including when the preset list failed to
   // load — show the expression alone rather than calling it "Custom", which
   // would be a false claim about a preset schedule.
   return label ? (
     <div className="flex flex-col gap-0.5">
-      <span className="whitespace-nowrap">{label}</span>
+      {/* A sentence wraps; only the short preset names stay on one line. */}
+      <span className={preset ? "whitespace-nowrap" : "max-w-44"}>{label}</span>
       <span className="font-mono text-xs text-muted-foreground">{job.expression}</span>
     </div>
   ) : (
@@ -69,10 +80,19 @@ export function CronjobSchedule({ job, presets = [] }) {
 }
 
 export function CronjobNextRun({ job }) {
-  const { next_run_at: at, next_run_at_human: human } = job;
+  const format = useFormatter();
+  const now = useNow({ updateInterval: 15000 });
+  const { next_run_at: at } = job;
   // A paused job has no next run. A dash says that; "—" beats inventing a time
   // that will never happen.
   if (!at) return <span className="text-muted-foreground">—</span>;
+
+  // Counted down here rather than taken from `next_run_at_human`, which was
+  // true only at the moment the page loaded: a job that had run three times
+  // still read "15 seconds from now". The panel re-reads the list when the run
+  // is due; until it lands, a due run reads "now", never "ago".
+  const epoch = serverTimeToEpoch(at, job.timezone);
+  const human = epoch === null ? job.next_run_at_human : format.relativeTime(Math.max(epoch, now.getTime()), now);
 
   // Shown exactly as the API computed it, in the server's zone. Running it
   // through the browser's formatter would silently restate it in the reader's
@@ -123,7 +143,7 @@ function CommandCell({ row }) {
         {/* tabIndex: a truncated value must be reachable without a mouse. */}
         <span
           tabIndex={0}
-          className="block max-w-xs truncate rounded font-mono text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="block max-w-40 truncate rounded font-mono text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           {row.original.command}
         </span>
@@ -140,7 +160,7 @@ function ActiveCell({ row, table }) {
 }
 
 function ActionsCell({ row, table }) {
-  const { schedulePresets, commandPresets, applications, placeholder, timezone, onDuplicate } =
+  const { schedulePresets, commandPresets, applications, placeholder, timezone, onDuplicate, runAs } =
     table.options.meta;
   return (
     <CronjobRowActions
@@ -151,12 +171,14 @@ function ActionsCell({ row, table }) {
       placeholder={placeholder}
       timezone={timezone}
       onDuplicate={onDuplicate}
+      runAs={runAs}
     />
   );
 }
 
 export function CronjobsTable({
   data,
+  runAs,
   canManage = false,
   schedulePresets = [],
   commandPresets = [],
@@ -201,9 +223,10 @@ export function CronjobsTable({
 
   return (
     <>
-      {/* Cards below lg, the table from lg up — seven columns cannot fit a
-          phone, and the table quietly hid five of them. */}
-      <div className="lg:hidden">
+      {/* Cards below xl, the table from xl up. Seven columns need ~950px; at
+          lg the content box is 702px, and the ⋯ column sat off-screen behind a
+          sideways scroll — on a real command it did at 1280 too. */}
+      <div className="xl:hidden">
         <CronjobsCards
           jobs={data}
           canManage={canManage}
@@ -213,9 +236,10 @@ export function CronjobsTable({
           placeholder={placeholder}
           timezone={timezone}
           onDuplicate={onDuplicate}
+          runAs={runAs}
         />
       </div>
-      <div className="hidden lg:block">
+      <div className="hidden xl:block">
         <DataTable
           columns={columns}
           data={data}
@@ -227,6 +251,7 @@ export function CronjobsTable({
             placeholder,
             timezone,
             onDuplicate,
+            runAs,
           }}
           emptyMessage={t("empty.title")}
           // De-emphasise the row's text, not the controls: the switch and actions

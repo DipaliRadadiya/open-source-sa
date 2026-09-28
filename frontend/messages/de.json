@@ -712,6 +712,7 @@
     "unresolvedPath": "Ersetzen Sie {path} durch das Anwendungsverzeichnis",
     "required_expression": "Zeitplan ist erforderlich",
     "cronExpression": "Geben Sie fünf Felder ein (Minute Stunde Tag Monat Wochentag) oder ein Makro wie @daily",
+    "cronUnsupported": "Der Cron dieses Servers unterstützt L, W, ? und # nicht. Verwenden Sie Zahlen, *, Bereiche (1-5), Listen (1,15) und Schritte (*/10).",
     "required_runAs": "Wählen Sie, als welcher Benutzer der Job ausgeführt wird",
     "required_engine": "Engine auswählen.",
     "databaseName": "Nur Buchstaben, Zahlen und Unterstriche verwenden.",
@@ -1000,7 +1001,6 @@
       "namePlaceholder": "z. B. Nächtliche Bereinigung",
       "runAs": "Läuft als",
       "runAsPlaceholder": "Benutzer auswählen",
-      "runAsLocked": "Der ausführende Benutzer kann nicht geändert werden. Löschen Sie den Job und erstellen Sie stattdessen einen neuen.",
       "otherUser": "Anderer OS-Benutzer…",
       "username": "Systembenutzer",
       "usernameHint": "Muss bereits auf dem Server vorhanden sein, z. B. root oder www-data.",
@@ -1023,11 +1023,10 @@
         "days": "Tage & Wochen",
         "custom": "Benutzerdefiniert"
       },
-      "commandHintPath": "cron läuft mit einem minimalen PATH – verwenden Sie absolute Pfade, z. B. /usr/bin/php.",
-      "commandHintLog": "Fügen Sie >> /path/to/log 2>&1 an, um die Ausgabe zu speichern.",
+      "commandHint": "Cron läuft mit einem minimalen <code>PATH</code>, verwenden Sie daher absolute Pfade wie <code>/usr/bin/php</code>. Um die Ausgabe in einer Logdatei zu speichern, hängen Sie <code>>> /path/to/log 2>&1</code> an.",
       "serverTimeNote": "Läuft in Serverzeit ({timezone})",
       "runAsUnavailable": "Die Kontoliste konnte nicht geladen werden. Wählen Sie „Anderer OS-Benutzer…“ und geben Sie den Benutzernamen ein.",
-      "runAsHint": "Das Linux-Konto, unter dem der Befehl ausgeführt wird. Es legt fest, welche Dateien der Cron-Job lesen und schreiben kann, und kann nachträglich nicht geändert werden.",
+      "runAsHint": "Das Linux-Konto, unter dem der Befehl ausgeführt wird. Es legt fest, welche Dateien der Cron-Job lesen und schreiben kann.",
       "scheduleHint": "Wie oft er ausgeführt wird. Wählen Sie eine der üblichen Zeitpläne oder „Benutzerdefiniert“, um den Zeitplan selbst festzulegen."
     },
     "toast": {
@@ -1036,12 +1035,32 @@
       "deleted": "Cronjob gelöscht",
       "paused": "Cronjob pausiert",
       "resumed": "Cronjob fortgesetzt",
-      "failed": "Etwas ist schiefgelaufen"
+      "failed": "Etwas ist schiefgelaufen",
+      "alreadyGone": "„{name}“ war bereits entfernt."
     },
     "paused": "Pausiert",
     "duplicateName": "{name} (Kopie)",
     "loadFailed": "Ihre Cronjobs konnten nicht geladen werden. Sie wurden nicht geändert oder entfernt.",
-    "noPermission": "Ihre Rolle enthält nicht „Cronjob“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum."
+    "noPermission": "Ihre Rolle enthält nicht „Cronjob“ mit Verwaltungszugriff. Bitten Sie eine Administratorin oder einen Administrator darum.",
+    "preview": {
+      "everyMinute": "jede Minute",
+      "everyMinutes": "{n, plural, one {jede Minute} other {alle # Minuten}}",
+      "hourly": "{minute, plural, =0 {jede volle Stunde} one {stündlich, # Minute nach der vollen Stunde} other {stündlich, # Minuten nach der vollen Stunde}}",
+      "everyHours": "{n, plural, one {stündlich} other {alle # Stunden}}, {minute, plural, =0 {zur vollen Stunde} one {# Minute nach der vollen Stunde} other {# Minuten nach der vollen Stunde}}",
+      "everyBetween": "{n, plural, one {jede Minute} other {alle # Minuten}} von {from} bis {to}",
+      "at": "um {times}",
+      "everyDay": "jeden Tag",
+      "onWeekdays": "am {weekdays}",
+      "onWeekdayRange": "{from} bis {to}",
+      "onDays": "am Tag {days} des Monats",
+      "daysOrWeekdays": "{days} oder {weekdays}",
+      "inMonths": "{days} im {months}",
+      "sentenceAt": "Läuft {days} {time}.",
+      "sentenceRepeat": "Läuft {time}.",
+      "sentenceRepeatOn": "Läuft {time}, {days}.",
+      "nextRuns": "Nächste Ausführungen: {runs}",
+      "never": "Dieses Datum gibt es nie, der Cron-Job würde also nie ausgeführt."
+    }
   },
   "errors": {
     "title": "Etwas ist schiefgelaufen",

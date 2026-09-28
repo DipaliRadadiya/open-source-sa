@@ -712,6 +712,7 @@
     "unresolvedPath": "Remplacez {path} par le répertoire de l'application",
     "required_expression": "La planification est obligatoire",
     "cronExpression": "Saisissez cinq champs (minute heure jour mois jour-semaine) ou une macro comme @daily",
+    "cronUnsupported": "Le cron de ce serveur ne prend pas en charge L, W, ? ni #. Utilisez des nombres, *, des plages (1-5), des listes (1,15) et des pas (*/10).",
     "required_runAs": "Choisissez l'utilisateur qui exécute la tâche",
     "required_engine": "Choisissez un moteur.",
     "databaseName": "Utilisez uniquement des lettres, des chiffres et des tirets bas.",
@@ -1000,7 +1001,6 @@
       "namePlaceholder": "ex. Nettoyage nocturne",
       "runAs": "S'exécute en tant que",
       "runAsPlaceholder": "Sélectionner un utilisateur",
-      "runAsLocked": "L'utilisateur d'exécution ne peut pas être modifié. Supprimez la tâche et créez-en une nouvelle.",
       "otherUser": "Autre utilisateur OS…",
       "username": "Utilisateur système",
       "usernameHint": "Doit déjà exister sur le serveur, ex. root ou www-data.",
@@ -1023,11 +1023,10 @@
         "days": "Jours & semaines",
         "custom": "Personnalisé"
       },
-      "commandHintPath": "cron s'exécute avec un PATH minimal — utilisez des chemins absolus, ex. /usr/bin/php.",
-      "commandHintLog": "Ajoutez >> /chemin/du/log 2>&1 pour conserver la sortie.",
+      "commandHint": "Cron s'exécute avec un <code>PATH</code> minimal : utilisez des chemins absolus comme <code>/usr/bin/php</code>. Pour enregistrer la sortie dans un fichier journal, ajoutez <code>>> /chemin/du/log 2>&1</code>.",
       "serverTimeNote": "S'exécute à l'heure du serveur ({timezone})",
       "runAsUnavailable": "La liste des comptes n'a pas pu être chargée. Choisissez « Autre utilisateur OS… » et saisissez le nom d'utilisateur.",
-      "runAsHint": "Le compte Linux sous lequel la commande s'exécute. Il détermine les fichiers que la tâche peut lire et écrire, et il ne peut pas être modifié ensuite.",
+      "runAsHint": "Le compte Linux sous lequel la commande s'exécute. Il détermine les fichiers que la tâche peut lire et écrire.",
       "scheduleHint": "La fréquence d'exécution. Choisissez l'une des cadences courantes, ou choisissez Personnalisé pour rédiger vous-même la planification."
     },
     "toast": {
@@ -1036,12 +1035,32 @@
       "deleted": "Tâche cron supprimée",
       "paused": "Tâche cron mise en pause",
       "resumed": "Tâche cron reprise",
-      "failed": "Une erreur s'est produite"
+      "failed": "Une erreur s'est produite",
+      "alreadyGone": "« {name} » avait déjà été supprimée."
     },
     "paused": "En pause",
     "duplicateName": "{name} (copie)",
     "loadFailed": "Vos tâches cron n'ont pas pu être chargées. Elles n'ont pas été modifiées ni supprimées.",
-    "noPermission": "Votre rôle n'inclut pas les tâches cron avec l'accès Manage. Demandez à un administrateur de l'accorder."
+    "noPermission": "Votre rôle n'inclut pas les tâches cron avec l'accès Manage. Demandez à un administrateur de l'accorder.",
+    "preview": {
+      "everyMinute": "toutes les minutes",
+      "everyMinutes": "{n, plural, one {toutes les minutes} other {toutes les # minutes}}",
+      "hourly": "{minute, plural, =0 {toutes les heures pile} other {toutes les heures, à la minute #}}",
+      "everyHours": "{n, plural, one {toutes les heures} other {toutes les # heures}}, {minute, plural, =0 {pile} other {à la minute #}}",
+      "everyBetween": "{n, plural, one {toutes les minutes} other {toutes les # minutes}} de {from} à {to}",
+      "at": "à {times}",
+      "everyDay": "tous les jours",
+      "onWeekdays": "le {weekdays}",
+      "onWeekdayRange": "du {from} au {to}",
+      "onDays": "le {days} de chaque mois",
+      "daysOrWeekdays": "{days} ou {weekdays}",
+      "inMonths": "{days} en {months}",
+      "sentenceAt": "S'exécute {days} {time}.",
+      "sentenceRepeat": "S'exécute {time}.",
+      "sentenceRepeatOn": "S'exécute {time}, {days}.",
+      "nextRuns": "Prochaines exécutions : {runs}",
+      "never": "Cette date n'arrive jamais : la tâche ne s'exécuterait jamais."
+    }
   },
   "errors": {
     "title": "Une erreur s'est produite",

@@ -22,6 +22,7 @@ import {
  * no column header left to say what it toggles.
  */
 export function CronjobsCards({
+  runAs,
   jobs,
   canManage = false,
   schedulePresets = [],
@@ -60,6 +61,7 @@ export function CronjobsCards({
                   placeholder={placeholder}
                   timezone={timezone}
                   onDuplicate={onDuplicate}
+                  runAs={runAs}
                 />
               </div>
             ) : null}

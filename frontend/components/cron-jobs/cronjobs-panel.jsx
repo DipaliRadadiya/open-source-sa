@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CalendarClock, SearchX, Plus, Wand2 } from "lucide-react";
 import { OTHER_USER } from "@/lib/schemas/cronjob";
+import { serverTimeToEpoch } from "@/lib/cron-jobs/schedule";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { EmptyState } from "@/components/data-table/empty-state";
@@ -37,6 +39,20 @@ export function CronjobsPanel({
 }) {
   const t = useTranslations("cronJobs");
   const setQuery = useSetQuery();
+  const router = useRouter();
+
+  // Re-read the list just after the soonest job is due, so its next run moves
+  // on instead of counting down to a time that has already passed. One timer
+  // for the page, not a poll: nothing is fetched between runs.
+  useEffect(() => {
+    const due = cronjobs
+      .map((job) => (job.active ? serverTimeToEpoch(job.next_run_at, job.timezone) : null))
+      .filter((epoch) => epoch !== null);
+    if (due.length === 0) return undefined;
+    const wait = Math.min(Math.max(Math.min(...due) - Date.now() + 3000, 5000), 6 * 3600 * 1000);
+    const id = setTimeout(() => router.refresh(), wait);
+    return () => clearTimeout(id);
+  }, [cronjobs, router]);
   const [createOpen, setCreateOpen] = useState(false);
   const [seed, setSeed] = useState({ initialValues: undefined, starterKey: undefined });
 
@@ -78,7 +94,6 @@ export function CronjobsPanel({
     <>
       <CronjobsToolbar
         systemUsers={systemUsers}
-          systemUsersFailed={systemUsersFailed}
         cronjobs={cronjobs}
         canManage={canManage}
         onCreate={() => openCreate()}
@@ -138,6 +153,7 @@ export function CronjobsPanel({
       ) : (
         <CronjobsTable
           data={cronjobs}
+          runAs={{ users: systemUsers, failed: systemUsersFailed }}
           canManage={canManage}
           schedulePresets={schedulePresets}
           commandPresets={commandPresets}
