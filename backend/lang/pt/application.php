@@ -250,5 +250,6 @@ return [
         'signing_token' => 'O GitLab cria os tokens de assinatura ele próprio, por isso o painel não pode adicionar este webhook por si. Adicione-o nas definições de Webhooks do repositório com o URL abaixo e o seu token de assinatura.',
         'not_public' => 'O endereço do painel não é acessível a partir da internet, por isso o GitHub, o GitLab ou o Bitbucket não conseguiriam entregar-lhe nada. Dê ao painel um endereço público ou adicione o webhook à mão depois.',
         'provider_refused' => 'O fornecedor Git não deixou o painel adicionar o webhook. Provavelmente o token ligado não tem permissão para gerir webhooks neste repositório. Adicione-o à mão com o URL e o segredo abaixo, ou volte a ligar a conta com essa permissão.',
+        'removal_refused' => 'O deploy ao fazer push está desligado, mas o fornecedor Git não deixou o painel remover o webhook que adicionou. Provavelmente o token ligado não tem permissão para apagar webhooks. Os push continuarão a ser enviados e recusados até apagar o webhook nas definições do repositório.',
     ],
 ];

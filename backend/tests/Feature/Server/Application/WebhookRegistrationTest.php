@@ -236,3 +236,24 @@ describe('gitlab and bitbucket', function () {
         Http::assertSent(fn (Request $r) => $r['events'] === ['repo:push'] && $r['secret'] === $app->webhook_secret);
     });
 });
+
+describe('a provider that will not let the hook go', function () {
+    it('says so when switching off, instead of reporting a clean switch-off', function () {
+        // A Bitbucket API token with write:webhook but not delete:webhook
+        // (the real answer, 2026-09-28): the panel could add the hook and not
+        // remove it, and the screen said "off" while every push kept coming.
+        Http::fake(['api.bitbucket.org/*' => Http::response([
+            'type' => 'error',
+            'error' => ['message' => 'Your credentials lack one or more required privilege scopes.'],
+        ], 403)]);
+
+        $app = registrationApp(registrationAccount('bitbucket'), ['webhook_enabled' => true, 'webhook_provider' => 'bitbucket', 'webhook_remote_id' => '{c0ffee}']);
+
+        switchRegistration($app, ['enabled' => false])
+            ->assertOk()
+            ->assertJsonPath('application.webhook.enabled', false)
+            ->assertJsonPath('application.webhook.registered', true)
+            ->assertJsonPath('webhook_registration.status', 'removal_refused')
+            ->assertJsonPath('webhook_registration.message', __('application.webhook_registration.removal_refused'));
+    });
+});

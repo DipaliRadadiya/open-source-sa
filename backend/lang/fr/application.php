@@ -250,5 +250,6 @@ return [
         'signing_token' => 'GitLab crée lui-même les jetons de signature : le panneau ne peut donc pas ajouter ce webhook pour vous. Ajoutez-le dans les paramètres Webhooks du dépôt avec l\'URL ci-dessous et votre jeton de signature.',
         'not_public' => 'L\'adresse du panneau n\'est pas accessible depuis Internet, donc GitHub, GitLab ou Bitbucket ne pourraient pas y livrer. Donnez une adresse publique au panneau, ou ajoutez le webhook à la main ensuite.',
         'provider_refused' => 'Le fournisseur Git n\'a pas permis au panneau d\'ajouter le webhook. Le jeton connecté n\'a probablement pas le droit de gérer les webhooks de ce dépôt. Ajoutez-le à la main avec l\'URL et le secret ci-dessous, ou reconnectez le compte avec ce droit.',
+        'removal_refused' => 'Le déploiement au push est désactivé, mais le fournisseur Git n\'a pas permis au panneau de supprimer le webhook qu\'il avait ajouté. Le jeton connecté n\'a probablement pas le droit de supprimer des webhooks. Les push continueront d\'être envoyés et refusés jusqu\'à ce que vous supprimiez le webhook dans les paramètres du dépôt.',
     ],
 ];

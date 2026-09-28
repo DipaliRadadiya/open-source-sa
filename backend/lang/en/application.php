@@ -260,5 +260,6 @@ return [
         'signing_token' => 'GitLab creates signing tokens itself, so the panel cannot add this webhook for you. Add it in the repository\'s Webhooks settings with the URL below and your signing token.',
         'not_public' => 'The panel\'s address is not reachable from the internet, so GitHub, GitLab or Bitbucket could not deliver to it. Give the panel a public address, or add the webhook by hand once it has one.',
         'provider_refused' => 'The Git provider did not let the panel add the webhook. The connected token probably lacks permission to manage webhooks on this repository. Add it by hand with the URL and secret below, or reconnect the account with that permission.',
+        'removal_refused' => 'Deploy on push is off, but the Git provider did not let the panel remove the webhook it added. The connected token probably lacks permission to delete webhooks. Pushes will still be sent and refused until you delete the webhook in the repository\'s settings.',
     ],
 ];

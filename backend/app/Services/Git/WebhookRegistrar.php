@@ -43,6 +43,9 @@ class WebhookRegistrar
     /** The provider refused or could not be reached; usually a token without hook permission. */
     public const PROVIDER_REFUSED = 'provider_refused';
 
+    /** Switching off: the provider would not let the panel delete its hook. */
+    public const REMOVAL_REFUSED = 'removal_refused';
+
     public function __construct(
         private GitProviderManager $providers,
         private WebhookManager $webhooks,

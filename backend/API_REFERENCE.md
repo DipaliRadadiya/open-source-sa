@@ -1684,7 +1684,7 @@ There is no `webhook_enabled` or `webhook_identifier` key in the response — th
 
 - `status: "registered"`: nothing for the user to do. Show "Webhook added to the repository", **not** the URL-and-secret paste instructions.
 - `status: "manual"`: deploy-on-push **is still switched on**; show `message` (translated) plus `webhook.url` and `webhook.secret` to paste, as before. `reason` is one of `no_account` (deployed from a public URL), `signing_token` (a GitLab signing token, which GitLab mints itself), `not_public` (the panel's address is `localhost`/private, so the provider could not deliver), `provider_refused` (usually a token without permission to manage webhooks).
-- `webhook_registration` is `null` when switching off.
+- `webhook_registration` is `null` when switching off — **except** when the provider refused to delete the hook the panel added (e.g. a Bitbucket token with `write:webhook` but no `delete:webhook`): then `{"status": "removal_refused", "reason": "removal_refused", "message": "…"}`. Deploy-on-push *is* off, `webhook.registered` stays `true`, and the user must delete the hook in the repository settings — show `message`.
 
 ---
 

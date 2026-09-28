@@ -51,7 +51,14 @@ class ConfigureApplicationWebhook
         if (! ($data['enabled'] ?? false)) {
             // The hook the panel added, taken out of the repository again.
             // One added by hand is the user's and is left alone.
-            $this->registrar->unregister($application);
+            //
+            // A refusal is reported, not swallowed. A Bitbucket token with
+            // `write:webhook` but not `delete:webhook` (tested 2026-09-28)
+            // lets the panel add a hook and not remove it; the screen said
+            // "off" while the repository went on sending every push.
+            if (! $this->registrar->unregister($application)) {
+                $this->registration = ['status' => WebhookRegistrar::REMOVAL_REFUSED, 'reason' => 'removal_refused'];
+            }
 
             $application->forceFill(['webhook_enabled' => false])->save();
 
