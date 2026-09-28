@@ -2248,6 +2248,13 @@ return [
             // exactly like a release. For testing a pre-release on purpose.
             'offer_prerelease' => (bool) env('SERVER_PHP_OFFER_PRERELEASE', false),
 
+            // The oldest PHP offered for a new install. Anything older that is
+            // already installed is still listed and still usable — this only
+            // stops the panel offering releases long past end of life (5.6 to
+            // 7.3 came up in ondrej's repository and were offered like any
+            // other). Operator decision 2026-09-28: 7.4 and newer.
+            'min_offered' => (string) env('SERVER_PHP_MIN_OFFERED', '7.4'),
+
             /*
             | Why an install failed, matched against apt's output in order.
             |

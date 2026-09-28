@@ -155,9 +155,15 @@ class PhpRuntime implements Runtime
 
         $installed = $this->versions->versions();
 
+        $floor = (string) config('server.runtimes.php.min_offered', '7.4');
+
         return collect($this->stack->installableVersions($this->withoutPrereleases($output)))
             ->unique()
             ->reject(fn (string $version) => in_array($version, $installed, true))
+            // Offered for install from `min_offered` up only. An older one
+            // already on the server is not in this list at all — it is
+            // installed — so it keeps showing and working as before.
+            ->reject(fn (string $version) => version_compare($version, $floor, '<'))
             ->sortByDesc(fn (string $version) => (float) $version)
             ->values()
             ->all();

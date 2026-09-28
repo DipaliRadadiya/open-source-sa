@@ -190,6 +190,37 @@ it('offers a pre-release when told to', function () {
     expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.6', '8.5']);
 });
 
+it('offers nothing older than the configured floor for a new install', function () {
+    // Operator decision 2026-09-28: 5.6 to 7.3, long past end of life, are
+    // not offered any more — they came up in the repository and sat in the
+    // list like any other release.
+    fakePhp(search: "php5.6-fpm - x\nphp7.0-fpm - x\nphp7.3-fpm - x\nphp7.4-fpm - x\nphp8.2-fpm - x\n");
+
+    expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.2', '7.4']);
+
+    phpCall('POST', '/api/php/versions', ['version' => '7.3'])->assertStatus(422);
+});
+
+it('still lists and keeps an old version that is already installed', function () {
+    // "If the user has it installed, show it": a server that already runs
+    // 7.2 must not lose it from the screen because the panel stopped
+    // offering it.
+    File::makeDirectory("{$this->phpDir}/7.2/fpm", 0755, true);
+    fakePhp(search: "php7.2-fpm - x\nphp8.2-fpm - x\n");
+
+    $settings = phpSettings();
+
+    expect(collect($settings['versions'])->pluck('version')->all())->toContain('7.2')
+        ->and(collect($settings['installable'])->pluck('version')->all())->toBe(['8.2']);
+});
+
+it('offers an old version again when the floor is lowered on purpose', function () {
+    config(['server.runtimes.php.min_offered' => '5.6']);
+    fakePhp(search: "php5.6-fpm - x\nphp8.2-fpm - x\n");
+
+    expect(collect(phpSettings()['installable'])->pluck('version')->all())->toBe(['8.2', '5.6']);
+});
+
 it('refuses to install a pre-release through the API', function () {
     fakePhp(
         search: "php8.5-fpm - x\nphp8.6-fpm - x\n",
