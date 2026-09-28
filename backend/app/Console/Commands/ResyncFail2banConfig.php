@@ -49,6 +49,7 @@ class ResyncFail2banConfig extends Command
         }
 
         $this->moveSiteJails($sites);
+        $this->repairDefaultFilters($sites);
 
         $jails = $fail2ban->configuredJails();
 
@@ -86,6 +87,35 @@ class ResyncFail2banConfig extends Command
         ));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Take the `wp-admin` rule out of every site filter that is still the old
+     * default — it banned the site's own administrators (see
+     * ApplicationFail2banManager::defaultFilterContent()). Changing the
+     * default alone would have fixed only jails enabled from now on. Per site
+     * and never fatal, like the move below; an edited filter is left alone.
+     */
+    private function repairDefaultFilters(ApplicationFail2banManager $sites): void
+    {
+        $repaired = 0;
+
+        Application::query()
+            ->whereNotNull('fail2ban_jail_name')
+            ->orderBy('id')
+            ->each(function (Application $application) use ($sites, &$repaired) {
+                try {
+                    if ($sites->repairLegacyDefaultFilter($application)) {
+                        $repaired++;
+                    }
+                } catch (Fail2banOperationException $exception) {
+                    $this->components->warn("Site filter for {$application->name} not updated (reference {$exception->reference}); it keeps its old rules.");
+                }
+            });
+
+        if ($repaired > 0) {
+            $this->components->info("Site filters updated so a logged-in administrator is not banned: {$repaired}.");
+        }
     }
 
     /**

@@ -182,8 +182,21 @@ class ApplicationFail2banManager
     }
 
     /**
-     * Default filter INI for new applications. Three rules — the standard
-     * WordPress login/xmlrpc/admin regexes — and an empty ignore list.
+     * Default filter INI for new applications. Two rules — WordPress's login
+     * and XML-RPC endpoints — and an empty ignore list.
+     *
+     * 🔴 **There used to be a third, `POST .*wp-admin.*`, and it banned the
+     * site's own administrators.** Everything a logged-in user does in the
+     * dashboard is a POST under `/wp-admin/`: the Heartbeat API calls
+     * `admin-ajax.php` every 15–60 seconds while a screen is open, saving a
+     * post is `post.php`, saving settings is `options.php`. Three in ten
+     * minutes (the jail's `maxretry`/`findtime`) is a normal minute of
+     * editing, so the owner was locked out of their own site shortly after
+     * turning protection on (measured with `fail2ban-regex` on the Apache
+     * test box, 2026-09-28). A brute force needs the login form or XML-RPC —
+     * `wp-admin` itself requires the session it would be trying to get — so
+     * the rule protected nothing the other two did not. The filter the
+     * repository ships for WordPress, `panel-app-wplogin.conf`, never had it.
      *
      * **`[Definition]`, not `[{name}]`.** A fail2ban *filter* names its
      * section `Definition`; only a *jail* is named after itself. This emitted
@@ -201,10 +214,52 @@ class ApplicationFail2banManager
             [Definition]
             failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
                        ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
-                       ^<HOST> .* "(POST|PUT|DELETE) .*wp-admin.*
             ignoreregex =
 
             INI;
+    }
+
+    /**
+     * The default filter as it shipped until 2026-09-28, with the `wp-admin`
+     * rule that banned logged-in administrators — see defaultFilterContent().
+     */
+    private const LEGACY_DEFAULT_FILTER = <<<'INI'
+        [Definition]
+        failregex = ^<HOST> .* "(POST|PUT|DELETE) .*wp-login.php
+                   ^<HOST> .* "(POST|PUT|DELETE) .*xmlrpc.php
+                   ^<HOST> .* "(POST|PUT|DELETE) .*wp-admin.*
+        ignoreregex =
+        INI;
+
+    /**
+     * Replace a site's filter with the current default when it is still, word
+     * for word, the old one.
+     *
+     * Only then: a filter the user edited is theirs, and a rule they chose to
+     * keep is not the panel's to remove. Whitespace is compared loosely —
+     * the form round-trips the text and may re-indent it — but every rule
+     * must match. Written through `enableForApp()`, so a reload that fails
+     * restores the previous file.
+     *
+     * @throws Fail2banOperationException
+     */
+    public function repairLegacyDefaultFilter(Application $application): bool
+    {
+        $words = fn (string $text): string => (string) preg_replace('/\s+/', ' ', trim($text));
+
+        if ($application->fail2ban_jail_name === null
+            || $application->fail2ban_jail_content === null
+            || $words((string) $application->fail2ban_filter_content) !== $words(self::LEGACY_DEFAULT_FILTER)) {
+            return false;
+        }
+
+        $filter = $this->defaultFilterContent();
+
+        $this->enableForApp($application, (string) $application->fail2ban_jail_content, $filter);
+
+        $application->forceFill(['fail2ban_filter_content' => $filter])->save();
+
+        return true;
     }
 
     /**

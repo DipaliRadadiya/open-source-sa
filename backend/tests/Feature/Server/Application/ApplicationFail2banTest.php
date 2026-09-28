@@ -745,3 +745,69 @@ it('treats a filter as package-owned when dpkg cannot be asked', function () {
 
     expect(file_exists($this->filterD.'/shop.conf'))->toBeTrue();
 });
+
+it('does not ban a logged-in WordPress administrator by default', function () {
+    // The default filter matched every POST under /wp-admin/, and the
+    // dashboard is nothing but: the Heartbeat API alone calls admin-ajax.php
+    // every 15-60 seconds. Three in ten minutes banned the site's owner.
+    $this->application = createFail2banApp('Shop', 'shop.test', 'wordpress');
+
+    $filter = $this->withHeaders(appFail2banHeaders())
+        ->getJson(appFail2banUrl())
+        ->assertOk()
+        ->json('filter_template');
+
+    $regexes = collect(explode("\n", $filter))
+        ->map(fn (string $line) => trim((string) preg_replace('/^failregex\s*=/', '', trim($line))))
+        ->filter(fn (string $line) => str_starts_with($line, '^<HOST>'))
+        ->map(fn (string $line) => '/'.str_replace(['<HOST>', '/'], ['(?<host>\S+)', '\/'], $line).'/');
+
+    $line = fn (string $request) => '203.0.113.9 - - [28/Sep/2026:06:40:00 +0000] "'.$request.' HTTP/1.1" 200 512 "-" "Mozilla/5.0"';
+    $matches = fn (string $request) => $regexes->contains(fn (string $regex) => preg_match($regex, $line($request)) === 1);
+
+    expect($regexes)->not->toBeEmpty()
+        ->and($matches('POST /wp-admin/admin-ajax.php'))->toBeFalse()
+        ->and($matches('POST /wp-admin/post.php'))->toBeFalse()
+        ->and($matches('POST /wp-admin/options.php'))->toBeFalse()
+        // What it is for is still caught.
+        ->and($matches('POST /wp-login.php'))->toBeTrue()
+        ->and($matches('POST /xmlrpc.php'))->toBeTrue();
+});
+
+it('takes the wp-admin rule out of a filter still on the old default, on fail2ban:resync', function () {
+    $this->application = createFail2banApp('Shop', 'shop.test', 'wordpress', [
+        'fail2ban_jail_name' => 'panel-site-shop',
+        'fail2ban_jail_content' => "[{name}]\nenabled  = true\nfilter   = {filter}\nlogpath  = {logpath}\n",
+        // Re-indented, as a round trip through the form may leave it.
+        'fail2ban_filter_content' => "[Definition]\nfailregex = ^<HOST> .* \"(POST|PUT|DELETE) .*wp-login.php\n"
+            ."  ^<HOST> .* \"(POST|PUT|DELETE) .*xmlrpc.php\n"
+            ."  ^<HOST> .* \"(POST|PUT|DELETE) .*wp-admin.*\nignoreregex =\n",
+    ]);
+
+    $writes = [];
+    fakeAppFail2ban(writes: $writes);
+
+    $this->artisan('fail2ban:resync')->assertSuccessful();
+
+    expect($this->application->fresh()->fail2ban_filter_content)->not->toContain('wp-admin')
+        ->and($writes[$this->filterD.'/panel-site-shop.conf'] ?? '')->toContain('wp-login.php')
+        ->and($writes[$this->filterD.'/panel-site-shop.conf'] ?? '')->not->toContain('wp-admin');
+});
+
+it('leaves a filter the user edited alone on fail2ban:resync', function () {
+    $edited = "[Definition]\nfailregex = ^<HOST> .* \"POST .*wp-admin.*\nignoreregex =\n";
+
+    $this->application = createFail2banApp('Shop', 'shop.test', 'wordpress', [
+        'fail2ban_jail_name' => 'panel-site-shop',
+        'fail2ban_jail_content' => "[{name}]\nenabled  = true\nfilter   = {filter}\nlogpath  = {logpath}\n",
+        'fail2ban_filter_content' => $edited,
+    ]);
+
+    $writes = [];
+    fakeAppFail2ban(writes: $writes);
+
+    $this->artisan('fail2ban:resync')->assertSuccessful();
+
+    expect($this->application->fresh()->fail2ban_filter_content)->toBe($edited)
+        ->and($writes)->not->toHaveKey($this->filterD.'/panel-site-shop.conf');
+});
