@@ -5651,7 +5651,7 @@ Show `message` in the delete dialog. Nothing is deleted and nothing is logged.
 
 **Query:** `?repository=devuser/shop`
 
-**Response `200`:** `{"branches": ["main", "develop", "hotfix/payment"]}`
+**Response `200`:** `{"branches": [{"name": "main", "protected": true}, {"name": "develop", "protected": false}]}` — objects, not bare names; `protected` is the provider's own branch-protection flag.
 
 ---
 
