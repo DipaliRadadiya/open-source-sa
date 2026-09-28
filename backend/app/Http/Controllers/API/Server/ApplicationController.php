@@ -19,12 +19,11 @@ use App\Http\Requests\Server\Application\StoreApplicationRequest;
 use App\Http\Requests\Server\Application\UpdateApplicationRequest;
 use App\Http\Resources\ApplicationResource;
 use App\Http\Resources\AppSidebarResource;
-use App\Jobs\DeployApplication;
 use App\Jobs\MeasureApplicationSize;
 use App\Jobs\ProvisionApplication;
 use App\Models\Application;
 use App\Models\Permission;
-use App\Services\Server\Applications\DeploymentRecorder;
+use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\FileBrowser;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Applications\ProcessSupervisor;
@@ -165,13 +164,7 @@ class ApplicationController extends Controller
         // Deployment screen and stays for compatibility, but a deploy that
         // leaves no history depending on which button started it would be a
         // gap nobody could explain.
-        $deployment = app(DeploymentRecorder::class)->open(
-            $application,
-            DeploymentTrigger::Manual,
-            Auth::id(),
-        );
-
-        DeployApplication::dispatch($application->id, Auth::id(), $deployment->id);
+        app(DeployQueue::class)->queue($application, DeploymentTrigger::Manual, Auth::id());
 
         return response()->json([
             'application' => ApplicationResource::make($application->fresh(['systemUser']))->resolve(),

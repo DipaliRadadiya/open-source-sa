@@ -9,11 +9,10 @@ use App\Http\Requests\Server\Application\UpdateDeploySettingsRequest;
 use App\Http\Requests\Server\Application\UpdateGitAccountRequest;
 use App\Http\Resources\ApplicationResource;
 use App\Http\Resources\DeploymentResource;
-use App\Jobs\DeployApplication;
 use App\Models\Application;
 use App\Models\Deployment;
 use App\Services\ActivityLogger;
-use App\Services\Server\Applications\DeploymentRecorder;
+use App\Services\Server\Applications\DeployQueue;
 use App\Services\Server\Applications\GitDeployer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -74,13 +73,11 @@ class DeploymentController extends Controller
      * Start a deploy. Returns 202 with the row already created, so the screen
      * has something to show and poll before a worker picks the job up.
      */
-    public function store(Application $application, DeploymentRecorder $recorder): JsonResponse
+    public function store(Application $application, DeployQueue $deploys): JsonResponse
     {
         $this->refuseWithoutAccount($application);
 
-        $deployment = $recorder->open($application, DeploymentTrigger::Manual, Auth::id());
-
-        DeployApplication::dispatch($application->id, Auth::id(), $deployment->id);
+        $deployment = $deploys->queue($application, DeploymentTrigger::Manual, Auth::id());
 
         return response()->json([
             'deployment' => DeploymentResource::make($deployment)->resolve(),
@@ -95,14 +92,12 @@ class DeploymentController extends Controller
      * This re-runs the current branch, which is what fixes a deploy that failed
      * on a transient error, and it says so rather than implying time travel.
      */
-    public function redeploy(Application $application, Deployment $deployment, DeploymentRecorder $recorder): JsonResponse
+    public function redeploy(Application $application, Deployment $deployment, DeployQueue $deploys): JsonResponse
     {
         abort_unless($deployment->application_id === $application->id, 404);
         $this->refuseWithoutAccount($application);
 
-        $fresh = $recorder->open($application, DeploymentTrigger::Redeploy, Auth::id());
-
-        DeployApplication::dispatch($application->id, Auth::id(), $fresh->id);
+        $fresh = $deploys->queue($application, DeploymentTrigger::Redeploy, Auth::id());
 
         return response()->json([
             'deployment' => DeploymentResource::make($fresh)->resolve(),

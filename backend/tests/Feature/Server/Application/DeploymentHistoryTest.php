@@ -12,6 +12,8 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\DeploymentRecorder;
 use App\Services\Server\Applications\GitDeployer;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Bus\UniqueLock;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
@@ -453,4 +455,75 @@ describe('the newest deploy', function () {
 
         $this->actingAs($this->admin)->getJson(latestUrl())->assertNotFound();
     });
+});
+
+it('joins the deploy already waiting instead of leaving a row nothing will run', function () {
+    // DeployApplication is unique until processing, so Laravel drops a second
+    // dispatch while one waits. The row used to be opened regardless — a push
+    // during a queued deploy on the Apache test box left one `queued` forever.
+    Queue::fake();
+
+    $first = $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->assertStatus(202)
+        ->json('deployment.id');
+
+    $second = $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->assertStatus(202)
+        ->json('deployment.id');
+
+    expect($second)->toBe($first)
+        ->and($this->application->deployments()->count())->toBe(1);
+
+    Queue::assertPushed(DeployApplication::class, 1);
+});
+
+it('queues a fresh deploy once the waiting one has been picked up', function () {
+    Queue::fake();
+
+    $first = $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->json('deployment.id');
+
+    // What the worker does as it starts a unique-until-processing job.
+    (new UniqueLock(app(CacheRepository::class)))->release(new DeployApplication($this->application->id));
+    Deployment::whereKey($first)->update(['status' => DeploymentStatus::Running->value]);
+
+    $second = $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->json('deployment.id');
+
+    // A push during a *running* deploy must still queue one behind it — that
+    // deploy started before the new commit existed.
+    expect($second)->not->toBe($first)
+        ->and($this->application->deployments()->count())->toBe(2);
+
+    Queue::assertPushed(DeployApplication::class, 2);
+});
+
+it('closes a queued row no job will ever run when the next deploy is queued', function () {
+    Queue::fake();
+
+    $orphan = app(DeploymentRecorder::class)->open($this->application, DeploymentTrigger::Webhook, null);
+    $orphan->forceFill(['created_at' => now()->subDay()])->save();
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->assertStatus(202);
+
+    expect($orphan->fresh()->status)->toBe(DeploymentStatus::Failed)
+        ->and($orphan->fresh()->failed_step)->toBe('worker');
+});
+
+it('leaves a young queued row alone — it may be the one a worker just picked up', function () {
+    Queue::fake();
+
+    $young = app(DeploymentRecorder::class)->open($this->application, DeploymentTrigger::Webhook, null);
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/deployments")
+        ->assertStatus(202);
+
+    expect($young->fresh()->status)->toBe(DeploymentStatus::Queued);
 });

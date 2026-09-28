@@ -3,11 +3,10 @@
 namespace App\Actions\Server\Application;
 
 use App\Enums\DeploymentTrigger;
-use App\Jobs\DeployApplication;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Git\Webhooks\WebhookManager;
-use App\Services\Server\Applications\DeploymentRecorder;
+use App\Services\Server\Applications\DeployQueue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -112,13 +111,10 @@ class ReceiveDeployWebhook
         // this", which is true, rather than "we lost track of who did".
         // A row with no actor: nobody pressed anything. It reads as System,
         // the same rule the activity log follows for webhook deploys.
-        $deployment = app(DeploymentRecorder::class)->open(
-            $application,
-            DeploymentTrigger::Webhook,
-            null,
-        );
-
-        DeployApplication::dispatch($application->id, null, $deployment->id);
+        //
+        // A push that lands while a deploy is still waiting joins it instead
+        // (see DeployQueue) — that deploy fetches the tip, this commit included.
+        app(DeployQueue::class)->queue($application, DeploymentTrigger::Webhook, null);
 
         $this->activityLogger->log('application.webhook_deployed', $application, [
             'name' => $application->name,
