@@ -32,6 +32,7 @@ return [
         'version_not_installed' => 'PHP :version はこのサーバーにインストールされていません。先にインストールしてから、ここで選択してください。',
         'version_busy' => 'PHP :version はまだインストールまたは削除の途中です。完了してからバージョンを変更してください。',
         'unsupported_stack' => 'このサーバーは OpenLiteSpeed を使用しており、PHP-FPM プールはありません。',
+        'not_php_site' => 'このサイトは PHP を配信していないため、割り当てられるプールはありません。まず配信方法を変更してください。',
         'already_isolated' => 'このサイトにはすでに専用の PHP プールがあります。',
         'not_isolated' => 'このサイトは分離されていません。',
         'needs_isolation' => 'このサイトにはまだ専用の PHP プールがないため、これらの制限は適用できません。先にプールを割り当ててから保存してください。',

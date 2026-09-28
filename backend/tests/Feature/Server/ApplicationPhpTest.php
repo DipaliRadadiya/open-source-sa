@@ -5,8 +5,10 @@ use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Applications\Types\GitSiteType;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Php\PhpVersionManager;
+use App\Services\Server\Php\PoolIsolator;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
@@ -1076,5 +1078,78 @@ describe('adopting an existing open_basedir', function () {
 
         expect(app(PoolManager::class)->adoptOpenBasedir($this->application, $settings)['adopted'])->toBeFalse()
             ->and($settings->fresh()->open_basedir_paths)->toBe('/mnt/mine');
+    });
+});
+
+describe('a site that does not serve PHP', function () {
+    /**
+     * A git site's rendering type is chosen by the user at create, so unlike
+     * every other site type its row can disagree with its type's serving
+     * profile — {@see GitSiteType} has to
+     * answer `php`, which is the default for a repository with no rendering
+     * type. The row is the user's actual choice.
+     */
+    function staticGitSite(): Application
+    {
+        $application = Application::forceCreate([
+            'system_user_id' => test()->application->system_user_id,
+            'name' => 'Docs',
+            'slug' => 'docs',
+            'domain' => 'docs.test',
+            'site_type' => 'git',
+            'serving_profile' => 'static',
+            'status' => 'active',
+            'web_root' => '/',
+            // A static site never had one, which is exactly why isolating it
+            // would have reached for the server default instead.
+            'php_version' => null,
+        ]);
+
+        test()->application = $application;
+
+        return $application;
+    }
+
+    it('has no PHP screen at all', function () {
+        staticGitSite();
+
+        // 404, not 403: the screen does not exist for this site, which is a
+        // different statement from "you may not open it". The admin here
+        // holds every permission there is.
+        $this->actingAs($this->admin)->getJson(phpUrl())->assertNotFound();
+        $this->actingAs($this->admin)->putJson(phpUrl(), ['memory_limit' => '512M'])->assertNotFound();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertNotFound();
+    });
+
+    it('is refused a pool by the isolator itself', function () {
+        fakePhpServer();
+
+        $result = app(PoolIsolator::class)->isolate(staticGitSite());
+
+        expect($result['ok'])->toBeFalse()
+            ->and($result['reason'])->toBe('not_php_site')
+            // Nothing was written and nothing was reloaded. A pool file here
+            // would have been named for the *server's* default version and a
+            // reload touches every real PHP site on the box.
+            ->and(PoolFake::$files)->toBe([])
+            ->and(PoolFake::$ran)->toBe([]);
+    });
+
+    it('leaves a Node site alone too', function () {
+        $application = staticGitSite();
+        $application->forceFill(['serving_profile' => 'node'])->save();
+
+        $this->actingAs($this->admin)->getJson(phpUrl())->assertNotFound();
+    });
+
+    it('does not touch a site that really does serve PHP', function () {
+        // The negative control. Narrowing this by one profile must not take
+        // the screen away from the sites it was built for.
+        fakePhpServer();
+
+        $this->actingAs($this->admin)->getJson(phpUrl())->assertOk();
+        $this->actingAs($this->admin)->postJson(phpUrl('/isolate'))->assertOk();
+
+        expect($this->application->fresh()->isolated_at)->not->toBeNull();
     });
 });

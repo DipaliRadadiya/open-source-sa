@@ -41,6 +41,7 @@ return [
         'version_not_installed' => 'PHP :version is not installed on this server. Install it first, then select it here.',
         'version_busy' => 'PHP :version is still being installed or removed. Wait for that to finish, then change the version.',
         'unsupported_stack' => 'This server runs OpenLiteSpeed, which does not use PHP-FPM pools.',
+        'not_php_site' => 'This site does not serve PHP, so there is no pool to give it. Change how it is served first.',
         'already_isolated' => 'This site already has its own PHP pool.',
         'not_isolated' => 'This site is not isolated.',
         'needs_isolation' => 'This site does not have its own PHP pool yet, so these limits could not be enforced. Give it one first, then save.',

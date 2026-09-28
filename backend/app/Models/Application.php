@@ -337,6 +337,31 @@ class Application extends Model
             $features = array_values(array_diff($features, ['app_firewall']));
         }
 
+        // The second feature whose availability is a fact about *this
+        // application* rather than about its site type.
+        //
+        // {@see \App\Services\Applications\Types\AbstractSiteType::features()}
+        // adds `app_php` when the site type serves PHP, and a site type has
+        // one answer for all its sites. Git does not: the user picks a
+        // rendering type at create, and
+        // {@see \App\Services\Applications\ServingProfile::resolve()} turns
+        // `static`/`csr` into a directory of files and `ssr` into a Node
+        // process. `GitSiteType::servingProfile()` still has to say `php` —
+        // it is the default for a repository with no rendering type chosen —
+        // so a git site serving no PHP at all was offered the PHP screen, and
+        // {@see \App\Http\Middleware\CheckPermission} let all three of its
+        // endpoints through on the strength of it. Isolating such a site
+        // would have written it a pool under the *server's* default version
+        // (its own is null), set `isolated_at`, and reloaded PHP-FPM across
+        // every real PHP site on the box to serve a directory of static
+        // files.
+        //
+        // Read from the row, not the type, because the row is where the
+        // user's choice is recorded.
+        if ($this->serving_profile !== 'php') {
+            $features = array_values(array_diff($features, ['app_php']));
+        }
+
         return $features;
     }
 
