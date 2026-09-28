@@ -61,7 +61,7 @@
 @endforeach
 @endif
 @if ($botBlock)
-    SetEnvIfNoCase User-Agent "^({{ $botBlock }})" ai_bot_blocked
+    SetEnvIfNoCase User-Agent "({{ $botBlock }})" ai_bot_blocked
 @endif
 @if ($botBlock || $basicAuth || ($waf && $waf['mode'] === 'enforce'))
     {{-- A node app has no `<Directory>` of its own to attach any of these

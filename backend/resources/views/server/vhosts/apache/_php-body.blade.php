@@ -49,7 +49,7 @@
     {{-- `SetEnvIfNoCase` rather than mod_rewrite: it needs no `RewriteEngine`
          of its own, so it cannot conflict with a user's own rewrite rules in
          a `.htaccess` this vhost already allows (`AllowOverride All`). --}}
-    SetEnvIfNoCase User-Agent "^({{ $botBlock }})" ai_bot_blocked
+    SetEnvIfNoCase User-Agent "({{ $botBlock }})" ai_bot_blocked
 @endif
     <Directory {{ $documentRoot }}>
         Options -Indexes +FollowSymLinks

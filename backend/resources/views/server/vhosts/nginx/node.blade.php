@@ -138,7 +138,7 @@ server {
 @if ($botBlock)
     {{-- Blocked before auth_basic is evaluated, so a blocked bot gets a
          flat 403 and never sees the Basic Auth login prompt. --}}
-    if ($http_user_agent ~* "^({{ $botBlock }})") {
+    if ($http_user_agent ~* "({{ $botBlock }})") {
         return 403;
     }
 @endif
