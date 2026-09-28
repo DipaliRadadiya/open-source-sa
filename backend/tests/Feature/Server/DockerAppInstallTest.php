@@ -312,3 +312,30 @@ it('stores the secrets encrypted, not as readable json', function () {
         ->and($raw)->not->toContain('MYSQL_ROOT_PASSWORD')
         ->and($raw)->not->toContain($application->docker_secrets['MYSQL_ROOT_PASSWORD']);
 });
+
+it('renders the memory ceiling the app actually needs', function (string $type, int $port, array $roles) {
+    // Measured on a real box: Metabase inside the panel's 512m default reported
+    // 123.8 MB available to the JVM and wrote a crash log, and NocoDB exited with
+    // `Aborted (core dumped)`. Both failed as a 502 with nothing about memory
+    // anywhere in the panel.
+    $siteType = app(SiteTypeManager::class)->find($type);
+    $expected = $siteType->defaultMemoryLimit() ?? config('server.docker.default_memory_limit');
+
+    $parsed = Yaml::parse((string) installDockerApp(dockerAppSite($type))->compose);
+
+    // The app's own service, not the database — which keeps the db default.
+    $app = $parsed['services'][array_key_first($parsed['services'])];
+
+    expect($app['mem_limit'])->toBe($expected);
+})->with('docker apps');
+
+it('lets the user override the app floor', function () {
+    // The declared limit is what the app needs to start, not a policy about what
+    // it may have. Somebody who has given Metabase 4g must keep it.
+    $application = dockerAppSite('metabase');
+    $application->forceFill(['memory_limit' => '4g'])->save();
+
+    $parsed = Yaml::parse((string) installDockerApp($application)->compose);
+
+    expect($parsed['services']['metabase']['mem_limit'])->toBe('4g');
+});

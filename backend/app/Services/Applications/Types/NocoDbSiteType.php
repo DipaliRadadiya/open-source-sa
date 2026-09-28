@@ -34,6 +34,15 @@ class NocoDbSiteType extends AbstractDockerAppType
         return 'NC_PUBLIC_URL';
     }
 
+    /**
+     * `Aborted (core dumped)` inside the panel's 512m default, on a real box.
+     * 1g is what it starts and stays up in.
+     */
+    public function defaultMemoryLimit(): ?string
+    {
+        return '1g';
+    }
+
     public function composeTemplate(): string
     {
         return 'server.docker.apps.nocodb';

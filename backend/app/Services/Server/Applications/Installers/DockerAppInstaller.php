@@ -231,7 +231,11 @@ class DockerAppInstaller implements SiteInstaller
             'project' => $this->containers->project($application),
             'appPort' => (int) $application->app_port,
             'containerPort' => $type->containerPort(),
+            // The user's explicit choice, then the app's own floor, then the
+            // server default. An app that needs 2g to start would otherwise get
+            // 512m and fail as a 502 with nothing about memory in the panel.
             'memoryLimit' => (string) ($application->memory_limit
+                ?: $type->defaultMemoryLimit()
                 ?: config('server.docker.default_memory_limit', '512m')),
             // A database is not the application, and giving them one budget
             // means the app's ceiling is really the pair's. MySQL's own default

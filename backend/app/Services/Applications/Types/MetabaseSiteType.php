@@ -29,6 +29,17 @@ class MetabaseSiteType extends AbstractDockerAppType
         return 'metabase';
     }
 
+    /**
+     * Metabase is a JVM application and sizes its heap at a quarter of the
+     * container limit. At the panel's 512m default it reported 123.8 MB available
+     * and wrote a JVM crash log; upstream documents 1GB as the minimum and 2GB as
+     * recommended. Measured on the test box, not guessed.
+     */
+    public function defaultMemoryLimit(): ?string
+    {
+        return '2g';
+    }
+
     public function composeTemplate(): string
     {
         return 'server.docker.apps.metabase';

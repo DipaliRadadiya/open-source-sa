@@ -74,6 +74,29 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     }
 
     /**
+     * The memory ceiling this app needs, or null to take the server default.
+     *
+     * **Measured on a real box, because the failure is invisible.** The panel's
+     * generic default is 512m, which suits a small container and silently breaks
+     * a bigger one — and breaks it as a 502, not as anything mentioning memory:
+     *
+     *  - Metabase reported `Maximum memory available to JVM: 123.8 MB` and wrote
+     *    an `hs_err_pid1.log`. A JVM sizes its heap at a quarter of the container
+     *    limit, so 512m leaves it ~124MB against a documented 1GB minimum.
+     *  - NocoDB exited with `Aborted (core dumped)`.
+     *
+     * Ghost and Wiki.js run inside 512m, so this is genuinely per-app rather than
+     * a default that was simply too low.
+     *
+     * A user's own `memory_limit` on the application still wins: this is the
+     * floor the app needs to start, not a policy about what it may have.
+     */
+    public function defaultMemoryLimit(): ?string
+    {
+        return null;
+    }
+
+    /**
      * The environment key this app is told its own URL through, or null.
      *
      * Null is a real answer and three of the first four apps give it: Metabase
