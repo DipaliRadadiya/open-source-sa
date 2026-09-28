@@ -115,6 +115,17 @@ class CreateApplication
                     // pasted from Windows went back to failing with
                     // "command not found: composer\r". The suite caught it.
                     ...$this->typeColumns($type->fields(), $data),
+                    // The create form's "make a new one" fields, folded into the
+                    // columns the compose file is rendered from.
+                    //
+                    // Resolved here rather than left as separate columns, so
+                    // there is ONE place that answers "what network is this site
+                    // on" — a `docker_network_new` living alongside
+                    // `docker_network` would be a second source for the same
+                    // fact, and the compose renderer would have to know about
+                    // both. The objects themselves are created on the box at
+                    // provision time; this records the intent.
+                    ...$this->containerWiring($data),
                     'name' => $data['name'],
                     'domain' => $data['domain'],
                     'php_version' => $data['php_version'] ?? null,
@@ -211,6 +222,43 @@ class CreateApplication
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
+    /**
+     * The network and volume a container site was created with.
+     *
+     * `docker_network_new` and `docker_network` are two answers to one question,
+     * and validation refuses both at once (`prohibits`) — so whichever arrived
+     * lands in the same column and nothing downstream has to ask which field it
+     * came from.
+     *
+     * The volume pair becomes the first entry of `volume_mounts`, the same shape
+     * the Container card edits. Both halves or neither: validation makes each
+     * `required_with` the other, so a half-filled pair cannot reach here.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function containerWiring(array $data): array
+    {
+        $wiring = [];
+
+        $network = trim((string) ($data['docker_network_new'] ?? '')) !== ''
+            ? (string) $data['docker_network_new']
+            : (string) ($data['docker_network'] ?? '');
+
+        if ($network !== '') {
+            $wiring['docker_network'] = $network;
+        }
+
+        $volume = trim((string) ($data['volume_new'] ?? ''));
+        $path = trim((string) ($data['volume_path'] ?? ''));
+
+        if ($volume !== '' && $path !== '') {
+            $wiring['volume_mounts'] = [['volume' => $volume, 'path' => $path]];
+        }
+
+        return $wiring;
+    }
+
     private function typeColumns(array $fields, array $data): array
     {
         $columns = (new Application)->getFillable();

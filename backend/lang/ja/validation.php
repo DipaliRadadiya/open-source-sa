@@ -188,6 +188,10 @@ return [
     'docker_mount_root' => 'コンテナ内のパスを指定してください。例: /var/lib/mysql',
     'docker_mount_site_root' => 'そのパスにはサイト自身のファイルがマウントされています (:path)。ここにボリュームを置くとコンテナから見えなくなります。ファイルはサーバー上に残りますが、サイトは空のボリュームを配信します。',
     'docker_mount_reserved' => ':path はコンテナが起動するイメージの一部です。空のボリュームで覆うと、コンテナは起動できません。',
+
+    // A name the panel is about to create, so the inverse rule: not taken.
+    'docker_network_taken' => '\':name\' という名前のネットワークはこのサーバーに既に存在します。2つ目を作成せず、上のリストから選択してください。',
+    'docker_volume_taken' => '\':name\' という名前のボリュームはこのサーバーに既に存在します。2つ目を作成せず、サイトのコンテナカードから既存のものをマウントしてください。',
     'node_version_unsupported' => ':type アプリケーションは Node :range で動作します。その範囲内のバージョンを選んでください。範囲外ではアプリケーションが起動を拒否し、サイトは何も配信しません。',
     'php_version_unsupported' => ':type アプリケーションは PHP :range で動作します。その範囲内のバージョンを選んでください。範囲外ではインストールがアプリケーション自身のコードの途中で失敗し、後片付けの必要なサイトが残ります。',
     'php_version_default_unsupported' => ':type アプリケーションは PHP :range で動作します。この欄を空のままにするとサーバーの既定値 (:default) が使われますが、これは範囲外です。範囲内のバージョンを選んでください。',

@@ -2,7 +2,9 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Rules\ContainerMountPath;
 use App\Rules\ExistingDockerNetwork;
+use App\Rules\NewDockerName;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Docker\DockerResources;
 
@@ -150,6 +152,43 @@ class DockerSiteType extends AbstractSiteType
                 'options' => $this->networkOptions(),
             ]),
 
+            // Or make one, here, with a name you choose.
+            //
+            // Two fields rather than a picker with a "Create new…" entry, because
+            // the create form renders what the API declares and has no notion of
+            // a choice that reveals an input. Two plain fields that say what they
+            // do beat a control the renderer would have to learn.
+            //
+            // Refused if the name already exists, rather than quietly adopting
+            // it. Adopting looks like success and attaches the site to somebody
+            // else's network — and a typo that happens to collide is exactly the
+            // case that must not silently work.
+            $this->field('docker_network_new', 'text', advanced: true, extra: [
+                'placeholder' => 'ghost-net',
+                'help' => __('application.help.docker_network_new'),
+            ]),
+
+            // A volume, created and mounted as part of creating the site.
+            //
+            // Both halves or neither: a volume name without a path is not
+            // something the panel can act on, and a path without a name is not
+            // a volume. The pair is validated together.
+            //
+            // One volume here, not a list. The create form is for getting a site
+            // running; a second and third volume is a settled site being
+            // adjusted, and that is what the Container card is for. A repeater on
+            // the create form would be the most complex control on it, used by
+            // almost nobody, for a job that has a better home.
+            $this->field('volume_new', 'text', advanced: true, extra: [
+                'placeholder' => 'ghost-content',
+                'help' => __('application.help.volume_new'),
+            ]),
+
+            $this->field('volume_path', 'text', advanced: true, extra: [
+                'placeholder' => '/var/lib/ghost/content',
+                'help' => __('application.help.volume_path'),
+            ]),
+
             // Paste your own, and everything compose supports is supported.
             // Advanced, because the two fields above cover the common case and
             // a textarea of YAML on the create form would make a one-image
@@ -187,6 +226,15 @@ class DockerSiteType extends AbstractSiteType
             // is a container that will not start — and the refusal has to
             // arrive on the field rather than on the next deploy.
             'docker_network' => ['nullable', 'string', 'max:255', new ExistingDockerNetwork],
+
+            // A name to CREATE, so the opposite rule: it must not exist yet.
+            // `prohibits` rather than a hand-rolled check — picking an existing
+            // network and naming a new one are two answers to one question, and
+            // honouring both would mean deciding which the user meant.
+            'docker_network_new' => ['nullable', 'string', 'max:255', 'prohibits:docker_network', new NewDockerName('network')],
+
+            'volume_new' => ['nullable', 'string', 'max:255', 'required_with:volume_path', new NewDockerName('volume')],
+            'volume_path' => ['nullable', 'string', 'max:255', 'required_with:volume_new', 'regex:/^\//', 'not_regex:/(^|\/)\.\.(\/|$)/', new ContainerMountPath],
         ];
     }
 

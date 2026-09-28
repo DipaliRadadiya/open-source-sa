@@ -9,6 +9,7 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Jobs\MeasureApplicationSize;
 use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
+use App\Services\Server\Docker\DockerResources;
 use App\Services\Server\Php\PoolManager;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -476,6 +477,12 @@ class ApplicationProvisioner
         // supervisor directly, which proved it worked and nothing about
         // whether it was reachable.
         if ($application->serving_profile === 'docker') {
+            // The network and the volumes BEFORE the container, because the
+            // compose file declares them `external: true` — which means Compose
+            // looks them up and refuses rather than creating them. A site created
+            // with "make a new network" has nothing on the box yet at this point.
+            app(DockerResources::class)->ensureFor($application);
+
             $this->containers->apply($application, $documentRoot);
             $this->progress->record('start_app');
 

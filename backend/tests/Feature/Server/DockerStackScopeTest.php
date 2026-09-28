@@ -237,3 +237,33 @@ it('does not ask docker anything on a server that hosts no containers', function
 
     Process::assertNotRan(fn ($process) => in_array('docker', $process->command, true));
 });
+
+it('offers the create-new fields on the Docker card', function () {
+    // The form renders what the API declares, so a field that is not here does
+    // not exist to the user however well the endpoint accepts it.
+    recordStack('docker');
+
+    Process::fake(fn () => Process::result(output: ''));
+
+    $docker = collect(app(SiteTypeManager::class)->catalog())->firstWhere('name', 'docker');
+    $names = collect($docker['fields'])->pluck('name');
+
+    expect($names)->toContain('docker_network')
+        ->and($names)->toContain('docker_network_new')
+        ->and($names)->toContain('volume_new')
+        ->and($names)->toContain('volume_path');
+
+    // All advanced: the common case is one container that talks to nobody and
+    // keeps nothing, and four wiring fields on the front of the form would imply
+    // decisions most people do not have to make.
+    foreach (['docker_network', 'docker_network_new', 'volume_new', 'volume_path'] as $field) {
+        expect(collect($docker['fields'])->firstWhere('name', $field)['advanced'])->toBeTrue();
+    }
+
+    // And every one of them is labelled — `field()` reads
+    // `application.fields.<name>`, so a missing key renders the raw key path.
+    foreach (['docker_network_new', 'volume_new', 'volume_path'] as $field) {
+        $label = collect($docker['fields'])->firstWhere('name', $field)['label'];
+        expect($label)->not->toContain('application.fields');
+    }
+});

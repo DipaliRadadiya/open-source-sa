@@ -220,6 +220,10 @@ return [
     'docker_mount_root' => 'Choose a path inside the container, for example /var/lib/mysql.',
     'docker_mount_site_root' => 'That path is where the site\'s own files are mounted (:path). A volume there hides them from the container — the files stay on the server but the site serves an empty volume.',
     'docker_mount_reserved' => ':path is part of the image the container boots from. An empty volume over it leaves a container that cannot start.',
+
+    // A name the panel is about to create, so the inverse rule: not taken.
+    'docker_network_taken' => 'A network called \':name\' already exists on this server. Pick it from the list above instead of creating a second one.',
+    'docker_volume_taken' => 'A volume called \':name\' already exists on this server. Mount the existing one from the site\'s Container card instead of creating a second one.',
     'node_version_unsupported' => 'The :type application runs on Node :range. Choose a version in that range — outside it the application refuses to start and the site serves nothing.',
     'php_version_unsupported' => 'The :type application runs on PHP :range. Choose a version in that range — outside it the install fails part-way through, inside the application\'s own code, leaving a site to clean up.',
     'php_version_default_unsupported' => 'The :type application runs on PHP :range. Leaving this empty uses the server default (:default), which is outside that range — choose a version in the range instead.',

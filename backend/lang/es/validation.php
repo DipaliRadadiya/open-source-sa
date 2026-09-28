@@ -211,6 +211,10 @@ return [
     'docker_mount_root' => 'Elige una ruta dentro del contenedor, por ejemplo /var/lib/mysql.',
     'docker_mount_site_root' => 'En esa ruta se montan los archivos propios del sitio (:path). Un volumen ahí los oculta del contenedor: los archivos siguen en el servidor, pero el sitio sirve un volumen vacío.',
     'docker_mount_reserved' => ':path forma parte de la imagen con la que arranca el contenedor. Un volumen vacío encima deja un contenedor que no puede arrancar.',
+
+    // A name the panel is about to create, so the inverse rule: not taken.
+    'docker_network_taken' => 'Ya existe una red llamada \':name\' en este servidor. Elígela en la lista de arriba en lugar de crear una segunda.',
+    'docker_volume_taken' => 'Ya existe un volumen llamado \':name\' en este servidor. Monta el existente desde la tarjeta Contenedor del sitio en lugar de crear un segundo.',
     'node_version_unsupported' => 'La aplicación :type funciona con Node :range. Elige una versión dentro de ese rango: fuera de él la aplicación se niega a iniciarse y el sitio no sirve nada.',
     'php_version_unsupported' => 'La aplicación :type funciona con PHP :range. Elige una versión dentro de ese rango: fuera de él la instalación falla a medias, dentro del código de la propia aplicación, y deja un sitio que hay que limpiar.',
     'php_version_default_unsupported' => 'La aplicación :type funciona con PHP :range. Dejar este campo vacío usa el valor predeterminado del servidor (:default), que está fuera de ese rango: elige una versión dentro del rango.',

@@ -335,9 +335,30 @@ it('persists the type fields that are columns', function () {
     $docker = collect(app(SiteTypeManager::class)->all())
         ->first(fn ($type) => $type->name() === 'docker');
 
+    // A third category exists now: the create form's "make a new one" fields are
+    // neither columns nor settings ON PURPOSE. `docker_network_new` resolves into
+    // `docker_network`, and `volume_new` + `volume_path` into `volume_mounts`, so
+    // that ONE column answers "what network is this site on" — two columns for
+    // one fact is a compose renderer that has to know about both.
+    //
+    // They are allowed here only if `containerWiring()` actually names them. That
+    // keeps the guard's teeth: a new field that is neither a column nor wired
+    // still fails, which is the case that originally dropped a pasted compose
+    // file.
+    $wiring = $create;
+    $start = strpos($wiring, 'private function containerWiring');
+    expect($start)->not->toBeFalse('containerWiring() is gone; the transient fields have no consumer');
+    $body = substr($wiring, $start);
+
+    // And it is CALLED, not merely written — the failure mode this whole file
+    // exists to catch.
+    expect($create)->toContain('...$this->containerWiring($data)');
+
     foreach ($docker->fields() as $field) {
-        expect(in_array($field['name'], $columns, true))->toBeTrue(
-            "docker field {$field['name']} is neither a column nor covered by a setting",
+        $name = $field['name'];
+
+        expect(in_array($name, $columns, true) || str_contains($body, "'{$name}'"))->toBeTrue(
+            "docker field {$name} is neither a column, a setting, nor resolved by containerWiring()",
         );
     }
 });

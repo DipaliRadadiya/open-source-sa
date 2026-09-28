@@ -315,6 +315,59 @@ class DockerResources
     }
 
     /**
+     * Make sure the objects a site's compose file names actually exist.
+     *
+     * Called before `compose up`, and it exists because `external: true` means
+     * Compose will not create them. Two situations reach here:
+     *
+     *  - The site was created with "make a new network/volume". Nothing has made
+     *    it yet; validation only checked the name was free.
+     *  - The site has been wired for a while and somebody removed the object with
+     *    `docker volume rm` on the box. The panel's own delete refuses that, but
+     *    the panel is not the only thing with a shell.
+     *
+     * Creating rather than failing, in both cases, because the alternative is a
+     * site that will not start and a message about a name the user did choose.
+     * Idempotent by checking first: `network create` errors on an existing name,
+     * and `volume create` silently returns the existing volume — so neither is
+     * safe to fire blindly, for opposite reasons.
+     *
+     * @return list<string> what it had to create, for the provisioning log
+     */
+    public function ensureFor(Application $application): array
+    {
+        $created = [];
+
+        $network = (string) ($application->docker_network ?? '');
+
+        if ($network !== '' && ! collect($this->networks())->contains(fn (array $row): bool => $row['name'] === $network)) {
+            if (! $this->createNetwork($network)->failed()) {
+                $created[] = "network:{$network}";
+            }
+        }
+
+        $wanted = collect((array) ($application->volume_mounts ?? []))
+            ->pluck('volume')
+            ->filter()
+            ->unique();
+
+        if ($wanted->isEmpty()) {
+            return $created;
+        }
+
+        // One listing for every volume, rather than one per mount.
+        $existing = collect($this->volumes())->pluck('name')->all();
+
+        foreach ($wanted as $volume) {
+            if (! in_array($volume, $existing, true) && ! $this->createVolume($volume)->failed()) {
+                $created[] = "volume:{$volume}";
+            }
+        }
+
+        return $created;
+    }
+
+    /**
      * Create a user-defined bridge network.
      *
      * Bridge, and not a choice: `overlay` needs swarm, `macvlan` needs a

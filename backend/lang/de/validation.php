@@ -188,6 +188,10 @@ return [
     'docker_mount_root' => 'Wählen Sie einen Pfad innerhalb des Containers, zum Beispiel /var/lib/mysql.',
     'docker_mount_site_root' => 'Unter diesem Pfad sind die eigenen Dateien der Website eingebunden (:path). Ein Volume dort verbirgt sie vor dem Container — die Dateien bleiben auf dem Server, die Website liefert aber ein leeres Volume aus.',
     'docker_mount_reserved' => ':path ist Teil des Images, mit dem der Container startet. Ein leeres Volume darüber führt zu einem Container, der nicht starten kann.',
+
+    // A name the panel is about to create, so the inverse rule: not taken.
+    'docker_network_taken' => 'Ein Netzwerk namens \':name\' existiert auf diesem Server bereits. Wählen Sie es oben aus der Liste, statt ein zweites zu erstellen.',
+    'docker_volume_taken' => 'Ein Volume namens \':name\' existiert auf diesem Server bereits. Binden Sie das vorhandene über die Container-Karte der Website ein, statt ein zweites zu erstellen.',
     'node_version_unsupported' => 'Die Anwendung :type läuft mit Node :range. Wähle eine Version in diesem Bereich — außerhalb davon startet die Anwendung nicht und die Seite liefert nichts aus.',
     'php_version_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wähle eine Version in diesem Bereich — außerhalb davon bricht die Installation mitten im Code der Anwendung ab und hinterlässt eine Seite, die aufgeräumt werden muss.',
     'php_version_default_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wird dieses Feld leer gelassen, gilt die Servervorgabe (:default) — die außerhalb dieses Bereichs liegt. Wähle stattdessen eine Version im Bereich.',
