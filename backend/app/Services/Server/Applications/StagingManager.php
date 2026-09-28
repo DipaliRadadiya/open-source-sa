@@ -55,7 +55,10 @@ class StagingManager
             'system_user_id' => $production->system_user_id,
             'production_application_id' => $production->id,
             'name' => $name,
-            'slug' => Application::uniqueSlug($name),
+            'slug' => Application::uniqueSlug(
+                $name,
+                alsoTaken: fn (string $slug): bool => app(SlugConflict::class)->for($slug) !== null,
+            ),
             'domain' => $domain,
             'site_type' => $production->site_type,
             'serving_profile' => $production->serving_profile,

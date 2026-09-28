@@ -4,6 +4,7 @@ namespace App\Http\Requests\Server\Application;
 
 use App\Models\Application;
 use App\Rules\AvailablePort;
+use App\Rules\AvailableSiteName;
 use App\Rules\SingleLine;
 use App\Rules\StartCommand;
 use Illuminate\Foundation\Http\FormRequest;
@@ -28,7 +29,9 @@ class UpdateApplicationRequest extends FormRequest
         return [
             // See StoreApplicationRequest: the name is the config filename.
             // See StoreApplicationRequest: the name reaches a systemd unit.
-            'name' => ['sometimes', 'string', 'max:'.Application::MAX_NAME_LENGTH, new SingleLine, Rule::unique('applications', 'name')->ignore($this->route('application'))],
+            // See StoreApplicationRequest: a rename regenerates the slug, so
+            // the disk check belongs on both paths, not only on create.
+            'name' => ['sometimes', 'string', 'max:'.Application::MAX_NAME_LENGTH, new SingleLine, Rule::unique('applications', 'name')->ignore($this->route('application')), new AvailableSiteName($this->route('application'))],
             'domain' => ['sometimes', 'string', 'max:255', 'regex:/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/'],
             // See StoreApplicationRequest: this becomes a path used by root.
             'web_root' => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9._\-\/]+$/', 'not_regex:/(^|\/)\.\.(\/|$)/'],

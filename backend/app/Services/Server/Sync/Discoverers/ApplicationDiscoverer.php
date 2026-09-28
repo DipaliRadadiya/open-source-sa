@@ -303,6 +303,20 @@ class ApplicationDiscoverer implements Discoverable
         // The folder the files are in, never a name made up here: see
         // layout(). Checked again because a site created between the preview
         // and this apply could have taken it.
+        //
+        // Deliberately NOT passed {@see \App\Services\Server\Applications\SlugConflict},
+        // which create, rename, clone and staging all consult. That asks "does
+        // a file at this slug's paths already exist" — and for an adopted site
+        // the answer is yes by definition: the vhost being adopted is the file
+        // it would find. Wiring it here would refuse every adoption there is.
+        //
+        // The residual case is a folder named after something the panel does
+        // not own — `~/www` adopts as slug `www` — which only bites later, if
+        // that site is then isolated and its pool written over the distro's
+        // `pool.d/www.conf`. Left alone rather than half-guarded: the pool
+        // writer takes over unowned pool files on purpose (see
+        // `PoolManager::adoptOpenBasedir()`), so a refusal here would fight a
+        // feature rather than fix a bug.
         $slug = (string) $attributes['slug'];
 
         if (Application::query()->where('slug', $slug)->exists()) {

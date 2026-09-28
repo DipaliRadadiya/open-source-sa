@@ -232,6 +232,12 @@ class Application extends Model
     public const MAX_NAME_LENGTH = 240;
 
     /**
+     * How many names `uniqueSlug()` will ask the disk about before giving up
+     * on it. See the loop for why a bound is not optional.
+     */
+    public const SLUG_DISK_ATTEMPTS = 10;
+
+    /**
      * A stable, unique, filesystem-safe slug from the name — the key for the
      * web-server config filename. Suffixes `-2`, `-3`, … on collision.
      *
@@ -240,18 +246,53 @@ class Application extends Model
      * rename is halfway through. Same shape as {@see Cronjob::uniqueSlug()},
      * which names `/etc/cron.d` files the same way.
      */
-    public static function uniqueSlug(string $name, ?int $ignoreId = null): string
+    public static function uniqueSlug(string $name, ?int $ignoreId = null, ?callable $alsoTaken = null): string
     {
         $base = Str::slug($name) ?: 'application';
         $slug = $base;
         $suffix = 2;
 
+        // The table-based half of the condition below terminates on its own:
+        // there are finitely many rows, so a suffix eventually clears them.
+        // The disk-based half has no such guarantee — a predicate that answers
+        // "taken" to everything spins this loop forever, incrementing a
+        // counter. That is not hypothetical: it hung the whole test suite for
+        // forty minutes at 100% CPU, because `Process::fake()` with no handler
+        // answers *success* to every command, which this read as "every path
+        // exists".
+        //
+        // So the disk is consulted for a bounded number of names and then
+        // believed to be unhelpful. Falling out of the loop with a slug that
+        // may collide is the right failure: the names it hands back are still
+        // unique in the table, so the worst case is the bug this predicate was
+        // added to prevent, where the alternative is an application that never
+        // responds again.
+        $attempts = 0;
+
         while (static::query()
             ->where('slug', $slug)
             ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
             ->exists()
+            // "Taken" has a second meaning this table cannot see: the slug is
+            // a filename, and a file already at that path belongs to whoever
+            // put it there. Create and rename refuse outright and say so
+            // ({@see \App\Rules\AvailableSiteName}) — there is a user to tell.
+            // Clone and staging have no one to ask, so they pass a predicate
+            // here and step over the name instead, which is what the `-2`
+            // suffix has always been for.
+            //
+            // Sync discovery deliberately passes nothing: its slug *is* the
+            // folder it found, and the vhost it is adopting is exactly the
+            // file a probe would report — see ApplicationDiscoverer.
+            //
+            // Optional, and null by default, because the predicate reaches the
+            // server: every caller that has already validated the name would
+            // otherwise probe the disk a second time to learn what it was
+            // just told.
+            || ($alsoTaken !== null && $attempts < self::SLUG_DISK_ATTEMPTS && $alsoTaken($slug))
         ) {
             $slug = $base.'-'.$suffix++;
+            $attempts++;
         }
 
         return $slug;
