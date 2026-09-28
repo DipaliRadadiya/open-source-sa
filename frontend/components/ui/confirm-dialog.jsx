@@ -55,6 +55,7 @@ export function ConfirmDialog({
   // Widening is opt-in: a yes/no confirmation should stay narrow, but one that
   // asks you to review a list needs the room.
   className,
+  onCloseAutoFocus,
 }) {
   // Escape used to close it mid-request, leaving the outcome to a toast about
   // a box that was no longer there. Cancel is already disabled for the same
@@ -94,6 +95,7 @@ export function ConfirmDialog({
           base class on specificity and silently does nothing. */}
       <AlertDialogContent
         className={cn(children ? "data-[size=default]:sm:max-w-md" : null, className)}
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         {/* min-w-0 twice, because the title is two levels deep: the header is a
             grid item of the dialog and the title is a flex item of this row.

@@ -169,7 +169,7 @@ function ActiveCell({ row, table }) {
 }
 
 function ActionsCell({ row, table }) {
-  const { schedulePresets, commandPresets, applications, placeholder, timezone, onDuplicate, runAs, prevPage } =
+  const { schedulePresets, commandPresets, applications, placeholder, timezone, onDuplicate, runAs, prevPage, canManage, canViewLogs } =
     table.options.meta;
   return (
     <CronjobRowActions
@@ -182,12 +182,15 @@ function ActionsCell({ row, table }) {
       onDuplicate={onDuplicate}
       runAs={runAs}
       prevPage={prevPage}
+      canManage={canManage}
+      canViewLogs={canViewLogs}
     />
   );
 }
 
 export function CronjobsTable({
   data,
+  canViewLogs = false,
   runAs,
   prevPage = null,
   canManage = false,
@@ -221,15 +224,13 @@ export function CronjobsTable({
     { accessorKey: "username", header: () => <Head>{t("columns.runAs")}</Head>, cell: RunAsCell },
     { accessorKey: "command", header: () => <Head>{t("columns.command")}</Head>, cell: CommandCell },
     { id: "active", header: () => <Head>{t("columns.active")}</Head>, cell: ActiveCell },
-    ...(canManage
-      ? [
-          {
-            id: "actions",
-            header: () => <span className="sr-only">{t("actions.label")}</span>,
-            cell: ActionsCell,
-          },
-        ]
-      : []),
+    // Always there: a view-only reader still gets the menu, with each item
+    // saying why it is off, rather than a row with nothing to press.
+    {
+      id: "actions",
+      header: () => <span className="sr-only">{t("actions.label")}</span>,
+      cell: ActionsCell,
+    },
   ];
 
   return (
@@ -249,6 +250,7 @@ export function CronjobsTable({
           onDuplicate={onDuplicate}
           runAs={runAs}
           prevPage={prevPage}
+          canViewLogs={canViewLogs}
         />
       </div>
       <div className="hidden xl:block">
@@ -265,6 +267,7 @@ export function CronjobsTable({
             onDuplicate,
             runAs,
             prevPage,
+            canViewLogs,
           }}
           emptyMessage={t("empty.title")}
           // De-emphasise the row's text, not the controls: the switch and actions

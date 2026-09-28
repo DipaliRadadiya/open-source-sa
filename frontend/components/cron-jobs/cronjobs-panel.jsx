@@ -31,6 +31,7 @@ export function CronjobsPanel({
   systemUsersFailed = false,
   applications = [],
   canManage,
+  canViewLogs = false,
   schedulePresets,
   commandPresets,
   placeholder,
@@ -153,6 +154,7 @@ export function CronjobsPanel({
       ) : (
         <CronjobsTable
           data={cronjobs}
+          canViewLogs={canViewLogs}
           runAs={{ users: systemUsers, failed: systemUsersFailed }}
           // The page to land on when this page's only row leaves it (deleted,
           // or switched out of the status filter); null when a refresh will do.

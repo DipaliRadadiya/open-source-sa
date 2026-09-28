@@ -970,7 +970,8 @@
       "delete": "削除",
       "duplicate": "複製",
       "viewOutput": "出力を表示",
-      "noOutput": "まだ出力は取得されていません"
+      "noOutput": "まだ出力は取得されていません",
+      "noLogsPermission": "現在のロールには システムログ の権限が含まれていません。管理者に権限の付与を依頼してください。"
     },
     "empty": {
       "title": "cron ジョブはまだありません",

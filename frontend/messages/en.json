@@ -970,7 +970,8 @@
       "delete": "Delete",
       "duplicate": "Duplicate",
       "viewOutput": "View output",
-      "noOutput": "No output captured yet"
+      "noOutput": "No output captured yet",
+      "noLogsPermission": "Your role does not include System Logs. Ask an administrator to grant it."
     },
     "empty": {
       "title": "No cron jobs yet",

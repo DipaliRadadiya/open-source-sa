@@ -970,7 +970,8 @@
       "delete": "Excluir",
       "duplicate": "Duplicar",
       "viewOutput": "Ver saída",
-      "noOutput": "Nenhuma saída capturada ainda"
+      "noOutput": "Nenhuma saída capturada ainda",
+      "noLogsPermission": "Seu papel não inclui Logs do sistema. Peça a um administrador para concedê-lo."
     },
     "empty": {
       "title": "Nenhum cron job ainda",

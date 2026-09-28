@@ -24,6 +24,7 @@ import {
 export function CronjobsCards({
   runAs,
   prevPage = null,
+  canViewLogs = false,
   jobs,
   canManage = false,
   schedulePresets = [],
@@ -52,21 +53,21 @@ export function CronjobsCards({
                 {job.command}
               </p>
             </div>
-            {canManage ? (
-              <div className="-me-2 -mt-1 shrink-0">
-                <CronjobRowActions
-                  job={job}
-                  schedulePresets={schedulePresets}
-                  commandPresets={commandPresets}
-                  applications={applications}
-                  placeholder={placeholder}
-                  timezone={timezone}
-                  onDuplicate={onDuplicate}
-                  runAs={runAs}
-                  prevPage={prevPage}
-                />
-              </div>
-            ) : null}
+            <div className="-me-2 -mt-1 shrink-0">
+              <CronjobRowActions
+                job={job}
+                schedulePresets={schedulePresets}
+                commandPresets={commandPresets}
+                applications={applications}
+                placeholder={placeholder}
+                timezone={timezone}
+                onDuplicate={onDuplicate}
+                runAs={runAs}
+                prevPage={prevPage}
+                canManage={canManage}
+                canViewLogs={canViewLogs}
+              />
+            </div>
           </div>
 
           <CardFacts>

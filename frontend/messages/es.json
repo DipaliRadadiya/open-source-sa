@@ -970,7 +970,8 @@
       "delete": "Eliminar",
       "duplicate": "Duplicar",
       "viewOutput": "Ver la salida",
-      "noOutput": "Aún no se ha capturado ninguna salida"
+      "noOutput": "Aún no se ha capturado ninguna salida",
+      "noLogsPermission": "Tu rol no incluye Registros del sistema. Pide a un administrador que te lo conceda."
     },
     "empty": {
       "title": "Aún no hay tareas cron",

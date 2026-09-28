@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
@@ -14,11 +14,14 @@ export function DeleteCronjobDialog({ job, open, onOpenChange, prevPage = null }
   const t = useTranslations("cronJobs");
   const { refreshThen, navigateThen } = useRefresh();
   const [pending, setPending] = useState(false);
+  // The row, and the ⋯ that opened this, are gone once it is deleted.
+  const removed = useRef(false);
 
   async function onConfirm() {
     setPending(true);
     const done = (say) => {
       const after = () => {
+        removed.current = true;
         say();
         onOpenChange?.(false);
         setPending(false);
@@ -52,6 +55,12 @@ export function DeleteCronjobDialog({ job, open, onOpenChange, prevPage = null }
       confirmLabel={pending ? t("delete.deleting") : t("delete.confirm")}
       pending={pending}
       onConfirm={onConfirm}
+      onCloseAutoFocus={(event) => {
+        if (!removed.current) return;
+        removed.current = false;
+        event.preventDefault();
+        document.querySelector("[data-cron-add]")?.focus();
+      }}
     />
   );
 }

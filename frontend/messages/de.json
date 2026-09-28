@@ -970,7 +970,8 @@
       "delete": "Löschen",
       "duplicate": "Duplizieren",
       "viewOutput": "Ausgabe anzeigen",
-      "noOutput": "Noch keine Ausgabe erfasst"
+      "noOutput": "Noch keine Ausgabe erfasst",
+      "noLogsPermission": "Ihre Rolle enthält nicht „Systemprotokolle“. Bitten Sie eine Administratorin oder einen Administrator darum."
     },
     "empty": {
       "title": "Noch keine Cronjobs",

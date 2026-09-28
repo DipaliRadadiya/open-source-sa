@@ -136,3 +136,15 @@ test("deep pass: switch keeps focus while saving, each switch named, long names 
   assert.match(read("components/cron-jobs/cronjob-active-switch.jsx"), /aria-label=\{t\("activeFor", \{ name: job\.name \}\)\}/);
   assert.match(read("components/cron-jobs/cronjobs-table.jsx"), /\[overflow-wrap:anywhere\]">\{job\.name\}/);
 });
+
+test("View output follows Logs, the other items follow cron manage; focus to Add after delete", () => {
+  assert.match(read("app/(app)/cron-jobs/page.jsx"), /const canViewLogs = can\(permissions, "logs", "view"\)/);
+  const t = read("components/cron-jobs/cronjobs-table.jsx");
+  assert.match(t, /Always there: a view-only reader still gets the menu/);
+  const a = read("components/cron-jobs/cronjob-row-actions.jsx");
+  assert.match(a, /!canViewLogs \? \(\s*<MenuItemHint hint=\{t\("actions\.noLogsPermission"\)\}>/);
+  assert.equal((a.match(/disabled=\{!canManage\}/g) ?? []).length, 3);
+  const d = read("components/cron-jobs/delete-cronjob-dialog.jsx");
+  assert.match(d, /document\.querySelector\("\[data-cron-add\]"\)\?\.focus\(\)/);
+  assert.match(read("components/ui/confirm-dialog.jsx"), /onCloseAutoFocus=\{onCloseAutoFocus\}/);
+});

@@ -58,7 +58,7 @@ export function CronjobsToolbar({
       <div className="flex flex-wrap items-center gap-2">
         <RefreshButton />
         <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-          <Button disabled={!canManage} onClick={onCreate}>
+          <Button disabled={!canManage} onClick={onCreate} data-cron-add>
             <Plus className="size-4" />
             {t("addJob")}
           </Button>

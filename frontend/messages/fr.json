@@ -970,7 +970,8 @@
       "delete": "Supprimer",
       "duplicate": "Dupliquer",
       "viewOutput": "Voir la sortie",
-      "noOutput": "Aucune sortie capturée pour l'instant"
+      "noOutput": "Aucune sortie capturée pour l'instant",
+      "noLogsPermission": "Votre rôle n'inclut pas les journaux système. Demandez à un administrateur de l'accorder."
     },
     "empty": {
       "title": "Aucune tâche cron pour l'instant",
