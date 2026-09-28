@@ -76,7 +76,6 @@
     "columns": {
       "username": "Nom d'utilisateur",
       "password": "Mot de passe",
-      "home": "Répertoire personnel",
       "shell": "Shell",
       "access": "Accès",
       "applications": "Applications",
@@ -118,11 +117,12 @@
       "shellChanged": "Shell de connexion mis à jour.",
       "keyAdded": "Clé SSH ajoutée.",
       "keyRemoved": "Clé SSH retirée.",
-      "failed": "Une erreur s'est produite. Veuillez réessayer."
+      "alreadyGone": "{username} avait déjà été supprimé.",
+      "sshOffNotEnforced": "Connexion SSH désactivée ici. Elle prend effet dès que vous enregistrez Paramètres → Accès et sécurité."
     },
     "create": {
       "title": "Ajouter un utilisateur système",
-      "subtitle": "Crée un compte Linux sur le serveur (exécute useradd).",
+      "subtitle": "Crée un compte Linux sur le serveur.",
       "username": "Nom d'utilisateur",
       "usernamePlaceholder": "ex. deploy",
       "publicKey": "Clé publique SSH initiale",
@@ -158,7 +158,7 @@
     "apps": "Applications",
     "delete": {
       "title": "Supprimer l'utilisateur système ?",
-      "description": "Ceci supprime définitivement {username}, son répertoire personnel et ses tâches cron (exécute userdel -r). Action irréversible.",
+      "description": "Ceci supprime définitivement {username}, son répertoire personnel et ses tâches cron. Action irréversible.",
       "confirmLabel": "Saisissez {username} pour confirmer",
       "cancel": "Annuler",
       "confirm": "Supprimer l'utilisateur",

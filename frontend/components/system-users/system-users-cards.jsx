@@ -18,7 +18,7 @@ import { SystemUserRowActions } from "@/components/system-users/system-user-row-
  * shell picker takes the full width underneath: it is a control, not a reading,
  * and a 120px select shows half a shell name.
  */
-export function SystemUsersCards({ users, shells = [], canManage = false }) {
+export function SystemUsersCards({ users, shells = [], canManage = false, prevPage = null, sshEnforced = null }) {
   const t = useTranslations("systemUsers");
 
   return (
@@ -44,11 +44,10 @@ export function SystemUsersCards({ users, shells = [], canManage = false }) {
               </div>
               <p className="truncate font-mono text-xs text-muted-foreground">{user.home_path}</p>
             </div>
-            {canManage ? (
-              <div className="-me-2 -mt-1 shrink-0">
-                <SystemUserRowActions user={user} />
-              </div>
-            ) : null}
+            {/* For viewers too — the menu is how SSH keys are reached. */}
+            <div className="-me-2 -mt-1 shrink-0">
+              <SystemUserRowActions user={user} canManage={canManage} prevPage={prevPage} />
+            </div>
           </div>
 
           <CardFacts>
@@ -56,7 +55,7 @@ export function SystemUsersCards({ users, shells = [], canManage = false }) {
               <AccessSwitch user={user} field="sudo" canManage={canManage} />
             </CardFact>
             <CardFact label={t("ssh")}>
-              <AccessSwitch user={user} field="ssh" canManage={canManage} />
+              <AccessSwitch user={user} field="ssh" canManage={canManage} sshEnforced={sshEnforced} />
             </CardFact>
             <CardFact label={t("columns.applications")}>
               <AppsCell user={user} />

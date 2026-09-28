@@ -654,7 +654,6 @@
     "columns": {
       "username": "Usuario",
       "password": "Contraseña",
-      "home": "Directorio",
       "shell": "Shell",
       "access": "Acceso",
       "applications": "Aplicaciones",
@@ -696,11 +695,12 @@
       "shellChanged": "Shell de inicio de sesión actualizado.",
       "keyAdded": "Clave SSH añadida.",
       "keyRemoved": "Clave SSH eliminada.",
-      "failed": "Algo salió mal. Inténtalo de nuevo."
+      "alreadyGone": "{username} ya se había eliminado.",
+      "sshOffNotEnforced": "Inicio de sesión SSH desactivado aquí. Se aplica cuando guardes Ajustes → Acceso y seguridad."
     },
     "create": {
       "title": "Añadir usuario del sistema",
-      "subtitle": "Crea una cuenta Linux en el servidor (ejecuta useradd).",
+      "subtitle": "Crea una cuenta Linux en el servidor.",
       "username": "Usuario",
       "usernamePlaceholder": "p. ej. deploy",
       "publicKey": "Clave pública SSH inicial",
@@ -736,7 +736,7 @@
     "apps": "Aplicaciones",
     "delete": {
       "title": "¿Eliminar usuario del sistema?",
-      "description": "Esto elimina permanentemente a {username}, su directorio personal y sus tareas cron (ejecuta userdel -r). Esta acción no se puede deshacer.",
+      "description": "Esto elimina permanentemente a {username}, su directorio personal y sus tareas cron. Esta acción no se puede deshacer.",
       "confirmLabel": "Escribe {username} para confirmar",
       "cancel": "Cancelar",
       "confirm": "Eliminar usuario",

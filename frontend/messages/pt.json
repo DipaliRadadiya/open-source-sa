@@ -76,7 +76,6 @@
     "columns": {
       "username": "Nome de usuário",
       "password": "Senha",
-      "home": "Home",
       "shell": "Shell",
       "access": "Acesso",
       "applications": "Aplicações",
@@ -118,11 +117,12 @@
       "shellChanged": "Shell de login atualizado.",
       "keyAdded": "Chave SSH adicionada.",
       "keyRemoved": "Chave SSH removida.",
-      "failed": "Algo deu errado. Tente novamente."
+      "alreadyGone": "{username} já tinha sido excluído.",
+      "sshOffNotEnforced": "Login SSH desligado aqui. Passa a valer quando você salvar Configurações → Acesso e segurança."
     },
     "create": {
       "title": "Adicionar usuário de sistema",
-      "subtitle": "Cria uma conta Linux no servidor (executa useradd).",
+      "subtitle": "Cria uma conta Linux no servidor.",
       "username": "Nome de usuário",
       "usernamePlaceholder": "ex.: deploy",
       "publicKey": "Chave pública SSH inicial",
@@ -158,7 +158,7 @@
     "apps": "Aplicações",
     "delete": {
       "title": "Excluir usuário de sistema?",
-      "description": "Isso remove permanentemente {username}, seu diretório home e seus cron jobs (executa userdel -r). Isso não pode ser desfeito.",
+      "description": "Isso remove permanentemente {username}, seu diretório home e seus cron jobs. Isso não pode ser desfeito.",
       "confirmLabel": "Digite {username} para confirmar",
       "cancel": "Cancelar",
       "confirm": "Excluir usuário",

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ShieldAlert } from "lucide-react";
@@ -8,13 +7,17 @@ import { PendingSwitch } from "@/components/ui/pending-switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
+import { genericErrorMessage } from "@/lib/api/generic-error";
+import { useRefresh } from "@/hooks/use-refresh";
 
 // Inline access toggle used in the table. `field` is "sudo" | "ssh". Applies
 // immediately with a toast; read-only when !canManage. Enabling sudo (a root
 // grant) asks for confirmation first — disabling and SSH stay instant.
-export function AccessSwitch({ user, field, canManage = true }) {
+// `sshEnforced` is the list's `meta.ssh_access_enforced`: only `false` changes
+// what the SSH toast says.
+export function AccessSwitch({ user, field, canManage = true, sshEnforced = null }) {
   const t = useTranslations("systemUsers");
-  const router = useRouter();
+  const { refresh, refreshThen } = useRefresh();
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   // The value we asked for, until the server agrees with it.
@@ -38,20 +41,31 @@ export function AccessSwitch({ user, field, canManage = true }) {
     setBusy(true);
     setAsked(v);
     try {
+      let message;
       if (field === "sudo") {
         await setSystemUserSudo(user.id, v);
-        toast.success(v ? t("toast.sudoOn") : t("toast.sudoOff"));
+        message = v ? t("toast.sudoOn") : t("toast.sudoOff");
       } else {
         await setSystemUserSsh(user.id, v);
-        toast.success(v ? t("toast.sshOn") : t("toast.sshOff"));
+        // "SSH login disabled" was untrue while sshd has no AllowGroups line:
+        // the account could still sign in, and the banner above said so.
+        message = !v && sshEnforced === false ? t("toast.sshOffNotEnforced") : v ? t("toast.sshOn") : t("toast.sshOff");
       }
-      router.refresh();
+      // Said once the row shows it, like every other change on this page.
+      refreshThen(() => {
+        toast.success(message);
+        setBusy(false);
+      });
     } catch (error) {
       // Put the knob back where it was: the change did not happen.
       setAsked(null);
-      toast.error(apiMessage(error, t("toast.failed")));
-    } finally {
       setBusy(false);
+      if (error?.response?.status === 404) {
+        toast.info(t("toast.alreadyGone", { username: user.username }));
+        refresh();
+        return;
+      }
+      toast.error(apiMessage(error, genericErrorMessage()));
     }
   }
 

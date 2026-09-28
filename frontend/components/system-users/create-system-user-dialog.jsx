@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Loader2, Sparkles, UserRoundPlus } from "lucide-react";
@@ -11,6 +10,7 @@ import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { cn } from "@/lib/utils";
+import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -34,11 +34,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
-  // Fetched when the dialog opens rather than passed in: it is opened from the
-  // system-users page AND from the application form, and only one of those has
-  // the catalog to hand.
-  const [shells, setShells] = useState([]);
+export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialShells = [] }) {
+  // Fetched when the dialog opens: it is opened from the system-users page AND
+  // from the application form, and only one of those has the catalog to hand.
+  // The page passes its copy so the field never shows the raw "/bin/bash"
+  // while the request is out.
+  const [shells, setShells] = useState(initialShells);
   useEffect(() => {
     if (!open) return undefined;
     let cancelled = false;
@@ -53,7 +54,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
   }, [open]);
 
   const t = useTranslations("systemUsers");
-  const router = useRouter();
+  const { refreshThen } = useRefresh();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const form = useForm({
@@ -108,13 +109,15 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated }) {
     if (values.password) payload.password = values.password;
     try {
       const { data } = await createSystemUser(payload);
+      // Creating… holds until the new row is in the list behind the dialog —
+      // the toast used to land ~1.5 s before it.
+      await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("toast.created"));
       onCreated?.(data?.system_user ?? data?.user ?? null);
       // handleOpenChange, not onOpenChange: closing by our own code path skips
       // Radix's callback, so "More options" stayed expanded into the next open
       // — a dialog that is supposed to start as three fields.
       handleOpenChange(false);
-      router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }

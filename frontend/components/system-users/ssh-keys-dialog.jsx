@@ -27,8 +27,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { apiMessage } from "@/lib/api/error-message";
+import { genericErrorMessage } from "@/lib/api/generic-error";
+import { useRefresh } from "@/hooks/use-refresh";
 
-export function SshKeysDialog({ user, open, onOpenChange }) {
+// `canManage` false = read-only: the list, without Add or Remove. Listing keys
+// only needs view, and a viewer had no way to see them at all.
+export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
   const t = useTranslations("systemUsers");
   const [keys, setKeys] = useState(null); // null = loading
   // Distinct from an empty list on purpose. "This account has no keys" and "we
@@ -37,20 +41,45 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [removing, setRemoving] = useState(null);
   const [pending, setPending] = useState(false);
+  const { refresh } = useRefresh();
 
   const form = useForm({
     resolver: zodResolver(sshKeySchema),
     defaultValues: { name: "", public_key: "" },
   });
 
+  function handleOpenChange(next) {
+    if (!next) {
+      setKeys(null);
+      setLoadFailed(false);
+      setRemoving(null);
+      form.reset();
+    }
+    onOpenChange?.(next);
+  }
+
+  // The account was deleted somewhere else: nothing here can be done to it.
+  function gone() {
+    toast.info(t("toast.alreadyGone", { username: user.username }));
+    handleOpenChange(false);
+    refresh();
+  }
+
+  // True when the list loaded. A 404 means the account itself is gone.
   async function load() {
     try {
       const res = await listSystemUserSshKeys(user.id);
       setKeys(res.data?.ssh_keys ?? []);
       setLoadFailed(false);
-    } catch {
+      return true;
+    } catch (error) {
+      if (error?.response?.status === 404) {
+        gone();
+        return false;
+      }
       setKeys([]);
       setLoadFailed(true);
+      return false;
     }
   }
 
@@ -63,8 +92,12 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
         setKeys(res.data?.ssh_keys ?? []);
         setLoadFailed(false);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!active) return;
+        if (error?.response?.status === 404) {
+          gone();
+          return;
+        }
         setKeys([]);
         setLoadFailed(true);
       });
@@ -77,27 +110,18 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
 
-  function handleOpenChange(next) {
-    if (!next) {
-      setKeys(null);
-      setLoadFailed(false);
-      setRemoving(null);
-      form.reset();
-    }
-    onOpenChange?.(next);
-  }
-
   async function onAdd(values) {
     try {
       await addSystemUserSshKey(user.id, values);
       toast.success(t("toast.keyAdded"));
-      // Closed on success. It used to stay open on the theory that you might
-      // add a second key, but the form was already empty and the list already
-      // updated, so the dialog just sat there looking like the save had not
-      // gone through. handleOpenChange clears the form and the loaded list, so
-      // reopening starts clean.
-      handleOpenChange(false);
+      // Stays open for the next key. Closing made adding a second one a trip
+      // back through the menu; the new key appearing in the list above, and
+      // the form emptying under the cursor, is what says it went through.
+      form.reset();
+      await load();
+      document.querySelector("[data-ssh-key-name]")?.focus();
     } catch (error) {
+      if (error?.response?.status === 404) return gone();
       handleValidationError(error, form);
     }
   }
@@ -110,7 +134,15 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
       setRemoving(null);
       await load();
     } catch (error) {
-      toast.error(apiMessage(error, t("toast.failed")));
+      // Removed elsewhere — the key, or the whole account. Either way the key
+      // is not there any more, which is what was asked for; the reload says
+      // which (an account that is gone closes the dialog).
+      if (error?.response?.status === 404) {
+        setRemoving(null);
+        if (await load()) toast.success(t("toast.keyRemoved"));
+        return;
+      }
+      toast.error(apiMessage(error, genericErrorMessage()));
     } finally {
       setPending(false);
     }
@@ -137,14 +169,16 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
             >
               {t("close")}
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Plus className="size-4" />
-              )}
-              {t("sshForm.submit")}
-            </Button>
+            {canManage ? (
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+                {t("sshForm.submit")}
+              </Button>
+            ) : null}
           </>
         }
       >
@@ -190,7 +224,7 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
                           </p>
                         </div>
                       </div>
-                      {removing === key.id ? (
+                      {!canManage ? null : removing === key.id ? (
                         <div className="flex shrink-0 items-center gap-1">
                           <Button
                             type="button"
@@ -234,48 +268,51 @@ export function SshKeysDialog({ user, open, onOpenChange }) {
               )}
 
               {/* Add a key */}
-              <div className="space-y-3 rounded-lg border p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("sshForm.addHeading")}
-                </p>
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required hint={t("sshForm.nameHint")}>{t("sshForm.name")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={t("sshForm.namePlaceholder")}
-                          autoComplete="off"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage field={t('sshForm.name')} />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="public_key"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required hint={t("sshForm.publicKeyHint")}>{t("sshForm.publicKey")}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={2}
-                          // Same size as every other field — see the note in
-                          // create-system-user-dialog.
-                          placeholder={t("sshForm.publicKeyPlaceholder")}
-                          className="font-mono"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage field={t('sshForm.publicKey')} />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {canManage ? (
+                <div className="space-y-3 rounded-lg border p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("sshForm.addHeading")}
+                  </p>
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required hint={t("sshForm.nameHint")}>{t("sshForm.name")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            data-ssh-key-name
+                            placeholder={t("sshForm.namePlaceholder")}
+                            autoComplete="off"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage field={t('sshForm.name')} />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="public_key"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required hint={t("sshForm.publicKeyHint")}>{t("sshForm.publicKey")}</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            rows={2}
+                            // Same size as every other field — see the note in
+                            // create-system-user-dialog.
+                            placeholder={t("sshForm.publicKeyPlaceholder")}
+                            className="font-mono"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage field={t('sshForm.publicKey')} />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              ) : null}
       </FormModal>
     </Form>
   );

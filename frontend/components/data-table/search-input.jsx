@@ -27,6 +27,7 @@ export function SearchInput({
   const urlValue = searchParams.get(paramKey) ?? "";
   const [value, setValue] = useState(urlValue);
   const first = useRef(true);
+  const input = useRef(null);
 
   /*
    * Follow the URL when something else changes it.
@@ -77,6 +78,8 @@ export function SearchInput({
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       )}
       <Input
+        ref={input}
+        data-search-input
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
@@ -85,7 +88,11 @@ export function SearchInput({
       {value ? (
         <button
           type="button"
-          onClick={() => setValue("")}
+          // Back to the box: the × goes away with the text, and focus went with it.
+          onClick={() => {
+            setValue("");
+            input.current?.focus();
+          }}
           aria-label={tc("clearSearch")}
           className="absolute right-2 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:text-foreground"
         >

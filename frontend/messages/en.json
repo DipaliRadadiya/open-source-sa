@@ -76,7 +76,6 @@
     "columns": {
       "username": "Username",
       "password": "Password",
-      "home": "Home",
       "shell": "Shell",
       "access": "Access",
       "applications": "Applications",
@@ -118,11 +117,12 @@
       "shellChanged": "Login shell updated.",
       "keyAdded": "SSH key added.",
       "keyRemoved": "SSH key removed.",
-      "failed": "Something went wrong. Please try again."
+      "alreadyGone": "{username} had already been deleted.",
+      "sshOffNotEnforced": "SSH login switched off. It takes effect once you save Settings → Access & security."
     },
     "create": {
       "title": "Add system user",
-      "subtitle": "Creates a system user on the server (runs useradd).",
+      "subtitle": "Creates a Linux account on the server.",
       "username": "Username",
       "usernamePlaceholder": "e.g. deploy",
       "publicKey": "Initial SSH public key",
@@ -158,7 +158,7 @@
     "apps": "Applications",
     "delete": {
       "title": "Delete system user?",
-      "description": "This permanently removes {username}, its home directory, and its cron jobs (runs userdel -r). This cannot be undone.",
+      "description": "This permanently removes {username}, its home directory, and its cron jobs. This cannot be undone.",
       "confirmLabel": "Type {username} to confirm",
       "cancel": "Cancel",
       "confirm": "Delete user",

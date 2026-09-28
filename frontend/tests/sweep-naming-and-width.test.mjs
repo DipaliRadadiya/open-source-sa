@@ -34,10 +34,11 @@ test("Home stays, because it is not derivable from the username", () => {
    * that is a coincidence of how CreateSystemUser builds it. `home_path` is
    * read from /etc/passwd by SystemUserDiscoverer during Server Sync, so an
    * adopted server's accounts can live anywhere — and those are exactly the
-   * users who need the column.
+   * users who need to see it. It sits under the username since 2026-09-28 —
+   * its own column pushed the row menu off a 1280 screen — but it is shown.
    */
-  assert.match(table, /accessorKey: "home_path"/);
-  assert.doesNotMatch(table, /accessorKey: "home_path"[\s\S]{0,120}hidden/);
+  assert.match(table, /function UsernameCell[\s\S]{0,1200}row\.original\.home_path/);
+  assert.doesNotMatch(table, /home_path[^\n]*hidden/);
 });
 
 test("the fail2ban screen is called Fail2ban, everywhere", () => {

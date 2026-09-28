@@ -76,7 +76,6 @@
     "columns": {
       "username": "Benutzername",
       "password": "Passwort",
-      "home": "Home",
       "shell": "Shell",
       "access": "Zugriff",
       "applications": "Anwendungen",
@@ -118,11 +117,12 @@
       "shellChanged": "Anmelde-Shell aktualisiert.",
       "keyAdded": "SSH-Schlüssel hinzugefügt.",
       "keyRemoved": "SSH-Schlüssel entfernt.",
-      "failed": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+      "alreadyGone": "{username} wurde bereits gelöscht.",
+      "sshOffNotEnforced": "SSH-Anmeldung ausgeschaltet. Das greift, sobald Sie Einstellungen → Zugang & Sicherheit speichern."
     },
     "create": {
       "title": "Systembenutzer hinzufügen",
-      "subtitle": "Erstellt ein Linux-Konto auf dem Server (führt useradd aus).",
+      "subtitle": "Erstellt ein Linux-Konto auf dem Server.",
       "username": "Benutzername",
       "usernamePlaceholder": "z. B. deploy",
       "publicKey": "Erster öffentlicher SSH-Schlüssel",
@@ -158,7 +158,7 @@
     "apps": "Anwendungen",
     "delete": {
       "title": "Systembenutzer löschen?",
-      "description": "Dies entfernt {username}, das Home-Verzeichnis und die Cronjobs endgültig (führt userdel -r aus). Dies kann nicht rückgängig gemacht werden.",
+      "description": "Dies entfernt {username}, das Home-Verzeichnis und die Cronjobs endgültig. Dies kann nicht rückgängig gemacht werden.",
       "confirmLabel": "Geben Sie {username} zur Bestätigung ein",
       "cancel": "Abbrechen",
       "confirm": "Benutzer löschen",

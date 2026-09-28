@@ -35,6 +35,12 @@ import { SystemUsersCards } from "@/components/system-users/system-users-cards";
  * `canManage` reaches them through `table.options.meta`.
  * ------------------------------------------------------------------------- */
 
+// Headers may wrap: in French and Russian a one-line "NOM D'UTILISATEUR" was
+// what pushed the row menu off the edge.
+function Head({ children }) {
+  return <span className="block whitespace-normal">{children}</span>;
+}
+
 function UsernameCell({ row, table }) {
   const t = useTranslations("systemUsers");
   // The badge and the password column answer the same question. A manager has
@@ -43,14 +49,22 @@ function UsernameCell({ row, table }) {
   // the only thing telling them the account cannot be logged into.
   const showBadge = !table.options.meta.canManage && !row.original.password;
 
+  // Home under the name, not in a column of its own: the column cost ~160 px
+  // of a table that did not fit at 1280, for a value that is read alongside
+  // the name and never on its own.
   return (
-    <div className="flex items-center gap-2">
-      <span className="font-medium">{row.original.username}</span>
-      {showBadge ? (
-        <Badge variant="warning" className="font-normal">
-          {t("noPassword")}
-        </Badge>
-      ) : null}
+    <div className="min-w-0 max-w-56 space-y-0.5 whitespace-normal">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="font-medium [overflow-wrap:anywhere]">{row.original.username}</span>
+        {showBadge ? (
+          <Badge variant="warning" className="font-normal">
+            {t("noPassword")}
+          </Badge>
+        ) : null}
+      </div>
+      <p className="font-mono text-xs text-muted-foreground [overflow-wrap:anywhere]">
+        {row.original.home_path}
+      </p>
     </div>
   );
 }
@@ -61,26 +75,22 @@ function UsernameCell({ row, table }) {
 // having every account's password on screen while you scroll past.
 function PasswordCell({ row }) {
   return (
-    <div className="w-56 max-w-[14rem]">
+    <div className="w-44">
       <PasswordReveal password={row.original.password} />
     </div>
   );
 }
 
-function HomeCell({ row }) {
-  return (
-    <span className="font-mono text-xs text-muted-foreground">
-      {row.original.home_path}
-    </span>
-  );
-}
-
 function ShellCell({ row, table }) {
   return (
+    // Fixed width, wrapping onto a second line when the title is long: sized
+    // to its text, "Полный доступ к оболочке (bash)" alone pushed the Russian
+    // table 60 px past the edge; cut at a fixed width, it lost its end.
     <ShellSelect
       user={row.original}
       shells={table.options.meta.shells}
       canManage={table.options.meta.canManage}
+      className="min-h-8 w-48 py-1 text-left leading-snug whitespace-normal data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-2"
     />
   );
 }
@@ -93,7 +103,12 @@ function SudoCell({ row, table }) {
 
 function SshCell({ row, table }) {
   return (
-    <AccessSwitch user={row.original} field="ssh" canManage={table.options.meta.canManage} />
+    <AccessSwitch
+      user={row.original}
+      field="ssh"
+      canManage={table.options.meta.canManage}
+      sshEnforced={table.options.meta.sshEnforced}
+    />
   );
 }
 
@@ -109,8 +124,9 @@ function CreatedCell({ row }) {
   );
 }
 
-function RowActionsCell({ row }) {
-  return <SystemUserRowActions user={row.original} />;
+function RowActionsCell({ row, table }) {
+  const { canManage, prevPage } = table.options.meta;
+  return <SystemUserRowActions user={row.original} canManage={canManage} prevPage={prevPage} />;
 }
 
 export function SystemUsersTable(props) {
@@ -133,15 +149,16 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
   const filtered = data;
 
   const columns = [
-    { accessorKey: "username", header: t("columns.username"), cell: UsernameCell },
+    { accessorKey: "username", header: () => <Head>{t("columns.username")}</Head>, cell: UsernameCell },
     ...(canManage
-      ? [{ id: "password", header: t("columns.password"), cell: PasswordCell }]
+      ? [{ id: "password", header: () => <Head>{t("columns.password")}</Head>, cell: PasswordCell }]
       : []),
-    { accessorKey: "home_path", header: t("columns.home"), cell: HomeCell },
-    { accessorKey: "shell", header: t("columns.shell"), cell: ShellCell },
-    { id: "sudo", header: t("sudo"), cell: SudoCell },
-    { id: "ssh", header: t("ssh"), cell: SshCell },
-    { id: "applications", header: t("columns.applications"), cell: ApplicationsCell },
+    { accessorKey: "shell", header: () => <Head>{t("columns.shell")}</Head>, cell: ShellCell },
+    // Tighter padding on the narrow control columns buys the room German and
+    // Russian need at 1280 without touching a readable column.
+    { id: "sudo", header: () => <Head>{t("sudo")}</Head>, meta: { className: "px-3" }, cell: SudoCell },
+    { id: "ssh", header: () => <Head>{t("ssh")}</Head>, meta: { className: "px-3" }, cell: SshCell },
+    { id: "applications", header: () => <Head>{t("columns.applications")}</Head>, cell: ApplicationsCell },
     /*
      * Held back until 2xl, because this table does not fit and something has
      * to give.
@@ -158,32 +175,31 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
      * decided by it. Every other column here either identifies the account
      * (Username, Home) or is a control (Password, Shell, Sudo, SSH).
      *
-     * NOT Home, which looks redundant with Username and is not: `home_path` is
-     * read from /etc/passwd by SystemUserDiscoverer during Server Sync, so an
-     * adopted server's accounts can live anywhere, and those are precisely the
-     * users who need to see it.
+     * Home stays, under the username rather than in its own column:
+     * `home_path` is read from /etc/passwd by SystemUserDiscoverer during
+     * Server Sync, so an adopted server's accounts can live anywhere, and those
+     * are precisely the users who need to see it.
      *
-     * Below 1440 the table still scrolls. That is left alone deliberately —
-     * ScrollFade already fades only the edge there is more content towards and
-     * drops the fade on arrival, so the affordance is honest; and the cards
-     * below lg are the real answer for narrow screens.
+     * Below 1280 the list is cards, so the table only has to fit from there.
      */
     {
       accessorKey: "created_at_human",
-      header: t("columns.created"),
+      header: () => <Head>{t("columns.created")}</Head>,
       meta: { className: "hidden 2xl:table-cell" },
       cell: CreatedCell,
     },
-    ...(canManage
-      ? [
-          {
-            id: "actions",
-            header: () => <span className="sr-only">{t("actions.label")}</span>,
-            cell: RowActionsCell,
-          },
-        ]
-      : []),
+    // For viewers too — the menu is how SSH keys are reached.
+    {
+      id: "actions",
+      header: () => <span className="sr-only">{t("actions.label")}</span>,
+      meta: { className: "px-2" },
+      cell: RowActionsCell,
+    },
   ];
+
+  // The page's only row: deleting it leaves the page, so go to the one before.
+  const prevPage = data.length === 1 && meta?.current_page > 1 ? meta.current_page - 1 : null;
+  const sshEnforced = meta?.ssh_access_enforced ?? null;
 
   const isFiltered = Boolean(searchParams.get("search"));
 
@@ -194,7 +210,7 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
         <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
           <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-            <Button disabled={!canManage} onClick={() => setCreateOpen(true)}>
+            <Button disabled={!canManage} onClick={() => setCreateOpen(true)} data-su-add>
               <Plus className="size-4" />
               {t("addUser")}
             </Button>
@@ -209,7 +225,9 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
         * is not one. Only `false`: `null` means sshd could not be asked, and a
         * failed read is not a fact.
         */}
-      {meta?.ssh_access_enforced === false && data.length ? (
+      {/* Managers only: the fix it points to is theirs, and a viewer could
+          neither change the switches nor save the setting. */}
+      {canManage && sshEnforced === false && data.length ? (
         <Caution size="md">
           <p>{t("sshNotEnforced.body")}</p>
           {canOpenSecurity ? (
@@ -228,7 +246,15 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
             icon={SearchX}
             title={t("empty.filteredTitle")}
             action={
-              <Button variant="outline" onClick={() => setQuery({ search: undefined }, { resetPage: true })}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setQuery({ search: undefined }, { resetPage: true });
+                  // This button goes away with the empty state; the box is
+                  // where the reader is going next anyway.
+                  document.querySelector("[data-search-input]")?.focus();
+                }}
+              >
                 {t("clearSearch")}
               </Button>
             }
@@ -253,12 +279,24 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
         )
       ) : (
         <>
-          {/* Cards below lg, the table from lg up. */}
-          <div className="lg:hidden">
-            <SystemUsersCards users={filtered} shells={shells} canManage={canManage} />
+          {/* Cards below xl (1280), the table from there up — the same break
+              as Cron Jobs. Seven columns need ~950 px, which a laptop at 1280
+              has once the sidebar is open and a 1024 one does not. */}
+          <div className="xl:hidden">
+            <SystemUsersCards
+              users={filtered}
+              shells={shells}
+              canManage={canManage}
+              prevPage={prevPage}
+              sshEnforced={sshEnforced}
+            />
           </div>
-          <div className="hidden lg:block">
-            <DataTable columns={columns} data={filtered} meta={{ canManage, shells }} />
+          <div className="hidden xl:block">
+            <DataTable
+              columns={columns}
+              data={filtered}
+              meta={{ canManage, shells, prevPage, sshEnforced }}
+            />
           </div>
         </>
       )}
@@ -266,7 +304,7 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
       <DataTablePagination meta={meta} />
 
       {canManage ? (
-        <CreateSystemUserDialog open={createOpen} onOpenChange={setCreateOpen} />
+        <CreateSystemUserDialog open={createOpen} onOpenChange={setCreateOpen} initialShells={shells} />
       ) : null}
     </div>
   );

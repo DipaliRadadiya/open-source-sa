@@ -68,6 +68,8 @@ export const systemUserPasswordSchema = z
   });
 
 export const sshKeySchema = z.object({
-  name: z.string().min(1, "required_name"),
+  // The API's own cap. Without it a longer label went to the server and came
+  // back as its English sentence about a "name" field the form calls Label.
+  name: z.string().min(1, "required_name").max(255, "max255"),
   public_key: publicKeyField,
 });

@@ -38,6 +38,9 @@ export function FormModal({
   asForm = false,
   onSubmit,
   className,
+  // A selector for the control to land on, when the first one is not it — a
+  // dialog that opens on a reading (the current password) before its form.
+  initialFocus,
 }) {
   const inner = (
     <>
@@ -97,6 +100,12 @@ export function FormModal({
         // hidden native radios and selects are aria-hidden and untabbable, so
         // they fall out of the tabbable filter on their own.
         onOpenAutoFocus={(event) => {
+          const chosen = initialFocus ? event.currentTarget.querySelector(initialFocus) : null;
+          if (chosen) {
+            event.preventDefault();
+            chosen.focus();
+            return;
+          }
           const field = [...event.currentTarget.querySelectorAll(FOCUSABLE)].find(
             (element) =>
               element.getAttribute("data-slot") !== "info-hint" &&

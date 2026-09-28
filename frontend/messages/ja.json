@@ -76,7 +76,6 @@
     "columns": {
       "username": "ユーザー名",
       "password": "パスワード",
-      "home": "ホーム",
       "shell": "シェル",
       "access": "アクセス",
       "applications": "アプリケーション",
@@ -118,11 +117,12 @@
       "shellChanged": "ログインシェルを更新しました。",
       "keyAdded": "SSH 鍵を追加しました。",
       "keyRemoved": "SSH 鍵を削除しました。",
-      "failed": "問題が発生しました。もう一度お試しください。"
+      "alreadyGone": "{username} はすでに削除されています。",
+      "sshOffNotEnforced": "SSH ログインをオフにしました。設定 → アクセスとセキュリティ を保存すると適用されます。"
     },
     "create": {
       "title": "システムユーザーを追加",
-      "subtitle": "サーバー上に Linux アカウントを作成します (useradd を実行)。",
+      "subtitle": "サーバー上に Linux アカウントを作成します。",
       "username": "ユーザー名",
       "usernamePlaceholder": "例: deploy",
       "publicKey": "初期 SSH 公開鍵",
@@ -158,7 +158,7 @@
     "apps": "アプリケーション",
     "delete": {
       "title": "システムユーザーを削除しますか？",
-      "description": "{username} とそのホームディレクトリ、cron ジョブを完全に削除します (userdel -r を実行)。元に戻せません。",
+      "description": "{username} とそのホームディレクトリ、cron ジョブを完全に削除します。元に戻せません。",
       "confirmLabel": "確認のため {username} を入力してください",
       "cancel": "キャンセル",
       "confirm": "ユーザーを削除",

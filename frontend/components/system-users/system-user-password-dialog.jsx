@@ -1,6 +1,5 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, KeyRound } from "lucide-react";
@@ -20,10 +19,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { PasswordReveal } from "@/components/system-users/password-reveal";
+import { useRefresh } from "@/hooks/use-refresh";
 
 export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
   const t = useTranslations("systemUsers");
-  const router = useRouter();
+  const { refresh, refreshThen } = useRefresh();
 
   const form = useForm({
     resolver: zodResolver(systemUserPasswordSchema),
@@ -33,11 +33,18 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
   async function onSubmit(values) {
     try {
       await setSystemUserPassword(user.id, values);
+      // Saving… holds until the list has the new value, so reopening straight
+      // away never shows the old one.
+      await new Promise((resolve) => refreshThen(resolve));
       toast.success(t("toast.passwordSet"));
-      onOpenChange?.(false);
-      form.reset();
-      router.refresh();
+      handleOpenChange(false);
     } catch (error) {
+      if (error?.response?.status === 404) {
+        toast.info(t("toast.alreadyGone", { username: user.username }));
+        handleOpenChange(false);
+        refresh();
+        return;
+      }
       handleValidationError(error, form);
     }
   }
@@ -58,6 +65,9 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
         onOpenChange={handleOpenChange}
         asForm
         onSubmit={form.handleSubmit(onSubmit, () => scrollToFirstError())}
+        // The new password, not the eye on the current one: landing there
+        // opened its tooltip, and the first Escape only closed that.
+        initialFocus="input[name=password]"
         icon={KeyRound}
         title={`${t("password.title")} — ${user?.username ?? ""}`}
         description={t("password.subtitle", { username: user?.username ?? "" })}

@@ -18,7 +18,9 @@ test("the list keeps ssh_access_enforced instead of stripping it", async () => {
 test("the SSH switches carry a warning while they keep nobody out", () => {
   const table = read("components/system-users/system-users-table.jsx");
   // Only a definite false: null means sshd could not be asked.
-  assert.match(table, /meta\?\.ssh_access_enforced === false && data\.length \?/);
+  // Managers only: a viewer can neither flip the switches nor save the setting.
+  assert.match(table, /const sshEnforced = meta\?\.ssh_access_enforced \?\? null/);
+  assert.match(table, /canManage && sshEnforced === false && data\.length \?/);
   assert.match(table, /t\("sshNotEnforced\.body"\)/);
   assert.match(table, /href="\/settings\/security" prefetch=\{false\}/);
   // The link only for someone who can save that screen.

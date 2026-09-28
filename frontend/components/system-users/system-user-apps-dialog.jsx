@@ -45,6 +45,10 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
   }
 
   const skeletonCount = Math.max(minimal.length, 2);
+  // The names are already in the list row, so they show at once; only the
+  // domain and status wait for the detail request (1–4 s on a real server).
+  const loading = apps === null;
+  const shown = apps ?? minimal;
 
   return (
     <FormModal
@@ -63,7 +67,7 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
         </Button>
       }
     >
-      {apps === null ? (
+      {loading && shown.length === 0 ? (
             <ul className="grid gap-2 sm:grid-cols-2">
               {Array.from({ length: skeletonCount }).map((_, i) => (
                 <li
@@ -78,13 +82,13 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
                 </li>
               ))}
             </ul>
-          ) : apps.length === 0 ? (
+          ) : shown.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {t("detail.noApplications")}
             </p>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
-              {apps.map((app) => (
+              {shown.map((app) => (
                 <li
                   key={app.id}
                   className="flex items-center justify-between gap-2 rounded-lg border p-3"
@@ -97,6 +101,8 @@ export function SystemUserAppsDialog({ user, open, onOpenChange }) {
                         <p className="truncate text-xs text-muted-foreground">
                           {app.domain}
                         </p>
+                      ) : loading ? (
+                        <Skeleton className="mt-1.5 h-3 w-28" />
                       ) : null}
                     </div>
                   </div>
