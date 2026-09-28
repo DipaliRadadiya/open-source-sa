@@ -153,7 +153,19 @@ class DockerAppInstaller implements SiteInstaller
             $mounts[] = ['volume' => $name, 'path' => $path];
         }
 
-        $secrets = $this->generate($type);
+        // Existing secrets first, and only the missing ones generated. `install()`
+        // runs again on every Retry Setup and on a re-provision, and generating
+        // afresh each time rotates the credential in the compose file while the
+        // database keeps the one it was initialised with — `POSTGRES_PASSWORD`
+        // and `MYSQL_*` apply to an EMPTY data directory and are ignored after
+        // that. Measured: two apps crash-looping on "password authentication
+        // failed for user" after a re-provision, with a correct-looking file.
+        // `$stored + $fresh`, in that order. PHP's `+` keeps the LEFT operand
+        // wherever a key exists in both, so stored secrets win and any key the app
+        // has gained since it was installed still gets generated. Written the
+        // other way round it rotates everything — which is the bug this fixes, and
+        // which I wrote here first and caught only by running the union.
+        $secrets = $this->storedSecrets($application) + $this->generate($type);
 
         $application->forceFill([
             'container_port' => $type->containerPort(),

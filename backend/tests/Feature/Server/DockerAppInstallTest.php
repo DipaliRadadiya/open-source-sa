@@ -339,3 +339,35 @@ it('lets the user override the app floor', function () {
 
     expect($parsed['services']['metabase']['mem_limit'])->toBe('4g');
 });
+
+it('keeps the same secrets when installed twice', function (string $type, int $port, array $roles) {
+    // Retry Setup and a re-provision both call `install()` again. Generating afresh
+    // each time rotates the credential in the compose file while the database keeps
+    // the one it was initialised with — `POSTGRES_PASSWORD` and `MYSQL_*` apply to
+    // an EMPTY data directory and are ignored afterwards.
+    //
+    // Measured on the test box before this test existed: NocoDB and Metabase both
+    // crash-looping on "password authentication failed for user", with a compose
+    // file that looked entirely correct.
+    $application = dockerAppSite($type);
+
+    $first = installDockerApp($application)->docker_secrets;
+    $second = installDockerApp($application->fresh())->docker_secrets;
+
+    expect($second)->toBe($first);
+})->with('docker apps');
+
+it('still generates a secret the app has gained since install', function () {
+    // The union has to keep stored values AND fill gaps. `$stored + $fresh` does;
+    // `$fresh + $stored` rotates everything, which is what I wrote first.
+    $application = installDockerApp(dockerAppSite('ghost'));
+
+    $partial = $application->docker_secrets;
+    unset($partial['GHOST_DB_PASSWORD']);
+    $application->forceFill(['docker_secrets' => $partial])->save();
+
+    $after = installDockerApp($application->fresh())->docker_secrets;
+
+    expect($after['MYSQL_ROOT_PASSWORD'])->toBe($partial['MYSQL_ROOT_PASSWORD'])
+        ->and($after['GHOST_DB_PASSWORD'] ?? null)->not->toBeNull();
+});
