@@ -29,7 +29,7 @@ use Illuminate\Support\Str;
     // container; `app_port` is the loopback port on the host that nginx
     // proxies to, and conflating the two publishes a container on a port
     // another application already holds.
-    'image', 'container_port', 'memory_limit', 'compose', 'docker_network', 'volume_mounts',
+    'image', 'container_port', 'memory_limit', 'compose', 'docker_network', 'volume_mounts', 'docker_secrets',
     'build_command', 'deploy_script', 'start_command', 'package_manager',
     'git_account_id', 'repository', 'repository_url', 'branch', 'settings',
     'steps', 'failed_step', 'failed_reason', 'provisioning_started_at', 'reference', 'last_commit', 'last_deployed_at', 'directory_size_bytes', 'directory_size_updated_at',
@@ -58,6 +58,9 @@ class Application extends Model
             'waf_mode' => WafMode::class,
             'waf_categories' => 'array',
             'volume_mounts' => 'array',
+            // Live database credentials for a one-click container app. Encrypted
+            // for the same reason `webhook_secret` is: it grants access.
+            'docker_secrets' => 'encrypted:array',
             'fail2ban_enabled' => 'boolean',
             'fail2ban_jail_name' => 'string',
             'fail2ban_jail_content' => 'string',

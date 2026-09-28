@@ -3,6 +3,7 @@
 use App\Services\Applications\Types\AkauntingSiteType;
 use App\Services\Applications\Types\CraftCmsSiteType;
 use App\Services\Applications\Types\DockerSiteType;
+use App\Services\Applications\Types\GhostSiteType;
 use App\Services\Applications\Types\GitSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
 use App\Services\Applications\Types\MauticSiteType;
@@ -16,6 +17,7 @@ use App\Services\Applications\Types\PhpSiteType;
 use App\Services\Applications\Types\PrestaShopSiteType;
 use App\Services\Applications\Types\StatamicSiteType;
 use App\Services\Applications\Types\StaticSiteType;
+use App\Services\Applications\Types\StrapiSiteType;
 use App\Services\Applications\Types\UptimeKumaSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
@@ -26,6 +28,7 @@ use App\Services\Git\Webhooks\GithubWebhook;
 use App\Services\Git\Webhooks\GitlabWebhook;
 use App\Services\Server\Applications\Installers\AkauntingInstaller;
 use App\Services\Server\Applications\Installers\CraftCmsInstaller;
+use App\Services\Server\Applications\Installers\DockerAppInstaller;
 use App\Services\Server\Applications\Installers\JoomlaInstaller;
 use App\Services\Server\Applications\Installers\MauticInstaller;
 use App\Services\Server\Applications\Installers\MoodleInstaller;
@@ -1392,6 +1395,17 @@ return [
         | nobody asked for.
         */
 
+        // Every Docker app maps to the one installer: the differences between
+        // them live entirely in the site type — template, port, volumes, secrets
+        // — so a class per app would be five methods of delegation each.
+        'ghost' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'strapi' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
         'uptimekuma' => [
             'driver' => UptimeKumaInstaller::class,
             'repository' => env('SERVER_UPTIME_KUMA_REPO', 'https://github.com/louislam/uptime-kuma.git'),
@@ -1531,14 +1545,58 @@ return [
         // with it. Per-application overridable; never absent.
         'default_memory_limit' => env('DOCKER_DEFAULT_MEMORY_LIMIT', '512m'),
 
+        // A database is not the application, and one budget for the pair means
+        // the app's ceiling is really the pair's. MySQL's default buffer pool
+        // alone is 128M, so a one-click app sharing 512m with its engine would
+        // be tuned by whichever container asked for memory first.
+        'default_db_memory_limit' => env('DOCKER_DEFAULT_DB_MEMORY_LIMIT', '512m'),
+
         // `compose up` pulls an image the first time, and an image can be
         // large on a slow link. Generous, because the failure it prevents is a
         // deploy that was working and got killed.
         'command_timeout' => (int) env('DOCKER_COMMAND_TIMEOUT', 600),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | One-click Docker applications
+    |--------------------------------------------------------------------------
+    |
+    | The images each Docker app runs, here rather than in its site type so an
+    | operator can pin or mirror one without editing code — the same reason the
+    | PHP one-clicks keep their repositories and archive URLs in config.
+    |
+    | A floating tag, not a digest. A one-click that pins an exact version does
+    | not stay current; it stops being noticed, and every site created after
+    | that gets an old release. `5-alpine` tracks Ghost 5 patches, which is the
+    | behaviour somebody choosing "one-click Ghost" is asking for. The rendered
+    | compose file is stored per site, so an existing site is NOT moved when this
+    | changes — only new ones.
+    |
+    */
+    'docker_apps' => [
+        'strapi' => [
+            'image' => env('DOCKER_APP_STRAPI_IMAGE', 'strapi/strapi:latest'),
+            // 16, not `latest`: Strapi pins a Postgres client range, and a major
+            // Postgres upgrade is not something a container does in place — the
+            // data directory format changes and the server refuses to start on
+            // one written by an older major.
+            'db_image' => env('DOCKER_APP_STRAPI_DB_IMAGE', 'postgres:16-alpine'),
+        ],
+
+        'ghost' => [
+            'image' => env('DOCKER_APP_GHOST_IMAGE', 'ghost:5-alpine'),
+            // 8.0 rather than 8.4: Ghost 5 documents 8.0, and MySQL 8.4 changed
+            // the default authentication plugin — a combination that fails at
+            // connect time with an error about a plugin, not about a version.
+            'db_image' => env('DOCKER_APP_GHOST_DB_IMAGE', 'mysql:8.0'),
+        ],
+    ],
+
     'site_types' => [
         DockerSiteType::class,
+        GhostSiteType::class,
+        StrapiSiteType::class,
         WordPressSiteType::class,
         NextcloudSiteType::class,
         JoomlaSiteType::class,

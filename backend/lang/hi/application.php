@@ -11,6 +11,8 @@ return [
 
     'types' => [
         'docker' => ['title' => 'Docker कंटेनर', 'tagline' => 'किसी भी रजिस्ट्री से कोई भी इमेज, nginx के माध्यम से।'],
+        'ghost' => ['title' => 'Ghost', 'tagline' => 'प्रकाशन और न्यूज़लेटर — अपने MySQL के साथ चलता है'],
+        'strapi' => ['title' => 'Strapi', 'tagline' => 'हेडलेस CMS और API — अपने PostgreSQL के साथ चलता है'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'ब्लॉग और वेबसाइट बिल्डर'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'ब्राउज़र में अपने डेटाबेस प्रबंधित करें'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'अपटाइम निगरानी और स्टेटस पेज'],

@@ -315,6 +315,10 @@ it('implements syncUrl for exactly the installers that persist a URL', function 
         // site_url, and PrestaShop's shop_url rows.
         'AkauntingInstaller',
         'CraftCmsInstaller',
+        // The container apps' URL lives in the compose file the panel renders —
+        // Ghost's `url` and Strapi's `URL` — so a renamed site needs the file
+        // rewritten and the container brought up again, not a config edit.
+        'DockerAppInstaller',
         'MauticInstaller',
         'MoodleInstaller',
         'N8nInstaller',

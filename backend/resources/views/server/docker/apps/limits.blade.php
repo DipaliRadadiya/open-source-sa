@@ -1,0 +1,28 @@
+{{-- The protections every service gets, in one place.
+
+     These are not per-app choices, and that is why they are a partial rather
+     than copied into each template. The generic `compose.blade.php` carries all
+     three with a paragraph each explaining why; an app template that forgot one
+     would lose the protection silently, and the app that forgot it would be the
+     one that took the box down.
+
+     - **A memory ceiling, always.** One container with no limit can exhaust the
+       machine and take the panel with it.
+     - **Bounded logs.** Docker's default json-file driver has NO max size, so a
+       chatty container fills the disk and the first symptom is every site on the
+       box failing to write.
+     - `restart: unless-stopped` so a container that dies comes back, and a
+       container the panel stopped stays stopped.
+
+     **Indent the `@include`, not this file's first line.** `View::render()`
+     strips leading whitespace from a partial, so wherever the first line lands
+     is decided by the caller — `    @include(...)` gives it its four spaces, and
+     every line after it carries its own. Getting this wrong puts `restart:` at
+     column zero and the file stops being valid YAML. --}}
+    restart: unless-stopped
+    mem_limit: {{ $limit }}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
