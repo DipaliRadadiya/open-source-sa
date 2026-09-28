@@ -644,6 +644,7 @@
   "auth": {
     "loginTitle": "Se connecter",
     "loginSubtitle": "Saisissez vos identifiants pour accéder au panneau.",
+    "sessionExpired": "Votre session a expiré. Reconnectez-vous pour reprendre là où vous en étiez.",
     "registerTitle": "Créer un compte administrateur",
     "registerSubtitle": "Configurez le compte administrateur de ce panneau.",
     "noAccount": "Besoin de configurer le panneau ?",

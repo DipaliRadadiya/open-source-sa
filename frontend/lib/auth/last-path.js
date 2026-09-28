@@ -34,6 +34,19 @@ export function takeRememberedPath() {
   }
 }
 
+/**
+ * Whether this tab has somewhere to come back to, without spending it. Signing
+ * out on purpose clears it, so a value here means the session ended on its own
+ * — which is what the login page tells the reader.
+ */
+export function peekRememberedPath() {
+  try {
+    return safeNext(sessionStorage.getItem(LAST_PATH_KEY));
+  } catch {
+    return null;
+  }
+}
+
 /** Signing out on purpose: there is nowhere to come back to. */
 export function forgetRememberedPath() {
   try {

@@ -644,6 +644,7 @@
   "auth": {
     "loginTitle": "Anmelden",
     "loginSubtitle": "Geben Sie Ihre Zugangsdaten ein, um auf das Panel zuzugreifen.",
+    "sessionExpired": "Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an, um dort weiterzumachen, wo Sie aufgehört haben.",
     "registerTitle": "Administratorkonto erstellen",
     "registerSubtitle": "Richten Sie das Administratorkonto für dieses Panel ein.",
     "noAccount": "Panel noch einrichten?",

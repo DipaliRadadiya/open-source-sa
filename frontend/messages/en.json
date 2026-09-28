@@ -644,6 +644,7 @@
   "auth": {
     "loginTitle": "Sign in",
     "loginSubtitle": "Enter your credentials to access the panel.",
+    "sessionExpired": "Your session has expired. Sign in again to pick up where you left off.",
     "registerTitle": "Create admin account",
     "registerSubtitle": "Set up the administrator account for this panel.",
     "noAccount": "Need to set up the panel?",

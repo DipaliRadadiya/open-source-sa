@@ -71,6 +71,7 @@
   "auth": {
     "loginTitle": "Iniciar sesión",
     "loginSubtitle": "Introduce tus credenciales para acceder al panel.",
+    "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión para continuar donde lo dejaste.",
     "registerTitle": "Crear cuenta de administrador",
     "registerSubtitle": "Configura la cuenta de administrador para este panel.",
     "noAccount": "¿Necesitas configurar el panel?",

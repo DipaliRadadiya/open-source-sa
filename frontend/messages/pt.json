@@ -644,6 +644,7 @@
   "auth": {
     "loginTitle": "Entrar",
     "loginSubtitle": "Informe suas credenciais para acessar o painel.",
+    "sessionExpired": "Sua sessão expirou. Entre novamente para continuar de onde parou.",
     "registerTitle": "Criar conta de administrador",
     "registerSubtitle": "Configure a conta de administrador deste painel.",
     "noAccount": "Precisa configurar o painel?",

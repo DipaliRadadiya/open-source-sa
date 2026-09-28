@@ -644,6 +644,7 @@
   "auth": {
     "loginTitle": "ログイン",
     "loginSubtitle": "パネルにアクセスするための認証情報を入力してください。",
+    "sessionExpired": "セッションの有効期限が切れました。もう一度ログインすると、中断したところから再開できます。",
     "registerTitle": "管理者アカウントを作成",
     "registerSubtitle": "このパネルの管理者アカウントを設定します。",
     "noAccount": "パネルのセットアップが必要ですか？",
