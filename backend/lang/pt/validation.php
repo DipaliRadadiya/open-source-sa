@@ -162,6 +162,20 @@ return [
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],
+
+        // Laravel's default reads "The docker network new field prohibits docker
+        // network from being present" — raw attribute names at a user.
+        'docker_network_new' => [
+            'prohibits' => 'Escolha uma rede da lista ou dê nome a uma nova — não as duas. São duas respostas à mesma pergunta.',
+        ],
+
+        'volume_path' => [
+            'required_with' => 'Indique o caminho dentro do contentor onde este volume deve aparecer, por exemplo /var/lib/mysql.',
+        ],
+
+        'volume_new' => [
+            'required_with' => 'Dê um nome ao volume a criar, ou limpe o caminho se não quiser nenhum.',
+        ],
     ],
 
     'attributes' => [

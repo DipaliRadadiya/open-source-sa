@@ -162,6 +162,20 @@ return [
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],
+
+        // Laravel's default reads "The docker network new field prohibits docker
+        // network from being present" — raw attribute names at a user.
+        'docker_network_new' => [
+            'prohibits' => 'सूची से कोई नेटवर्क चुनें या नए का नाम दें — दोनों नहीं। ये एक ही प्रश्न के दो उत्तर हैं।',
+        ],
+
+        'volume_path' => [
+            'required_with' => 'वह पथ दें जहाँ यह वॉल्यूम कंटेनर के अंदर दिखे, उदाहरण के लिए /var/lib/mysql।',
+        ],
+
+        'volume_new' => [
+            'required_with' => 'बनाने वाले वॉल्यूम का नाम दें, या यदि नहीं चाहिए तो पथ खाली कर दें।',
+        ],
     ],
 
     'attributes' => [
