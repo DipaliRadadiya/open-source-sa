@@ -78,8 +78,9 @@
 @if ($waf && $waf['mode'] === 'enforce')
             <RequireAny>
                 Require env waf_exception
-                <RequireNone>
-                    <RequireAny>
+                <RequireAll>
+                    Require all granted
+                    <RequireNone>
 @if (in_array('query_string', $waf['categories'], true))
                         Require env waf_query
 @endif
@@ -101,8 +102,8 @@
 @if ($waf['customRules'] !== [])
                         Require env waf_custom
 @endif
-                    </RequireAny>
-                </RequireNone>
+                    </RequireNone>
+                </RequireAll>
             </RequireAny>
 @endif
 @if ($basicAuth)

@@ -68,15 +68,18 @@
 @endif
 @if ($waf && $waf['mode'] === 'enforce')
             {{-- Grant access if (an exception matched) OR (no enabled
-                 category/custom rule matched) — the two-level RequireAny
-                 wrapping a RequireNone is Apache's way of expressing
-                 "blocked AND NOT excepted" without a boolean AND operator.
+                 category/custom rule matched). A `RequireNone` cannot sit
+                 directly in a `RequireAny` — Apache refuses the config with
+                 "directive has no effect", since a negation alone never
+                 grants — so it is paired with `Require all granted` inside
+                 a `RequireAll`, which is how Apache spells "none matched".
                  Detect mode skips this entirely — see the CustomLog lines
                  below instead, which log without ever denying access. --}}
             <RequireAny>
                 Require env waf_exception
-                <RequireNone>
-                    <RequireAny>
+                <RequireAll>
+                    Require all granted
+                    <RequireNone>
 @if (in_array('query_string', $waf['categories'], true))
                         Require env waf_query
 @endif
@@ -98,8 +101,8 @@
 @if ($waf['customRules'] !== [])
                         Require env waf_custom
 @endif
-                    </RequireAny>
-                </RequireNone>
+                    </RequireNone>
+                </RequireAll>
             </RequireAny>
 @endif
 @if ($basicAuth)
