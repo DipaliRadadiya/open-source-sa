@@ -138,7 +138,7 @@ return [
         'table_prefix_random' => 'Leave empty and a random prefix is generated, keeping the tables apart if the database is ever shared.',
         'timezone' => 'Timezone for the site, e.g. America/New_York or Europe/Berlin. See Settings → General → Timezone.',
         'table_prefix_optional' => 'Optional. Clear it and the tables are created with no prefix at all.',
-        'start_command' => 'The entry file, for example \"node server.js\". Not \"npm start\" — a package manager forks the real process, so shutdown signals never reach it.',
+        'start_command' => 'The entry file, for example "node server.js". Not "npm start" — a package manager forks the real process, so shutdown signals never reach it.',
         'app_port' => 'Left empty, the panel picks a free one.',
         'rendering_type' => 'Server-side rendering runs your app and proxies to it. The other two build to files the web server hands out directly — faster, and nothing to keep running.',
         'repository_url' => 'A public repository — no account needed. Must be an https:// address.',

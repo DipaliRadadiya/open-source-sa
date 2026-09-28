@@ -79,3 +79,22 @@ it('keeps every locale key-complete against English', function () {
 
     expect($missing)->toBe([]);
 });
+
+it('has no backslash-escaped double quotes in single-quoted strings', function () {
+    // `\"` means nothing inside a single-quoted PHP string, so the backslash
+    // reached the user verbatim: the Node start-command error read
+    // `for example \"node server.js\"` in four locales.
+    $escaped = [];
+
+    foreach (langFiles() as $path) {
+        $strings = require $path;
+
+        array_walk_recursive($strings, function ($value, $key) use ($path, &$escaped) {
+            if (is_string($value) && str_contains($value, '\\"')) {
+                $escaped[] = str_replace(lang_path().'/', '', $path).': '.$key;
+            }
+        });
+    }
+
+    expect($escaped)->toBe([]);
+});

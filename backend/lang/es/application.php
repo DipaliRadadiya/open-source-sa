@@ -133,7 +133,7 @@ return [
         'table_prefix_random' => 'Déjalo vacío y se generará un prefijo aleatorio, manteniendo las tablas separadas si alguna vez se comparte la base de datos.',
         'timezone' => 'Zona horaria del sitio, p. ej. America/New_York o Europe/Madrid. Ver Ajustes → General → Zona horaria.',
         'table_prefix_optional' => 'Opcional. Si lo borras, las tablas se crean sin ningún prefijo.',
-        'start_command' => 'El archivo de entrada, por ejemplo \"node server.js\". No \"npm start\": un gestor de paquetes bifurca el proceso real, así que las señales de apagado nunca le llegan.',
+        'start_command' => 'El archivo de entrada, por ejemplo "node server.js". No "npm start": un gestor de paquetes bifurca el proceso real, así que las señales de apagado nunca le llegan.',
         'app_port' => 'Si lo dejas vacío, el panel elige uno libre.',
         'rendering_type' => 'El renderizado en servidor ejecuta tu app y hace de proxy hacia ella. Los otros dos compilan a archivos que el servidor web entrega directamente: más rápido y sin nada que mantener en ejecución.',
         'repository_url' => 'Un repositorio público: no hace falta cuenta. Debe ser una dirección https://.',

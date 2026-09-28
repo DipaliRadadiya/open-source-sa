@@ -172,8 +172,8 @@ return [
         'role' => 'função',
     ],
 
-    'start_command_shell' => 'O comando de início não pode conter \":token\" — ele é executado diretamente, não através de um shell.',
-    'start_command_wrapper' => 'Inicie a app com o ficheiro de entrada, por exemplo \"node server.js\", não com :binary. Um gestor de pacotes bifurca o processo real, por isso os sinais nunca lhe chegam.',
+    'start_command_shell' => 'O comando de início não pode conter ":token" — ele é executado diretamente, não através de um shell.',
+    'start_command_wrapper' => 'Inicie a app com o ficheiro de entrada, por exemplo "node server.js", não com :binary. Um gestor de pacotes bifurca o processo real, por isso os sinais nunca lhe chegam.',
 
     'port_in_use_by_app' => 'A porta :port já é usada por outra aplicação neste servidor.',
     'node_version_unsupported' => 'A aplicação :type funciona com Node :range. Escolha uma versão dentro desse intervalo — fora dele a aplicação recusa-se a arrancar e o site não serve nada.',
