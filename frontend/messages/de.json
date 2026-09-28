@@ -3481,7 +3481,7 @@
       "networkHint": "Container im selben Netzwerk erreichen sich über ihren Namen. Die Standard-Bridge von Docker kann das nicht.",
       "defaultBridge": "Standard-Bridge von Docker",
       "noNetworks": "Dieser Server hat noch keine eigenen Netzwerke, also gibt es keins zum Beitreten.",
-      "noNetworksLink": "Auf der Docker-Seite eines erstellen.",
+      "noNetworksLink": "Auf der Docker-Seite ein Netzwerk erstellen.",
       "missingOption": "{name} (nicht mehr auf diesem Server)",
       "missingTitle": "Dieses Netzwerk existiert nicht mehr",
       "missingBody": "Die Website soll {name} beitreten, und dieser Server hat es nicht mehr. Der Container startet erst, wenn Sie ein vorhandenes Netzwerk wählen oder dieses neu erstellen.",
@@ -3497,7 +3497,24 @@
       "saved": "Container-Einstellungen gespeichert.",
       "failed": "Die Container-Einstellungen konnten nicht gespeichert werden.",
       "noPermission": "Sie haben keine Berechtigung, diese Website zu ändern.",
-      "nothingToSave": "Nichts hat sich geändert."
+      "nothingToSave": "Nichts hat sich geändert.",
+      "volumes": {
+        "title": "Volumes",
+        "empty": "Keine Volumes eingebunden. Der Container behält nichts, was einen Neuaufbau übersteht.",
+        "choose": "Volume auswählen",
+        "alreadyMounted": "{name} (bereits eingebunden)",
+        "pathPlaceholder": "/var/lib/mysql",
+        "pathLabel": "Pfad innerhalb des Containers",
+        "add": "Einbinden",
+        "remove": "{volume} aushängen",
+        "added": "{volume} eingebunden. Der Container wurde neu erstellt.",
+        "removed": "{volume} ausgehängt. Der Container wurde neu erstellt.",
+        "failed": "Die Einbindungen konnten nicht geändert werden.",
+        "invalid": "Wählen Sie ein Volume und geben Sie einen absoluten Pfad im Container an, zum Beispiel /var/lib/mysql.",
+        "noVolumes": "Dieser Server hat noch keine Volumes, es gibt also nichts einzubinden.",
+        "noVolumesLink": "Auf der Docker-Seite ein Volume erstellen.",
+        "hint": "Ein Volume behält Daten, die einen Neuaufbau des Containers überstehen. Das Einbinden erstellt den Container neu, und das Volume startet leer — was das Image an diesem Pfad hatte, wird verborgen, nicht zusammengeführt."
+      }
     },
     "domains": {
       "title": "Domains und SSL",

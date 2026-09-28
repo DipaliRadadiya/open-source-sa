@@ -10,6 +10,7 @@ return [
     'network_used_by_sites' => 'Diese Websites sollen dem Netzwerk :name beitreten: :sites. Ändern Sie zuerst deren Netzwerk — eine Entfernung würde verhindern, dass sie starten.',
     'volume_in_use' => 'Das Volume :name wird noch von :count Container(n) genutzt. Stoppen Sie diese zuerst — ein Volume im Betrieb zu löschen entfernt Daten, die gerade geschrieben werden.',
     'volume_in_use_by' => 'Das Volume :name wird noch von :containers verwendet. Stoppen Sie diese zuerst — ein Volume im Einsatz zu entfernen löscht Daten, die gerade geschrieben werden.',
+    'volume_used_by_sites' => 'Diese Websites binden das Volume :name ein: :sites. Entfernen Sie dort zuerst die Einbindung — eine Löschung vernichtet die darin gespeicherten Daten.',
     'network_create_failed' => 'Das Netzwerk konnte nicht erstellt werden. Referenz :reference.',
     'network_remove_failed' => 'Das Netzwerk konnte nicht entfernt werden. Referenz :reference.',
     'volume_create_failed' => 'Das Volume konnte nicht erstellt werden. Referenz :reference.',

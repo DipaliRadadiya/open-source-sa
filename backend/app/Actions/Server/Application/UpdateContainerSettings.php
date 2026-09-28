@@ -54,6 +54,7 @@ class UpdateContainerSettings
             'network' => $application->docker_network,
             'container_port' => $application->container_port,
             'memory_limit' => $application->memory_limit,
+            'volume_mounts' => count((array) ($application->volume_mounts ?? [])),
             // Recorded, because a save that only wrote the row and a save that
             // recreated the container are different events and the log is where
             // somebody will look to tell them apart.

@@ -10,6 +10,7 @@ return [
     'network_used_by_sites' => 'Ces sites sont configurés pour rejoindre le réseau :name : :sites. Changez d\'abord leur réseau — le supprimer maintenant les empêcherait de démarrer.',
     'volume_in_use' => 'Le volume :name est encore utilisé par :count conteneur(s). Arrêtez-les d\'abord : supprimer un volume en cours d\'utilisation efface des données qu\'un processus écrit encore.',
     'volume_in_use_by' => 'Le volume :name est encore utilisé par :containers. Arrêtez-les d\'abord — supprimer un volume en cours d\'utilisation efface des données en train d\'être écrites.',
+    'volume_used_by_sites' => 'Ces sites montent le volume :name : :sites. Retirez d\'abord le montage — le supprimer maintenant détruit les données qu\'ils y conservent.',
     'network_create_failed' => 'Le réseau n\'a pas pu être créé. Référence :reference.',
     'network_remove_failed' => 'Le réseau n\'a pas pu être supprimé. Référence :reference.',
     'volume_create_failed' => 'Le volume n\'a pas pu être créé. Référence :reference.',

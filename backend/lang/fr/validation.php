@@ -180,6 +180,14 @@ return [
     // A network the panel created, named by a site that will join it.
     'docker_network_invalid' => 'Commencez le nom du réseau par une lettre ou un chiffre, puis utilisez des lettres, des chiffres, des points, des tirets ou des tirets bas.',
     'docker_network_missing' => 'Il n\'existe aucun réseau Docker nommé \':name\' sur ce serveur. Il a peut-être été supprimé depuis le chargement de cette page.',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'Commencez le nom du volume par une lettre ou un chiffre, puis utilisez des lettres, des chiffres, des points, des tirets ou des tirets bas.',
+    'docker_volume_missing' => 'Il n\'existe aucun volume Docker nommé \':name\' sur ce serveur. Il a peut-être été supprimé depuis le chargement de cette page.',
+    'docker_mount_duplicate' => 'Deux volumes ne peuvent pas être montés sur :path. Docker n\'en garderait qu\'un, sans dire lequel.',
+    'docker_mount_root' => 'Choisissez un chemin à l\'intérieur du conteneur, par exemple /var/lib/mysql.',
+    'docker_mount_site_root' => 'C\'est à ce chemin que les fichiers du site sont montés (:path). Un volume ici les masque au conteneur : les fichiers restent sur le serveur, mais le site sert un volume vide.',
+    'docker_mount_reserved' => ':path fait partie de l\'image avec laquelle le conteneur démarre. Un volume vide par-dessus donne un conteneur incapable de démarrer.',
     'node_version_unsupported' => 'L\'application :type fonctionne avec Node :range. Choisissez une version dans cette plage : en dehors, l\'application refuse de démarrer et le site ne sert rien.',
     'php_version_unsupported' => 'L\'application :type fonctionne avec PHP :range. Choisissez une version dans cette plage : en dehors, l\'installation échoue à mi-parcours, dans le code de l\'application elle-même, et laisse un site à nettoyer.',
     'php_version_default_unsupported' => 'L\'application :type fonctionne avec PHP :range. Laisser ce champ vide utilise la valeur par défaut du serveur (:default), qui est hors de cette plage — choisissez plutôt une version dans la plage.',

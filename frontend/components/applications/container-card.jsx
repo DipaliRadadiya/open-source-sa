@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { Input } from "@/components/ui/input";
 import { Note } from "@/components/ui/note";
+import { ContainerVolumes } from "@/components/applications/container-volumes";
 import {
   Select,
   SelectContent,
@@ -65,6 +66,7 @@ const DEFAULT_NETWORK = "__default__";
 export function ContainerCard({
   application,
   networks = [],
+  volumes = [],
   canManage = false,
   className,
 }) {
@@ -257,6 +259,15 @@ export function ContainerCard({
                 )}
               />
             </div>
+
+            {/* Its own control, not part of the form above. A mount is a discrete
+                fact that saves on add and remove — batching it into the Save
+                button would hide that each change recreates the container. */}
+            <ContainerVolumes
+              application={application}
+              volumes={volumes}
+              canManage={canManage}
+            />
           </CardContent>
           <CardSaveFooter
             submit

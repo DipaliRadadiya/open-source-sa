@@ -53,6 +53,9 @@ services:
          exists in a template is a rule the next code path forgets. --}}
     volumes:
       - {{ $documentRoot }}:/app
+@foreach ($mounts as $mount)
+      - {{ $mount['volume'] }}:{{ $mount['path'] }}
+@endforeach
 
     {{-- The same file the Environment screen edits. They have to name the same
          path: when the unit and the screen each built their own, the screen
@@ -90,4 +93,22 @@ services:
 networks:
   {{ $network }}:
     external: true
+@endif
+@if ($mounts !== [])
+
+{{-- Declared `external: true` for the same reason the network is: the panel
+     created these on the Docker page, and Compose must look them up rather than
+     make its own. Without it Compose creates `<project>_<name>` — a DIFFERENT,
+     empty volume — and the site comes up with none of its data while a volume
+     full of it sits unreferenced. That is the failure mode that looks like data
+     loss and is not, which is worse than an error, because somebody restores a
+     backup over the top of a perfectly good volume.
+
+     Keyed by volume name, so two mounts of the same volume at different paths
+     declare it once. --}}
+volumes:
+@foreach (collect($mounts)->pluck('volume')->unique() as $volume)
+  {{ $volume }}:
+    external: true
+@endforeach
 @endif

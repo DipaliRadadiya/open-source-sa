@@ -212,6 +212,14 @@ return [
     // A network the panel created, named by a site that will join it.
     'docker_network_invalid' => 'Start the network name with a letter or number, then letters, numbers, dots, dashes or underscores.',
     'docker_network_missing' => 'There is no Docker network called \':name\' on this server. It may have been removed since this page loaded.',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'Start the volume name with a letter or number, then letters, numbers, dots, dashes or underscores.',
+    'docker_volume_missing' => 'There is no Docker volume called \':name\' on this server. It may have been removed since this page loaded.',
+    'docker_mount_duplicate' => 'Two volumes cannot mount at :path. Docker would keep only one of them, without saying which.',
+    'docker_mount_root' => 'Choose a path inside the container, for example /var/lib/mysql.',
+    'docker_mount_site_root' => 'That path is where the site\'s own files are mounted (:path). A volume there hides them from the container — the files stay on the server but the site serves an empty volume.',
+    'docker_mount_reserved' => ':path is part of the image the container boots from. An empty volume over it leaves a container that cannot start.',
     'node_version_unsupported' => 'The :type application runs on Node :range. Choose a version in that range — outside it the application refuses to start and the site serves nothing.',
     'php_version_unsupported' => 'The :type application runs on PHP :range. Choose a version in that range — outside it the install fails part-way through, inside the application\'s own code, leaving a site to clean up.',
     'php_version_default_unsupported' => 'The :type application runs on PHP :range. Leaving this empty uses the server default (:default), which is outside that range — choose a version in the range instead.',

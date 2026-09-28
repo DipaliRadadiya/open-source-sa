@@ -10,6 +10,7 @@ return [
     'network_used_by_sites' => '次のサイトはネットワーク :name に参加する設定です: :sites。先にそれらのネットワークを変更してください。今削除すると起動できなくなります。',
     'volume_in_use' => 'ボリューム :name はまだ :count 個のコンテナで使用されています。先に停止してください。使用中のボリュームを削除すると、書き込み中のデータが失われます。',
     'volume_in_use_by' => 'ボリューム :name は :containers がまだ使用しています。先に停止してください。使用中のボリュームを削除すると、書き込み中のデータが消えます。',
+    'volume_used_by_sites' => '次のサイトがボリューム :name をマウントしています: :sites。先にマウントを解除してください。今削除すると、保存されているデータが失われます。',
     'network_create_failed' => 'ネットワークを作成できませんでした。参照 :reference。',
     'network_remove_failed' => 'ネットワークを削除できませんでした。参照 :reference。',
     'volume_create_failed' => 'ボリュームを作成できませんでした。参照 :reference。',

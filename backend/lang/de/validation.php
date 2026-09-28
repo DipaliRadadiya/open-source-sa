@@ -180,6 +180,14 @@ return [
     // A network the panel created, named by a site that will join it.
     'docker_network_invalid' => 'Beginnen Sie den Netzwerknamen mit einem Buchstaben oder einer Zahl, danach Buchstaben, Zahlen, Punkte, Bindestriche oder Unterstriche.',
     'docker_network_missing' => 'Auf diesem Server gibt es kein Docker-Netzwerk namens \':name\'. Möglicherweise wurde es entfernt, seit diese Seite geladen wurde.',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'Beginnen Sie den Volume-Namen mit einem Buchstaben oder einer Zahl, danach Buchstaben, Zahlen, Punkte, Bindestriche oder Unterstriche.',
+    'docker_volume_missing' => 'Auf diesem Server gibt es kein Docker-Volume namens \':name\'. Möglicherweise wurde es entfernt, seit diese Seite geladen wurde.',
+    'docker_mount_duplicate' => 'Zwei Volumes können nicht unter :path eingebunden werden. Docker würde nur eines behalten, ohne zu sagen welches.',
+    'docker_mount_root' => 'Wählen Sie einen Pfad innerhalb des Containers, zum Beispiel /var/lib/mysql.',
+    'docker_mount_site_root' => 'Unter diesem Pfad sind die eigenen Dateien der Website eingebunden (:path). Ein Volume dort verbirgt sie vor dem Container — die Dateien bleiben auf dem Server, die Website liefert aber ein leeres Volume aus.',
+    'docker_mount_reserved' => ':path ist Teil des Images, mit dem der Container startet. Ein leeres Volume darüber führt zu einem Container, der nicht starten kann.',
     'node_version_unsupported' => 'Die Anwendung :type läuft mit Node :range. Wähle eine Version in diesem Bereich — außerhalb davon startet die Anwendung nicht und die Seite liefert nichts aus.',
     'php_version_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wähle eine Version in diesem Bereich — außerhalb davon bricht die Installation mitten im Code der Anwendung ab und hinterlässt eine Seite, die aufgeräumt werden muss.',
     'php_version_default_unsupported' => 'Die Anwendung :type läuft mit PHP :range. Wird dieses Feld leer gelassen, gilt die Servervorgabe (:default) — die außerhalb dieses Bereichs liegt. Wähle stattdessen eine Version im Bereich.',

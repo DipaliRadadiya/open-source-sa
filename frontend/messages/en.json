@@ -3481,7 +3481,7 @@
       "networkHint": "Containers on the same network reach each other by name. Docker's default bridge cannot do that.",
       "defaultBridge": "Docker's default bridge",
       "noNetworks": "This server has no networks of its own yet, so there is nothing to join.",
-      "noNetworksLink": "Create one on the Docker page.",
+      "noNetworksLink": "Create a network on the Docker page.",
       "missingOption": "{name} (no longer on this server)",
       "missingTitle": "This network is gone",
       "missingBody": "The site is set to join {name}, and this server no longer has it. The container will not start until you pick a network that exists, or recreate that one.",
@@ -3497,7 +3497,24 @@
       "saved": "Container settings saved.",
       "failed": "Couldn't save the container settings.",
       "noPermission": "You don't have permission to change this site.",
-      "nothingToSave": "Nothing has changed."
+      "nothingToSave": "Nothing has changed.",
+      "volumes": {
+        "title": "Volumes",
+        "empty": "No volumes mounted. The container keeps nothing that survives a rebuild.",
+        "choose": "Choose a volume",
+        "alreadyMounted": "{name} (already mounted)",
+        "pathPlaceholder": "/var/lib/mysql",
+        "pathLabel": "Path inside the container",
+        "add": "Mount",
+        "remove": "Unmount {volume}",
+        "added": "{volume} mounted. The container was recreated.",
+        "removed": "{volume} unmounted. The container was recreated.",
+        "failed": "Couldn't change the mounts.",
+        "invalid": "Pick a volume and give an absolute path inside the container, for example /var/lib/mysql.",
+        "noVolumes": "This server has no volumes yet, so there is nothing to mount.",
+        "noVolumesLink": "Create a volume on the Docker page.",
+        "hint": "A volume keeps data that survives the container being rebuilt. Mounting one recreates the container, and it starts empty — whatever the image had at that path is hidden, not merged."
+      }
     },
     "domains": {
       "title": "Domains and SSL",

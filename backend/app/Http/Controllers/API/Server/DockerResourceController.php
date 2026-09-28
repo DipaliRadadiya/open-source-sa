@@ -149,6 +149,20 @@ class DockerResourceController extends Controller
                 ]),
         );
 
+        // The guard `in_use` cannot make, and the one that matters most on this
+        // screen: a STOPPED site has no container, so `Links` is 0 and every
+        // check above passes — while the volume still holds that site's data.
+        // Deleting a network out from under a stopped site breaks a start;
+        // deleting its volume destroys the database.
+        abort_if(
+            $volume['sites'] !== [],
+            409,
+            __('errors/docker.volume_used_by_sites', [
+                'name' => $name,
+                'sites' => implode(', ', array_column($volume['sites'], 'name')),
+            ]),
+        );
+
         $result = $docker->removeVolume($name);
 
         abort_if($result->failed(), 500, __('errors/docker.volume_remove_failed', [

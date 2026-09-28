@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Rules\ContainerMountPath;
 use App\Rules\ExistingDockerNetwork;
+use App\Rules\ExistingDockerVolume;
 use App\Rules\SingleLine;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -46,6 +49,63 @@ class UpdateContainerRequest extends FormRequest
 
             // Null is a real answer: it means Docker's default bridge.
             'docker_network' => ['sometimes', 'nullable', 'string', 'max:255', new ExistingDockerNetwork],
+
+            // The volumes this site mounts. A list, unlike the network, and each
+            // entry needs BOTH halves: a volume name is not actionable without
+            // the path it mounts at inside the container.
+            'volume_mounts' => ['sometimes', 'nullable', 'array', 'max:20'],
+            'volume_mounts.*.volume' => ['required', 'string', 'max:255', new ExistingDockerVolume],
+            'volume_mounts.*.path' => [
+                'required',
+                'string',
+                'max:255',
+                // Absolute, because a relative mount target is not a path
+                // Docker will accept and the error it gives says so badly.
+                'regex:/^\//',
+                // No traversal. The value is a path inside the container rather
+                // than on the host, so this is not the same hole a bind mount
+                // would be — but it still reaches a compose file, and a target
+                // nobody can predict is a target nobody can review.
+                'not_regex:/(^|\/)\.\.(\/|$)/',
+                new ContainerMountPath,
+            ],
+        ];
+    }
+
+    /**
+     * The checks that need the whole list, not one entry.
+     *
+     * @return array<int, callable>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $mounts = (array) $this->input('volume_mounts', []);
+                $seen = [];
+
+                foreach ($mounts as $index => $mount) {
+                    $path = rtrim((string) ($mount['path'] ?? ''), '/');
+
+                    if ($path === '') {
+                        continue;
+                    }
+
+                    // Two mounts at one path: Docker takes the last and
+                    // discards the first silently, so a site would be missing a
+                    // volume it is configured to have and nothing would say so.
+                    if (isset($seen[$path])) {
+                        $validator->errors()->add(
+                            "volume_mounts.{$index}.path",
+                            __('validation.docker_mount_duplicate', ['path' => $path]),
+                        );
+
+                        continue;
+                    }
+
+                    $seen[$path] = true;
+                }
+            },
         ];
     }
 }

@@ -180,6 +180,14 @@ return [
     // A network the panel created, named by a site that will join it.
     'docker_network_invalid' => 'Comece o nome da rede com uma letra ou número e depois use letras, números, pontos, hífens ou sublinhados.',
     'docker_network_missing' => 'Não existe nenhuma rede Docker chamada \':name\' neste servidor. Ela pode ter sido removida depois de esta página ser carregada.',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'Comece o nome do volume com uma letra ou número e depois use letras, números, pontos, hífens ou sublinhados.',
+    'docker_volume_missing' => 'Não existe nenhum volume Docker chamado \':name\' neste servidor. Pode ter sido removido depois de esta página ser carregada.',
+    'docker_mount_duplicate' => 'Dois volumes não podem ser montados em :path. O Docker manteria apenas um, sem dizer qual.',
+    'docker_mount_root' => 'Escolha um caminho dentro do contentor, por exemplo /var/lib/mysql.',
+    'docker_mount_site_root' => 'É nesse caminho que os ficheiros do próprio site são montados (:path). Um volume aí esconde-os do contentor — os ficheiros ficam no servidor, mas o site serve um volume vazio.',
+    'docker_mount_reserved' => ':path faz parte da imagem com que o contentor arranca. Um volume vazio por cima deixa um contentor que não consegue arrancar.',
     'node_version_unsupported' => 'A aplicação :type funciona com Node :range. Escolha uma versão dentro desse intervalo — fora dele a aplicação recusa-se a arrancar e o site não serve nada.',
     'php_version_unsupported' => 'A aplicação :type funciona com PHP :range. Escolha uma versão dentro desse intervalo — fora dele a instalação falha a meio, dentro do código da própria aplicação, e deixa um site para limpar.',
     'php_version_default_unsupported' => 'A aplicação :type funciona com PHP :range. Deixar este campo vazio usa a predefinição do servidor (:default), que está fora desse intervalo — escolha antes uma versão dentro do intervalo.',

@@ -57,6 +57,9 @@ export const dockerVolumeSchema = z.object({
   // the names from `container inspect`, so an empty list beside a non-zero count
   // means "could not ask", not "nothing is using it". The cell says so.
   container_names: z.array(z.string()).default([]),
+  // The sites configured to mount it, running or not. `container_names` cannot
+  // answer this: a stopped site has no container, and its data is still in here.
+  sites: z.array(z.object({ id: z.number(), name: z.string() })).default([]),
   in_use: z.boolean(),
   dangling: z.boolean(),
   application_id: z.number().nullish(),
@@ -97,4 +100,25 @@ export const containerSettingsFormSchema = z.object({
     .regex(/^\d+(b|k|m|g)?$/i)
     .or(z.literal("")),
   docker_network: z.string(),
+});
+
+/**
+ * One volume mounted into a container, at a path inside it.
+ *
+ * The path is the half people forget. A volume name on its own is not actionable
+ * — `shop-db` is only useful at `/var/lib/mysql` — which is why "attach this
+ * volume to a container" cannot be a single dropdown.
+ *
+ * The server refuses more than this does: `/app` (where the site's own files
+ * live), `/`, and the image's own directories. Those need to know what the
+ * compose file mounts, so they stay server-side and arrive as field errors.
+ */
+export const volumeMountSchema = z.object({
+  volume: dockerNameSchema,
+  path: z
+    .string()
+    .min(1)
+    .max(255)
+    .regex(/^\//)
+    .refine((path) => !/(^|\/)\.\.(\/|$)/.test(path)),
 });

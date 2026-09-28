@@ -213,3 +213,64 @@ test("an unused volume still reads as unused, not as unnamed", () => {
   assert.match(panel, /!volume\.in_use \?/);
   assert.match(panel, /volumes\.unused/);
 });
+
+/*
+ * Mounting a volume into a site.
+ *
+ * The path is the half a container picker cannot express: `shop-db` is only
+ * useful at `/var/lib/mysql`, and the same volume at `/app/uploads` is a
+ * different thing. That is why the control lives on the site, not in the volume
+ * create dialog — and why `docker volume create` taking no container is not the
+ * obstacle it looks like.
+ */
+
+const volumesList = read("components/applications/container-volumes.jsx");
+
+test("a mount carries both a volume and a path", () => {
+  assert.match(schemas, /export const volumeMountSchema/);
+  assert.match(schemas, /volume: dockerNameSchema/);
+  // Absolute, and no traversal.
+  assert.ok(schemas.includes(".regex(/^\\//)"), "path must be required absolute");
+  assert.ok(schemas.includes("(^|\\/)\\.\\.(\\/|$)"), "path must refuse traversal");
+});
+
+test("the volumes list is offered only on a container site", () => {
+  assert.match(appPage, /volumes=\{dockerVolumes\}/);
+  assert.match(appPage, /getDockerVolumes/);
+});
+
+test("a volume already mounted is still offered, at another path", () => {
+  // One volume at two paths is legal Docker; only a repeated PATH is refused.
+  // Filtering mounted volumes out of the chooser would forbid something valid.
+  assert.match(volumesList, /alreadyMounted/);
+});
+
+test("add and remove save immediately and refresh", () => {
+  // Each change recreates the container, so batching them into a Save button
+  // would hide how many restarts one click is worth.
+  assert.match(volumesList, /router\.refresh\(\)/);
+  assert.match(volumesList, /updateContainerSettings/);
+});
+
+test("the server's refusal is shown where it was typed, not only as a toast", () => {
+  // "That path is where the site's own files are" needs reading twice, and only
+  // the server can say it — the rule needs to know what the compose file mounts.
+  assert.match(volumesList, /setError\(/);
+  assert.match(volumesList, /text-destructive/);
+});
+
+test("the volume schema declares sites, or Zod drops it", () => {
+  assert.match(schemas, /sites: z\.array\(z\.object\(\{ id: z\.number\(\), name: z\.string\(\) \}\)\)/);
+});
+
+test("every volumes-list string exists in every locale", () => {
+  const reference = Object.keys(messages.en.applications.container.volumes);
+  assert.ok(reference.length > 10, "expected the volumes block to be populated");
+  for (const locale of LOCALES) {
+    assert.deepEqual(
+      Object.keys(messages[locale].applications.container.volumes ?? {}).slice().sort(),
+      reference.slice().sort(),
+      `${locale} disagrees with en on applications.container.volumes`,
+    );
+  }
+});

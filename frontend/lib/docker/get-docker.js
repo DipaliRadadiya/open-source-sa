@@ -42,3 +42,16 @@ export async function getDockerNetworks() {
 
   return networks.failed ? [] : (networks.data?.networks ?? []);
 }
+
+/**
+ * Just the volumes, for the mount list on a container site's settings.
+ *
+ * Degrades to an empty list on failure, like `getDockerNetworks()` — this feeds a
+ * chooser beside values the site already has, and "we could not ask" and "there
+ * are none" both mean: offer nothing new, keep showing what is configured.
+ */
+export async function getDockerVolumes() {
+  const volumes = await read("/docker/volumes", dockerVolumesResponseSchema);
+
+  return volumes.failed ? [] : (volumes.data?.volumes ?? []);
+}

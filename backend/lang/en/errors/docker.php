@@ -10,6 +10,7 @@ return [
     'network_used_by_sites' => 'These sites are set to join the network :name: :sites. Change their network first — removing it now would stop them starting.',
     'volume_in_use' => 'The volume :name is still used by :count container(s). Stop them first — removing a volume in use deletes data something is still writing to.',
     'volume_in_use_by' => 'The volume :name is still used by :containers. Stop them first — removing a volume in use deletes data something is still writing to.',
+    'volume_used_by_sites' => 'These sites mount the volume :name: :sites. Remove the mount from them first — deleting it now destroys the data they keep in it.',
     'network_create_failed' => 'The network could not be created. Reference :reference.',
     'network_remove_failed' => 'The network could not be removed. Reference :reference.',
     'volume_create_failed' => 'The volume could not be created. Reference :reference.',

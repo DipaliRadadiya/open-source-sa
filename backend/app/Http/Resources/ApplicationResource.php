@@ -167,6 +167,7 @@ class ApplicationResource extends JsonResource
             'container_port' => $this->container_port,
             'memory_limit' => $this->memory_limit,
             'docker_network' => $this->docker_network,
+            'volume_mounts' => $this->volume_mounts ?? [],
 
             // Whether this application runs a process of its own, and what
             // systemd says about it *right now*. Null for PHP and static sites,

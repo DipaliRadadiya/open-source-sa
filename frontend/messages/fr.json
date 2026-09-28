@@ -3481,7 +3481,7 @@
       "networkHint": "Les conteneurs d'un même réseau s'atteignent par leur nom. Le bridge par défaut de Docker ne le permet pas.",
       "defaultBridge": "Bridge par défaut de Docker",
       "noNetworks": "Ce serveur n'a pas encore de réseau propre, il n'y a donc rien à rejoindre.",
-      "noNetworksLink": "Créez-en un sur la page Docker.",
+      "noNetworksLink": "Créez un réseau sur la page Docker.",
       "missingOption": "{name} (plus présent sur ce serveur)",
       "missingTitle": "Ce réseau n'existe plus",
       "missingBody": "Le site est configuré pour rejoindre {name}, et ce serveur ne l'a plus. Le conteneur ne démarrera pas tant que vous n'aurez pas choisi un réseau existant ou recréé celui-ci.",
@@ -3497,7 +3497,24 @@
       "saved": "Paramètres du conteneur enregistrés.",
       "failed": "Impossible d'enregistrer les paramètres du conteneur.",
       "noPermission": "Vous n'avez pas la permission de modifier ce site.",
-      "nothingToSave": "Rien n'a changé."
+      "nothingToSave": "Rien n'a changé.",
+      "volumes": {
+        "title": "Volumes",
+        "empty": "Aucun volume monté. Le conteneur ne conserve rien qui survive à une reconstruction.",
+        "choose": "Choisir un volume",
+        "alreadyMounted": "{name} (déjà monté)",
+        "pathPlaceholder": "/var/lib/mysql",
+        "pathLabel": "Chemin dans le conteneur",
+        "add": "Monter",
+        "remove": "Démonter {volume}",
+        "added": "{volume} monté. Le conteneur a été recréé.",
+        "removed": "{volume} démonté. Le conteneur a été recréé.",
+        "failed": "Impossible de modifier les montages.",
+        "invalid": "Choisissez un volume et indiquez un chemin absolu dans le conteneur, par exemple /var/lib/mysql.",
+        "noVolumes": "Ce serveur n'a pas encore de volume, il n'y a donc rien à monter.",
+        "noVolumesLink": "Créez un volume sur la page Docker.",
+        "hint": "Un volume conserve des données qui survivent à la reconstruction du conteneur. Le monter recrée le conteneur, et il démarre vide : ce que l'image contenait à ce chemin est masqué, pas fusionné."
+      }
     },
     "domains": {
       "title": "Domaines et SSL",

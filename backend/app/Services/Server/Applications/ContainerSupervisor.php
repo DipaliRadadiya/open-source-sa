@@ -158,6 +158,15 @@ class ContainerSupervisor
             // resolves to an arbitrary one of them when two sites share a
             // network.
             'alias' => $application->slug,
+            // Named volumes, each with the path it mounts at inside the
+            // container. A list, unlike the network: a site mounts as many as it
+            // has data worth keeping.
+            'mounts' => array_values(array_filter(
+                (array) ($application->volume_mounts ?? []),
+                fn ($mount): bool => is_array($mount)
+                    && ($mount['volume'] ?? '') !== ''
+                    && ($mount['path'] ?? '') !== '',
+            )),
         ])->render();
     }
 

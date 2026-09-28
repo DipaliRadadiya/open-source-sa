@@ -180,6 +180,14 @@ return [
     // A network the panel created, named by a site that will join it.
     'docker_network_invalid' => 'ネットワーク名は英数字で始め、その後は英数字、ドット、ハイフン、アンダースコアを使用してください。',
     'docker_network_missing' => 'このサーバーに \':name\' という Docker ネットワークはありません。このページを読み込んだあとに削除された可能性があります。',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'ボリューム名は英数字で始め、その後は英数字、ドット、ハイフン、アンダースコアを使用してください。',
+    'docker_volume_missing' => 'このサーバーに \':name\' という Docker ボリュームはありません。このページを読み込んだあとに削除された可能性があります。',
+    'docker_mount_duplicate' => '2 つのボリュームを :path にマウントできません。Docker はどちらか一方だけを残し、どちらかは示しません。',
+    'docker_mount_root' => 'コンテナ内のパスを指定してください。例: /var/lib/mysql',
+    'docker_mount_site_root' => 'そのパスにはサイト自身のファイルがマウントされています (:path)。ここにボリュームを置くとコンテナから見えなくなります。ファイルはサーバー上に残りますが、サイトは空のボリュームを配信します。',
+    'docker_mount_reserved' => ':path はコンテナが起動するイメージの一部です。空のボリュームで覆うと、コンテナは起動できません。',
     'node_version_unsupported' => ':type アプリケーションは Node :range で動作します。その範囲内のバージョンを選んでください。範囲外ではアプリケーションが起動を拒否し、サイトは何も配信しません。',
     'php_version_unsupported' => ':type アプリケーションは PHP :range で動作します。その範囲内のバージョンを選んでください。範囲外ではインストールがアプリケーション自身のコードの途中で失敗し、後片付けの必要なサイトが残ります。',
     'php_version_default_unsupported' => ':type アプリケーションは PHP :range で動作します。この欄を空のままにするとサーバーの既定値 (:default) が使われますが、これは範囲外です。範囲内のバージョンを選んでください。',

@@ -3481,7 +3481,7 @@
       "networkHint": "Contentores na mesma rede alcançam-se pelo nome. A bridge predefinida do Docker não permite isso.",
       "defaultBridge": "Bridge predefinida do Docker",
       "noNetworks": "Este servidor ainda não tem redes próprias, por isso não há nenhuma para juntar.",
-      "noNetworksLink": "Crie uma na página do Docker.",
+      "noNetworksLink": "Crie uma rede na página do Docker.",
       "missingOption": "{name} (já não está neste servidor)",
       "missingTitle": "Esta rede já não existe",
       "missingBody": "O site está configurado para se juntar a {name} e este servidor já não a tem. O contentor não arranca até escolher uma rede existente ou recriar essa.",
@@ -3497,7 +3497,24 @@
       "saved": "Definições do contentor guardadas.",
       "failed": "Não foi possível guardar as definições do contentor.",
       "noPermission": "Não tem permissão para alterar este site.",
-      "nothingToSave": "Nada foi alterado."
+      "nothingToSave": "Nada foi alterado.",
+      "volumes": {
+        "title": "Volumes",
+        "empty": "Nenhum volume montado. O contentor não guarda nada que sobreviva a uma reconstrução.",
+        "choose": "Escolha um volume",
+        "alreadyMounted": "{name} (já montado)",
+        "pathPlaceholder": "/var/lib/mysql",
+        "pathLabel": "Caminho dentro do contentor",
+        "add": "Montar",
+        "remove": "Desmontar {volume}",
+        "added": "{volume} montado. O contentor foi recriado.",
+        "removed": "{volume} desmontado. O contentor foi recriado.",
+        "failed": "Não foi possível alterar as montagens.",
+        "invalid": "Escolha um volume e indique um caminho absoluto dentro do contentor, por exemplo /var/lib/mysql.",
+        "noVolumes": "Este servidor ainda não tem volumes, por isso não há nada para montar.",
+        "noVolumesLink": "Crie um volume na página do Docker.",
+        "hint": "Um volume guarda dados que sobrevivem à reconstrução do contentor. Montá-lo recria o contentor e ele começa vazio — o que a imagem tinha nesse caminho fica oculto, não é combinado."
+      }
     },
     "domains": {
       "title": "Domínios e SSL",

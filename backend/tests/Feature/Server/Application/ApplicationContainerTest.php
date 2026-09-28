@@ -223,3 +223,148 @@ it('is refused without the manage permission', function () {
 
     expect($this->application->fresh()->docker_network)->toBeNull();
 });
+
+/*
+ * Mounting a volume into the site.
+ *
+ * The validation here is not paperwork. `/app` is where the generated compose
+ * bind-mounts the site's own directory, and a volume over it hides those files
+ * from the container while leaving them on disk and in the backup — which looks
+ * exactly like deletion and invites a restore that changes nothing.
+ */
+
+/** Extends the box fake with a volume list. */
+function fakeDockerBoxWithVolumes(array $volumes = ['shop-db']): void
+{
+    containerRecorder()->exchangeArray([]);
+
+    Process::fake(function ($process) use ($volumes) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        containerRecorder()->append($args);
+
+        if (($args[1] ?? '') === 'system' && ($args[2] ?? '') === 'df') {
+            return Process::result(output: json_encode(array_map(
+                fn (string $name): array => [
+                    'Name' => $name, 'Driver' => 'local',
+                    'Mountpoint' => "/var/lib/docker/volumes/{$name}/_data",
+                    'Size' => '10MB', 'Links' => '0',
+                ],
+                $volumes,
+            )));
+        }
+
+        if (($args[1] ?? '') === 'ps' && in_array('-aq', $args, true)) {
+            return Process::result(output: '');
+        }
+
+        if (($args[1] ?? '') === 'compose') {
+            return Process::result(output: "abc123\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+}
+
+it('mounts a volume and recreates the container', function () {
+    fakeDockerBoxWithVolumes();
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['volume_mounts' => [
+            ['volume' => 'shop-db', 'path' => '/var/lib/mysql'],
+        ]])
+        ->assertOk()
+        ->assertJsonPath('application.volume_mounts.0.volume', 'shop-db');
+
+    expect($this->application->fresh()->volume_mounts)
+        ->toBe([['volume' => 'shop-db', 'path' => '/var/lib/mysql']])
+        ->and(dockerRan(fn (array $args): bool => ($args[1] ?? '') === 'compose' && in_array('up', $args, true)))
+        ->toBeTrue();
+});
+
+it('refuses a mount over the site\'s own files', function () {
+    // The dangerous one. The files stay on the server and in the backup, and the
+    // container serves an empty volume — indistinguishable from deletion.
+    fakeDockerBoxWithVolumes();
+
+    foreach (['/app', '/app/', '/app/public', '/app/storage/uploads'] as $path) {
+        $this->withHeaders(containerHeaders())
+            ->putJson(containerUrl(), ['volume_mounts' => [['volume' => 'shop-db', 'path' => $path]]])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('volume_mounts.0.path');
+    }
+
+    expect($this->application->fresh()->volume_mounts)->toBeNull();
+});
+
+it('refuses a mount over the image itself', function () {
+    fakeDockerBoxWithVolumes();
+
+    foreach (['/', '/etc', '/usr', '/bin', '/lib'] as $path) {
+        $this->withHeaders(containerHeaders())
+            ->putJson(containerUrl(), ['volume_mounts' => [['volume' => 'shop-db', 'path' => $path]]])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('volume_mounts.0.path');
+    }
+});
+
+it('refuses a relative path and a traversal', function () {
+    fakeDockerBoxWithVolumes();
+
+    foreach (['var/lib/mysql', '/var/../etc', '/var/lib/..'] as $path) {
+        $this->withHeaders(containerHeaders())
+            ->putJson(containerUrl(), ['volume_mounts' => [['volume' => 'shop-db', 'path' => $path]]])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('volume_mounts.0.path');
+    }
+});
+
+it('refuses two volumes at the same path', function () {
+    // Docker keeps one and discards the other without saying which, so the site
+    // would be missing a volume it is configured to have.
+    fakeDockerBoxWithVolumes(['shop-db', 'shop-other']);
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['volume_mounts' => [
+            ['volume' => 'shop-db', 'path' => '/data'],
+            ['volume' => 'shop-other', 'path' => '/data/'],
+        ]])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('volume_mounts.1.path');
+});
+
+it('allows one volume at two different paths', function () {
+    // Legal Docker, and the top-level declaration is keyed so it appears once.
+    fakeDockerBoxWithVolumes(['shared']);
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['volume_mounts' => [
+            ['volume' => 'shared', 'path' => '/one'],
+            ['volume' => 'shared', 'path' => '/two'],
+        ]])
+        ->assertOk();
+
+    expect($this->application->fresh()->volume_mounts)->toHaveCount(2);
+});
+
+it('refuses a volume that is not on this server', function () {
+    fakeDockerBoxWithVolumes(['shop-db']);
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['volume_mounts' => [
+            ['volume' => 'not-there', 'path' => '/data'],
+        ]])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('volume_mounts.0.volume');
+});
+
+it('clears every mount when given an empty list', function () {
+    fakeDockerBoxWithVolumes();
+    $this->application->forceFill(['volume_mounts' => [['volume' => 'shop-db', 'path' => '/data']]])->save();
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['volume_mounts' => []])
+        ->assertOk();
+
+    expect($this->application->fresh()->volume_mounts)->toBe([]);
+});

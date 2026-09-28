@@ -203,6 +203,14 @@ return [
     // A network the panel created, named by a site that will join it.
     'docker_network_invalid' => 'Empieza el nombre de la red con una letra o un número y después usa letras, números, puntos, guiones o guiones bajos.',
     'docker_network_missing' => 'En este servidor no hay ninguna red de Docker llamada \':name\'. Puede que se haya eliminado desde que se cargó esta página.',
+
+    // Mounting a panel-created volume into a container site.
+    'docker_volume_invalid' => 'Empieza el nombre del volumen con una letra o un número y después usa letras, números, puntos, guiones o guiones bajos.',
+    'docker_volume_missing' => 'En este servidor no hay ningún volumen de Docker llamado \':name\'. Puede que se haya eliminado desde que se cargó esta página.',
+    'docker_mount_duplicate' => 'Dos volúmenes no pueden montarse en :path. Docker conservaría solo uno, sin indicar cuál.',
+    'docker_mount_root' => 'Elige una ruta dentro del contenedor, por ejemplo /var/lib/mysql.',
+    'docker_mount_site_root' => 'En esa ruta se montan los archivos propios del sitio (:path). Un volumen ahí los oculta del contenedor: los archivos siguen en el servidor, pero el sitio sirve un volumen vacío.',
+    'docker_mount_reserved' => ':path forma parte de la imagen con la que arranca el contenedor. Un volumen vacío encima deja un contenedor que no puede arrancar.',
     'node_version_unsupported' => 'La aplicación :type funciona con Node :range. Elige una versión dentro de ese rango: fuera de él la aplicación se niega a iniciarse y el sitio no sirve nada.',
     'php_version_unsupported' => 'La aplicación :type funciona con PHP :range. Elige una versión dentro de ese rango: fuera de él la instalación falla a medias, dentro del código de la propia aplicación, y deja un sitio que hay que limpiar.',
     'php_version_default_unsupported' => 'La aplicación :type funciona con PHP :range. Dejar este campo vacío usa el valor predeterminado del servidor (:default), que está fuera de ese rango: elige una versión dentro del rango.',

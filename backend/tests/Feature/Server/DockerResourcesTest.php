@@ -325,7 +325,7 @@ it('refuses to delete a volume something is writing to', function () {
     $this->mock(DockerResources::class, function ($mock) {
         $mock->shouldReceive('volumes')->andReturn([[
             'name' => 'sv-app-6_data', 'in_use' => true, 'containers' => 1,
-            'container_names' => ['sv-app-6-db-1'], 'application_id' => 6,
+            'container_names' => ['sv-app-6-db-1'], 'sites' => [], 'application_id' => 6,
         ]]);
     });
 
@@ -462,7 +462,7 @@ it('keeps refusing a volume in use even when it cannot name the containers', fun
     $this->mock(DockerResources::class, function ($mock) {
         $mock->shouldReceive('volumes')->andReturn([[
             'name' => 'sv-app-6_data', 'in_use' => true, 'containers' => 2,
-            'container_names' => [], 'application_id' => 6,
+            'container_names' => [], 'sites' => [], 'application_id' => 6,
         ]]);
     });
 
@@ -481,7 +481,7 @@ it('names the containers when refusing to delete a volume', function () {
         $mock->shouldReceive('volumes')->andReturn([[
             'name' => 'sv-app-6_data', 'in_use' => true, 'containers' => 2,
             'container_names' => ['sv-app-6-db-1', 'sv-app-6-worker-1'],
-            'application_id' => 6,
+            'sites' => [], 'application_id' => 6,
         ]]);
     });
 
@@ -492,4 +492,74 @@ it('names the containers when refusing to delete a volume', function () {
             'name' => 'sv-app-6_data',
             'containers' => 'sv-app-6-db-1, sv-app-6-worker-1',
         ])]);
+});
+
+/*
+ * Deleting a volume a site mounts.
+ *
+ * The most consequential guard on this screen. `Links` counts CONTAINERS, so a
+ * stopped site has none and every other check passes — while the volume still
+ * holds that site's database. Deleting a network out from under a stopped site
+ * breaks a start; deleting its volume destroys the data.
+ */
+
+it('reports which sites mount a volume', function () {
+    $user = SystemUser::create(['username' => 'shop', 'home_path' => '/home/shop']);
+    $application = Application::forceCreate([
+        'system_user_id' => $user->id, 'name' => 'Shop', 'slug' => 'shop',
+        'domain' => 'shop.test', 'web_root' => 'public_html',
+        'site_type' => 'docker', 'serving_profile' => 'docker',
+        'image' => 'mysql:8', 'container_port' => 3306, 'app_port' => 20002,
+        'volume_mounts' => [
+            ['volume' => 'shop-db', 'path' => '/var/lib/mysql'],
+            // Same volume twice: the site must be listed once, not twice.
+            ['volume' => 'shop-db', 'path' => '/backup'],
+        ],
+    ]);
+
+    $volumes = collect((new DockerResources(dockerResourceOps([
+        'docker_volume_df' => fn () => dockerResourceOutput(
+            '[{"Name":"shop-db","Driver":"local","Mountpoint":"/x","Size":"1MB","Links":"0"}]'
+        ),
+        'docker_ps_ids' => fn () => dockerResourceOutput("\n"),
+    ])))->volumes());
+
+    expect($volumes->firstWhere('name', 'shop-db')['sites'])
+        ->toBe([['id' => $application->id, 'name' => 'Shop']]);
+});
+
+it('refuses to delete a volume a stopped site still mounts', function () {
+    // `Links` is 0 and `container_names` is empty — every earlier check passes.
+    $admin = dockerAdmin();
+
+    $this->mock(DockerResources::class, function ($mock) {
+        $mock->shouldReceive('volumes')->andReturn([[
+            'name' => 'shop-db', 'in_use' => false, 'containers' => 0,
+            'container_names' => [], 'sites' => [['id' => 4, 'name' => 'Shop']],
+            'application_id' => null,
+        ]]);
+    });
+
+    $this->actingAs($admin)
+        ->deleteJson('/api/docker/volumes/shop-db')
+        ->assertStatus(409)
+        ->assertJsonFragment(['message' => __('errors/docker.volume_used_by_sites', [
+            'name' => 'shop-db', 'sites' => 'Shop',
+        ])]);
+});
+
+it('deletes a volume no site mounts and nothing is using', function () {
+    // Without this, "refuses when mounted" could be satisfied by refusing always.
+    $admin = dockerAdmin();
+
+    $this->mock(DockerResources::class, function ($mock) {
+        $mock->shouldReceive('volumes')->andReturn([[
+            'name' => 'spare-vol', 'in_use' => false, 'containers' => 0,
+            'container_names' => [], 'sites' => [], 'application_id' => null,
+        ]]);
+        $mock->shouldReceive('removeVolume')->once()->with('spare-vol')
+            ->andReturn(new ServerOpsResult(ok: true, reference: 'r', answered: true));
+    });
+
+    $this->actingAs($admin)->deleteJson('/api/docker/volumes/spare-vol')->assertOk();
 });

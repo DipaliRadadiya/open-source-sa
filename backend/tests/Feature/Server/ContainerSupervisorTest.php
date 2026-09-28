@@ -485,3 +485,103 @@ it('leaves a pasted compose file alone, network or not', function () {
     expect($written)->toContain('their-own-net')
         ->and($written)->not->toContain('ghost-net');
 });
+
+/*
+ * The volumes a site mounts.
+ *
+ * `external: true` matters even more here than it does for the network. Without
+ * it, a name Compose cannot find is a name Compose CREATES — an empty volume —
+ * so the site comes up with none of its data while the real volume sits
+ * unreferenced. That reads as data loss and invites a restore over a volume that
+ * was fine all along.
+ */
+
+it('mounts the volumes it is given, and declares them external', function () {
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['volume_mounts' => [
+        ['volume' => 'shop-db', 'path' => '/var/lib/mysql'],
+        ['volume' => 'shop-uploads', 'path' => '/srv/uploads'],
+    ]])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    expect($written)->toContain('- shop-db:/var/lib/mysql')
+        ->and($written)->toContain('- shop-uploads:/srv/uploads')
+        // The site's own directory is still mounted; a volume is added beside it.
+        ->and($written)->toContain(':/app')
+        ->and($written)->toContain('external: true');
+});
+
+it('writes the same file it always did when no volume is mounted', function () {
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply(containerApp(), '/home/shop/shop/public_html');
+
+    expect($written)->not->toContain('external:')
+        // The bind mount, and nothing beside it. Named explicitly rather than
+        // counting `- ` lines, which also counts the port and the env file.
+        ->and($written)->toContain('- /home/shop/shop/public_html:/app')
+        ->and(substr_count($written, ':/app'))->toBe(1);
+});
+
+it('declares a volume once even when it is mounted twice', function () {
+    // Two paths, one volume — legal, and a duplicate top-level key is not.
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['volume_mounts' => [
+        ['volume' => 'shared', 'path' => '/one'],
+        ['volume' => 'shared', 'path' => '/two'],
+    ]])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    // The DECLARATION once, at the top level. `substr_count('shared:')` also
+    // counts the two mount lines, which is how this assertion first read 3 and
+    // said nothing useful.
+    expect(substr_count($written, "\nvolumes:\n  shared:\n"))->toBe(1)
+        ->and(substr_count($written, 'external: true'))->toBe(1)
+        ->and($written)->toContain('- shared:/one')
+        ->and($written)->toContain('- shared:/two');
+});
+
+it('skips a half-written mount rather than rendering a broken line', function () {
+    // A row with no path would render `- name:` — valid YAML, and a mount Docker
+    // refuses. The column is JSON, so a partial row can arrive from anywhere.
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['volume_mounts' => [
+        ['volume' => 'good', 'path' => '/data'],
+        ['volume' => 'orphan', 'path' => ''],
+        ['path' => '/nameless'],
+    ]])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    expect($written)->toContain('- good:/data')
+        ->and($written)->not->toContain('orphan')
+        ->and($written)->not->toContain('/nameless');
+});

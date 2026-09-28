@@ -146,7 +146,28 @@ class DockerResources
         // `networks()` follows for `docker ps`.
         $users = $this->volumeContainers();
 
-        return array_map(function (array $row) use ($users): array {
+        // Which sites MOUNT each volume, which `Links` cannot answer. A stopped
+        // site's container is gone, so `Links` is 0 and every check passes — and
+        // the volume still holds that site's database. Deleting it there is
+        // actual data loss, not a site that fails to start, which makes this the
+        // more important of the two guards rather than the mirror of the
+        // network one.
+        $sites = Application::query()
+            ->whereNotNull('volume_mounts')
+            ->get(['id', 'name', 'volume_mounts'])
+            ->flatMap(fn (Application $application): array => collect((array) $application->volume_mounts)
+                ->pluck('volume')
+                ->filter()
+                ->unique()
+                ->map(fn (string $volume): array => [
+                    'volume' => $volume,
+                    'site' => ['id' => $application->id, 'name' => $application->name],
+                ])
+                ->all())
+            ->groupBy('volume')
+            ->map(fn (Collection $rows): array => $rows->pluck('site')->values()->all());
+
+        return array_map(function (array $row) use ($users, $sites): array {
             $links = (int) ($row['Links'] ?? 0);
             $name = (string) ($row['Name'] ?? '');
 
@@ -166,6 +187,8 @@ class DockerResources
                 // `->get()` with a default, never `?? []` — see the note in
                 // `networks()` about what the null-coalesce hides.
                 'container_names' => $users->get($name, []),
+                // The sites configured to mount it, running or not.
+                'sites' => $sites->get($name, []),
                 // Deliberately still `$links`, not `count($container_names)`.
                 // This is what the delete guard reads, and `system df -v` is the
                 // stricter source: if `inspect` could not answer, a volume with
