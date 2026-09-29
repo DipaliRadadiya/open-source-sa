@@ -31,6 +31,23 @@ uses(RefreshDatabase::class);
  *    hands over the machine.
  */
 
+/**
+ * The panel override's contents, captured across a run.
+ *
+ * A function rather than another by-reference parameter, because every existing
+ * caller of `containerDeps()` would otherwise need its signature changed.
+ */
+function overrideWritten(?string $contents = null): ?string
+{
+    static $last = null;
+
+    if ($contents !== null) {
+        $last = $contents;
+    }
+
+    return $last;
+}
+
 function containerApp(): Application
 {
     $user = SystemUser::create(['username' => 'shop', 'home_path' => '/home/shop']);
@@ -66,7 +83,16 @@ function containerDeps(array $handlers = [], array &$ran = [], ?string &$written
     );
 
     $files = Mockery::mock(ManagedFile::class);
+    // `$written` means the COMPOSE FILE, not "the last thing written". The panel
+    // also writes `compose.panel.yml` now, and capturing indiscriminately made every
+    // assertion about the compose file silently assert about the override instead.
     $files->shouldReceive('put')->andReturnUsing(function (string $path, string $contents) use (&$written) {
+        if (str_ends_with($path, '/compose.panel.yml')) {
+            overrideWritten($contents);
+
+            return new ServerOpsResult(ok: true, reference: 'r', answered: true);
+        }
+
         $written = $contents;
 
         return new ServerOpsResult(ok: true, reference: 'r', answered: true);
@@ -605,4 +631,134 @@ it('skips a half-written mount rather than rendering a broken line', function ()
     expect($written)->toContain('- good:/data')
         ->and($written)->not->toContain('orphan')
         ->and($written)->not->toContain('/nameless');
+});
+
+/*
+ * The panel's compose override, for a PASTED file.
+ *
+ * `ComposeValidator` rewrites published ports to loopback and refuses the keys that
+ * hand over the host — and adds nothing. Measured: zero references to `mem_limit` or
+ * `logging` in that class. So a hand-written compose file was a site with no memory
+ * ceiling and unbounded logs, which are the two failures that take a box down.
+ */
+
+it('gives a pasted compose file a memory ceiling and bounded logs', function () {
+    $pasted = <<<'YAML'
+    services:
+      web:
+        image: nginx:1.27-alpine
+        ports:
+          - "127.0.0.1:20001:80"
+      worker:
+        image: nginx:1.27-alpine
+    YAML;
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => [
+                    'web' => ['image' => 'nginx:1.27-alpine', 'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']]],
+                    'worker' => ['image' => 'nginx:1.27-alpine'],
+                ],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['compose' => $pasted])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    $override = overrideWritten();
+
+    expect($override)->toContain('services:')
+        // Every service named, from the RESOLVED document — compose accepts
+        // `extends` and anchors, so reading the user's text would miss some.
+        ->and($override)->toContain('  web:')
+        ->and($override)->toContain('  worker:')
+        ->and(substr_count($override, 'mem_limit'))->toBe(2)
+        ->and(substr_count($override, 'max-size'))->toBe(2);
+});
+
+it('passes the override to up, and to nothing else', function () {
+    // Limits are read when a container is CREATED. `down`, `logs` and the rest do
+    // not need them — and passing `-f` for a file that is not on disk, which is the
+    // case for any site provisioned before this existed, fails the whole command.
+    $pasted = "services:\n  web:\n    image: nginx:1.27-alpine\n    ports:\n      - \"127.0.0.1:20001:80\"\n";
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => ['web' => ['image' => 'nginx:1.27-alpine', 'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']]]],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['compose' => $pasted])->save();
+
+    $supervisor = new ContainerSupervisor($ops, $files, new ComposeValidator($ops));
+    $supervisor->apply($application, '/home/shop/shop/public_html');
+    $supervisor->stop($application, '/home/shop/shop/public_html');
+
+    // `contains('compose.panel.yml')` is an EQUALITY check and the command holds a
+    // full path, so it matched nothing — a predicate is required, and without one
+    // this test passed vacuously in both directions.
+    $overrides = fn (string $op): int => collect($ran)
+        ->where('op', $op)
+        ->filter(fn (array $row): bool => collect($row['command'])
+            ->contains(fn ($argument): bool => str_contains((string) $argument, 'compose.panel.yml')))
+        ->count();
+
+    expect($overrides('compose_up'))->toBeGreaterThan(0)
+        ->and($overrides('compose_stop'))->toBe(0);
+});
+
+it('writes no override for a generated file, which carries its own', function () {
+    // Duplicating the limits would be two sources for one value.
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply(containerApp(), '/home/shop/shop/public_html');
+
+    expect(collect($ran)->contains(
+        fn (array $row): bool => collect($row['command'])
+            ->contains(fn ($argument): bool => str_contains((string) $argument, 'compose.panel.yml'))
+    ))->toBeFalse()
+        // And the generated file still has them itself.
+        ->and($written)->toContain('mem_limit');
+});
+
+it('honours a per-site memory limit in the override', function () {
+    $pasted = "services:\n  web:\n    image: nginx:1.27-alpine\n    ports:\n      - \"127.0.0.1:20001:80\"\n";
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => ['web' => ['image' => 'nginx:1.27-alpine', 'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']]]],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['compose' => $pasted, 'memory_limit' => '3g'])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    expect(overrideWritten())->toContain('mem_limit: 3g');
 });

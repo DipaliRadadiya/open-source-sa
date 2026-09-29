@@ -525,7 +525,13 @@ it('reports which sites mount a volume', function () {
     ])))->volumes());
 
     expect($volumes->firstWhere('name', 'shop-db')['sites'])
-        ->toBe([['id' => $application->id, 'name' => 'Shop']]);
+        // One row per MOUNT, not per site: this fixture mounts the same volume at
+        // two paths, and `/var/lib/mysql` versus `/backup` is the difference between
+        // "this is the database" and "this is a copy of it". The table shows both.
+        ->toBe([
+            ['id' => $application->id, 'name' => 'Shop', 'path' => '/var/lib/mysql'],
+            ['id' => $application->id, 'name' => 'Shop', 'path' => '/backup'],
+        ]);
 });
 
 it('refuses to delete a volume a stopped site still mounts', function () {

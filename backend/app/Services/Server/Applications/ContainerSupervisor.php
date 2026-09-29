@@ -53,6 +53,17 @@ class ContainerSupervisor
      *
      * @throws ProvisioningFailedException
      */
+    /**
+     * Service names from the last pasted compose file this instance rendered.
+     *
+     * Set by `contents()` and read by `writeOverride()`, because the override has
+     * to name each service and only the resolved document knows what they are.
+     * Empty for a generated file, whose template carries its own limits.
+     *
+     * @var list<string>
+     */
+    private array $pastedServices = [];
+
     public function apply(Application $application, string $documentRoot, bool $start = true): void
     {
         $path = $this->composePath($application, $documentRoot);
@@ -67,11 +78,13 @@ class ContainerSupervisor
             throw new ProvisioningFailedException('compose_write', $written->reference);
         }
 
+        $override = $this->writeOverride($application, $documentRoot, $context);
+
         if (! $start) {
             return;
         }
 
-        $result = $this->compose($application, $documentRoot, ['up', '-d', '--remove-orphans'], 'compose_up');
+        $result = $this->compose($application, $documentRoot, ['up', '-d', '--remove-orphans'], 'compose_up', $override);
 
         if ($result->failed()) {
             throw new ProvisioningFailedException('container_start', $result->reference);
@@ -131,6 +144,12 @@ class ContainerSupervisor
                 $application->forceFill(['app_port' => $port])->save();
             }
 
+            // The service names the panel has to protect, taken from the
+            // RESOLVED document rather than by reading the user's text: compose
+            // accepts `extends`, anchors and profiles, and the resolved document
+            // is the only place their result is visible.
+            $this->pastedServices = array_keys((array) ($verdict['resolved']['services'] ?? []));
+
             // The validator's file, not the user's. They differ when a port
             // was published to every address and the panel bound it to
             // loopback — the row keeps what was typed so the editor shows it
@@ -171,6 +190,62 @@ class ContainerSupervisor
     }
 
     /**
+     * Write the panel's own compose override, and return its path.
+     *
+     * **Why an override file rather than editing the user's YAML.** A pasted compose
+     * file is the user's, shown back to them unchanged in the editor, and rewriting
+     * it to insert keys means parsing and re-emitting YAML — which loses comments,
+     * reorders keys and is a bug farm. Compose is built for this: a second `-f`
+     * merges over the first, and `docker compose` itself does the merging.
+     *
+     * **What it protects, and why it is not optional.** `ComposeValidator` rewrites
+     * published ports to loopback and refuses the keys that hand over the host, but
+     * it adds nothing — measured, not assumed: zero references to `mem_limit` or
+     * `logging` in that class. So a hand-written compose file was a site with **no
+     * memory ceiling and unbounded logs**, which are precisely the two failures the
+     * generated template carries a paragraph each about: one container exhausting
+     * the box and taking the panel with it, and Docker's default json-file driver
+     * having no max size, so a chatty container fills the disk and the first symptom
+     * is every site on the server failing to write.
+     *
+     * Returns null when there is nothing to override — a generated file, whose
+     * template already carries both.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function writeOverride(Application $application, string $documentRoot, array $context): ?string
+    {
+        if ($this->pastedServices === []) {
+            return null;
+        }
+
+        $limit = (string) ($application->memory_limit
+            ?: config('server.docker.default_memory_limit', '512m'));
+
+        $lines = ['# Written by the panel. Merged over compose.yml by `docker compose -f`.', 'services:'];
+
+        foreach ($this->pastedServices as $service) {
+            $lines[] = "  {$service}:";
+            $lines[] = "    mem_limit: {$limit}";
+            $lines[] = '    logging:';
+            $lines[] = '      driver: json-file';
+            $lines[] = '      options:';
+            $lines[] = '        max-size: "10m"';
+            $lines[] = '        max-file: "3"';
+        }
+
+        $path = rtrim($documentRoot, '/').'/compose.panel.yml';
+
+        $written = $this->files->put($path, implode("\n", $lines)."\n", $context);
+
+        if ($written->failed()) {
+            throw new ProvisioningFailedException('compose_override', $written->reference);
+        }
+
+        return $path;
+    }
+
+    /**
      * Is anything actually up?
      *
      * `--status running` rather than counting lines of `ps`: a container that
@@ -191,7 +266,22 @@ class ContainerSupervisor
 
     public function start(Application $application, string $documentRoot): ServerOpsResult
     {
-        return $this->compose($application, $documentRoot, ['up', '-d'], 'compose_up');
+        // The override is rewritten here too, not assumed to be on disk. `start()`
+        // is reachable on a site provisioned before it existed, and passing `-f` for
+        // a file that is not there fails the whole command.
+        $context = ['feature' => 'application', 'op' => 'compose_override', 'application' => $application->id];
+
+        // Re-render so `$pastedServices` is populated; the file itself is already
+        // correct on disk and this is a read of the record, not of the container.
+        $this->contents($application, $documentRoot);
+
+        return $this->compose(
+            $application,
+            $documentRoot,
+            ['up', '-d'],
+            'compose_up',
+            $this->writeOverride($application, $documentRoot, $context),
+        );
     }
 
     public function stop(Application $application, string $documentRoot): ServerOpsResult
@@ -295,12 +385,28 @@ class ContainerSupervisor
      *
      * @param  array<int, string>  $arguments
      */
-    private function compose(Application $application, string $documentRoot, array $arguments, string $op): ServerOpsResult
-    {
+    private function compose(
+        Application $application,
+        string $documentRoot,
+        array $arguments,
+        string $op,
+        ?string $override = null,
+    ): ServerOpsResult {
+        // The override is passed only where it matters, which is container
+        // CREATION — `up`. `down`, `logs`, `ps`, `stop` and `restart` do not read
+        // limits, and passing `-f` for a file that may not exist on a site
+        // provisioned before this feature would fail the command outright. That is
+        // the whole reason this is a parameter rather than part of the base command.
+        $files = ['-f', $this->composePath($application, $documentRoot)];
+
+        if ($override !== null) {
+            $files = array_merge($files, ['-f', $override]);
+        }
+
         return $this->serverOps->run(
             array_merge([
                 'docker', 'compose',
-                '-f', $this->composePath($application, $documentRoot),
+            ], $files, [
                 '-p', $this->project($application),
             ], $arguments),
             ['feature' => 'application', 'op' => $op, 'application' => $application->id],
