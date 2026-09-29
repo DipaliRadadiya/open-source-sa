@@ -107,11 +107,28 @@ class DockerSiteType extends AbstractSiteType
     public function fields(): array
     {
         return [
+            // **The first decision, and the reason this card is not confusing any
+            // more.** An image-and-port site and a pasted compose file are
+            // alternatives, and the form used to show both sets at once with help
+            // text reading "leave the picker above empty and type a name here".
+            // Choosing between them up front is what that text was standing in for.
+            //
+            // Not advanced: it decides which other fields exist.
+            $this->field('docker_mode', 'select', extra: [
+                'default' => 'simple',
+                'help' => __('application.help.docker_mode'),
+                'options' => [
+                    ['value' => 'simple', 'label' => __('application.options.docker_mode.simple')],
+                    ['value' => 'compose', 'label' => __('application.options.docker_mode.compose')],
+                ],
+            ]),
+
             // Required only when there is no compose file. A pasted compose
             // names its own images — asking for one as well is asking the
             // same question twice and refusing an answer the user already
             // gave.
             $this->field('image', 'text', extra: [
+                'depends_on' => 'docker_mode:simple',
                 'placeholder' => 'nginx:1.27-alpine',
                 'help' => __('application.help.image'),
                 'required_without' => 'compose',
@@ -125,6 +142,7 @@ class DockerSiteType extends AbstractSiteType
             // reads the published port out of the resolved document instead,
             // so asking would let the two disagree.
             $this->field('container_port', 'number', extra: [
+                'depends_on' => 'docker_mode:simple',
                 'default' => 80,
                 'help' => __('application.help.container_port'),
                 'required_without' => 'compose',
@@ -148,6 +166,7 @@ class DockerSiteType extends AbstractSiteType
             // and a network picker on the front of the form implies a decision
             // most people do not have to make.
             $this->field('docker_network', 'select', advanced: true, extra: [
+                'depends_on' => 'docker_mode:simple',
                 'help' => __('application.help.docker_network'),
                 'options' => $this->networkOptions(),
             ]),
@@ -164,6 +183,7 @@ class DockerSiteType extends AbstractSiteType
             // else's network — and a typo that happens to collide is exactly the
             // case that must not silently work.
             $this->field('docker_network_new', 'text', advanced: true, extra: [
+                'depends_on' => 'docker_mode:simple',
                 'placeholder' => 'ghost-net',
                 'help' => __('application.help.docker_network_new'),
             ]),
@@ -180,11 +200,13 @@ class DockerSiteType extends AbstractSiteType
             // the create form would be the most complex control on it, used by
             // almost nobody, for a job that has a better home.
             $this->field('volume_new', 'text', advanced: true, extra: [
+                'depends_on' => 'docker_mode:simple',
                 'placeholder' => 'ghost-content',
                 'help' => __('application.help.volume_new'),
             ]),
 
             $this->field('volume_path', 'text', advanced: true, extra: [
+                'depends_on' => 'docker_mode:simple',
                 'placeholder' => '/var/lib/ghost/content',
                 'help' => __('application.help.volume_path'),
             ]),
@@ -197,7 +219,8 @@ class DockerSiteType extends AbstractSiteType
             // Left empty, the panel writes the file from the fields. Filled,
             // this is the file — validated first, and the validator is where
             // the interesting part of this feature lives.
-            $this->field('compose', 'textarea', advanced: true, extra: [
+            $this->field('compose', 'textarea', extra: [
+                'depends_on' => 'docker_mode:compose',
                 'help' => __('application.help.compose'),
                 'rows' => 14,
                 'monospace' => true,
@@ -225,6 +248,13 @@ class DockerSiteType extends AbstractSiteType
             // makes Compose look the name up, so a network that is not there
             // is a container that will not start — and the refusal has to
             // arrive on the field rather than on the next deploy.
+            // Never persisted and deliberately not validated against a list: it is a
+            // form affordance, and the either/or it expresses is already enforced by
+            // `required_without:compose` on the fields themselves. A site created in
+            // compose mode is recognisable by having a compose file, which is a
+            // better answer than a column repeating it.
+            'docker_mode' => ['nullable', 'string', 'max:20'],
+
             'docker_network' => ['nullable', 'string', 'max:255', new ExistingDockerNetwork],
 
             // A name to CREATE, so the opposite rule: it must not exist yet.

@@ -234,6 +234,10 @@ class CreateApplication
      * the Container card edits. Both halves or neither: validation makes each
      * `required_with` the other, so a half-filled pair cannot reach here.
      *
+     * **`docker_mode` is not resolved here and not stored at all** — see the
+     * form-only list in `typeSettings()`. It answers a question about the form, and
+     * the site already records which way it was made by having a compose file or not.
+     *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
@@ -296,8 +300,27 @@ class CreateApplication
             $settings['database_engine'] = (string) $data['database_engine'];
         }
 
+        /*
+         * Declared fields that shape the create FORM and are never stored anywhere.
+         *
+         * `docker_mode` chooses whether the Docker card asks for an image and a port
+         * or for a compose file. It answers a question about the form, not about the
+         * site — and the site already records which way it was made, by having a
+         * compose file or not. Storing it would be a second source for that, free to
+         * drift, and the first person to trust the wrong one gets a surprise.
+         *
+         * Listed rather than silently dropped: the guard in ContainerSupervisorTest
+         * requires every declared field to be a column, a setting, or named as a
+         * deliberate exception, and this is where the exception lives.
+         */
+        $formOnly = ['docker_mode'];
+
         foreach ($fields as $field) {
             $name = (string) $field['name'];
+
+            if (in_array($name, $formOnly, true)) {
+                continue;
+            }
 
             if (! in_array($name, $columns, true) && array_key_exists($name, $data)) {
                 $settings[$name] = $data[$name];

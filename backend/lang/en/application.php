@@ -74,6 +74,7 @@ return [
         'image' => 'Image',
         'container_port' => 'Container port',
         'docker_network' => 'Network',
+        'docker_mode' => 'How to run it',
         'docker_network_new' => 'New network',
         'volume_new' => 'New volume',
         'volume_path' => 'Volume path',
@@ -155,11 +156,19 @@ return [
         'start_command' => 'node server.js',
     ],
 
+    'options' => [
+        'docker_mode' => [
+            'simple' => 'Simple — an image and a port',
+            'compose' => 'Compose file — write it yourself',
+        ],
+    ],
+
     'help' => [
         'compose' => 'Optional. Paste your own compose file and everything Compose supports is supported — multiple services, named volumes, healthchecks. Leave it empty and the panel writes one from the fields above. Ports must publish to 127.0.0.1 and bind mounts must stay inside this application\'s directory; anything else is refused with the reason.',
         'image' => 'The image to run, with an explicit tag — `nginx:1.27-alpine`. A bare name pulls `latest`, which makes a deploy unreproducible and a rollback meaningless.',
         'container_port' => 'The port your application listens on inside the container. The panel allocates the port on the server itself and points nginx at it.',
         'docker_network' => 'Join a Docker network so this container and others on it can reach each other by name. Leave empty for Docker\'s default bridge, where they cannot. Create networks on the Docker page.',
+        'docker_mode' => 'Simple gives you an image and a port and the panel writes the compose file. Compose file is for anything else — you write it, and the panel still enforces loopback publishing, a memory ceiling and bounded logs.',
         'docker_network_new' => 'Leave the picker above empty and type a name here to create a new network and join this site to it. Refused if a network with that name already exists — pick it above instead.',
         'volume_new' => 'Create a volume with this name and mount it into the site, so its data survives the container being rebuilt. Refused if a volume with that name already exists.',
         'volume_path' => 'Where the volume appears inside the container, for example /var/lib/ghost/content. Not the site\'s own directory — a volume there would hide the site\'s files.',

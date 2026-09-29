@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\User;
 use App\Services\Applications\SiteTypeManager;
@@ -266,4 +267,49 @@ it('offers the create-new fields on the Docker card', function () {
         $label = collect($docker['fields'])->firstWhere('name', $field)['label'];
         expect($label)->not->toContain('application.fields');
     }
+});
+
+it('makes the Docker card a choice between two modes, not both at once', function () {
+    // The confusion this fixes: the form showed an image, a port, a network picker, a
+    // "new network" text box, a volume pair AND a compose textarea simultaneously,
+    // with help text reading "leave the picker above empty and type a name here".
+    // They are alternatives, so the form now asks which.
+    recordStack('docker');
+
+    Process::fake(fn () => Process::result(output: ''));
+
+    $docker = collect(app(SiteTypeManager::class)->catalog())->firstWhere('name', 'docker');
+    $fields = collect($docker['fields'])->keyBy('name');
+
+    $mode = $fields->get('docker_mode');
+
+    expect($mode)->not->toBeNull()
+        ->and($mode['type'])->toBe('select')
+        // Not advanced: it decides which other fields exist, so it cannot be behind
+        // a disclosure.
+        ->and($mode['advanced'])->toBeFalse()
+        ->and(collect($mode['options'])->pluck('value')->all())->toBe(['simple', 'compose']);
+
+    // Every other field declares which mode it belongs to, or it is back to being
+    // shown in both.
+    foreach (['image', 'container_port', 'docker_network', 'docker_network_new', 'volume_new', 'volume_path'] as $name) {
+        expect($fields->get($name)['depends_on'] ?? null)->toBe('docker_mode:simple', "{$name} is not gated");
+    }
+
+    expect($fields->get('compose')['depends_on'] ?? null)->toBe('docker_mode:compose')
+        // And the compose box is no longer behind Advanced: in compose mode it IS
+        // the field.
+        ->and($fields->get('compose')['advanced'])->toBeFalse();
+});
+
+it('stores the mode nowhere, because the site already records how it was made', function () {
+    // A column or a setting saying "this was made in compose mode" is a second source
+    // for a fact the compose file already carries, free to drift from it.
+    expect((new Application)->getFillable())->not->toContain('docker_mode');
+
+    $create = file_get_contents(base_path('app/Actions/Server/Application/CreateApplication.php'));
+
+    // Named as a deliberate exception rather than silently dropped — which is what
+    // the "every declared field is handled" guard exists to force.
+    expect($create)->toContain("\$formOnly = ['docker_mode']");
 });

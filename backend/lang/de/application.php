@@ -69,6 +69,7 @@ return [
         'image' => 'Image',
         'container_port' => 'Container-Port',
         'docker_network' => 'Netzwerk',
+        'docker_mode' => 'Art der Ausführung',
         'docker_network_new' => 'Neues Netzwerk',
         'volume_new' => 'Neues Volume',
         'volume_path' => 'Volume-Pfad',
@@ -150,11 +151,19 @@ return [
         'start_command' => 'node server.js',
     ],
 
+    'options' => [
+        'docker_mode' => [
+            'simple' => 'Einfach — ein Image und ein Port',
+            'compose' => 'Compose-Datei — selbst schreiben',
+        ],
+    ],
+
     'help' => [
         'compose' => 'Optional. Fügen Sie Ihre eigene Compose-Datei ein — alles, was Compose unterstützt, wird unterstützt: mehrere Dienste, benannte Volumes, Healthchecks. Lassen Sie sie leer, schreibt das Panel eine aus den Feldern oben. Ports müssen auf 127.0.0.1 veröffentlicht werden und Bind-Mounts innerhalb des Verzeichnisses dieser Anwendung bleiben; alles andere wird mit Begründung abgelehnt.',
         'image' => 'Das auszuführende Image, mit ausdrücklichem Tag — `nginx:1.27-alpine`. Ein Name ohne Tag zieht `latest`, was ein Deployment nicht reproduzierbar und ein Rollback bedeutungslos macht.',
         'container_port' => 'Der Port, auf dem Ihre Anwendung innerhalb des Containers lauscht. Den Port auf dem Server selbst vergibt das Panel und richtet nginx darauf aus.',
         'docker_network' => 'Treten Sie einem Docker-Netzwerk bei, damit dieser Container und andere darin sich über ihren Namen erreichen können. Leer lassen für die Standard-Bridge von Docker, in der das nicht möglich ist. Netzwerke werden auf der Docker-Seite erstellt.',
+        'docker_mode' => 'Einfach bedeutet Image und Port, und das Panel schreibt die Compose-Datei. Compose-Datei ist für alles andere — Sie schreiben sie, und das Panel erzwingt weiterhin Loopback-Veröffentlichung, ein Speicherlimit und begrenzte Logs.',
         'docker_network_new' => 'Lassen Sie die Auswahl oben leer und geben Sie hier einen Namen ein, um ein neues Netzwerk zu erstellen und diese Website damit zu verbinden. Wird abgelehnt, wenn es ein Netzwerk mit diesem Namen schon gibt — wählen Sie es dann oben aus.',
         'volume_new' => 'Erstellt ein Volume mit diesem Namen und bindet es in die Website ein, damit deren Daten einen Neuaufbau des Containers überstehen. Wird abgelehnt, wenn es ein Volume mit diesem Namen schon gibt.',
         'volume_path' => 'Wo das Volume im Container erscheint, zum Beispiel /var/lib/ghost/content. Nicht das eigene Verzeichnis der Website — ein Volume dort würde deren Dateien verbergen.',

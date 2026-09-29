@@ -69,6 +69,7 @@ return [
         'image' => 'Image',
         'container_port' => 'Port du conteneur',
         'docker_network' => 'Réseau',
+        'docker_mode' => 'Mode d\'exécution',
         'docker_network_new' => 'Nouveau réseau',
         'volume_new' => 'Nouveau volume',
         'volume_path' => 'Chemin du volume',
@@ -150,11 +151,19 @@ return [
         'start_command' => 'node server.js',
     ],
 
+    'options' => [
+        'docker_mode' => [
+            'simple' => 'Simple — une image et un port',
+            'compose' => 'Fichier compose — à vous de l\'écrire',
+        ],
+    ],
+
     'help' => [
         'compose' => 'Facultatif. Collez votre propre fichier compose et tout ce que Compose gère est géré : plusieurs services, volumes nommés, healthchecks. Laissez-le vide et le panel en écrira un à partir des champs ci-dessus. Les ports doivent être publiés sur 127.0.0.1 et les montages rester dans le répertoire de cette application ; tout le reste est refusé avec la raison.',
         'image' => 'L\'image à exécuter, avec une étiquette explicite : `nginx:1.27-alpine`. Un nom sans étiquette utilise `latest`, ce qui rend un déploiement non reproductible et un retour arrière vide de sens.',
         'container_port' => 'Le port sur lequel votre application écoute à l\'intérieur du conteneur. Le panel attribue le port sur le serveur lui-même et y dirige nginx.',
         'docker_network' => 'Rejoignez un réseau Docker pour que ce conteneur et les autres du même réseau puissent s\'atteindre par leur nom. Laissez vide pour le bridge par défaut de Docker, où ce n\'est pas possible. Les réseaux se créent sur la page Docker.',
+        'docker_mode' => 'Simple demande une image et un port, et le panneau écrit le fichier compose. Fichier compose sert à tout le reste : vous l\'écrivez, et le panneau impose toujours la publication en loopback, une limite de mémoire et des logs bornés.',
         'docker_network_new' => 'Laissez le sélecteur ci-dessus vide et saisissez un nom ici pour créer un réseau et y rattacher ce site. Refusé si un réseau porte déjà ce nom — sélectionnez-le ci-dessus à la place.',
         'volume_new' => 'Crée un volume portant ce nom et le monte dans le site, afin que ses données survivent à la reconstruction du conteneur. Refusé si un volume porte déjà ce nom.',
         'volume_path' => 'Où le volume apparaît dans le conteneur, par exemple /var/lib/ghost/content. Pas le répertoire propre du site — un volume ici masquerait ses fichiers.',

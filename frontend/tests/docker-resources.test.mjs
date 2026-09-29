@@ -469,3 +469,25 @@ test("the flag is omitted when not asked for", () => {
   const api = read("lib/api/applications.js");
   assert.match(api, /if \(removeDockerResources\) params\.remove_docker_resources = true;/);
 });
+
+/*
+ * The Docker create form: a choice between two modes, not both at once.
+ */
+
+const createForm = read("components/applications/create-application-form.jsx");
+
+test("a field can depend on another field's value", () => {
+  // A general extension of the existing named `depends_on` conditions, not a
+  // Docker special case — and watched rather than read once, so the form reacts as
+  // soon as the mode changes.
+  assert.match(createForm, /depends_on: "<field>:<value>"/);
+  assert.match(createForm, /dependsOnSatisfied/);
+  assert.match(createForm, /useWatch\(\{ control: form\.control \}\)/);
+});
+
+test("an unparseable depends_on does not hide the field", () => {
+  // The existing named conditions ("rendering_type", "node_rendering") have no
+  // colon, so the new check has to pass them through — defaulting to hidden would
+  // have silently emptied the Git card.
+  assert.match(createForm, /!dependsOn\.includes\(":"\)\) return true/);
+});

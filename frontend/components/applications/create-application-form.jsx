@@ -931,9 +931,28 @@ export function CreateApplicationForm({
     (config) =>
       !COMMON_FIELD_NAMES.has(config.name),
   );
+  /*
+   * `depends_on: "<field>:<value>"` — show this field only while that other field
+   * holds that value. A general extension of the existing named conditions below,
+   * added for the Docker card: an image-and-port site and a pasted compose file are
+   * alternatives, and showing both sets at once with help text saying "leave the
+   * picker above empty" was the whole of the confusion.
+   *
+   * Watched, not read once: the answer has to change as soon as the mode does.
+   */
+  const dependencyValues = useWatch({ control: form.control });
+  const dependsOnSatisfied = (dependsOn) => {
+    if (typeof dependsOn !== "string" || !dependsOn.includes(":")) return true;
+
+    const [field, expected] = dependsOn.split(":");
+
+    return String(dependencyValues?.[field] ?? "") === expected;
+  };
+
   const visibleFields = typeFields
     .filter(
       (config) =>
+        dependsOnSatisfied(config.depends_on) &&
         (config.depends_on !== "rendering_type" || renderingType === "ssr") &&
         (config.depends_on !== "node_rendering" ||
           ["ssr", "csr"].includes(renderingType)),
