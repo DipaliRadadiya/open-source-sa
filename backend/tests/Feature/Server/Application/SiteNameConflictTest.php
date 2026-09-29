@@ -200,7 +200,13 @@ it('refuses the create request itself, in the user\'s language', function () {
     expect(Application::query()->where('slug', 'panel')->exists())->toBeFalse();
 });
 
-it('refuses the rename request too', function () {
+it('cannot be reached by a rename at all, since the name is immutable', function () {
+    // This used to assert that the *collision* was refused on rename. It would
+    // still pass, and it would be measuring the wrong thing: `name` is now
+    // refused on this endpoint whatever its value
+    // ({@see \App\Http\Requests\Server\Application\UpdateApplicationRequest}),
+    // so a slug can no longer move and the disk check has nothing to catch
+    // here. Renamed so it does not claim otherwise.
     $application = conflictSite('Shop', 'shop');
 
     ConflictFake::$present = ['/etc/php/8.4/fpm/pool.d/www.conf'];
@@ -210,7 +216,32 @@ it('refuses the rename request too', function () {
         ->assertStatus(422)
         ->assertJsonValidationErrors('name');
 
-    expect($application->fresh()->slug)->toBe('shop');
+    // An ordinary name is refused for the same reason — the guard is not what
+    // is doing the work.
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$application->id}", ['name' => 'Perfectly Fine'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('name');
+
+    expect($application->fresh()->slug)->toBe('shop')
+        ->and($application->fresh()->name)->toBe('Shop');
+});
+
+it('still accepts the runtime fields the panel really sends to this endpoint', function () {
+    // The one frontend caller of `PUT /applications/{id}` is
+    // `updateApplicationRuntime`, which sends these two and nothing else.
+    // Prohibiting `name` must not cost it.
+    $application = conflictSite('Node Site', 'node-site');
+    $application->forceFill(['serving_profile' => 'node', 'php_version' => null])->save();
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$application->id}", [
+            'start_command' => 'node server.js',
+            'app_port' => 3999,
+        ])
+        ->assertOk();
+
+    expect($application->fresh()->start_command)->toBe('node server.js');
 });
 
 it('steps over a taken name instead of refusing where there is nobody to ask', function () {

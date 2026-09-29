@@ -215,6 +215,7 @@ return [
     'port_in_use' => 'Something on this server is already listening on port :port. Pick another, or stop what is using it.',
 
     'port_registered' => 'Port :port is normally used by :service. You can still use it if nothing on this server does.',
+    'application_name_immutable' => 'A site\'s name is fixed once it exists — it names its configuration files on the server. Create a new site if you need a different name.',
     'site_name_taken_pool' => 'This server already has a PHP pool file called “:name.conf” that the panel did not create. Choose a different name.',
     'site_name_taken_vhost' => 'This server already has a web server configuration called “:name” that the panel did not create — the panel\'s own is one of them. Choose a different name.',
 

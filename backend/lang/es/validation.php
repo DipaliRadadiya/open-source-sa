@@ -206,6 +206,7 @@ return [
     'port_in_use' => 'Algo en este servidor ya está escuchando en el puerto :port. Elige otro o detén lo que lo usa.',
 
     'port_registered' => 'El puerto :port lo usa normalmente :service. Puedes usarlo igualmente si nada en este servidor lo hace.',
+    'application_name_immutable' => 'El nombre de un sitio es fijo una vez creado: da nombre a sus archivos de configuración en el servidor. Crea un sitio nuevo si necesitas otro nombre.',
     'site_name_taken_pool' => 'Este servidor ya tiene un archivo de pool de PHP llamado «:name.conf» que no creó el panel. Elige otro nombre.',
     'site_name_taken_vhost' => 'Este servidor ya tiene una configuración del servidor web llamada «:name» que no creó el panel — la del propio panel es una de ellas. Elige otro nombre.',
 

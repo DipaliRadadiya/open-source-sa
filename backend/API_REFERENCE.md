@@ -935,9 +935,19 @@ A failed measure changes nothing — the previous figure and its date stand, bec
 ### PUT `/applications/{application}`
 **Permission:** `application` (manage)
 
-Update name / web root / PHP version / git branch.
+Update web root / PHP version / git branch.
 
-**Request:** `{"name": "new-shop", "php_version": "8.4", "web_root": "/public", "branch": "main"}`
+**Request:** `{"php_version": "8.4", "web_root": "/public", "branch": "main"}`
+
+🔴 **`name` is refused here (422), deliberately (2026-09-29).** This endpoint used to
+accept it, and this page used to advertise it. The name becomes the site's slug, and the
+slug is the filename of six things: the vhost, the PHP-FPM pool *and its socket*, the
+site's directory, its logs, its fail2ban jail and its worker units. A rename moved one of
+them — the vhost — so the site came back pointing at a socket no pool listens on (**502**)
+beside a newly created *empty* site directory (**404**), with its real files still in the
+old one. Reproduced on a test server. Moving all six atomically under a live site is a lot
+of machinery for a label, so the label is fixed: the name is set at creation and a site
+that needs a different one is a new site.
 
 **Response `200`:** `{"application": {...}}`
 

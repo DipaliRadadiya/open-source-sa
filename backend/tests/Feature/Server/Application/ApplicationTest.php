@@ -351,10 +351,13 @@ it('lists, shows, updates and deletes an application', function () {
     $this->withHeaders(appHeaders())->getJson("/api/applications/{$app->id}")
         ->assertOk()->assertJsonPath('application.name', 'Site');
 
-    // A partial settings update must not wipe what it didn't mention.
+    // A partial settings update must not wipe what it didn't mention. This
+    // used to send `name` as well; the name is immutable now, so the update
+    // it demonstrates is the settings merge — see
+    // {@see \App\Http\Requests\Server\Application\UpdateApplicationRequest}.
     $this->withHeaders(appHeaders())->putJson("/api/applications/{$app->id}", [
-        'name' => 'Renamed', 'settings' => ['b' => 2],
-    ])->assertOk()->assertJsonPath('application.name', 'Renamed');
+        'settings' => ['b' => 2],
+    ])->assertOk()->assertJsonPath('application.name', 'Site');
 
     expect($app->fresh()->settings)->toBe(['a' => 1, 'b' => 2]);
 

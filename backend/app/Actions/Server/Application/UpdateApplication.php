@@ -2,20 +2,16 @@
 
 namespace App\Actions\Server\Application;
 
-use App\Enums\ApplicationStatus;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Applications\ServingProfile;
 use App\Services\Applications\SiteTypeManager;
-use App\Services\Server\WebServers\WebServerManager;
 
 class UpdateApplication
 {
     public function __construct(
         private ActivityLogger $activityLogger,
         private UpdateApplicationWebRoot $webRootAction,
-        private WebServerManager $webServers,
-        private ApplyVhost $vhost,
     ) {}
 
     /**
@@ -39,19 +35,19 @@ class UpdateApplication
             }
         }
 
-        // A rename moves the web-server config, because the file is named after
-        // the application. The old one has to go while the application still
-        // knows what it was called — `configPath()` is built from the slug, so
-        // once that moves there is no way left to address the old file, and it
-        // would sit in sites-enabled serving the same domains as the new one.
+        // The slug is not recomputed here, and a rename cannot reach this
+        // method any more — {@see UpdateApplicationRequest} refuses `name`.
         //
-        // Same ordering as ChangePrimaryDomain, and for the same reason.
-        $renamed = array_key_exists('name', $data)
-            && (string) $data['name'] !== (string) $application->name;
-
-        if ($renamed) {
-            $data['slug'] = Application::uniqueSlug((string) $data['name'], $application->id);
-        }
+        // What used to be here regenerated the slug and moved the vhost to
+        // match it. That was half a rename: the slug also names the PHP-FPM
+        // pool and its socket, the site's directory, its logs, its fail2ban
+        // jail and its worker units, and none of those moved. On a real
+        // server the result was a vhost pointing at a socket no pool listens
+        // on (502) beside a freshly created *empty* site directory (404),
+        // with the site's actual files still in the old one.
+        //
+        // Nothing is left to detect, so there is no `$renamed` flag and no
+        // config move below.
 
         // Changing the rendering type or the start command changes how the
         // site must be served, and getting it wrong is invisible until the
@@ -82,23 +78,7 @@ class UpdateApplication
         $changesWebRoot = array_key_exists('web_root', $data);
         unset($data['web_root']);
 
-        // Only a provisioned site has a config to move; a pending one has
-        // nothing on disk yet, and a disabled one's vhost deliberately points
-        // at the disabled page — republishing it here would put the site back
-        // online as a side effect of a rename.
-        $movesConfig = $renamed
-            && $application->status === ApplicationStatus::Active
-            && $application->disabled_at === null;
-
-        if ($movesConfig) {
-            $this->webServers->driver()->remove($application->load('systemUser'));
-        }
-
         $application->forceFill($data)->save();
-
-        if ($movesConfig) {
-            $this->vhost->execute($application->fresh(['systemUser', 'domains']));
-        }
 
         if ($changesWebRoot) {
             $this->webRootAction->execute($application, $webRoot);
