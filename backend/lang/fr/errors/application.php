@@ -43,6 +43,7 @@ return [
     'waf_failed' => 'La modification des paramètres du pare-feu a échoué sur le serveur.',
     'staging_failed' => 'L\'opération de staging a échoué sur le serveur.',
     'staging_rollback_failed' => 'La publication depuis le staging a échoué et la production n\'a pas pu être restaurée. Le site reste désactivé. Communiquez la référence au support.',
+    'staging_push_running' => 'Un envoi vers ce site est déjà en cours. Attendez qu’il se termine.',
     'clone_failed' => 'L\'opération de clonage a échoué sur le serveur.',
     'fail2ban_failed' => 'L\'opération fail2ban a échoué sur le serveur.',
 

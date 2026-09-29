@@ -43,6 +43,7 @@ return [
     'waf_failed' => 'Changing the firewall settings failed on the server.',
     'staging_failed' => 'The staging operation failed on the server.',
     'staging_rollback_failed' => 'The staging push failed and production could not be restored. The site remains disabled. Quote the reference to support.',
+    'staging_push_running' => 'A push to this site is already running. Wait for it to finish.',
     'clone_failed' => 'The clone operation failed on the server.',
     'fail2ban_failed' => 'The fail2ban operation failed on the server.',
 

@@ -10,11 +10,14 @@ use App\Exceptions\Server\ServerOperationException;
 use App\Models\Application;
 use App\Models\ApplicationDomain;
 use App\Models\Database;
+use App\Models\Restore;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\ServerOps;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
@@ -162,7 +165,104 @@ class StagingManager
     /**
      * @param  'files'|'full'  $mode
      */
+    /** Pre-push database dumps kept per site, newest first. */
+    public const KEEP_PRE_PUSH_DUMPS = 3;
+
+    /**
+     * Push staging onto production — one at a time per site, never during a
+     * restore of it.
+     *
+     * It ran inside the request with no lock: a double-click started two
+     * pushes that snapshot, overwrite and roll back the same production site
+     * at once, and nothing stopped one running while a restore swapped the
+     * same files (found in code review 2026-09-29). The marker is what the
+     * backup job reads, so a scheduled backup does not archive a site that
+     * is half-overwritten either.
+     */
     public function push(Application $production, string $mode): void
+    {
+        if (Restore::inProgressFor($production->id)) {
+            throw ValidationException::withMessages([
+                'mode' => [__('backup.errors.restore_already_running')],
+            ]);
+        }
+
+        $lock = Cache::lock(self::lockKey($production->id), 3600);
+
+        if (! $lock->get()) {
+            throw ValidationException::withMessages([
+                'mode' => [__('errors/application.staging_push_running')],
+            ]);
+        }
+
+        Cache::put(self::markerKey($production->id), true, 3600);
+
+        try {
+            $this->runPush($production, $mode);
+        } finally {
+            Cache::forget(self::markerKey($production->id));
+            $lock->release();
+        }
+
+        $this->pruneSafetyDumps($production);
+    }
+
+    public static function pushInProgress(int $applicationId): bool
+    {
+        return Cache::has(self::markerKey($applicationId));
+    }
+
+    private static function lockKey(int $applicationId): string
+    {
+        return "staging-push:{$applicationId}";
+    }
+
+    private static function markerKey(int $applicationId): string
+    {
+        return "staging-push-running:{$applicationId}";
+    }
+
+    /**
+     * Keep the newest few pre-push dumps and remove the rest.
+     *
+     * Each is a full copy of the production database, written before every
+     * push and never removed, so a site that pushed often slowly filled the
+     * disk. The newest are kept as a manual way back. Best-effort: a push
+     * that succeeded is not failed by housekeeping.
+     */
+    private function pruneSafetyDumps(Application $production): void
+    {
+        $directory = $production->panelPath().'/staging-backups';
+        $context = ['feature' => 'application', 'op' => 'staging_dump_prune', 'application' => $production->id];
+
+        // `.panel` and this directory are root's (PanelDirectory), and -type f
+        // matches only real files, so nothing here follows a link.
+        $listed = $this->serverOps->run(
+            ['find', $directory, '-mindepth', '1', '-maxdepth', '1', '-type', 'f', '-name', 'pre-push-*.sql', '-printf', '%f\n'],
+            $context,
+            timeout: 30,
+        );
+
+        if ($listed->failed()) {
+            return;
+        }
+
+        // The name starts with the timestamp, so a reverse sort is newest first.
+        $names = array_values(array_filter(array_map('trim', explode("\n", $listed->output()))));
+        rsort($names, SORT_STRING);
+
+        $expired = array_slice($names, self::KEEP_PRE_PUSH_DUMPS);
+
+        if ($expired !== []) {
+            $this->serverOps->run(
+                array_merge(['rm', '-f', '--'], array_map(fn (string $name) => "{$directory}/{$name}", $expired)),
+                $context,
+                timeout: 60,
+            );
+        }
+    }
+
+    private function runPush(Application $production, string $mode): void
     {
         $staging = $production->staging;
 

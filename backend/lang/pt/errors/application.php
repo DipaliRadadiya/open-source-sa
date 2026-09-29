@@ -43,6 +43,7 @@ return [
     'waf_failed' => 'Não foi possível alterar as definições da firewall no servidor.',
     'staging_failed' => 'A operação de staging falhou no servidor.',
     'staging_rollback_failed' => 'O envio do staging falhou e não foi possível restaurar a produção. O site permanece desativado. Informe a referência ao suporte.',
+    'staging_push_running' => 'Já existe um envio em curso para este site. Aguarde que termine.',
     'clone_failed' => 'A operação de clonagem falhou no servidor.',
     'fail2ban_failed' => 'A operação do fail2ban falhou no servidor.',
 

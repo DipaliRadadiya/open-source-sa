@@ -8,6 +8,7 @@ use App\Models\Backup;
 use App\Models\BackupTarget;
 use App\Models\Restore;
 use App\Services\ActivityLogger;
+use App\Services\Server\Applications\StagingManager;
 use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\GoogleHttpClient;
@@ -110,8 +111,8 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
         // A scheduled run that falls during a restore: skipped, not queued
         // behind it — the next schedule takes the restored site. See
         // Restore::inProgressFor().
-        if (Restore::inProgressFor($target->application_id)) {
-            Log::channel('server-ops')->info('backup skipped, a restore of this application is in progress', [
+        if (Restore::inProgressFor($target->application_id) || StagingManager::pushInProgress($target->application_id)) {
+            Log::channel('server-ops')->info('backup skipped, a restore or staging push of this application is in progress', [
                 'feature' => 'backup',
                 'backup_target' => $this->backupTargetId,
             ]);

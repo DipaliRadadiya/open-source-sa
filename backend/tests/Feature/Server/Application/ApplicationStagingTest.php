@@ -1,15 +1,19 @@
 <?php
 
 use App\Enums\DomainType;
+use App\Enums\RestoreStatus;
 use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Database;
 use App\Models\DatabaseUser;
+use App\Models\Restore;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\StagingManager;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -1251,4 +1255,95 @@ it('refuses the push when it cannot tell whether media exists', function () {
     $this->withHeaders(stagingHeaders())
         ->postJson(stagingUrl().'/push', ['mode' => 'files'])
         ->assertStatus(500);
+});
+
+describe('one push at a time', function () {
+    // Pushes ran inside the request with no lock: a double-click started two
+    // that overwrote and rolled back the same production site at once, and
+    // nothing stopped one during a restore (found in code review 2026-09-29).
+    it('refuses a second push while one is running', function () {
+        fakeStagingServer();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+        $held = Cache::lock('staging-push:'.$this->production->id, 60);
+        $held->get();
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/push', ['mode' => 'files'])
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => __('errors/application.staging_push_running')]);
+
+        $held->release();
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+    });
+
+    it('refuses a push while a restore of production is running', function () {
+        fakeStagingServer();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+        Restore::forceCreate(['application_id' => $this->production->id, 'status' => RestoreStatus::Running, 'type' => 'full']);
+
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl().'/push', ['mode' => 'files'])
+            ->assertStatus(422);
+    });
+
+    it('marks the push as running for the backup job, and clears it after', function () {
+        fakeStagingServer();
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+        $seen = false;
+        $id = $this->production->id;
+        Process::fake(function ($process) use (&$seen, $id) {
+            $seen = $seen || StagingManager::pushInProgress($id);
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+            return in_array('option', $args, true) && in_array('get', $args, true)
+                ? Process::result(output: "1\n")
+                : Process::result(exitCode: 0);
+        });
+
+        $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+
+        expect($seen)->toBeTrue()
+            ->and(StagingManager::pushInProgress($id))->toBeFalse();
+    });
+});
+
+it('keeps only the newest pre-push database dumps', function () {
+    // Each is a full copy of production's database, written before every
+    // push and never removed (found in code review 2026-09-29).
+    fakeStagingServer();
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl(), ['domain' => 'staging.shop.test'])->assertCreated();
+
+    $removed = [];
+    Process::fake(function ($process) use (&$removed) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (in_array('option', $args, true) && in_array('get', $args, true)) {
+            return Process::result(output: "1\n");
+        }
+
+        if (($args[0] ?? '') === 'find' && in_array('pre-push-*.sql', $args, true)) {
+            return Process::result(output: implode("\n", [
+                'pre-push-20260901-100000-aaaaaa.sql',
+                'pre-push-20260929-100000-eeeeee.sql',
+                'pre-push-20260915-100000-cccccc.sql',
+                'pre-push-20260910-100000-bbbbbb.sql',
+                'pre-push-20260920-100000-dddddd.sql',
+            ])."\n");
+        }
+
+        if (($args[0] ?? '') === 'rm' && ($args[1] ?? '') === '-f') {
+            $removed = array_map('basename', array_slice($args, 3));
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    $this->withHeaders(stagingHeaders())->postJson(stagingUrl().'/push', ['mode' => 'files'])->assertOk();
+
+    sort($removed);
+    expect($removed)->toBe(['pre-push-20260901-100000-aaaaaa.sql', 'pre-push-20260910-100000-bbbbbb.sql']);
 });

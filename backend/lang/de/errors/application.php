@@ -43,6 +43,7 @@ return [
     'waf_failed' => 'Das Ändern der Firewall-Einstellungen ist auf dem Server fehlgeschlagen.',
     'staging_failed' => 'Der Staging-Vorgang ist auf dem Server fehlgeschlagen.',
     'staging_rollback_failed' => 'Der Staging-Push ist fehlgeschlagen und die Produktionswebsite konnte nicht wiederhergestellt werden. Die Website bleibt deaktiviert. Nennen Sie dem Support die Referenz.',
+    'staging_push_running' => 'Für diese Website läuft bereits eine Übertragung. Warte, bis sie abgeschlossen ist.',
     'clone_failed' => 'Der Klonvorgang ist auf dem Server fehlgeschlagen.',
     'fail2ban_failed' => 'Der Fail2ban-Vorgang ist auf dem Server fehlgeschlagen.',
 

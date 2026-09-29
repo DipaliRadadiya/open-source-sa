@@ -14,6 +14,7 @@ use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\StaleBackupReaper;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
@@ -261,4 +262,12 @@ describe('while a restore of the same site is in progress', function () {
 
         expect(Backup::where('backup_target_id', $this->backupTarget->id)->count())->toBe(0);
     });
+});
+
+it('skips a scheduled run while a staging push is overwriting the site', function () {
+    Cache::put('staging-push-running:'.$this->application->id, true, 60);
+
+    (new RunBackup($this->backupTarget->id))->handle(app(BackupRunner::class), app(ActivityLogger::class));
+
+    expect(Backup::where('backup_target_id', $this->backupTarget->id)->count())->toBe(0);
 });
