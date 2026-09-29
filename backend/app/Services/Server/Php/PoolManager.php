@@ -415,16 +415,28 @@ class PoolManager
 
         $this->serverOps->run(['mkdir', '-p', $sessions], $this->context($application, 'pool_dirs'), timeout: 30);
 
+        // The sessions directory only — never its parent. This was
+        // `chown -R` on `dirname($sessions)`, which is `.panel`: it handed the
+        // panel's own directory to the site user on every PHP site, and every
+        // root write into `.panel` after that could be redirected by a
+        // symlink the user planted (2026-09-29, reproduced live). `-h` so a
+        // `sessions` that is already a link is not followed either.
         if ($user !== null) {
             $this->serverOps->run(
-                ['chown', '-R', $user.':'.$user, dirname($sessions)],
+                ['chown', '-h', $user.':'.$user, $sessions],
                 $this->context($application, 'pool_dirs_own'),
                 timeout: 30,
             );
         }
 
         // 0700: session files are as sensitive as the cookies that name them.
-        $this->serverOps->run(['chmod', '0700', $sessions], $this->context($application, 'pool_dirs_mode'), timeout: 15);
+        // As the user, who owns it: root's chmod follows a link, the user's
+        // reaches only what the user could already change.
+        $this->serverOps->run(
+            $user !== null ? ['runuser', '-u', $user, '--', 'chmod', '0700', $sessions] : ['chmod', '0700', $sessions],
+            $this->context($application, 'pool_dirs_mode'),
+            timeout: 15,
+        );
     }
 
     private function restore(Application $application, string $path, ?string $previous): void

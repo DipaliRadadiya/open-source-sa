@@ -519,6 +519,11 @@ describe('when creating staging fails', function () {
                 return Process::result(output: '1');
             }
 
+            // Written as the site user now, so the command arrives wrapped.
+            if (($args[0] ?? '') === 'runuser') {
+                $args = array_slice($args, 4);
+            }
+
             if (($args[0] ?? '') === $command && str_ends_with((string) end($args), '/wp-config.php')) {
                 return Process::result(exitCode: 1, errorOutput: 'permission denied');
             }
@@ -531,7 +536,7 @@ describe('when creating staging fails', function () {
             ->assertStatus(500);
 
         expect(Application::where('production_application_id', $this->production->id)->exists())->toBeFalse();
-    })->with(['chmod', 'chown']);
+    })->with(['tee', 'chmod']);
 });
 
 /*
@@ -930,9 +935,10 @@ it('hides a new staging site from search engines', function () {
     expect($sets->contains(fn (string $c) => str_contains($c, 'blog_public 0')))->toBeTrue();
 
     // ...and the file, which a database import cannot undo.
+    // Written as the staging site's own user, not root.
     $written = collect($commands)
-        ->filter(fn (array $a) => ($a[0] ?? '') === 'tee')
-        ->map(fn (array $a) => (string) ($a[1] ?? ''));
+        ->filter(fn (array $a) => ($a[0] ?? '') === 'runuser' && ($a[4] ?? '') === 'tee')
+        ->map(fn (array $a) => (string) ($a[5] ?? ''));
 
     expect($written->contains(fn (string $path) => str_contains($path, 'panel-staging-noindex.php')))->toBeTrue();
 });

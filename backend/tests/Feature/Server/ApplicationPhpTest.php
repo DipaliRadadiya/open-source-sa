@@ -254,6 +254,25 @@ it('keeps the session directory inside the site', function () {
     expect(poolFile())->toContain('session.save_path] = /home/siteowner/shop/.panel/sessions');
 });
 
+it('hands the site its sessions directory and never the .panel above it', function () {
+    fakePhpServer();
+    $this->actingAs($this->admin)->postJson(phpUrl('/isolate'));
+
+    $ran = collect(PoolFake::$ran);
+
+    // `.panel` is root's: everything else root writes for this site lives
+    // there. This was `chown -R` on the parent of `sessions`, which handed
+    // `.panel` to the site user on every PHP site, and a link the user
+    // planted in it then redirected root's writes (reproduced live
+    // 2026-09-29: enabling Basic Auth wrote and chowned a file outside the
+    // site).
+    expect($ran->contains(fn (string $c) => str_contains($c, 'chown -R') && str_contains($c, '/home/siteowner/shop/.panel')))->toBeFalse()
+        ->and($ran)->toContain('chown -h siteowner:siteowner /home/siteowner/shop/.panel/sessions')
+        // And the mode by its owner, so a `sessions` that is a link is not
+        // followed by root.
+        ->and($ran)->toContain('runuser -u siteowner -- chmod 0700 /home/siteowner/shop/.panel/sessions');
+});
+
 it('bounds a memory leak with max_requests', function () {
     fakePhpServer();
     $this->actingAs($this->admin)->postJson(phpUrl('/isolate'));

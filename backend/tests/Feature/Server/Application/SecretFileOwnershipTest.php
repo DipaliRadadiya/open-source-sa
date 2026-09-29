@@ -63,10 +63,22 @@ function configOwner(): string
 
     app(ApplicationProvisioner::class)->provision(test()->application);
 
+    // A root chown is only run when the group differs from the site user
+    // (PHP running as www-data). Otherwise the file is the user's because the
+    // user wrote it — `runuser -u <user> -- tee …` — and there is nothing to
+    // chown: root's chown followed a link planted at the path (2026-09-29).
     $chown = collect($runs)->first(fn ($command) => ($command[0] ?? '') === 'chown'
-        && str_ends_with((string) ($command[2] ?? ''), '/config.inc.php'));
+        && str_ends_with((string) end($command), '/config.inc.php'));
 
-    return (string) $chown[1];
+    if ($chown !== null) {
+        return (string) $chown[count($chown) - 2];
+    }
+
+    $write = collect($runs)->first(fn ($command) => ($command[0] ?? '') === 'runuser'
+        && ($command[4] ?? '') === 'tee'
+        && str_ends_with((string) end($command), '/config.inc.php'));
+
+    return $write === null ? '' : "{$write[2]}:{$write[2]}";
 }
 
 it('gives an OpenLiteSpeed site its own user, which is what runs its PHP there', function () {

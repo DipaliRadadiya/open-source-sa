@@ -142,23 +142,18 @@ class PhpMyAdminSso
      */
     public function installShim(Application $application): ServerOpsResult
     {
-        $owner = $application->systemUser->username;
         $directory = $this->tokenDirectory($application);
 
-        $steps = [
-            ['mkdir', '-p', $directory],
-            // 0700, and owned by the site: the directory holds database
-            // passwords for the next sixty seconds each.
-            ['chown', "{$owner}:{$owner}", $directory],
-            ['chmod', '0700', $directory],
-        ];
+        // Made by root and handed over one level deep, the way every other
+        // user directory in `.panel` is (PanelDirectory) — then 0700 by its
+        // owner: the directory holds database passwords for the next sixty
+        // seconds each.
+        app(PanelDirectory::class)->ensure($application, basename($directory));
 
-        foreach ($steps as $command) {
-            $result = $this->run($command, $application);
+        $result = $this->run($this->asUser($application, ['chmod', '0700', $directory]), $application);
 
-            if ($result->failed()) {
-                return $result;
-            }
+        if ($result->failed()) {
+            return $result;
         }
 
         $result = $this->writeFile(
@@ -191,7 +186,7 @@ class PhpMyAdminSso
     private function ensureSignonServer(Application $application): ServerOpsResult
     {
         $path = $this->configPath($application);
-        $read = $this->run(['cat', $path], $application);
+        $read = $this->run($this->asUser($application, ['cat', $path]), $application);
 
         // A config that cannot be read is not a config that is missing the
         // entry. Rewriting on a failed read would replace a working file with
@@ -294,25 +289,30 @@ class PhpMyAdminSso
      */
     private function writeFile(Application $application, string $path, string $contents, string $mode): ServerOpsResult
     {
-        $owner = $application->systemUser->username;
-
-        $result = $this->run(['tee', $path], $application, input: $contents);
-
-        if ($result->failed()) {
-            return $result;
-        }
-
-        // Mode before ownership, matching writeSecretFile(). `tee` creates the
-        // file at the panel's umask — 0644, world-readable — so the narrowing
-        // has to happen first; chowning a still-readable file only changes who
-        // owns something everyone can already read.
-        $result = $this->run(['chmod', $mode, $path], $application);
+        // As the site user, all of it. Every path here is in a directory that
+        // user owns — the document root, and `.panel/sso` — and this ran as
+        // root: `tee` followed a link the user had put at `sso.php` or
+        // `config.inc.php`, and the `chown` after it then handed whatever the
+        // link pointed at to the user. Found with the same class of bug in
+        // `.panel` (2026-09-29). Written as the user the file is theirs by
+        // construction, and a link reaches only what they could already
+        // write — so there is nothing left to chown.
+        $result = $this->run($this->asUser($application, ['tee', $path]), $application, input: $contents);
 
         if ($result->failed()) {
             return $result;
         }
 
-        return $this->run(['chown', "{$owner}:{$owner}", $path], $application);
+        return $this->run($this->asUser($application, ['chmod', $mode, $path]), $application);
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     * @return array<int, string>
+     */
+    private function asUser(Application $application, array $command): array
+    {
+        return ['runuser', '-u', $application->systemUser->username, '--', ...$command];
     }
 
     /**

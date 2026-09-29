@@ -38,14 +38,28 @@ class PermissionFixer
         $user = $application->systemUser->username;
 
         $this->run(['chown', '-R', "{$user}:{$user}", $root], $application, 'chown');
-        $this->run(['find', $root, '-type', 'd', '-exec', 'chmod', '0755', '{}', '+'], $application, 'chmod_dirs');
-        $this->run(['find', $root, '-type', 'f', '-exec', 'chmod', '0644', '{}', '+'], $application, 'chmod_files');
+        // The chown stays root's — it is the one step the user cannot do — and
+        // is safe as it is: `chown -R` without -H/-L follows no link, and the
+        // document root cannot itself be replaced (its parent is immutable,
+        // SiteRootLock). The modes are the user's to set once they own
+        // everything, and as the user a link swapped in between `find` seeing
+        // a directory and `chmod` touching it reaches nothing new.
+        $this->run($this->asUser($application, ['find', $root, '-type', 'd', '-exec', 'chmod', '0755', '{}', '+']), $application, 'chmod_dirs');
+        $this->run($this->asUser($application, ['find', $root, '-type', 'f', '-exec', 'chmod', '0644', '{}', '+']), $application, 'chmod_files');
 
         // Re-tighten what the bulk pass above just loosened. Sourced from the
         // services that own each path, not duplicated here — a second copy of
         // ".env is 0600" is how it drifts.
+        //
+        // Both as the site user. They were root's, and GNU chmod follows a
+        // link named on its command line — `chmod -R` then descends into it.
+        // A user who replaced `.env` or `sessions` with a link had root chmod
+        // whatever it pointed at, recursively (reproduced live 2026-09-29 on a
+        // canary outside the site). The user owns both paths, so running as
+        // them loses nothing and a planted link reaches only what the user
+        // could already change.
         if ($this->environment->exists($application)) {
-            $this->run(['chmod', '0600', $this->environment->path($application)], $application, 'chmod_env');
+            $this->run($this->asUser($application, ['chmod', '0600', $this->environment->path($application)]), $application, 'chmod_env');
         }
 
         // Every site that runs as its own user has a session directory of its
@@ -53,8 +67,17 @@ class PermissionFixer
         // skipped every OpenLiteSpeed site — leaving session files at whatever
         // the bulk chmod above left them, which is not private.
         if ($this->ownership->runsAsOwnUser($application)) {
-            $this->run(['chmod', '-R', '0700', $this->pool->sessionPath($application)], $application, 'chmod_sessions');
+            $this->run($this->asUser($application, ['chmod', '-R', '0700', $this->pool->sessionPath($application)]), $application, 'chmod_sessions');
         }
+    }
+
+    /**
+     * @param  array<int, string>  $command
+     * @return array<int, string>
+     */
+    private function asUser(Application $application, array $command): array
+    {
+        return ['runuser', '-u', $application->systemUser->username, '--', ...$command];
     }
 
     /**

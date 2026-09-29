@@ -132,25 +132,26 @@ class WordPressCloneStrategy implements CloneStrategy
 
     private function writeSecretFile(Application $application, string $path, string $contents): void
     {
-        $written = $this->serverOps->run(['tee', $path], $this->context($application, 'clone_write_file'), input: $contents);
+        // As the site's own user. The directory is a copy of another site —
+        // anything its owner planted there came across with it, including a
+        // `wp-config.php` or `mu-plugins` that is a link — and this ran as
+        // root: `tee` wrote through the link and the `chown` after it handed
+        // the target to the user (the same class of bug found in `.panel`,
+        // 2026-09-29). The copy is already theirs by now (rsync() chowns it),
+        // so as the user the file is theirs by construction and a link
+        // reaches only what they could already write.
+        $user = $application->systemUser->username;
+
+        $written = $this->serverOps->run(['runuser', '-u', $user, '--', 'tee', $path], $this->context($application, 'clone_write_file'), input: $contents);
 
         if ($written->failed()) {
             throw new CloneOperationException($written->reference);
         }
 
-        $mode = $this->serverOps->run(['chmod', '0640', $path], $this->context($application, 'clone_chmod'));
+        $modeResult = $this->serverOps->run(['runuser', '-u', $user, '--', 'chmod', '0640', $path], $this->context($application, 'clone_chmod'));
 
-        if ($mode->failed()) {
-            throw new CloneOperationException($mode->reference, $mode->busy, $mode->staleLock);
-        }
-
-        $ownership = $this->serverOps->run(
-            ['chown', "{$application->systemUser->username}:{$application->systemUser->username}", $path],
-            $this->context($application, 'clone_chown'),
-        );
-
-        if ($ownership->failed()) {
-            throw new CloneOperationException($ownership->reference, $ownership->busy, $ownership->staleLock);
+        if ($modeResult->failed()) {
+            throw new CloneOperationException($modeResult->reference, $modeResult->busy, $modeResult->staleLock);
         }
     }
 

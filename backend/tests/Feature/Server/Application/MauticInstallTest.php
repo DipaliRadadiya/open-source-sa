@@ -72,7 +72,7 @@ function installMautic(): ArrayObject
 
 function mauticLocalConfig(ArrayObject $runs): string
 {
-    return collect($runs)->first(fn ($run) => str_ends_with((string) ($run['command'][1] ?? ''), 'local.php'))['input'];
+    return collect($runs)->first(fn ($run) => in_array('tee', $run['command'], true) && str_ends_with((string) end($run['command']), 'local.php'))['input'];
 }
 
 /** @return array<string, mixed> */

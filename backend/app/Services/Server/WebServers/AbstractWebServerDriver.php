@@ -10,6 +10,7 @@ use App\Models\Application;
 use App\Models\ApplicationPhpSettings;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ApplicationLogDirectory;
+use App\Services\Server\Applications\PanelDirectory;
 use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
@@ -187,6 +188,12 @@ abstract class AbstractWebServerDriver implements WebServerDriver
             $application->panelPath(),
             ['feature' => 'application', 'op' => 'ensure_panel_dir', 'application' => $application->id],
         );
+
+        // And root's again, with anything planted in it removed. Here because
+        // `sites:resync` comes through this method on every deploy: that is
+        // how the servers where `.panel` had been handed to the site user
+        // repair themselves. See PanelDirectory::secure().
+        app(PanelDirectory::class)->secure($application);
     }
 
     /**

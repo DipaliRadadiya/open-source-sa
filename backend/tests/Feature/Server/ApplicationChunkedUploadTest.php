@@ -265,7 +265,7 @@ it('creates the upload directory elevated and hands it to the site user', functi
     // then chowned — the site user owns its uploads directory and nothing else.
     expect(ChunkedUploadFake::$ran)
         ->toContain('mkdir -p /home/siteowner/shop/.panel/uploads')
-        ->toContain('chown siteowner:siteowner /home/siteowner/shop/.panel/uploads');
+        ->toContain('chown -h siteowner:siteowner /home/siteowner/shop/.panel/uploads');
 });
 
 it('reports the running total from the server, not the client', function () {

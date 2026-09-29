@@ -702,9 +702,11 @@ describe('the driver', function () {
         );
 
         expect($commands)->toContain('mkdir -p /home/shopuser/shop/.panel/sessions')
-            ->toContain('chown shopuser:shopuser /home/shopuser/shop/.panel/sessions')
+            // -h and the mode by its owner: neither may follow a `sessions`
+            // that was replaced by a link (the `.panel` bug, 2026-09-29).
+            ->toContain('chown -h shopuser:shopuser /home/shopuser/shop/.panel/sessions')
             // As sensitive as the cookies that name the files in it.
-            ->toContain('chmod 0700 /home/shopuser/shop/.panel/sessions');
+            ->toContain('runuser -u shopuser -- chmod 0700 /home/shopuser/shop/.panel/sessions');
     });
 
     it('hands the site its sessions without handing it its own limits', function () {

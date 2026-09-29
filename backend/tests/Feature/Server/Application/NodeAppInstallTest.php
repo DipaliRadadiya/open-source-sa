@@ -125,10 +125,18 @@ function rewrittenTo(string $path): ?string
 /** What was piped into the command that wrote `$path`. */
 function writtenTo(string $path): ?string
 {
+    // Secret files are written as the site user, so the `tee` arrives as
+    // `runuser -u <user> -- tee <path>`.
     return test()->ran
-        ->first(fn ($process) => is_array($process->command)
-            && ($process->command[0] ?? '') === 'tee'
-            && in_array($path, $process->command, true))
+        ->first(function ($process) use ($path) {
+            if (! is_array($process->command)) {
+                return false;
+            }
+
+            $bare = ($process->command[0] ?? '') === 'runuser' ? array_slice($process->command, 4) : $process->command;
+
+            return ($bare[0] ?? '') === 'tee' && in_array($path, $bare, true);
+        })
         ?->input;
 }
 

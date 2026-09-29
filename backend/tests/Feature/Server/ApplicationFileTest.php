@@ -144,7 +144,8 @@ it('re-tightens .env back to 0600 when one exists', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    expect(FixPermissionsFake::$ran)->toContain('chmod 0600 /home/siteowner/shop/.env');
+    // As the site user: root's chmod followed a `.env` that was a link.
+    expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod 0600 /home/siteowner/shop/.env');
 });
 
 it('does not touch .env when the site has none', function () {
@@ -152,7 +153,7 @@ it('does not touch .env when the site has none', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    expect(FixPermissionsFake::$ran)->not->toContain('chmod 0600 /home/siteowner/shop/.env');
+    expect(collect(FixPermissionsFake::$ran)->contains(fn (string $c) => str_contains($c, 'chmod 0600 /home/siteowner/shop/.env')))->toBeFalse();
 });
 
 it('re-tightens the session directory once the site is isolated', function () {
@@ -164,7 +165,9 @@ it('re-tightens the session directory once the site is isolated', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    expect(FixPermissionsFake::$ran)->toContain('chmod -R 0700 /home/siteowner/shop/.panel/sessions');
+    // As the site user: root's `chmod -R` descended into whatever a
+    // `sessions` link pointed at (reproduced live 2026-09-29).
+    expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod -R 0700 /home/siteowner/shop/.panel/sessions');
 });
 
 it('leaves the session directory alone for a site that is not isolated', function () {
@@ -2466,7 +2469,7 @@ describe('panel directory ownership', function () {
         // this suite stayed green — Process is faked, and a fake never returns
         // EACCES.
         expect(collect(FileBrowserFake::$ran)->contains(
-            fn (string $c): bool => $c === 'chown siteowner:siteowner /home/siteowner/shop/.panel/file-backups'
+            fn (string $c): bool => $c === 'chown -h siteowner:siteowner /home/siteowner/shop/.panel/file-backups'
         ))->toBeTrue();
     });
 
@@ -2478,7 +2481,7 @@ describe('panel directory ownership', function () {
             ->assertOk();
 
         expect(collect(FileBrowserFake::$ran)->contains(
-            fn (string $c): bool => $c === 'chown siteowner:siteowner /home/siteowner/shop/.panel/trash'
+            fn (string $c): bool => $c === 'chown -h siteowner:siteowner /home/siteowner/shop/.panel/trash'
         ))->toBeTrue();
     });
 

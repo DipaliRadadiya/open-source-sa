@@ -207,8 +207,8 @@ it('creates a database and a dedicated user, and writes them into wp-config', fu
     // The generated password ends up in wp-config.php and nowhere else.
     $password = $database->users->first()->password;
 
-    Process::assertRan(fn ($p) => $p->command[0] === 'tee'
-        && str_contains((string) $p->command[1], 'wp-config.php')
+    Process::assertRan(fn ($p) => in_array('tee', $p->command, true)
+        && str_contains((string) end($p->command), 'wp-config.php')
         && str_contains((string) $p->input, $database->name)
         && str_contains((string) $p->input, $password));
 
@@ -416,9 +416,10 @@ it('locks down wp-config.php, which holds live database credentials', function (
     fakeInstallServer();
     runProvision(wpApp());
 
-    Process::assertRan(fn ($p) => $p->command[0] === 'chmod'
-        && $p->command[1] === '0640'
-        && str_contains((string) $p->command[2], 'wp-config.php'));
+    // By the site user, who wrote it: root's chmod followed a link planted
+    // at the path (the `.panel` class of bug, 2026-09-29).
+    Process::assertRan(fn ($p) => array_slice($p->command, 0, 6) === ['runuser', '-u', 'deploy', '--', 'chmod', '0640']
+        && str_contains((string) end($p->command), 'wp-config.php'));
 });
 
 /** The wp-config.php WordPress will read, as written. */
@@ -427,7 +428,7 @@ function wpConfigWritten(): string
     $config = '';
 
     Process::fake(function ($process) use (&$config) {
-        if (($process->command[0] ?? '') === 'tee' && str_contains((string) $process->command[1], 'wp-config.php')) {
+        if (in_array('tee', $process->command, true) && str_contains((string) end($process->command), 'wp-config.php')) {
             $config = (string) $process->input;
         }
 
@@ -471,7 +472,7 @@ it('gives every install its own salts', function () {
 
     // The fake handler sees every command, so it can capture what was written.
     Process::fake(function ($process) use (&$configs) {
-        if ($process->command[0] === 'tee' && str_contains((string) $process->command[1], 'wp-config.php')) {
+        if (in_array('tee', $process->command, true) && str_contains((string) end($process->command), 'wp-config.php')) {
             preg_match("/define\('AUTH_KEY', '(.*)'\);/U", (string) $process->input, $m);
             $configs[] = $m[1] ?? '';
         }

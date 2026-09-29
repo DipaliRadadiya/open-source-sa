@@ -428,9 +428,22 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      */
     protected function writeSecretFile(Application $application, string $path, string $contents, string $mode = '0640'): void
     {
-        $this->run('configure', ['tee', $path], $application, input: $contents);
-        $this->run('configure', ['chmod', $mode, $path], $application);
-        $this->run('configure', ['chown', $this->runtimePhpOwner($application), $path], $application);
+        // Written and narrowed as the site user: every path here is inside a
+        // tree that user already owns (extract() chowns it), and root's `tee`
+        // and `chown` followed a link planted at the path — the class of bug
+        // found in `.panel` on 2026-09-29. As the user, a link reaches only
+        // what they could already write.
+        $this->runAsSiteUser('configure', $application, ['tee', $path], input: $contents);
+        $this->runAsSiteUser('configure', $application, ['chmod', $mode, $path]);
+
+        // The group is the one thing the user may not be able to set — PHP can
+        // run as `www-data` — so it stays root's, with `-h` so a link is
+        // changed itself rather than followed.
+        $owner = $this->runtimePhpOwner($application);
+
+        if ($owner !== $application->systemUser->username.':'.$application->systemUser->username) {
+            $this->run('configure', ['chown', '-h', $owner, $path], $application);
+        }
     }
 
     /**
