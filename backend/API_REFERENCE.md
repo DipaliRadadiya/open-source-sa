@@ -1258,6 +1258,8 @@ Change what an attached name **does**. Accepts `type` (`alias` | `redirect`), `r
 
 Switching `type` to `alias` clears `redirect_to`, because an alias serves the site itself. Switching to `redirect` without a target — in the request or already stored — is a `422` on `redirect_to`.
 
+`redirect_to` (here and on `POST .../domains`) must be `http(s)://` + host + optional path. A query string, fragment, whitespace or any of `; # $ & ? " ' \ { } < > `` ` `` is a `422` on `redirect_to` (`errors/application.redirect_target_invalid`): the target is written into the vhost as is, and those characters mean something there. Every web server appends the request path to the target, so a query string never worked anyway.
+
 **The name itself cannot be changed here, deliberately.** A rename would leave the old name in the certificate's lineage, and `certbot renew` re-validates every name in a lineage and fails the whole renewal when one of them cannot be validated — so it would silently stop the certificate covering the site's remaining, perfectly good names from ever renewing, and the first anyone hears of it is a browser warning up to ninety days later. Renaming stays a `DELETE` plus a `POST`, which is visibly two decisions. See `stale_domains` on the certificate object.
 
 The **primary** domain is refused with `422`: it names the vhost file and both log files, so changing it is what `POST …/domains/{domain}/primary` is for.

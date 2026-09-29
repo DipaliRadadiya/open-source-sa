@@ -16,6 +16,8 @@ return [
     'primary_domain_not_editable' => 'Eine primäre Domain kann nicht bearbeitet werden. Mache zuerst eine andere Domain zur primären.',
     'domain_taken' => 'Diese Domain wird auf diesem Server bereits verwendet.',
     'domain_taken_by' => 'Diese Domain wird bereits von der Anwendung „:application“ verwendet.',
+    'domain_is_panel' => 'Unter dieser Adresse wird das Panel selbst ausgeliefert, daher kann eine Website sie nicht verwenden.',
+    'redirect_target_invalid' => 'Das Weiterleitungsziel muss eine einfache Webadresse sein: https://, ein Host und optional ein Pfad – ohne Query-String, Leerzeichen oder Zeichen wie ; # $ &.',
     'unsupported_web_server' => 'Das Panel kann für :web_server keine Website-Konfiguration schreiben.',
     'no_web_server' => 'kein Webserver erkannt',
     'provision_failed' => 'Die Einrichtung der Website ist im Schritt „:step" fehlgeschlagen.',

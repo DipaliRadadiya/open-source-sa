@@ -7,6 +7,7 @@ use App\Enums\DomainOrigin;
 use App\Models\Application;
 use App\Rules\AvailablePort;
 use App\Rules\AvailableSiteName;
+use App\Rules\NotPanelHost;
 use App\Rules\SingleLine;
 use App\Rules\StartCommand;
 use App\Rules\SupportedNodeVersion;
@@ -64,6 +65,7 @@ class StoreApplicationRequest extends FormRequest
                 // index surface as a database exception after the application
                 // row has already been inserted.
                 Rule::unique('application_domains', 'domain'),
+                new NotPanelHost,
             ],
             // Whether the hostname above is one the user owns or the temporary
             // `<name>.<ip>.nip.io` the panel offers. The name itself is sent

@@ -1347,3 +1347,20 @@ it('keeps only the newest pre-push database dumps', function () {
     sort($removed);
     expect($removed)->toBe(['pre-push-20260901-100000-aaaaaa.sql', 'pre-push-20260910-100000-bbbbbb.sql']);
 });
+
+it('refuses a staging domain that is already another site name or the panel host', function () {
+    fakeStagingServer();
+    $this->production->domains()->create(['domain' => 'www.shop.test', 'type' => DomainType::Alias]);
+    config(['server.storage.panel_url' => 'https://panel.shop.test']);
+
+    // An alias lives only in application_domains, so the old check against
+    // applications.domain let it through to the insert.
+    foreach (['www.shop.test', 'panel.shop.test'] as $domain) {
+        $this->withHeaders(stagingHeaders())
+            ->postJson(stagingUrl(), ['domain' => $domain])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('domain');
+    }
+
+    expect(Application::where('production_application_id', $this->production->id)->count())->toBe(0);
+});

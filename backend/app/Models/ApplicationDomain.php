@@ -17,6 +17,20 @@ class ApplicationDomain extends Model
 {
     use HasFactory;
 
+    /**
+     * What a redirect target may contain: a scheme, a host and a path.
+     *
+     * The target is written verbatim into the vhost, and Laravel's `url` rule
+     * lets through characters that mean something there: `;` ends an nginx
+     * directive and `#` comments out the rest of the line, so
+     * `https://x.com/;internal;#` added a directive of the user's choosing to
+     * the server block (found in code review 2026-09-29). `$` is a variable in
+     * nginx and a back-reference in Apache, and `&`, `'`, `"` come out
+     * HTML-escaped by Blade. A query string or fragment has no use here
+     * anyway: every template appends the request path to the target.
+     */
+    public const REDIRECT_TARGET_PATTERN = '/^https?:\/\/[^\s;#$&?"\'`\\\\{}<>]+$/i';
+
     protected function casts(): array
     {
         return [

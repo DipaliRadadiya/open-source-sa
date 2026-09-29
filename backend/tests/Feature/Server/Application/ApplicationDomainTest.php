@@ -464,3 +464,69 @@ it('names the application already holding a domain', function () {
 
     expect($response->json('errors.domain.0'))->toContain('Company Blog');
 });
+
+it('refuses a redirect target that would write config into the vhost', function (string $target) {
+    // Every one of these passes Laravel's `url` rule. `;internal;#` is the
+    // reason: `;` ends nginx's `return` and `#` comments out what follows, so
+    // the vhost gained a directive of the user's choosing.
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/domains", [
+            'domain' => 'old-shop.example.com', 'type' => 'redirect', 'redirect_to' => $target,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['redirect_to' => __('errors/application.redirect_target_invalid')]);
+
+    $domain = $this->application->domains()->create([
+        'domain' => 'www.example.com', 'type' => DomainType::Redirect,
+        'redirect_to' => 'https://example.com', 'redirect_status' => 301,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->putJson("/api/applications/{$this->application->id}/domains/{$domain->id}", ['redirect_to' => $target])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('redirect_to');
+
+    expect(renderedVhost($this->application))->not->toContain('internal');
+})->with([
+    'directive' => 'https://example.com/;internal;#',
+    'nginx variable' => 'https://example.com/$host',
+    'query string' => 'https://example.com/?a=1&b=2',
+    'no scheme' => 'example.com/;x',
+]);
+
+it('still takes an ordinary redirect target with a path', function () {
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/domains", [
+            'domain' => 'old-shop.example.com', 'type' => 'redirect',
+            'redirect_to' => 'https://shop.example.com:8443/new-home_page.v2/~x',
+        ])
+        ->assertCreated();
+});
+
+it('refuses the hostnames the panel itself is served on', function (string $domain) {
+    // install.sh writes these as API_HOST and PANEL_HOST. A site holding one
+    // fights the panel's vhost for the name, and as a primary its certificate
+    // would be issued into — and deleted with — the panel's own lineage.
+    config(['app.url' => 'https://api.panel.example.org', 'server.storage.panel_url' => 'https://panel.example.org']);
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/domains", ['domain' => $domain])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['domain' => __('errors/application.domain_is_panel')]);
+
+    $this->actingAs($this->admin)
+        ->postJson('/api/applications', [
+            'site_type' => 'php', 'name' => 'Grab', 'domain' => $domain,
+            'system_user_id' => $this->application->system_user_id,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('domain');
+})->with(['panel.example.org', 'API.panel.example.org']);
+
+it('still takes a sibling of the panel host', function () {
+    config(['app.url' => 'https://panel.example.org', 'server.storage.panel_url' => 'https://panel.example.org']);
+
+    $this->actingAs($this->admin)
+        ->postJson("/api/applications/{$this->application->id}/domains", ['domain' => 'shop.panel.example.org'])
+        ->assertCreated();
+});

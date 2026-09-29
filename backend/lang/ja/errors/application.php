@@ -16,6 +16,8 @@ return [
     'primary_domain_not_editable' => 'プライマリドメインは編集できません。先に別のドメインをプライマリにしてください。',
     'domain_taken' => 'このドメインはこのサーバーで既に使用されています。',
     'domain_taken_by' => 'このドメインはアプリケーション「:application」で既に使用されています。',
+    'domain_is_panel' => 'これはパネル自体が公開されているアドレスのため、サイトでは使用できません。',
+    'redirect_target_invalid' => 'リダイレクト先は https://、ホスト名、任意のパスだけのシンプルな URL にしてください。クエリ文字列、空白、; # $ & などの文字は使えません。',
     'unsupported_web_server' => ':web_server 用のサイト設定は作成できません。',
     'no_web_server' => 'ウェブサーバーが検出されません',
     'provision_failed' => 'サイトのセットアップが「:step」の段階で失敗しました。',

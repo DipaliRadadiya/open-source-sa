@@ -16,6 +16,8 @@ return [
     'primary_domain_not_editable' => 'Un dominio principal no se puede editar. Haz principal otro dominio primero.',
     'domain_taken' => 'Este dominio ya está en uso en este servidor.',
     'domain_taken_by' => 'Este dominio ya lo usa la aplicación «:application».',
+    'domain_is_panel' => 'Esta es la dirección en la que se sirve el propio panel, así que un sitio no puede usarla.',
+    'redirect_target_invalid' => 'El destino de la redirección debe ser una dirección web simple: https://, un host y una ruta opcional, sin cadena de consulta, espacios ni caracteres como ; # $ &.',
     'unsupported_web_server' => 'El panel no puede escribir la configuración del sitio para :web_server.',
     'no_web_server' => 'ningún servidor web detectado',
     'provision_failed' => 'La configuración del sitio falló en el paso «:step».',
