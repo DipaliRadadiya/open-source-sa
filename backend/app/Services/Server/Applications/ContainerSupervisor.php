@@ -87,7 +87,11 @@ class ContainerSupervisor
         $result = $this->compose($application, $documentRoot, ['up', '-d', '--remove-orphans'], 'compose_up', $override);
 
         if ($result->failed()) {
-            throw new ProvisioningFailedException('container_start', $result->reference);
+            // `fromResult` rather than the bare constructor, so the one failure
+            // this step has that is not self-explanatory gets named: a registry
+            // that refused the pull. Everything else still classifies to null and
+            // is answered by the reference, which is the rule that class states.
+            throw ProvisioningFailedException::fromResult('container_start', $result);
         }
 
         // `up` succeeding is not the container running. Asked separately, and

@@ -80,6 +80,18 @@ class ProvisioningFailedException extends Exception
             return 'composer_platform';
         }
 
+        // A registry refused to serve the image.
+        //
+        // Named here for the same reason as the two above: the failure is
+        // actionable and the log does not read as an action. `docker compose up`
+        // reports it as one line among the pull progress — "Error pull access
+        // denied" — inside output whose next line is a bare `denied`, and a
+        // reader who does not already know Docker's wording sees a broken step
+        // rather than a credential they need to supply.
+        if (self::mentionsRegistryAuth($result)) {
+            return 'registry_auth';
+        }
+
         $exitCode = $result->result?->exitCode();
 
         if ($exitCode !== self::EXIT_KILLED) {
@@ -132,6 +144,61 @@ class ProvisioningFailedException extends Exception
             // reached when the install went through under one PHP and the code
             // is then run under an older one.
             'Composer detected issues in your platform',
+        ] as $needle) {
+            if (str_contains($output, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Did the pull fail because the registry would not authorise it?
+     *
+     * Measured against Docker 29.8.1 and Compose 5.5.1 on 2026-09-29 rather
+     * than remembered, because each registry words this differently and only
+     * one of the four phrasings is the one people quote:
+     *
+     *   - Docker Hub: `pull access denied for <repo>, repository does not
+     *     exist or may require 'docker login'`
+     *   - GHCR:       `error from registry: denied`
+     *   - ECR:        `pull access denied, repository does not exist or may
+     *     require authorization: authorization failed: no basic auth
+     *     credentials`
+     *   - registry v2 (GitLab, Harbor, self-hosted): `unauthorized:
+     *     authentication required`
+     *
+     * `from registry: denied` rather than a bare `denied`, which appears in
+     * unrelated daemon errors and on its own line in the very output above.
+     *
+     * **The reason deliberately does not claim the image is private.** Docker
+     * Hub answers "does not exist" and "exists but is yours" with the same
+     * sentence — it says so in the sentence — so a typo in a public image name
+     * lands here too. The wording this maps to names both, which is the honest
+     * answer and still the useful one: either way the next step is to check the
+     * name, and registry credentials are not something the panel can store yet.
+     *
+     * Two failures that reach the same step are deliberately left
+     * unclassified, both verified on the same box:
+     *
+     *   - a tag that does not exist on a repository that does, which reports
+     *     `not found` with no mention of access;
+     *   - a registry that cannot be reached, which reports `dial tcp: lookup
+     *     … no such host`.
+     *
+     * Neither is fixed by a credential, and claiming otherwise is this class's
+     * own stated failure mode.
+     */
+    private static function mentionsRegistryAuth(ServerOpsResult $result): bool
+    {
+        $output = $result->errorOutput()."\n".$result->output();
+
+        foreach ([
+            'pull access denied',
+            'from registry: denied',
+            'unauthorized: authentication required',
+            'no basic auth credentials',
         ] as $needle) {
             if (str_contains($output, $needle)) {
                 return true;
