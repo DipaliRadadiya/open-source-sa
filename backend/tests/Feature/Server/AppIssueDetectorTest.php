@@ -11,6 +11,7 @@ use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Applications\AppIssueDetector;
 use App\Services\Server\Applications\DnsVerifier;
+use Illuminate\Support\Facades\Process;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
@@ -223,6 +224,33 @@ it('does not flag a stopped worker when the app has no start command', function 
     // The app has no process (no start command), so the worker check is skipped.
     expect(makeDetector()->issues($this->application))->toHaveCount(0);
 });
+
+/**
+ * What `systemctl show` prints for the unit — it exits 0 whatever the state,
+ * which is exactly what the check used to get wrong.
+ */
+function fakeUnitState(string $state): void
+{
+    Process::fake(fn () => Process::result(output: "ActiveState={$state}\nSubState=dead\nExecMainStartTimestamp=\nMemoryCurrent=[not set]\nNRestarts=0\n"));
+}
+
+it('flags a Node app whose unit has stopped or crashed', function (string $state) {
+    $this->application->update(['start_command' => 'node server.js']);
+    fakeUnitState($state);
+
+    $issues = makeDetector()->issues($this->application->fresh());
+
+    expect($issues)->toHaveCount(1)
+        ->and($issues->first()['type'])->toBe('worker')
+        ->and($issues->first()['meta']['state'])->toBe($state);
+})->with(['inactive', 'failed']);
+
+it('does not flag a Node app that is running or starting', function (string $state) {
+    $this->application->update(['start_command' => 'node server.js']);
+    fakeUnitState($state);
+
+    expect(makeDetector()->issues($this->application->fresh()))->toHaveCount(0);
+})->with(['active', 'activating', 'unknown']);
 
 // ---------------------------------------------------------------------------
 // PHP EOL
