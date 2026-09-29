@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\AdministratorRole;
 use App\Services\PermissionCatalog;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -30,7 +32,16 @@ class RegisterFirstAdmin
      */
     public function execute(array $data): User
     {
-        return DB::transaction(function () use ($data): User {
+        // One registration at a time, and the "no user yet" question asked
+        // again once the lock is held. RegisterRequest::authorize() asks it
+        // too, but before this runs, so two sign-ups arriving together on a
+        // fresh panel both passed it and both became administrators (found
+        // in code review 2026-09-29).
+        return Cache::lock('register-first-admin', 30)->block(10, fn (): User => DB::transaction(function () use ($data): User {
+            if (User::query()->where('is_system', false)->exists()) {
+                throw new AuthorizationException(__('auth.registration_closed'));
+            }
+
             // Write the catalog first: the Administrator role is defined as
             // "every permission", so on an install where the seeder never ran
             // that set is empty and the first admin ends up with a role that
@@ -56,6 +67,6 @@ class RegisterFirstAdmin
             $this->activityLogger->log('user.registered', $user, ['username' => $user->username], actor: $user);
 
             return $user;
-        });
+        }));
     }
 }
