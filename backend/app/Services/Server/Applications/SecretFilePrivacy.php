@@ -35,7 +35,11 @@ use Throwable;
 class SecretFilePrivacy
 {
     /**
-     * Secret files each installer writes, relative to the document root.
+     * Each type's secret files, relative to its code path (the project root:
+     * the document root for every type but Craft and Statamic, which serve a
+     * subfolder of it). Those written by our installers, and those the
+     * application writes itself — Joomla, PrestaShop and Nextcloud save their
+     * database password on their own, 0644 or 0640.
      *
      * @var array<string, array<int, string>>
      */
@@ -46,6 +50,20 @@ class SecretFilePrivacy
         'mautic' => ['config/local.php'],
         'nodebb' => ['config.json'],
         'nodered' => ['settings.js'],
+        'joomla' => ['configuration.php'],
+        'prestashop' => ['app/config/parameters.php'],
+        'nextcloud' => ['config/config.php'],
+    ];
+
+    /**
+     * Directories of secret files, with the name pattern inside them. A
+     * Statamic user is a YAML file holding their password hash, one per
+     * account, created with the default umask.
+     *
+     * @var array<string, array<string, string>>
+     */
+    public const DIRECTORIES = [
+        'statamic' => ['users' => '*.yaml'],
     ];
 
     public function __construct(
@@ -81,6 +99,22 @@ class SecretFilePrivacy
         $ownUser = $this->ownership->runsAsOwnUser($application);
         $group = (string) config('server.web_server_user', 'www-data');
 
+        $mode = $ownUser ? 'go-rwx' : 'o-rwx,g-w';
+
+        foreach ($this->directories($application) as $directory => $pattern) {
+            // `find` as the user never follows a link (-P is its default), so
+            // one planted in the directory is skipped rather than chmodded.
+            // Own-user sites only: the other kind would need each file's
+            // group handed to the web server first, and Statamic — the one
+            // type with such a directory — always runs as its own user.
+            if ($ownUser) {
+                $this->serverOps->run(
+                    ['runuser', '-u', $user, '--', 'find', $directory, '-maxdepth', '1', '-type', 'f', '-name', $pattern, '-exec', 'chmod', $mode, '{}', '+'],
+                    $this->context($application),
+                );
+            }
+        }
+
         foreach ($this->paths($application) as $path) {
             // A plain test as the user: absent is the common case (most types
             // have no `.env`), and nothing here should run against a path that
@@ -96,10 +130,7 @@ class SecretFilePrivacy
 
             // As the site user, so a link planted at the path reaches only
             // what they could already change.
-            $this->serverOps->run(
-                ['runuser', '-u', $user, '--', 'chmod', $ownUser ? 'go-rwx' : 'o-rwx,g-w', $path],
-                $this->context($application),
-            );
+            $this->serverOps->run(['runuser', '-u', $user, '--', 'chmod', $mode, $path], $this->context($application));
         }
     }
 
@@ -115,13 +146,28 @@ class SecretFilePrivacy
         // resync over every site should do on the way past.
         $paths = [app(ApplicationEnvironment::class)->path($application)];
 
-        $root = rtrim($application->documentRoot(), '/');
+        $root = rtrim($application->codePath(), '/');
 
         foreach (self::FILES[(string) $application->site_type] ?? [] as $relative) {
             $paths[] = "{$root}/{$relative}";
         }
 
         return array_values(array_unique($paths));
+    }
+
+    /**
+     * @return array<string, string> directory => name pattern
+     */
+    private function directories(Application $application): array
+    {
+        $root = rtrim($application->codePath(), '/');
+        $directories = [];
+
+        foreach (self::DIRECTORIES[(string) $application->site_type] ?? [] as $relative => $pattern) {
+            $directories["{$root}/{$relative}"] = $pattern;
+        }
+
+        return $directories;
     }
 
     /**

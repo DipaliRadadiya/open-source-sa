@@ -158,3 +158,31 @@ it('writes secrets 0600 where the site runs as its own user, 0640 where PHP runs
 
     expect($ownership->secretFileMode($this->application->fresh()))->toBe('0640');
 });
+
+it('covers config files the application writes itself', function (string $type, string $relative) {
+    $this->application->forceFill(['site_type' => $type])->save();
+    $ran = fakeEnvServer();
+
+    app(SecretFilePrivacy::class)->narrow($this->application->fresh());
+
+    $file = rtrim($this->application->fresh()->codePath(), '/').'/'.$relative;
+
+    expect(collect($ran)->contains(['runuser', '-u', 'envuser', '--', 'chmod', 'go-rwx', $file]))->toBeTrue();
+})->with([
+    'Joomla' => ['joomla', 'configuration.php'],
+    'PrestaShop' => ['prestashop', 'app/config/parameters.php'],
+    'Nextcloud' => ['nextcloud', 'config/config.php'],
+]);
+
+it('covers Statamic user files, which hold password hashes, at the project root', function () {
+    $this->application->forceFill(['site_type' => 'statamic', 'web_root' => '/public'])->save();
+    $ran = fakeEnvServer();
+
+    app(SecretFilePrivacy::class)->narrow($this->application->fresh());
+
+    $users = rtrim($this->application->fresh()->codePath(), '/').'/users';
+
+    expect($users)->not->toContain('/public/')
+        ->and(collect($ran)->contains(['runuser', '-u', 'envuser', '--', 'find', $users, '-maxdepth', '1', '-type', 'f',
+            '-name', '*.yaml', '-exec', 'chmod', 'go-rwx', '{}', '+']))->toBeTrue();
+});
