@@ -435,8 +435,10 @@ it('locks down wp-config.php, which holds live database credentials', function (
     runProvision(wpApp());
 
     // By the site user, who wrote it: root's chmod followed a link planted
-    // at the path (the `.panel` class of bug, 2026-09-29).
-    Process::assertRan(fn ($p) => array_slice($p->command, 0, 6) === ['runuser', '-u', 'deploy', '--', 'chmod', '0640']
+    // at the path (the `.panel` class of bug, 2026-09-29). And 0600, not
+    // 0640: the site runs as its own user, and its group is not private —
+    // on OpenLiteSpeed the web server account is a member of it.
+    Process::assertRan(fn ($p) => array_slice($p->command, 0, 6) === ['runuser', '-u', 'deploy', '--', 'chmod', '0600']
         && str_contains((string) end($p->command), 'wp-config.php'));
 });
 

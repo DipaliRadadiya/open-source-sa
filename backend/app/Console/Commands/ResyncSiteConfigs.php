@@ -5,8 +5,8 @@ namespace App\Console\Commands;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\ApplicationProvisioner;
-use App\Services\Server\Applications\EnvFilePrivacy;
 use App\Services\Server\Applications\ProcessSupervisor;
+use App\Services\Server\Applications\SecretFilePrivacy;
 use App\Services\Server\Applications\SiteConfigResyncer;
 use App\Services\Server\Applications\SiteRootLock;
 use App\Services\Server\SystemUsers\HomeDirectoryAccess;
@@ -67,17 +67,18 @@ class ResyncSiteConfigs extends Command
         // and by the same means — see PanelDirectoryAccess.
         $this->call('panel:close-directory');
         $this->refreshUnits(app(ProcessSupervisor::class), app(ApplicationProvisioner::class));
-        $this->narrowEnvFiles(app(EnvFilePrivacy::class));
+        $this->narrowSecretFiles(app(SecretFilePrivacy::class));
 
         return self::SUCCESS;
     }
 
     /**
-     * Take world access off every site's `.env` — see EnvFilePrivacy. Here
-     * because the installs that left it 0644 happened before the fix did.
-     * Only ever narrows, so a file the user tightened is left as it is.
+     * Keep every site's `.env` and config secrets to the account that runs
+     * it — see SecretFilePrivacy. Here because the installs that left them
+     * readable happened before the fix did. Only ever narrows, so a file the
+     * user tightened is left as it is.
      */
-    private function narrowEnvFiles(EnvFilePrivacy $privacy): void
+    private function narrowSecretFiles(SecretFilePrivacy $privacy): void
     {
         $count = 0;
 
@@ -90,7 +91,7 @@ class ResyncSiteConfigs extends Command
             $count++;
         }
 
-        $this->info("Environment files: world access removed where present ({$count} site(s) checked).");
+        $this->info("Secret files (.env, wp-config.php and the like): narrowed where present ({$count} site(s) checked).");
     }
 
     /**

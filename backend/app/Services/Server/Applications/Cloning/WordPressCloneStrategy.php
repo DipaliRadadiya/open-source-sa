@@ -11,6 +11,7 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
+use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
@@ -148,7 +149,7 @@ class WordPressCloneStrategy implements CloneStrategy
             throw new CloneOperationException($written->reference);
         }
 
-        $modeResult = $this->serverOps->run(['runuser', '-u', $user, '--', 'chmod', '0640', $path], $this->context($application, 'clone_chmod'));
+        $modeResult = $this->serverOps->run(['runuser', '-u', $user, '--', 'chmod', app(RuntimeOwnership::class)->secretFileMode($application), $path], $this->context($application, 'clone_chmod'));
 
         if ($modeResult->failed()) {
             throw new CloneOperationException($modeResult->reference, $modeResult->busy, $modeResult->staleLock);

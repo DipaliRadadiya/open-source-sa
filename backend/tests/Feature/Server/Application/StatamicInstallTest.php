@@ -208,7 +208,7 @@ it('takes world access off the .env once everything that writes it has run', fun
     $commands = collect(installStatamic())->pluck('command')->values();
 
     $makeUser = $commands->search(fn (array $c) => in_array('make:user', $c, true));
-    $narrow = $commands->search(fn (array $c) => ($c[4] ?? null) === 'chmod' && ($c[5] ?? null) === 'o-rwx,g-w'
+    $narrow = $commands->search(fn (array $c) => ($c[4] ?? null) === 'chmod' && ($c[5] ?? null) === 'go-rwx'
         && ($c[6] ?? null) === test()->projectRoot.'/.env');
 
     expect($makeUser)->not->toBeFalse()

@@ -11,6 +11,7 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Databases\DatabaseIdentifier;
 use App\Services\Server\Databases\DatabaseManager;
 use App\Services\Server\Databases\DatabasePassword;
+use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
@@ -477,8 +478,10 @@ class WordPressStagingStrategy implements StagingStrategy
         }
     }
 
-    private function writeSecretFile(Application $application, string $path, string $contents, string $mode = '0640'): void
+    private function writeSecretFile(Application $application, string $path, string $contents, ?string $mode = null): void
     {
+        $mode ??= app(RuntimeOwnership::class)->secretFileMode($application);
+
         // As the site's own user. The directory is a copy of another site —
         // anything its owner planted there came across with it, including a
         // `wp-config.php` or `mu-plugins` that is a link — and this ran as

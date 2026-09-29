@@ -4,8 +4,9 @@ use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
-use App\Services\Server\Applications\EnvFilePrivacy;
 use App\Services\Server\Applications\GitDeployer;
+use App\Services\Server\Applications\SecretFilePrivacy;
+use App\Services\Server\Php\RuntimeOwnership;
 use Illuminate\Support\Facades\Process;
 
 /*
@@ -52,12 +53,14 @@ function fakeEnvServer(int $testExit = 0, string $testStderr = ''): ArrayObject
 it('takes world access off the file, as the site user, and adds none', function () {
     $ran = fakeEnvServer();
 
-    app(EnvFilePrivacy::class)->narrow($this->application);
+    app(SecretFilePrivacy::class)->narrow($this->application);
 
     $env = $this->application->codePath().'/.env';
 
-    // `o-rwx,g-w` never widens: a file the user made 0600 stays 0600.
-    expect(collect($ran)->contains(['runuser', '-u', 'envuser', '--', 'chmod', 'o-rwx,g-w', $env]))->toBeTrue()
+    // `go-rwx` never widens: it only removes. The group goes too — the site
+    // runs as its own user, and on OpenLiteSpeed the web server account is a
+    // member of that user's group.
+    expect(collect($ran)->contains(['runuser', '-u', 'envuser', '--', 'chmod', 'go-rwx', $env]))->toBeTrue()
         // The site runs as its own user, so the group is already right.
         ->and(collect($ran)->contains(fn (array $c) => ($c[0] ?? '') === 'chown'))->toBeFalse();
 });
@@ -68,7 +71,7 @@ it('hands the group to the web server first where PHP runs as that', function ()
     $this->application->forceFill(['isolated_at' => null])->save();
     $ran = fakeEnvServer();
 
-    app(EnvFilePrivacy::class)->narrow($this->application->fresh());
+    app(SecretFilePrivacy::class)->narrow($this->application->fresh());
 
     $commands = collect($ran)->values();
     $env = $this->application->codePath().'/.env';
@@ -83,7 +86,7 @@ it('hands the group to the web server first where PHP runs as that', function ()
 it('does nothing when there is no .env', function () {
     $ran = fakeEnvServer(testExit: 1);
 
-    app(EnvFilePrivacy::class)->narrow($this->application);
+    app(SecretFilePrivacy::class)->narrow($this->application);
 
     expect(collect($ran)->contains(fn (array $c) => in_array('chmod', $c, true)))->toBeFalse();
 });
@@ -93,7 +96,7 @@ it('never fails the caller when it cannot tell whether the file is there', funct
     // turns into an exception. Here it must only mean "leave it alone".
     $ran = fakeEnvServer(testExit: 1, testStderr: 'sudo: a password is required');
 
-    app(EnvFilePrivacy::class)->narrow($this->application);
+    app(SecretFilePrivacy::class)->narrow($this->application);
 
     expect(collect($ran)->contains(fn (array $c) => in_array('chmod', $c, true)))->toBeFalse();
 });
@@ -115,7 +118,9 @@ it('narrows a git deploy seed right after copying it', function () {
 
     $commands = collect($ran)->values();
     $seed = $commands->search(fn (array $c) => ($c[0] ?? '') === 'runuser' && str_contains((string) ($c[6] ?? ''), '.env.example'));
-    $chmod = $commands->search(fn (array $c) => ($c[4] ?? '') === 'chmod' && ($c[5] ?? '') === 'o-rwx,g-w');
+    // Either mode — which one is the ownership rule's business, tested above;
+    // this is about when it runs.
+    $chmod = $commands->search(fn (array $c) => ($c[4] ?? '') === 'chmod' && in_array($c[5] ?? '', ['go-rwx', 'o-rwx,g-w'], true));
 
     expect($seed)->not->toBeFalse()
         ->and($chmod)->not->toBeFalse()
@@ -126,9 +131,30 @@ it('runs from sites:resync, so sites installed before the fix are repaired', fun
     $ran = fakeEnvServer();
 
     $this->artisan('sites:resync')
-        ->expectsOutputToContain('Environment files: world access removed where present')
+        ->expectsOutputToContain('Secret files (.env, wp-config.php and the like): narrowed where present')
         ->assertSuccessful();
 
-    expect(collect($ran)->contains(fn (array $c) => ($c[4] ?? '') === 'chmod' && ($c[5] ?? '') === 'o-rwx,g-w'
+    expect(collect($ran)->contains(fn (array $c) => ($c[4] ?? '') === 'chmod' && ($c[5] ?? '') === 'go-rwx'
         && str_starts_with((string) ($c[6] ?? ''), '/home/envuser/books/')))->toBeTrue();
+});
+
+it('covers the config file each installer writes, not only .env', function () {
+    $this->application->forceFill(['site_type' => 'wordpress'])->save();
+    $ran = fakeEnvServer();
+
+    app(SecretFilePrivacy::class)->narrow($this->application->fresh());
+
+    $config = rtrim($this->application->fresh()->documentRoot(), '/').'/wp-config.php';
+
+    expect(collect($ran)->contains(['runuser', '-u', 'envuser', '--', 'chmod', 'go-rwx', $config]))->toBeTrue();
+});
+
+it('writes secrets 0600 where the site runs as its own user, 0640 where PHP runs as the web server', function () {
+    $ownership = app(RuntimeOwnership::class);
+
+    expect($ownership->secretFileMode($this->application))->toBe('0600');
+
+    $this->application->forceFill(['isolated_at' => null])->save();
+
+    expect($ownership->secretFileMode($this->application->fresh()))->toBe('0640');
 });

@@ -426,8 +426,13 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      *
      * @throws ProvisioningFailedException
      */
-    protected function writeSecretFile(Application $application, string $path, string $contents, string $mode = '0640'): void
+    protected function writeSecretFile(Application $application, string $path, string $contents, ?string $mode = null): void
     {
+        // A mode passed in is deliberate (a PHP file the web server must be
+        // able to read, say); the default is private — see
+        // RuntimeOwnership::secretFileMode().
+        $mode ??= $this->ownership->secretFileMode($application);
+
         // Written and narrowed as the site user: every path here is inside a
         // tree that user already owns (extract() chowns it), and root's `tee`
         // and `chown` followed a link planted at the path — the class of bug

@@ -42,7 +42,7 @@ class ApplicationProvisioner
         private ApplicationArtifacts $artifacts,
         private HttpReadinessCheck $readiness,
         private SiteRootLock $rootLock,
-        private EnvFilePrivacy $envPrivacy,
+        private SecretFilePrivacy $secretPrivacy,
     ) {}
 
     /**
@@ -420,7 +420,7 @@ class ApplicationProvisioner
 
             // After everything that may write a `.env` — installers and the
             // first-start step alike. Several leave it 0644.
-            $this->envPrivacy->narrow($application);
+            $this->secretPrivacy->narrow($application);
         }
 
         // Last, and unable to fail the provision. The site is created, serving
