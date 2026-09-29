@@ -2,6 +2,7 @@ import { read } from "@/lib/api/read";
 import {
   dockerNetworksResponseSchema,
   dockerVolumesResponseSchema,
+  registriesResponseSchema,
 } from "@/lib/schemas/docker";
 
 /**
@@ -13,19 +14,38 @@ import {
  * that looks like data.
  */
 export async function getDockerResources() {
-  const [networks, volumes] = await Promise.all([
+  const [networks, volumes, registries] = await Promise.all([
     read("/docker/networks", dockerNetworksResponseSchema),
     read("/docker/volumes", dockerVolumesResponseSchema),
+    read("/docker/registries", registriesResponseSchema),
   ]);
 
   return {
     networks: networks.failed ? [] : (networks.data?.networks ?? []),
     volumes: volumes.failed ? [] : (volumes.data?.volumes ?? []),
+    // Degrades to an empty list rather than failing the page, unlike the two
+    // above. "This server has no networks" is a lie about the machine; "no
+    // registry credentials are stored" is the true and ordinary state of every
+    // server that has not configured one, so an empty list here is honest.
+    registries: registries.failed ? [] : (registries.data?.registries ?? []),
     failed: networks.failed || volumes.failed,
     status: networks.status ?? volumes.status,
     failure: networks.failure ?? volumes.failure,
     message: networks.message ?? volumes.message,
   };
+}
+
+/**
+ * Just the registries, for the picker on a container site's settings.
+ *
+ * Degrades to an empty list, like the two below: this feeds a chooser beside a
+ * saved value, and "we could not ask" and "there are none" both mean offer
+ * nothing new and keep showing what the site already has.
+ */
+export async function getRegistries() {
+  const registries = await read("/docker/registries", registriesResponseSchema);
+
+  return registries.failed ? [] : (registries.data?.registries ?? []);
 }
 
 /**

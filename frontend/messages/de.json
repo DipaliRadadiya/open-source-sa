@@ -3525,7 +3525,18 @@
         "hint": "Bei der Installation der Anwendung erzeugt und verschlüsselt gespeichert. Das Anzeigen wird im Aktivitätsprotokoll vermerkt.",
         "shownWarning": "Jede Person, die diese Website verwalten darf, kann diese Werte lesen. Es sind die echten Datenbank-Zugangsdaten der Anwendung — sie hier zu ändern ist nicht möglich, weil die laufende Datenbank den alten Wert behielte.",
         "failed": "Die Zugangsdaten konnten nicht geladen werden."
-      }
+      },
+      "registry": "Registry",
+      "noRegistry": "Keine — anonym laden",
+      "registryHint": "Die gespeicherten Anmeldedaten, mit denen diese Site ihr Image lädt. Für ein öffentliches Image auf Keine lassen.",
+      "missingRegistryOption": "Gelöschte Anmeldedaten — der nächste Pull dieser Site ist anonym",
+      "noRegistries": "Auf diesem Server sind keine Registry-Anmeldedaten gespeichert, es können also nur öffentliche Images geladen werden.",
+      "noRegistriesLink": "Fügen Sie welche auf der Docker-Seite hinzu.",
+      "pullTitle": "Image aktualisieren",
+      "pullHint": "Lädt das Image erneut und erstellt den Container neu. Ein Neustart der Site prüft die Registry nicht erneut — ein verschobener Tag braucht dies.",
+      "pull": "Laden und neu ausrollen",
+      "pulled": "Das Image wurde geladen und der Container neu erstellt.",
+      "pullFailed": "Das Image konnte nicht geladen werden."
     },
     "domains": {
       "title": "Domains und SSL",
@@ -6411,6 +6422,60 @@
       "cancel": "Abbrechen",
       "theSite": "die Website",
       "restartWarning": "Dies ändert die Konfiguration von {site} und erstellt deren Container neu, die Website ist einige Sekunden nicht erreichbar."
+    },
+    "registries": {
+      "title": "Registry-Anmeldedaten",
+      "add": "Registry hinzufügen",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "edit": "Bearbeiten",
+      "remove": "Entfernen",
+      "test": "Verbindung testen",
+      "hint": "Gespeicherte Anmeldedaten zum Laden privater Images. Eine Site wählt eine bei der Erstellung oder später in ihren Container-Einstellungen. Bleibt die Registry einer Site leer, lädt sie anonym — richtig für jedes öffentliche Image.",
+      "empty": "Es sind keine Registry-Anmeldedaten gespeichert. Fügen Sie welche hinzu, um ein privates Image auszuführen.",
+      "failed": "Das hat nicht funktioniert.",
+      "created": "{name} wurde hinzugefügt.",
+      "updated": "{name} wurde gespeichert.",
+      "removed": "{name} wurde gelöscht.",
+      "tested": "Die Registry wurde kontaktiert.",
+      "dockerHub": "Docker Hub",
+      "tokenHint": "Ein Access-Token, nicht Ihr Kontopasswort. Bei Docker Hub: Kontoeinstellungen, dann Personal access tokens, mit Lesezugriff.",
+      "tokenHintEdit": "Leer lassen, um das gespeicherte Token zu behalten. Ein neues eingeben, um es zu ersetzen.",
+      "usedBySites": "{count, plural, one {# Site} other {# Sites}}",
+      "usedByNone": "Keine Sites",
+      "fields": {
+        "name": "Name",
+        "registry": "Registry-Adresse",
+        "username": "Benutzername",
+        "token": "Access-Token"
+      },
+      "placeholders": {
+        "name": "GHCR",
+        "registry": "ghcr.io"
+      },
+      "columns": {
+        "name": "Name",
+        "registry": "Registry",
+        "username": "Benutzername",
+        "status": "Status",
+        "usedBy": "Genutzt von"
+      },
+      "invalid": {
+        "name": "Geben Sie diesen Anmeldedaten einen Namen, den Sie wiedererkennen.",
+        "registry": "Geben Sie nur den Host an — ghcr.io, nicht ghcr.io/ihre-org, und ohne Benutzername oder Passwort.",
+        "username": "Geben Sie den Benutzernamen an, zu dem dieses Token gehört.",
+        "token": "Fügen Sie das Token ohne Leerzeichen oder Zeilenumbrüche ein."
+      },
+      "errors": {
+        "invalid_credentials": "Die Registry hat diesen Benutzernamen und dieses Token abgelehnt.",
+        "unreachable": "Die Registry ist von diesem Server nicht erreichbar.",
+        "unknown": "Die Registry hat die Verbindung ohne Angabe eines Grundes abgelehnt."
+      },
+      "confirm": {
+        "title": "{name} löschen?",
+        "body": "Die Anmeldedaten werden von diesem Server gelöscht. Keine Site verwendet sie.",
+        "bodyInUse": "{count, plural, one {# Site lädt} other {# Sites laden}} mit diesen Anmeldedaten. Sie werden nicht gelöscht und laufen weiter, ihr nächster Pull ist jedoch anonym und schlägt fehl, wenn das Image privat ist."
+      }
     }
   }
 }

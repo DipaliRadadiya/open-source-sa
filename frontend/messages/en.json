@@ -3525,7 +3525,18 @@
         "hint": "Created when the app was installed, and stored encrypted. Revealing them is recorded in the activity log.",
         "shownWarning": "Anyone who can manage this site can read these. They are the app's real database credentials — changing one here is not possible, because the running database would keep the old value.",
         "failed": "Couldn't load the credentials."
-      }
+      },
+      "registry": "Registry",
+      "noRegistry": "None — pull anonymously",
+      "registryHint": "The stored credential this site pulls its image with. Leave it as None for a public image.",
+      "missingRegistryOption": "Deleted credential — this site's next pull will be anonymous",
+      "noRegistries": "No registry credentials are stored on this server, so only public images can be pulled.",
+      "noRegistriesLink": "Add one on the Docker page.",
+      "pullTitle": "Update the image",
+      "pullHint": "Fetches the image again and recreates the container. Bringing the site up on its own does not re-check the registry, so a moved tag needs this.",
+      "pull": "Pull and redeploy",
+      "pulled": "The image was pulled and the container recreated.",
+      "pullFailed": "The image could not be pulled."
     },
     "domains": {
       "title": "Domains and SSL",
@@ -6411,6 +6422,60 @@
       "cancel": "Cancel",
       "theSite": "the site",
       "restartWarning": "This rewrites {site}'s configuration and recreates its container, so the site is down for a few seconds."
+    },
+    "registries": {
+      "title": "Registry credentials",
+      "add": "Add registry",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "remove": "Remove",
+      "test": "Test connection",
+      "hint": "Stored credentials for pulling private images. A site chooses one when it is created, or later in its container settings. Leave a site's registry empty and it pulls anonymously, which is right for every public image.",
+      "empty": "No registry credentials are stored. Add one to run a private image.",
+      "failed": "That did not work.",
+      "created": "{name} was added.",
+      "updated": "{name} was saved.",
+      "removed": "{name} was deleted.",
+      "tested": "The registry was contacted.",
+      "dockerHub": "Docker Hub",
+      "tokenHint": "An access token, not your account password. On Docker Hub: Account settings, then Personal access tokens, with read access.",
+      "tokenHintEdit": "Leave empty to keep the stored token. Type a new one to replace it.",
+      "usedBySites": "{count, plural, one {# site} other {# sites}}",
+      "usedByNone": "No sites",
+      "fields": {
+        "name": "Name",
+        "registry": "Registry address",
+        "username": "Username",
+        "token": "Access token"
+      },
+      "placeholders": {
+        "name": "GHCR",
+        "registry": "ghcr.io"
+      },
+      "columns": {
+        "name": "Name",
+        "registry": "Registry",
+        "username": "Username",
+        "status": "Status",
+        "usedBy": "Used by"
+      },
+      "invalid": {
+        "name": "Give this credential a name you will recognise.",
+        "registry": "Enter the host on its own — ghcr.io, not ghcr.io/your-org, and no username or password.",
+        "username": "Enter the username this token belongs to.",
+        "token": "Paste the token with no spaces or line breaks."
+      },
+      "errors": {
+        "invalid_credentials": "The registry refused this username and token.",
+        "unreachable": "The registry could not be reached from this server.",
+        "unknown": "The registry refused the connection without saying why."
+      },
+      "confirm": {
+        "title": "Delete {name}?",
+        "body": "The credential is deleted from this server. No site is using it.",
+        "bodyInUse": "{count, plural, one {# site is} other {# sites are}} set to pull with this credential. They are not deleted and keep running — but their next pull will be anonymous, and will fail if the image is private."
+      }
     }
   }
 }

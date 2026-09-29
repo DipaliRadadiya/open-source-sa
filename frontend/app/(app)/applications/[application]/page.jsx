@@ -9,7 +9,7 @@ import { can } from "@/lib/permissions/can";
 import { getApplication, getApplicationIssues } from "@/lib/applications/get-applications";
 import { getBackupTarget, getBackups } from "@/lib/backups/get-backups";
 import { getGitAccounts } from "@/lib/git/get-git";
-import { getDockerNetworks, getDockerVolumes } from "@/lib/docker/get-docker";
+import { getDockerNetworks, getDockerVolumes, getRegistries } from "@/lib/docker/get-docker";
 import {
   getApplicationDomains,
   getApplicationCertificate,
@@ -84,10 +84,10 @@ export default async function ApplicationDetailPage({ params }) {
   // Only for a container, and only once it is serving: the endpoint is gated on
   // the same profile, and asking a LEMP box for Docker networks is a 409 to
   // build a chooser for a card that is not rendered.
-  const [dockerNetworks, dockerVolumes] =
+  const [dockerNetworks, dockerVolumes, registries] =
     isContainer && application.status === "active"
-      ? await Promise.all([getDockerNetworks(), getDockerVolumes()])
-      : [[], []];
+      ? await Promise.all([getDockerNetworks(), getDockerVolumes(), getRegistries()])
+      : [[], [], []];
   // Only a serving site has domains, a certificate or a running process. While
   // it is still being built, saying anything about them would be invention.
   const settled = application.status === "active";
@@ -525,6 +525,7 @@ export default async function ApplicationDetailPage({ params }) {
               application={application}
               networks={dockerNetworks}
               volumes={dockerVolumes}
+              registries={registries}
               canManage={canManage}
               className="lg:col-span-2 xl:col-span-3"
             />

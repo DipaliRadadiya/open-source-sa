@@ -3525,7 +3525,18 @@
         "hint": "Criadas quando a aplicação foi instalada e guardadas cifradas. Mostrá-las fica registado no histórico de atividade.",
         "shownWarning": "Qualquer pessoa que possa gerir este site consegue lê-las. São as credenciais reais da base de dados da aplicação — alterá-las aqui não é possível, porque a base de dados em execução manteria o valor antigo.",
         "failed": "Não foi possível carregar as credenciais."
-      }
+      },
+      "registry": "Registo",
+      "noRegistry": "Nenhum — obter anonimamente",
+      "registryHint": "A credencial guardada com que este site obtém a sua imagem. Deixe em Nenhum para uma imagem pública.",
+      "missingRegistryOption": "Credencial eliminada — a próxima obtenção deste site será anónima",
+      "noRegistries": "Não há credenciais de registo guardadas neste servidor, pelo que só podem ser obtidas imagens públicas.",
+      "noRegistriesLink": "Adicione uma na página Docker.",
+      "pullTitle": "Atualizar a imagem",
+      "pullHint": "Obtém a imagem novamente e recria o contentor. Reiniciar o site não volta a consultar o registo, por isso uma etiqueta movida precisa disto.",
+      "pull": "Obter e reimplantar",
+      "pulled": "A imagem foi obtida e o contentor recriado.",
+      "pullFailed": "Não foi possível obter a imagem."
     },
     "domains": {
       "title": "Domínios e SSL",
@@ -6411,6 +6422,60 @@
       "cancel": "Cancelar",
       "theSite": "o site",
       "restartWarning": "Isto reescreve a configuração de {site} e recria o seu contentor, por isso o site fica em baixo alguns segundos."
+    },
+    "registries": {
+      "title": "Credenciais de registo",
+      "add": "Adicionar registo",
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "remove": "Remover",
+      "test": "Testar conexão",
+      "hint": "Credenciais guardadas para obter imagens privadas. Um site escolhe uma ao ser criado, ou depois nas definições do contentor. Se o registo de um site ficar vazio, obtém a imagem anonimamente, o que é correto para qualquer imagem pública.",
+      "empty": "Não há credenciais de registo guardadas. Adicione uma para executar uma imagem privada.",
+      "failed": "Isso não funcionou.",
+      "created": "{name} foi adicionado.",
+      "updated": "{name} foi guardado.",
+      "removed": "{name} foi excluído.",
+      "tested": "O registo foi contactado.",
+      "dockerHub": "Docker Hub",
+      "tokenHint": "Um token de acesso, não a palavra-passe da sua conta. No Docker Hub: Definições da conta, e depois Personal access tokens, com acesso de leitura.",
+      "tokenHintEdit": "Deixe vazio para manter o token guardado. Escreva um novo para o substituir.",
+      "usedBySites": "{count, plural, one {# site} other {# sites}}",
+      "usedByNone": "Nenhum site",
+      "fields": {
+        "name": "Nome",
+        "registry": "Endereço do registo",
+        "username": "Nome de usuário",
+        "token": "Token de acesso"
+      },
+      "placeholders": {
+        "name": "GHCR",
+        "registry": "ghcr.io"
+      },
+      "columns": {
+        "name": "Nome",
+        "registry": "Registo",
+        "username": "Nome de usuário",
+        "status": "Status",
+        "usedBy": "Usado por"
+      },
+      "invalid": {
+        "name": "Dê a esta credencial um nome que reconheça.",
+        "registry": "Indique apenas o host — ghcr.io, não ghcr.io/a-sua-org, e sem utilizador nem palavra-passe.",
+        "username": "Indique o utilizador a que este token pertence.",
+        "token": "Cole o token sem espaços nem quebras de linha."
+      },
+      "errors": {
+        "invalid_credentials": "O registo recusou este utilizador e este token.",
+        "unreachable": "Não foi possível contactar o registo a partir deste servidor.",
+        "unknown": "O registo recusou a ligação sem dizer porquê."
+      },
+      "confirm": {
+        "title": "Excluir {name}?",
+        "body": "A credencial é eliminada deste servidor. Nenhum site a está a usar.",
+        "bodyInUse": "{count, plural, one {# site está} other {# sites estão}} configurado(s) para obter imagens com esta credencial. Não são eliminados e continuam a funcionar, mas a próxima obtenção será anónima e falhará se a imagem for privada."
+      }
     }
   }
 }

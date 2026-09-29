@@ -3525,7 +3525,18 @@
         "hint": "Créés à l'installation de l'application et stockés chiffrés. Leur affichage est consigné dans le journal d'activité.",
         "shownWarning": "Toute personne pouvant gérer ce site peut les lire. Ce sont les véritables identifiants de base de données de l'application : les modifier ici est impossible, car la base de données en cours d'exécution conserverait l'ancienne valeur.",
         "failed": "Impossible de charger les identifiants."
-      }
+      },
+      "registry": "Registre",
+      "noRegistry": "Aucun — récupération anonyme",
+      "registryHint": "L’identifiant enregistré avec lequel ce site récupère son image. Laissez Aucun pour une image publique.",
+      "missingRegistryOption": "Identifiant supprimé — la prochaine récupération de ce site sera anonyme",
+      "noRegistries": "Aucun identifiant de registre n’est enregistré sur ce serveur : seules les images publiques peuvent être récupérées.",
+      "noRegistriesLink": "Ajoutez-en un sur la page Docker.",
+      "pullTitle": "Mettre à jour l’image",
+      "pullHint": "Récupère l’image à nouveau et recrée le conteneur. Redémarrer le site ne revérifie pas le registre : un tag déplacé nécessite ceci.",
+      "pull": "Récupérer et redéployer",
+      "pulled": "L’image a été récupérée et le conteneur recréé.",
+      "pullFailed": "L’image n’a pas pu être récupérée."
     },
     "domains": {
       "title": "Domaines et SSL",
@@ -6411,6 +6422,60 @@
       "cancel": "Annuler",
       "theSite": "le site",
       "restartWarning": "Cela réécrit la configuration de {site} et recrée son conteneur : le site est indisponible quelques secondes."
+    },
+    "registries": {
+      "title": "Identifiants de registre",
+      "add": "Ajouter un registre",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "remove": "Retirer",
+      "test": "Tester la connexion",
+      "hint": "Identifiants enregistrés pour récupérer des images privées. Un site en choisit un à sa création, ou plus tard dans ses réglages de conteneur. Laissez le registre d’un site vide et il récupère l’image de façon anonyme, ce qui convient à toute image publique.",
+      "empty": "Aucun identifiant de registre n’est enregistré. Ajoutez-en un pour exécuter une image privée.",
+      "failed": "Cela n’a pas fonctionné.",
+      "created": "{name} a été ajouté.",
+      "updated": "{name} a été enregistré.",
+      "removed": "{name} a été supprimé.",
+      "tested": "Le registre a été contacté.",
+      "dockerHub": "Docker Hub",
+      "tokenHint": "Un jeton d’accès, pas le mot de passe de votre compte. Sur Docker Hub : Paramètres du compte, puis Jetons d’accès personnels, en lecture.",
+      "tokenHintEdit": "Laissez vide pour conserver le jeton enregistré. Saisissez-en un nouveau pour le remplacer.",
+      "usedBySites": "{count, plural, one {# site} other {# sites}}",
+      "usedByNone": "Aucun site",
+      "fields": {
+        "name": "Nom",
+        "registry": "Adresse du registre",
+        "username": "Nom d'utilisateur",
+        "token": "Jeton d’accès"
+      },
+      "placeholders": {
+        "name": "GHCR",
+        "registry": "ghcr.io"
+      },
+      "columns": {
+        "name": "Nom",
+        "registry": "Registre",
+        "username": "Nom d'utilisateur",
+        "status": "Statut",
+        "usedBy": "Utilisé par"
+      },
+      "invalid": {
+        "name": "Donnez à cet identifiant un nom que vous reconnaîtrez.",
+        "registry": "Saisissez l’hôte seul — ghcr.io, pas ghcr.io/votre-org, et sans nom d’utilisateur ni mot de passe.",
+        "username": "Saisissez le nom d’utilisateur auquel ce jeton appartient.",
+        "token": "Collez le jeton sans espaces ni retours à la ligne."
+      },
+      "errors": {
+        "invalid_credentials": "Le registre a refusé ce nom d’utilisateur et ce jeton.",
+        "unreachable": "Le registre est injoignable depuis ce serveur.",
+        "unknown": "Le registre a refusé la connexion sans dire pourquoi."
+      },
+      "confirm": {
+        "title": "Supprimer {name} ?",
+        "body": "L’identifiant est supprimé de ce serveur. Aucun site ne l’utilise.",
+        "bodyInUse": "{count, plural, one {# site est} other {# sites sont}} configuré(s) pour récupérer les images avec cet identifiant. Ils ne sont pas supprimés et continuent de fonctionner, mais leur prochaine récupération sera anonyme et échouera si l’image est privée."
+      }
     }
   }
 }

@@ -3525,7 +3525,18 @@
         "hint": "Se crearon al instalar la aplicación y se guardan cifradas. Mostrarlas queda registrado en el historial de actividad.",
         "shownWarning": "Cualquiera que pueda gestionar este sitio puede leerlas. Son las credenciales reales de la base de datos de la aplicación: no se pueden cambiar aquí, porque la base de datos en marcha conservaría el valor anterior.",
         "failed": "No se han podido cargar las credenciales."
-      }
+      },
+      "registry": "Registro",
+      "noRegistry": "Ninguno — descargar de forma anónima",
+      "registryHint": "La credencial guardada con la que este sitio descarga su imagen. Déjelo en Ninguno para una imagen pública.",
+      "missingRegistryOption": "Credencial eliminada: la próxima descarga de este sitio será anónima",
+      "noRegistries": "No hay credenciales de registro guardadas en este servidor, así que solo se pueden descargar imágenes públicas.",
+      "noRegistriesLink": "Añada una en la página de Docker.",
+      "pullTitle": "Actualizar la imagen",
+      "pullHint": "Descarga la imagen otra vez y recrea el contenedor. Reiniciar el sitio no vuelve a consultar el registro, así que una etiqueta movida necesita esto.",
+      "pull": "Descargar y volver a desplegar",
+      "pulled": "Se descargó la imagen y se recreó el contenedor.",
+      "pullFailed": "No se pudo descargar la imagen."
     },
     "domains": {
       "title": "Dominios y SSL",
@@ -6411,6 +6422,60 @@
       "cancel": "Cancelar",
       "theSite": "el sitio",
       "restartWarning": "Esto reescribe la configuración de {site} y recrea su contenedor, así que el sitio estará caído unos segundos."
+    },
+    "registries": {
+      "title": "Credenciales de registro",
+      "add": "Añadir registro",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "remove": "Quitar",
+      "test": "Probar conexión",
+      "hint": "Credenciales guardadas para descargar imágenes privadas. Un sitio elige una al crearse, o después en sus ajustes de contenedor. Si el registro de un sitio queda vacío, descarga de forma anónima, que es lo correcto para cualquier imagen pública.",
+      "empty": "No hay credenciales de registro guardadas. Añada una para ejecutar una imagen privada.",
+      "failed": "Eso no funcionó.",
+      "created": "{name} se añadió.",
+      "updated": "{name} se guardó.",
+      "removed": "{name} se eliminó.",
+      "tested": "Se contactó con el registro.",
+      "dockerHub": "Docker Hub",
+      "tokenHint": "Un token de acceso, no la contraseña de su cuenta. En Docker Hub: Ajustes de la cuenta, y luego Personal access tokens, con acceso de lectura.",
+      "tokenHintEdit": "Déjelo vacío para mantener el token guardado. Escriba uno nuevo para reemplazarlo.",
+      "usedBySites": "{count, plural, one {# sitio} other {# sitios}}",
+      "usedByNone": "Ningún sitio",
+      "fields": {
+        "name": "Nombre",
+        "registry": "Dirección del registro",
+        "username": "Usuario",
+        "token": "Token de acceso"
+      },
+      "placeholders": {
+        "name": "GHCR",
+        "registry": "ghcr.io"
+      },
+      "columns": {
+        "name": "Nombre",
+        "registry": "Registro",
+        "username": "Usuario",
+        "status": "Estado",
+        "usedBy": "Usada por"
+      },
+      "invalid": {
+        "name": "Dé a esta credencial un nombre que reconozca.",
+        "registry": "Introduzca solo el host: ghcr.io, no ghcr.io/su-org, y sin usuario ni contraseña.",
+        "username": "Introduzca el usuario al que pertenece este token.",
+        "token": "Pegue el token sin espacios ni saltos de línea."
+      },
+      "errors": {
+        "invalid_credentials": "El registro rechazó este usuario y este token.",
+        "unreachable": "No se pudo contactar con el registro desde este servidor.",
+        "unknown": "El registro rechazó la conexión sin indicar el motivo."
+      },
+      "confirm": {
+        "title": "¿Eliminar {name}?",
+        "body": "La credencial se elimina de este servidor. Ningún sitio la está usando.",
+        "bodyInUse": "{count, plural, one {# sitio está} other {# sitios están}} configurado(s) para descargar con esta credencial. No se eliminan y siguen funcionando, pero su próxima descarga será anónima y fallará si la imagen es privada."
+      }
     }
   }
 }

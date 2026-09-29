@@ -5,6 +5,7 @@ import { can } from "@/lib/permissions/can";
 import { getDockerResources } from "@/lib/docker/get-docker";
 import { getAllApplications } from "@/lib/applications/get-applications";
 import { DockerResourcesPanel } from "@/components/docker/docker-resources-panel";
+import { RegistriesCard } from "@/components/docker/registries-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -23,10 +24,12 @@ export default async function DockerPage() {
     getTranslations("docker"),
   ]);
 
-  if (!can(permissions, "docker", "view")) return <PermissionDenied title={t("title")} />;
+  if (!can(permissions, "docker", "view"))
+    return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "docker", "manage");
 
-  const { networks, volumes, failed, status, failure, message } = await getDockerResources();
+  const { networks, volumes, registries, failed, status, failure, message } =
+    await getDockerResources();
 
   // The container sites, for attaching one from this page. Only sites that are
   // actually serving: the endpoint applies the change by rewriting the compose
@@ -40,7 +43,8 @@ export default async function DockerPage() {
   const sites = canManageSites
     ? (await getAllApplications()).applications.filter(
         (application) =>
-          application.serving_profile === "docker" && application.status === "active",
+          application.serving_profile === "docker" &&
+          application.status === "active",
       )
     : [];
 
@@ -60,18 +64,36 @@ export default async function DockerPage() {
          * shelling out to a docker binary that is not installed.
          */
         status === 409 ? (
-          <EmptyState icon={Container} title={t("unavailable.title")} description={t("unavailable.body")} />
+          <EmptyState
+            icon={Container}
+            title={t("unavailable.title")}
+            description={t("unavailable.body")}
+          />
         ) : (
-          <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />
+          <LoadFailed
+            description={t("loadFailed")}
+            status={status}
+            failure={failure}
+            message={message}
+          />
         )
       ) : (
-        <DockerResourcesPanel
-          initialNetworks={networks}
-          initialVolumes={volumes}
-          sites={sites}
-          canManage={canManage}
-          canManageSites={canManageSites}
-        />
+        <>
+          <DockerResourcesPanel
+            initialNetworks={networks}
+            initialVolumes={volumes}
+            sites={sites}
+            canManage={canManage}
+            canManageSites={canManageSites}
+          />
+          {/* Below the two Docker objects rather than above them, because it is
+              the one most servers will never configure — every public image and
+              all fifteen one-click apps need nothing here. */}
+          <RegistriesCard
+            initialRegistries={registries}
+            canManage={canManage}
+          />
+        </>
       )}
     </div>
   );

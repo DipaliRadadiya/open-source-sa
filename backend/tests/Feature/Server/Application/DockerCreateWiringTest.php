@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Application;
+use App\Models\Registry;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
@@ -265,4 +266,52 @@ it('does not recreate objects that are already there', function () {
 
     expect(app(DockerResources::class)->ensureFor($application))->toBe([])
         ->and(collect($ran)->contains(fn (array $a): bool => ($a[2] ?? '') === 'create'))->toBeFalse();
+});
+
+/*
+ * The registry picker, which is the one container field that reaches a row in the
+ * panel's own database rather than a Docker object.
+ */
+
+it('creates a site with a registry chosen on the form', function () {
+    fakeDockerBoxFor();
+
+    $registry = Registry::forceCreate([
+        'name' => 'GHCR', 'registry' => 'ghcr.io', 'username' => 'octocat',
+        'config' => ['token' => 'ghp_TOKEN'],
+    ]);
+
+    $this->withHeaders(dockerCreateHeaders())
+        ->postJson('/api/applications', dockerCreatePayload(['registry_id' => $registry->id]))
+        ->assertCreated();
+
+    // The whole point of asserting a create path separately: the field is declared
+    // on the site type and the column is fillable, and BOTH have to be true for
+    // `typeColumns()` to carry it. A field that is only one of the two vanishes
+    // silently, which is how a Docker site once arrived with a null `compose`.
+    expect(Application::where('name', 'Shop')->first()->registry_id)->toBe($registry->id);
+});
+
+it('creates a site with no registry when the picker was left empty', function () {
+    // The default, and the case every public image takes. An empty select posts an
+    // empty STRING, not null — if that reached the integer foreign key it would be
+    // a constraint violation on the happy path.
+    fakeDockerBoxFor();
+
+    $this->withHeaders(dockerCreateHeaders())
+        ->postJson('/api/applications', dockerCreatePayload(['registry_id' => '']))
+        ->assertCreated();
+
+    expect(Application::where('name', 'Shop')->first()->registry_id)->toBeNull();
+});
+
+it('refuses a registry that does not exist', function () {
+    // Otherwise the site pulls anonymously and fails on the next deploy with a
+    // reason that names credentials nobody ever configured.
+    fakeDockerBoxFor();
+
+    $this->withHeaders(dockerCreateHeaders())
+        ->postJson('/api/applications', dockerCreatePayload(['registry_id' => 4242]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('registry_id');
 });

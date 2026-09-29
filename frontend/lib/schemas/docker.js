@@ -75,6 +75,72 @@ export const dockerVolumeSchema = z.object({
   application_id: z.number().nullish(),
 });
 
+/**
+ * A stored registry credential, minus the credential.
+ *
+ * There is no `token` field and there is no reveal endpoint to add one — the API
+ * reports only whether a token exists. `has_credentials` is therefore the whole of
+ * what the UI can say about the secret.
+ *
+ * `auth_key` is worth surfacing rather than hiding: Docker Hub's credentials must
+ * be keyed on the legacy v1 index URL, so a user who typed `docker.io` sees what
+ * the panel will actually write instead of wondering why their entry looks wrong.
+ */
+export const registrySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  registry: z.string(),
+  auth_key: z.string(),
+  is_docker_hub: z.boolean().default(false),
+  username: z.string(),
+  has_credentials: z.boolean().default(false),
+  // Only present when the API counted it. Declared or Zod strips it — silently,
+  // and looking exactly like an API that did not send it.
+  applications_count: z.number().nullish(),
+  last_tested_at: z.string().nullish(),
+  last_tested_at_human: z.string().nullish(),
+  last_test_success: z.boolean().nullish(),
+  last_test_error: z.string().nullish(),
+  // `never_tested` is a distinct state from `failed`, so this is not a boolean:
+  // "we have not asked" is not the user's problem to fix.
+  status: z.enum(["connected", "failed", "never_tested"]),
+  status_title: z.string(),
+});
+
+export const registriesResponseSchema = z.object({
+  registries: z.array(registrySchema),
+});
+
+/**
+ * The create form.
+ *
+ * `registry` mirrors `RegistryHost` on the server, and the mirroring matters more
+ * here than for most fields: an address Docker cannot interpret is silently
+ * IGNORED at pull time — the credential never applies and the error is identical
+ * to having none at all. So a namespace like `ghcr.io/my-org` has to be a message
+ * under the field, not a discovery three screens later.
+ */
+export const registryFormSchema = z.object({
+  name: z.string().min(1).max(100),
+  registry: z
+    .string()
+    .min(1)
+    .max(255)
+    // host[:port], with an optional scheme this and the server both strip. No
+    // slash, so a namespace is refused; no `@`, so a credential cannot hide here.
+    .regex(
+      /^(https?:\/\/)?[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?(:\d{1,5})?\/?$/,
+    ),
+  username: z.string().min(1).max(255),
+  // A newline authenticates nowhere while looking correct — and this form shows
+  // the value back in no screen, so there would be nothing to look at.
+  token: z
+    .string()
+    .min(1)
+    .max(4096)
+    .refine((value) => !/\s/.test(value)),
+});
+
 export const dockerNetworksResponseSchema = z.object({
   networks: z.array(dockerNetworkSchema),
 });
@@ -105,6 +171,10 @@ export const dockerNameSchema = z
  */
 export const containerSettingsFormSchema = z.object({
   container_port: z.coerce.number().int().min(1).max(65535),
+  // A sentinel string, not a number or a null: Radix reserves `""` for "nothing
+  // selected", so "pull anonymously" needs a value of its own and the form holds
+  // the id as a string. The card maps both back on submit.
+  registry_id: z.string(),
   memory_limit: z
     .string()
     .regex(/^\d+(b|k|m|g)?$/i)

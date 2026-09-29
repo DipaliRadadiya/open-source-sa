@@ -6,16 +6,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Box, Network } from "lucide-react";
+import { Box, Network, KeyRound, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { containerSettingsFormSchema } from "@/lib/schemas/docker";
-import { updateContainerSettings } from "@/lib/api/docker";
+import { pullContainerImage, updateContainerSettings } from "@/lib/api/docker";
 import { apiMessage } from "@/lib/api/error-message";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { Input } from "@/components/ui/input";
 import { Note } from "@/components/ui/note";
+import { Button } from "@/components/ui/button";
 import { ContainerVolumes } from "@/components/applications/container-volumes";
 import { ContainerCredentials } from "@/components/applications/container-credentials";
 import {
@@ -45,6 +46,16 @@ import {
 const DEFAULT_NETWORK = "__default__";
 
 /**
+ * "No registry — pull anonymously", as a value the form can hold.
+ *
+ * The same Radix constraint as `DEFAULT_NETWORK`: `""` is reserved for "nothing
+ * selected", so the default answer needs a value of its own — and it has to be the
+ * same one in the defaults, the item and the submit mapping, which is the bug those
+ * three have already had once on this form.
+ */
+const NO_REGISTRY = "__none__";
+
+/**
  * What a container site runs as — and the only place the panel's own Docker
  * networks become usable.
  *
@@ -68,12 +79,14 @@ export function ContainerCard({
   application,
   networks = [],
   volumes = [],
+  registries = [],
   canManage = false,
   className,
 }) {
   const t = useTranslations("applications.container");
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [pulling, setPulling] = useState(false);
 
   const defaults = {
     container_port: application.container_port ?? 80,
@@ -87,6 +100,9 @@ export function ContainerCard({
     // API and came back as a validation error on a field the user had just set
     // to "none".
     docker_network: application.docker_network ?? DEFAULT_NETWORK,
+    registry_id: application.registry_id
+      ? String(application.registry_id)
+      : NO_REGISTRY,
   };
 
   const form = useForm({
@@ -103,6 +119,15 @@ export function ContainerCard({
     defaults.docker_network !== DEFAULT_NETWORK &&
     !networks.some((network) => network.name === defaults.docker_network);
 
+  // Same idea for the registry, and it is a REACHABLE state here rather than a
+  // defensive one: deleting a credential detaches its sites instead of refusing,
+  // so a site can legitimately point at a row that is gone.
+  const missingRegistry =
+    defaults.registry_id !== NO_REGISTRY &&
+    !registries.some(
+      (registry) => String(registry.id) === defaults.registry_id,
+    );
+
   async function save(values) {
     setSaving(true);
     try {
@@ -113,6 +138,10 @@ export function ContainerCard({
           values.docker_network === DEFAULT_NETWORK
             ? null
             : values.docker_network,
+        registry_id:
+          values.registry_id === NO_REGISTRY
+            ? null
+            : Number(values.registry_id),
       });
       toast.success(t("saved"));
       form.reset(values);
@@ -148,6 +177,108 @@ export function ContainerCard({
               </code>
               <p className="text-xs text-muted-foreground">{t("imageHint")}</p>
             </div>
+
+            {/* Its own button, not part of Save. Pulling is not a settings
+                change: it downloads, recreates the container, and can take
+                minutes on a large image — batching it into a form that also
+                edits a port would hide all of that behind one click.
+
+                Here rather than on the deploy card because this is the deploy
+                story for a container: `compose up` reuses an image it already
+                has, so without this a site on a floating tag never moves. */}
+            {canManage ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{t("pullTitle")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("pullHint")}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={pulling}
+                  onClick={async () => {
+                    setPulling(true);
+                    try {
+                      await pullContainerImage(application.id);
+                      toast.success(t("pulled"));
+                      router.refresh();
+                    } catch (error) {
+                      toast.error(apiMessage(error, t("pullFailed")));
+                    } finally {
+                      setPulling(false);
+                    }
+                  }}
+                >
+                  <RefreshCw
+                    className={pulling ? "size-4 animate-spin" : "size-4"}
+                  />
+                  {t("pull")}
+                </Button>
+              </div>
+            ) : null}
+
+            <FormField
+              control={form.control}
+              name="registry_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("registry")}</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={!canManage}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("noRegistry")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={NO_REGISTRY}>
+                        {t("noRegistry")}
+                      </SelectItem>
+                      {/* The site's own credential, kept in the list even if it is
+                          gone — deleting a registry detaches the site rather than
+                          blocking, so this option can legitimately name a row that
+                          no longer exists. Dropping it would silently show
+                          "anonymous" for a site whose next pull will fail. */}
+                      {missingRegistry ? (
+                        <SelectItem value={defaults.registry_id}>
+                          {t("missingRegistryOption")}
+                        </SelectItem>
+                      ) : null}
+                      {registries.map((registry) => (
+                        <SelectItem
+                          key={registry.id}
+                          value={String(registry.id)}
+                        >
+                          {registry.name} — {registry.registry}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>{t("registryHint")}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {registries.length === 0 ? (
+              // An empty chooser with no explanation reads as a broken control —
+              // the same reason the networks note below exists.
+              <Note icon={KeyRound}>
+                {t("noRegistries")}{" "}
+                <Link
+                  href="/docker"
+                  className="font-medium text-primary underline"
+                >
+                  {t("noRegistriesLink")}
+                </Link>
+              </Note>
+            ) : null}
 
             <FormField
               control={form.control}
