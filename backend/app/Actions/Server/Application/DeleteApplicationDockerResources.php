@@ -49,11 +49,24 @@ class DeleteApplicationDockerResources
         // per volume on a site that might have five.
         $state = collect($this->docker->volumes())->keyBy('name');
 
+        // An EMPTY listing is not "no volumes exist" — `docker system df -v` is the
+        // slowest call in this service and `volumes()` returns `[]` when it does not
+        // answer. Treating that as "nothing to do" is how a delete reported success
+        // having removed nothing and said nothing: measured on a real box, a volume
+        // that appeared in neither `removed` nor `kept`.
+        if ($volumes->isNotEmpty() && $state->isEmpty()) {
+            $kept[] = 'unreadable:docker-volume-list';
+        }
+
         foreach ($volumes as $name) {
             $volume = $state->get($name);
 
-            // Not there: nothing to remove and nothing to warn about.
             if ($volume === null) {
+                // Either already gone, or the listing could not be read. Both are
+                // worth recording — silence here is what made the first failure
+                // undiagnosable.
+                $kept[] = $state->isEmpty() ? "{$name}:not-listed" : "{$name}:already-gone";
+
                 continue;
             }
 
@@ -78,8 +91,14 @@ class DeleteApplicationDockerResources
             $foreign = collect($volume['container_names'] ?? [])
                 ->reject(fn (string $container): bool => str_starts_with($container, $ownPrefix));
 
-            if ($others->isNotEmpty() || $foreign->isNotEmpty()) {
-                $kept[] = $name;
+            if ($others->isNotEmpty()) {
+                $kept[] = "{$name}:mounted-by-".$others->pluck('name')->implode(',');
+
+                continue;
+            }
+
+            if ($foreign->isNotEmpty()) {
+                $kept[] = "{$name}:held-by-".$foreign->implode(',');
 
                 continue;
             }
@@ -107,15 +126,18 @@ class DeleteApplicationDockerResources
             $foreign = collect($row['containers'] ?? [])
                 ->reject(fn (array $container): bool => str_starts_with((string) $container['name'], $ownPrefix));
 
-            $removable = $row !== null
-                && ! ($row['built_in'] ?? false)
-                && $others->isEmpty()
-                && $foreign->isEmpty();
-
-            if ($removable && ! $this->docker->removeNetwork($network)->failed()) {
+            if ($row === null) {
+                $kept[] = "{$network}:not-listed";
+            } elseif ($row['built_in'] ?? false) {
+                $kept[] = "{$network}:docker-owned";
+            } elseif ($others->isNotEmpty()) {
+                $kept[] = "{$network}:joined-by-".$others->pluck('name')->implode(',');
+            } elseif ($foreign->isNotEmpty()) {
+                $kept[] = "{$network}:attached-".$foreign->pluck('name')->implode(',');
+            } elseif ($this->docker->removeNetwork($network)->failed()) {
+                $kept[] = "{$network}:remove-failed";
+            } else {
                 $removed[] = "network:{$network}";
-            } elseif ($row !== null) {
-                $kept[] = $network;
             }
         }
 

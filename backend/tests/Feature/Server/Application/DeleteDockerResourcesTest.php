@@ -101,7 +101,7 @@ it('keeps a volume another site also mounts', function () {
     $outcome = app(DeleteApplicationDockerResources::class)->execute($site);
 
     expect($ran)->toBe([])
-        ->and($outcome['kept'])->toBe(['shared_db']);
+        ->and($outcome['kept'])->toBe(['shared_db:mounted-by-beta']);
 });
 
 it('keeps a volume a FOREIGN container is still holding', function () {
@@ -116,7 +116,8 @@ it('keeps a volume a FOREIGN container is still holding', function () {
         'sites' => [['id' => $site->id, 'name' => 'alpha', 'path' => '/data']],
     ]], [], $ran);
 
-    expect(app(DeleteApplicationDockerResources::class)->execute($site)['kept'])->toBe(['busy_db']);
+    expect(app(DeleteApplicationDockerResources::class)->execute($site)['kept'])
+        ->toBe(['busy_db:held-by-someone-elses-container']);
     expect($ran)->toBe([]);
 });
 
@@ -135,7 +136,7 @@ it('keeps a network another site is on', function () {
         ],
     ]], $ran);
 
-    expect(app(DeleteApplicationDockerResources::class)->execute($site)['kept'])->toBe(['shared-net']);
+    expect(app(DeleteApplicationDockerResources::class)->execute($site)['kept'])->toBe(['shared-net:joined-by-beta']);
     expect($ran)->toBe([]);
 });
 
@@ -174,14 +175,22 @@ it('says nothing and breaks nothing when the objects are already gone', function
         'volume_mounts' => [['volume' => 'missing_vol', 'path' => '/data']],
     ]);
 
+    // A listing that ANSWERED and simply does not contain them. With an empty
+    // listing the two cases are indistinguishable, which is the point of the
+    // separate `not-listed` reason and of the test below.
     $ran = [];
-    fakeDockerState([], [], $ran);
+    fakeDockerState([[
+        'name' => 'somebody-elses', 'in_use' => false, 'containers' => 0,
+        'container_names' => [], 'sites' => [],
+    ]], [], $ran);
 
     $outcome = app(DeleteApplicationDockerResources::class)->execute($site);
 
+    // Recorded as already-gone rather than skipped in silence: a volume appearing
+    // in neither list is what made the first real failure undiagnosable.
     expect($ran)->toBe([])
         ->and($outcome['removed'])->toBe([])
-        ->and($outcome['kept'])->toBe([]);
+        ->and($outcome['kept'])->toBe(['missing_vol:already-gone', 'missing-net:not-listed']);
 });
 
 it('records what it kept as well as what it removed', function () {
@@ -200,7 +209,7 @@ it('records what it kept as well as what it removed', function () {
     $log = ActivityLog::where('action', 'docker_resources_removed')->first();
 
     expect($log)->not->toBeNull()
-        ->and($log->properties['kept'])->toBe(['busy_db']);
+        ->and($log->properties['kept'])->toBe(['busy_db:held-by-x']);
 });
 
 it('removes a volume its OWN container is still holding', function () {
@@ -250,6 +259,23 @@ it('keeps a network a foreign container is attached to', function () {
         'sites' => [['id' => $site->id, 'name' => 'alpha']],
     ]], $ran);
 
-    expect(app(DeleteApplicationDockerResources::class)->execute($site)['kept'])->toBe(['alpha-net']);
+    expect(app(DeleteApplicationDockerResources::class)->execute($site)['kept'])->toBe(['alpha-net:attached-stranger']);
     expect($ran)->toBe([]);
+});
+
+it('says so when Docker could not be asked at all', function () {
+    // `volumes()` returns an empty array when `docker system df -v` does not answer,
+    // and it is the slowest call in that service. Reading that as "no volumes exist"
+    // is how a delete reported success having removed nothing and said nothing —
+    // measured on a real box.
+    $site = dockerSite('alpha', ['volume_mounts' => [['volume' => 'alpha_db', 'path' => '/data']]]);
+
+    $ran = [];
+    fakeDockerState([], [], $ran);
+
+    $kept = app(DeleteApplicationDockerResources::class)->execute($site)['kept'];
+
+    expect($kept)->toContain('unreadable:docker-volume-list')
+        ->and($kept)->toContain('alpha_db:not-listed')
+        ->and($ran)->toBe([]);
 });
