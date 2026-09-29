@@ -1707,10 +1707,12 @@ All health signals for this application in one call.
 
 ```json
 {"issues": [
-  {"id": "ssl_expiring", "severity": "warning", "title": "SSL certificate expires soon", "detail": "The SSL certificate for shop.example.com expires in 12 days.", "data": {"expires_at": "01-09-2026 00:00:00", "days_remaining": 12}},
-  {"id": "no_recent_deploy", "severity": "info", "title": "No recent deployment", "detail": "Last deployed 30 days ago.", "data": {"last_deployed_at": null}}
+  {"type": "certificate", "severity": "critical", "message": "The SSL certificate for shop.example.com has expired.", "meta": {"…": "…"}},
+  {"type": "worker", "severity": "warning", "message": "The application process is not running.", "meta": {"unit": "…"}}
 ], "healthy": false}
 ```
+
+Each issue is `{type, severity, message, meta}` (corrected 2026-09-29 — this showed `id`/`title`/`detail`/`data`, which the API has not returned). `type` is one of `certificate`, `dns`, `worker` (the Node application's own process — queue workers are on the Workers screen), `php_eol`, `disk`, `deploy_failed`; `message` is already localised; `meta` varies by type.
 
 `healthy: false` when there is at least one warning or critical. Info-level issues do not affect the flag.
 
@@ -2812,11 +2814,12 @@ Which log sources this application has and whether each exists yet.
 
 ```json
 {"logs": [
-  {"key": "access", "label": "Access Log", "kind": "access", "exists": true, "size": 1048576, "modified": "29-07-2026 11:00:00"},
-  {"key": "error", "label": "Error Log", "kind": "error", "exists": true, "size": 4096, "modified": "29-07-2026 10:55:00"},
-  {"key": "supervisor", "label": "Worker Output", "kind": "process", "exists": false}
+  {"key": "access", "label": "Access log", "kind": "file", "exists": true},
+  {"key": "error", "label": "Error log", "kind": "file", "exists": true}
 ]}
 ```
+
+Each source is `{key, label, kind, exists}` — no `size` or `modified` (corrected 2026-09-29). Always `access` and `error`; a **Node** application adds its own process output (stdout and stderr, separately); a site with the WAF on adds `waf_detect`. **Queue workers' logs are not here** — they are on the server Logs screen under each worker's `log_identifier` (see Workers).
 
 ---
 
