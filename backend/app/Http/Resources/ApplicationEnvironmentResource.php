@@ -61,7 +61,13 @@ class ApplicationEnvironmentResource extends JsonResource
             'requires_restart' => app(ProcessSupervisor::class)->runs($application),
             'requires_apply' => $detector->requiresApply($application, $framework),
 
-            'raw' => $raw,
+            // The whole file only for someone who may edit it. It went to
+            // anyone with `app_environment` view, secrets and all, while
+            // `variables` beside it carefully nulled the same values — a
+            // view-only role read APP_KEY from here (found live 2026-09-29;
+            // the DB-01 class). `variables` and `checks` still describe the
+            // file without a single secret value in either.
+            'raw' => $request->user()?->canManage('app_environment') ? $raw : null,
             'variables' => $inspector->variables($raw),
             'checks' => $exists ? $inspector->checks($raw, $framework, $exposed) : [],
 

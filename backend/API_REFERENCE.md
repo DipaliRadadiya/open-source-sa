@@ -1759,6 +1759,8 @@ All of this comes from **one read** of the file. A raw endpoint plus a parsed en
 
 **A secret's `value` is `null`, not a masked string.** Don't render dots from the API; render them from `secret: true`.
 
+**`raw` is `null` unless the caller has `app_environment` (manage)** (2026-09-29): it is the whole file, secrets included, and it went to view-only roles while `variables` nulled the same values. A viewer gets `variables` and `checks` — neither ever carries a secret value — so show those read-only rather than an empty editor.
+
 **`requires_restart` and `requires_apply` are the two ways a save can appear to do nothing**, answered up front so the button can say what it will actually do:
 - `requires_restart` — the application runs a process of its own, which is holding the old values in memory.
 - `requires_apply` — a compiled config cache exists (`bootstrap/cache/config.php` on Laravel/Statamic), which is read *instead of* the file. Editing `.env` with one present changes nothing at all until it is rebuilt.
@@ -1799,7 +1801,7 @@ Restore a previous snapshot.
 
 **Request:** `{"backup": ".env.bak-20260728-141530", "restart": true}`
 
-`backup` is the `name` from the list, verbatim. It reaches a path, so anything not matching `.env.bak-YYYYMMDD-HHMMSS` exactly is refused rather than sanitised. The current file is backed up first, so restoring the wrong snapshot is itself undoable.
+`backup` is the `name` from the list, verbatim. It reaches a path, so anything not matching `.env.bak-YYYYMMDD-HHMMSS` exactly is refused rather than sanitised — a `422` on `backup`, as is a well-formed name that is no longer on disk (both were `500`s until 2026-09-29). The current file is backed up first, so restoring the wrong snapshot is itself undoable.
 
 **Response `200`:** `{"environment": {...}}`
 

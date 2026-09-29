@@ -46,7 +46,7 @@ class ApplicationEnvironment
      * the copy that guards a read must not be able to drift from the copy that
      * guards a restore.
      */
-    private const BACKUP_NAME = '/^\.env\.bak-\d{8}-\d{6}(?:-\d{1,2})?$/';
+    public const BACKUP_NAME = '/^\.env\.bak-\d{8}-\d{6}(?:-\d{1,2})?$/';
 
     public function __construct(
         private ServerOps $serverOps,

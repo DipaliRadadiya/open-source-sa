@@ -259,6 +259,31 @@ describe('permissions', function () {
         $this->actingAs($user)->putJson(envUrl(), ['raw' => "A=1\n"])->assertForbidden();
     });
 
+    it('gives a viewer the variables but not the file with its secrets in it', function () {
+        // `raw` went to every viewer, APP_KEY and DB_PASSWORD included, while
+        // `variables` beside it nulled the same values (found live
+        // 2026-09-29 — the DB-01 class).
+        fakeSite();
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_environment', view: true, manage: false);
+
+        $response = $this->actingAs($viewer)->getJson(envUrl())->assertOk();
+
+        expect($response->json('environment.raw'))->toBeNull()
+            ->and($response->getContent())->not->toContain('hunter2')
+            ->and($response->getContent())->not->toContain('base64:abc')
+            ->and(collect($response->json('environment.variables'))->pluck('key')->all())->toContain('DB_PASSWORD');
+    });
+
+    it('still gives the whole file to someone who may edit it', function () {
+        fakeSite();
+        $editor = User::factory()->create();
+        grantPermission($editor, 'app_environment', view: true, manage: true);
+
+        $this->actingAs($editor)->getJson(envUrl())->assertOk()
+            ->assertJsonPath('environment.raw', "APP_ENV=production\nAPP_KEY=base64:abc\nDB_PASSWORD=hunter2\n");
+    });
+
     it('denies a user with no grant at all', function () {
         fakeSite();
 
@@ -495,8 +520,8 @@ describe('the history of who changed it', function () {
     });
 
     it('is readable by someone who can view but not edit', function () {
-        // They can already read the secret values on this screen. Who last
-        // touched them reveals strictly less than what is already shown.
+        // Who last touched the file reveals nothing about its values — which
+        // a viewer no longer gets (`raw` is manage-only since 2026-09-29).
         fakeSite();
 
         $viewer = User::factory()->create();
@@ -695,5 +720,29 @@ describe('what one change did, variable by variable', function () {
         $this->actingAs($this->admin)
             ->getJson(envUrl('/history/'.$log->id.'/diff'))
             ->assertStatus(500);
+    });
+});
+
+describe('restoring a backup', function () {
+    it('refuses a name that is not a backup with a 422, not a 500', function (string $name) {
+        // It reached the service unvalidated, which threw, and the user saw
+        // "server error" while an error was logged (found live 2026-09-29).
+        fakeSite();
+
+        $this->actingAs($this->admin)->postJson(envUrl('/restore'), ['backup' => $name])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('backup');
+    })->with([
+        'a path' => ['../../etc/passwd'],
+        'almost a backup' => ['.env.bak-2026'],
+        'nothing' => [''],
+    ]);
+
+    it('refuses a well-formed backup that is not on disk with a 422', function () {
+        fakeSite();
+
+        $this->actingAs($this->admin)->postJson(envUrl('/restore'), ['backup' => '.env.bak-20260101-000000'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('backup');
     });
 });
