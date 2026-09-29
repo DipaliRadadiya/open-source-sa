@@ -107,7 +107,10 @@ it('builds into an empty directory, not the project root Composer would refuse',
         ->and($target)->not->toBe("{$this->projectRoot}/web");
 
     // ...and the build is then copied into the project root.
-    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'cp'
+    // As the site user: root's `cp` wrote through a link planted at the
+    // destination (the `.panel` class of bug, 2026-09-29).
+    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'runuser'
+        && ($run['command'][4] ?? '') === 'cp'
         && in_array($this->projectRoot, $run['command'], true));
 
     expect($copy['command'])->toContain("{$target}/.");

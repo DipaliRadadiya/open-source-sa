@@ -215,6 +215,24 @@ it('creates a database and a dedicated user, and writes them into wp-config', fu
     Process::assertNotRan(fn ($p) => str_contains(implode(' ', $p->command), $password));
 });
 
+it('copies the extracted files into the site as the site user, never as root', function () {
+    // The document root is not always new — "Retry setup" copies into one the
+    // site user has had all along — and root's `cp` wrote through a link
+    // planted at a destination path (the `.panel` class of bug, 2026-09-29).
+    fakeSaltService();
+    fakeInstallServer();
+    runProvision(wpApp());
+
+    $unwrap = fn (array $c) => ($c[0] ?? null) === 'sudo' ? array_slice($c, 2) : $c;
+
+    Process::assertNotRan(fn ($p) => ($unwrap($p->command)[0] ?? null) === 'cp');
+    Process::assertRan(function ($p) use ($unwrap) {
+        $c = $unwrap($p->command);
+
+        return ($c[0] ?? null) === 'runuser' && ($c[2] ?? null) === 'deploy' && ($c[4] ?? null) === 'cp';
+    });
+});
+
 it('hands the extracted files to the site user, not root', function () {
     fakeSaltService();
     fakeInstallServer();

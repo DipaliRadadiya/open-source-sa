@@ -79,7 +79,10 @@ it('serves from public/, not the project root', function () {
     // Built one level above what is served — but not *into* the project root,
     // which already holds public/ and would make Composer refuse. It is copied
     // there instead.
-    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'cp'
+    // As the site user: root's `cp` wrote through a link planted at the
+    // destination (the `.panel` class of bug, 2026-09-29).
+    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'runuser'
+        && ($run['command'][4] ?? '') === 'cp'
         && in_array($this->projectRoot, $run['command'], true));
 
     expect($copy)->not->toBeNull();

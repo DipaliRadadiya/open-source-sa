@@ -301,7 +301,7 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         $root = $this->archiveRoot();
         $source = $root === null ? "{$work}/src" : "{$work}/src/".trim($root, '/');
 
-        $this->run('extract', ['cp', '-r', "{$source}/.", $documentRoot], $application);
+        $this->copyIntoSite($application, $source, $documentRoot, $work);
 
         // The copy above runs elevated, so everything it just wrote is owned
         // by root. Provisioning's `set_ownership` step cannot help: it runs
@@ -411,7 +411,7 @@ abstract class AbstractSiteInstaller implements SiteInstaller
 
         // Contents, not the directory — `{$work}/.` for the same reason
         // downloadAndExtract() uses it.
-        $this->run('extract', ['cp', '-r', "{$work}/.", $projectRoot], $application);
+        $this->copyIntoSite($application, $work, $projectRoot, $work);
         $this->run('extract', ['rm', '-rf', $work], $application);
 
         // The copy ran elevated even though the build did not, so the tree
@@ -509,6 +509,30 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      *
      * @throws ProvisioningFailedException
      */
+    /**
+     * Copy a prepared tree into the site — as the site's own user.
+     *
+     * The destination is not always new. "Retry setup" copies into a document
+     * root the site user has had all along, and `cp` run as root writes
+     * *through* a symlink it finds at a destination path: a link planted at
+     * `license.txt`, or a directory link where the archive has a folder,
+     * redirected root's copy to a file of the user's choosing — the class of
+     * bug found in `.panel` on 2026-09-29. As the user, a planted link reaches
+     * only what the user could already write.
+     *
+     * The staging tree is handed to the user first so they can read it; it is
+     * the panel's own temporary directory, under a name nobody could guess.
+     *
+     * @param  string  $work  the staging directory to hand over (the source or its parent)
+     */
+    protected function copyIntoSite(Application $application, string $source, string $destination, string $work): void
+    {
+        $owner = $application->systemUser->username;
+
+        $this->run('extract', ['chown', '-R', "{$owner}:{$owner}", $work], $application);
+        $this->runAsSiteUser('extract', $application, ['cp', '-r', "{$source}/.", $destination]);
+    }
+
     protected function runAsSiteUser(string $step, Application $application, array $command, ?string $input = null, ?string $cwd = null): ServerOpsResult
     {
         return $this->run($step, array_merge(

@@ -12,6 +12,7 @@ use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\Runtimes\NodeRuntime;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Str;
 
 /**
  * Shared machinery for the one-click Node applications.
@@ -214,8 +215,10 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
      */
     protected function cloneInto(Application $application, string $repository, string $branch, string $documentRoot): void
     {
+        // A name nobody can guess, as downloadAndExtract() uses: this was
+        // `node-{id}`, which a site user could create first.
         $work = rtrim((string) config('server.installer_work_dir', sys_get_temp_dir()), '/')
-            .'/node-'.$application->id;
+            .'/node-'.Str::uuid();
 
         $this->run('download', ['rm', '-rf', $work], $application);
         $this->run('download', [
@@ -225,7 +228,7 @@ abstract class AbstractNodeInstaller extends AbstractSiteInstaller
         // The placeholder would otherwise sit in the web root of an
         // application that never serves files from it.
         $this->run('extract', ['rm', '-f', $documentRoot.'/index.html', $documentRoot.'/index.php'], $application);
-        $this->run('extract', ['cp', '-rT', $work, $documentRoot], $application);
+        $this->copyIntoSite($application, $work, $documentRoot, $work);
         $this->run('extract', ['rm', '-rf', $work], $application);
 
         $this->run('extract', [

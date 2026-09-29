@@ -181,7 +181,10 @@ it('takes the zip, not the bzip2 tarball', function () {
 it('copies out of the wrapping directory the zip ships', function () {
     $runs = installNextcloud();
 
-    $copy = collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'cp')['command'];
+    // Run as the site user (`runuser -u <user> -- cp …`), so the copy's own
+    // arguments start four places in.
+    $copy = array_slice(collect($runs)->first(fn ($run) => ($run['command'][0] ?? '') === 'runuser'
+        && ($run['command'][4] ?? '') === 'cp')['command'], 4);
 
     // The zip's entries start at `nextcloud/`, unlike Mautic's flat one, and
     // `unzip` has no `--strip-components` to drop it. Copying from the

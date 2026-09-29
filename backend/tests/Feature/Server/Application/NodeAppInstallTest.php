@@ -1318,3 +1318,21 @@ it('lets npm 12 run install scripts during NodeBB setup too', function () {
 
     expect($setup)->toContain("export npm_config_dangerously_allow_all_scripts='true';");
 });
+
+it('copies a cloned app into the site as the site user, from a staging name nobody can guess', function () {
+    // Root's `cp` into a site that already exists — "Retry setup" — wrote
+    // through a link the site user had planted at a destination path (the
+    // `.panel` class of bug, 2026-09-29). And `node-{id}` was a staging path
+    // a site user could create before the installer did.
+    app(ApplicationProvisioner::class)->provision(oneClickApp('uptimekuma'));
+
+    $commands = test()->ran->filter(fn ($p) => is_array($p->command))->map(fn ($p) => $p->command)->values();
+
+    $rootCopies = $commands->filter(fn (array $c) => ($c[0] ?? '') === 'cp');
+    $userCopies = $commands->filter(fn (array $c) => ($c[0] ?? '') === 'runuser' && ($c[4] ?? '') === 'cp');
+    $clone = $commands->first(fn (array $c) => ($c[0] ?? '') === 'git' && ($c[1] ?? '') === 'clone');
+
+    expect($rootCopies->all())->toBe([])
+        ->and($userCopies)->not->toBeEmpty()
+        ->and((string) end($clone))->toMatch('/\/node-[0-9a-f-]{36}$/');
+});
