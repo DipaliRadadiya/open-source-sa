@@ -3514,6 +3514,14 @@
         "noVolumes": "This server has no volumes yet, so there is nothing to mount.",
         "noVolumesLink": "Create a volume on the Docker page.",
         "hint": "A volume keeps data that survives the container being rebuilt. Mounting one recreates the container, and it starts empty — whatever the image had at that path is hidden, not merged."
+      },
+      "credentials": {
+        "title": "Generated credentials",
+        "reveal": "Reveal",
+        "revealing": "Loading…",
+        "hint": "Created when the app was installed, and stored encrypted. Revealing them is recorded in the activity log.",
+        "shownWarning": "Anyone who can manage this site can read these. They are the app's real database credentials — changing one here is not possible, because the running database would keep the old value.",
+        "failed": "Couldn't load the credentials."
       }
     },
     "domains": {

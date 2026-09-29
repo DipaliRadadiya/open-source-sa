@@ -3514,6 +3514,14 @@
         "noVolumes": "Ce serveur n'a pas encore de volume, il n'y a donc rien à monter.",
         "noVolumesLink": "Créez un volume sur la page Docker.",
         "hint": "Un volume conserve des données qui survivent à la reconstruction du conteneur. Le monter recrée le conteneur, et il démarre vide : ce que l'image contenait à ce chemin est masqué, pas fusionné."
+      },
+      "credentials": {
+        "title": "Identifiants générés",
+        "reveal": "Afficher",
+        "revealing": "Chargement…",
+        "hint": "Créés à l'installation de l'application et stockés chiffrés. Leur affichage est consigné dans le journal d'activité.",
+        "shownWarning": "Toute personne pouvant gérer ce site peut les lire. Ce sont les véritables identifiants de base de données de l'application : les modifier ici est impossible, car la base de données en cours d'exécution conserverait l'ancienne valeur.",
+        "failed": "Impossible de charger les identifiants."
       }
     },
     "domains": {

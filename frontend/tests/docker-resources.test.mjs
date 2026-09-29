@@ -353,3 +353,62 @@ test("every attach string exists in every locale", () => {
     );
   }
 });
+
+/*
+ * The generated credentials.
+ *
+ * Ghost's MySQL password and a one-click's signing keys were generated per site and
+ * then existed only in a compose file and an encrypted column — correct, and
+ * useless to whoever needs them to connect a client or debug the app. It also
+ * unblocks apps whose ADMIN account comes from environment variables: a password
+ * nobody can read is the same as no account.
+ */
+
+const credentials = read("components/applications/container-credentials.jsx");
+
+test("credential values are not on the application payload", () => {
+  // Only the KEY NAMES, so nothing is fetched, cached or re-rendered on a page
+  // visit. The values have their own endpoint.
+  const appSchema = read("lib/schemas/application.js");
+  assert.match(appSchema, /container_secret_keys/);
+  assert.doesNotMatch(appSchema, /container_secrets:/);
+});
+
+test("the values are fetched only when asked for", () => {
+  assert.match(credentials, /getContainerSecrets/);
+  // No effect that loads them on mount — revealing is a deliberate act.
+  assert.doesNotMatch(credentials, /useEffect/);
+});
+
+test("the mask does not leak the length", () => {
+  // A row of dots as long as the password tells an onlooker how long it is.
+  assert.match(credentials, /••••/);
+  assert.doesNotMatch(credentials, /repeat\(/);
+});
+
+test("the section is offered only to someone who can manage the site", () => {
+  // The endpoint is gated on `manage`, so rendering it for anyone else offers a
+  // button whose only outcome is 403.
+  // Prettier wraps the ternary across lines, so match the guard and the component
+  // separately rather than pinning one formatting of them.
+  assert.match(card, /\{canManage \? \(/);
+  assert.match(card, /<ContainerCredentials application=\{application\} \/>/);
+});
+
+test("nothing offers to rotate a credential from here", () => {
+  // Rotating means rewriting the compose file AND the credential inside the running
+  // database; leaving those disagreeing is how a site comes back up unable to reach
+  // its own data.
+  assert.doesNotMatch(credentials, /rotate|regenerate/i);
+});
+
+test("every credentials string exists in every locale", () => {
+  const reference = Object.keys(messages.en.applications.container.credentials);
+  for (const locale of LOCALES) {
+    assert.deepEqual(
+      Object.keys(messages[locale].applications.container.credentials ?? {}).slice().sort(),
+      reference.slice().sort(),
+      `${locale} disagrees with en on applications.container.credentials`,
+    );
+  }
+});

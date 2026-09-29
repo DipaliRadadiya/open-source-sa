@@ -3514,6 +3514,14 @@
         "noVolumes": "Este servidor todavía no tiene volúmenes, así que no hay nada que montar.",
         "noVolumesLink": "Crea un volumen en la página de Docker.",
         "hint": "Un volumen conserva datos que sobreviven a la reconstrucción del contenedor. Montarlo recrea el contenedor y empieza vacío: lo que la imagen tuviera en esa ruta queda oculto, no combinado."
+      },
+      "credentials": {
+        "title": "Credenciales generadas",
+        "reveal": "Mostrar",
+        "revealing": "Cargando…",
+        "hint": "Se crearon al instalar la aplicación y se guardan cifradas. Mostrarlas queda registrado en el historial de actividad.",
+        "shownWarning": "Cualquiera que pueda gestionar este sitio puede leerlas. Son las credenciales reales de la base de datos de la aplicación: no se pueden cambiar aquí, porque la base de datos en marcha conservaría el valor anterior.",
+        "failed": "No se han podido cargar las credenciales."
       }
     },
     "domains": {

@@ -25,3 +25,14 @@ export function deleteDockerVolume(name) {
 export function updateContainerSettings(id, payload) {
   return api.put(`/applications/${id}/container`, payload);
 }
+
+/**
+ * The credentials the panel generated for a one-click container app.
+ *
+ * Its own request, made only when somebody asks to see them — they are not on the
+ * application payload precisely so they are not fetched, cached and re-rendered on
+ * every visit to the page. The server records each read.
+ */
+export function getContainerSecrets(id) {
+  return api.get(`/applications/${id}/container/secrets`);
+}

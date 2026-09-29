@@ -122,6 +122,7 @@ return [
     'application.created' => 'Anwendung :name (:site_type) erstellt',
     'application.updated' => 'Anwendung :name aktualisiert',
     'application.container_updated' => 'Container-Einstellungen für :name aktualisiert',
+    'application.container_secrets_viewed' => 'Container-Zugangsdaten für :name angesehen',
     'application.deleted' => 'Anwendung :name (:site_type) gelöscht',
     'application.process_start' => ':name gestartet',
     'application.process_stop' => ':name gestoppt',

@@ -168,6 +168,12 @@ class ApplicationResource extends JsonResource
             'memory_limit' => $this->memory_limit,
             'docker_network' => $this->docker_network,
             'volume_mounts' => $this->volume_mounts ?? [],
+            // The NAMES of the generated credentials, never the values. Enough for
+            // the UI to decide whether to render a Credentials section and what to
+            // label each row; the values come from their own endpoint, so they are
+            // not in every application payload, every list response and every
+            // browser cache along the way.
+            'container_secret_keys' => array_keys((array) ($this->docker_secrets ?? [])),
 
             // Whether this application runs a process of its own, and what
             // systemd says about it *right now*. Null for PHP and static sites,

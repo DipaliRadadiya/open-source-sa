@@ -3514,6 +3514,14 @@
         "noVolumes": "Dieser Server hat noch keine Volumes, es gibt also nichts einzubinden.",
         "noVolumesLink": "Auf der Docker-Seite ein Volume erstellen.",
         "hint": "Ein Volume behält Daten, die einen Neuaufbau des Containers überstehen. Das Einbinden erstellt den Container neu, und das Volume startet leer — was das Image an diesem Pfad hatte, wird verborgen, nicht zusammengeführt."
+      },
+      "credentials": {
+        "title": "Erzeugte Zugangsdaten",
+        "reveal": "Anzeigen",
+        "revealing": "Wird geladen…",
+        "hint": "Bei der Installation der Anwendung erzeugt und verschlüsselt gespeichert. Das Anzeigen wird im Aktivitätsprotokoll vermerkt.",
+        "shownWarning": "Jede Person, die diese Website verwalten darf, kann diese Werte lesen. Es sind die echten Datenbank-Zugangsdaten der Anwendung — sie hier zu ändern ist nicht möglich, weil die laufende Datenbank den alten Wert behielte.",
+        "failed": "Die Zugangsdaten konnten nicht geladen werden."
       }
     },
     "domains": {

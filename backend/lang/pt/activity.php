@@ -122,6 +122,7 @@ return [
     'application.created' => 'Criou a aplicação :name (:site_type)',
     'application.updated' => 'Atualizou a aplicação :name',
     'application.container_updated' => 'Atualizou as definições do contentor de :name',
+    'application.container_secrets_viewed' => 'Consultou as credenciais do contentor de :name',
     'application.deleted' => 'Excluiu a aplicação :name (:site_type)',
     'application.process_start' => ':name iniciada',
     'application.process_stop' => ':name parada',

@@ -122,6 +122,7 @@ return [
     'application.created' => 'एप्लिकेशन :name (:site_type) बनाया',
     'application.updated' => 'एप्लिकेशन :name अपडेट किया',
     'application.container_updated' => ':name की कंटेनर सेटिंग अपडेट की',
+    'application.container_secrets_viewed' => ':name की कंटेनर क्रेडेंशियल देखीं',
     'application.deleted' => 'एप्लिकेशन :name (:site_type) हटाया',
     'application.process_start' => ':name शुरू किया',
     'application.process_stop' => ':name बंद किया',

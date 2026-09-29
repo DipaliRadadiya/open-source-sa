@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Role;
 use App\Models\ServerCapability;
@@ -368,3 +369,92 @@ it('clears every mount when given an empty list', function () {
 
     expect($this->application->fresh()->volume_mounts)->toBe([]);
 });
+
+/*
+ * The generated credentials.
+ *
+ * These are live database passwords. The shape of the feature is the security
+ * argument: they are not on the application payload, asking for them is recorded,
+ * and the endpoint is gated on `manage` rather than `view` because reading a
+ * password is not a read-only act in any sense that matters.
+ */
+
+it('does not put the credentials in the application payload', function () {
+    // The whole reason for a separate endpoint. On the resource they would ride in
+    // every application response, every list, and every cache in between.
+    fakeDockerBox();
+    $this->application->forceFill(['docker_secrets' => ['MYSQL_ROOT_PASSWORD' => 'supersecretvalue']])->save();
+
+    // The APPLICATION payload is what must not carry it. The secrets endpoint
+    // obviously does — that is its job, and asserting otherwise was this test
+    // being wrong rather than the code.
+    $body = $this->withHeaders(containerHeaders())
+        ->getJson('/api/applications/'.$this->application->id)
+        ->assertOk()
+        ->content();
+
+    expect($body)->not->toContain('supersecretvalue')
+        // But the NAMES are there, so the UI knows what to offer without asking.
+        ->and($body)->toContain('MYSQL_ROOT_PASSWORD');
+});
+
+it('returns the credentials from their own endpoint', function () {
+    fakeDockerBox();
+    $this->application->forceFill(['docker_secrets' => [
+        'MYSQL_ROOT_PASSWORD' => 'rootvalue', 'GHOST_DB_PASSWORD' => 'appvalue',
+    ]])->save();
+
+    $this->withHeaders(containerHeaders())
+        ->getJson(containerUrl2())
+        ->assertOk()
+        ->assertJsonPath('secrets.MYSQL_ROOT_PASSWORD', 'rootvalue')
+        ->assertJsonPath('secrets.GHOST_DB_PASSWORD', 'appvalue');
+});
+
+it('records who looked', function () {
+    // An audit trail is most of the value: a password that can be read without a
+    // trace is a password nobody can reason about after an incident.
+    fakeDockerBox();
+    $this->application->forceFill(['docker_secrets' => ['MYSQL_ROOT_PASSWORD' => 'v']])->save();
+
+    $this->withHeaders(containerHeaders())->getJson(containerUrl2())->assertOk();
+
+    expect(ActivityLog::where('action', 'container_secrets_viewed')->exists())
+        ->toBeTrue('nothing recorded the read');
+});
+
+it('refuses a user without manage', function () {
+    // `manage`, not `view`. Somebody who may look at a site must not thereby be
+    // able to read its database password.
+    fakeDockerBox();
+    $this->application->forceFill(['docker_secrets' => ['MYSQL_ROOT_PASSWORD' => 'v']])->save();
+
+    $viewer = User::factory()->create();
+    $viewer->roles()->attach(Role::create(['name' => 'Viewer', 'slug' => 'viewer']));
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$viewer->createToken('t')->plainTextToken])
+        ->getJson(containerUrl2())
+        ->assertForbidden();
+});
+
+it('refuses a site that is not a container', function () {
+    fakeDockerBox();
+    $this->application->forceFill(['site_type' => 'php', 'serving_profile' => 'php'])->save();
+
+    $this->withHeaders(containerHeaders())->getJson(containerUrl2())->assertStatus(422);
+});
+
+it('answers with an empty set rather than failing when there are none', function () {
+    // A plain Docker site has no generated credentials, and that is not an error.
+    fakeDockerBox();
+
+    $this->withHeaders(containerHeaders())
+        ->getJson(containerUrl2())
+        ->assertOk()
+        ->assertExactJson(['secrets' => []]);
+});
+
+function containerUrl2(): string
+{
+    return '/api/applications/'.test()->application->id.'/container/secrets';
+}

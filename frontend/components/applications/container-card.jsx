@@ -17,6 +17,7 @@ import { CardSaveFooter } from "@/components/ui/card-save-footer";
 import { Input } from "@/components/ui/input";
 import { Note } from "@/components/ui/note";
 import { ContainerVolumes } from "@/components/applications/container-volumes";
+import { ContainerCredentials } from "@/components/applications/container-credentials";
 import {
   Select,
   SelectContent,
@@ -268,6 +269,14 @@ export function ContainerCard({
               volumes={volumes}
               canManage={canManage}
             />
+
+            {/* Only for a site the panel generated credentials for, and only for
+                somebody who can manage it — the endpoint is gated on `manage`, so
+                rendering the control for anyone else offers a button whose only
+                outcome is 403. */}
+            {canManage ? (
+              <ContainerCredentials application={application} />
+            ) : null}
           </CardContent>
           <CardSaveFooter
             submit

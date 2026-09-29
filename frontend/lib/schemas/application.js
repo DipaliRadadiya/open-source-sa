@@ -183,6 +183,12 @@ export const applicationSchema = z.object({
     .array(z.object({ volume: z.string(), path: z.string() }))
     .nullish()
     .transform((mounts) => mounts ?? []),
+  // Names only. Enough to know whether to offer a Credentials section and what to
+  // label each row; the values are fetched on demand from their own endpoint.
+  container_secret_keys: z
+    .array(z.string())
+    .nullish()
+    .transform((keys) => keys ?? []),
   rendering_type: z.string().nullish(),
   status: z
     .enum(["pending", "provisioning", "active", "failed"])
