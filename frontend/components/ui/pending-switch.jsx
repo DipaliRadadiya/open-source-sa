@@ -23,7 +23,9 @@ import { Switch } from "@/components/ui/switch";
  * locked on it. Reserving the space costs 16px of a table cell and nothing
  * moves.
  */
-export function PendingSwitch({ pending = false, disabled = false, className, onCheckedChange, ...props }) {
+// `aside` fills the same slot while nothing is pending — a marker that a
+// disabled switch is locked for a reason, not merely off.
+export function PendingSwitch({ pending = false, disabled = false, aside = null, className, onCheckedChange, ...props }) {
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
       {/* Locked by ignoring changes, not by `disabled`: a disabled element
@@ -43,7 +45,9 @@ export function PendingSwitch({ pending = false, disabled = false, className, on
             className="size-3.5 animate-spin text-muted-foreground"
             aria-hidden
           />
-        ) : null}
+        ) : (
+          aside
+        )}
       </span>
     </span>
   );

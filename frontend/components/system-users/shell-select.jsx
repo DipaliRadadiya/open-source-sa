@@ -15,6 +15,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { apiMessage } from "@/lib/api/error-message";
 import { genericErrorMessage } from "@/lib/api/generic-error";
 import { useRefresh } from "@/hooks/use-refresh";
+import { offeredShells } from "@/lib/system-users/offered-shells";
 
 /**
  * Inline login-shell picker.
@@ -75,7 +76,7 @@ export function ShellSelect({ user, shells = [], canManage = true, className }) 
   }
 
   const options = shells.length
-    ? shells
+    ? offeredShells(shells, user.shell)
     : // No catalog (the request failed) — keep the current value visible so a
       // lost list never reads as a lost setting.
       [{ value: user.shell, title: label, description: "", allows_login: null }];

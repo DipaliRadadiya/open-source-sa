@@ -125,7 +125,7 @@
       "subtitle": "Creates a Linux account on the server.",
       "username": "Username",
       "usernamePlaceholder": "e.g. deploy",
-      "publicKey": "Initial SSH public key",
+      "publicKey": "SSH public key",
       "publicKeyHint": "Optional — added as the account's first authorized key.",
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
       "submit": "Create user",
@@ -138,13 +138,13 @@
       "sshAccessHint": "Lets this account sign in over SSH.",
       "password": "Password",
       "passwordPlaceholder": "Leave empty for no password",
-      "passwordHint": "Generated for you. Keep it, change it, or clear it — you can see it again later from the user's Set password action.",
+      "passwordHint": "Generated for you. Keep it, change it or clear it. You can see it again later from the user's ⋯ menu → Password.",
       "generate": "Generate",
       "sshNeedsLoginShell": "{shell} does not allow login, so SSH access cannot be turned on with it."
     },
     "password": {
       "open": "Password",
-      "title": "OS password",
+      "title": "Password",
       "subtitle": "The server login password for {username}.",
       "current": "Current password",
       "setNew": "Set a new password",
@@ -219,9 +219,10 @@
     },
     "loadFailed": "Your system users could not be loaded. They have not been changed or removed.",
     "sshNotEnforced": {
-      "body": "The SSH login switches aren't enforced yet — a user switched off here can still sign in over SSH. They take effect once you save Settings → Access & security. After that, only users switched on here, sudo users and root can sign in.",
+      "body": "SSH switches aren't active yet, so every user can still sign in over SSH. Save Settings → Access & security to turn them on.",
       "action": "Open Access & security"
-    }
+    },
+    "sshViaSudo": "Sudo users can always sign in over SSH. Turn off sudo to control SSH here."
   },
   "dashboard": {
     "title": "Dashboard",

@@ -10,11 +10,9 @@ export function AppsCell({ user }) {
   const count = user.applications?.length ?? 0;
 
   if (count === 0) {
-    return (
-      <Badge variant="outline" className="font-normal text-muted-foreground">
-        {t("appsCount", { count: 0 })}
-      </Badge>
-    );
+    // Plain text: an outlined badge here looked exactly like the clickable
+    // "1 application" beside it.
+    return <span className="text-xs text-muted-foreground">{t("appsCount", { count: 0 })}</span>;
   }
 
   return (

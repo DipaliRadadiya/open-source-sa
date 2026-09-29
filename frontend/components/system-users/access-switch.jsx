@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { ShieldAlert } from "lucide-react";
+import { Info, ShieldAlert } from "lucide-react";
 import { setSystemUserSudo, setSystemUserSsh } from "@/lib/api/system-users";
 import { PendingSwitch } from "@/components/ui/pending-switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -83,6 +83,10 @@ export function AccessSwitch({ user, field, canManage = true, sshEnforced = null
   // refusing — so it is left alone rather than blocked on a guess.
   const sshBlocked =
     field === "ssh" && !checked && user.shell_allows_login === false;
+  // sshd's AllowGroups always admits the sudo group, so for a sudo user this
+  // switch decides nothing. Drawn as what is true — on — and locked.
+  const viaSudo = field === "ssh" && user.sudo && user.shell_allows_login !== false;
+  const locked = sshBlocked || viaSudo;
 
   return (
     <>
@@ -101,15 +105,18 @@ export function AccessSwitch({ user, field, canManage = true, sshEnforced = null
             ? t("noPermission")
             : sshBlocked
               ? t("sshNeedsLoginShell", { shell: user.shell_title ?? user.shell })
-              : null
+              : viaSudo
+                ? t("sshViaSudo")
+                : null
         }
       >
         <PendingSwitch
-          checked={shown}
+          checked={viaSudo ? true : shown}
           pending={busy}
-          disabled={!canManage || sshBlocked}
-          onCheckedChange={canManage && !sshBlocked ? onToggle : undefined}
+          disabled={!canManage || locked}
+          onCheckedChange={canManage && !locked ? onToggle : undefined}
           aria-label={label}
+          aside={canManage && locked ? <Info className="size-3.5 text-muted-foreground" aria-hidden /> : null}
         />
       </ReasonTooltip>
 

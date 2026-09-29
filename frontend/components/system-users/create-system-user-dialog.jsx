@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -10,6 +10,7 @@ import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { cn } from "@/lib/utils";
+import { offeredShells } from "@/lib/system-users/offered-shells";
 import { useRefresh } from "@/hooks/use-refresh";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,6 +125,11 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
   }
 
   const isSubmitting = form.formState.isSubmitting;
+
+  const [sudoOn, chosenShell] = useWatch({ control: form.control, name: ["sudo", "shell"] });
+  const sshViaSudo =
+    sudoOn &&
+    shells.find((entry) => entry.value === (chosenShell || DEFAULT_SHELL))?.allows_login !== false;
 
   function handleOpenChange(next) {
     if (!next) {
@@ -284,7 +290,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
                             spelled. Until the catalog arrives the default is
                             the single option, so the field is never empty. */}
                         {(shells.length
-                          ? shells
+                          ? offeredShells(shells, field.value)
                           : [{ value: DEFAULT_SHELL, title: DEFAULT_SHELL }]
                         ).map((shell) => (
                           <SelectItem key={shell.value} value={shell.value} className="text-xs">
@@ -305,7 +311,14 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
 
               {[
                 { name: "sudo", label: t("create.sudo"), hint: t("create.sudoHint") },
-                { name: "ssh_access", label: t("create.sshAccess"), hint: t("create.sshAccessHint") },
+                {
+                  name: "ssh_access",
+                  label: t("create.sshAccess"),
+                  // Same rule as the list: sudo users always get SSH, so the
+                  // switch shows that and stays out of the way.
+                  hint: sshViaSudo ? t("sshViaSudo") : t("create.sshAccessHint"),
+                  locked: sshViaSudo,
+                },
               ].map((toggle) => (
                 <FormField
                   key={toggle.name}
@@ -315,7 +328,12 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
                     <FormItem>
                       {/* A real label, so the whole row toggles — same as the
                           firewall and password-protection switches. */}
-                      <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border p-3">
+                      <label
+                        className={cn(
+                          "flex items-center justify-between gap-4 rounded-lg border p-3",
+                          toggle.locked ? "cursor-not-allowed" : "cursor-pointer",
+                        )}
+                      >
                         <div className="space-y-0.5">
                           <span className="block text-sm font-medium">{toggle.label}</span>
                           <span className="block text-xs text-muted-foreground">{toggle.hint}</span>
@@ -323,7 +341,9 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
                         <div className="flex h-5 shrink-0 items-center">
                           <FormControl>
                             <Switch
-                              checked={field.value}
+                              checked={toggle.locked ? true : field.value}
+                              disabled={toggle.locked}
+                              disabledReason={toggle.locked ? toggle.hint : undefined}
                               onCheckedChange={field.onChange}
                               aria-label={toggle.label}
                             />

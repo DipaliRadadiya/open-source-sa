@@ -33,6 +33,7 @@ test("the shell picker takes the server's list as it comes, however long", () =>
   for (const file of ["components/system-users/shell-select.jsx", "components/system-users/create-system-user-dialog.jsx"]) {
     const src = read(file);
     assert.doesNotMatch(src, /\/usr\/bin\/zsh|shells\[\d\]|shells\.length [=!]==? \d/, file);
-    assert.match(src, /shells\.length\s*\?\s*shells/, `${file} renders what it was given`);
+    // Only the legacy duplicate of "No login" may be dropped (offered-shells.js).
+    assert.match(src, /shells\.length\s*\?\s*(shells|offeredShells\(shells, )/, `${file} renders what it was given`);
   }
 });

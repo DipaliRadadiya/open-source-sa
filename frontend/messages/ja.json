@@ -125,7 +125,7 @@
       "subtitle": "サーバー上に Linux アカウントを作成します。",
       "username": "ユーザー名",
       "usernamePlaceholder": "例: deploy",
-      "publicKey": "初期 SSH 公開鍵",
+      "publicKey": "SSH 公開鍵",
       "publicKeyHint": "任意 — このアカウントの最初の authorized key として追加されます。",
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
       "submit": "ユーザーを作成",
@@ -138,13 +138,13 @@
       "sshAccessHint": "このアカウントが SSH でログインできるようにします。",
       "password": "パスワード",
       "passwordPlaceholder": "パスワードを設定しない場合は空欄",
-      "passwordHint": "自動生成されます。保管、変更、削除が可能です。後でユーザーの「パスワードを設定」から再確認できます。",
+      "passwordHint": "自動生成されます。保管、変更、削除が可能です。後でユーザーの ⋯ メニュー →「パスワード」から再確認できます。",
       "generate": "生成",
       "sshNeedsLoginShell": "{shell} ではログインできないため、これを使用して SSH アクセスを有効にすることはできません。"
     },
     "password": {
       "open": "パスワード",
-      "title": "OS パスワード",
+      "title": "パスワード",
       "subtitle": "{username} のサーバーログイン用パスワードです。",
       "current": "現在のパスワード",
       "setNew": "新しいパスワードを設定",
@@ -219,9 +219,10 @@
     },
     "loadFailed": "システムユーザーを読み込めませんでした。変更や削除は行われていません。",
     "sshNotEnforced": {
-      "body": "SSH ログインのスイッチはまだ適用されていません。ここでオフにしたユーザーも SSH でサインインできます。設定 → アクセスとセキュリティ を保存すると適用され、その後はここでオンにしたユーザー、sudo ユーザー、root だけがサインインできます。",
+      "body": "SSH スイッチはまだ有効ではないため、すべてのユーザーが SSH でサインインできます。有効にするには 設定 → アクセスとセキュリティ を保存してください。",
       "action": "アクセスとセキュリティを開く"
-    }
+    },
+    "sshViaSudo": "sudo ユーザーは常に SSH でサインインできます。ここで SSH を制御するには sudo をオフにしてください。"
   },
   "dashboard": {
     "title": "ダッシュボード",

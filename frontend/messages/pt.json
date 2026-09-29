@@ -125,7 +125,7 @@
       "subtitle": "Cria uma conta Linux no servidor.",
       "username": "Nome de usuário",
       "usernamePlaceholder": "ex.: deploy",
-      "publicKey": "Chave pública SSH inicial",
+      "publicKey": "Chave pública SSH",
       "publicKeyHint": "Opcional — adicionada como a primeira chave autorizada da conta.",
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
       "submit": "Criar usuário",
@@ -138,13 +138,13 @@
       "sshAccessHint": "Permite que esta conta faça login via SSH.",
       "password": "Senha",
       "passwordPlaceholder": "Deixe vazio para nenhuma senha",
-      "passwordHint": "Gerada para você. Guarde, altere ou limpe — você pode vê-la novamente depois pela ação Definir senha do usuário.",
+      "passwordHint": "Gerada para você. Guarde, altere ou limpe. Você pode vê-la novamente depois no menu ⋯ do usuário → Senha.",
       "generate": "Gerar",
       "sshNeedsLoginShell": "{shell} não permite login, então o acesso SSH não pode ser ativado com ele."
     },
     "password": {
       "open": "Senha",
-      "title": "Senha do SO",
+      "title": "Senha",
       "subtitle": "A senha de login no servidor para {username}.",
       "current": "Senha atual",
       "setNew": "Definir uma nova senha",
@@ -219,9 +219,10 @@
     },
     "loadFailed": "Seus usuários de sistema não puderam ser carregados. Eles não foram alterados nem removidos.",
     "sshNotEnforced": {
-      "body": "As chaves de login SSH ainda não são aplicadas: um usuário desligado aqui ainda consegue fazer login via SSH. Elas passam a valer quando você salvar Configurações → Acesso e segurança. Depois disso, só fazem login os usuários ligados aqui, os usuários com sudo e o root.",
+      "body": "As chaves SSH ainda não estão ativas, então qualquer usuário ainda consegue fazer login via SSH. Salve Configurações → Acesso e segurança para ativá-las.",
       "action": "Abrir Acesso e segurança"
-    }
+    },
+    "sshViaSudo": "Usuários com sudo sempre conseguem fazer login via SSH. Desligue o sudo para controlar o SSH aqui."
   },
   "dashboard": {
     "title": "Painel",

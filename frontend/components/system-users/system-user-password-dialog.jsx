@@ -2,8 +2,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { Loader2, KeyRound } from "lucide-react";
+import { Loader2, KeyRound, Sparkles } from "lucide-react";
 import { systemUserPasswordSchema } from "@/lib/schemas/system-user";
+import { generatePassword } from "@/lib/applications/generate-password";
 import { setSystemUserPassword } from "@/lib/api/system-users";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
@@ -103,7 +104,7 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
             control={form.control}
             name="password"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="relative">
                 <FormLabel required>{t("password.new")}</FormLabel>
                 <FormControl>
                   <PasswordInput
@@ -112,6 +113,22 @@ export function SystemUserPasswordDialog({ user, open, onOpenChange }) {
                     {...field}
                   />
                 </FormControl>
+                {/* Same control as the create dialog. Fills both fields —
+                    nobody retypes a generated password to confirm it. */}
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="absolute top-0 right-0 h-auto p-0 text-xs"
+                  onClick={() => {
+                    const value = generatePassword();
+                    form.setValue("password", value, { shouldDirty: true, shouldValidate: true });
+                    form.setValue("password_confirmation", value, { shouldDirty: true, shouldValidate: true });
+                  }}
+                >
+                  <Sparkles className="size-3" />
+                  {t("create.generate")}
+                </Button>
                 <FormMessage field={t('password.new')} />
               </FormItem>
             )}

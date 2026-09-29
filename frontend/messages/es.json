@@ -703,7 +703,7 @@
       "subtitle": "Crea una cuenta Linux en el servidor.",
       "username": "Usuario",
       "usernamePlaceholder": "p. ej. deploy",
-      "publicKey": "Clave pública SSH inicial",
+      "publicKey": "Clave pública SSH",
       "publicKeyHint": "Opcional — se añade como la primera clave autorizada de la cuenta.",
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
       "submit": "Crear usuario",
@@ -716,13 +716,13 @@
       "sshAccessHint": "Permite que esta cuenta inicie sesión por SSH.",
       "password": "Contraseña",
       "passwordPlaceholder": "Déjalo vacío para no poner contraseña",
-      "passwordHint": "Generada automáticamente. Consérvala, cámbiala o bórrala: podrás volver a verla más tarde desde la acción Establecer contraseña del usuario.",
+      "passwordHint": "Generada automáticamente. Consérvala, cámbiala o bórrala. Podrás volver a verla más tarde desde el menú ⋯ del usuario → Contraseña.",
       "generate": "Generar",
       "sshNeedsLoginShell": "{shell} no permite iniciar sesión, así que no se puede activar el acceso SSH con ese shell."
     },
     "password": {
       "open": "Contraseña",
-      "title": "Contraseña del SO",
+      "title": "Contraseña",
       "subtitle": "La contraseña de inicio de sesión del servidor para {username}.",
       "current": "Contraseña actual",
       "setNew": "Establecer una nueva contraseña",
@@ -797,9 +797,10 @@
     },
     "loadFailed": "No se pudieron cargar tus usuarios del sistema. No se han modificado ni eliminado.",
     "sshNotEnforced": {
-      "body": "Los interruptores de inicio de sesión SSH aún no se aplican: un usuario desactivado aquí todavía puede entrar por SSH. Se aplican cuando guardas Ajustes → Acceso y seguridad. A partir de entonces, solo pueden entrar los usuarios activados aquí, los usuarios con sudo y root.",
+      "body": "Los interruptores SSH aún no están activos, así que todos los usuarios pueden entrar por SSH. Guarda Ajustes → Acceso y seguridad para activarlos.",
       "action": "Abrir Acceso y seguridad"
-    }
+    },
+    "sshViaSudo": "Los usuarios con sudo siempre pueden entrar por SSH. Desactiva sudo para controlar el SSH aquí."
   },
   "serverDashboard": {
     "title": "Panel",

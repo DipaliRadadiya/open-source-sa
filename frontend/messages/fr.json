@@ -125,7 +125,7 @@
       "subtitle": "Crée un compte Linux sur le serveur.",
       "username": "Nom d'utilisateur",
       "usernamePlaceholder": "ex. deploy",
-      "publicKey": "Clé publique SSH initiale",
+      "publicKey": "Clé publique SSH",
       "publicKeyHint": "Facultatif — ajoutée comme première clé autorisée du compte.",
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
       "submit": "Créer l'utilisateur",
@@ -138,13 +138,13 @@
       "sshAccessHint": "Permet à ce compte de se connecter via SSH.",
       "password": "Mot de passe",
       "passwordPlaceholder": "Laisser vide pour aucun mot de passe",
-      "passwordHint": "Généré pour vous. Conservez-le, modifiez-le ou effacez-le — vous pourrez le revoir plus tard depuis l'action Définir le mot de passe de l'utilisateur.",
+      "passwordHint": "Généré pour vous. Conservez-le, modifiez-le ou effacez-le. Vous pourrez le revoir plus tard depuis le menu ⋯ de l'utilisateur → Mot de passe.",
       "generate": "Générer",
       "sshNeedsLoginShell": "{shell} n'autorise pas la connexion, donc l'accès SSH ne peut pas être activé avec."
     },
     "password": {
       "open": "Mot de passe",
-      "title": "Mot de passe système",
+      "title": "Mot de passe",
       "subtitle": "Mot de passe de connexion au serveur pour {username}.",
       "current": "Mot de passe actuel",
       "setNew": "Définir un nouveau mot de passe",
@@ -219,9 +219,10 @@
     },
     "loadFailed": "Vos utilisateurs système n'ont pas pu être chargés. Ils n'ont pas été modifiés ni supprimés.",
     "sshNotEnforced": {
-      "body": "Les interrupteurs de connexion SSH ne sont pas encore appliqués : un utilisateur désactivé ici peut toujours se connecter en SSH. Ils prennent effet dès que vous enregistrez Paramètres → Accès et sécurité. Ensuite, seuls les utilisateurs activés ici, les utilisateurs sudo et root peuvent se connecter.",
+      "body": "Les interrupteurs SSH ne sont pas encore actifs : tous les utilisateurs peuvent toujours se connecter en SSH. Enregistrez Paramètres → Accès et sécurité pour les activer.",
       "action": "Ouvrir Accès et sécurité"
-    }
+    },
+    "sshViaSudo": "Les utilisateurs sudo peuvent toujours se connecter en SSH. Désactivez sudo pour contrôler le SSH ici."
   },
   "dashboard": {
     "title": "Tableau de bord",

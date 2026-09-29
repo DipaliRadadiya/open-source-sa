@@ -125,7 +125,7 @@
       "subtitle": "Erstellt ein Linux-Konto auf dem Server.",
       "username": "Benutzername",
       "usernamePlaceholder": "z. B. deploy",
-      "publicKey": "Erster öffentlicher SSH-Schlüssel",
+      "publicKey": "Öffentlicher SSH-Schlüssel",
       "publicKeyHint": "Optional – wird als erster autorisierter Schlüssel des Kontos hinzugefügt.",
       "publicKeyPlaceholder": "ssh-ed25519 AAAA…",
       "submit": "Benutzer erstellen",
@@ -138,13 +138,13 @@
       "sshAccessHint": "Erlaubt diesem Konto die Anmeldung über SSH.",
       "password": "Passwort",
       "passwordPlaceholder": "Leer lassen für kein Passwort",
-      "passwordHint": "Automatisch generiert. Übernehmen, ändern oder löschen – Sie können es später erneut über „Passwort festlegen“ einsehen.",
+      "passwordHint": "Automatisch generiert. Übernehmen, ändern oder löschen – Sie können es später im ⋯-Menü des Benutzers → Passwort erneut einsehen.",
       "generate": "Erzeugen",
       "sshNeedsLoginShell": "{shell} erlaubt keine Anmeldung, daher kann SSH-Zugriff damit nicht aktiviert werden."
     },
     "password": {
       "open": "Passwort",
-      "title": "Systempasswort",
+      "title": "Passwort",
       "subtitle": "Das Server-Anmeldepasswort für {username}.",
       "current": "Aktuelles Passwort",
       "setNew": "Neues Passwort festlegen",
@@ -219,9 +219,10 @@
     },
     "loadFailed": "Ihre Systembenutzer konnten nicht geladen werden. Sie wurden nicht geändert oder entfernt.",
     "sshNotEnforced": {
-      "body": "Die Schalter für die SSH-Anmeldung werden noch nicht durchgesetzt – ein hier ausgeschalteter Benutzer kann sich weiterhin über SSH anmelden. Sie greifen, sobald Sie Einstellungen → Zugang & Sicherheit speichern. Danach können sich nur hier eingeschaltete Benutzer, sudo-Benutzer und root anmelden.",
+      "body": "Die SSH-Schalter sind noch nicht aktiv, daher kann sich jeder Benutzer weiterhin über SSH anmelden. Speichern Sie Einstellungen → Zugang & Sicherheit, um sie zu aktivieren.",
       "action": "Zugang & Sicherheit öffnen"
-    }
+    },
+    "sshViaSudo": "Sudo-Benutzer können sich immer über SSH anmelden. Schalten Sie sudo aus, um SSH hier zu steuern."
   },
   "dashboard": {
     "title": "Dashboard",
