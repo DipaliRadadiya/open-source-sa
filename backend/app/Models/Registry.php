@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -71,13 +72,39 @@ class Registry extends Model
      */
     public function configValue(string $key, mixed $default = null): mixed
     {
-        $config = $this->config;
+        $config = $this->decodedConfig();
 
         if (! is_array($config)) {
             return $default;
         }
 
         return $config[$key] ?? $default;
+    }
+
+    /**
+     * The decrypted credential set, or null when it cannot be decrypted.
+     *
+     * The `try` is the point, and it was written after a test proved the comment
+     * above it was a lie: reading an `encrypted:array` attribute whose ciphertext
+     * does not belong to this `APP_KEY` throws `DecryptException` from the cast,
+     * it does not return null. Without catching it, a database restored under a
+     * different key turns every registry read — including the site list, which
+     * only wanted a name — into a 500.
+     *
+     * Null rather than an empty array, so `hasCredentials()` reports false and a
+     * caller cannot mistake "we cannot read it" for "there is nothing here".
+     *
+     * @return array<string, mixed>|null
+     */
+    private function decodedConfig(): ?array
+    {
+        try {
+            $config = $this->config;
+        } catch (DecryptException) {
+            return null;
+        }
+
+        return is_array($config) ? $config : null;
     }
 
     /**
@@ -94,7 +121,7 @@ class Registry extends Model
     public function mergeConfig(array $values): void
     {
         $this->config = array_merge(
-            is_array($this->config) ? $this->config : [],
+            $this->decodedConfig() ?? [],
             array_filter($values, fn ($value): bool => $value !== null),
         );
     }
