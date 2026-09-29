@@ -69,3 +69,8 @@ test("UX-11: a locked switch carries a marker in the spinner slot", () => {
 test("UX-11: every disabled switch lets the tap through to its reason (phones)", () => {
   assert.match(read("components/ui/switch.jsx"), /data-disabled:pointer-events-none/);
 });
+
+test("Services: the locked boot switch explains itself on a tap too", () => {
+  const src = read("components/services/service-boot-switch.jsx");
+  assert.match(src, /<ReasonTooltip reason=\{canToggle \? null : t\("noPermission"\)\}>\{control\}<\/ReasonTooltip>/);
+});
