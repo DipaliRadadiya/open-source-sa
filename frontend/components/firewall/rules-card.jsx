@@ -129,7 +129,7 @@ export function RulesCard({
   enabled,
   presets,
   canManage,
-  isAdmin,
+  historyForEveryone,
   riskyPorts = [],
   listening = [],
 }) {
@@ -291,7 +291,7 @@ export function RulesCard({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <RefreshButton />
-          <HistoryDialog isAdmin={isAdmin} />
+          <HistoryDialog everyone={historyForEveryone} />
           <AddRuleDialog
             presets={presets}
             rules={allRules}

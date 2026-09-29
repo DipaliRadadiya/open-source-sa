@@ -376,3 +376,27 @@ test("A risky Quick add tile asks before opening a database to everyone", () => 
     assert.ok(q.riskyTitle.includes("{name}") && q.riskyBody.includes("{port}") && q.riskyConfirm, l);
   }
 });
+
+test("Activity Log shows everyone's server activity, with who did it", () => {
+  const page = read("app/(app)/activity-log/page.jsx");
+  assert.match(page, /getServerActivity\(sp\)/);
+  assert.match(page, /<MyActivityTable[\s\S]*?showUser/);
+  assert.match(read("lib/activity-log/get-server-activity.js"), /read\("\/server\/activity-log"/);
+  assert.match(read("components/activity-log/my-activity-table.jsx"), /showUser \? \[\{ id: "user"/);
+  const history = read("components/firewall/history-dialog.jsx");
+  assert.match(history, /everyone \? getServerActivityByType : getMyActivityByType/);
+  assert.match(read("app/(app)/firewall/page.jsx"), /historyForEveryone = can\(permissions, "activity_log", "view"\)/);
+  for (const l of locales) {
+    const m = JSON.parse(read(`messages/${l}.json`));
+    assert.ok(m.activity.server.subtitle && m.firewall.history.openLog, l);
+    assert.equal(m.activity.mine.subtitle, undefined, l);
+  }
+});
+
+test("Server log filters never offer account verbs", async () => {
+  const { actionsForScope, typesForScope } = await import("../lib/activity-log/labels.js");
+  const own = { types: ["user", "central"], actions: { all: ["logged_in", "enabled"], user: ["logged_in"], central: ["enabled"] } };
+  assert.deepEqual(typesForScope(own.types, "server"), []);
+  assert.deepEqual(actionsForScope(own.actions, own.types, "server").all, []);
+  assert.deepEqual(actionsForScope({ all: ["created"] }, [], "server").all, ["created"]);
+});

@@ -96,7 +96,8 @@ export function typeBadgeClass(type) {
 // scope-aware — it returns every type the caller has rows for — so a page that
 // fixes its scope has to narrow the list itself, or it offers `user` on the
 // server page where it can never match.
-const ACCOUNT_TYPES = new Set(["user", "role", "permission"]);
+// Mirrors config/activity.php `scopes.account`.
+const ACCOUNT_TYPES = new Set(["user", "role", "permission", "central"]);
 
 export function typesForScope(types = [], scope) {
   if (!scope) return types;
@@ -117,7 +118,11 @@ export function actionsForScope(actions = {}, types = [], scope) {
   const allowed = typesForScope(types, scope);
   const union = new Set();
   for (const type of allowed) for (const action of actions[type] ?? []) union.add(action);
-  const scoped = { ...actions, all: union.size ? [...union].sort() : (actions.all ?? []) };
+  // `all` only stands in when the API sent no per-type lists at all. With
+  // them, an empty union means none of these verbs belong here — falling back
+  // offered "Logged In" on the server log, a filter that matches nothing.
+  const perType = Object.keys(actions).some((key) => key !== "all");
+  const scoped = { ...actions, all: union.size || perType ? [...union].sort() : (actions.all ?? []) };
   for (const type of Object.keys(scoped)) {
     if (type !== "all" && !allowed.includes(type)) delete scoped[type];
   }

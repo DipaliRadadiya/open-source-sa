@@ -627,14 +627,16 @@
       "type": "Tipo"
     },
     "mine": {
-      "title": "Registro de atividades",
-      "subtitle": "O que você fez no painel. As ações de outras pessoas não são mostradas aqui.",
-      "loadFailed": "Não foi possível carregar sua atividade.",
-      "empty": "Você ainda não fez nada.",
-      "emptyFiltered": "Nada corresponde a esses filtros.",
-      "searchPlaceholder": "Buscar o que você fez…"
+      "emptyFiltered": "Nada corresponde a esses filtros."
     },
-    "loadFailed": "O registro de atividades não pôde ser carregado. Tente novamente em instantes."
+    "loadFailed": "O registro de atividades não pôde ser carregado. Tente novamente em instantes.",
+    "server": {
+      "title": "Registro de atividades",
+      "subtitle": "O que todas as pessoas com acesso alteraram neste servidor. Seus logins e alterações de conta ficam na sua página Conta.",
+      "loadFailed": "Não foi possível carregar o registro de atividades.",
+      "empty": "Nada aconteceu neste servidor ainda.",
+      "searchPlaceholder": "Buscar atividade…"
+    }
   },
   "pagination": {
     "perPage": "Por página",
@@ -1729,7 +1731,10 @@
       "loading": "Carregando…",
       "failed": "Não conseguimos carregar seu histórico.",
       "empty": "Você ainda não alterou nenhuma configuração do firewall.",
-      "everyone": "Ver alterações de todos"
+      "descriptionEveryone": "Todas as alterações no firewall deste servidor, mais recentes primeiro.",
+      "failedEveryone": "Não foi possível carregar o histórico do firewall.",
+      "emptyEveryone": "Ninguém alterou o firewall ainda.",
+      "openLog": "Abrir registro de atividades"
     },
     "edit": {
       "title": "Editar regra",

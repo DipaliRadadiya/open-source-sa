@@ -2,8 +2,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { History, Loader2, ExternalLink } from "lucide-react";
-import { getMyActivityByType } from "@/lib/api/activity-log";
+import { getMyActivityByType, getServerActivityByType } from "@/lib/api/activity-log";
 import { myActivityResponseSchema } from "@/lib/schemas/account";
+import { activityResponseSchema } from "@/lib/schemas/activity";
 import { humanizeActivity, actionBadgeVariant } from "@/lib/activity-log/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,20 +16,19 @@ import { apiMessage } from "@/lib/api/error-message";
 import { PER_PAGE_OPTIONS } from "@/lib/schemas/user";
 
 /**
- * What changed on this firewall, and when.
+ * What changed on this firewall, when, and by whom.
  *
- * Scope is stated plainly in the dialog, because it is narrower than people will
- * assume: `GET /activity-log` returns **the caller's own** rows and carries no
- * user field, so this cannot say who else changed a rule. Admins get a link to
- * the admin log, which does span users. Claiming "who opened this port" from an
- * endpoint that only knows about you would be a lie the UI can't back up.
+ * `everyone` (the `activity_log` permission) reads the server log, which names
+ * the person. Without it the only readable rows are your own, and the dialog
+ * says so rather than implying it is the whole history.
  *
  * Fetched on open rather than with the page: nobody needs the history until they
  * ask for it, and it would otherwise cost every visitor a request.
  */
-export function HistoryDialog({ isAdmin }) {
+export function HistoryDialog({ everyone = false }) {
   const t = useTranslations("firewall");
   const paginationT = useTranslations("pagination");
+  const tActivity = useTranslations("activity");
   const [open, setOpen] = useState(false);
   const [perPage, setPerPage] = useState(10);
   const [state, setState] = useState({
@@ -45,11 +45,14 @@ export function HistoryDialog({ isAdmin }) {
   async function load(page = 1, requestedPerPage = perPage) {
     setState({ loading: true, failed: false, entries: [], meta: null, status: null });
     try {
-      const response = await getMyActivityByType("firewall", {
+      const fetchHistory = everyone ? getServerActivityByType : getMyActivityByType;
+      const response = await fetchHistory("firewall", {
         page,
         perPage: requestedPerPage,
       });
-      const parsed = myActivityResponseSchema.safeParse(response.data);
+      const parsed = (everyone ? activityResponseSchema : myActivityResponseSchema).safeParse(
+        response.data,
+      );
       if (!parsed.success) {
         // The request worked; the payload is not what this screen expects.
         setState({ loading: false, failed: true, entries: [], meta: null, status: null, failure: "shape" });
@@ -95,17 +98,14 @@ export function HistoryDialog({ isAdmin }) {
         onOpenChange={setOpen}
         icon={History}
         title={t("history.title")}
-        description={t("history.description")}
+        description={everyone ? t("history.descriptionEveryone") : t("history.description")}
         footer={
           <>
-            {/* Only admins can see everyone's changes, so only they get the
-                link — offering it to someone who'd be redirected is worse than
-                not offering it. */}
-            {isAdmin ? (
+            {everyone ? (
               <Button variant="outline" asChild className="mr-auto">
-                <Link href="/admin/activity-log?type=firewall">
+                <Link href="/activity-log?type=firewall">
                   <ExternalLink className="size-4" />
-                  {t("history.everyone")}
+                  {t("history.openLog")}
                 </Link>
               </Button>
             ) : null}
@@ -122,14 +122,14 @@ export function HistoryDialog({ isAdmin }) {
           </p>
         ) : state.failed ? (
           <LoadFailed
-            description={t("history.failed")}
+            description={everyone ? t("history.failedEveryone") : t("history.failed")}
             status={state.status}
             failure={state.failure ?? null}
             message={state.message ?? null}
           />
         ) : state.entries.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
-            {t("history.empty")}
+            {everyone ? t("history.emptyEveryone") : t("history.empty")}
           </p>
         ) : (
           <div className="space-y-4">
@@ -146,8 +146,15 @@ export function HistoryDialog({ isAdmin }) {
                       {humanizeActivity(entry.action)}
                     </Badge>
                   </div>
-                  <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
-                    {entry.created_at_human || entry.created_at || "—"}
+                  <span className="shrink-0 space-y-0.5 text-right text-xs text-muted-foreground">
+                    {everyone ? (
+                      <span className="block whitespace-nowrap text-foreground">
+                        {entry.user ? `@${entry.user.username}` : tActivity("system")}
+                      </span>
+                    ) : null}
+                    <span className="block whitespace-nowrap">
+                      {entry.created_at_human || entry.created_at || "—"}
+                    </span>
                   </span>
                 </li>
               ))}

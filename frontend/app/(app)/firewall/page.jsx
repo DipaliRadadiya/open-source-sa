@@ -1,6 +1,5 @@
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
-import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { can } from "@/lib/permissions/can";
 import { getFirewall, getFirewallPresets, getFirewallRules } from "@/lib/firewall/get-firewall";
 import { FirewallStatusCard } from "@/components/firewall/firewall-status-card";
@@ -34,8 +33,7 @@ export default async function FirewallPage({ searchParams }) {
   // Presets are only needed for the add form; a failure there must not take the
   // page down, so they're fetched independently and default to an empty list.
   // `cache()`d, so this is free here — the layout already fetched it.
-  const user = await getCurrentUser();
-  const isAdmin = Boolean(user?.is_admin);
+  const historyForEveryone = can(permissions, "activity_log", "view");
 
   const [
     { data, failed, status, failure, message },
@@ -100,7 +98,7 @@ export default async function FirewallPage({ searchParams }) {
                 enabled={data.enabled}
                 presets={presets}
                 canManage={canManage}
-                isAdmin={isAdmin}
+                historyForEveryone={historyForEveryone}
                 riskyPorts={data.risky_ports}
                 listening={data.listening}
               />

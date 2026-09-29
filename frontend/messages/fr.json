@@ -627,14 +627,16 @@
       "type": "Type"
     },
     "mine": {
-      "title": "Journal d'activité",
-      "subtitle": "Ce que vous avez fait dans le panneau. Les actions des autres personnes n'apparaissent pas ici.",
-      "loadFailed": "Impossible de charger votre activité.",
-      "empty": "Vous n'avez encore rien fait.",
-      "emptyFiltered": "Aucun résultat ne correspond à ces filtres.",
-      "searchPlaceholder": "Recherchez ce que vous avez fait…"
+      "emptyFiltered": "Aucun résultat ne correspond à ces filtres."
     },
-    "loadFailed": "Le journal d'activité n'a pas pu être chargé. Réessayez dans un instant."
+    "loadFailed": "Le journal d'activité n'a pas pu être chargé. Réessayez dans un instant.",
+    "server": {
+      "title": "Journal d'activité",
+      "subtitle": "Ce que toutes les personnes ayant accès ont modifié sur ce serveur. Vos connexions et modifications de compte sont sur votre page Compte.",
+      "loadFailed": "Impossible de charger le journal d'activité.",
+      "empty": "Rien ne s'est encore passé sur ce serveur.",
+      "searchPlaceholder": "Rechercher dans l'activité…"
+    }
   },
   "pagination": {
     "perPage": "Par page",
@@ -1729,7 +1731,10 @@
       "loading": "Chargement…",
       "failed": "Impossible de charger votre historique.",
       "empty": "Vous n'avez encore modifié aucun paramètre du pare-feu.",
-      "everyone": "Voir les modifications de tout le monde"
+      "descriptionEveryone": "Toutes les modifications du pare-feu sur ce serveur, les plus récentes en premier.",
+      "failedEveryone": "Impossible de charger l'historique du pare-feu.",
+      "emptyEveryone": "Personne n'a encore modifié le pare-feu.",
+      "openLog": "Ouvrir le journal d'activité"
     },
     "edit": {
       "title": "Modifier la règle",

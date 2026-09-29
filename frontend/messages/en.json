@@ -627,14 +627,16 @@
       "type": "Type"
     },
     "mine": {
-      "title": "Activity Log",
-      "subtitle": "What you have done in the panel. Other people's actions aren't shown here.",
-      "loadFailed": "We couldn't load your activity.",
-      "empty": "You haven't done anything yet.",
-      "emptyFiltered": "Nothing matches those filters.",
-      "searchPlaceholder": "Search what you did…"
+      "emptyFiltered": "Nothing matches those filters."
     },
-    "loadFailed": "The activity log could not be loaded. Try again in a moment."
+    "loadFailed": "The activity log could not be loaded. Try again in a moment.",
+    "server": {
+      "title": "Activity Log",
+      "subtitle": "What everyone with access has changed on this server. Your logins and account changes are on your Account page.",
+      "loadFailed": "We couldn't load the activity log.",
+      "empty": "Nothing has happened on this server yet.",
+      "searchPlaceholder": "Search activity…"
+    }
   },
   "pagination": {
     "perPage": "Per page",
@@ -1729,7 +1731,10 @@
       "loading": "Loading…",
       "failed": "We could not load your history.",
       "empty": "You have not changed any firewall settings yet.",
-      "everyone": "See everyone’s changes"
+      "descriptionEveryone": "Every firewall change on this server, newest first.",
+      "failedEveryone": "We could not load the firewall history.",
+      "emptyEveryone": "Nobody has changed the firewall yet.",
+      "openLog": "Open Activity Log"
     },
     "edit": {
       "title": "Edit rule",

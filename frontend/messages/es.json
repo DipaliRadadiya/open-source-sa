@@ -400,14 +400,16 @@
       "type": "Tipo"
     },
     "mine": {
-      "title": "Registro de actividad",
-      "subtitle": "Lo que has hecho en el panel. Las acciones de otras personas no aparecen aquí.",
-      "loadFailed": "No pudimos cargar tu actividad.",
-      "empty": "Todavía no has hecho nada.",
-      "emptyFiltered": "Nada coincide con esos filtros.",
-      "searchPlaceholder": "Busca lo que hiciste…"
+      "emptyFiltered": "Nada coincide con esos filtros."
     },
-    "loadFailed": "No se pudo cargar el registro de actividad. Vuelve a intentarlo en un momento."
+    "loadFailed": "No se pudo cargar el registro de actividad. Vuelve a intentarlo en un momento.",
+    "server": {
+      "title": "Registro de actividad",
+      "subtitle": "Lo que han cambiado en este servidor todas las personas con acceso. Tus inicios de sesión y cambios de cuenta están en tu página Cuenta.",
+      "loadFailed": "No pudimos cargar el registro de actividad.",
+      "empty": "Todavía no ha pasado nada en este servidor.",
+      "searchPlaceholder": "Buscar actividad…"
+    }
   },
   "pagination": {
     "perPage": "Por página",
@@ -1729,7 +1731,10 @@
       "loading": "Cargando…",
       "failed": "No hemos podido cargar tu historial.",
       "empty": "Todavía no has cambiado nada en el cortafuegos.",
-      "everyone": "Ver los cambios de todos"
+      "descriptionEveryone": "Todos los cambios del cortafuegos en este servidor, los más nuevos primero.",
+      "failedEveryone": "No pudimos cargar el historial del cortafuegos.",
+      "emptyEveryone": "Nadie ha cambiado el cortafuegos todavía.",
+      "openLog": "Abrir registro de actividad"
     },
     "edit": {
       "title": "Editar regla",

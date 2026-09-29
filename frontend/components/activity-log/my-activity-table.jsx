@@ -66,21 +66,28 @@ function EventCell({ row }) {
   );
 }
 
+function UserCell({ row }) {
+  const t = useTranslations("activity");
+  const u = row.original.user;
+  return u ? (
+    <span className="whitespace-nowrap">@{u.username}</span>
+  ) : (
+    <span className="text-muted-foreground">{t("system")}</span>
+  );
+}
+
 function DescriptionCell({ row }) {
   return <span>{row.original.description || "—"}</span>;
 }
 
 /**
- * The caller's own activity for one scope, fixed by the page.
- *
- * There is no "who" column: every row is you. That is the whole difference from
- * the admin log, and the reason the page says so in its subtitle rather than
- * leaving people to infer it from a missing column.
+ * Activity for one scope, fixed by the page. `showUser` adds the "who" column
+ * for the server log, which spans everyone; the account tab is only you.
  *
  * No scope column either — each page fixes its own scope, so a column repeating
  * "Server" on every row would be a constant.
  */
-export function MyActivityTable({ data, emptyMessage, hasFilters = false }) {
+export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUser = false }) {
   const t = useTranslations("activity");
 
   // Type and Event are shorthand for the description — "Php" + "Install Started"
@@ -89,6 +96,7 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false }) {
   // that scrolls out of sight.
   const columns = [
     { accessorKey: "created_at_human", header: t("table.when"), cell: WhenCell },
+    ...(showUser ? [{ id: "user", header: t("columns.user"), cell: UserCell }] : []),
     {
       accessorKey: "type",
       header: t("table.type"),

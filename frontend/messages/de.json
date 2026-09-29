@@ -627,14 +627,16 @@
       "type": "Typ"
     },
     "mine": {
-      "title": "Aktivitätsprotokoll",
-      "subtitle": "Was Sie im Panel getan haben. Aktionen anderer werden hier nicht angezeigt.",
-      "loadFailed": "Ihre Aktivität konnte nicht geladen werden.",
-      "empty": "Sie haben noch nichts getan.",
-      "emptyFiltered": "Nichts entspricht diesen Filtern.",
-      "searchPlaceholder": "Ihre Aktionen durchsuchen…"
+      "emptyFiltered": "Nichts entspricht diesen Filtern."
     },
-    "loadFailed": "Das Aktivitätsprotokoll konnte nicht geladen werden. Versuchen Sie es gleich noch einmal."
+    "loadFailed": "Das Aktivitätsprotokoll konnte nicht geladen werden. Versuchen Sie es gleich noch einmal.",
+    "server": {
+      "title": "Aktivitätsprotokoll",
+      "subtitle": "Was alle mit Zugriff auf diesem Server geändert haben. Ihre Anmeldungen und Kontoänderungen finden Sie auf Ihrer Kontoseite.",
+      "loadFailed": "Das Aktivitätsprotokoll konnte nicht geladen werden.",
+      "empty": "Auf diesem Server ist noch nichts passiert.",
+      "searchPlaceholder": "Aktivität durchsuchen…"
+    }
   },
   "pagination": {
     "perPage": "Pro Seite",
@@ -1729,7 +1731,10 @@
       "loading": "Wird geladen…",
       "failed": "Ihr Verlauf konnte nicht geladen werden.",
       "empty": "Sie haben bisher keine Firewall-Einstellungen geändert.",
-      "everyone": "Änderungen aller ansehen"
+      "descriptionEveryone": "Alle Firewall-Änderungen auf diesem Server, neueste zuerst.",
+      "failedEveryone": "Der Firewall-Verlauf konnte nicht geladen werden.",
+      "emptyEveryone": "Noch niemand hat die Firewall geändert.",
+      "openLog": "Aktivitätsprotokoll öffnen"
     },
     "edit": {
       "title": "Regel bearbeiten",

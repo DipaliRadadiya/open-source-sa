@@ -166,7 +166,7 @@ test("a screen is spelled one way", () => {
   // itself "Activity log" while its own table said "Activity Log".
   const en = JSON.parse(read("messages/en.json")).activity;
   assert.equal(en.title, "Activity Log");
-  assert.equal(en.title, en.mine.title);
+  assert.equal(en.title, en.server.title);
 });
 
 test("the clear button names what it actually clears", () => {
