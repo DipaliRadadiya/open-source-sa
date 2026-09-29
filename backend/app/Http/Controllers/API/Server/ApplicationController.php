@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\Server;
 use App\Actions\Server\Application\CreateApplication;
 use App\Actions\Server\Application\DeleteApplication;
 use App\Actions\Server\Application\DeleteApplicationDatabases;
+use App\Actions\Server\Application\DeleteApplicationDockerResources;
 use App\Actions\Server\Application\DeprovisionApplication;
 use App\Actions\Server\Application\DisableApplication;
 use App\Actions\Server\Application\EnableApplication;
@@ -285,6 +286,7 @@ class ApplicationController extends Controller
         DeprovisionApplication $deprovision,
         DeleteApplication $action,
         DeleteApplicationDatabases $databases,
+        DeleteApplicationDockerResources $dockerResources,
     ): JsonResponse {
         // A queued worker can still be writing this site's files and config.
         // Deleting its record now would leave those mutations untracked.
@@ -297,6 +299,18 @@ class ApplicationController extends Controller
         $attached = $request->boolean('remove_databases')
             ? $application->databases()->with('users')->get()
             : null;
+
+        // Docker objects BEFORE the row is deleted, because deciding whether a
+        // volume is still wanted means asking which other sites mount it — and the
+        // row being deleted is one of the answers. After the delete, every volume
+        // looks unclaimed.
+        //
+        // Before deprovision too: `compose down` stops the containers, and a
+        // volume no container holds is one the safety check can no longer tell
+        // apart from a volume nothing ever used.
+        if ($request->boolean('remove_docker_resources')) {
+            $dockerResources->execute($application);
+        }
 
         $deprovision->execute($application, $request->boolean('remove_files'));
         $action->execute($application);

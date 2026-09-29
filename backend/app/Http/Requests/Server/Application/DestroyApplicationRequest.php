@@ -35,6 +35,15 @@ class DestroyApplicationRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        // A Docker network or volume is a server-level object with its own
+        // permission, exactly as a database is. Someone who may delete a site
+        // must not thereby reach the volume holding another site's data — the
+        // guard against that is `docker,manage`, and the same argument that put
+        // `remove_databases` behind `database` puts this behind it.
+        if ($this->boolean('remove_docker_resources') && ! ($this->user()?->canManage('docker') ?? false)) {
+            return false;
+        }
+
         if (! $this->boolean('remove_databases')) {
             return true;
         }
@@ -48,7 +57,11 @@ class DestroyApplicationRequest extends FormRequest
      */
     protected function failedAuthorization(): void
     {
-        throw new AuthorizationException(__('errors/application.database_removal_not_permitted'));
+        throw new AuthorizationException(__(
+            $this->boolean('remove_docker_resources')
+                ? 'errors/application.docker_removal_not_permitted'
+                : 'errors/application.database_removal_not_permitted'
+        ));
     }
 
     /**
@@ -63,7 +76,7 @@ class DestroyApplicationRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        foreach (['remove_files', 'remove_databases'] as $flag) {
+        foreach (['remove_files', 'remove_databases', 'remove_docker_resources'] as $flag) {
             if (! $this->has($flag)) {
                 continue;
             }
@@ -85,6 +98,7 @@ class DestroyApplicationRequest extends FormRequest
             // `sometimes`: absent is the common case and means false for both.
             'remove_files' => ['sometimes', 'boolean'],
             'remove_databases' => ['sometimes', 'boolean'],
+            'remove_docker_resources' => ['sometimes', 'boolean'],
         ];
     }
 }

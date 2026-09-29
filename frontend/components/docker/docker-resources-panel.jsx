@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CopyButton } from "@/components/ui/copy-button";
 import { AttachSiteDialog } from "@/components/docker/attach-site-dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -278,6 +279,10 @@ export function DockerResourcesPanel({
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("columns.name")}</TableHead>
+                  {/* Where it is on the HOST. Wanted for the unglamorous reasons:
+                      rsyncing a volume elsewhere, checking what is actually on
+                      disk, pointing a support answer at a directory. */}
+                  <TableHead>{t("columns.path")}</TableHead>
                   {/* The column people actually want, and the one
                       `docker volume ls` reports as N/A. */}
                   <TableHead>{t("columns.size")}</TableHead>
@@ -295,6 +300,21 @@ export function DockerResourcesPanel({
                           {t("ownedByApp", { id: volume.application_id })}
                         </Badge>
                       ) : null}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {volume.mountpoint ? (
+                        <span className="flex items-center gap-1">
+                          {/* Long and uniform — `/var/lib/docker/volumes/<name>/_data`
+                              — so it truncates from the LEFT, keeping the part that
+                              differs between rows readable. */}
+                          <code className="max-w-[16rem] truncate font-mono" dir="rtl" title={volume.mountpoint}>
+                            {volume.mountpoint}
+                          </code>
+                          <CopyButton value={volume.mountpoint} />
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">{volume.size || "—"}</TableCell>
                     <TableCell className="text-sm">
@@ -326,6 +346,23 @@ export function DockerResourcesPanel({
                           {t("volumes.inUseUnnamed", { count: volume.containers })}
                         </Badge>
                       )}
+
+                      {/* Which SITE mounts it and WHERE, beneath the container
+                          names. A container name says which process holds the
+                          volume; `alpha → /var/lib/mysql` says what the volume IS.
+                          Shown even with nothing running, because a stopped site
+                          still owns its data and is still what the guard refuses
+                          on. */}
+                      {volume.sites.length > 0 ? (
+                        <ul className="mt-1 space-y-0.5">
+                          {volume.sites.map((site) => (
+                            <li key={`${site.id}:${site.path}`} className="text-xs text-muted-foreground">
+                              {site.name}
+                              {site.path ? <span className="font-mono"> → {site.path}</span> : null}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">

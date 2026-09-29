@@ -3447,7 +3447,10 @@
       "removeDatabasesOff": "{count, plural, one {{databases} stays on the server, no longer linked to any application. Remove it from Databases if you no longer need it.} other {{databases} stay on the server, no longer linked to any application. Remove them from Databases if you no longer need them.}}",
       "databasesFailed": "The application was deleted, but {databases} could not be removed.",
       "goToDatabases": "Open Databases",
-      "removeFilesHint": "Off, the application is removed from the panel but its files stay on the server. On, the files and its backups are deleted and cannot be recovered."
+      "removeFilesHint": "Off, the application is removed from the panel but its files stay on the server. On, the files and its backups are deleted and cannot be recovered.",
+      "removeDocker": "Also delete this site's Docker network and volumes ({count})",
+      "removeDockerOn": "{names} will be deleted. Anything another site is still using is kept — the server checks at the moment it deletes, not now.",
+      "removeDockerOff": "{names} stays on the server. Its data survives, and you can remove it later from the Docker page."
     },
     "facts": {
       "title": "Application",
@@ -6354,6 +6357,7 @@
     },
     "columns": {
       "name": "Name",
+      "path": "Path",
       "driver": "Driver",
       "attached": "Containers",
       "size": "Size",

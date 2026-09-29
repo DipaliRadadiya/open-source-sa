@@ -3447,7 +3447,10 @@
       "removeDatabasesOff": "{count, plural, one {{databases} reste sur le serveur, sans lien avec aucune application. Supprimez-la depuis Bases de données si vous n'en avez plus besoin.} other {{databases} restent sur le serveur, sans lien avec aucune application. Supprimez-les depuis Bases de données si vous n'en avez plus besoin.}}",
       "databasesFailed": "L'application a été supprimée, mais {databases} n'ont pas pu être retirées.",
       "goToDatabases": "Ouvrir Bases de données",
-      "removeFilesHint": "Désactivé, l'application est retirée du panneau mais ses fichiers restent sur le serveur. Activé, les fichiers et ses sauvegardes sont supprimés et ne peuvent pas être récupérés."
+      "removeFilesHint": "Désactivé, l'application est retirée du panneau mais ses fichiers restent sur le serveur. Activé, les fichiers et ses sauvegardes sont supprimés et ne peuvent pas être récupérés.",
+      "removeDocker": "Supprimer aussi le réseau et les volumes Docker de ce site ({count})",
+      "removeDockerOn": "{names} sera supprimé. Ce qu'un autre site utilise encore est conservé — le serveur le vérifie au moment de la suppression, pas maintenant.",
+      "removeDockerOff": "{names} reste sur le serveur. Ses données sont conservées et vous pourrez les supprimer plus tard depuis la page Docker."
     },
     "facts": {
       "title": "Application",
@@ -6354,6 +6357,7 @@
     },
     "columns": {
       "name": "Nom",
+      "path": "Chemin",
       "driver": "Pilote",
       "attached": "Conteneurs",
       "size": "Taille",

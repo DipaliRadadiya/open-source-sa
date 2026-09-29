@@ -123,6 +123,7 @@ return [
     'application.updated' => 'Anwendung :name aktualisiert',
     'application.container_updated' => 'Container-Einstellungen für :name aktualisiert',
     'application.container_secrets_viewed' => 'Container-Zugangsdaten für :name angesehen',
+    'application.docker_resources_removed' => 'Docker-Netzwerk und -Volumes für :name entfernt',
     'application.deleted' => 'Anwendung :name (:site_type) gelöscht',
     'application.process_start' => ':name gestartet',
     'application.process_stop' => ':name gestoppt',

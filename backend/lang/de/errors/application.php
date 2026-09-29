@@ -35,6 +35,7 @@ return [
     'provision_failed' => 'Die Einrichtung der Website ist im Schritt „:step" fehlgeschlagen.',
     'not_a_git_application' => 'Diese Anwendung ist kein Git-Deployment — es gibt nichts abzurufen.',
     'not_a_container' => 'Diese Anwendung läuft nicht in einem Container und hat daher keine Container-Einstellungen.',
+    'docker_removal_not_permitted' => 'Sie haben keine Berechtigung, Docker-Netzwerke oder -Volumes zu löschen. Entfernen Sie die Website ohne sie, oder fragen Sie jemanden mit Docker-Zugriff.',
     'no_database_engine' => 'Keine Datenbank-Engine verfügbar. Installiere und konfiguriere MySQL oder MariaDB, bevor du diese Anwendung anlegst.',
     'no_process' => '„:name“ führt keinen eigenen Prozess aus.',
     'process_failed' => 'Die Anwendung konnte nicht :action werden. Nenne dem Support die Referenz.',

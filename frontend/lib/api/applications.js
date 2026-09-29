@@ -104,7 +104,7 @@ export function retryProvisioning(id) {
 
 // Files are kept unless `remove_files` is sent — deleting the panel record must
 // not silently destroy someone's code, so the flag is always the user's choice.
-export function deleteApplication(id, { removeFiles = false, removeDatabases = false } = {}) {
+export function deleteApplication(id, { removeFiles = false, removeDatabases = false, removeDockerResources = false } = {}) {
   /*
    * Both flags are omitted when false rather than sent as `false`. The API
    * reads them with `boolean()`, so either works — but a delete that carries
@@ -117,6 +117,10 @@ export function deleteApplication(id, { removeFiles = false, removeDatabases = f
   const params = {};
   if (removeFiles) params.remove_files = true;
   if (removeDatabases) params.remove_databases = true;
+  // Named for what it removes rather than "docker": a site's own network and the
+  // volumes it mounts — and only the ones nothing else uses, which the server
+  // decides at the moment it deletes, not this call.
+  if (removeDockerResources) params.remove_docker_resources = true;
 
   return api.delete(`/applications/${id}`, {
     params: Object.keys(params).length ? params : undefined,

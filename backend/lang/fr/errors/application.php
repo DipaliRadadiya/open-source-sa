@@ -35,6 +35,7 @@ return [
     'provision_failed' => 'La configuration du site a échoué à l\'étape « :step ».',
     'not_a_git_application' => 'Cette application n\'est pas un déploiement git : il n\'y a rien à récupérer.',
     'not_a_container' => 'Cette application ne s\'exécute pas dans un conteneur : elle n\'a donc pas de paramètres de conteneur.',
+    'docker_removal_not_permitted' => 'Vous n\'avez pas la permission de supprimer des réseaux ou des volumes Docker. Supprimez le site sans eux, ou demandez à quelqu\'un ayant accès à Docker.',
     'no_database_engine' => 'Aucun moteur de base de données disponible. Installez et configurez MySQL ou MariaDB avant de créer cette application.',
     'no_process' => '« :name » n\'exécute pas de processus propre.',
     'process_failed' => 'Impossible de :action l\'application. Communiquez la référence au support.',

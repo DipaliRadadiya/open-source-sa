@@ -156,12 +156,19 @@ class DockerResources
             ->whereNotNull('volume_mounts')
             ->get(['id', 'name', 'volume_mounts'])
             ->flatMap(fn (Application $application): array => collect((array) $application->volume_mounts)
-                ->pluck('volume')
-                ->filter()
-                ->unique()
-                ->map(fn (string $volume): array => [
-                    'volume' => $volume,
-                    'site' => ['id' => $application->id, 'name' => $application->name],
+                ->filter(fn ($mount): bool => is_array($mount) && ($mount['volume'] ?? '') !== '')
+                ->map(fn (array $mount): array => [
+                    'volume' => (string) $mount['volume'],
+                    'site' => [
+                        'id' => $application->id,
+                        'name' => $application->name,
+                        // WHERE the site mounts it, which is the more useful half
+                        // of the answer: `/var/lib/mysql` says this volume is a
+                        // database, and the host mountpoint says nothing at all.
+                        // One row per mount rather than per volume, because a
+                        // volume mounted twice is mounted at two paths.
+                        'path' => (string) ($mount['path'] ?? ''),
+                    ],
                 ])
                 ->all())
             ->groupBy('volume')

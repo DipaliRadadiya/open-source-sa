@@ -123,6 +123,7 @@ return [
     'application.updated' => 'A mis à jour l\'application :name',
     'application.container_updated' => 'A mis à jour les paramètres du conteneur de :name',
     'application.container_secrets_viewed' => 'A consulté les identifiants du conteneur de :name',
+    'application.docker_resources_removed' => 'A supprimé le réseau et les volumes Docker de :name',
     'application.deleted' => 'A supprimé l\'application :name (:site_type)',
     'application.process_start' => ':name démarrée',
     'application.process_stop' => ':name arrêtée',

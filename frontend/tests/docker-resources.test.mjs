@@ -412,3 +412,60 @@ test("every credentials string exists in every locale", () => {
     );
   }
 });
+
+/*
+ * Paths in the volumes table, and deleting a site's Docker objects.
+ */
+
+const deleteDialog = read("components/applications/delete-application-dialog.jsx");
+
+test("the volumes table shows where the volume is on disk", () => {
+  // Wanted for the unglamorous reasons: rsyncing it elsewhere, checking what is
+  // actually on disk, pointing a support answer at a directory.
+  assert.match(panel, /columns\.path/);
+  assert.match(panel, /volume\.mountpoint/);
+  for (const locale of LOCALES) {
+    assert.ok(messages[locale].docker.columns.path, `${locale} is missing docker.columns.path`);
+  }
+});
+
+test("the host path truncates from the left", () => {
+  // Every mountpoint starts `/var/lib/docker/volumes/`, so truncating from the
+  // right hides the only part that differs between rows.
+  assert.match(panel, /dir="rtl"/);
+});
+
+test("the volumes table says which site mounts it, and where", () => {
+  // A container name says which process holds the volume; `alpha → /var/lib/mysql`
+  // says what the volume is.
+  assert.match(panel, /volume\.sites\.map/);
+  assert.match(panel, /site\.path/);
+  const schemas = read("lib/schemas/docker.js");
+  assert.match(schemas, /path: z\.string\(\)\.default\(""\)/);
+});
+
+test("deleting a site offers to remove its Docker objects, opt-in", () => {
+  // Off by default and only when there is something to remove — the same rule the
+  // databases checkbox follows.
+  assert.match(deleteDialog, /useState\(false\)/);
+  assert.match(deleteDialog, /dockerResourceNames\.length \?/);
+  assert.match(deleteDialog, /removeDockerResources/);
+});
+
+test("the dialog names what will go, rather than counting it", () => {
+  // "Also delete 2 volumes" is a promise the reader cannot check; the names are.
+  assert.match(deleteDialog, /names: dockerResourceNames\.join\(", "\)/);
+  for (const locale of LOCALES) {
+    const d = messages[locale].applications.delete;
+    for (const key of ["removeDocker", "removeDockerOn", "removeDockerOff"]) {
+      assert.ok(d[key], `${locale} is missing applications.delete.${key}`);
+    }
+  }
+});
+
+test("the flag is omitted when not asked for", () => {
+  // A delete carrying no destructive flag at all is the one you want in a request
+  // log — the same treatment the other two flags get.
+  const api = read("lib/api/applications.js");
+  assert.match(api, /if \(removeDockerResources\) params\.remove_docker_resources = true;/);
+});

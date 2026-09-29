@@ -23,7 +23,17 @@ export const dockerNetworkSchema = z.object({
   // nothing about a site that joined a network somebody else created. Declared
   // here or it never arrives — Zod strips what the schema does not name, so an
   // unlisted key is silently dropped between the API and the page.
-  sites: z.array(z.object({ id: z.number(), name: z.string() })).default([]),
+  // `path` is where the SITE mounts it inside its container. More useful than the
+  // host mountpoint on its own: `/var/lib/mysql` says this volume is a database.
+  sites: z
+    .array(
+      z.object({
+        id: z.number(),
+        name: z.string(),
+        path: z.string().default(""),
+      }),
+    )
+    .default([]),
   containers: z
     .array(
       z.object({

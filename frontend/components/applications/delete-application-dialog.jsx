@@ -40,6 +40,9 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
   const [confirm, setConfirm] = useState("");
   const [removeFiles, setRemoveFiles] = useState(false);
   const [removeDatabases, setRemoveDatabases] = useState(false);
+  // Off by default, like the other two. A volume holding a site's database is as
+  // unrecoverable as the database a LEMP site had.
+  const [removeDockerResources, setRemoveDockerResources] = useState(false);
   /*
    * Only to NAME them on the checkbox. "Also delete the database" is a
    * different decision from "also delete shop_live", and the second is the one
@@ -50,6 +53,18 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
    * taken and this cannot go stale in a way that loses data.
    */
   const [databases, setDatabases] = useState([]);
+
+  /*
+   * The site's own network and the volumes it mounts, from the application payload
+   * — no extra request. Deliberately NOT filtered by what other sites use: the
+   * server decides that at the moment it deletes, and a list assembled here a
+   * minute ago is not what it will act on. This names what is at stake; the note
+   * says anything still in use is kept.
+   */
+  const dockerResourceNames = [
+    ...(application.volume_mounts ?? []).map((mount) => mount.volume),
+    ...(application.docker_network ? [application.docker_network] : []),
+  ].filter((name, index, all) => name && all.indexOf(name) === index);
 
   /*
    * On open, not on mount: this dialog is rendered per row on the list, so
@@ -95,7 +110,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     if (!matches) return;
     setPending(true);
     try {
-      const { data } = await deleteApplication(application.id, { removeFiles, removeDatabases });
+      const { data } = await deleteApplication(application.id, { removeFiles, removeDatabases, removeDockerResources });
 
       /*
        * 200 with a failure inside it. The site really is gone — a red toast
@@ -176,6 +191,35 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
             </p>
           </div>
         </div>
+
+        {/* Only for a container site with something to remove — the same rule as
+            the databases box, for the same reason: a note about volumes on a site
+            that has none is a sentence about nothing. */}
+        {dockerResourceNames.length ? (
+          <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
+            <Checkbox
+              id="delete-app-docker"
+              checked={removeDockerResources}
+              onCheckedChange={(value) => setRemoveDockerResources(value === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="delete-app-docker" className="text-sm font-medium">
+                {t("removeDocker", { count: dockerResourceNames.length })}
+              </Label>
+              {/* Named, not counted — same argument as the databases note. And the
+                  caveat is stated while the box is still unchecked, because
+                  "anything another site uses is kept" is the fact that decides
+                  whether somebody ticks it. */}
+              <p className="text-xs leading-5 text-muted-foreground">
+                {t(removeDockerResources ? "removeDockerOn" : "removeDockerOff", {
+                  count: dockerResourceNames.length,
+                  names: dockerResourceNames.join(", "),
+                })}
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         {/* Only when there is one. The old note said a database "is kept" on
             every site, including those that never had one. */}

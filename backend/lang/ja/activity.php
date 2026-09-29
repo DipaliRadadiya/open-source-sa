@@ -123,6 +123,7 @@ return [
     'application.updated' => 'アプリケーション :name を更新しました',
     'application.container_updated' => ':name のコンテナ設定を更新しました',
     'application.container_secrets_viewed' => ':name のコンテナ資格情報を表示しました',
+    'application.docker_resources_removed' => ':name の Docker ネットワークとボリュームを削除しました',
     'application.deleted' => 'アプリケーション :name (:site_type) を削除しました',
     'application.process_start' => ':name を開始しました',
     'application.process_stop' => ':name を停止しました',

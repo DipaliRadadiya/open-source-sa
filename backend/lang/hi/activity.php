@@ -123,6 +123,7 @@ return [
     'application.updated' => 'एप्लिकेशन :name अपडेट किया',
     'application.container_updated' => ':name की कंटेनर सेटिंग अपडेट की',
     'application.container_secrets_viewed' => ':name की कंटेनर क्रेडेंशियल देखीं',
+    'application.docker_resources_removed' => ':name के Docker नेटवर्क और वॉल्यूम हटाए',
     'application.deleted' => 'एप्लिकेशन :name (:site_type) हटाया',
     'application.process_start' => ':name शुरू किया',
     'application.process_stop' => ':name बंद किया',

@@ -3447,7 +3447,10 @@
       "removeDatabasesOff": "{count, plural, one {{databases} permanece no servidor, sem vínculo com qualquer aplicação. Remova-o em Bancos de dados se não precisar mais dele.} other {{databases} permanecem no servidor, sem vínculo com qualquer aplicação. Remova-os em Bancos de dados se não precisar mais deles.}}",
       "databasesFailed": "A aplicação foi excluída, mas {databases} não puderam ser removidos.",
       "goToDatabases": "Abrir Bancos de dados",
-      "removeFilesHint": "Desligado, a aplicação é removida do painel, mas os arquivos permanecem no servidor. Ligado, os arquivos e suas cópias de segurança são excluídos e não podem ser recuperados."
+      "removeFilesHint": "Desligado, a aplicação é removida do painel, mas os arquivos permanecem no servidor. Ligado, os arquivos e suas cópias de segurança são excluídos e não podem ser recuperados.",
+      "removeDocker": "Eliminar também a rede e os volumes Docker deste site ({count})",
+      "removeDockerOn": "{names} será eliminado. O que outro site ainda estiver a usar é mantido — o servidor verifica no momento da eliminação, não agora.",
+      "removeDockerOff": "{names} permanece no servidor. Os dados sobrevivem e pode removê-los mais tarde na página do Docker."
     },
     "facts": {
       "title": "Aplicação",
@@ -6354,6 +6357,7 @@
     },
     "columns": {
       "name": "Nome",
+      "path": "Caminho",
       "driver": "Controlador",
       "attached": "Contentores",
       "size": "Tamanho",

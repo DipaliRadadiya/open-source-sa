@@ -3447,7 +3447,10 @@
       "removeDatabasesOff": "{count, plural, one {{databases} bleibt auf dem Server, ohne Verknüpfung zu einer Anwendung. Entfernen Sie sie unter „Datenbanken“, wenn Sie sie nicht mehr brauchen.} other {{databases} bleiben auf dem Server, ohne Verknüpfung zu einer Anwendung. Entfernen Sie sie unter „Datenbanken“, wenn Sie sie nicht mehr brauchen.}}",
       "databasesFailed": "Die Anwendung wurde gelöscht, aber {databases} konnte nicht entfernt werden.",
       "goToDatabases": "Datenbanken öffnen",
-      "removeFilesHint": "Aus: Die Seite wird aus dem Panel entfernt, aber ihre Dateien bleiben auf dem Server. Ein: Die Dateien und die Sicherungen werden gelöscht und können nicht wiederhergestellt werden."
+      "removeFilesHint": "Aus: Die Seite wird aus dem Panel entfernt, aber ihre Dateien bleiben auf dem Server. Ein: Die Dateien und die Sicherungen werden gelöscht und können nicht wiederhergestellt werden.",
+      "removeDocker": "Auch Docker-Netzwerk und -Volumes dieser Website löschen ({count})",
+      "removeDockerOn": "{names} wird gelöscht. Was eine andere Website noch verwendet, bleibt erhalten — der Server prüft das beim Löschen, nicht jetzt.",
+      "removeDockerOff": "{names} bleibt auf dem Server. Die Daten bleiben erhalten und können später auf der Docker-Seite entfernt werden."
     },
     "facts": {
       "title": "Anwendung",
@@ -6354,6 +6357,7 @@
     },
     "columns": {
       "name": "Name",
+      "path": "Pfad",
       "driver": "Treiber",
       "attached": "Container",
       "size": "Größe",

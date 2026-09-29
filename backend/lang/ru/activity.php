@@ -123,6 +123,7 @@ return [
     'application.updated' => 'Обновлено приложение :name',
     'application.container_updated' => 'Обновлены настройки контейнера для :name',
     'application.container_secrets_viewed' => 'Просмотрены учётные данные контейнера для :name',
+    'application.docker_resources_removed' => 'Удалены сеть и тома Docker для :name',
     'application.deleted' => 'Удалено приложение :name (:site_type)',
     'application.process_start' => ':name запущено',
     'application.process_stop' => ':name остановлено',
