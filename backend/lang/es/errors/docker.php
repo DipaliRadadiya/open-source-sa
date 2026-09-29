@@ -15,4 +15,6 @@ return [
     'network_remove_failed' => 'No se pudo eliminar la red. Referencia :reference.',
     'volume_create_failed' => 'No se pudo crear el volumen. Referencia :reference.',
     'volume_remove_failed' => 'No se pudo eliminar el volumen. Referencia :reference.',
+    'registry_deleted' => 'La credencial del registro se eliminó. Los sitios que la usaban descargarán las imágenes de forma anónima a partir de ahora.',
+    'registry_credential_unwritable' => 'No se pudo escribir la credencial del registro en el disco, por lo que nunca se consultó a Docker. Referencia :reference.',
 ];

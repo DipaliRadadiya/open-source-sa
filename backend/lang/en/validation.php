@@ -180,6 +180,18 @@ return [
     */
 
     'custom' => [
+
+        // A registry address Docker cannot interpret is silently IGNORED at
+        // pull time — the credential simply never applies and the error is
+        // identical to having none. So these are refusals at the form, and each
+        // one names the specific mistake rather than saying "invalid".
+        'registry' => [
+            'empty' => 'Enter the registry\'s address — `docker.io` for Docker Hub, `ghcr.io`, or your own host.',
+            'path' => 'That looks like a namespace or a repository, not a registry. Enter the host on its own — `ghcr.io`, not `ghcr.io/your-org`.',
+            'credentials' => 'Do not put a username or password in the address. Enter the host on its own; the credentials go in the fields below.',
+            'host' => 'That is not a registry address. Enter a hostname, optionally with a port — `registry.example.com` or `registry.example.com:5000`.',
+            'port' => 'The port must be between 1 and 65535.',
+        ],
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],

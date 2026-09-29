@@ -15,4 +15,6 @@ return [
     'network_remove_failed' => 'Das Netzwerk konnte nicht entfernt werden. Referenz :reference.',
     'volume_create_failed' => 'Das Volume konnte nicht erstellt werden. Referenz :reference.',
     'volume_remove_failed' => 'Das Volume konnte nicht entfernt werden. Referenz :reference.',
+    'registry_deleted' => 'Die Registry-Anmeldedaten wurden gelöscht. Sites, die sie genutzt haben, laden Images ab jetzt anonym.',
+    'registry_credential_unwritable' => 'Die Registry-Anmeldedaten konnten nicht auf die Festplatte geschrieben werden, daher wurde Docker nie gefragt. Referenz :reference.',
 ];

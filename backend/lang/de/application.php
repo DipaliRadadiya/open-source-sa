@@ -67,6 +67,7 @@ return [
     'fields' => [
         'compose' => 'Compose-Datei',
         'image' => 'Image',
+        'registry_id' => 'Registry',
         'container_port' => 'Container-Port',
         'docker_network' => 'Netzwerk',
         'docker_mode' => 'Art der Ausführung',
@@ -161,6 +162,7 @@ return [
     'help' => [
         'compose' => 'Optional. Fügen Sie Ihre eigene Compose-Datei ein — alles, was Compose unterstützt, wird unterstützt: mehrere Dienste, benannte Volumes, Healthchecks. Lassen Sie sie leer, schreibt das Panel eine aus den Feldern oben. Ports müssen auf 127.0.0.1 veröffentlicht werden und Bind-Mounts innerhalb des Verzeichnisses dieser Anwendung bleiben; alles andere wird mit Begründung abgelehnt.',
         'image' => 'Das auszuführende Image, mit ausdrücklichem Tag — `nginx:1.27-alpine`. Ein Name ohne Tag zieht `latest`, was ein Deployment nicht reproduzierbar und ein Rollback bedeutungslos macht.',
+        'registry_id' => 'Für ein öffentliches Image leer lassen. Wählen Sie gespeicherte Anmeldedaten, um aus einer privaten Registry zu laden — legen Sie zuerst welche auf der Docker-Seite an. Das gilt auch für eine eingefügte Compose-Datei, denn jedes darin genannte Image kann privat sein.',
         'container_port' => 'Der Port, auf dem Ihre Anwendung innerhalb des Containers lauscht. Den Port auf dem Server selbst vergibt das Panel und richtet nginx darauf aus.',
         'docker_network' => 'Treten Sie einem Docker-Netzwerk bei, damit dieser Container und andere darin sich über ihren Namen erreichen können. Leer lassen für die Standard-Bridge von Docker, in der das nicht möglich ist. Netzwerke werden auf der Docker-Seite erstellt.',
         'docker_mode' => 'Einfach bedeutet Image und Port, und das Panel schreibt die Compose-Datei. Compose-Datei ist für alles andere — Sie schreiben sie, und das Panel erzwingt weiterhin Loopback-Veröffentlichung, ein Speicherlimit und begrenzte Logs.',
@@ -233,6 +235,7 @@ return [
         'no_build_tools' => 'Für diesen Schritt musste ein natives Modul kompiliert werden, und auf diesem Server ist kein Compiler installiert. Installieren Sie die Build-Tools im Einrichtungsbildschirm und versuchen Sie es erneut. Eine andere Node-Version kann ebenfalls helfen, da manche Versionen fertige Binärdateien mitbringen — welche das sind, entscheidet aber jedes Paket selbst, daher ist das allein keine verlässliche Lösung.',
         'composer_platform' => 'Composer konnte die Abhängigkeiten dieser Anwendung mit der für diese Site eingestellten PHP-Version nicht installieren. Die PHP-Version der Site oder eine der benötigten Erweiterungen erfüllt nicht, was das Projekt verlangt. Stellen Sie die Site auf eine unterstützte PHP-Version um oder installieren Sie die fehlende Erweiterung, und deployen Sie erneut.',
         'registry_auth' => 'Docker konnte dieses Image nicht laden, die Registry hat es abgelehnt. Entweder ist der Image-Name oder das Tag falsch, oder das Image ist privat — Docker meldet beides gleich, prüfen Sie daher zuerst die Referenz. Ist das Image privat: Das Panel kann sich noch nicht an einer Registry anmelden und daher nur öffentlich verfügbare Images ausführen.',
+        'registry_credentials_rejected' => 'Die Registry hat die Anmeldedaten abgelehnt, mit denen diese Site Images lädt. Das Token ist höchstwahrscheinlich abgelaufen oder widerrufen — erneuern Sie es auf der Docker-Seite und deployen Sie erneut. Die Image-Referenz selbst ist in Ordnung: Die Registry hat geantwortet und nur diesen Benutzernamen und dieses Token nicht akzeptiert.',
         'composer_dependencies_missing' => 'Dieses Projekt benötigt Composer-Abhängigkeiten, es wurden aber keine installiert. Der Anwendung fehlt daher vendor/autoload.php und jede Anfrage schlägt fehl. Fügen Sie dem Deploy-Skript einen Schritt mit composer install hinzu und deployen Sie erneut.',
     ],
 

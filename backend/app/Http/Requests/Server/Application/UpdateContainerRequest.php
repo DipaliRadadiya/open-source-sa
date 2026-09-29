@@ -50,6 +50,16 @@ class UpdateContainerRequest extends FormRequest
             // Null is a real answer: it means Docker's default bridge.
             'docker_network' => ['sometimes', 'nullable', 'string', 'max:255', new ExistingDockerNetwork],
 
+            // Which stored credential pulls this site's image. Editable here even
+            // though `image` is not, and the asymmetry is deliberate: a token
+            // expires or gets rotated while the image reference stays exactly
+            // right, so a site whose registry cannot be changed is a site that
+            // has to be rebuilt to fix a password.
+            //
+            // Null is a real answer here too — it means pull anonymously, which
+            // is correct the moment an image is made public.
+            'registry_id' => ['sometimes', 'nullable', 'integer', 'exists:registries,id'],
+
             // The volumes this site mounts. A list, unlike the network, and each
             // entry needs BOTH halves: a volume name is not actionable without
             // the path it mounts at inside the container.

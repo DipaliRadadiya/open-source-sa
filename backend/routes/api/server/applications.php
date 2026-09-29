@@ -75,6 +75,19 @@ Route::put('/applications/{application}/web-root', [ApplicationWebRootController
 Route::put('/applications/{application}/container', [ApplicationContainerController::class, 'update'])
     ->middleware(['permission:application,manage', 'throttle:10,1']);
 
+// Pull a newer image and recreate the container on it.
+//
+// `manage` on the application, not `docker,manage`: this changes what one site
+// runs, which is the site's own permission — the same call the settings endpoint
+// above makes. Gating it on Docker would mean somebody who may restart a site may
+// not update it.
+//
+// Throttled harder than the settings write. Each call can be a multi-gigabyte
+// download, so this is the one container endpoint where a spammed form costs
+// bandwidth rather than a restart.
+Route::post('/applications/{application}/container/pull', [ApplicationContainerController::class, 'pull'])
+    ->middleware(['permission:application,manage', 'throttle:6,1']);
+
 // The generated credentials, behind `manage` rather than `view`: reading a
 // database password is not a read-only act in any sense that matters, and the
 // permission that governs changing the site is the one that should govern seeing

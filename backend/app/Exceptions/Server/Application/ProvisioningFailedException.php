@@ -88,6 +88,16 @@ class ProvisioningFailedException extends Exception
         // denied" — inside output whose next line is a bare `denied`, and a
         // reader who does not already know Docker's wording sees a broken step
         // rather than a credential they need to supply.
+        // Checked BEFORE the no-credential case, and the order is load-bearing.
+        // Docker Hub answers a rejected credential with "authentication
+        // required - incorrect username or password", and a self-hosted registry
+        // v2 with a 401 — neither of which contains the other's needles, but a
+        // future needle added loosely to either set could overlap. The more
+        // specific diagnosis goes first.
+        if (self::mentionsRejectedCredentials($result)) {
+            return 'registry_credentials_rejected';
+        }
+
         if (self::mentionsRegistryAuth($result)) {
             return 'registry_auth';
         }
@@ -167,7 +177,10 @@ class ProvisioningFailedException extends Exception
      *     require authorization: authorization failed: no basic auth
      *     credentials`
      *   - registry v2 (GitLab, Harbor, self-hosted): `unauthorized:
-     *     authentication required`
+     *     authentication required` — this one is from the registry v2 spec and
+     *     is the ONE needle here that was not observed on a real box. Kept
+     *     because it costs nothing and the spec mandates the wording; named as
+     *     unverified rather than quietly listed beside four measurements.
      *
      * `from registry: denied` rather than a bare `denied`, which appears in
      * unrelated daemon errors and on its own line in the very output above.
@@ -199,6 +212,49 @@ class ProvisioningFailedException extends Exception
             'from registry: denied',
             'unauthorized: authentication required',
             'no basic auth credentials',
+        ] as $needle) {
+            if (str_contains($output, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Did the registry reject the credential the panel sent?
+     *
+     * A different failure from {@see self::mentionsRegistryAuth()} with a
+     * different fix, which is the only reason it is worth a reason code of its
+     * own: "you have not configured a credential for this registry" sends
+     * somebody to the Docker page, and "the credential you configured was
+     * refused" sends them to rotate a token. Reporting the first for the second
+     * is how someone ends up re-entering a registry they already added.
+     *
+     * Both needles measured on 2026-09-29 against a real private repository:
+     *
+     *   - Docker Hub: `authentication required - incorrect username or
+     *     password`
+     *   - self-hosted registry v2: `unexpected status from HEAD request to
+     *     http://…/v2/…/manifests/1: 401 Unauthorized`
+     *
+     * `401 Unauthorized` is narrow enough here despite looking generic: this
+     * output is a container pull, and a 401 in it is the registry declining the
+     * credentials in play. The alternative — matching the whole HEAD sentence —
+     * would break on the next Docker release that rewords its own transport
+     * errors, which is not the part worth pinning.
+     *
+     * The token itself is never in this text. Docker echoes the USERNAME back in
+     * the Hub variant and nothing else, which is why the raw output still must
+     * not reach the API — only this reason code does.
+     */
+    private static function mentionsRejectedCredentials(ServerOpsResult $result): bool
+    {
+        $output = $result->errorOutput()."\n".$result->output();
+
+        foreach ([
+            'incorrect username or password',
+            '401 Unauthorized',
         ] as $needle) {
             if (str_contains($output, $needle)) {
                 return true;

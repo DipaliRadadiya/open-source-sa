@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Server;
 
+use App\Actions\Server\Application\PullContainerImage;
 use App\Actions\Server\Application\UpdateContainerSettings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\UpdateContainerRequest;
@@ -40,6 +41,33 @@ class ApplicationContainerController extends Controller
 
         return response()->json([
             'secrets' => (array) ($application->docker_secrets ?? []),
+        ]);
+    }
+
+    /**
+     * Fetch a newer image and recreate the container on it.
+     *
+     * The update story for a container, and it needs to exist because nothing
+     * else does it: `compose up` reuses an image it already has, so a site on a
+     * floating tag never moves — which reads as an update button that does
+     * nothing. It is also the only way a private image can be updated at all,
+     * since a rebuild of the site is the alternative.
+     *
+     * Synchronous, like the settings endpoint above, and for the same reason: the
+     * caller should get the pull's real failure rather than a 202 and a site that
+     * quietly stayed where it was. A large image on a slow link is covered by the
+     * command timeout, not by a queue.
+     */
+    public function pull(Application $application, PullContainerImage $action): JsonResponse
+    {
+        abort_unless(
+            $application->serving_profile === 'docker',
+            422,
+            __('errors/application.not_a_container'),
+        );
+
+        return response()->json([
+            'application' => ApplicationResource::make($action->execute($application))->resolve(),
         ]);
     }
 

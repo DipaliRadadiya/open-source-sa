@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
+use App\Services\Server\Docker\RegistryAuth;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -29,6 +30,7 @@ class ContainerSupervisor
         private ServerOps $serverOps,
         private ManagedFile $files,
         private ComposeValidator $validator,
+        private RegistryAuth $registryAuth,
     ) {}
 
     /**
@@ -84,7 +86,21 @@ class ContainerSupervisor
             return;
         }
 
-        $result = $this->compose($application, $documentRoot, ['up', '-d', '--remove-orphans'], 'compose_up', $override);
+        // The pull happens inside `up`, so the credential has to be available
+        // for it — and only for it. `with()` writes the file, runs this, and
+        // removes it in a `finally`, including when the pull is what failed.
+        $result = $this->registryAuth->with(
+            $application->registry,
+            ['feature' => 'application', 'application' => $application->id],
+            fn (?string $auth): ServerOpsResult => $this->compose(
+                $application,
+                $documentRoot,
+                ['up', '-d', '--remove-orphans'],
+                'compose_up',
+                $override,
+                $auth,
+            ),
+        );
 
         if ($result->failed()) {
             // `fromResult` rather than the bare constructor, so the one failure
@@ -98,6 +114,55 @@ class ContainerSupervisor
         // this is the check the whole class exists for.
         if (! $this->running($application, $documentRoot)) {
             throw new ProvisioningFailedException('container_exited', $result->reference);
+        }
+    }
+
+    /**
+     * Fetch a newer image and recreate the container on it.
+     *
+     * The update story for a container, and it has to be its own action because
+     * **`up` alone does not do it.** Compose reuses an image it already has
+     * locally, so a site on a floating tag stays on the layers it first pulled
+     * for as long as the tag exists — which reads as "the update button does
+     * nothing". `pull` is the part that talks to the registry.
+     *
+     * Two commands, one credential window: the token is written once and both
+     * run inside it, rather than being written, removed, and written again.
+     *
+     * `up` still runs even if nothing new was pulled. That is not wasted work —
+     * it is what recreates the container onto an image that DID change, and
+     * compose already no-ops when neither the image nor the file moved.
+     *
+     * @throws ProvisioningFailedException
+     */
+    public function pull(Application $application, string $documentRoot): void
+    {
+        $override = $this->writeOverride(
+            $application,
+            $documentRoot,
+            ['feature' => 'application', 'op' => 'compose_override', 'application' => $application->id],
+        );
+
+        $context = ['feature' => 'application', 'application' => $application->id];
+
+        $this->registryAuth->with($application->registry, $context, function (?string $auth) use ($application, $documentRoot, $override): void {
+            $pulled = $this->compose($application, $documentRoot, ['pull'], 'compose_pull', null, $auth);
+
+            if ($pulled->failed()) {
+                throw ProvisioningFailedException::fromResult('image_pull', $pulled);
+            }
+
+            $started = $this->compose($application, $documentRoot, ['up', '-d', '--remove-orphans'], 'compose_up', $override, $auth);
+
+            if ($started->failed()) {
+                throw ProvisioningFailedException::fromResult('container_start', $started);
+            }
+        });
+
+        // Asked after the credential window closes, because it needs no
+        // credential and the window should be as short as the work requires.
+        if (! $this->running($application, $documentRoot)) {
+            throw new ProvisioningFailedException('container_exited', '');
         }
     }
 
@@ -395,6 +460,7 @@ class ContainerSupervisor
         array $arguments,
         string $op,
         ?string $override = null,
+        ?string $auth = null,
     ): ServerOpsResult {
         // The override is passed only where it matters, which is container
         // CREATION — `up`. `down`, `logs`, `ps`, `stop` and `restart` do not read
@@ -407,9 +473,18 @@ class ContainerSupervisor
             $files = array_merge($files, ['-f', $override]);
         }
 
+        // `--config` is a flag of the docker CLI itself, so it goes BEFORE the
+        // `compose` subcommand — after it, compose would read it as one of its
+        // own and fail. Verified against both `compose up` and `compose pull`:
+        // the plugin does honour the CLI's credential store.
+        //
+        // The value is a directory path, not a secret, so having it in argv is
+        // fine. The token inside the file it names is not there.
+        $prefix = $auth === null ? ['docker'] : ['docker', '--config', $auth];
+
         return $this->serverOps->run(
-            array_merge([
-                'docker', 'compose',
+            array_merge($prefix, [
+                'compose',
             ], $files, [
                 '-p', $this->project($application),
             ], $arguments),

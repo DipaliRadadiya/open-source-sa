@@ -159,6 +159,18 @@ return [
     'required_if_declined' => ':other が拒否された場合、:attribute は必須です。',
 
     'custom' => [
+
+        // A registry address Docker cannot interpret is silently IGNORED at
+        // pull time — the credential simply never applies and the error is
+        // identical to having none. So these are refusals at the form, and each
+        // one names the specific mistake rather than saying "invalid".
+        'registry' => [
+            'empty' => 'レジストリのアドレスを入力してください — Docker Hub なら `docker.io`、ほかに `ghcr.io` や自前のホストです。',
+            'path' => 'それは名前空間かリポジトリのように見えます。レジストリではありません。ホストだけを入力してください — `ghcr.io/your-org` ではなく `ghcr.io` です。',
+            'credentials' => 'アドレスにユーザー名やパスワードを含めないでください。ホストだけを入力し、認証情報は下のフィールドに入れてください。',
+            'host' => 'レジストリのアドレスではありません。ホスト名を、必要ならポートも付けて入力してください — `registry.example.com` または `registry.example.com:5000`。',
+            'port' => 'ポートは 1 から 65535 の間でなければなりません。',
+        ],
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],

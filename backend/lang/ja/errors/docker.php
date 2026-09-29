@@ -15,4 +15,6 @@ return [
     'network_remove_failed' => 'ネットワークを削除できませんでした。参照 :reference。',
     'volume_create_failed' => 'ボリュームを作成できませんでした。参照 :reference。',
     'volume_remove_failed' => 'ボリュームを削除できませんでした。参照 :reference。',
+    'registry_deleted' => 'レジストリ認証情報を削除しました。これを使っていたサイトは今後、匿名でイメージを取得します。',
+    'registry_credential_unwritable' => 'レジストリ認証情報をディスクに書き込めなかったため、Docker には問い合わせていません。参照 :reference。',
 ];

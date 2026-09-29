@@ -72,6 +72,7 @@ return [
     'fields' => [
         'compose' => 'Compose file',
         'image' => 'Image',
+        'registry_id' => 'Registry',
         'container_port' => 'Container port',
         'docker_network' => 'Network',
         'docker_mode' => 'How to run it',
@@ -166,6 +167,7 @@ return [
     'help' => [
         'compose' => 'Optional. Paste your own compose file and everything Compose supports is supported — multiple services, named volumes, healthchecks. Leave it empty and the panel writes one from the fields above. Ports must publish to 127.0.0.1 and bind mounts must stay inside this application\'s directory; anything else is refused with the reason.',
         'image' => 'The image to run, with an explicit tag — `nginx:1.27-alpine`. A bare name pulls `latest`, which makes a deploy unreproducible and a rollback meaningless.',
+        'registry_id' => 'Leave this empty for a public image. Choose a stored credential to pull from a private registry — add one on the Docker page first. It applies to a pasted compose file too, since any image it names can be private.',
         'container_port' => 'The port your application listens on inside the container. The panel allocates the port on the server itself and points nginx at it.',
         'docker_network' => 'Join a Docker network so this container and others on it can reach each other by name. Leave empty for Docker\'s default bridge, where they cannot. Create networks on the Docker page.',
         'docker_mode' => 'Simple gives you an image and a port and the panel writes the compose file. Compose file is for anything else — you write it, and the panel still enforces loopback publishing, a memory ceiling and bounded logs.',
@@ -243,6 +245,7 @@ return [
         'no_build_tools' => 'This step needed to compile a native module, and this server has no compiler installed. Install the build tools from the setup screen, then try again. Choosing a different Node version may also help, since some versions ship ready-built binaries — but which ones do is up to each package, so it is not a reliable fix on its own.',
         'composer_platform' => 'Composer could not install this application\'s dependencies under the PHP version this site is set to. The site\'s PHP version, or one of the extensions it needs, does not meet what the project requires. Change the site\'s PHP version to one the project supports, or install the missing extension, and deploy again.',
         'registry_auth' => 'Docker could not pull this image because the registry refused it. Either the image name or tag is wrong, or the image is private — Docker reports both the same way, so check the reference first. If the image is private, note that the panel cannot sign in to a registry yet, so it can only run images that are publicly available.',
+        'registry_credentials_rejected' => 'The registry refused the credential this site pulls with. The token has most likely expired or been revoked — rotate it on the Docker page and deploy again. The image reference itself is fine; the registry answered, it just would not accept this username and token.',
         'composer_dependencies_missing' => 'This project requires Composer dependencies and none were installed, so the application has no vendor/autoload.php and every request to it will fail. Add a build step that runs composer install to the deployment script, then deploy again.',
     ],
 

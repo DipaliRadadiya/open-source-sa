@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Server\DockerResourceController;
+use App\Http\Controllers\API\Server\RegistryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -37,4 +38,35 @@ Route::middleware('hosts-containers')->group(function (): void {
     Route::delete('/docker/volumes/{name}', [DockerResourceController::class, 'removeVolume'])
         ->where('name', '[A-Za-z0-9][A-Za-z0-9_.-]*')
         ->middleware(['permission:docker,manage', 'throttle:20,1']);
+
+    /*
+    | Registry credentials. Bound by id, not by name: unlike a network or a
+    | volume, this is a panel-owned row rather than an object Docker knows about,
+    | so its identifier is the database's.
+    |
+    | Every mutation is `docker,manage` — creating one stores a credential that
+    | can pull private code onto this box, which is not a `view` action by any
+    | reading. Reads are `docker` because the picker on the site form needs them.
+    */
+    Route::get('/docker/registries', [RegistryController::class, 'index'])
+        ->middleware(['permission:docker', 'throttle:60,1']);
+
+    Route::post('/docker/registries', [RegistryController::class, 'store'])
+        ->middleware(['permission:docker,manage', 'throttle:20,1']);
+
+    Route::get('/docker/registries/{registry}', [RegistryController::class, 'show'])
+        ->middleware(['permission:docker', 'throttle:60,1']);
+
+    Route::patch('/docker/registries/{registry}', [RegistryController::class, 'update'])
+        ->middleware(['permission:docker,manage', 'throttle:20,1']);
+
+    Route::delete('/docker/registries/{registry}', [RegistryController::class, 'destroy'])
+        ->middleware(['permission:docker,manage', 'throttle:20,1']);
+
+    // Throttled harder than the rest, and deliberately: every call makes an
+    // outbound request to a host the caller chose, so a generous limit here is a
+    // way to occupy the panel's workers against a registry that never answers.
+    // The same reasoning as the storage and git test endpoints.
+    Route::post('/docker/registries/{registry}/test', [RegistryController::class, 'test'])
+        ->middleware(['permission:docker,manage', 'throttle:10,1']);
 });

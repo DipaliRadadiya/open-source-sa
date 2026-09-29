@@ -1615,6 +1615,29 @@ return [
         // large on a slow link. Generous, because the failure it prevents is a
         // deploy that was working and got killed.
         'command_timeout' => (int) env('DOCKER_COMMAND_TIMEOUT', 600),
+
+        // Where a registry credential is materialised for the length of one
+        // pull. Mirrors `git_credential_dir`, and for the identical reason: the
+        // secret has to reach a CLI that only reads it from a file, so it is
+        // written root-owned and removed in a `finally`.
+        //
+        // **Never the site's document root.** The site user can read their own
+        // tree, and the panel deliberately keeps them out of the `docker` group
+        // because that group is root-equivalent — handing them a registry token
+        // there would give away by file what was withheld by group.
+        // Defaults to the system temp dir, the same as `git_credential_dir`,
+        // and deliberately not a new path under /var/lib: install.sh runs once
+        // and the updater ships code, never directories, so a fresh default
+        // path would exist on new boxes and be missing on every existing one.
+        // The per-pull subdirectory is created on demand regardless.
+        'registry_credential_dir' => env('DOCKER_REGISTRY_CREDENTIAL_DIR', sys_get_temp_dir()),
+
+        // The credential probe talks to a remote registry, so it needs its own
+        // ceiling: `command_timeout` is 600s because a pull may be gigabytes,
+        // and a login that has not answered in half a minute is not going to.
+        // The endpoint is throttled as well — a slow registry must not become a
+        // way to occupy the panel's workers.
+        'login_timeout' => (int) env('DOCKER_LOGIN_TIMEOUT', 30),
     ],
 
     /*

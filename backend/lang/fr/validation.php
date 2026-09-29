@@ -159,6 +159,18 @@ return [
     'required_if_declined' => 'Le champ :attribute est obligatoire quand :other est refusé.',
 
     'custom' => [
+
+        // A registry address Docker cannot interpret is silently IGNORED at
+        // pull time — the credential simply never applies and the error is
+        // identical to having none. So these are refusals at the form, and each
+        // one names the specific mistake rather than saying "invalid".
+        'registry' => [
+            'empty' => 'Saisissez l’adresse du registre — `docker.io` pour Docker Hub, `ghcr.io`, ou votre propre hôte.',
+            'path' => 'Cela ressemble à un espace de noms ou à un dépôt, pas à un registre. Saisissez l’hôte seul — `ghcr.io`, pas `ghcr.io/votre-org`.',
+            'credentials' => 'Ne mettez pas de nom d’utilisateur ni de mot de passe dans l’adresse. Saisissez l’hôte seul ; les identifiants vont dans les champs ci-dessous.',
+            'host' => 'Ce n’est pas une adresse de registre. Saisissez un nom d’hôte, éventuellement avec un port — `registry.example.com` ou `registry.example.com:5000`.',
+            'port' => 'Le port doit être compris entre 1 et 65535.',
+        ],
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],

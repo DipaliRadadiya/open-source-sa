@@ -15,4 +15,6 @@ return [
     'network_remove_failed' => 'नेटवर्क नहीं हटाया जा सका। संदर्भ :reference।',
     'volume_create_failed' => 'वॉल्यूम नहीं बनाया जा सका। संदर्भ :reference।',
     'volume_remove_failed' => 'वॉल्यूम नहीं हटाया जा सका। संदर्भ :reference।',
+    'registry_deleted' => 'रजिस्ट्री क्रेडेंशियल हटा दिया गया। जो साइटें इसका उपयोग कर रही थीं, वे अब गुमनाम रूप से इमेज खींचेंगी।',
+    'registry_credential_unwritable' => 'रजिस्ट्री क्रेडेंशियल डिस्क पर नहीं लिखा जा सका, इसलिए Docker से पूछा ही नहीं गया। संदर्भ :reference।',
 ];

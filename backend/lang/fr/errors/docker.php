@@ -15,4 +15,6 @@ return [
     'network_remove_failed' => 'Le réseau n\'a pas pu être supprimé. Référence :reference.',
     'volume_create_failed' => 'Le volume n\'a pas pu être créé. Référence :reference.',
     'volume_remove_failed' => 'Le volume n\'a pas pu être supprimé. Référence :reference.',
+    'registry_deleted' => 'L’identifiant de registre a été supprimé. Les sites qui l’utilisaient récupéreront désormais les images de façon anonyme.',
+    'registry_credential_unwritable' => 'L’identifiant de registre n’a pas pu être écrit sur le disque, Docker n’a donc jamais été interrogé. Référence :reference.',
 ];

@@ -55,6 +55,10 @@ class UpdateContainerSettings
             'container_port' => $application->container_port,
             'memory_limit' => $application->memory_limit,
             'volume_mounts' => count((array) ($application->volume_mounts ?? [])),
+            // Which credential, by id — the registry's name would be friendlier
+            // and would also go stale the moment it is renamed. The log records
+            // what was chosen, not what it was called at the time.
+            'registry_id' => $application->registry_id,
             // Recorded, because a save that only wrote the row and a save that
             // recreated the container are different events and the log is where
             // somebody will look to tell them apart.

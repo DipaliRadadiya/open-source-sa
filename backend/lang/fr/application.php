@@ -67,6 +67,7 @@ return [
     'fields' => [
         'compose' => 'Fichier compose',
         'image' => 'Image',
+        'registry_id' => 'Registre',
         'container_port' => 'Port du conteneur',
         'docker_network' => 'Réseau',
         'docker_mode' => 'Mode d\'exécution',
@@ -161,6 +162,7 @@ return [
     'help' => [
         'compose' => 'Facultatif. Collez votre propre fichier compose et tout ce que Compose gère est géré : plusieurs services, volumes nommés, healthchecks. Laissez-le vide et le panel en écrira un à partir des champs ci-dessus. Les ports doivent être publiés sur 127.0.0.1 et les montages rester dans le répertoire de cette application ; tout le reste est refusé avec la raison.',
         'image' => 'L\'image à exécuter, avec une étiquette explicite : `nginx:1.27-alpine`. Un nom sans étiquette utilise `latest`, ce qui rend un déploiement non reproductible et un retour arrière vide de sens.',
+        'registry_id' => 'Laissez vide pour une image publique. Choisissez un identifiant enregistré pour récupérer une image d’un registre privé — ajoutez-en un d’abord sur la page Docker. Cela s’applique aussi à un fichier compose collé, car n’importe quelle image qu’il nomme peut être privée.',
         'container_port' => 'Le port sur lequel votre application écoute à l\'intérieur du conteneur. Le panel attribue le port sur le serveur lui-même et y dirige nginx.',
         'docker_network' => 'Rejoignez un réseau Docker pour que ce conteneur et les autres du même réseau puissent s\'atteindre par leur nom. Laissez vide pour le bridge par défaut de Docker, où ce n\'est pas possible. Les réseaux se créent sur la page Docker.',
         'docker_mode' => 'Simple demande une image et un port, et le panneau écrit le fichier compose. Fichier compose sert à tout le reste : vous l\'écrivez, et le panneau impose toujours la publication en loopback, une limite de mémoire et des logs bornés.',
@@ -233,6 +235,7 @@ return [
         'no_build_tools' => 'Cette étape devait compiler un module natif, et aucun compilateur n’est installé sur ce serveur. Installez les outils de compilation depuis l’écran de configuration, puis réessayez. Choisir une autre version de Node peut aussi aider, car certaines fournissent des binaires précompilés — mais chaque paquet décide lesquelles, ce n’est donc pas une solution fiable à elle seule.',
         'composer_platform' => 'Composer n’a pas pu installer les dépendances de cette application avec la version de PHP configurée pour ce site. La version de PHP du site, ou l’une des extensions dont elle a besoin, ne correspond pas à ce qu’exige le projet. Choisissez une version de PHP prise en charge par le projet, ou installez l’extension manquante, puis redéployez.',
         'registry_auth' => 'Docker n’a pas pu récupérer cette image, le registre l’a refusée. Soit le nom ou le tag de l’image est incorrect, soit l’image est privée — Docker signale les deux de la même façon, vérifiez donc d’abord la référence. Si l’image est privée, sachez que le panneau ne peut pas encore se connecter à un registre : il ne peut exécuter que des images accessibles publiquement.',
+        'registry_credentials_rejected' => 'Le registre a refusé l’identifiant utilisé par ce site. Le jeton a très probablement expiré ou été révoqué — renouvelez-le sur la page Docker puis redéployez. La référence de l’image est correcte : le registre a répondu, il a simplement refusé ce nom d’utilisateur et ce jeton.',
         'composer_dependencies_missing' => 'Ce projet nécessite des dépendances Composer et aucune n’a été installée : l’application n’a pas de vendor/autoload.php et toutes les requêtes échoueront. Ajoutez une étape composer install au script de déploiement, puis redéployez.',
     ],
 

@@ -159,6 +159,18 @@ return [
     'required_if_declined' => 'Поле :attribute обязательно для заполнения, когда :other отклонено.',
 
     'custom' => [
+
+        // A registry address Docker cannot interpret is silently IGNORED at
+        // pull time — the credential simply never applies and the error is
+        // identical to having none. So these are refusals at the form, and each
+        // one names the specific mistake rather than saying "invalid".
+        'registry' => [
+            'empty' => 'Укажите адрес реестра — `docker.io` для Docker Hub, `ghcr.io` или ваш собственный хост.',
+            'path' => 'Это похоже на пространство имён или репозиторий, а не на реестр. Укажите только хост — `ghcr.io`, а не `ghcr.io/ваша-организация`.',
+            'credentials' => 'Не указывайте имя пользователя или пароль в адресе. Укажите только хост; учётные данные вводятся в полях ниже.',
+            'host' => 'Это не адрес реестра. Укажите имя хоста, при необходимости с портом — `registry.example.com` или `registry.example.com:5000`.',
+            'port' => 'Порт должен быть от 1 до 65535.',
+        ],
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],

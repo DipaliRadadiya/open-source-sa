@@ -168,6 +168,12 @@ class ApplicationResource extends JsonResource
             'memory_limit' => $this->memory_limit,
             'docker_network' => $this->docker_network,
             'volume_mounts' => $this->volume_mounts ?? [],
+            // Which stored credential pulls this image, if any. The id for the
+            // form, and the name so a page can say "pulls with GHCR" without a
+            // second request — but never anything from the credential itself.
+            // Null is the common case and means anonymous, not misconfigured.
+            'registry_id' => $this->registry_id,
+            'registry_name' => $this->whenLoaded('registry', fn (): ?string => $this->registry?->name),
             // The NAMES of the generated credentials, never the values. Enough for
             // the UI to decide whether to render a Credentials section and what to
             // label each row; the values come from their own endpoint, so they are

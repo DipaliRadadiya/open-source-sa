@@ -35,6 +35,7 @@ return [
     'provision_failed' => 'A configuração do site falhou na etapa ":step".',
     'not_a_git_application' => 'A aplicação não é uma implantação git, portanto não há nada para baixar.',
     'not_a_container' => 'Esta aplicação não é executada num contentor, por isso não tem definições de contentor.',
+    'container_not_running' => 'Este contentor não está em execução, por isso não há nada para atualizar. Aprovisione ou ative o site primeiro.',
     'docker_removal_not_permitted' => 'Não tem permissão para eliminar redes ou volumes Docker. Remova o site sem eles, ou peça a alguém com acesso ao Docker.',
     'no_database_engine' => 'Nenhum mecanismo de banco de dados disponível. Instale e configure o MySQL ou MariaDB antes de criar esta aplicação.',
     'no_process' => '\"‎:name\" não executa um processo próprio.',

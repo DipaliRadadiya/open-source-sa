@@ -159,6 +159,18 @@ return [
     'required_if_declined' => 'जब :other अस्वीकार किया जाए तो :attribute आवश्यक है।',
 
     'custom' => [
+
+        // A registry address Docker cannot interpret is silently IGNORED at
+        // pull time — the credential simply never applies and the error is
+        // identical to having none. So these are refusals at the form, and each
+        // one names the specific mistake rather than saying "invalid".
+        'registry' => [
+            'empty' => 'रजिस्ट्री का पता दर्ज करें — Docker Hub के लिए `docker.io`, या `ghcr.io`, या आपका स्वयं का होस्ट।',
+            'path' => 'यह नेमस्पेस या रिपॉज़िटरी जैसा लगता है, रजिस्ट्री जैसा नहीं। केवल होस्ट दर्ज करें — `ghcr.io`, `ghcr.io/your-org` नहीं।',
+            'credentials' => 'पते में उपयोगकर्ता नाम या पासवर्ड न डालें। केवल होस्ट दर्ज करें; क्रेडेंशियल नीचे के फ़ील्ड में जाते हैं।',
+            'host' => 'यह रजिस्ट्री का पता नहीं है। होस्टनेम दर्ज करें, चाहें तो पोर्ट के साथ — `registry.example.com` या `registry.example.com:5000`।',
+            'port' => 'पोर्ट 1 और 65535 के बीच होना चाहिए।',
+        ],
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],

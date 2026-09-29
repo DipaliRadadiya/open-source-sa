@@ -15,4 +15,6 @@ return [
     'network_remove_failed' => 'Не удалось удалить сеть. Ссылка :reference.',
     'volume_create_failed' => 'Не удалось создать том. Ссылка :reference.',
     'volume_remove_failed' => 'Не удалось удалить том. Ссылка :reference.',
+    'registry_deleted' => 'Учётные данные реестра удалены. Сайты, которые их использовали, теперь будут загружать образы анонимно.',
+    'registry_credential_unwritable' => 'Не удалось записать учётные данные реестра на диск, поэтому запрос к Docker не выполнялся. Ссылка :reference.',
 ];

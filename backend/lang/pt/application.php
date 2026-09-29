@@ -67,6 +67,7 @@ return [
     'fields' => [
         'compose' => 'Ficheiro compose',
         'image' => 'Imagem',
+        'registry_id' => 'Registo',
         'container_port' => 'Porta do contentor',
         'docker_network' => 'Rede',
         'docker_mode' => 'Como executar',
@@ -161,6 +162,7 @@ return [
     'help' => [
         'compose' => 'Opcional. Cole o seu próprio ficheiro compose e tudo o que o Compose suporta é suportado: vários serviços, volumes nomeados, healthchecks. Deixe vazio e o painel escreve um a partir dos campos acima. As portas têm de ser publicadas em 127.0.0.1 e os bind mounts permanecer dentro do diretório desta aplicação; o resto é recusado com o motivo.',
         'image' => 'A imagem a executar, com uma etiqueta explícita — `nginx:1.27-alpine`. Um nome sem etiqueta puxa `latest`, o que torna uma implementação não reproduzível e uma reversão sem significado.',
+        'registry_id' => 'Deixe vazio para uma imagem pública. Escolha uma credencial guardada para obter de um registo privado — adicione uma primeiro na página Docker. Aplica-se também a um compose colado, pois qualquer imagem que ele indique pode ser privada.',
         'container_port' => 'A porta em que a sua aplicação escuta dentro do contentor. O painel atribui a porta no próprio servidor e aponta o nginx para ela.',
         'docker_network' => 'Junte-se a uma rede Docker para que este contentor e os outros nessa rede se consigam alcançar pelo nome. Deixe vazio para a bridge predefinida do Docker, onde isso não é possível. As redes criam-se na página do Docker.',
         'docker_mode' => 'Simples pede uma imagem e uma porta, e o painel escreve o ficheiro compose. Ficheiro compose serve para todo o resto — escreve-o você, e o painel continua a impor publicação em loopback, um limite de memória e logs limitados.',
@@ -233,6 +235,7 @@ return [
         'no_build_tools' => 'Esta etapa precisava de compilar um módulo nativo e este servidor não tem compilador instalado. Instale as ferramentas de compilação no ecrã de configuração e tente novamente. Escolher outra versão do Node também pode ajudar, pois algumas incluem binários já compilados — mas cada pacote decide quais, por isso não é uma solução fiável por si só.',
         'composer_platform' => 'O Composer não conseguiu instalar as dependências desta aplicação com a versão de PHP definida para este site. A versão de PHP do site, ou uma das extensões de que necessita, não cumpre o que o projeto exige. Altere a versão de PHP do site para uma suportada, ou instale a extensão em falta, e implante novamente.',
         'registry_auth' => 'O Docker não conseguiu obter esta imagem porque o registo a recusou. Ou o nome ou a etiqueta da imagem estão errados, ou a imagem é privada — o Docker comunica ambos os casos da mesma forma, por isso verifique primeiro a referência. Se a imagem for privada, note que o painel ainda não consegue iniciar sessão num registo, pelo que só pode executar imagens de acesso público.',
+        'registry_credentials_rejected' => 'O registo recusou a credencial com que este site obtém a imagem. O token muito provavelmente expirou ou foi revogado — renove-o na página Docker e implante novamente. A referência da imagem está correta: o registo respondeu, apenas não aceitou este nome de utilizador e este token.',
         'composer_dependencies_missing' => 'Este projeto precisa de dependências do Composer e nenhuma foi instalada, pelo que a aplicação não tem vendor/autoload.php e todos os pedidos irão falhar. Acrescente ao script de implantação um passo que execute composer install e implante novamente.',
     ],
 

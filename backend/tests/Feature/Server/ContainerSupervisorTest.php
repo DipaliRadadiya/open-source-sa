@@ -6,6 +6,7 @@ use App\Models\SystemUser;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\ContainerSupervisor;
+use App\Services\Server\Docker\RegistryAuth;
 use App\Services\Server\ManagedFile;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
@@ -118,7 +119,7 @@ it('publishes only to loopback, never to every address', function () {
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc123\n"), answered: true),
     ], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->apply(containerApp(), '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))->apply(containerApp(), '/home/shop/shop/public_html');
 
     expect($written)->toContain('"127.0.0.1:20001:80"')
         // The naive form, which binds 0.0.0.0 and is reachable past ufw.
@@ -133,7 +134,7 @@ it('mounts the application directory and nothing above it', function () {
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
     ], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->apply(containerApp(), '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))->apply(containerApp(), '/home/shop/shop/public_html');
 
     expect($written)->toContain('/home/shop/shop/public_html:/app')
         ->and($written)->not->toContain('- /:/');
@@ -148,7 +149,7 @@ it('gives every container a memory ceiling and bounded logs', function () {
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
     ], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->apply(containerApp(), '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))->apply(containerApp(), '/home/shop/shop/public_html');
 
     expect($written)->toContain('mem_limit:')
         ->and($written)->toContain('max-size:');
@@ -168,7 +169,7 @@ it('refuses to report a container that started and died as running', function ()
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult(''), answered: true),
     ], $ran, $written);
 
-    expect(fn () => (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->apply(containerApp(), '/home/shop/shop/public_html'))
+    expect(fn () => (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))->apply(containerApp(), '/home/shop/shop/public_html'))
         ->toThrow(ProvisioningFailedException::class);
 });
 
@@ -183,7 +184,7 @@ it('names the project explicitly, so two apps cannot collide', function () {
     ], $ran, $written);
 
     $app = containerApp();
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->apply($app, '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))->apply($app, '/home/shop/shop/public_html');
 
     $up = collect($ran)->firstWhere('op', 'compose_up');
 
@@ -200,7 +201,7 @@ it('does not delete data when the application is removed', function () {
     $written = null;
     [$ops, $files] = containerDeps([], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->remove(containerApp(), '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))->remove(containerApp(), '/home/shop/shop/public_html');
 
     $down = collect($ran)->firstWhere('op', 'compose_down');
 
@@ -216,7 +217,7 @@ it('bounds the log read', function () {
     $written = null;
     [$ops, $files] = containerDeps([], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))->logs(containerApp(), '/home/shop/shop/public_html');
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))->logs(containerApp(), '/home/shop/shop/public_html');
 
     expect(collect($ran)->firstWhere('op', 'compose_logs')['command'])->toContain('--tail');
 });
@@ -286,7 +287,7 @@ it('validates a user-supplied compose file again at deploy time', function () {
     // from the container gives it the real one, which cannot reach docker in
     // a test — every verdict comes back "unparsable" and the refusal tests
     // pass for the wrong reason.
-    expect(fn () => (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    expect(fn () => (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($app, '/home/shop/shop/public_html'))
         ->toThrow(ProvisioningFailedException::class);
 
@@ -318,7 +319,7 @@ it('writes the user file verbatim when it passes', function () {
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
     ], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($app, '/home/shop/shop/public_html');
 
     expect($written)->toBe($app->compose)
@@ -404,7 +405,7 @@ it('strips the escape codes the application itself prints', function () {
         ),
     ], $ran, $written);
 
-    $out = (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    $out = (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->logs(containerApp(), '/home/shop/shop/public_html');
 
     expect($out)->not->toContain("\e")
@@ -433,7 +434,7 @@ it('strips OSC sequences, which would swallow the rest of a line', function () {
         ),
     ], $ran, $written);
 
-    $out = (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    $out = (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->logs(containerApp(), '/home/shop/shop/public_html');
 
     expect(trim($out))->toBe('visible text');
@@ -457,7 +458,7 @@ it('joins the chosen network, and declares it external', function () {
     $application = containerApp();
     $application->forceFill(['docker_network' => 'ghost-net'])->save();
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($application, '/home/shop/shop/public_html');
 
     expect($written)->toContain('networks:')
@@ -484,7 +485,7 @@ it('writes the same file it always did when no network was chosen', function () 
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
     ], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply(containerApp(), '/home/shop/shop/public_html');
 
     expect($written)->not->toContain('networks:')
@@ -526,7 +527,7 @@ it('leaves a pasted compose file alone, network or not', function () {
     $application = containerApp();
     $application->forceFill(['compose' => $pasted, 'docker_network' => 'ghost-net'])->save();
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($application, '/home/shop/shop/public_html');
 
     expect($written)->toContain('their-own-net')
@@ -556,7 +557,7 @@ it('mounts the volumes it is given, and declares them external', function () {
         ['volume' => 'shop-uploads', 'path' => '/srv/uploads'],
     ]])->save();
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($application, '/home/shop/shop/public_html');
 
     expect($written)->toContain('- shop-db:/var/lib/mysql')
@@ -573,7 +574,7 @@ it('writes the same file it always did when no volume is mounted', function () {
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
     ], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply(containerApp(), '/home/shop/shop/public_html');
 
     expect($written)->not->toContain('external:')
@@ -597,7 +598,7 @@ it('declares a volume once even when it is mounted twice', function () {
         ['volume' => 'shared', 'path' => '/two'],
     ]])->save();
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($application, '/home/shop/shop/public_html');
 
     // The DECLARATION once, at the top level. `substr_count('shared:')` also
@@ -625,7 +626,7 @@ it('skips a half-written mount rather than rendering a broken line', function ()
         ['path' => '/nameless'],
     ]])->save();
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($application, '/home/shop/shop/public_html');
 
     expect($written)->toContain('- good:/data')
@@ -670,7 +671,7 @@ it('gives a pasted compose file a memory ceiling and bounded logs', function () 
     $application = containerApp();
     $application->forceFill(['compose' => $pasted])->save();
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($application, '/home/shop/shop/public_html');
 
     $override = overrideWritten();
@@ -704,7 +705,7 @@ it('passes the override to up, and to nothing else', function () {
     $application = containerApp();
     $application->forceFill(['compose' => $pasted])->save();
 
-    $supervisor = new ContainerSupervisor($ops, $files, new ComposeValidator($ops));
+    $supervisor = new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops));
     $supervisor->apply($application, '/home/shop/shop/public_html');
     $supervisor->stop($application, '/home/shop/shop/public_html');
 
@@ -729,7 +730,7 @@ it('writes no override for a generated file, which carries its own', function ()
         'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
     ], $ran, $written);
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply(containerApp(), '/home/shop/shop/public_html');
 
     expect(collect($ran)->contains(
@@ -757,7 +758,7 @@ it('honours a per-site memory limit in the override', function () {
     $application = containerApp();
     $application->forceFill(['compose' => $pasted, 'memory_limit' => '3g'])->save();
 
-    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops)))
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
         ->apply($application, '/home/shop/shop/public_html');
 
     expect(overrideWritten())->toContain('mem_limit: 3g');

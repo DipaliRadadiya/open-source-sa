@@ -2,6 +2,7 @@
 
 namespace App\Services\Applications\Types;
 
+use App\Models\Registry;
 use App\Rules\ContainerMountPath;
 use App\Rules\ExistingDockerNetwork;
 use App\Rules\NewDockerName;
@@ -134,6 +135,24 @@ class DockerSiteType extends AbstractSiteType
                 'required_without' => 'compose',
             ]),
 
+            // Which stored credential to pull with, from the registries on the
+            // Docker page.
+            //
+            // **Deliberately NOT `depends_on: docker_mode:simple`**, unlike the
+            // two fields around it. A pasted compose file names its own images
+            // and any of them can be private, so hiding this in compose mode
+            // would make the panel's only private-registry support unreachable
+            // from the mode most likely to need it.
+            //
+            // The second field here that is not "an option Docker takes" — it is
+            // a panel-owned row, like the network below, and for the same reason
+            // it has to be asked rather than discovered.
+            $this->field('registry_id', 'select', extra: [
+                'default' => '',
+                'help' => __('application.help.registry_id'),
+                'options' => $this->registryOptions(),
+            ]),
+
             // The port *inside* the container. The published port on the host
             // is allocated by the panel and is not the user's to choose —
             // picking it would let two applications collide, and picking 80
@@ -255,6 +274,11 @@ class DockerSiteType extends AbstractSiteType
             // better answer than a column repeating it.
             'docker_mode' => ['nullable', 'string', 'max:20'],
 
+            // Checked against the table, not just the shape: a site pointed at a
+            // registry that is not there pulls anonymously and fails on the next
+            // deploy with a reason that names credentials nobody configured.
+            'registry_id' => ['nullable', 'integer', 'exists:registries,id'],
+
             'docker_network' => ['nullable', 'string', 'max:255', new ExistingDockerNetwork],
 
             // A name to CREATE, so the opposite rule: it must not exist yet.
@@ -266,6 +290,42 @@ class DockerSiteType extends AbstractSiteType
             'volume_new' => ['nullable', 'string', 'max:255', 'required_with:volume_path', new NewDockerName('volume')],
             'volume_path' => ['nullable', 'string', 'max:255', 'required_with:volume_new', 'regex:/^\//', 'not_regex:/(^|\/)\.\.(\/|$)/', new ContainerMountPath],
         ];
+    }
+
+    /**
+     * The registries this server can pull with, as chooser options.
+     *
+     * Gated on the server hosting containers for the same reason
+     * `networkOptions()` is: `fields()` is serialised for every site type in the
+     * catalog listing, and an ungated query here would run on a LEMP box to build
+     * options for a card that is not shown. Unlike that method this is a database
+     * read rather than a shell-out, so the cost is smaller — but the gate is what
+     * keeps the two consistent, and consistency is what stops the next person
+     * removing it.
+     *
+     * The empty option is not listed. It is the default, and it means "pull
+     * anonymously" — which is the correct answer for every public image and all
+     * fifteen one-click apps.
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    private function registryOptions(): array
+    {
+        if (! app(ServerCapabilities::class)->hosts('docker')) {
+            return [];
+        }
+
+        return Registry::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'registry'])
+            ->map(fn ($registry): array => [
+                'value' => (string) $registry->id,
+                // The address alongside the name, because a name is whatever
+                // somebody typed and two rows called "main" and "backup" say
+                // nothing about which one is GHCR.
+                'label' => $registry->name.' — '.$registry->registry,
+            ])
+            ->all();
     }
 
     /**

@@ -15,4 +15,6 @@ return [
     'network_remove_failed' => 'The network could not be removed. Reference :reference.',
     'volume_create_failed' => 'The volume could not be created. Reference :reference.',
     'volume_remove_failed' => 'The volume could not be removed. Reference :reference.',
+    'registry_deleted' => 'The registry credential was deleted. Sites that used it will pull anonymously from now on.',
+    'registry_credential_unwritable' => 'The registry credential could not be written to disk, so Docker was never asked. Reference :reference.',
 ];
