@@ -111,10 +111,27 @@ class ApplicationContainerController extends Controller
             __('errors/application.not_a_container'),
         );
 
+        try {
+            $updated = $action->execute($application, $request->validated());
+        } catch (ProvisioningFailedException $e) {
+            // The settings were saved; bringing the container up on them failed.
+            // Said as a 422 with the reason rather than a 500, and said the same way
+            // as the pull endpoint above so the UI has one shape to handle.
+            return response()->json([
+                'message' => $e->reason !== null
+                    ? __('application.failure_reason.'.$e->reason)
+                    : __('errors/application.container_apply_failed'),
+                'step' => $e->step,
+                'reason' => $e->reason,
+                'reference' => $e->reference,
+                // Saved, even though the apply failed — so the form does not offer
+                // to "retry" a change it thinks was lost.
+                'saved' => true,
+            ], 422);
+        }
+
         return response()->json([
-            'application' => ApplicationResource::make(
-                $action->execute($application, $request->validated())
-            )->resolve(),
+            'application' => ApplicationResource::make($updated)->resolve(),
         ]);
     }
 }

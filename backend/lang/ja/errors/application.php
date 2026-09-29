@@ -37,6 +37,7 @@ return [
     'not_a_container' => 'このアプリケーションはコンテナで動作していないため、コンテナ設定はありません。',
     'container_not_running' => 'このコンテナは稼働していないため、更新するものがありません。先にサイトをプロビジョニングするか有効化してください。',
     'container_pull_failed' => 'イメージを取得できませんでした。参照 :reference。',
+    'container_apply_failed' => '設定は保存しましたが、その設定でコンテナを起動できませんでした。参照 :reference。',
     'docker_removal_not_permitted' => 'Docker のネットワークやボリュームを削除する権限がありません。それらを残してサイトを削除するか、Docker の権限を持つ人に依頼してください。',
     'no_database_engine' => '利用可能なデータベースエンジンがありません。このアプリケーションを作成する前に MySQL または MariaDB を設定してください。',
     'no_process' => '「:name」は独自のプロセスを実行していません。',

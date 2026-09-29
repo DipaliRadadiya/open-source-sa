@@ -3,6 +3,7 @@
 namespace App\Actions\Server\Application;
 
 use App\Enums\ApplicationStatus;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
@@ -43,11 +44,31 @@ class UpdateContainerSettings
         $applies = $application->status === ApplicationStatus::Active
             && $application->disabled_at === null;
 
+        $failure = null;
+
         if ($applies) {
-            $this->containers->apply(
-                $application,
-                $this->provisioner->documentRoot($application),
-            );
+            try {
+                $this->containers->apply(
+                    $application,
+                    $this->provisioner->documentRoot($application),
+                );
+            } catch (ProvisioningFailedException $e) {
+                // The row is already saved, deliberately: the settings the user
+                // asked for ARE what this site is configured to run, and reverting
+                // them would leave the compose file on disk disagreeing with the
+                // panel. What failed is making them true right now.
+                //
+                // Recorded and rethrown, so the caller gets a named reason instead
+                // of a 500. Reachable in practice since the registry became
+                // editable here: changing it re-pulls, and a wrong credential fails
+                // the apply — which used to answer "Server Error".
+                $application->forceFill([
+                    'failed_step' => $e->step,
+                    'failed_reason' => $e->reason,
+                ])->save();
+
+                $failure = $e;
+            }
         }
 
         $this->activityLogger->log('application.container_updated', $application, [
@@ -63,8 +84,15 @@ class UpdateContainerSettings
             // recreated the container are different events and the log is where
             // somebody will look to tell them apart.
             'applied' => $applies,
+            // Distinguishes "saved and running" from "saved, but the container did
+            // not come back" — the second is the event somebody will be hunting.
+            'apply_failed' => $failure?->reason ?? ($failure !== null ? $failure->step : null),
         ]);
 
-        return $application->fresh(['systemUser']);
+        if ($failure !== null) {
+            throw $failure;
+        }
+
+        return $application->fresh(['systemUser', 'registry']);
     }
 }

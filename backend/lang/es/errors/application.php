@@ -37,6 +37,7 @@ return [
     'not_a_container' => 'Esta aplicación no se ejecuta en un contenedor, por lo que no tiene ajustes de contenedor.',
     'container_not_running' => 'Este contenedor no se está ejecutando, por lo que no hay nada que actualizar. Aprovisione o active el sitio primero.',
     'container_pull_failed' => 'No se pudo descargar la imagen. Referencia :reference.',
+    'container_apply_failed' => 'Los ajustes se guardaron, pero no se pudo iniciar el contenedor con ellos. Referencia :reference.',
     'docker_removal_not_permitted' => 'No tienes permiso para eliminar redes ni volúmenes de Docker. Elimina el sitio sin ellos o pide ayuda a alguien con acceso a Docker.',
     'no_database_engine' => 'No hay ningún motor de base de datos disponible. Instala y configura MySQL o MariaDB antes de crear esta aplicación.',
     'no_process' => '\":name\" no ejecuta un proceso propio.',

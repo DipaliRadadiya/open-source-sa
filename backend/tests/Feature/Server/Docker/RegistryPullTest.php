@@ -389,3 +389,29 @@ it('clears a previous failure when a pull succeeds', function () {
     expect($this->application->fresh()->failed_reason)->toBeNull()
         ->and($this->application->fresh()->failed_step)->toBeNull();
 });
+
+/*
+ * The settings endpoint has the same failure shape, and my feature is what made it
+ * reachable: the registry became editable there, so changing it re-pulls, and a
+ * wrong credential fails the apply. It answered 500 before this.
+ */
+
+it('answers 422 when the settings save cannot bring the container up', function () {
+    $ran = [];
+    recordPull($ran, fn () => Process::result(
+        output: '',
+        errorOutput: 'Error response from daemon: authentication required - incorrect username or password',
+        exitCode: 18,
+    ));
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$this->admin->createToken('t')->plainTextToken])
+        ->putJson('/api/applications/'.$this->application->id.'/container', ['container_port' => 8080])
+        ->assertStatus(422)
+        ->assertJsonPath('reason', 'registry_credentials_rejected')
+        // Saved, even though the apply failed. Reverting would leave the compose
+        // file on disk disagreeing with what the panel shows.
+        ->assertJsonPath('saved', true);
+
+    expect($this->application->fresh()->container_port)->toBe(8080)
+        ->and($this->application->fresh()->failed_reason)->toBe('registry_credentials_rejected');
+});
