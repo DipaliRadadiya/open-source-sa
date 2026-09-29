@@ -14,6 +14,7 @@ use App\Models\SiteClone;
 use App\Models\SystemUser;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -685,6 +686,34 @@ describe('cloning a git application', function () {
         expect($payload['url'])->toContain($clone->webhook_identifier);
         expect($payload['secret'])->toBe($clone->webhook_secret);
         expect($payload['provider'])->toBe('github');
+    });
+
+    it('keeps the copy\'s webhook secret from a role that may not deploy', function () {
+        fakeCloneServer();
+
+        $record = runClone(gitSource([
+            'webhook_enabled' => true,
+            'webhook_identifier' => 'src-hook',
+            'webhook_secret' => 'src-secret',
+            'webhook_provider' => 'github',
+        ]), 'api-clone.test');
+
+        // With the URL and the secret anyone can sign a push and start a
+        // deployment, so it follows the deploy button, not the clone screen.
+        $viewer = User::factory()->create();
+        grantPermission($viewer, 'app_clone', manage: true);
+
+        // runClone() authenticated as the admin, and the guard keeps that
+        // user for the rest of the test unless told to forget it.
+        Auth::forgetGuards();
+
+        $payload = test()->withHeaders(['Authorization' => 'Bearer '.$viewer->createToken('t')->plainTextToken])
+            ->getJson("/api/clones/{$record->id}")
+            ->assertOk()
+            ->json('clone.target_webhook');
+
+        expect($payload['url'])->not->toBeNull()
+            ->and($payload['secret'])->toBeNull();
     });
 
     it('says nothing about a webhook the source never used', function () {

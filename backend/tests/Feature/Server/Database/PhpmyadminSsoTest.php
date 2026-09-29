@@ -395,6 +395,18 @@ describe('POST /databases/{database}/phpmyadmin-sso', function () {
         $response->assertForbidden();
     });
 
+    it('refuses a view-only role, because the session it opens can write', function () {
+        // DB-02: the sign-in lands as the database's own user, and a
+        // read-only role used it to run an INSERT.
+        grantPermission($this->user, 'database');
+        DatabaseUser::factory()->create(['database_id' => $this->database->id]);
+
+        $this->postJson("/api/databases/{$this->database->id}/phpmyadmin-sso")->assertForbidden();
+
+        // Refused before anything is written to the phpMyAdmin site.
+        expect($this->ranCommands)->toBe([]);
+    });
+
     it('returns 404 for a non-existent database', function () {
         grantDatabasePermission($this->user);
 

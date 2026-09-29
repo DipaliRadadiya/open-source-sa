@@ -891,7 +891,7 @@ It is set by a deploy, by a file change (about a minute later — see
 
 `has_process` is null-safe to read everywhere and tells you whether to render process controls at all: PHP and static sites have nothing to run, so the answer is "render nothing", not "render a disabled button".
 
-**`webhook.secret` is returned in full, deliberately** — the user has to paste it into their repository settings and will come back for it. `webhook.url` is assembled server-side so the frontend never builds the path or gets the host wrong. `webhook.verification` is `signature` or `token`; `token` means a plaintext shared value, which only GitLab has — offer the user the stronger signing token when you see it.
+**`webhook.secret` is returned in full, deliberately** — the user has to paste it into their repository settings and will come back for it. **It is `null` unless the caller has `app_deployment` (manage)** (2026-09-29): with the URL and the secret anyone can sign a push and start a deploy, so it follows `POST /deploy`, not the right to view the application. Hide the secret field (not the webhook card) when it is `null` and `webhook.enabled` is true. Same for `target_webhook.secret` on `GET /clones/{clone}`. `webhook.url` is assembled server-side so the frontend never builds the path or gets the host wrong. `webhook.verification` is `signature` or `token`; `token` means a plaintext shared value, which only GitLab has — offer the user the stronger signing token when you see it.
 
 `settings` is always an object (`{}` when empty), never `[]`. `steps` is a genuine list and stays `[]`.
 
@@ -3860,6 +3860,8 @@ Delete the export row **and** its file.
 ### GET `/databases/{database}/users`
 **Permission:** `database` (view)
 
+**`password` and `connection_string` are `null` unless the caller has `database` (manage)** (2026-09-28, DB-01 — a read-only role was handed working credentials). `password_known` still says whether a password is stored, so a read-only screen can show "set" without the value. Applies everywhere a database user is returned, including `GET /databases/{database}`.
+
 ```json
 {"users": [{
   "id": 1, "database_id": 1, "username": "shopuser",
@@ -3919,7 +3921,7 @@ Update username, connection preference, or password.
 ---
 
 ### POST `/databases/{database}/phpmyadmin-sso`
-**Permission:** `database` (view)
+**Permission:** `database` (**manage**) — was `view` until 2026-09-28 (DB-02): the session signs in as the database's own user, which can write, so a read-only role could run an INSERT. Hide the button for view-only users; they get `403`.
 
 One-click auto-login to phpMyAdmin for the database's user. Works only for MySQL/MariaDB databases (MongoDB is not supported by phpMyAdmin — see `mongo-express` instead). Requires a running phpMyAdmin site on this server.
 
@@ -4034,6 +4036,8 @@ Today: `slow_queries` is `null` on **PostgreSQL** (no counter without `pg_stat_s
 
 ### GET `/system-users`
 **Permission:** `system_user` (view)
+
+**`password` is `null` unless the caller has `system_user` (manage)** (2026-09-28, SU-01 — it is a working SSH/SFTP login). New field **`password_known`** says whether one is set. Same on `GET /system-users/{id}` and every endpoint returning a system user.
 
 Paged. `?search=` case-insensitively matches the username; `?sort=created_at|username`, default `-created_at`; `?per_page=10|20|30|50|100`, default 10. Responds `meta{current_page, per_page, total, last_page, ssh_access_enforced}`.
 

@@ -50,7 +50,7 @@ class CloneResource extends JsonResource
             // URL. The copy has a different URL, so the user has to add it —
             // and the moment they learn the clone exists is the moment to say
             // so, not whenever they next happen to open Deployment.
-            'target_webhook' => $this->whenLoaded('targetApplication', function () {
+            'target_webhook' => $this->whenLoaded('targetApplication', function () use ($request) {
                 $target = $this->resource->targetApplication;
 
                 if (! $target?->webhook_enabled || blank($target->webhook_identifier)) {
@@ -61,8 +61,10 @@ class CloneResource extends JsonResource
                     'url' => url("/api/webhooks/deploy/{$target->webhook_identifier}"),
                     // Shown for the same reason the Deployment screen shows it:
                     // the user has to paste it into the provider's form, and
-                    // will come back for it otherwise.
-                    'secret' => $target->webhook_secret,
+                    // will come back for it otherwise. Only to someone who
+                    // may deploy — the same bar, and the same reason, as the
+                    // Deployment screen's copy in ApplicationResource.
+                    'secret' => $request->user()?->canManage('app_deployment') ? $target->webhook_secret : null,
                     'provider' => $target->webhook_provider,
                 ];
             }),

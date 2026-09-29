@@ -192,11 +192,16 @@ class ApplicationResource extends JsonResource
             // same reasoning as the System User password. `url` is built here so
             // the frontend never assembles it (and never gets the path wrong on
             // a panel served under a different host).
+            //
+            // The secret only for someone who may deploy (`app_deployment`
+            // manage, the bar on POST /deploy): with it and the URL, anyone can
+            // sign a push and start a deployment, and it went to every role
+            // that could view the application.
             'webhook' => [
                 'enabled' => (bool) $this->webhook_enabled,
                 'provider' => $this->webhook_provider,
                 'url' => $this->resource->webhookUrl(),
-                'secret' => $this->webhook_secret,
+                'secret' => $request->user()?->canManage('app_deployment') ? $this->webhook_secret : null,
                 // True when the panel added the webhook to the repository
                 // itself; false means it has to be pasted in by hand.
                 'registered' => $this->webhook_remote_id !== null,
