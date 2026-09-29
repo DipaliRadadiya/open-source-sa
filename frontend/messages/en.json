@@ -2155,6 +2155,10 @@
     "tabs": {
       "extensions": "Extensions",
       "ioncube": "ionCube"
+    },
+    "unavailable": {
+      "title": "PHP is not managed on this server",
+      "body": "This server hosts containers, so it serves no PHP sites and has no PHP versions to manage. PHP is still installed for the panel itself, and its service can be restarted from Services."
     }
   },
   "node": {

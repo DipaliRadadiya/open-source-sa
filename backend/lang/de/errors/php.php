@@ -37,4 +37,5 @@ return [
     'ioncube_reload_failed' => 'PHP konnte nicht neu geladen werden. Die Änderungen sind möglicherweise noch nicht aktiv. Alle Wiederherstellungskopien wurden aufbewahrt.',
     'ioncube_rollback_failed' => 'Das Zurücksetzen ist fehlgeschlagen; alle Wiederherstellungskopien wurden aufbewahrt. Eine manuelle Wiederherstellung ist erforderlich.',
     'ioncube_config_test_failed' => 'Die PHP-Konfigurationsprüfung ist fehlgeschlagen. Die vorherigen Konfigurationsdateien wurden wiederhergestellt und PHP wurde nicht neu geladen.',
+    'not_a_php_server' => 'Dieser Server hostet Container, serviert also keine PHP-Sites und hat keine PHP-Versionen zu verwalten. PHP ist weiterhin für das Panel selbst installiert, und sein Dienst kann unter Dienste neu gestartet werden.',
 ];

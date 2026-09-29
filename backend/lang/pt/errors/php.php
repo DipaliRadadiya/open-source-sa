@@ -37,4 +37,5 @@ return [
     'ioncube_reload_failed' => 'Não foi possível recarregar o PHP. As alterações podem ainda não estar ativas. Todas as cópias de recuperação foram mantidas.',
     'ioncube_rollback_failed' => 'A reversão falhou; todas as cópias de recuperação foram mantidas. É necessária uma recuperação manual.',
     'ioncube_config_test_failed' => 'A validação da configuração do PHP falhou. Os ficheiros de configuração anteriores foram restaurados e o PHP não foi recarregado.',
+    'not_a_php_server' => 'Este servidor aloja contentores, por isso não serve sites PHP nem tem versões de PHP para gerir. O PHP continua instalado para o próprio painel, e o seu serviço pode ser reiniciado em Serviços.',
 ];

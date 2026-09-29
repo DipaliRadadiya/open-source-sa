@@ -37,4 +37,5 @@ return [
     'ioncube_reload_failed' => 'PHP n\'a pas pu être rechargé. Les modifications ne sont peut-être pas encore actives. Toutes les copies de récupération ont été conservées.',
     'ioncube_rollback_failed' => 'La restauration a échoué ; toutes les copies de récupération ont été conservées. Une récupération manuelle est nécessaire.',
     'ioncube_config_test_failed' => 'La validation de la configuration PHP a échoué. Les fichiers de configuration précédents ont été restaurés et PHP n\'a pas été rechargé.',
+    'not_a_php_server' => 'Ce serveur héberge des conteneurs : il ne sert aucun site PHP et n’a aucune version de PHP à gérer. PHP reste installé pour le panneau lui-même, et son service peut être redémarré depuis Services.',
 ];

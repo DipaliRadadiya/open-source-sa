@@ -15,7 +15,11 @@ import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { RuntimeStatusNotice } from "@/components/runtime/version-status";
-import { anyInFlight, RUNTIME_POLL_MS, RUNTIME_POLL_STOP_MS } from "@/lib/runtime/in-flight";
+import {
+  anyInFlight,
+  RUNTIME_POLL_MS,
+  RUNTIME_POLL_STOP_MS,
+} from "@/lib/runtime/in-flight";
 import { FileCode2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { PermissionDenied } from "@/components/sections/permission-denied";
@@ -29,17 +33,40 @@ export async function generateMetadata() {
 
 export default async function PhpPage({ searchParams }) {
   const sp = await searchParams;
-  const [permissions, t, { data, failed, status, failure, message }] = await Promise.all([
-    getPermissions(),
-    getTranslations("php"),
-    getPhp(),
-  ]);
+  const [permissions, t, { data, failed, status, failure, message }] =
+    await Promise.all([getPermissions(), getTranslations("php"), getPhp()]);
 
   // Runtimes are gated by the same permission as the rest of the server config.
-  if (!can(permissions, "php", "view")) return <PermissionDenied title={t("title")} />;
+  if (!can(permissions, "php", "view"))
+    return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "php", "manage");
 
-  if (failed || !data) return <LoadFailed description={t("loadFailed")} status={status} failure={failure} message={message} />;
+  // A 409 is not a failure to report — it is the honest answer on a Docker box,
+  // whose stack serves no PHP sites. The sidebar already stops offering this
+  // screen there, so this is reached by a bookmark or a tab left open across a
+  // stack change, and both deserve a sentence rather than a red error card.
+  if (failed && status === 409) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={t("title")} />
+        <EmptyState
+          icon={FileCode2}
+          title={t("unavailable.title")}
+          description={t("unavailable.body")}
+        />
+      </div>
+    );
+  }
+
+  if (failed || !data)
+    return (
+      <LoadFailed
+        description={t("loadFailed")}
+        status={status}
+        failure={failure}
+        message={message}
+      />
+    );
 
   const php = data;
   const versions = php?.versions ?? [];
@@ -53,19 +80,22 @@ export default async function PhpPage({ searchParams }) {
     versions[0]?.version ??
     null;
 
-  const current = versions.find((version) => version.version === selected) ?? null;
+  const current =
+    versions.find((version) => version.version === selected) ?? null;
 
   // An install that failed or is still running has nothing on disk, so the
   // extensions endpoint 404s. Asking anyway spends a request to learn what the
   // version list already said.
-  const installState = current?.status && current.status !== "ready" ? current.status : null;
+  const installState =
+    current?.status && current.status !== "ready" ? current.status : null;
   // Both endpoints 404 on a version that is still installing or failed, so
   // neither is asked for then — the same reason the extensions call is
   // skipped. Fetched together: they are independent and waiting for one to
   // start the other adds a round trip to every load of this page.
-  const [{ data: extensions }, { data: ioncube, failed: ionCubeFailed }] = installState
-    ? [{ data: null }, { data: null, failed: false }]
-    : await Promise.all([getPhpExtensions(selected), getIonCube(selected)]);
+  const [{ data: extensions }, { data: ioncube, failed: ionCubeFailed }] =
+    installState
+      ? [{ data: null }, { data: null, failed: false }]
+      : await Promise.all([getPhpExtensions(selected), getIonCube(selected)]);
 
   // An install or a purge takes minutes and finishes without telling anyone, so
   // a page rendered once sits on "Installing" until you navigate away and back.
@@ -83,7 +113,10 @@ export default async function PhpPage({ searchParams }) {
   return (
     <div className="space-y-6">
       {inFlight ? (
-        <AutoRefresh intervalMs={RUNTIME_POLL_MS} stopAfterMs={RUNTIME_POLL_STOP_MS} />
+        <AutoRefresh
+          intervalMs={RUNTIME_POLL_MS}
+          stopAfterMs={RUNTIME_POLL_STOP_MS}
+        />
       ) : null}
 
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
@@ -184,7 +217,11 @@ export default async function PhpPage({ searchParams }) {
             // Shared with Node so the two pages cannot drift. This branch used
             // to be `installing ? … : failed`, so a version being REMOVED
             // announced "Install failed" — a failure that had not happened.
-            <RuntimeStatusNotice version={current} versionLabel={selected} namespace="php" />
+            <RuntimeStatusNotice
+              version={current}
+              versionLabel={selected}
+              namespace="php"
+            />
           ) : (
             /*
              * One at a time, not stacked. The extensions list is ~96 rows and

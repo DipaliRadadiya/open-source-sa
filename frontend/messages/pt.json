@@ -2155,6 +2155,10 @@
     "tabs": {
       "extensions": "Extensões",
       "ioncube": "ionCube"
+    },
+    "unavailable": {
+      "title": "O PHP não é gerido neste servidor",
+      "body": "Este servidor aloja contentores, por isso não serve sites PHP nem tem versões de PHP para gerir. O PHP continua instalado para o próprio painel, e o seu serviço pode ser reiniciado em Serviços."
     }
   },
   "node": {

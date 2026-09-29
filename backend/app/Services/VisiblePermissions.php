@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Application;
 use App\Models\Permission;
 use App\Models\User;
+use App\Services\Server\Capabilities\ServerCapabilities;
 
 /**
  * The permissions a user can actually see, resolved in one place.
@@ -43,6 +44,31 @@ class VisiblePermissions
                 fn (Permission $permission) => $permission->level !== 'application'
                     || in_array($permission->name, $features, true)
             );
+        }
+
+        // The third filter, and the server-level counterpart of the one above:
+        // a feature the STACK cannot do is a screen about nothing.
+        //
+        // Only `php` for now, deliberately. The same reasoning applies to
+        // Databases and Node.js on a Docker box, and to Docker on a LEMP box —
+        // Databases in particular already answers 409 there, so that tab is
+        // live-broken today. Those are a product decision about how much of the
+        // sidebar vanishes, not a mechanical consequence of this one, so they are
+        // left to be asked for rather than assumed.
+        //
+        // `hosts('php')`, never `can('php')`: PHP is installed on a Docker box
+        // because the panel is a Laravel application, and gating on that would
+        // hide this nowhere. A server with no recorded stack answers `true` by
+        // design — refusing a working migrated LEMP box its PHP screen because
+        // nobody wrote a capability row is a far worse failure than one extra tab.
+        if ($level === 'server' || $level === null) {
+            $hostsPhp = app(ServerCapabilities::class)->hosts('php');
+
+            if (! $hostsPhp) {
+                $permissions = $permissions->reject(
+                    fn (Permission $permission) => $permission->level === 'server' && $permission->name === 'php'
+                );
+            }
         }
 
         // Build effective {view, manage} per permission id, merged across

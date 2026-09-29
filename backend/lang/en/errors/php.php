@@ -37,4 +37,5 @@ return [
     'ioncube_reload_failed' => 'PHP could not be reloaded. The changes may not yet be active. Any recovery copies have been retained.',
     'ioncube_rollback_failed' => 'Rollback failed; any recovery copies have been retained. Manual recovery is required.',
     'ioncube_config_test_failed' => 'PHP configuration validation failed. The previous configuration files were restored and PHP was not reloaded.',
+    'not_a_php_server' => 'This server hosts containers, so it serves no PHP sites and has no PHP versions to manage. PHP is still installed for the panel itself, and its service can be restarted from Services.',
 ];
