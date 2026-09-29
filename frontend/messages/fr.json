@@ -6169,7 +6169,8 @@
       "stalledQueued": "Cette restauration n'a pas démarré",
       "stalledQueuedBody": "Elle attend depuis quelques minutes que le serveur la prenne en charge. Rien n'a été modifié sur l'application. Le job ne fonctionne peut-être pas — vérifiez à nouveau, ou demandez à la personne qui gère ce serveur de regarder.",
       "undone": "La restauration a été annulée",
-      "undoneBody": "L'application est revenue à son état antérieur à votre restauration. Vérifiez l'application, puis fermez ceci."
+      "undoneBody": "L'application est revenue à son état antérieur à votre restauration. Vérifiez l'application, puis fermez ceci.",
+      "checkFailed": "Impossible de vérifier cette restauration. Réessayez dans un instant."
     },
     "application": {
       "pageTitle": "Sauvegardes",

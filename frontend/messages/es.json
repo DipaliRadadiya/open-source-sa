@@ -6169,7 +6169,8 @@
       "stalledQueued": "Esta restauración no ha empezado",
       "stalledQueuedBody": "Lleva un par de minutos esperando a que el servidor la recoja. No se ha cambiado nada en la aplicación. Puede que el proceso no esté en marcha: vuelve a comprobarlo o pide a quien gestione el servidor que lo revise.",
       "undone": "Se ha deshecho la restauración",
-      "undoneBody": "La aplicación ha vuelto a como estaba antes de restaurar. Revisa la aplicación y luego descarta este aviso."
+      "undoneBody": "La aplicación ha vuelto a como estaba antes de restaurar. Revisa la aplicación y luego descarta este aviso.",
+      "checkFailed": "No pudimos comprobar esta restauración. Inténtalo de nuevo en un momento."
     },
     "application": {
       "pageTitle": "Copias de seguridad",

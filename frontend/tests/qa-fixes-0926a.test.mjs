@@ -22,7 +22,7 @@ test("BK-C: a finished restore keeps its banner (and Undo) across reloads until 
   // The callback is read through a ref, so an inline function cannot restart the polling.
   const progress = read("components/backups/restore-progress.jsx");
   assert.match(progress, /statusRef\.current\?\.\(next\.status, next\.id\)/);
-  assert.match(progress, /\}, \[inFlight, id, queued, router\]\);/);
+  assert.match(progress, /\}, \[inFlight, id, queued, router, round\]\);/);
 });
 
 test("PP-F: the show/hide password button is reachable by keyboard", () => {

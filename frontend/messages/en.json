@@ -6169,7 +6169,8 @@
       "stalledQueued": "This restore has not started",
       "stalledQueuedBody": "It has been waiting a couple of minutes for the server to pick it up. Nothing on the application has been changed. The job may not be running — check again, or ask whoever manages this server to look.",
       "undone": "The restore has been undone",
-      "undoneBody": "The application is back as it was before you restored. Check the application, then dismiss this."
+      "undoneBody": "The application is back as it was before you restored. Check the application, then dismiss this.",
+      "checkFailed": "We couldn't check this restore. Try again in a moment."
     },
     "application": {
       "pageTitle": "Backups",

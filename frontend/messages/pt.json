@@ -6169,7 +6169,8 @@
       "stalledQueued": "Esta restauração não foi iniciada",
       "stalledQueuedBody": "Está aguardando há alguns minutos para o servidor pegá-la. Nada na aplicação foi alterado. O job pode não estar em execução — verifique novamente ou peça a quem administra este servidor para conferir.",
       "undone": "A restauração foi desfeita",
-      "undoneBody": "A aplicação voltou ao estado anterior à restauração. Verifique a aplicação e depois descarte."
+      "undoneBody": "A aplicação voltou ao estado anterior à restauração. Verifique a aplicação e depois descarte.",
+      "checkFailed": "Não foi possível verificar esta restauração. Tente novamente em instantes."
     },
     "application": {
       "pageTitle": "Backups",

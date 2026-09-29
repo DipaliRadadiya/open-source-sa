@@ -61,7 +61,7 @@ export function RestoreProgress({
   onDismiss,
 }) {
   const t = useTranslations("backups.progress");
-  const { refresh, pending: refreshing } = useRefresh();
+  const { refreshAndWait } = useRefresh();
   const router = useRouter();
   const [restore, setRestore] = useState(initial);
   const [undoBackup, setUndoBackup] = useState(null);
@@ -81,6 +81,10 @@ export function RestoreProgress({
   // Set when polling gives up: the restore is still `pending`/`running` as far
   // as the API is concerned, but nothing has moved for a long time.
   const [stalled, setStalled] = useState(false);
+  // Bumped by "Check again" so polling restarts even when the status it finds
+  // is the same one it gave up on.
+  const [round, setRound] = useState(0);
+  const [checking, setChecking] = useState(false);
   const timer = useRef(null);
   // Through a ref: callers pass an inline function, and as an effect
   // dependency it restarted the polling (and its give-up timer) every render.
@@ -135,7 +139,29 @@ export function RestoreProgress({
       clearInterval(timer.current);
       clearTimeout(stop);
     };
-  }, [inFlight, id, queued, router]);
+  }, [inFlight, id, queued, router, round]);
+
+  // Ask about THIS restore, not the page. A refresh re-rendered the layout,
+  // but the banner keeps its own copy, so it went on saying "has not started"
+  // over a restore that had long finished.
+  async function checkAgain() {
+    setChecking(true);
+    try {
+      const response = await fetchRestore(id);
+      const next = response.data?.restore;
+      if (next) {
+        setRestore(next);
+        statusRef.current?.(next.status, next.id);
+        if (!RESTORE_IN_FLIGHT.includes(next.status)) await refreshAndWait();
+      }
+      setStalled(false);
+      setRound((current) => current + 1);
+    } catch (error) {
+      toast.error(apiMessage(error, t("checkFailed")));
+    } finally {
+      setChecking(false);
+    }
+  }
 
   if (!restore) return null;
 
@@ -290,8 +316,8 @@ export function RestoreProgress({
           </div>
         </div>
         <div className="ml-14 flex flex-wrap gap-2">
-          <Button size="sm" onClick={refresh} disabled={refreshing}>
-            <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+          <Button size="sm" onClick={checkAgain} disabled={checking}>
+            <RefreshCw className={cn("size-4", checking && "animate-spin")} />
             {t("checkAgain")}
           </Button>
           <Button variant="secondary" size="sm" onClick={onDismiss} className={NEUTRAL}>

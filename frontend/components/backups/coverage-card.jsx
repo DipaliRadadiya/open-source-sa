@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Clock, SearchX, ShieldAlert, ShieldCheck } from "lucide-react";
 import { BACKUP_IN_FLIGHT, BACKUP_TYPES } from "@/lib/schemas/backup";
 import { runBackupNow } from "@/lib/api/backups";
+import { backupStartedWithin } from "@/lib/backups/just-started";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
@@ -53,7 +54,10 @@ export function CoverageCard({
   // Set when "Run backup" is pressed, so the poller can cover the gap between
   // accepting the run and the row showing it. A timer clears it rather than a
   // comparison against `Date.now()`, which would make the render impure.
-  const [justStarted, setJustStarted] = useState(false);
+  // Also true when this card has just replaced the empty state, whose "Back up
+  // now" started a run these rows do not show yet. Only an invisible poller
+  // depends on it, so a server/client difference changes no markup.
+  const [justStarted, setJustStarted] = useState(() => backupStartedWithin(JUST_STARTED_MS));
 
   const [state, setState] = useState("all");
   const [search, setSearch] = useState("");
@@ -285,6 +289,7 @@ export function CoverageCard({
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
         options={backupOptions}
+        onStarted={() => setJustStarted(true)}
       />
     </>
   );

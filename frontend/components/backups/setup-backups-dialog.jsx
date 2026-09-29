@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { CheckCircle2, Loader2, PlayCircle, ShieldCheck, TriangleAlert } from "lucide-react";
@@ -12,6 +12,7 @@ import {
 } from "@/lib/schemas/backup";
 import { frequencyOption, timeUsage } from "@/lib/backups/frequency";
 import { fetchBackupTargetOptions, runBackupNow, saveBackupTarget } from "@/lib/api/backups";
+import { markBackupStarted } from "@/lib/backups/just-started";
 import { listDestinations } from "@/lib/api/storage";
 import { storageDestinationsResponseSchema } from "@/lib/schemas/storage";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
@@ -60,10 +61,11 @@ export function SetupBackupsDialog({
   onStarted,
 }) {
   const t = useTranslations("backups.setup");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [saved, setSaved] = useState(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [running, setRunning] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   /*
    * The destinations, as of the last time we asked.
    *
@@ -148,12 +150,14 @@ export function SetupBackupsDialog({
       const application = applications.find(
         (candidate) => candidate.id === Number(values.application_id),
       );
+      // No refresh yet: on the Backups empty state it swaps the page for the
+      // overview, which unmounts this dialog and loses the "Back up now" step.
+      // Done and Back up now refresh instead.
       setSaved({
         id: Number(values.application_id),
         name: application?.name ?? applicationName ?? "",
         ...values,
       });
-      router.refresh();
     } catch (error) {
       if (error.response?.data?.errors) {
         handleValidationError(error, form);
@@ -167,10 +171,11 @@ export function SetupBackupsDialog({
     setRunning(true);
     try {
       await runBackupNow(saved.id);
-      toast.success(t("started"));
+      markBackupStarted();
       onStarted?.();
+      await refreshAndWait();
+      toast.success(t("started"));
       close();
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("startFailed")));
     } finally {
@@ -184,6 +189,17 @@ export function SetupBackupsDialog({
     if (!saved && form.formState.isDirty && !form.formState.isSubmitting) {
       setConfirmDiscard(true);
       return;
+    }
+    close();
+  }
+
+  // Leaving the saved step: the page behind has not seen the new settings yet.
+  async function finish() {
+    setFinishing(true);
+    try {
+      await refreshAndWait();
+    } finally {
+      setFinishing(false);
     }
     close();
   }
@@ -265,7 +281,7 @@ export function SetupBackupsDialog({
     return (
       <FormModal
         open={open}
-        onOpenChange={(next) => (next ? onOpenChange?.(true) : close())}
+        onOpenChange={(next) => (next ? onOpenChange?.(true) : running || finishing ? null : finish())}
         icon={CheckCircle2}
         title={
           saved.name
@@ -277,10 +293,11 @@ export function SetupBackupsDialog({
         }
         footer={
           <>
-            <Button type="button" variant="outline" onClick={close} disabled={running}>
+            <Button type="button" variant="outline" onClick={finish} disabled={running || finishing}>
+              {finishing ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("done")}
             </Button>
-            <Button type="button" onClick={backUpNow} disabled={running}>
+            <Button type="button" onClick={backUpNow} disabled={running || finishing}>
               {running ? <Loader2 className="size-4 animate-spin" /> : <PlayCircle className="size-4" />}
               {t("backUpNow")}
             </Button>

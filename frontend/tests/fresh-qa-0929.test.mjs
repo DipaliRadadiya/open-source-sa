@@ -400,3 +400,30 @@ test("Server log filters never offer account verbs", async () => {
   assert.deepEqual(actionsForScope(own.actions, own.types, "server").all, []);
   assert.deepEqual(actionsForScope({ all: ["created"] }, [], "server").all, ["created"]);
 });
+
+test("Backups: the setup dialog keeps its saved step and the overview watches the new run", async () => {
+  const dialog = read("components/backups/setup-backups-dialog.jsx");
+  const submit = dialog.slice(dialog.indexOf("async function onSubmit"), dialog.indexOf("async function backUpNow"));
+  assert.doesNotMatch(submit, /router\.refresh\(\)|refreshAndWait\(\)/);
+  assert.match(dialog, /await runBackupNow\(saved\.id\);\s*markBackupStarted\(\);\s*onStarted\?\.\(\);\s*await refreshAndWait\(\);/);
+  assert.match(dialog, /async function finish\(\)/);
+  const card = read("components/backups/coverage-card.jsx");
+  assert.match(card, /useState\(\(\) => backupStartedWithin\(JUST_STARTED_MS\)\)/);
+  assert.match(card, /onStarted=\{\(\) => setJustStarted\(true\)\}/);
+  globalThis.sessionStorage = new Map();
+  globalThis.sessionStorage.setItem = globalThis.sessionStorage.set; globalThis.sessionStorage.getItem = globalThis.sessionStorage.get;
+  globalThis.window = {};
+  const { markBackupStarted, backupStartedWithin } = await import("../lib/backups/just-started.js");
+  assert.equal(backupStartedWithin(90_000), false);
+  markBackupStarted();
+  assert.equal(backupStartedWithin(90_000), true);
+  delete globalThis.window; delete globalThis.sessionStorage;
+});
+
+test("Backups: Check again on a stalled restore asks about that restore and resumes watching", () => {
+  const src = read("components/backups/restore-progress.jsx");
+  assert.match(src, /async function checkAgain\(\) \{[\s\S]*?await fetchRestore\(id\)[\s\S]*?setStalled\(false\);\s*setRound/);
+  assert.match(src, /\[inFlight, id, queued, router, round\]/);
+  assert.match(src, /onClick=\{checkAgain\}/);
+  for (const l of locales) assert.ok(JSON.parse(read(`messages/${l}.json`)).backups.progress.checkFailed, l);
+});

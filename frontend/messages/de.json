@@ -6169,7 +6169,8 @@
       "stalledQueued": "Diese Wiederherstellung hat nicht begonnen",
       "stalledQueuedBody": "Sie wartet seit einigen Minuten darauf, dass der Server sie aufnimmt. An der Anwendung wurde nichts geändert. Der Job läuft möglicherweise nicht — prüfen Sie erneut oder bitten Sie die Person, die diesen Server verwaltet, nachzusehen.",
       "undone": "Die Wiederherstellung wurde zurückgenommen",
-      "undoneBody": "Die Anwendung ist wieder wie vor der Wiederherstellung. Prüfen Sie die Anwendung und blenden Sie das dann aus."
+      "undoneBody": "Die Anwendung ist wieder wie vor der Wiederherstellung. Prüfen Sie die Anwendung und blenden Sie das dann aus.",
+      "checkFailed": "Diese Wiederherstellung konnte nicht geprüft werden. Versuchen Sie es gleich noch einmal."
     },
     "application": {
       "pageTitle": "Backups",
