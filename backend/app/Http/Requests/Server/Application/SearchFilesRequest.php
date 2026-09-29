@@ -19,7 +19,10 @@ class SearchFilesRequest extends FormRequest
     {
         return [
             'q' => ['required', 'string', 'min:1', 'max:255'],
-            'path' => ['sometimes', 'string', 'max:1024', new SafeRelativePath],
+            // Nullable: `?path=` arrives as null (ConvertEmptyStringsToNull),
+            // and the documented meaning of an empty path is the site root.
+            // It was a 422 "must be a string" instead.
+            'path' => ['sometimes', 'nullable', 'string', 'max:1024', new SafeRelativePath],
         ];
     }
 

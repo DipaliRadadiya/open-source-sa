@@ -390,6 +390,25 @@ function fakeFileBrowserServer(): void
                 ."\t1700000000\t{$mode}\t{$owner}\t{$group}\t{$targetType}\t{$linkTarget}";
         };
 
+        // `find <trash> … -name '*.paths' -exec grep -H '' {} +` — each batch's
+        // record, printed the way grep -H prints it: `<file>:<line>`.
+        if ($binary === 'find' && in_array('*.paths', $inner, true)) {
+            $root = rtrim($inner[1], '/');
+            $lines = [];
+
+            foreach (FileBrowserFake::$fs as $path => $entry) {
+                if (preg_match('#^'.preg_quote($root, '#').'/\d{8}-\d{6}\.paths$#', $path) !== 1) {
+                    continue;
+                }
+
+                foreach (array_filter(explode("\n", (string) ($entry['content'] ?? ''))) as $line) {
+                    $lines[] = "{$path}:{$line}";
+                }
+            }
+
+            return Process::result(output: $lines === [] ? '' : implode("\n", $lines)."\n");
+        }
+
         // `find <trash> -mindepth 2 -printf '%P\n'` — everything under the
         // trash root, path relative to it. Keys in the fake are absolute for
         // anything above the web root, so this strips the root prefix the same
@@ -519,6 +538,17 @@ function fakeFileBrowserServer(): void
             $entry = FileBrowserFake::$fs[$relative($inner[1])] ?? null;
 
             return Process::result(output: $entry['content'] ?? '');
+        }
+
+        // `tee -a <trash>/<batch>.paths` — the record of what a batch holds.
+        if ($binary === 'tee' && ($inner[1] ?? null) === '-a') {
+            $rel = $relative($inner[2]);
+            FileBrowserFake::$fs[$rel] = [
+                'type' => 'f',
+                'content' => (FileBrowserFake::$fs[$rel]['content'] ?? '').($process->input ?? ''),
+            ];
+
+            return Process::result(exitCode: 0);
         }
 
         if ($binary === 'tee') {
@@ -2076,7 +2106,8 @@ describe('bulk operations', function () {
         // come back together rather than scattering across twelve folders.
         $batches = collect(array_keys(FileBrowserFake::$fs))
             ->filter(fn (string $k) => str_contains($k, '/.panel/trash/'))
-            ->map(fn (string $k) => explode('/', explode('/.panel/trash/', $k)[1])[0])
+            // `<batch>.paths` is that batch's record of what it holds.
+            ->map(fn (string $k) => preg_replace('/\.paths$/', '', explode('/', explode('/.panel/trash/', $k)[1])[0]))
             ->unique();
 
         expect($batches)->toHaveCount(1);
@@ -2330,10 +2361,68 @@ describe('upload throttling', function () {
     });
 });
 
+it('treats an empty path as the site root, as documented', function () {
+    // `?path=` reaches the request as null (ConvertEmptyStringsToNull), and
+    // was refused with "The path field must be a string" (found live
+    // 2026-09-29).
+    FileBrowserFake::reset();
+    FileBrowserFake::$fs[''] = ['type' => 'd'];
+    FileBrowserFake::$fs['index.php'] = ['type' => 'f', 'content' => '<?php'];
+    fakeFileBrowserServer();
+
+    $this->actingAs($this->admin)->getJson(filesUrl().'?path=')->assertOk()->assertJsonPath('path', '');
+    $this->actingAs($this->admin)->getJson(filesUrl('/search').'?q=index&path=')->assertOk();
+});
+
 describe('trash', function () {
     beforeEach(function () {
         FileBrowserFake::reset();
         FileBrowserFake::$fs['old.txt'] = ['type' => 'f', 'size' => 5, 'content' => 'gone?'];
+    });
+
+    it('lists what was deleted from inside a folder, not the folder, and restores it', function () {
+        // Found live 2026-09-29: deleting `qa/note.txt` made `<batch>/qa/` for
+        // it, the listing read that scaffolding back as a deleted folder `qa`
+        // and hid the file, and "restore all" tried to put back a `qa` that
+        // was never deleted — refused with `exists`. Nothing deleted below the
+        // site root could be restored from the screen.
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['qa'] = ['type' => 'd'];
+        FileBrowserFake::$fs['qa/note.txt'] = ['type' => 'f', 'size' => 9, 'content' => 'hello v1'];
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['path' => 'qa/note.txt', 'confirm' => true])
+            ->assertOk();
+
+        $trash = $this->actingAs($this->admin)->getJson(filesUrl('/trash'))->assertOk()->json('trash');
+
+        expect(collect($trash)->pluck('path')->all())->toBe(['qa/note.txt']);
+
+        $this->actingAs($this->admin)
+            ->postJson(filesUrl('/trash/restore'), ['batch' => $trash[0]['batch']])
+            ->assertOk()
+            ->assertJsonPath('restored', true)
+            ->assertJsonPath('succeeded', ['qa/note.txt']);
+
+        expect(FileBrowserFake::$fs['qa/note.txt']['content'] ?? null)->toBe('hello v1');
+    });
+
+    it('lists each item of a selection deleted from inside a folder', function () {
+        fakeFileBrowserServer();
+        FileBrowserFake::$fs['qa'] = ['type' => 'd'];
+        FileBrowserFake::$fs['qa/keep'] = ['type' => 'd'];
+        FileBrowserFake::$fs['qa/keep/a.txt'] = ['type' => 'f', 'size' => 1, 'content' => 'a'];
+        FileBrowserFake::$fs['qa/keep2'] = ['type' => 'd'];
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl(), ['paths' => ['qa/keep', 'qa/keep2'], 'confirm' => true, 'count' => 2])
+            ->assertOk();
+
+        $trash = $this->actingAs($this->admin)->getJson(filesUrl('/trash'))->assertOk()->json('trash');
+
+        // Both, and only the tops of the two deleted trees — not `qa`, and not
+        // `qa/keep/a.txt`.
+        expect(collect($trash)->pluck('path')->sort()->values()->all())->toBe(['qa/keep', 'qa/keep2']);
     });
 
     it('lists what was deleted with its size and retention, then puts it back', function () {

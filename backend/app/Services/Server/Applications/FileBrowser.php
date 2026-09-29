@@ -1056,11 +1056,44 @@ class FileBrowser
      */
     private function moveToTrash(Application $application, string $relative, string $target): void
     {
-        $destination = $this->trashDirectory($application).'/'.now()->format('Ymd-His').'/'.ltrim($relative, '/');
+        $batch = now()->format('Ymd-His');
+        $destination = $this->trashDirectory($application).'/'.$batch.'/'.ltrim($relative, '/');
 
         $this->panelDirectory->ensure($application, 'trash');
         $this->run($application, ['mkdir', '-p', dirname($destination)], 'trash_dir');
         $this->run($application, ['mv', $target, $destination], 'trash');
+        $this->recordTrashed($application, $batch, [$relative]);
+    }
+
+    /**
+     * Note what a batch actually holds, beside it as `<batch>.paths`.
+     *
+     * The trash cannot answer that on its own. Deleting `qa/note.txt` first
+     * makes `<batch>/qa/` so the file has somewhere to go, and read back that
+     * scaffolding is indistinguishable from a deleted folder called `qa`: the
+     * listing showed `qa`, hid the file under it, and "restore all" tried to
+     * put back a folder that was never deleted and refused with `exists`
+     * (found live 2026-09-29). Anything deleted below the site root was
+     * unrecoverable from the screen.
+     *
+     * One line per path, appended, as the site user like every other trash
+     * write. Beside the batch rather than in it, so it can never collide with
+     * a deleted file's own name and is never mistaken for trash.
+     *
+     * @param  array<int, string>  $paths
+     */
+    private function recordTrashed(Application $application, string $batch, array $paths): void
+    {
+        $lines = implode('', array_map(fn (string $path): string => ltrim($path, '/')."\n", $paths));
+
+        // Not fatal: the item is already safely in the trash, and a batch with
+        // no record is still listed the old way.
+        $this->serverOps->run(
+            $this->asUser($application, ['tee', '-a', $this->trashDirectory($application)."/{$batch}.paths"]),
+            ['feature' => 'application', 'op' => 'file_trash_record', 'application' => $application->id],
+            timeout: 30,
+            input: $lines,
+        );
     }
 
     /**
@@ -1098,12 +1131,21 @@ class FileBrowser
         }
 
         $entries = [];
+        $present = [];
+        $recorded = $this->trashRecords($application);
 
         foreach (array_filter(array_map('trim', explode("\n", $result->output()))) as $line) {
             // `%P` gives `<batch>/<original/relative/path>`.
             [$batch, $path] = array_pad(explode('/', $line, 2), 2, '');
 
             if ($path === '' || ! preg_match('/^\d{8}-\d{6}$/', $batch)) {
+                continue;
+            }
+
+            $present[$batch][$path] = true;
+
+            // A batch that says what it holds is listed from that, below.
+            if (isset($recorded[$batch])) {
                 continue;
             }
 
@@ -1121,9 +1163,61 @@ class FileBrowser
             ];
         }
 
-        usort($entries, fn (array $a, array $b): int => strcmp($b['batch'], $a['batch']));
+        // Exactly what was deleted, and only what is still there — a path
+        // restored on its own drops out, and a move that failed is never
+        // offered back.
+        foreach ($recorded as $batch => $paths) {
+            foreach (array_unique($paths) as $path) {
+                if (isset($present[$batch][$path])) {
+                    $entries[] = [
+                        'batch' => $batch,
+                        'path' => $path,
+                        'deleted_at' => $this->timestampFromBackupName($batch),
+                    ];
+                }
+            }
+        }
+
+        usort($entries, fn (array $a, array $b): int => strcmp($b['batch'], $a['batch']) ?: strcmp($a['path'], $b['path']));
 
         return $entries;
+    }
+
+    /**
+     * Each batch's `<batch>.paths` record, batch => paths.
+     *
+     * Batches from before the record existed have none and are listed as
+     * they always were; they age out with the retention window.
+     *
+     * @return array<string, array<int, string>>
+     */
+    private function trashRecords(Application $application): array
+    {
+        $root = $this->trashDirectory($application);
+
+        $result = $this->serverOps->run(
+            $this->asUser($application, ['find', $root, '-mindepth', '1', '-maxdepth', '1', '-type', 'f', '-name', '*.paths', '-exec', 'grep', '-H', '', '{}', '+']),
+            ['feature' => 'application', 'op' => 'trash_records', 'application' => $application->id],
+            timeout: 30,
+        );
+
+        if ($result->failed()) {
+            return [];
+        }
+
+        $records = [];
+
+        foreach (array_filter(explode("\n", $result->output())) as $line) {
+            // `<root>/<batch>.paths:<path>` — the path is everything after the
+            // first colon following the record's own name.
+            if (! preg_match('#^'.preg_quote($root, '#').'/(\d{8}-\d{6})\.paths:(.+)$#', $line, $m)) {
+                continue;
+            }
+
+            $records[$m[1]][] = trim($m[2], "/ \t\r");
+        }
+
+        return $records;
     }
 
     /**
@@ -1291,7 +1385,7 @@ class FileBrowser
         if ($batch !== null) {
             abort_unless(preg_match('/^\d{8}-\d{6}$/', $batch) === 1, 422, __('errors/application.unknown_backup'));
 
-            $this->run($application, ['rm', '-rf', $this->trashDirectory($application).'/'.$batch], 'trash_empty');
+            $this->run($application, ['rm', '-rf', $this->trashDirectory($application).'/'.$batch, $this->trashDirectory($application).'/'.$batch.'.paths'], 'trash_empty');
 
             return;
         }
@@ -1314,8 +1408,10 @@ class FileBrowser
 
         $this->serverOps->run(
             $this->asUser($application, [
+                // Batches and their `.paths` records alike.
                 'find', $this->trashDirectory($application), '-mindepth', '1', '-maxdepth', '1',
-                '-type', 'd', '-mtime', '+'.$days, '-exec', 'rm', '-rf', '{}', '+',
+                '(', '-type', 'd', '-o', '-name', '*.paths', ')',
+                '-mtime', '+'.$days, '-exec', 'rm', '-rf', '{}', '+',
             ]),
             ['feature' => 'application', 'op' => 'trash_prune', 'application' => $application->id],
             timeout: 60,
@@ -1864,6 +1960,11 @@ class FileBrowser
                 $this->tolerant($application, ['mkdir', '-p', dirname($destination)], 'trash_dir');
                 $this->tolerant($application, ['mv', $this->resolve($application, $relative), $destination], 'trash');
             }
+
+            // What was meant to go in, not what made it: the listing only shows
+            // a recorded path that is really there, so a failed move is never
+            // offered back.
+            $this->recordTrashed($application, $stamp, array_keys($found));
 
             $directories = [];
             $files = [];

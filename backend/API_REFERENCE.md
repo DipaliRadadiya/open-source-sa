@@ -1823,7 +1823,7 @@ Fix file/directory ownership and permissions for this site.
 
 Browse a directory.
 
-**Query:** `?path=wp-content/plugins` (relative to the site root; defaults to `""`, the root itself — a leading `/` is refused with 422)
+**Query:** `?path=wp-content/plugins` (relative to the site root; omitted or empty — `?path=` — is the root itself; empty was a 422 until 2026-09-29. A leading `/` is refused with 422)
 
 **The root (`""`) is the site's code root — `{home}/{slug}/public_html` — not its document root.** They are the same directory for a site with no web root. For Statamic (`/public`), Craft (`/web`) or any git site serving from a subdirectory they are not, and rooting here is what lets the file manager show the application itself: its `.env`, `composer.json`, `vendor/` and config, rather than only the served folder. Every path in this section is relative to that root, and nothing above it is reachable — `.panel/` (Basic Auth hash, PHP sessions, pre-push database dumps) is a sibling of `public_html`, which is precisely why the panel writes there.
 
@@ -1847,7 +1847,7 @@ Browse a directory.
 
 `type` is `file`, `dir` or `symlink` — note `dir`, not `directory`.
 
-`mode` is the full `ls -l` string (type char + permission bits), **not** an octal — `PUT …/files/permissions` takes an octal, so don't echo this value back at it. `owner` and `group` are separate fields, not part of `mode`.
+`mode` is the **octal** permission bits as a string (`"644"`, `"755"`) — the same three digits `PUT …/files/permissions` takes (corrected 2026-09-29: this said an `ls -l` string, which the API has not returned). `owner` and `group` are separate fields.
 
 On a **symlink**, `mode`/`owner`/`group` are `null` — a link's own mode is always `lrwxrwxrwx` and its ownership says nothing about the target, so a constant is not shown. `link_target` is where it points, left exactly as written (a relative target stays relative), and `link_broken` is `true` when the target does not exist, is a loop, or could not be read. Both are `null` on non-symlinks.
 
@@ -1899,7 +1899,7 @@ Read a file.
 
 **Response `200`:**
 ```json
-{"path": "wp-config.php", "content": "<?php\ndefine('DB_NAME', 'shop');\n…", "size": 4096, "backups": ["2026-07-28-141530"]}
+{"path": "wp-config.php", "content": "<?php\ndefine('DB_NAME', 'shop');\n…", "size": 4096, "backups": [{"name": "wp-config.php.bak-20260728-141530", "created_at": "28-07-2026 14:15:30"}]}
 ```
 
 Binary files return `422`.
@@ -1909,7 +1909,7 @@ Binary files return `422`.
 ### PUT `/applications/{application}/files/content`
 **Permission:** `app_file` (manage) | **Throttle:** 20/min
 
-Write/edit a file.
+Edit an **existing** file (`404` if there is none — create files with `POST …/files/upload`). The previous version is kept as an automatic backup first.
 
 **Request:** `{"path": "wp-config.php", "content": "<?php\n…"}`
 
@@ -1922,7 +1922,7 @@ Write/edit a file.
 
 Restore a file from an automatic backup.
 
-**Request:** `{"path": "wp-config.php", "backup": "2026-07-28-141530"}`
+**Request:** `{"path": "wp-config.php", "backup": "wp-config.php.bak-20260728-141530"}` — `backup` is a `name` from the `backups` list, verbatim. The current content is backed up before restoring, so a restore is itself undoable.
 
 **Response `200`:** `{"restored": true}`
 
@@ -1935,7 +1935,7 @@ Upload one file in a single request. **Capped at 50 MB** — the whole body is
 buffered through PHP memory. For anything larger use the resumable endpoints
 below; there is no size limit there.
 
-**Body:** `file` (binary), `path` (destination directory, e.g. `wp-content`)
+**Body:** `file` (binary), `path` — the **full destination file path**, e.g. `wp-content/plugin.zip`, not the folder (corrected 2026-09-29). An existing file is never overwritten: `422`, delete it first.
 
 **Response `200`:** `{"uploaded": true}`
 
@@ -1955,16 +1955,16 @@ than after the user has waited.
 Opens a resumable upload and returns its id. Validates up front that the
 destination directory exists and that the disk has room.
 
-**Request:** `{"path": "wp-content/big-backup.zip"}`
+**Request:** `{"path": "wp-content/big-backup.zip"}` — an existing file there is refused up front (`422`).
 
-**Response `201`:** `{"upload": {"id": "…32 hex…"}}`
+**Response `200`:** `{"upload_id": "…32 hex…", "max_chunk": 66584576}` — `max_chunk` is the largest chunk this server accepts, in bytes.
 
 ---
 
 ### PUT `/applications/{application}/files/uploads/{uploadId}`
 **Permission:** `app_file` (manage) | **Throttle:** 1200/min | **Content-Type:** raw body
 
-Appends one chunk. **The body is the raw bytes, not multipart** — that halves
+Appends one chunk; responds `{"received": <total bytes so far>}`. **The body is the raw bytes, not multipart** — that halves
 the disk traffic of an upload on a box that is also serving customer sites.
 
 Bounds: one chunk must fit `client_max_body_size` (**64 MB**); the reference
@@ -1980,13 +1980,15 @@ whichever is larger.
 ### GET `/applications/{application}/files/uploads/{uploadId}`
 **Permission:** `app_file` (view) | **Throttle:** 60/min
 
-Bytes received so far — **this is the resume offset.** Restart from it after a
+`{"received": <bytes>}` — **this is the resume offset.** Restart from it after a
 dropped connection; there is no separate session to reconcile.
 
 ---
 
 ### POST `/applications/{application}/files/uploads/{uploadId}/finalize`
 **Permission:** `app_file` (manage) | **Throttle:** 30/min
+
+**Request:** `{"path": "wp-content/big-backup.zip"}` — the same path the upload was opened with (required). **Response:** `{"uploaded": true}`.
 
 Moves the assembled file into place. A same-filesystem rename, so it is atomic
 and instant — a half-finished upload is never visible at the target path.
@@ -1996,7 +1998,7 @@ and instant — a half-finished upload is never visible at the target path.
 ### DELETE `/applications/{application}/files/uploads/{uploadId}`
 **Permission:** `app_file` (manage) | **Throttle:** 30/min
 
-Abandons an upload and removes its part file.
+Abandons an upload and removes its part file. **Response:** `{"aborted": true}`.
 
 ---
 
@@ -2048,9 +2050,9 @@ Extract a **`.zip`, `.tar.gz` or `.tgz`** archive already in the site. Guarded
 against zip bombs: refused above 250 MB uncompressed or 10,000 entries, and
 any entry that is a symlink or escapes the destination.
 
-**Request:** `{"path": "plugin.zip", "target": "wp-content/plugins"}`
+**Request:** `{"path": "plugin.zip", "target": "wp-content/plugins"}` — `target` must already exist.
 
-**Response `200`:** `{"extracted": true}`
+**Response `202`:** `{"job": {"id": 5, "operation": "extract", "target": "wp-content/plugins", "status": "queued", …}}` — runs in the background; follow it on `GET …/files/archive-jobs` (`status`: `queued` → `running` → `completed` / `failed`, with `message` and `reference` on failure). Corrected 2026-09-29: this said `200 {"extracted": true}`.
 
 ---
 
@@ -2145,7 +2147,7 @@ runs from that folder so the archive holds bare names rather than the server's
 directory layout, and there is no folder to run from once the sources are
 spread across the tree. Disable the button when a selection spans folders.
 
-**Response `200`:** `{"compressed": true}`
+**Response `202`:** `{"job": {"id": 1, "operation": "compress", "target": "wp-content-backup.tar.gz", "status": "queued", …}}` — runs in the background, like `extract`; the finished job carries `size_bytes`. Corrected 2026-09-29: this said `200 {"compressed": true}`.
 
 ---
 
@@ -2200,7 +2202,7 @@ What is recoverable, newest first. An empty list is a normal answer.
 
 `path` is where it came from, which is also where it goes back to — `plugin.php`
 alone would not say which one it was. Only the top of a deleted tree is listed:
-a deleted directory is one thing the user deleted, not four hundred.
+a deleted directory is one thing the user deleted, not four hundred. Items deleted from inside a folder are listed by their own path (`qa/note.txt`), not the folder's — until 2026-09-29 they showed as the parent folder and "restore all" failed with `exists`; batches deleted before that fix still list the old way until they expire.
 
 `size` is the reclaimable on-disk footprint of that entry (directories included),
 not its inode size. `size` and `size_human` are `null` if that entry cannot be
