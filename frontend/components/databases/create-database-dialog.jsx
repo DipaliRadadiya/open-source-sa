@@ -11,6 +11,7 @@ import { applicationOptions } from "@/lib/backups/database-availability";
 import { acceptedEnginesFor, engineAccepted } from "@/lib/databases/engine-acceptance";
 import { createDatabase } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { useRestartConfirm } from "@/components/databases/use-restart-confirm";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +71,7 @@ export function CreateDatabaseDialog({
 }) {
   const t = useTranslations("databases");
   const tEngines = useTranslations("databases.engines");
+  const restart = useRestartConfirm();
   const router = useRouter();
   const [advanced, setAdvanced] = useState(false);
   // Set on success. The dialog then shows the credential instead of the form —
@@ -163,6 +165,7 @@ export function CreateDatabaseDialog({
       // Omitted means the API generates one, which is better than anything a
       // person types in a hurry.
       if (submitted.password) payload.create_user.password = submitted.password;
+      if (submitted.restart_cluster) payload.create_user.restart_cluster = true;
       if (submitted.connection_preference === "remote") {
         payload.create_user.host = submitted.host;
       }
@@ -174,7 +177,9 @@ export function CreateDatabaseDialog({
       setCreated(data?.database ?? null);
       router.refresh();
     } catch (error) {
-      handleValidationError(error, form);
+      const restartAnswer = restart.ask(error);
+      if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
+      if (!restartAnswer) handleValidationError(withUserFieldErrors(error, form), form);
     }
   }
 
@@ -556,7 +561,25 @@ export function CreateDatabaseDialog({
             </CollapsibleContent>
           </Collapsible>
         ) : null}
+      {restart.dialog}
       </FormModal>
     </Form>
   );
+}
+
+// The first user is sent nested as `create_user`, so its errors come back as
+// `create_user.username` / `.host` — keys no field is named, and a refused
+// username made Create do nothing (or, at best, raise a toast). They are set on
+// the fields directly and left out of what the generic handler sees.
+function withUserFieldErrors(error, form) {
+  const errors = error?.response?.data?.errors;
+  if (!errors) return error;
+  const rest = {};
+  for (const [key, messages] of Object.entries(errors)) {
+    const field = key.startsWith("create_user.") ? key.slice("create_user.".length) : null;
+    if (field && form.getValues(field) !== undefined) form.setError(field, { type: "server", message: messages[0] });
+    else rest[key] = messages;
+  }
+  if (!Object.keys(rest).length) return { ...error, response: { ...error.response, data: { ...error.response.data, errors: {} } } };
+  return { ...error, response: { ...error.response, data: { ...error.response.data, errors: rest } } };
 }

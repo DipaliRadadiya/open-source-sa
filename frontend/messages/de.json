@@ -387,7 +387,8 @@
       "submitEdit": "Änderungen speichern",
       "saving": "Wird gespeichert…",
       "cancel": "Abbrechen",
-      "rolesLoadFailed": "Die Rollen konnten nicht geladen werden, daher wird keine angezeigt. Das bedeutet nicht, dass keine vorhanden sind – versuchen Sie es in Kürze erneut."
+      "rolesLoadFailed": "Die Rollen konnten nicht geladen werden, daher wird keine angezeigt. Das bedeutet nicht, dass keine vorhanden sind – versuchen Sie es in Kürze erneut.",
+      "ownAdminLocked": "Sie können sich den eigenen Admin-Zugang nicht entziehen. Bitten Sie einen anderen Admin, ihn zu ändern."
     },
     "resetPassword": {
       "title": "Passwort zurücksetzen",
@@ -539,7 +540,8 @@
       "deleted": "Rolle gelöscht.",
       "deleteFailed": "Diese Rolle konnte nicht gelöscht werden."
     },
-    "loadFailed": "Die Rollen konnten nicht geladen werden. Das bedeutet nicht, dass sie fehlen – versuchen Sie es gleich noch einmal."
+    "loadFailed": "Die Rollen konnten nicht geladen werden. Das bedeutet nicht, dass sie fehlen – versuchen Sie es gleich noch einmal.",
+    "catalogLoadFailed": "Die Liste der Berechtigungen konnte nicht geladen werden, daher lassen sich Rollen gerade nicht bearbeiten. Es wurde nichts geändert."
   },
   "account": {
     "title": "Konto",
@@ -1494,7 +1496,7 @@
       "banned": "{ip} gesperrt",
       "failed": "Diese Adresse konnte nicht gesperrt werden.",
       "invalidIp": "Das ist keine gültige IP-Adresse. Bereiche sind hier nicht erlaubt.",
-      "selfWarning": "Von dieser Adresse aus wurde dieses Panel erreicht. Sperren Sie sie, kann Sie das vom Server aussperren.",
+      "selfWarning": "Das ist Ihre eigene Adresse. Der Server sperrt sie nicht – Sie würden sich aussperren.",
       "ipLabelHint": "Die Adresse, die gesperrt werden soll. Prüfen Sie vor dem Speichern, dass es nicht Ihre eigene Verbindung ist.",
       "jailLabelHint": "Welcher Regelsatz verwendet wird, um die Adresse zu sperren. Jedes Jail überwacht einen Dienst, etwa SSH oder den Webserver."
     },
@@ -1585,7 +1587,10 @@
       "exposedTitle": "Ihre Firewall ist an, blockiert aber nichts",
       "exposedBody": "Ihre Regeln werden angewendet, aber alles, was unten nicht aufgeführt ist, wird trotzdem hereingelassen. Die Standardregel wurde außerhalb des Panels geändert.",
       "secureNow": "Eingehendes standardmäßig blockieren",
-      "secured": "Eingehender Verkehr wird wieder standardmäßig blockiert."
+      "secured": "Eingehender Verkehr wird wieder standardmäßig blockiert.",
+      "unknownTitle": "Firewall-Status konnte nicht gelesen werden",
+      "unknownBody": "Das Panel konnte den Server nicht fragen, ob die Firewall an ist. Es wurde nichts geändert. Laden Sie gleich neu; passiert es weiter, geben Sie dem Support diese Referenz.",
+      "reference": "Referenz: {reference}"
     },
     "confirmOn": {
       "title": "Firewall einschalten?",
@@ -1689,8 +1694,9 @@
       "onlyMyIp": "Nur meine IP",
       "onlyMyIpSet": "Ihre IP",
       "wouldLockYouOut": "Das ist die Adresse, von der Sie verbunden sind. Sie zu blockieren würde Sie von diesem Server aussperren.",
-      "protectedLocked": "Diese Regel hat das Panel eingerichtet und sie ist in Benutzung. Port, Protokoll, Aktion und Quelle lassen sich bei eingeschalteter Firewall nicht ändern — nur der Name.",
-      "protocolHint": "Über TCP läuft fast alles – Websites, SSH, Datenbanken. UDP wird für DNS, VPNs und einige Spieleserver verwendet."
+      "protectedLocked": "Diese Regel hat das Panel eingerichtet und sie ist in Benutzung. Port, Protokoll, Aktion und Quelle lassen sich nicht ändern — nur der Name.",
+      "protocolHint": "Über TCP läuft fast alles – Websites, SSH, Datenbanken. UDP wird für DNS, VPNs und einige Spieleserver verwendet.",
+      "onlyMyIpAlready": "Ihre IP ist bereits eingetragen."
     },
     "quick": {
       "title": "Schnell hinzufügen",
@@ -2076,7 +2082,8 @@
       "incompleteDetail": "Es fehlen {packages} – installiert wurde sie von einem anderen Paket, nicht vom Panel.",
       "completeInstall": "Installation vervollständigen",
       "completing": "PHP {version} wird vervollständigt …",
-      "incompleteDefault": "Vervollständigen Sie zuerst die Installation – das Standard-PHP läuft überall dort, wo keine Version festgelegt ist."
+      "incompleteDefault": "Vervollständigen Sie zuerst die Installation – das Standard-PHP läuft überall dort, wo keine Version festgelegt ist.",
+      "statusRemoveFailed": "Entfernen fehlgeschlagen"
     },
     "extensions": {
       "title": "Erweiterungen",
@@ -2275,7 +2282,8 @@
       "removing": "Node.js {version} wird entfernt…",
       "removingSince": "Gestartet {when}. Die Seite aktualisiert sich von selbst.",
       "retry": "Erneut versuchen",
-      "retrying": "Node {version} wird erneut installiert…"
+      "retrying": "Node {version} wird erneut installiert…",
+      "statusRemoveFailed": "Entfernen fehlgeschlagen"
     },
     "install": {
       "action": "Version installieren",
@@ -2970,6 +2978,11 @@
       "action": "Anzeigen",
       "filtered": "Es werden nur Datenbanken ohne Anwendungsverknüpfung angezeigt",
       "showAll": "Alle anzeigen"
+    },
+    "restartForRemote": {
+      "title": "Datenbankserver neu starten?",
+      "cancel": "Abbrechen",
+      "confirm": "Neu starten und fortfahren"
     }
   },
   "git": {
@@ -5733,7 +5746,7 @@
     "delete": {
       "title": "Dieses Ziel löschen?",
       "description": "{name} wird aus dem Panel entfernt.",
-      "warning": "Jede Anwendung, die hierhin sichert, sichert dann nicht mehr. Bestehende Backups im Bucket werden nicht gelöscht.",
+      "warning": "Ein Ziel lässt sich nur löschen, wenn keine Anwendung mehr dorthin sichert und keine Backups mehr darin liegen.",
       "cancel": "Abbrechen",
       "confirm": "Ziel löschen",
       "removed": "Ziel gelöscht.",
@@ -5955,7 +5968,7 @@
       "warnings": {
         "narrower": "Ab dem nächsten Lauf werden Datenbanken nicht mehr gesichert. Bereits erstellte Backups enthalten sie weiterhin.",
         "narrowerFiles": "Ab dem nächsten Lauf werden Dateien nicht mehr gesichert. Bereits erstellte Backups enthalten sie weiterhin.",
-        "retentionDown": "{count, plural, one {Das älteste Backup wird beim nächsten Lauf gelöscht} other {Die # ältesten Backups werden beim nächsten Lauf gelöscht}}."
+        "retentionDown": "{count, plural, one {Das älteste Backup wird beim Speichern sofort gelöscht} other {Die # ältesten Backups werden beim Speichern sofort gelöscht}}."
       },
       "destinationFailing": "Der letzte Verbindungstest zu {name} ist fehlgeschlagen, dorthin gesendete Backups werden also nicht geschrieben, bis das behoben ist.",
       "noDatabase": {

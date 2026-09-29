@@ -268,3 +268,43 @@ test("Firewall and Fail2ban use the address the BROWSER connects from, never the
     assert.match(read(`components/fail2ban/${f}`), /const yourIp = useBrowserIp\(\);/, f);
   }
 });
+
+test("Code review C–G: role editing refuses to open on a failed permission catalog", () => {
+  assert.match(read("lib/permissions/get-permission-catalog.js"), /if \(!permissions\.length\) return empty\(res\.status, "shape"\);/);
+  for (const p of ["app/admin/roles/[role]/page.jsx", "app/admin/roles/new/page.jsx"]) assert.match(read(p), /if \(catalog\.failed\) return <LoadFailed/, p);
+});
+
+test("Code review C–G: an admin cannot untick their own admin access", () => {
+  assert.match(read("components/admin/users/user-form-dialog.jsx"), /disabled=\{isEdit && isSelf\}/);
+  assert.match(read("components/admin/users/user-row-actions.jsx"), /isSelf=\{isSelf\}/);
+});
+
+test("Code review C–G: fail2ban lockout guards keep working with the browser-sourced IP", () => {
+  assert.match(read("components/fail2ban/recommended-setup.jsx"), /acknowledged: Boolean\(yourIp\)/);
+  assert.match(read("components/fail2ban/jails-card.jsx"), /const ignoreIp = typedIp \?\? yourIp \?\? "";/);
+  assert.match(read("components/fail2ban/ignore-list-card.jsx"), /const live = edited && sameList\(edited\.base, saved\) \? edited\.ips : null;/);
+  const ban = read("components/fail2ban/ban-ip-dialog.jsx");
+  assert.match(ban, /const activeJails = jails\.filter\(\(j\) => j\.enabled\);/);
+  assert.match(ban, /disabled=\{pending \|\| !ip\.trim\(\) \|\| !jail \|\| isSelf\}/);
+});
+
+test("Code review C–G: firewall protected rules lock always; unreadable state is its own state", () => {
+  assert.match(read("components/firewall/add-rule-dialog.jsx"), /const ruleLocked = editing && Boolean\(rule\.protected\);/);
+  assert.match(read("lib/schemas/firewall.js"), /enabled: z\.boolean\(\)\.nullable\(\),/);
+  assert.match(read("lib/firewall/state.js"), /if \(enabled === null \|\| enabled === undefined\) return "unknown";/);
+  for (const l of locales) assert.ok(JSON.parse(read(`messages/${l}.json`)).firewall.status.unknownTitle, l);
+});
+
+test("Code review C–G: databases — remote access restart confirm, nested user errors, export download gated", () => {
+  for (const f of ["add-user-dialog.jsx", "edit-user-dialog.jsx", "create-database-dialog.jsx"]) {
+    assert.match(read(`components/databases/${f}`), /restart\.ask\(error\)[\s\S]{0,160}restart_cluster: true/, f);
+  }
+  assert.match(read("components/databases/create-database-dialog.jsx"), /if \(field && form\.getValues\(field\) !== undefined\) form\.setError\(field/);
+  assert.match(read("components/databases/database-exports.jsx"), /canManage && row\.download_url && row\.available/);
+});
+
+test("Code review C–G: settings survive an unexpected PermitRootLogin; PHP removal failure is not an install failure", () => {
+  assert.match(read("lib/schemas/settings.js"), /permit_root_login: z\s*\.string\(\)/);
+  assert.match(read("components/runtime/version-status.jsx"), /if \(removeFailed\(version\)\) return null;/);
+  assert.match(read("app/(app)/php/page.jsx"), /const installState = versionState\(current\);/);
+});

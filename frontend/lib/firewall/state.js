@@ -26,6 +26,9 @@
  * how it cases a word.
  */
 export function firewallState(enabled, policy) {
+  // Unread is not off: "off" offers "Turn on", and a firewall the panel cannot
+  // read needs fixing on the server first.
+  if (enabled === null || enabled === undefined) return "unknown";
   if (!enabled) return "off";
 
   const incoming = typeof policy?.incoming === "string" ? policy.incoming.trim().toLowerCase() : null;

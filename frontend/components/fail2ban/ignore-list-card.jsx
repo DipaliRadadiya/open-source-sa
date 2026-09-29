@@ -44,7 +44,16 @@ export function IgnoreListCard({ settings, canManage }) {
   const t = useTranslations("fail2ban");
   const router = useRouter();
 
-  const [ips, setIps] = useState(settings.ignore_ips ?? []);
+  const saved = settings.ignore_ips ?? [];
+  // Follows the server until edited here. A copy taken at mount went stale when
+  // the Protection tab added an address, and Save then wrote the old list back
+  // over it — un-ignoring the address that had just been protected.
+  // An edit holds only while the server still has the list it was based on.
+  const [edited, setEdited] = useState(null);
+  const sameList = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const live = edited && sameList(edited.base, saved) ? edited.ips : null;
+  const ips = live ?? saved;
+  const setIps = (update) => setEdited({ ips: update(ips), base: saved });
   const [draft, setDraft] = useState("");
   const [draftError, setDraftError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -56,7 +65,6 @@ export function IgnoreListCard({ settings, canManage }) {
   // dialog exists to prevent, just approached from the other side.
   const [confirmRemoveSelf, setConfirmRemoveSelf] = useState(false);
 
-  const saved = settings.ignore_ips ?? [];
   const dirty = JSON.stringify(saved) !== JSON.stringify(ips);
   const ipIgnored = Boolean(yourIp) && ips.includes(yourIp);
 
@@ -244,7 +252,7 @@ export function IgnoreListCard({ settings, canManage }) {
             dirty={dirty}
             saveReason={saveReason}
             onSave={save}
-            onDiscard={() => setIps(saved)}
+            onDiscard={() => setEdited(null)}
             saveLabel={t("settings.save")}
             savingNote={t("settings.savingNote")}
           />

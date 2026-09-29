@@ -387,7 +387,8 @@
       "submitEdit": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "rolesLoadFailed": "The roles could not be loaded, so none can be shown. This is not the same as there being none — try again in a moment."
+      "rolesLoadFailed": "The roles could not be loaded, so none can be shown. This is not the same as there being none — try again in a moment.",
+      "ownAdminLocked": "You can't remove your own admin access. Ask another admin to change it."
     },
     "resetPassword": {
       "title": "Reset password",
@@ -539,7 +540,8 @@
       "deleted": "Role deleted.",
       "deleteFailed": "Could not delete this role."
     },
-    "loadFailed": "The roles could not be loaded. This does not mean the role is missing — try again in a moment."
+    "loadFailed": "The roles could not be loaded. This does not mean the role is missing — try again in a moment.",
+    "catalogLoadFailed": "The list of permissions could not be loaded, so roles can't be edited right now. Nothing was changed."
   },
   "account": {
     "title": "Account",
@@ -1494,7 +1496,7 @@
       "banned": "{ip} banned",
       "failed": "We could not ban that address.",
       "invalidIp": "That is not a valid IP address. Ranges are not allowed here.",
-      "selfWarning": "This is the address this panel was reached from. Banning it may lock you out of the server.",
+      "selfWarning": "This is your own address. The server won't ban it — it would lock you out.",
       "ipLabelHint": "The address to block. Check it is not your own connection before you save.",
       "jailLabelHint": "Which set of rules to ban the address under. Each jail watches one service, such as SSH or the web server."
     },
@@ -1585,7 +1587,10 @@
       "exposedTitle": "Your firewall is on, but it isn't blocking anything",
       "exposedBody": "Your rules are being enforced, but anything not listed below is still allowed in. The default policy was changed outside the panel.",
       "secureNow": "Block incoming by default",
-      "secured": "Incoming traffic is blocked by default again."
+      "secured": "Incoming traffic is blocked by default again.",
+      "unknownTitle": "Firewall state couldn't be read",
+      "unknownBody": "The panel couldn't ask the server whether the firewall is on. Nothing was changed. Reload in a moment; if it keeps happening, give support this reference.",
+      "reference": "Reference: {reference}"
     },
     "confirmOn": {
       "title": "Turn the firewall on?",
@@ -1689,8 +1694,9 @@
       "onlyMyIp": "Only my IP",
       "onlyMyIpSet": "Your IP",
       "wouldLockYouOut": "That is the address you are connected from. Blocking it would lock you out of this server.",
-      "protectedLocked": "This rule was set up by the panel and is in use. Its port, protocol, action and source cannot be changed while the firewall is on — only its name.",
-      "protocolHint": "TCP carries almost everything — websites, SSH, databases. UDP is for DNS, VPNs and some game servers."
+      "protectedLocked": "This rule was set up by the panel and is in use. Its port, protocol, action and source cannot be changed — only its name.",
+      "protocolHint": "TCP carries almost everything — websites, SSH, databases. UDP is for DNS, VPNs and some game servers.",
+      "onlyMyIpAlready": "Your IP is already filled in."
     },
     "quick": {
       "title": "Quick add",
@@ -2076,7 +2082,8 @@
       "incompleteDetail": "Missing {packages} — it was installed by another package, not by the panel.",
       "completeInstall": "Complete install",
       "completing": "Completing PHP {version}…",
-      "incompleteDefault": "Complete the install first — the default PHP is what runs when nothing pins a version."
+      "incompleteDefault": "Complete the install first — the default PHP is what runs when nothing pins a version.",
+      "statusRemoveFailed": "Removal failed"
     },
     "extensions": {
       "title": "Extensions",
@@ -2275,7 +2282,8 @@
       "removing": "Removing Node.js {version}…",
       "removingSince": "Started {when}. The page updates on its own.",
       "retry": "Try again",
-      "retrying": "Installing Node {version} again…"
+      "retrying": "Installing Node {version} again…",
+      "statusRemoveFailed": "Removal failed"
     },
     "install": {
       "action": "Install version",
@@ -2970,6 +2978,11 @@
       "action": "Show them",
       "filtered": "Showing only databases not linked to an application",
       "showAll": "Show all"
+    },
+    "restartForRemote": {
+      "title": "Restart the database server?",
+      "cancel": "Cancel",
+      "confirm": "Restart and continue"
     }
   },
   "git": {
@@ -3397,7 +3410,7 @@
       "ready": "Ready",
       "incompleteHint": "Complete these items to continue.",
       "readyHint": "Review this configuration, then create the application.",
-      "complete": "Add {field}",
+      "complete": "Missing: {field}",
       "configured": "Configured",
       "progress": "{done} of {total} ready"
     },
@@ -5733,7 +5746,7 @@
     "delete": {
       "title": "Delete this destination?",
       "description": "{name} will be removed from the panel.",
-      "warning": "Any application set to back up here will stop backing up. Existing backups already in the bucket are not deleted.",
+      "warning": "A destination can only be deleted when no application backs up to it and no backups are stored in it any more.",
       "cancel": "Cancel",
       "confirm": "Delete destination",
       "removed": "Destination deleted.",
@@ -5955,7 +5968,7 @@
       "warnings": {
         "narrower": "Databases will stop being backed up from the next run. Backups already taken still contain them.",
         "narrowerFiles": "Files will stop being backed up from the next run. Backups already taken still contain them.",
-        "retentionDown": "{count, plural, one {The oldest backup will be deleted} other {The # oldest backups will be deleted}} on the next run."
+        "retentionDown": "{count, plural, one {The oldest backup will be deleted} other {The # oldest backups will be deleted}} as soon as you save."
       },
       "destinationFailing": "The last connection test to {name} failed, so backups sent there will not be written until it is fixed.",
       "noDatabase": {

@@ -205,8 +205,8 @@ export function BackupSettingsFields({
       form.setValue("type", "full", { shouldDirty: true });
     }
   }, [noDatabase, type, form]);
-  // Lowering retention prunes on the very next run. "Keeps 3" explains the
-  // future; it does not say four archives are about to be deleted.
+  // Lowering retention prunes when the settings are SAVED (SaveBackupTarget
+  // applies it in the same request), not on the next run.
   const pruning =
     target && Number(retention) > 0 && Number(retention) < target.retention_count
       ? target.retention_count - Number(retention)

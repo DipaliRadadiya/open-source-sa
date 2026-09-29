@@ -48,7 +48,10 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
   // empty it stayed "" for good, and Submit — which is disabled on `!jail` —
   // could never be pressed again however many jails turned up later.
   const [chosen, setChosen] = useState(null);
-  const jail = chosen ?? jails[0]?.name ?? "";
+  // Only jails that are switched on: the API refuses a ban in any other, and
+  // defaulting to the first jail offered an off one to every ban.
+  const activeJails = jails.filter((j) => j.enabled);
+  const jail = chosen ?? activeJails[0]?.name ?? "";
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
 
@@ -135,7 +138,11 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
             >
               {t("ban.cancel")}
             </Button>
-            <Button type="submit" disabled={pending || !ip.trim() || !jail}>
+            <Button
+              type="submit"
+              disabled={pending || !ip.trim() || !jail || isSelf}
+              disabledReason={isSelf ? t("ban.selfWarning") : null}
+            >
               {pending && <Loader2 className="size-4 animate-spin" />}
               {t("ban.submit")}
             </Button>
@@ -167,11 +174,8 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
               remove it, and a lockout-risk jail asks you to acknowledge — but
               the dialog that bans an address by hand knew nothing about it.
 
-              Worded as "the address this panel was reached from", not "your
-              address": `your_ip` is whatever the API saw make the request, and
-              this page is server-rendered, so on a real install it is the
-              panel's own server. Claiming it is definitely you would be the
-              same overclaim the jails card refuses to make. */}
+              The address comes from the browser (components/network/browser-ip),
+              so it is the reader's own, and the API refuses to ban it. */}
           {isSelf ? (
             <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-xs leading-relaxed text-warning">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" />
@@ -187,7 +191,7 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {jails.map((j) => (
+              {activeJails.map((j) => (
                 <SelectItem key={j.name} value={j.name}>
                   {j.label}
                 </SelectItem>

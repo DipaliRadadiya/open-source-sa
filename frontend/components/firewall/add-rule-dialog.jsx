@@ -102,7 +102,11 @@ export function AddRuleDialog({
   // deliberately NOT in the list — the guard allows a rename, on the grounds
   // that a label never reaches ufw and blocking a typo fix is pure
   // obstruction. So the fields lock, not the button.
-  const ruleLocked = editing && Boolean(rule.protected) && firewallEnabled;
+  // Locked whether or not the firewall is on. The API allows these edits while
+  // it is off, but turning it on then re-adds the panel's own allow rule AFTER
+  // the edited one — ufw matches the first — so an SSH rule edited to Block
+  // locks you out the moment the firewall starts.
+  const ruleLocked = editing && Boolean(rule.protected);
   const [selfOpen, setSelfOpen] = useState(false);
   const open = editing ? true : selfOpen;
   const setOpen = (next) => {
@@ -452,7 +456,7 @@ export function AddRuleDialog({
                   // the same lock — otherwise one button quietly makes the
                   // exact edit the greyed input beside it is refusing.
                   disabled={ruleLocked || values.source_ip === yourIp}
-                  disabledReason={ruleLocked ? t("rules.protectedReason") : t("add.wouldLockYouOut")}
+                  disabledReason={ruleLocked ? t("rules.protectedReason") : t("add.onlyMyIpAlready")}
                 >
                   <Crosshair className="size-4" />
                   {values.source_ip === yourIp ? t("add.onlyMyIpSet") : t("add.onlyMyIp")}

@@ -73,7 +73,10 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
   // is the panel's own server, not the browser. Checking it against the ignore
   // list used to "prove" you were safe and skip the warning entirely, which is
   // how the SSH jail became a switch you could turn off and never back on.
-  const [ignoreIp, setIgnoreIp] = useState(yourIp ?? "");
+  // Derived until typed in: the address arrives from the browser after the
+  // first render, and a useState seed would have kept it empty.
+  const [typedIp, setIgnoreIp] = useState(null);
+  const ignoreIp = typedIp ?? yourIp ?? "";
 
   const shown = (jail) => {
     const override = asked[jail.name];

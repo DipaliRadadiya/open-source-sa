@@ -1,3 +1,4 @@
+import { versionState } from "@/components/runtime/version-status";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -58,7 +59,7 @@ export default async function PhpPage({ searchParams }) {
   // An install that failed or is still running has nothing on disk, so the
   // extensions endpoint 404s. Asking anyway spends a request to learn what the
   // version list already said.
-  const installState = current?.status && current.status !== "ready" ? current.status : null;
+  const installState = versionState(current);
   // Both endpoints 404 on a version that is still installing or failed, so
   // neither is asked for then — the same reason the extensions call is
   // skipped. Fetched together: they are independent and waiting for one to

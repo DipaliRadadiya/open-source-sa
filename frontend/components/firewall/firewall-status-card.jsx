@@ -9,6 +9,7 @@ import {
   ArrowUpFromLine,
   ShieldAlert,
   ShieldCheck,
+  ShieldQuestion,
   ShieldOff,
   TriangleAlert,
 } from "lucide-react";
@@ -34,7 +35,7 @@ import { apiMessage } from "@/lib/api/error-message";
  *     "off" to also mean "lost my rules", so the dialog says they're kept —
  *     otherwise the safe action feels destructive and gets avoided.
  */
-export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
+export function FirewallStatusCard({ enabled, reference = null, policy, ruleCount, canManage }) {
   const t = useTranslations("firewall");
   const router = useRouter();
   const [confirming, setConfirming] = useState(null);
@@ -89,7 +90,9 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
             >
               {/* Not the same icon as "off": this firewall IS running, and a
                   shield with a line through it would say it is not. */}
-              {state === "on" ? (
+              {state === "unknown" ? (
+                <ShieldQuestion className="size-5" />
+              ) : state === "on" ? (
                 <ShieldCheck className="size-5" />
               ) : state === "exposed" ? (
                 <ShieldAlert className="size-5" />
@@ -106,6 +109,9 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
                   ? t("status.offBody", { count: ruleCount })
                   : t(`status.${state}Body`)}
               </p>
+              {state === "unknown" && reference ? (
+                <p className="font-mono text-xs text-muted-foreground">{t("status.reference", { reference })}</p>
+              ) : null}
               {/* Labelled once rather than twice. Both pills used to end in "by
                   default", which pushed the one word that differs — blocked vs
                   allowed — into the middle of a sentence set in 12px. The label
@@ -150,6 +156,7 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
               </ReasonTooltip>
             ) : null}
 
+            {state === "unknown" ? null : (
             <ReasonTooltip reason={canManage ? null : t("disabled.noPermission")}>
               {/* Destructive when it is the off switch: this stops enforcing
                   every rule on the page and puts the server back on the open
@@ -166,6 +173,7 @@ export function FirewallStatusCard({ enabled, policy, ruleCount, canManage }) {
                 {enabled ? t("status.turnOff") : t("status.turnOn")}
               </Button>
             </ReasonTooltip>
+            )}
           </div>
         </CardContent>
       </Card>

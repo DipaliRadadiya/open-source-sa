@@ -51,9 +51,10 @@ export function RecommendedSetup({ jails, settings, yourIp, ignoreIps = [], canM
         // Sent in the same call as the jails, so there is no window where the
         // SSH jail is live and the operator's own address is still bannable.
         ...(willIgnoreMe ? { ignore_ips: [...ignoreIps, yourIp] } : null),
-        // The lockout check is satisfied by the ignore_ips above; this tells the
-        // API we know what we're doing when it can't see that yet.
-        acknowledged: true,
+        // Only when the reader's address is known and covered above. Until the
+        // browser has it, the API's own lockout check runs against this very
+        // request — which comes from the browser, so it sees the right address.
+        acknowledged: Boolean(yourIp),
       });
       toast.success(t("recommended.done"));
       router.refresh();

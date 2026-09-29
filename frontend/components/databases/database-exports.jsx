@@ -387,7 +387,9 @@ function ExportRow({ row, canManage, onDelete, slow = false }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        {row.download_url && row.available ? (
+        {/* Manage only: the download route is behind `database,manage`, and a
+            viewer's click ended on a 403 page. */}
+        {canManage && row.download_url && row.available ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button asChild variant="ghost" size="icon" className="size-8">

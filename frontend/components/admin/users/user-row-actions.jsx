@@ -103,6 +103,7 @@ export function UserRowActions({ user, roles = [], rolesFailed = false, currentU
         user={user}
         roles={roles}
         rolesFailed={rolesFailed}
+        isSelf={isSelf}
         open={editOpen}
         onOpenChange={setEditOpen}
       />

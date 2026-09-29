@@ -31,7 +31,9 @@ export const firewallRuleSchema = z.object({
 });
 
 export const firewallResponseSchema = z.object({
-  enabled: z.boolean(),
+  // Null when the panel could not read ufw (FirewallController): not "off".
+  enabled: z.boolean().nullable(),
+  status_reference: z.string().nullish(),
   default_policy: z
     .object({ incoming: z.string().nullable().optional(), outgoing: z.string().nullable().optional() })
     .nullable()

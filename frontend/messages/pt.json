@@ -387,7 +387,8 @@
       "submitEdit": "Salvar alterações",
       "saving": "Salvando…",
       "cancel": "Cancelar",
-      "rolesLoadFailed": "Os papéis não puderam ser carregados, então nenhum pode ser exibido. Isso não significa que não existam — tente novamente em instantes."
+      "rolesLoadFailed": "Os papéis não puderam ser carregados, então nenhum pode ser exibido. Isso não significa que não existam — tente novamente em instantes.",
+      "ownAdminLocked": "Você não pode remover seu próprio acesso de administrador. Peça a outro administrador para alterá-lo."
     },
     "resetPassword": {
       "title": "Redefinir senha",
@@ -539,7 +540,8 @@
       "deleted": "Papel excluído.",
       "deleteFailed": "Não foi possível excluir este papel."
     },
-    "loadFailed": "Os papéis não puderam ser carregados. Isso não significa que o papel esteja ausente — tente novamente em alguns instantes."
+    "loadFailed": "Os papéis não puderam ser carregados. Isso não significa que o papel esteja ausente — tente novamente em alguns instantes.",
+    "catalogLoadFailed": "Não foi possível carregar a lista de permissões, então os papéis não podem ser editados agora. Nada foi alterado."
   },
   "account": {
     "title": "Conta",
@@ -1494,7 +1496,7 @@
       "banned": "{ip} banido",
       "failed": "Não foi possível banir esse endereço.",
       "invalidIp": "Esse não é um endereço IP válido. Intervalos não são permitidos aqui.",
-      "selfWarning": "Este é o endereço de onde este painel foi acessado. Banir pode bloquear seu acesso ao servidor.",
+      "selfWarning": "Este é o seu próprio endereço. O servidor não vai bani-lo — você ficaria sem acesso.",
       "ipLabelHint": "O endereço a ser bloqueado. Verifique se não é a sua própria conexão antes de salvar.",
       "jailLabelHint": "Conjunto de regras sob o qual o endereço será banido. Cada jail monitora um serviço, como SSH ou o servidor web."
     },
@@ -1585,7 +1587,10 @@
       "exposedTitle": "Seu firewall está ativado, mas não está bloqueando nada",
       "exposedBody": "Suas regras estão sendo aplicadas, mas tudo que não estiver listado abaixo ainda é permitido. A política padrão foi alterada fora do painel.",
       "secureNow": "Bloquear entrada por padrão",
-      "secured": "O tráfego de entrada voltou a ser bloqueado por padrão."
+      "secured": "O tráfego de entrada voltou a ser bloqueado por padrão.",
+      "unknownTitle": "Não foi possível ler o estado do firewall",
+      "unknownBody": "O painel não conseguiu perguntar ao servidor se o firewall está ativado. Nada foi alterado. Recarregue em instantes; se continuar, passe esta referência ao suporte.",
+      "reference": "Referência: {reference}"
     },
     "confirmOn": {
       "title": "Ativar o firewall?",
@@ -1689,8 +1694,9 @@
       "onlyMyIp": "Apenas meu IP",
       "onlyMyIpSet": "Seu IP",
       "wouldLockYouOut": "Esse é o endereço de onde você está conectado. Bloqueá-lo trancaria você fora deste servidor.",
-      "protectedLocked": "Esta regra foi configurada pelo painel e está em uso. Sua porta, protocolo, ação e origem não podem ser alterados enquanto o firewall estiver ativado — apenas o nome.",
-      "protocolHint": "TCP carrega quase tudo — sites, SSH, bancos de dados. UDP é para DNS, VPNs e alguns servidores de jogos."
+      "protectedLocked": "Esta regra foi configurada pelo painel e está em uso. Sua porta, protocolo, ação e origem não podem ser alterados — apenas o nome.",
+      "protocolHint": "TCP carrega quase tudo — sites, SSH, bancos de dados. UDP é para DNS, VPNs e alguns servidores de jogos.",
+      "onlyMyIpAlready": "Seu IP já está preenchido."
     },
     "quick": {
       "title": "Adição rápida",
@@ -2076,7 +2082,8 @@
       "incompleteDetail": "Faltam {packages} — foi instalada por outro pacote, não pelo painel.",
       "completeInstall": "Concluir a instalação",
       "completing": "Concluindo o PHP {version}…",
-      "incompleteDefault": "Conclua a instalação primeiro — o PHP padrão é o que roda quando nada fixa uma versão."
+      "incompleteDefault": "Conclua a instalação primeiro — o PHP padrão é o que roda quando nada fixa uma versão.",
+      "statusRemoveFailed": "Falha ao remover"
     },
     "extensions": {
       "title": "Extensões",
@@ -2275,7 +2282,8 @@
       "removing": "Removendo Node.js {version}…",
       "removingSince": "Iniciado {when}. A página se atualiza sozinha.",
       "retry": "Tentar novamente",
-      "retrying": "Instalando Node {version} novamente…"
+      "retrying": "Instalando Node {version} novamente…",
+      "statusRemoveFailed": "Falha ao remover"
     },
     "install": {
       "action": "Instalar versão",
@@ -2970,6 +2978,11 @@
       "action": "Mostrar",
       "filtered": "Mostrando apenas bancos de dados não vinculados a uma aplicação",
       "showAll": "Mostrar todos"
+    },
+    "restartForRemote": {
+      "title": "Reiniciar o servidor de banco de dados?",
+      "cancel": "Cancelar",
+      "confirm": "Reiniciar e continuar"
     }
   },
   "git": {
@@ -3397,7 +3410,7 @@
       "ready": "Pronto",
       "incompleteHint": "Conclua estes itens para continuar.",
       "readyHint": "Revise esta configuração e crie a aplicação.",
-      "complete": "Adicionar {field}",
+      "complete": "Falta: {field}",
       "configured": "Configurado",
       "progress": "{done} de {total} prontos"
     },
@@ -5733,7 +5746,7 @@
     "delete": {
       "title": "Excluir este destino?",
       "description": "{name} será removido do painel.",
-      "warning": "Qualquer aplicação configurada para fazer backup aqui deixará de fazer backup. Os backups já existentes no bucket não são excluídos.",
+      "warning": "Um destino só pode ser excluído quando nenhuma aplicação faz backup nele e ele não guarda mais nenhum backup.",
       "cancel": "Cancelar",
       "confirm": "Excluir destino",
       "removed": "Destino excluído.",
@@ -5955,7 +5968,7 @@
       "warnings": {
         "narrower": "Os bancos de dados deixarão de ser copiados a partir da próxima execução. Os backups já feitos ainda os contêm.",
         "narrowerFiles": "Os arquivos deixarão de ser copiados a partir da próxima execução. Os backups já feitos ainda os contêm.",
-        "retentionDown": "{count, plural, one {O backup mais antigo será excluído} other {Os # backups mais antigos serão excluídos}} na próxima execução."
+        "retentionDown": "{count, plural, one {O backup mais antigo será excluído} other {Os # backups mais antigos serão excluídos}} assim que você salvar."
       },
       "destinationFailing": "O último teste de conexão com {name} falhou, então os backups enviados para lá não serão gravados até que seja corrigido.",
       "noDatabase": {

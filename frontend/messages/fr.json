@@ -387,7 +387,8 @@
       "submitEdit": "Enregistrer les modifications",
       "saving": "Enregistrement…",
       "cancel": "Annuler",
-      "rolesLoadFailed": "Les rôles n'ont pas pu être chargés, donc aucun ne peut être affiché. Ce n'est pas la même chose qu'aucun rôle n'existe — réessayez dans un instant."
+      "rolesLoadFailed": "Les rôles n'ont pas pu être chargés, donc aucun ne peut être affiché. Ce n'est pas la même chose qu'aucun rôle n'existe — réessayez dans un instant.",
+      "ownAdminLocked": "Vous ne pouvez pas retirer votre propre accès administrateur. Demandez à un autre administrateur de le modifier."
     },
     "resetPassword": {
       "title": "Réinitialiser le mot de passe",
@@ -539,7 +540,8 @@
       "deleted": "Rôle supprimé.",
       "deleteFailed": "Impossible de supprimer ce rôle."
     },
-    "loadFailed": "Les rôles n'ont pas pu être chargés. Cela ne signifie pas que le rôle est absent — réessayez dans un instant."
+    "loadFailed": "Les rôles n'ont pas pu être chargés. Cela ne signifie pas que le rôle est absent — réessayez dans un instant.",
+    "catalogLoadFailed": "La liste des permissions n'a pas pu être chargée, les rôles ne peuvent donc pas être modifiés pour le moment. Rien n'a été modifié."
   },
   "account": {
     "title": "Compte",
@@ -1494,7 +1496,7 @@
       "banned": "{ip} bannie",
       "failed": "Impossible de bannir cette adresse.",
       "invalidIp": "Ce n'est pas une adresse IP valide. Les plages ne sont pas autorisées ici.",
-      "selfWarning": "C'est l'adresse depuis laquelle ce panel a été contacté. La bannir peut vous verrouiller l'accès au serveur.",
+      "selfWarning": "C'est votre propre adresse. Le serveur ne la bannira pas — vous vous bloqueriez l'accès.",
       "ipLabelHint": "L'adresse à bloquer. Vérifiez qu'il ne s'agit pas de votre propre connexion avant d'enregistrer.",
       "jailLabelHint": "Le jeu de règles sous lequel bloquer l'adresse. Chaque jail surveille un service, comme SSH ou le serveur web."
     },
@@ -1585,7 +1587,10 @@
       "exposedTitle": "Votre pare-feu est activé, mais il ne bloque rien",
       "exposedBody": "Vos règles sont appliquées, mais tout ce qui n'est pas listé ci-dessous reste autorisé. La politique par défaut a été modifiée en dehors du panneau.",
       "secureNow": "Bloquer le trafic entrant par défaut",
-      "secured": "Le trafic entrant est à nouveau bloqué par défaut."
+      "secured": "Le trafic entrant est à nouveau bloqué par défaut.",
+      "unknownTitle": "Impossible de lire l'état du pare-feu",
+      "unknownBody": "Le panneau n'a pas pu demander au serveur si le pare-feu est activé. Rien n'a été modifié. Rechargez dans un instant ; si cela continue, donnez cette référence au support.",
+      "reference": "Référence : {reference}"
     },
     "confirmOn": {
       "title": "Activer le pare-feu ?",
@@ -1689,8 +1694,9 @@
       "onlyMyIp": "Uniquement mon IP",
       "onlyMyIpSet": "Votre IP",
       "wouldLockYouOut": "C'est l'adresse depuis laquelle vous êtes connecté. La bloquer vous verrouillerait l'accès à ce serveur.",
-      "protectedLocked": "Cette règle a été créée par le panneau et est utilisée. Son port, protocole, action et source ne peuvent pas être modifiés tant que le pare-feu est activé — seul son nom.",
-      "protocolHint": "TCP transporte presque tout — sites web, SSH, bases de données. UDP sert pour DNS, VPN et certains serveurs de jeu."
+      "protectedLocked": "Cette règle a été créée par le panneau et est utilisée. Son port, protocole, action et source ne peuvent pas être modifiés — seul son nom.",
+      "protocolHint": "TCP transporte presque tout — sites web, SSH, bases de données. UDP sert pour DNS, VPN et certains serveurs de jeu.",
+      "onlyMyIpAlready": "Votre IP est déjà renseignée."
     },
     "quick": {
       "title": "Ajout rapide",
@@ -2076,7 +2082,8 @@
       "incompleteDetail": "Il manque {packages} — elle a été installée par un autre paquet, pas par le panneau.",
       "completeInstall": "Compléter l'installation",
       "completing": "Finalisation de PHP {version}…",
-      "incompleteDefault": "Complétez d'abord l'installation — le PHP par défaut est celui qui s'exécute quand rien ne fixe de version."
+      "incompleteDefault": "Complétez d'abord l'installation — le PHP par défaut est celui qui s'exécute quand rien ne fixe de version.",
+      "statusRemoveFailed": "Échec de la suppression"
     },
     "extensions": {
       "title": "Extensions",
@@ -2275,7 +2282,8 @@
       "removing": "Suppression de Node.js {version}…",
       "removingSince": "Démarré {when}. La page se met à jour toute seule.",
       "retry": "Réessayer",
-      "retrying": "Nouvelle installation de Node {version}…"
+      "retrying": "Nouvelle installation de Node {version}…",
+      "statusRemoveFailed": "Échec de la suppression"
     },
     "install": {
       "action": "Installer une version",
@@ -2970,6 +2978,11 @@
       "action": "Les afficher",
       "filtered": "Affichage des seules bases de données non liées à une application",
       "showAll": "Tout afficher"
+    },
+    "restartForRemote": {
+      "title": "Redémarrer le serveur de bases de données ?",
+      "cancel": "Annuler",
+      "confirm": "Redémarrer et continuer"
     }
   },
   "git": {
@@ -3397,7 +3410,7 @@
       "ready": "Prêt",
       "incompleteHint": "Complétez ces éléments pour continuer.",
       "readyHint": "Vérifiez cette configuration, puis créez l'application.",
-      "complete": "Ajouter {field}",
+      "complete": "Manquant : {field}",
       "configured": "Configuré",
       "progress": "{done} sur {total} prêts"
     },
@@ -5733,7 +5746,7 @@
     "delete": {
       "title": "Supprimer cette destination ?",
       "description": "{name} sera retirée du panneau.",
-      "warning": "Toute application configurée pour sauvegarder ici arrêtera de le faire. Les sauvegardes déjà présentes dans le bucket ne sont pas supprimées.",
+      "warning": "Une destination ne peut être supprimée que si aucune application n'y sauvegarde et qu'elle ne contient plus aucune sauvegarde.",
       "cancel": "Annuler",
       "confirm": "Supprimer la destination",
       "removed": "Destination supprimée.",
@@ -5955,7 +5968,7 @@
       "warnings": {
         "narrower": "Les bases de données ne seront plus sauvegardées à partir de la prochaine exécution. Les sauvegardes déjà prises en contiennent toujours.",
         "narrowerFiles": "Les fichiers ne seront plus sauvegardés à partir de la prochaine exécution. Les sauvegardes déjà prises en contiennent toujours.",
-        "retentionDown": "{count, plural, one {La plus ancienne sauvegarde sera supprimée} other {Les # plus anciennes sauvegardes seront supprimées}} lors de la prochaine exécution."
+        "retentionDown": "{count, plural, one {La plus ancienne sauvegarde sera supprimée} other {Les # plus anciennes sauvegardes seront supprimées}} dès l'enregistrement."
       },
       "destinationFailing": "Le dernier test de connexion vers {name} a échoué, les sauvegardes envoyées là-bas ne seront pas écrites tant que ce n'est pas corrigé.",
       "noDatabase": {

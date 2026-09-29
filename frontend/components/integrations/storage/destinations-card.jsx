@@ -214,10 +214,9 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
         error={removal.error}
         onConfirm={remove}
       >
-        {/* The backend deletes without checking whether a backup target points
-            here, and there is no endpoint that lists targets across
-            applications — so the panel cannot name the sites that would be
-            affected. Saying that plainly beats a confident "this is safe". */}
+        {/* The API refuses while any application backs up here or any backup
+            is still stored here, and names them in its answer (shown in the
+            dialog as the error). */}
         <p className="text-sm text-muted-foreground">{t("delete.warning")}</p>
       </ConfirmDialog>
     </Card>

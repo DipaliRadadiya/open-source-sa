@@ -8,6 +8,7 @@ import { Loader2, UserRoundPlus } from "lucide-react";
 import { databaseUserFormSchema } from "@/lib/schemas/database";
 import { createDatabaseUser } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { useRestartConfirm } from "@/components/databases/use-restart-confirm";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
@@ -17,6 +18,7 @@ import { CreatedCredentials } from "@/components/databases/created-credentials";
 
 export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true }) {
   const t = useTranslations("databases.users");
+  const restart = useRestartConfirm();
   const router = useRouter();
   // Set on success: the new credential replaces the form, because a password
   // you are never shown is a password nobody can use.
@@ -48,6 +50,7 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
     // Omitted means the API generates one, which beats anything typed in a
     // hurry.
     if (submitted.password) payload.password = submitted.password;
+    if (submitted.restart_cluster) payload.restart_cluster = true;
     if (submitted.connection_preference === "remote") {
       payload.host = submitted.host;
     }
@@ -58,7 +61,9 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
       setCreated({ ...database, users: [data?.user].filter(Boolean) });
       router.refresh();
     } catch (error) {
-      handleValidationError(error, form);
+      const restartAnswer = restart.ask(error);
+      if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
+      if (!restartAnswer) handleValidationError(error, form);
     }
   }
 
@@ -111,6 +116,7 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
       >
         <UserFields form={form} access={values.connection_preference} remoteUsers={remoteUsers} />
         <p className="text-xs text-muted-foreground">{t("passwordGenerated")}</p>
+      {restart.dialog}
       </FormModal>
     </Form>
   );

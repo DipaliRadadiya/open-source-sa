@@ -17,13 +17,18 @@ import { accessLevelSchema, permissionGroupSchema } from "@/lib/schemas/role";
  * effective grants for the nav. Admin-only.
  */
 export async function getPermissionCatalog() {
-  const empty = { permissions: [], groups: [], accessLevels: [] };
+  // `failed`: the role form must not open on an empty catalog. It saves every
+  // grant it shows, so an empty list saved as "no permissions" and stripped
+  // the role — and everyone holding it — under a "Role updated." toast.
+  const empty = (status = null, failure = status ? "http" : "network") =>
+    ({ permissions: [], groups: [], accessLevels: [], failed: true, status, failure });
   try {
     const res = await serverFetch("/admin/permissions");
-    if (!res.ok) return empty;
+    if (!res.ok) return empty(res.status);
     const data = await res.json();
 
     const permissions = Array.isArray(data?.permissions) ? data.permissions : [];
+    if (!permissions.length) return empty(res.status, "shape");
     const groups = z.array(permissionGroupSchema).safeParse(data?.groups);
     const accessLevels = z.array(accessLevelSchema).safeParse(data?.access_levels);
 
@@ -35,9 +40,10 @@ export async function getPermissionCatalog() {
         ? groups.data
         : groupByLevel(permissions),
       accessLevels: accessLevels.success ? accessLevels.data : [],
+      failed: false,
     };
   } catch {
-    return empty;
+    return empty();
   }
 }
 

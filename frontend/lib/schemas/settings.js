@@ -30,7 +30,12 @@ export const swapSettingsSchema = z.object({
 
 export const securitySettingsSchema = z.object({
   port: z.number(),
-  permit_root_login: z.enum(["yes", "no", "prohibit-password"]),
+  // Any string: `sshd -T` can print values the form does not offer
+  // (forced-commands-only), and an enum failed the whole /settings response —
+  // every tab went "could not be loaded". The old alias maps to its new name.
+  permit_root_login: z
+    .string()
+    .transform((value) => (value === "without-password" ? "prohibit-password" : value)),
   password_authentication: z.boolean(),
   // The lockout guard, surfaced before it fires: PUT /settings/security 422s
   // when password auth is disabled with no key present, so without this the

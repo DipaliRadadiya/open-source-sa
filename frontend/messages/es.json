@@ -495,7 +495,8 @@
       "submitEdit": "Guardar cambios",
       "saving": "Guardando…",
       "cancel": "Cancelar",
-      "rolesLoadFailed": "No se pudieron cargar los roles, así que no se puede mostrar ninguno. Eso no significa que no haya ninguno: inténtalo de nuevo en un momento."
+      "rolesLoadFailed": "No se pudieron cargar los roles, así que no se puede mostrar ninguno. Eso no significa que no haya ninguno: inténtalo de nuevo en un momento.",
+      "ownAdminLocked": "No puedes quitarte tu propio acceso de administrador. Pide a otro administrador que lo cambie."
     },
     "resetPassword": {
       "title": "Restablecer contraseña",
@@ -647,7 +648,8 @@
       "deleted": "Rol eliminado.",
       "deleteFailed": "No se pudo eliminar este rol."
     },
-    "loadFailed": "No se pudieron cargar los roles. Esto no significa que el rol no exista: inténtalo de nuevo en un momento."
+    "loadFailed": "No se pudieron cargar los roles. Esto no significa que el rol no exista: inténtalo de nuevo en un momento.",
+    "catalogLoadFailed": "No se pudo cargar la lista de permisos, así que ahora no se pueden editar roles. No se ha cambiado nada."
   },
   "systemUsers": {
     "title": "Usuarios del sistema",
@@ -1494,7 +1496,7 @@
       "banned": "{ip} bloqueada",
       "failed": "No hemos podido bloquear esa dirección.",
       "invalidIp": "Eso no es una dirección IP válida. Aquí no se admiten rangos.",
-      "selfWarning": "Esta es la dirección desde la que se accedió al panel. Bloquearla puede dejarte fuera del servidor.",
+      "selfWarning": "Es tu propia dirección. El servidor no la bloqueará: te dejaría fuera.",
       "ipLabelHint": "La dirección que se va a bloquear. Verifique que no sea su propia conexión antes de guardar.",
       "jailLabelHint": "Bajo qué conjunto de reglas se bloqueará la dirección. Cada jail supervisa un servicio, como SSH o el servidor web."
     },
@@ -1585,7 +1587,10 @@
       "exposedTitle": "Tu cortafuegos está activo, pero no está bloqueando nada",
       "exposedBody": "Tus reglas se están aplicando, pero todo lo que no aparece abajo sigue teniendo acceso. La política por defecto se cambió fuera del panel.",
       "secureNow": "Bloquear entrante por defecto",
-      "secured": "El tráfico entrante vuelve a estar bloqueado por defecto."
+      "secured": "El tráfico entrante vuelve a estar bloqueado por defecto.",
+      "unknownTitle": "No se pudo leer el estado del cortafuegos",
+      "unknownBody": "El panel no pudo preguntar al servidor si el cortafuegos está activo. No se ha cambiado nada. Recarga en un momento; si sigue pasando, da esta referencia a soporte.",
+      "reference": "Referencia: {reference}"
     },
     "confirmOn": {
       "title": "¿Activar el cortafuegos?",
@@ -1689,8 +1694,9 @@
       "onlyMyIp": "Solo mi IP",
       "onlyMyIpSet": "Tu IP",
       "wouldLockYouOut": "Esa es la dirección desde la que estás conectado. Bloquearla te dejaría fuera de este servidor.",
-      "protectedLocked": "Esta regla la creó el panel y está en uso. Su puerto, protocolo, acción y origen no se pueden cambiar mientras el cortafuegos esté activo; solo su nombre.",
-      "protocolHint": "TCPtransporta casi todo: sitios web, SSH, bases de datos. UDP es para DNS, VPN y algunos servidores de juegos."
+      "protectedLocked": "Esta regla la creó el panel y está en uso. Su puerto, protocolo, acción y origen no se pueden cambiar; solo su nombre.",
+      "protocolHint": "TCPtransporta casi todo: sitios web, SSH, bases de datos. UDP es para DNS, VPN y algunos servidores de juegos.",
+      "onlyMyIpAlready": "Tu IP ya está puesta."
     },
     "quick": {
       "title": "Añadir rápido",
@@ -2076,7 +2082,8 @@
       "incompleteDetail": "Faltan {packages}: la instaló otro paquete, no el panel.",
       "completeInstall": "Completar la instalación",
       "completing": "Completando PHP {version}…",
-      "incompleteDefault": "Completa primero la instalación: el PHP predeterminado es el que se usa cuando nada fija una versión."
+      "incompleteDefault": "Completa primero la instalación: el PHP predeterminado es el que se usa cuando nada fija una versión.",
+      "statusRemoveFailed": "No se pudo eliminar"
     },
     "extensions": {
       "title": "Extensiones",
@@ -2275,7 +2282,8 @@
       "removing": "Eliminando Node.js {version}…",
       "removingSince": "Empezó {when}. La página se actualiza sola.",
       "retry": "Reintentar",
-      "retrying": "Instalando Node {version} de nuevo…"
+      "retrying": "Instalando Node {version} de nuevo…",
+      "statusRemoveFailed": "No se pudo eliminar"
     },
     "install": {
       "action": "Instalar versión",
@@ -2970,6 +2978,11 @@
       "action": "Mostrarlas",
       "filtered": "Mostrando solo bases de datos sin vincular a una aplicación",
       "showAll": "Mostrar todas"
+    },
+    "restartForRemote": {
+      "title": "¿Reiniciar el servidor de bases de datos?",
+      "cancel": "Cancelar",
+      "confirm": "Reiniciar y continuar"
     }
   },
   "git": {
@@ -3397,7 +3410,7 @@
       "ready": "Listo",
       "incompleteHint": "Completa estos elementos para continuar.",
       "readyHint": "Revisa esta configuración y crea la aplicación.",
-      "complete": "Añade {field}",
+      "complete": "Falta: {field}",
       "configured": "Configurado",
       "progress": "{done} de {total} listos"
     },
@@ -5733,7 +5746,7 @@
     "delete": {
       "title": "¿Eliminar este destino?",
       "description": "{name} se quitará del panel.",
-      "warning": "Cualquier aplicación configurada para copiar aquí dejará de hacerlo. Las copias que ya están en el bucket no se eliminan.",
+      "warning": "Un destino solo se puede eliminar cuando ninguna aplicación hace copias en él y ya no guarda ninguna copia.",
       "cancel": "Cancelar",
       "confirm": "Eliminar destino",
       "removed": "Destino eliminado.",
@@ -5955,7 +5968,7 @@
       "warnings": {
         "narrower": "Las bases de datos dejarán de respaldarse desde la próxima ejecución. Las copias ya realizadas siguen incluyéndolas.",
         "narrowerFiles": "Los archivos dejarán de respaldarse desde la próxima ejecución. Las copias ya realizadas siguen incluyéndolos.",
-        "retentionDown": "{count, plural, one {Se eliminará la copia más antigua} other {Se eliminarán las # copias más antiguas}} en la próxima ejecución."
+        "retentionDown": "{count, plural, one {Se eliminará la copia más antigua} other {Se eliminarán las # copias más antiguas}} en cuanto guardes."
       },
       "destinationFailing": "La última prueba de conexión con {name} falló, así que las copias enviadas allí no se escribirán hasta que se corrija.",
       "noDatabase": {

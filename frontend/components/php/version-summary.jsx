@@ -1,5 +1,6 @@
 "use client";
 
+import { removeFailed, versionState } from "@/components/runtime/version-status";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -51,7 +52,7 @@ export function VersionSummary({
   const sites = version.sites ?? [];
 
   // The API omits `status` on older responses; absent means ready.
-  const installState = version.status && version.status !== "ready" ? version.status : null;
+  const installState = versionState(version);
 
   /*
    * Present, but not a version this panel set up.
@@ -201,7 +202,11 @@ export function VersionSummary({
           ) : null}
           {/* Said out loud. A version whose install failed used to look exactly
               like a healthy one — same title, same "no sites use this yet". */}
-          {installState === "failed" ? (
+          {removeFailed(version) ? (
+            <Badge variant="destructive" className="font-normal" title={version.message ?? undefined}>
+              {t("versions.statusRemoveFailed")}
+            </Badge>
+          ) : installState === "failed" ? (
             <Badge variant="destructive" className="font-normal">
               {t("versions.statusFailed")}
             </Badge>

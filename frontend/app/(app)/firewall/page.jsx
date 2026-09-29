@@ -67,6 +67,7 @@ export default async function FirewallPage({ searchParams }) {
                 protection whether or not anything is enforcing them. */}
             <FirewallStatusCard
               enabled={data.enabled}
+              reference={data.status_reference ?? null}
               policy={data.default_policy}
               ruleCount={rulesFailed ? data.rules.length : meta.total}
               canManage={canManage}

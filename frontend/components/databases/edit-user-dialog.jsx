@@ -7,6 +7,7 @@ import { Loader2, Pencil, Sparkles } from "lucide-react";
 import { databaseUserFormSchema } from "@/lib/schemas/database";
 import { updateDatabaseUser } from "@/lib/api/databases";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { useRestartConfirm } from "@/components/databases/use-restart-confirm";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Button } from "@/components/ui/button";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
@@ -32,6 +33,7 @@ import { UserFields } from "@/components/databases/user-fields";
  */
 export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers = true }) {
   const t = useTranslations("databases.users");
+  const restart = useRestartConfirm();
   const tc = useTranslations("common");
   const router = useRouter();
   const isMongo = database?.driver === "mongo";
@@ -68,6 +70,7 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
       }
     }
     if (submitted.password) payload.password = submitted.password;
+    if (submitted.restart_cluster) payload.restart_cluster = true;
 
     if (Object.keys(payload).length === 0) {
       onOpenChange?.(false);
@@ -80,7 +83,9 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
       onOpenChange?.(false);
       router.refresh();
     } catch (error) {
-      handleValidationError(error, form);
+      const restartAnswer = restart.ask(error);
+      if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
+      if (!restartAnswer) handleValidationError(error, form);
     }
   }
 
@@ -183,6 +188,7 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
         ) : null}
 
         <p className="text-xs text-muted-foreground">{t("editHint")}</p>
+      {restart.dialog}
       </FormModal>
     </Form>
   );
