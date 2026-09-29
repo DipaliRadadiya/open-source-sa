@@ -22,7 +22,6 @@ import {
   SlidersHorizontal,
   Sparkles,
   TriangleAlert,
-  UserPlus,
   Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -44,6 +43,7 @@ import {
 } from "@/lib/api/applications";
 import { generatePassword } from "@/lib/applications/generate-password";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
+import { apiMessage } from "@/lib/api/error-message";
 import { scrollToFirstError } from "@/lib/forms/scroll-to-first-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,7 +95,8 @@ import {
   sharedFieldNames,
 } from "@/lib/applications/form-reset";
 import { CreateReadinessPanel } from "@/components/applications/create-readiness-panel";
-import { CreateSystemUserDialog } from "@/components/system-users/create-system-user-dialog";
+import { createSystemUser, deleteSystemUser } from "@/lib/api/system-users";
+import { suggestSystemUsername } from "@/lib/applications/system-username";
 
 const COMMON_FIELD_NAMES = new Set([
   "site_type",
@@ -413,7 +414,10 @@ function ConfigField({
    * width soft-wraps every real command, so half the lines you read are not
    * lines you wrote.
    */
-  const isTextarea = config.type === "textarea";
+  // build_command too: the API declares it `text`, but the package-manager
+  // templates that fill it are two lines ("npm ci\nnpm run build"), which an
+  // <input> showed as "npm cinpm run build".
+  const isTextarea = config.type === "textarea" || config.name === "build_command";
   // `GitDeployer::script()` runs the deploy script when there is one and falls
   // back to build_command otherwise. Both fields sit in the same Advanced
   // section, so filling both is easy and the loser goes quiet — the API's own
@@ -791,7 +795,6 @@ export function CreateApplicationForm({
   // added in the other tab does not change `git_account_id`, so without this the
   // fetch effect has no reason to run again and the picker stays stale.
   const [repositoriesNonce, setRepositoriesNonce] = useState(0);
-  const [systemUserDialogOpen, setSystemUserDialogOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -799,7 +802,12 @@ export function CreateApplicationForm({
   // Bumped to ask for a scroll; the effect runs after the reveal has committed.
   const [scrollRequest, setScrollRequest] = useState(0);
   const formRef = useRef(null);
-  const [createdSystemUsers, setCreatedSystemUsers] = useState([]);
+  // Set once the username is typed in, so renaming the application stops
+  // overwriting it.
+  const usernameEdited = useRef(false);
+  // A second click lands before React has disabled the button, and would
+  // create the same system user twice.
+  const submitting = useRef(false);
 
   /*
    * The only connected account, preselected.
@@ -838,6 +846,8 @@ export function CreateApplicationForm({
       // a form that defaults to a refusal is a form that is wrong on open.
       generate_system_user: canCreateSystemUser,
       system_user_id: "",
+      system_user_username: suggestSystemUsername(initialName, systemUsers.map((user) => user.username)),
+      system_user_password: "",
       git_account_id: startingGitAccountId,
       repository: "",
       branch: "",
@@ -859,6 +869,20 @@ export function CreateApplicationForm({
     name: "package_manager",
   });
   const name = useWatch({ control: form.control, name: "name" });
+  const newUsername = useWatch({ control: form.control, name: "system_user_username" });
+  // After mount: a random value rendered on the server would never match the
+  // one the browser draws.
+  useEffect(() => {
+    form.setValue("system_user_password", generatePassword());
+  }, [form]);
+  useEffect(() => {
+    if (usernameEdited.current) return;
+    form.setValue(
+      "system_user_username",
+      suggestSystemUsername(name, systemUsers.map((user) => user.username)),
+      { shouldValidate: Boolean(form.formState.errors.system_user_username) },
+    );
+  }, [name, form, systemUsers]);
   const domain = useWatch({ control: form.control, name: "domain" });
   const repositoryUrl = useWatch({
     control: form.control,
@@ -954,12 +978,7 @@ export function CreateApplicationForm({
   const advancedErrorCount = advancedFields.filter(
     (config) => form.formState.errors[config.name],
   ).length;
-  const availableSystemUsers = [
-    ...systemUsers,
-    ...createdSystemUsers.filter(
-      (created) => !systemUsers.some((user) => user.id === created.id),
-    ),
-  ];
+  const availableSystemUsers = systemUsers;
   // A deploy script makes the build command dead weight, so the last thing
   // read before pressing Create must not list it as set and ready.
   const hasDeployScript = String(values?.deploy_script ?? "").trim() !== "";
@@ -1030,16 +1049,18 @@ export function CreateApplicationForm({
     },
     {
       key: "user",
-      target: "system_user_id",
+      target: generateSystemUser ? "system_user_username" : "system_user_id",
       label: t("systemUser"),
       // Generating is a complete answer, so the row reads as ready rather than
       // as a blank waiting to be filled — the name itself does not exist yet.
       value: generateSystemUser
-        ? t("form.systemUserWillBeCreated")
+        ? newUsername
+          ? t("form.systemUserNew", { username: newUsername })
+          : "—"
         : (availableSystemUsers.find(
             (user) => String(user.id) === String(systemUserId),
           )?.username ?? "—"),
-      ready: generateSystemUser || Boolean(systemUserId),
+      ready: generateSystemUser ? Boolean(newUsername) : Boolean(systemUserId),
     },
     ...(isGit
       ? [
@@ -1077,7 +1098,7 @@ export function CreateApplicationForm({
    * and it cannot be finished before a type is chosen, because until then it
    * has no fields to be finished WITH.
    */
-  const DETAIL_TARGETS = ["name", "domain", "system_user_id"];
+  const DETAIL_TARGETS = ["name", "domain", "system_user_id", "system_user_username"];
   const sectionDone = {
     1: Boolean(selected),
     2: !missingReadinessItems.some((item) => DETAIL_TARGETS.includes(item.target)),
@@ -1325,11 +1346,17 @@ export function CreateApplicationForm({
   // untouched — the moment the user edits it themselves, their text wins and
   // changing the dropdown again must not clobber it out from under them.
   useEffect(() => {
-    if (!packageManager || form.getValues("build_command")) return;
+    if (!packageManager) return;
     const field = selected?.fields?.find(
       (item) => item.name === "package_manager",
     );
-    const template = field?.build_templates?.[packageManager];
+    const templates = field?.build_templates ?? {};
+    // "Untouched" means empty OR still exactly one of the templates — the one we
+    // filled in ourselves. Checking only for empty kept npm's commands after
+    // switching to Yarn.
+    const current = form.getValues("build_command") ?? "";
+    if (current && !Object.values(templates).includes(current)) return;
+    const template = templates[packageManager];
     if (template) {
       form.setValue("build_command", template, {
         shouldDirty: true,
@@ -1441,6 +1468,16 @@ export function CreateApplicationForm({
   }, [focusRequest, advancedOpen]);
 
   async function onSubmit(values) {
+    if (submitting.current) return;
+    submitting.current = true;
+    try {
+      await submitApplication(values);
+    } finally {
+      submitting.current = false;
+    }
+  }
+
+  async function submitApplication(values) {
     const missingFields = visibleFields.filter(
       (config) => config.required && !String(values[config.name] ?? "").trim(),
     );
@@ -1470,13 +1507,7 @@ export function CreateApplicationForm({
       site_type: values.site_type,
       name: values.name.trim(),
       domain: values.domain.trim(),
-      // One or the other, never both: the API refuses a payload carrying a
-      // generate flag *and* an id, because a client that sends both has not
-      // decided and picking for it is how a site ends up owned by an account
-      // nobody chose.
-      ...(values.generate_system_user
-        ? { generate_system_user: true }
-        : { system_user_id: Number(values.system_user_id) }),
+      system_user_id: Number(values.system_user_id),
     };
     // Every field the chosen type declares is validated at the TOP LEVEL on
     // create — the backend generates the rules from that same schema, so a
@@ -1520,6 +1551,30 @@ export function CreateApplicationForm({
       if (values.branch?.trim()) payload.branch = values.branch.trim();
     }
 
+    // A generated user is created first, with the name and password shown on
+    // the form — `generate_system_user` would pick its own name and set no
+    // password. Removed again if the application is refused, so a failed
+    // attempt leaves no account behind.
+    let newUser = null;
+    if (values.generate_system_user) {
+      try {
+        const { data } = await createSystemUser({
+          username: values.system_user_username,
+          ...(values.system_user_password ? { password: values.system_user_password } : {}),
+        });
+        newUser = data?.system_user ?? null;
+      } catch (error) {
+        const errors = error.response?.data?.errors ?? {};
+        const mapped = { username: "system_user_username", password: "system_user_password" };
+        const fields = Object.keys(errors).filter((key) => mapped[key]);
+        fields.forEach((key) => form.setError(mapped[key], { type: "server", message: errors[key][0] }));
+        if (fields.length) revealErrors(fields.map((key) => mapped[key]));
+        else toast.error(apiMessage(error, t("form.systemUserCreateFailed")));
+        return;
+      }
+      payload.system_user_id = newUser?.id;
+    }
+
     try {
       const { data } = await createApplication(payload);
       setSubmitted(true);
@@ -1531,6 +1586,15 @@ export function CreateApplicationForm({
       );
       router.refresh();
     } catch (error) {
+      if (newUser?.id) {
+        const removed = await deleteSystemUser(newUser.id).then(() => true, () => false);
+        // Left behind, so a retry would be told the name is taken. Say so, and
+        // re-read the page so it is offered under "Use an existing system user".
+        if (!removed) {
+          toast.warning(t("form.systemUserLeftBehind", { username: newUser.username }), { duration: 15000 });
+          router.refresh();
+        }
+      }
       handleValidationError(error, form);
       // The backend rejects fields too, and its errors landed silently: nothing
       // scrolled, and an advanced field's message stayed behind the disclosure.
@@ -1772,22 +1836,6 @@ export function CreateApplicationForm({
                         <FormLabel className="min-w-0" required hint={t("systemUserHint")}>
                           {t("systemUser")}
                         </FormLabel>
-                        {/* Shows whether or not users already exist: wanting a
-                            dedicated user for a new site is the normal case,
-                            not a recovery from an empty list. Hidden while the
-                            panel is generating one — there is nothing to pick
-                            between, so the link would open a dialog whose
-                            result the form would ignore. */}
-                        {canCreateSystemUser && !generateSystemUser ? (
-                          <button
-                            type="button"
-                            onClick={() => setSystemUserDialogOpen(true)}
-                            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline"
-                          >
-                            <UserPlus className="size-3" />
-                            {t("form.createSystemUser")}
-                          </button>
-                        ) : null}
                       </div>
 
                       {/* Only offered to someone who may actually create an
@@ -1874,6 +1922,66 @@ export function CreateApplicationForm({
                     </FormItem>
                   )}
                 />
+                {generateSystemUser ? (
+                  <div className="grid min-w-0 gap-4 @md:grid-cols-2 @2xl:col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="system_user_username"
+                      render={({ field }) => (
+                        <FormItem data-field-name="system_user_username" className="min-w-0">
+                          <FormLabel required>{t("form.systemUserUsername")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              autoComplete="off"
+                              spellCheck={false}
+                              className="font-mono"
+                              {...field}
+                              onChange={(event) => {
+                                usernameEdited.current = true;
+                                field.onChange(event);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="system_user_password"
+                      render={({ field }) => (
+                        <FormItem data-field-name="system_user_password" className="relative min-w-0">
+                          <FormLabel hint={t("form.systemUserPasswordHint")}>
+                            {t("form.systemUserPassword")}
+                          </FormLabel>
+                          <FormControl>
+                            <PasswordInput
+                              autoComplete="new-password"
+                              placeholder={t("form.systemUserPasswordPlaceholder")}
+                              {...field}
+                            />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="absolute top-0 right-0 h-auto p-0 text-xs"
+                            onClick={() =>
+                              form.setValue("system_user_password", generatePassword(), {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                              })
+                            }
+                          >
+                            <Sparkles className="size-3" />
+                            {t("form.systemUserGeneratePassword")}
+                          </Button>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                ) : null}
               </div>
             </section>
 
@@ -2314,18 +2422,6 @@ export function CreateApplicationForm({
           </aside>
         </div>
       </form>
-      <CreateSystemUserDialog
-        open={systemUserDialogOpen}
-        onOpenChange={setSystemUserDialogOpen}
-        onCreated={(user) => {
-          if (!user?.id) return;
-          setCreatedSystemUsers((current) => [...current, user]);
-          form.setValue("system_user_id", String(user.id), {
-            shouldDirty: true,
-            shouldValidate: true,
-          });
-        }}
-      />
       <ConfirmDialog
         open={confirmLeave}
         onOpenChange={setConfirmLeave}

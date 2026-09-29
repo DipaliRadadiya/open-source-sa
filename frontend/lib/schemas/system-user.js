@@ -22,7 +22,7 @@ export const shellSchema = z.object({
 export const DEFAULT_SHELL = "/bin/bash";
 
 // Mirrors the backend OS-password policy: min 10, mixed case + a number.
-const passwordField = z
+export const passwordField = z
   .string()
   .min(10, "min10")
   .regex(/[a-z]/, "lowercase")
@@ -31,7 +31,7 @@ const passwordField = z
 
 // Linux username rules: ^[a-z_][a-z0-9_-]{0,31}$ (backend also blocks reserved
 // names + enforces uniqueness — surfaced as a server-side error).
-const usernameField = z
+export const usernameField = z
   .string()
   .min(1, "required_username")
   .max(32, "max32")

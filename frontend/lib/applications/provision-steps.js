@@ -45,6 +45,14 @@ export const PROVISION_STEPS = new Set([
   "set_password",
   "set_timezone",
   "trust_domain",
+  // Seen on the fresh server 2026-09-29 without a label ("Ensure account").
+  "ensure_account",
+  "build",
+  "create_admin",
+  "schedule_cron",
+  "start_app",
+  "verify_install",
+  "verify_serving",
 ]);
 
 /**

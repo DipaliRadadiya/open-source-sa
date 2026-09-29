@@ -1,11 +1,13 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { serverLocale } from "@/lib/i18n/server-locale";
 import { fetchWithRetry } from "@/lib/api/retry";
 import { RateLimitedError } from "@/lib/api/rate-limited";
 import { PanelUnavailableError } from "@/lib/api/unavailable";
 import { RequestFailedError } from "@/lib/api/request-failed";
 import { readErrorBody } from "@/lib/api/error-body";
+import { signedOutPath } from "@/lib/auth/signed-out-path";
 
 /**
  * `level`/`applicationId` are forwarded verbatim: `?level=application&
@@ -25,7 +27,10 @@ export const getPermissions = cache(async (level, applicationId) => {
   // An empty catalog means "this user may do nothing", which is what every
   // page gate reads. A failed request must therefore NOT degrade to [] — that
   // turns an API hiccup into a silent "you don't have permission" redirect.
-  // Only 401/419 (signed out) return empty; the layout redirects to /login.
+  // Signed out (401/419) goes straight to the sign-in page from here. Leaving
+  // it to the layout was not enough: a layout does not re-run on a client-side
+  // navigation, so an expired session clicking a sidebar link got [] and the
+  // page told them their role could not view it.
   // Retried once on a 5xx — like the session, this gates every page, so one
   // backend hiccup must not blank the app.
   const url = `${process.env.NEXT_PUBLIC_API_URL}/api/permissions${suffix}`;
@@ -48,7 +53,7 @@ export const getPermissions = cache(async (level, applicationId) => {
     throw new RequestFailedError({ url, status: null, cause });
   }
 
-  if (res.status === 401 || res.status === 419) return [];
+  if (res.status === 401 || res.status === 419) redirect(await signedOutPath());
 
   // Rate-limited, not "may do nothing" — returning [] here would redirect the
   // user out of the page they asked for as though they lacked permission.

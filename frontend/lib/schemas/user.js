@@ -3,8 +3,12 @@ import { z } from "zod";
 export const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
 // Mirrors the backend password policy: min 10, mixed case + a number.
+// Empty says "enter one" first: the rules checklist beside the field already
+// lists "at least 10 characters", so repeating it in red on a blank field read
+// as a second, separate complaint.
 const passwordField = z
   .string()
+  .min(1, "required_password")
   .min(10, "min10")
   .regex(/[a-z]/, "lowercase")
   .regex(/[A-Z]/, "uppercase")

@@ -377,17 +377,20 @@ export function SiteTypePicker({ types = [], value, onChange }) {
   const selectedType = types.find((type) => type.name === value);
 
   // One entry per DESTINATION, not per blocked card: "install a database
-  // engine" is the same answer for all eight of them.
+  // engine" is the same answer for all eight of them. Only for cards on
+  // screen — computed over every type, "Install a database engine" sat under
+  // a Popular tab of seven available apps because NodeBB, on another tab,
+  // wanted MongoDB.
   const fixes = useMemo(() => {
     const byHref = new Map();
-    for (const type of types) {
+    for (const type of filtered) {
       if (type.available) continue;
       for (const fix of blockerFixes(type)) {
         if (!byHref.has(fix.href)) byHref.set(fix.href, fix);
       }
     }
     return [...byHref.values()];
-  }, [types]);
+  }, [filtered]);
 
   /*
    * Chosen: one row, and the grid is gone.
@@ -405,7 +408,7 @@ export function SiteTypePicker({ types = [], value, onChange }) {
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{selectedType.title}</span>
           {selectedType.tagline ? (
-            <span className="block truncate text-xs text-muted-foreground">
+            <span className="block text-xs text-muted-foreground">
               {selectedType.tagline}
             </span>
           ) : null}

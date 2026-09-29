@@ -19,7 +19,7 @@ import { EmptyState } from "@/components/data-table/empty-state";
  * `title` is the page's own heading, passed in by the page, so the refusal
  * never carries a second name for a screen the sidebar already labels.
  */
-export async function PermissionDenied({ title }) {
+export async function PermissionDenied({ title, description }) {
   const t = await getTranslations("common.permissionDenied");
 
   return (
@@ -28,7 +28,7 @@ export async function PermissionDenied({ title }) {
       <EmptyState
         icon={ShieldOff}
         title={t("title", { feature: title })}
-        description={t("description")}
+        description={description ?? t("description")}
       />
     </div>
   );

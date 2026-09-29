@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useRefresh } from "@/hooks/use-refresh";
 import { TriangleAlert } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
 import { deleteApplication } from "@/lib/api/applications";
@@ -37,6 +38,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo }) {
   const t = useTranslations("applications.delete");
   const router = useRouter();
+  const { refreshThen } = useRefresh();
   const [pending, setPending] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [removeFiles, setRemoveFiles] = useState(true);
@@ -98,7 +100,15 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     if (!matches) return;
     setPending(true);
     try {
-      const { data } = await deleteApplication(application.id, { removeFiles: removeFiles && !orphaned, removeDatabases });
+      // Databases only when they were listed and the box is ticked. Sent
+      // unconditionally, a site with no database still asked for
+      // remove_databases=true — a 403 for every role without database manage,
+      // and a silent drop of databases this dialog never showed when their
+      // list failed to load.
+      const { data } = await deleteApplication(application.id, {
+        removeFiles: removeFiles && !orphaned,
+        removeDatabases: databases.length > 0 && removeDatabases,
+      });
 
       /*
        * 200 with a failure inside it. The site really is gone — a red toast
@@ -109,18 +119,18 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
        * finish it, held long enough to read.
        */
       const failed = data?.databases?.failed ?? [];
-      if (failed.length) {
-        toast.warning(data?.message ?? t("databasesFailed", { databases: failed.map((row) => row.name).join(", ") }), {
-          duration: 20000,
-          action: { label: t("goToDatabases"), onClick: () => router.push("/databases") },
-        });
-      } else {
-        toast.success(t("done", { name: application.name }));
-      }
-      handleOpenChange(false);
+      const say = () => {
+        if (failed.length) {
+          toast.warning(data?.message ?? t("databasesFailed", { databases: failed.map((row) => row.name).join(", ") }), {
+            duration: 20000,
+            action: { label: t("goToDatabases"), onClick: () => router.push("/databases") },
+          });
+        } else {
+          toast.success(t("done", { name: application.name }));
+        }
+      };
       if (afterDelete) await afterDelete();
-      if (redirectTo) router.push(redirectTo);
-      else router.refresh();
+      finish(say);
     } catch (error) {
       /*
        * 404 means somebody already deleted it — another tab, another person,
@@ -135,16 +145,29 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
        * is refreshed underneath them so the row actually leaves.
        */
       if (error?.response?.status === 404) {
-        toast.info(t("alreadyGone", { name: application.name }));
-        handleOpenChange(false);
         if (afterDelete) await afterDelete();
-        if (redirectTo) router.push(redirectTo);
-        else router.refresh();
+        finish(() => toast.info(t("alreadyGone", { name: application.name })));
         return;
       }
       toast.error(apiMessage(error, t("failed")));
-    } finally {
       setPending(false);
+    }
+  }
+
+  // Announced when the list no longer shows the row, not before: closed
+  // straight after the API answered, the dialog left "… was deleted" over a
+  // row that stayed on screen for another two seconds.
+  function finish(say) {
+    const done = () => {
+      say();
+      handleOpenChange(false);
+      setPending(false);
+    };
+    if (redirectTo) {
+      router.push(redirectTo);
+      done();
+    } else {
+      refreshThen(done);
     }
   }
 

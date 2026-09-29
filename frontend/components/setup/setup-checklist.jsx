@@ -21,7 +21,7 @@ const SLOW_AFTER_MS = 3 * 60 * 1000;
 // will never stop.
 const GIVE_UP_MS = 10 * 60 * 1000;
 
-export function SetupChecklist({ initialSetup, versions = {} }) {
+export function SetupChecklist({ initialSetup, versions = {}, canInstall = {} }) {
   const t = useTranslations("setup");
   const router = useRouter();
   const [setup, setSetup] = useState(initialSetup);
@@ -139,7 +139,9 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
   // recommended, and a heading that says otherwise is a heading that lies. It
   // is also not called "Optional" — this page already decided that reads as
   // "you can skip this", which is wrong for a runtime a Node site needs.
-  const attention = pending.filter((c) => c.state === "failed" || c.state === "installing");
+  // Failed only. An install in progress is not "something that did not
+  // finish" — it stays in its own group, floated to the top by `rank`.
+  const attention = pending.filter((c) => c.state === "failed");
   const advised = pending.filter((c) => !attention.includes(c) && c.recommended);
   const optional = pending.filter((c) => !attention.includes(c) && !c.recommended);
 
@@ -159,6 +161,7 @@ export function SetupChecklist({ initialSetup, versions = {} }) {
       // apt runs one install at a time — while any is in flight, the others are
       // held so a second click can't hit an apt lock.
       locked={anyInstalling && component.state !== "installing" && !busy[component.key]}
+      denied={canInstall[component.key] === false}
       onInstall={install}
     />
   );

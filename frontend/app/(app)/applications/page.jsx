@@ -1,4 +1,5 @@
 import { Globe2 } from "lucide-react";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
@@ -73,6 +74,14 @@ export default async function ApplicationsPage({ searchParams }) {
   const gitProviders = needsGitAccounts
     ? providersByAccountId(await getGitAccounts().then((r) => r.accounts ?? []).catch(() => []))
     : new Map();
+  // A 422 here is the URL, not the server: an old bookmark or a hand-typed
+  // `?status=foo` made the whole list "could not be loaded", and Try again
+  // could never succeed. Drop the filters and sort, keep the search.
+  if (result.failed && result.status === 422 && (sp?.status || sp?.site_type || sp?.sort)) {
+    const kept = new URLSearchParams();
+    if (typeof sp.search === "string" && sp.search) kept.set("search", sp.search);
+    redirect(`/applications${kept.size ? `?${kept}` : ""}`);
+  }
   if (result.failed) return <LoadFailed description={t("loadFailed")} status={result.status} failure={result.failure} message={result.message} debug={result.debug} />;
 
 

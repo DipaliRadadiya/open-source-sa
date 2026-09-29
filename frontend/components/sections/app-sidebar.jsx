@@ -98,6 +98,7 @@ export function AppSidebar({ items }) {
   const params = useParams();
   const t = useTranslations("common");
   const { state, isMobile } = useSidebar();
+  const { guardNavigation } = useUnsaved();
 
   const applicationId = params?.application;
   const iconOnly = state === "collapsed" && !isMobile;
@@ -105,7 +106,7 @@ export function AppSidebar({ items }) {
   // Inside an application, prefer the catalog its layout fetched: only that one
   // is filtered by what this site type supports. Until it arrives, the shared
   // catalog renders the same items minus that filter.
-  const { items: applicationItems, resolved, application } = useApplicationNav();
+  const { items: applicationItems, resolved, application, gitProvider } = useApplicationNav();
   // Once the layout has answered and the answer is "no menu", this site does not
   // exist. Fall back to the SERVER panel rather than rendering the shared
   // catalog against a dead id — that produced a full site menu whose every link
@@ -131,7 +132,13 @@ export function AppSidebar({ items }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-16 justify-center border-b px-3">
-        <Link href="/dashboard" className="flex items-center">
+        <Link
+          href="/dashboard"
+          className="flex items-center"
+          onClick={(event) => {
+            if (pathname !== "/dashboard" && guardNavigation("/dashboard")) event.preventDefault();
+          }}
+        >
           {iconOnly ? (
             <Logo collapsed className="size-8" />
           ) : (
@@ -180,7 +187,7 @@ export function AppSidebar({ items }) {
                         brand colour here and it needs a surface to sit on,
                         or it reads as a stray glyph against the tint. */}
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-background shadow-xs group-data-[collapsible=icon]:size-5! group-data-[collapsible=icon]:border-0! group-data-[collapsible=icon]:bg-transparent! group-data-[collapsible=icon]:shadow-none!">
-                      <SiteTypeLogo name={application.site_type} size="h-5 w-5" />
+                      <SiteTypeLogo name={application.site_type} provider={gitProvider} size="h-5 w-5" />
                     </span>
                     {/* Hidden explicitly when the rail collapses to icons. The
                         sidebar's own rule only hides a button's LAST span,

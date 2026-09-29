@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   timezoneOptions,
   timezoneOptionsWith,
+  phpTimezoneOptionsWith,
 } from "../lib/settings/timezone-options.js";
 
 const GROUPS = [
@@ -46,4 +47,16 @@ test("a value the API does not list is kept selectable", () => {
 test("a known or empty value adds nothing", () => {
   assert.equal(timezoneOptionsWith(GROUPS, "Etc/UTC").length, 3);
   assert.equal(timezoneOptionsWith(GROUPS, "").length, 3);
+});
+
+test("PHP settings offer only zones the date.timezone save accepts", () => {
+  const groups = [
+    { region: "UTC", zones: [{ value: "UTC", label: "UTC", offset: "+00:00" }] },
+    { region: "Etc", zones: [{ value: "Etc/UTC", label: "UTC", offset: "+00:00" }, { value: "Etc/GMT+5", label: "GMT+5", offset: "-05:00" }] },
+    { region: "EST", zones: [{ value: "EST", label: "EST", offset: "-05:00" }] },
+    { region: "Asia", zones: [{ value: "Asia/Kolkata", label: "Kolkata", offset: "+05:30" }, { value: "Asia/Istanbul", label: "Istanbul", offset: "+03:00" }] },
+  ];
+  const values = phpTimezoneOptionsWith(groups, "").map((o) => o.value);
+  assert.deepEqual(values, ["UTC", "Asia/Kolkata"]);
+  assert.equal(values.filter((v) => v.endsWith("UTC")).length, 1);
 });

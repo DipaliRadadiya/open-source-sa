@@ -29,8 +29,8 @@ import {
  *
  * `window.open` rather than a redirect: leaving the panel to look at a table
  * is not the same as navigating away from it, and the popup keeps the page
- * you were on. The call has to happen first, though, so the popup is opened
- * before the await — a window opened after one is blocked as unsolicited.
+ * you were on. The tab is opened once the URL exists, riding on the click
+ * (browsers honour it for a few seconds); see `open()` below.
  *
  * `noopener` must NOT go in the features string: per spec `window.open`
  * returns null when it is present, so there is no handle to point at the URL
@@ -132,51 +132,38 @@ export function PhpmyadminButton({
   }
 
   async function open(applicationId) {
+    /*
+     * No tab until the login URL exists (Krishna, 2026-09-29). Opening
+     * about:blank on the click kept the browser's permission to open a tab,
+     * but showed an empty page for the whole round trip. The button carries
+     * the wait ("Signing you in…"); the tab opens straight onto phpMyAdmin.
+     * Chrome and Firefox still count the click for ~5 s, which the SSO call
+     * fits inside; when it does not, the toast's button is a fresh click.
+     */
     setOpening(true);
-    // Opened synchronously off the click, then pointed somewhere once the
-    // token arrives. Opening it after the await is a popup the browser did
-    // not see the user ask for.
-    const tab = openBlankTab();
     try {
-
-      // Give the placeholder something to say.
-      //
-      // The blank frame cannot be removed — the tab has to exist before the
-      // await or the browser blocks it, and the URL does not exist until after
-      // — but it does not have to be `about:blank`. Unexplained, it reads as a
-      // tab that opened by mistake, which is what it was reported as.
-      //
-      // Same reason as the line above for being inside the try: this touches a
-      // document in a window the browser may already have disowned, and a
-      // throw here would cost the click that is fetching a 60-second token.
-      paintPlaceholder(tab, t("signingIn"), "phpMyAdmin");
-
-      const { data } = await phpmyadminSso(
-        database.id,
-        undefined,
-        applicationId,
-      );
+      const { data } = await phpmyadminSso(database.id, undefined, applicationId);
       const url = data?.redirect_url;
       if (!url) throw new Error("no url");
 
+      const tab = openBlankTab();
       if (tab) {
-        // `replace`, so the blank placeholder is not left in the new tab's
-        // history for Back to return to.
+        // `replace`, so nothing is left in the new tab's history for Back.
+        paintPlaceholder(tab, t("signingIn"), "phpMyAdmin");
         tab.location.replace(url);
         return;
       }
 
-      // Popup blocked. The panel stays exactly where it is; a click the
-      // browser can see is the only way to open the tab now.
-      toast.error(t("blocked"), {
-        duration: 20000,
+      // The browser no longer treats the click as permission. The token is good
+      // for the rest of its minute, so offer a click it will honour.
+      toast(t("linkReady"), {
+        duration: 55000,
         action: {
           label: t("openAnyway"),
           onClick: () => window.open(url, "_blank", "noopener"),
         },
       });
     } catch (error) {
-      tab?.close();
       // The API's own sentence: it names which of the two reasons applies —
       // no phpMyAdmin site on this server, or an engine it cannot talk to.
       toast.error(apiMessage(error, t("failed")));
@@ -195,7 +182,7 @@ export function PhpmyadminButton({
   // the icon for "opens a site", so it read as a link to the database's own
   // page — and the tooltip that explained it needs a hover, which a phone
   // does not have. A word costs a little width and removes the guessing.
-  const label = compact ? "phpMyAdmin" : t("open");
+  const label = opening ? t("signingShort") : compact ? "phpMyAdmin" : t("open");
 
   /*
    * More than one installation: the button asks which, instead of silently
@@ -205,9 +192,8 @@ export function PhpmyadminButton({
    * get it wrong — the wrong choice costs a click, not data — and a modal for
    * that is heavier than the decision.
    *
-   * `onSelect` still counts as the click that opened the tab, which is the
-   * whole reason the choice can live here at all: a tab opened outside a
-   * gesture is a blocked popup.
+   * `onSelect` is the click the tab rides on, which is why the choice can live
+   * here at all.
    */
   if (sites !== null && sites.length > 1) {
     return (

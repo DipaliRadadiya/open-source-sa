@@ -39,8 +39,7 @@ test("server sync: a whole-type placeholder row is not a name and cannot be igno
 test("every new string exists in all eight locales", () => {
   for (const l of ["en", "es", "hi", "de", "fr", "pt", "ja", "ru"]) {
     const m = JSON.parse(read(`messages/${l}.json`));
-    for (const k of ["lock", "title", "body", "cancel", "confirm", "locking", "done", "failed"]) assert.ok(m.applications.rootLock[k], `${l} rootLock.${k}`);
-    assert.match(m.applications.rootLock.body, /\{path\}/, l);
+    for (const k of ["lock", "title", "intro", "folderLabel", "effectOwner", "effectNoChanges", "effectPublic", "cancel", "confirm", "locking", "done", "failed"]) assert.ok(m.applications.rootLock[k], `${l} rootLock.${k}`);
     assert.ok(m.applications.protection.folder && m.applications.attention.folderUnlocked && m.sync.results.wholeType, l);
   }
 });

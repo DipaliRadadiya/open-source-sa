@@ -1,12 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Sparkles, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const DISMISS_KEY = "sv-setup-banner-dismissed";
+
+function subscribeStorage(onChange) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+function readDismissed() {
+  try {
+    return window.localStorage.getItem(DISMISS_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * A gentle nudge on the dashboard while the recommended setup is incomplete, so
@@ -15,15 +28,18 @@ const DISMISS_KEY = "sv-setup-banner-dismissed";
  */
 export function SetupBanner({ remaining }) {
   const t = useTranslations("setup");
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(DISMISS_KEY) === "1";
-  });
+  // Storage read through useSyncExternalStore: the server snapshot (hidden)
+  // is what hydrates, so the HTML and the first client render agree — reading
+  // storage in a useState initialiser made them disagree. Hidden until then,
+  // so a dismissed banner never flashes in.
+  const stored = useSyncExternalStore(subscribeStorage, readDismissed, () => true);
+  const [justDismissed, setJustDismissed] = useState(false);
+  const dismissed = stored || justDismissed;
 
   if (dismissed || remaining <= 0) return null;
 
   function dismiss() {
-    setDismissed(true);
+    setJustDismissed(true);
     try {
       window.localStorage.setItem(DISMISS_KEY, "1");
     } catch {

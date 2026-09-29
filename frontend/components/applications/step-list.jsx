@@ -39,11 +39,16 @@ export function StepList({
   label,
   className,
 }) {
+  // The API's list ends with the step that failed, so without this it was
+  // drawn twice — ticked as done, then again in red.
+  const done =
+    failedStep && steps[steps.length - 1] === failedStep ? steps.slice(0, -1) : steps;
+
   return (
     // Rows appear one at a time while the user watches, so announce the
     // additions rather than leaving a screen reader on a frozen page.
     <ol className={cn("space-y-2.5", className)} aria-live="polite">
-      {steps.map((step, index) => (
+      {done.map((step, index) => (
         <li key={`${step}-${index}`} className="flex items-center gap-3 text-sm">
           <Marker tone="done">
             <Check className="size-3" />

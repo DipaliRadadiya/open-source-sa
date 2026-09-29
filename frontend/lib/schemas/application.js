@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { listMetaSchema } from "./list.js";
+import { passwordField, usernameField } from "./system-user.js";
 
 const textField = z.object({
   name: z.string(),
@@ -14,6 +15,13 @@ const textField = z.object({
   source: z.string().nullish(),
   depends_on: z.string().nullish(),
   generate: z.boolean().default(false),
+  // package_manager → the install+build command it fills in. Stripped by this
+  // schema until 2026-09-29, so the form never filled build_command and every
+  // Node git app deployed without installing its dependencies (HTTP 502).
+  // PHP sends an empty map as [].
+  build_templates: z
+    .preprocess((v) => (Array.isArray(v) ? {} : v), z.record(z.string(), z.string()))
+    .optional(),
 });
 
 // Either end may be absent, meaning unbounded in that direction.
@@ -483,7 +491,8 @@ export function suggestApplicationDomain(value) {
 
 export const createApplicationSchema = z.object({
   site_type: z.string().min(1, "applicationTypeRequired"),
-  name: z.string().trim().min(1, "applicationNameRequired").max(255, "tooLong"),
+  // 240, the API's limit (StoreApplicationRequest); 255 let 241–255 through to a 422.
+  name: z.string().trim().min(1, "applicationNameRequired").max(240, "max240"),
   domain: z
     .string()
     .trim()
@@ -498,6 +507,9 @@ export const createApplicationSchema = z.object({
   // conditional field, because the message has to land on `system_user_id` —
   // that is where the control is and where the form scrolls to.
   system_user_id: z.union([z.coerce.number().int().positive(), z.literal("")]).optional(),
+  // The new user's details, only read while generating one.
+  system_user_username: z.string().optional(),
+  system_user_password: z.string().optional(),
 }).passthrough().superRefine((values, ctx) => {
   if (!values.generate_system_user && !values.system_user_id) {
     ctx.addIssue({
@@ -505,6 +517,18 @@ export const createApplicationSchema = z.object({
       path: ["system_user_id"],
       message: "applicationSystemUserRequired",
     });
+  }
+  if (!values.generate_system_user) return;
+  const checks = [
+    ["system_user_username", usernameField, values.system_user_username ?? ""],
+    ["system_user_password", passwordField, values.system_user_password ?? ""],
+  ];
+  for (const [path, field, value] of checks) {
+    if (path === "system_user_password" && value === "") continue;
+    const result = field.safeParse(value);
+    if (!result.success) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message: result.error.issues[0].message });
+    }
   }
 });
 

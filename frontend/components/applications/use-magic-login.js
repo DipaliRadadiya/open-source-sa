@@ -6,8 +6,26 @@ import {
   createMagicLogin,
 } from "@/lib/api/magic-login";
 import { apiMessage } from "@/lib/api/error-message";
-import { submitMagicLogin } from "@/lib/applications/magic-login-window";
-import { openBlankTab, paintPlaceholder, discardTab } from "@/lib/browser/new-tab";
+import { openMagicLogin } from "@/lib/applications/magic-login-window";
+
+/**
+ * Open WordPress with a minted session, or — when the browser has stopped
+ * treating the original click as permission to open a tab — offer a button
+ * that does, for as long as the one-minute token lasts.
+ */
+export function launchMagicLogin(session, t) {
+  const holding = { message: t("redirecting"), title: t("action") };
+  if (openMagicLogin(session, holding)) return;
+  toast(t("linkReady"), {
+    duration: 55000,
+    action: {
+      label: t("openAdmin"),
+      onClick: () => {
+        if (!openMagicLogin(session, holding)) toast.error(t("popupBlocked"));
+      },
+    },
+  });
+}
 
 /**
  * One click, and a picker only when there is something to pick.
@@ -27,69 +45,53 @@ import { openBlankTab, paintPlaceholder, discardTab } from "@/lib/browser/new-ta
  */
 export function useMagicLogin(appId) {
   const t = useTranslations("applications.magicLogin");
-  const [pending, setPending] = useState(false);
+  // "fetching" while WordPress lists its administrators, then "signing" only
+  // once there is one to sign in as — the button says which wait it is.
+  const [phase, setPhase] = useState(null);
   // Non-null while the picker is open. Carries the list already fetched, so
   // the dialog never asks WordPress a second time for what we just read.
   const [choice, setChoice] = useState(null);
 
   const start = useCallback(async () => {
     /*
-     * Opened here, synchronously, while this is still the click. Everything
-     * below awaits, and an await costs the user gesture that `window.open` is
-     * allowed by.
+     * No tab until there is somewhere to send it. Opening about:blank first
+     * kept the click's permission to open a tab, but it showed a blank page
+     * for the whole WP-CLI round trip — and when there were several
+     * administrators it closed that tab again to show the picker. The button
+     * carries the wait instead (`phase`), and the tab opens straight onto
+     * WordPress.
      */
-    const tab = openBlankTab();
-    if (!tab) {
-      toast.error(t("popupBlocked"));
-      return;
-    }
-
-    /*
-     * Say what the tab is for, immediately.
-     *
-     * Reading the administrator list runs WP-CLI on the server and minting the
-     * token is a second request, so this tab sat white for TEN SECONDS before
-     * WordPress appeared — reported as "it opens a blank page". The wait
-     * cannot go (the tab must exist before the token does, see new-tab.js),
-     * but it does not have to be unexplained. phpMyAdmin has done this since
-     * 05429064; this launcher was simply never given the same treatment.
-     */
-    paintPlaceholder(tab, t("redirecting"), t("action"));
-
-    setPending(true);
+    setPhase("fetching");
     try {
       const admins = await getWordPressAdministrators(appId);
 
       if (admins.length === 1) {
+        setPhase("signing");
         const session = await createMagicLogin(appId, admins[0].id);
-        submitMagicLogin(tab, session);
+        launchMagicLogin(session, t);
         return;
       }
 
       /*
-       * None or several. Both open the dialog — and both need the tab closed
-       * first, because a blank tab left behind beside a picker reads as a
-       * login that half-happened.
-       *
-       * Zero is not merged into the error path on purpose: "this site has no
-       * administrators" and "we could not ask WordPress" look identical as an
-       * empty list, and only one of them is the operator's problem. The dialog
-       * says the first; the catch below says the second.
+       * None or several: the picker. Zero is not merged into the error path on
+       * purpose — "this site has no administrators" and "we could not ask
+       * WordPress" look identical as an empty list, and only one of them is the
+       * operator's problem. The dialog says the first; the catch says the
+       * second.
        */
-      discardTab(tab);
       setChoice({ admins });
     } catch (error) {
-      discardTab(tab);
       toast.error(apiMessage(error, t("listFailed")));
     } finally {
-      setPending(false);
+      setPhase(null);
     }
   }, [appId, t]);
 
   return {
-    /** Call from a click handler. Never from an effect — see openBlankTab. */
+    /** Call from a click handler: the tab it opens rides on that click. */
     start,
-    pending,
+    pending: phase !== null,
+    phase,
     choice,
     closeChoice: useCallback(() => setChoice(null), []),
   };

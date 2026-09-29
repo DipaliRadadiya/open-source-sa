@@ -39,7 +39,7 @@ const POLL_LIMIT_MS = 20 * 60 * 1000;
  */
 export function ProvisioningCard({ application, canManage = false }) {
   const t = useTranslations("applications.details");
-  const { refresh, pending: refreshing } = useRefresh();
+  const { refresh, refreshThen, pending: refreshing } = useRefresh();
   const router = useRouter();
   const [retrying, setRetrying] = useState(false);
   const [stalled, setStalled] = useState(false);
@@ -71,12 +71,13 @@ export function ProvisioningCard({ application, canManage = false }) {
     setRetrying(true);
     try {
       await retryProvisioning(application.id);
-      router.refresh();
+      // Busy until the page shows the new run: released on the API's answer,
+      // the card sat on "Setup failed" with a live Retry for ~3 s.
+      refreshThen(() => setRetrying(false));
     } catch (error) {
       toast.error(
         apiMessage(error, t("failedAt", { step: stepLabel(application.failed_step) })),
       );
-    } finally {
       setRetrying(false);
     }
   }

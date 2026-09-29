@@ -14,6 +14,7 @@ export const registerSchema = z
       .regex(/^[a-zA-Z0-9_-]+$/, "usernameChars"),
     password: z
       .string()
+      .min(1, "required_password")
       .min(10, "min10")
       .regex(/[a-z]/, "lowercase")
       .regex(/[A-Z]/, "uppercase")

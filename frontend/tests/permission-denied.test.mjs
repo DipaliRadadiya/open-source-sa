@@ -53,7 +53,9 @@ test("a refused page names itself, not whatever it would have bounced to", () =>
   for (const p of guarded) {
     assert.match(
       strip(read(p)),
-      /<PermissionDenied title=\{t\("(title|pageTitle)"\)\} \/>/,
+      // createTitle: the create page's own heading; it also says which
+      // permission is missing, since "view" is not the one it lacks.
+      /<PermissionDenied title=\{t\("(title|pageTitle|createTitle)"\)\}( description=\{t\("noPermission"\)\})? \/>/,
       `${p} must name itself`,
     );
   }

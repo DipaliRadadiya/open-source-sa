@@ -50,18 +50,14 @@ test("a finding with nowhere to go still gets a chip and no hover", () => {
 
 test("the header is an identity card carrying the site's own mark", () => {
   assert.match(page, /import \{ SiteTypeLogo \}/);
-  assert.match(page, /<SiteTypeLogo name=\{application\.site_type\} size="h-6 w-6" \/>/);
+  assert.match(page, /<SiteTypeLogo\s+name=\{application\.site_type\}[\s\S]{0,120}size="h-6 w-6"\s*\/>/);
   assert.match(page, /flex size-11 shrink-0 items-center justify-center rounded-lg border bg-background/);
   // One surface, matching the Files toolbar so the two pages read as one product.
   assert.match(page, /<div className="rounded-xl border bg-muted\/30 p-4">/);
 });
 
-test("no provider is passed to the logo", () => {
-  /*
-   * `provider` swaps in a Git host's mark and needs the providers map, which
-   * this page does not load — `gitProviderFor` lives on the applications list.
-   * Passing an undefined field would silently fall back and look identical in
-   * a green build, so the absence is asserted rather than assumed.
-   */
-  assert.doesNotMatch(page, /<SiteTypeLogo[^>]*provider=/);
+test("a git site's header shows its Git host, as the list does", () => {
+  // Krishna 2026-09-29: the list showed GitHub and the dashboard the generic
+  // git mark. The accounts are already loaded here for the source card.
+  assert.match(page, /provider=\{gitProviderFor\(application, providersByAccountId\(gitAccounts\)\)\}/);
 });

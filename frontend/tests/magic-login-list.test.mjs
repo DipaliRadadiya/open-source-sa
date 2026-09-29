@@ -58,12 +58,10 @@ test("each row's dialog is mounted only once opened", () => {
   // the list fresh, since `choice` only ever holds what `start()` just read.
   assert.match(actions, /magicLogin\.choice \? \(\s*<MagicLoginDialog/);
   assert.match(actions, /const magicLogin = useMagicLogin\(application\.id\)/);
-  /*
-   * preventDefault on select: Radix closes the menu on its own, and if that
-   * teardown runs first the user gesture is spent and `window.open` is blocked.
-   * Driven in a browser from a real dropdown to confirm the tab still opens.
-   */
-  assert.match(actions, /event\.preventDefault\(\);\s*setMenuOpen\(false\);\s*magicLogin\.start\(\)/);
+  // The menu stays open, the item saying "Signing you in…", until WordPress
+  // opens or the picker takes over.
+  assert.match(actions, /event\.preventDefault\(\);[\s\S]{0,80}magicLogin\.start\(\)\.then\(\(\) => setMenuOpen\(false\)\)/);
+  assert.match(actions, /magicLogin\.phase === "fetching"\s*\? t\("magicLogin\.fetchingUsers"\)\s*: magicLogin\.phase === "signing"\s*\? t\("magicLogin\.redirecting"\)/);
 });
 
 test("Magic Login does not draw its own separator", () => {

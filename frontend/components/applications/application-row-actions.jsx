@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";
@@ -82,7 +81,6 @@ export function ApplicationRowActions({
   redirectTo,
 }) {
   const t = useTranslations("applications");
-  const router = useRouter();
   const { refreshThen } = useRefresh();
   const [retrying, setRetrying] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -148,9 +146,12 @@ export function ApplicationRowActions({
     try {
       await enableApplication(application.id);
       // After the refresh lands, so the badge and the toast agree.
+      // The menu is closed here too: pausing and resuming change `disabled_at`,
+      // not `status`, so the status-change close above never fires for them.
       refreshThen(() => {
         toast.success(t("pause.resumed", { name: application.name }));
         setResuming(false);
+        setMenuOpen(false);
       });
     } catch (error) {
       // Includes the 422 for a site somebody already resumed elsewhere; the
@@ -164,10 +165,11 @@ export function ApplicationRowActions({
     setRetrying(true);
     try {
       await retryProvisioning(application.id);
-      router.refresh();
+      // "Retrying…" until the row itself says Provisioning; released on the
+      // API's answer, the row sat on "Failed" for ~3 s with nothing moving.
+      refreshThen(() => setRetrying(false));
     } catch (error) {
       toast.error(apiMessage(error, t("details.failedAt", { step: provisionStepLabel(application.failed_step, t, "details.") })));
-    } finally {
       setRetrying(false);
     }
   }
@@ -177,7 +179,7 @@ export function ApplicationRowActions({
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="size-8">
-            {retrying ? (
+            {retrying || magicLogin.pending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <MoreHorizontal className="size-4" />
@@ -238,21 +240,28 @@ export function ApplicationRowActions({
               right; the one that knows what follows it wins. */}
           {showMagicLogin ? (
             <DropdownMenuItem
+              disabled={magicLogin.pending}
               /*
-               * `preventDefault` so Radix does not close the menu before the
-               * click has been used. `window.open` is allowed by the gesture
-               * this handler is running inside, and a menu that tears itself
-               * down first takes that with it.
+               * The menu stays open with the item saying "Signing you in…"
+               * until WordPress opens or the picker takes over — the same
+               * pattern Retry uses, so the wait is visible where the click was.
                */
               onSelect={(event) => {
                 event.preventDefault();
-                setMenuOpen(false);
-                magicLogin.start();
                 openingDialog.current = true;
+                magicLogin.start().then(() => setMenuOpen(false));
               }}
             >
-              <KeyRound className="size-4" />
-              {t("magicLogin.action")}
+              {magicLogin.pending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <KeyRound className="size-4" />
+              )}
+              {magicLogin.phase === "fetching"
+                ? t("magicLogin.fetchingUsers")
+                : magicLogin.phase === "signing"
+                  ? t("magicLogin.redirecting")
+                  : t("magicLogin.action")}
             </DropdownMenuItem>
           ) : null}
 

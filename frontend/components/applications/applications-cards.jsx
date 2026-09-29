@@ -1,3 +1,4 @@
+import { phpVersionShown } from "@/lib/applications/php-version-shown";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
@@ -100,9 +101,9 @@ export function ApplicationsCards({
                 a wrapped list of facts reads as a value, where in a table
                 column it reads as an empty cell. Node and static sites simply
                 have nothing to say here. */}
-            {application.php_version ? (
+            {phpVersionShown(application) ? (
               <span className="whitespace-nowrap tabular-nums">
-                {t("phpFact", { version: application.php_version })}
+                {t("phpFact", { version: phpVersionShown(application) })}
               </span>
             ) : null}
             <span className="truncate font-mono">{application.system_user?.username ?? "—"}</span>

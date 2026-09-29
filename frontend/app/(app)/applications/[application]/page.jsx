@@ -10,6 +10,7 @@ import { getApplication, getApplicationIssues } from "@/lib/applications/get-app
 import { getBackupTarget, getBackups } from "@/lib/backups/get-backups";
 import { BACKUP_IN_FLIGHT } from "@/lib/schemas/backup";
 import { getGitAccounts } from "@/lib/git/get-git";
+import { gitProviderFor, providersByAccountId } from "@/lib/applications/git-provider";
 import { getLatestDeployment } from "@/lib/applications/get-deployments";
 import {
   getApplicationDomains,
@@ -365,10 +366,11 @@ export default async function ApplicationDetailPage({ params }) {
                 screen about a single site was the only place not showing what
                 kind of site it is. */}
             <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border bg-background">
-              {/* No `provider`: that swaps in a Git host's mark, which needs
-                  the providers map this page does not load. The site type is
-                  the identity worth showing here anyway. */}
-              <SiteTypeLogo name={application.site_type} size="h-6 w-6" />
+              <SiteTypeLogo
+                name={application.site_type}
+                provider={gitProviderFor(application, providersByAccountId(gitAccounts))}
+                size="h-6 w-6"
+              />
             </span>
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">

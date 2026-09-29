@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { CheckCircle2, CircleDot, Globe2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { useBranding } from "@/components/branding-provider";
 
@@ -95,7 +96,13 @@ export function ApplicationEmptyState({ canManage = false, compact = false }) {
             <h2 className="text-balance text-xl font-semibold tracking-tight sm:text-2xl">{t("empty.title")}</h2>
             <p className="max-w-lg text-sm leading-6 text-muted-foreground">{t("empty.description", { brand })}</p>
           </div>
-          {canManage ? <Button asChild size="lg"><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button> : null}
+          {canManage ? (
+            <Button asChild size="lg"><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button>
+          ) : (
+            <ReasonTooltip reason={t("noPermission")}>
+              <Button size="lg" disabled><Plus className="size-4" />{t("create")}</Button>
+            </ReasonTooltip>
+          )}
         </div>
         <div className="rounded-xl border bg-background/85 p-4 shadow-sm sm:p-5">
           <p className="text-sm font-medium">{t("empty.guideTitle")}</p>

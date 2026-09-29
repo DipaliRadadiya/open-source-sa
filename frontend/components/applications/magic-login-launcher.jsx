@@ -16,13 +16,13 @@ import { useMagicLogin } from "@/components/applications/use-magic-login";
  */
 export function MagicLoginLauncher({ appId }) {
   const t = useTranslations("applications.magicLogin");
-  const { start, pending, choice, closeChoice } = useMagicLogin(appId);
+  const { start, pending, phase, choice, closeChoice } = useMagicLogin(appId);
 
   return (
     <>
       <Button type="button" variant="outline" size="sm" onClick={start} disabled={pending}>
         {pending ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
-        {t("action")}
+        {phase === "fetching" ? t("fetchingUsers") : phase === "signing" ? t("redirecting") : t("action")}
       </Button>
       {/*
        * Rendered only while there is a choice, which also remounts it on every

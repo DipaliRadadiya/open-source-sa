@@ -12,6 +12,8 @@ import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { Badge } from "@/components/ui/badge";
 import { VisitSiteLink } from "@/components/applications/visit-site-link";
 import { Button } from "@/components/ui/button";
+import { phpVersionShown } from "@/lib/applications/php-version-shown";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
@@ -56,7 +58,7 @@ import {
  * down the column instead of drifting with digit width.
  */
 function PhpCell({ row }) {
-  const value = row.original.php_version;
+  const value = phpVersionShown(row.original);
   return (
     <span className="block truncate tabular-nums text-muted-foreground" title={value ?? undefined}>
       {value ?? "—"}
@@ -268,7 +270,15 @@ function ApplicationsList({
   const hasWorkingApplication = applications.some((application) => application.status === "pending" || application.status === "provisioning");
   useEffect(() => { if (!hasWorkingApplication) return undefined; const timer = window.setInterval(() => router.refresh(), 4000); return () => window.clearInterval(timer); }, [hasWorkingApplication, router]);
 
-  const createButton = canManage ? <Button asChild><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button> : null;
+  // Shown to viewers too, off and with the reason, like every other page's
+  // primary action — hidden, the list gave no hint that creating was possible.
+  const createButton = canManage ? (
+    <Button asChild><Link href="/applications/create"><Plus className="size-4" />{t("create")}</Link></Button>
+  ) : (
+    <ReasonTooltip reason={t("noPermission")}>
+      <Button disabled><Plus className="size-4" />{t("create")}</Button>
+    </ReasonTooltip>
+  );
   const columns = useMemo(
     () => [
       // `col` is the API's own sort key, from the whitelist on

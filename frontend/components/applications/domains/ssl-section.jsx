@@ -605,7 +605,13 @@ export function SslSection({
         current={cert}
         open={issueOpen}
         onOpenChange={setIssueOpen}
-        onIssued={setCert}
+        onIssued={(next) => {
+          setCert(next);
+          // An uploaded certificate is active on arrival, so no poll ever
+          // settles to re-read the page — and the Domains tab (and the tab's
+          // padlock) kept saying "No SSL" until a manual refresh.
+          if (!isPending(next)) router.refresh();
+        }}
         rateLimited={cert?.status === "failed" && NO_RETRY.has(cert.reason)}
       />
       <DeleteCertDialog
