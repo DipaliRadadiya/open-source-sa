@@ -1617,6 +1617,8 @@
       "protectedReason": "Ela mantém você conectado — desativá-la pode trancá-lo fora do servidor ou tirar suas aplicações do ar.",
       "confirmTitle": "Excluir esta regra?",
       "confirmBodyOn": "{rule} — isso entra em vigor imediatamente. Tudo o que ela estava permitindo será bloqueado.",
+      "confirmBodyOnDeny": "{rule} — isso entra em vigor imediatamente. Tudo o que ela estava bloqueando passará.",
+      "confirmBodyRuleOff": "{rule} — esta regra está desativada, então nada muda hoje.",
       "confirmBodyOff": "{rule} — o firewall está desativado, então nada muda hoje, mas a regra não voltará quando você ativá-lo.",
       "name": "Nome",
       "action": "Ação",
@@ -1715,7 +1717,10 @@
       "stackAddHint": "Clique para adicionar estas regras",
       "switchedOn": "{names} reativadas.",
       "tileOffBody": "Nada está chegando na porta {port} — esta regra está desativada.",
-      "tileOffHint": "Clique para reativá-la"
+      "tileOffHint": "Clique para reativá-la",
+      "riskyTitle": "Abrir {name} para todos?",
+      "riskyBody": "Qualquer pessoa na internet poderá acessar {name} na porta {port}. Mais seguro: use Regra personalizada e escolha \"Apenas meu IP\".",
+      "riskyConfirm": "Abrir para todos"
     },
     "history": {
       "action": "Histórico",

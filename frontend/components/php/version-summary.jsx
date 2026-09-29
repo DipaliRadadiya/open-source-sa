@@ -2,7 +2,7 @@
 
 import { removeFailed, versionState } from "@/components/runtime/version-status";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
@@ -40,7 +40,7 @@ export function VersionSummary({
   children,
 }) {
   const t = useTranslations("php");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(false);
   // WHICH action is running. A single boolean made Remove spin the
   // Make default button — same fault the Node card had. They still disable
@@ -110,8 +110,8 @@ export function VersionSummary({
     setRunning("default");
     try {
       await setDefaultPhpVersion(version.version);
+      await refreshAndWait();
       toast.success(t("versions.defaultSet", { version: version.version }));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("versions.defaultFailed")));
     } finally {
@@ -123,8 +123,8 @@ export function VersionSummary({
     setRunning("retry");
     try {
       await installPhpVersion(version.version);
+      await refreshAndWait();
       toast.success(t("versions.retrying", { version: version.version }));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("versions.installFailedShort")));
     } finally {
@@ -136,8 +136,8 @@ export function VersionSummary({
     setRunning("complete");
     try {
       await installPhpVersion(version.version);
+      await refreshAndWait();
       toast.success(t("versions.completing", { version: version.version }));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("versions.installFailedShort")));
     } finally {
@@ -149,12 +149,12 @@ export function VersionSummary({
     setRunning("remove");
     try {
       await removePhpVersion(version.version);
+      await refreshAndWait();
       // "Removing", not "removed": this is a 202 now, and apt has minutes of
       // work ahead of it. Saying it was done was the reason a version still
       // sitting there looked like a bug rather than a purge in progress.
       toast.success(t("versions.removing", { version: version.version }));
       setConfirming(false);
-      router.refresh();
     } catch (error) {
       // The API names the sites in its message, which is more useful than
       // anything this page could compose.

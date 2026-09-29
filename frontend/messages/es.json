@@ -1617,6 +1617,8 @@
       "protectedReason": "Esta te mantiene conectado: desactivarla puede dejarte fuera del servidor o tumbar tus aplicaciones.",
       "confirmTitle": "¿Eliminar esta regla?",
       "confirmBodyOn": "{rule} — tiene efecto de inmediato. Lo que dejaba pasar quedará bloqueado.",
+      "confirmBodyOnDeny": "{rule} — tiene efecto de inmediato. Lo que bloqueaba quedará permitido.",
+      "confirmBodyRuleOff": "{rule} — esta regla está desactivada, así que hoy no cambia nada.",
       "confirmBodyOff": "{rule} — el cortafuegos está apagado, así que hoy no cambia nada, pero la regla no volverá cuando lo actives.",
       "name": "Nombre",
       "action": "Acción",
@@ -1715,7 +1717,10 @@
       "stackAddHint": "Haz clic para añadir estas reglas",
       "switchedOn": "Se ha vuelto a activar {names}.",
       "tileOffBody": "Nada llega al puerto {port}: esta regla está desactivada.",
-      "tileOffHint": "Haz clic para volver a activarla"
+      "tileOffHint": "Haz clic para volver a activarla",
+      "riskyTitle": "¿Abrir {name} a todo el mundo?",
+      "riskyBody": "Cualquiera en internet podrá conectarse a {name} en el puerto {port}. Más seguro: usa «Regla personalizada» y elige «Solo mi IP».",
+      "riskyConfirm": "Abrir a todo el mundo"
     },
     "history": {
       "action": "Historial",

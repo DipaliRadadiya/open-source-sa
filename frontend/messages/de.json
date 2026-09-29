@@ -1617,6 +1617,8 @@
       "protectedReason": "Diese hält Ihre Verbindung offen — sie auszuschalten kann Sie vom Server aussperren oder Ihre Anwendungen offline nehmen.",
       "confirmTitle": "Diese Regel löschen?",
       "confirmBodyOn": "{rule} — das wirkt sofort. Was sie durchgelassen hat, wird blockiert.",
+      "confirmBodyOnDeny": "{rule} — das wirkt sofort. Was sie blockiert hat, wird durchgelassen.",
+      "confirmBodyRuleOff": "{rule} — diese Regel ist ausgeschaltet, heute ändert sich also nichts.",
       "confirmBodyOff": "{rule} — die Firewall ist aus, heute ändert sich also nichts, aber die Regel kommt beim Einschalten nicht zurück.",
       "name": "Name",
       "action": "Aktion",
@@ -1715,7 +1717,10 @@
       "stackAddHint": "Klicken, um diese Regeln hinzuzufügen",
       "switchedOn": "{names} wieder eingeschaltet.",
       "tileOffBody": "Port {port} wird von nichts erreicht — diese Regel ist ausgeschaltet.",
-      "tileOffHint": "Klicken, um sie wieder einzuschalten"
+      "tileOffHint": "Klicken, um sie wieder einzuschalten",
+      "riskyTitle": "{name} für alle öffnen?",
+      "riskyBody": "Jeder im Internet kann {name} dann auf Port {port} erreichen. Sicherer: Nehmen Sie „Eigene Regel“ und wählen Sie „Nur meine IP“.",
+      "riskyConfirm": "Für alle öffnen"
     },
     "history": {
       "action": "Verlauf",

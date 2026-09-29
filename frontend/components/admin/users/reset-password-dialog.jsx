@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, KeyRound } from "lucide-react";
@@ -22,7 +22,7 @@ import {
 
 export function ResetPasswordDialog({ user, open, onOpenChange }) {
   const t = useTranslations("users");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const form = useForm({
     resolver: zodResolver(resetPasswordSchema),
@@ -32,10 +32,10 @@ export function ResetPasswordDialog({ user, open, onOpenChange }) {
   async function onSubmit(values) {
     try {
       await resetUserPassword(user.id, values);
+      await refreshAndWait();
       toast.success(t("toast.passwordReset"));
       onOpenChange?.(false);
       form.reset();
-      router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }

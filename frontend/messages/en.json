@@ -1617,6 +1617,8 @@
       "protectedReason": "This one keeps you connected — switching it off can lock you out of the server or take your applications offline.",
       "confirmTitle": "Delete this rule?",
       "confirmBodyOn": "{rule} — this takes effect straight away. Whatever it was letting through will be blocked.",
+      "confirmBodyOnDeny": "{rule} — this takes effect straight away. Whatever it was blocking will be let through.",
+      "confirmBodyRuleOff": "{rule} — this rule is switched off, so nothing changes today.",
       "confirmBodyOff": "{rule} — the firewall is off, so nothing changes today, but the rule will not come back when you turn it on.",
       "name": "Name",
       "action": "Action",
@@ -1715,7 +1717,10 @@
       "stackAddHint": "Click to add these rules",
       "switchedOn": "Switched {names} back on.",
       "tileOffBody": "Nothing is reaching port {port} — this rule is switched off.",
-      "tileOffHint": "Click to switch it back on"
+      "tileOffHint": "Click to switch it back on",
+      "riskyTitle": "Open {name} to everyone?",
+      "riskyBody": "Anyone on the internet will be able to reach {name} on port {port}. Safer: use Custom rule and pick “Only my IP”.",
+      "riskyConfirm": "Open to everyone"
     },
     "history": {
       "action": "History",

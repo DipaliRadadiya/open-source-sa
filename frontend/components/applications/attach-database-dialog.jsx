@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link2, Loader2 } from "lucide-react";
@@ -31,7 +31,7 @@ export function AttachDatabaseDialog({
   onOpenChange,
 }) {
   const t = useTranslations("applications.attachDatabase");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [picked, setPicked] = useState(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
@@ -54,10 +54,10 @@ export function AttachDatabaseDialog({
     setError(null);
     try {
       await attachDatabase(value, applicationId);
+      await refreshAndWait();
       const name = databases.find((d) => String(d.id) === String(value))?.name ?? "";
       toast.success(t("done", { name }));
       handleOpenChange(false);
-      router.refresh();
     } catch (caught) {
       setError(
         caught.response?.data?.errors?.application_id?.[0]

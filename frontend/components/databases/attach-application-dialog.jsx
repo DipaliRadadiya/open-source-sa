@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link2, Loader2 } from "lucide-react";
@@ -35,7 +35,7 @@ export function AttachApplicationDialog({
 }) {
   const t = useTranslations("databases.attach");
   const tEngines = useTranslations("databases.engines");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   // null means untouched, so the field simply reads the database. Holding the
   // current site in state instead would need an effect to re-seed it, and an
   // effect that writes state on open is a cascading render.
@@ -70,9 +70,9 @@ export function AttachApplicationDialog({
     setError(null);
     try {
       await attachDatabase(database.id, chosen);
+      await refreshAndWait();
       toast.success(chosen ? t("attached") : t("detached"));
       handleOpenChange(false);
-      router.refresh();
     } catch (caught) {
       // The API returns both refusals on `application_id`, which is the field
       // the reader is looking at.

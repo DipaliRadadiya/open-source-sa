@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Info, Loader2, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
@@ -32,7 +32,7 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
   const t = useTranslations("php.ioncube");
   // Reused rather than re-worded: these three already exist under `php`.
   const tp = useTranslations("php");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [busy, setBusy] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -58,10 +58,10 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
     setBusy(true);
     try {
       await installIonCube(version);
+      await refreshAndWait();
       // Always 202: the archive is ~29 MB, so the message says it has started
       // rather than that it is done.
       toast.success(t("installStarted", { version }));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("installFailed")));
     } finally {
@@ -73,9 +73,9 @@ export function IonCubeCard({ version, ioncube, canManage, failed = false }) {
     setBusy(true);
     try {
       await removeIonCube(version);
+      await refreshAndWait();
       toast.success(t("removed", { version }));
       setConfirmOpen(false);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("removeFailed")));
     } finally {

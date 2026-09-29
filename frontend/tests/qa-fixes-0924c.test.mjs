@@ -52,5 +52,5 @@ test("E5: the restore picker is a radio group led by the saved time", () => {
 
 test("a refresh that unmounts its caller still runs the waiting step (the delete toast)", () => {
   const src = read("hooks/use-refresh.js");
-  assert.match(src, /\(\) => \(\) => \{\s*const run = after\.current;\s*after\.current = null;\s*run\?\.\(\);/);
+  assert.match(src, /useEffect\(\(\) => \(\) => flush\(\), \[\]\);/);
 });

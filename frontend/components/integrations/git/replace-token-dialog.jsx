@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ExternalLink, KeyRound, Loader2, TriangleAlert } from "lucide-react";
@@ -39,7 +39,7 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
   // write a second set that can drift from it.
   const tConnect = useTranslations("git.connect");
   const { name: brand } = useBranding();
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [failure, setFailure] = useState(null);
 
   const form = useForm({
@@ -53,8 +53,8 @@ export function ReplaceTokenDialog({ account, open, onOpenChange }) {
     setFailure(null);
     try {
       await updateAccount(account.id, { token: values.token });
+      await refreshAndWait();
       toast.success(t("replaced"));
-      router.refresh();
       onOpenChange?.(false);
     } catch (error) {
       if (error.response?.data?.errors) {

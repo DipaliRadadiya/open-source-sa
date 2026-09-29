@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { apiMessage } from "@/lib/api/error-message";
 
@@ -32,7 +32,7 @@ import { apiMessage } from "@/lib/api/error-message";
  * branch on the outcome — closing a dialog only when it worked, say.
  */
 export function useAction() {
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   // The key of the work in flight, or null. A plain boolean cannot say WHICH
   // row is busy, and a list that disables every row while one of them saves is
   // the same silence in a different costume.
@@ -43,9 +43,11 @@ export function useAction() {
       setPendingKey(key);
       try {
         const result = await fn();
+        // Re-read first, then say so and close: the other order left the old
+        // row on screen under a "deleted" toast.
+        if (refresh) await refreshAndWait();
         if (success) toast.success(success);
         await onSuccess?.(result);
-        if (refresh) router.refresh();
         return true;
       } catch (cause) {
         toast.error(apiMessage(cause, error));
@@ -54,7 +56,7 @@ export function useAction() {
         setPendingKey(null);
       }
     },
-    [router],
+    [refreshAndWait],
   );
 
   return {

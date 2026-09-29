@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations, useFormatter } from "next-intl";
 import {
@@ -60,6 +61,7 @@ const TONE = {
 export function DatabaseExports({ database, exports: initial = [], canManage }) {
   const t = useTranslations("databases.exports");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [polled, setPolled] = useState(null);
   // The polled rows override the server render — and have to stand down the
   // moment the server render is newer than they are. Keeping them forever was
@@ -189,9 +191,9 @@ export function DatabaseExports({ database, exports: initial = [], canManage }) 
     setPendingDelete(true);
     try {
       await deleteExport(deleting.id);
+      await refreshAndWait();
       toast.success(t("deleted"));
       setDeleting(null);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("deleteFailed")));
     } finally {

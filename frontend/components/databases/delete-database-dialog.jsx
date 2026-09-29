@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
@@ -21,6 +22,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 export function DeleteDatabaseDialog({ database, open, onOpenChange, redirectTo }) {
   const t = useTranslations("databases");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(false);
   const [confirm, setConfirm] = useState("");
 
@@ -43,11 +45,17 @@ export function DeleteDatabaseDialog({ database, open, onOpenChange, redirectTo 
     setPending(true);
     try {
       await deleteDatabase(database.id);
+      // Deleted from its own detail page: that page no longer exists.
+      if (redirectTo) {
+        toast.success(t("delete.deleted", { name }));
+        handleOpenChange(false);
+        router.push(redirectTo);
+        router.refresh();
+        return;
+      }
+      await refreshAndWait();
       toast.success(t("delete.deleted", { name }));
       handleOpenChange(false);
-      // Deleted from its own detail page: that page no longer exists.
-      if (redirectTo) router.push(redirectTo);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("delete.failed")));
     } finally {

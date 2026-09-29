@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { deleteBackups } from "@/lib/api/backups";
@@ -43,6 +44,8 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
   // deserves saying out loud rather than being counted in silently.
   const safetyCount = backups.filter((backup) => backup.is_safety).length;
 
+  const { refreshAndWait } = useRefresh();
+
   async function confirm() {
     setPending(true);
     try {
@@ -53,6 +56,9 @@ export function DeleteBackupsDialog({ open, onOpenChange, backups = [], onDelete
       // The successes are reported either way, so the table loses those rows
       // immediately and the two numbers in the toast are about real work.
       onDeleted?.(succeeded, failed.map((entry) => entry.id));
+      // The list re-read before the toast: closing first left the deleted rows
+      // on screen under "deleted".
+      await refreshAndWait();
 
       if (failed.length === 0) {
         toast.success(t("done", { count: succeeded.length }));

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { HardDrive, Plus, Trash2 } from "lucide-react";
@@ -32,7 +32,7 @@ const EMPTY_STATE_PROVIDERS = ["aws", "r2", "b2", "wasabi", "spaces"];
  */
 export function DestinationsCard({ destinations = [], canManage, oauthRedirectUri = null }) {
   const t = useTranslations("storage");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [connecting, setConnecting] = useState(false);
   const [editing, setEditing] = useState(null);
   const [replacing, setReplacing] = useState(null);
@@ -58,9 +58,9 @@ export function DestinationsCard({ destinations = [], canManage, oauthRedirectUr
   async function remove() {
     await removal.run(() => deleteDestination(removal.target.id), {
       fallback: t("delete.failed"),
-      onDone: () => {
+      onDone: async () => {
+        await refreshAndWait();
         toast.success(t("delete.removed"));
-        router.refresh();
       },
     });
   }

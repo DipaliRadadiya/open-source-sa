@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -60,6 +61,7 @@ import {
 export function PushStagingDialog({ appId, production, staging, open, onOpenChange }) {
   const t = useTranslations("applications.staging.pushDialog");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [mode, setMode] = useState("");
   const [confirm, setConfirm] = useState("");
   const [pending, setPending] = useState(false);
@@ -72,9 +74,9 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
     setPending(true);
     try {
       await pushApplicationStaging(appId, mode);
+      await refreshAndWait();
       onOpenChange(false);
       toast.success(t("done", { domain }));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
       // The usual cause is the copy having gone (deleted in another tab), and

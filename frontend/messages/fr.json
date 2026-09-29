@@ -1617,6 +1617,8 @@
       "protectedReason": "Elle vous maintient connecté — la désactiver peut vous verrouiller l'accès au serveur ou mettre vos applications hors ligne.",
       "confirmTitle": "Supprimer cette règle ?",
       "confirmBodyOn": "{rule} — cela prend effet immédiatement. Tout ce qu'elle laissait passer sera bloqué.",
+      "confirmBodyOnDeny": "{rule} — cela prend effet immédiatement. Tout ce qu'elle bloquait passera.",
+      "confirmBodyRuleOff": "{rule} — cette règle est désactivée, rien ne change aujourd'hui.",
       "confirmBodyOff": "{rule} — le pare-feu est désactivé, rien ne change aujourd'hui, mais la règle ne reviendra pas à la réactivation.",
       "name": "Nom",
       "action": "Action",
@@ -1715,7 +1717,10 @@
       "stackAddHint": "Cliquer pour ajouter ces règles",
       "switchedOn": "{names} réactivé(es).",
       "tileOffBody": "Rien n'atteint le port {port} — cette règle est désactivée.",
-      "tileOffHint": "Cliquer pour la réactiver"
+      "tileOffHint": "Cliquer pour la réactiver",
+      "riskyTitle": "Ouvrir {name} à tout le monde ?",
+      "riskyBody": "N'importe qui sur internet pourra joindre {name} sur le port {port}. Plus sûr : utilisez Règle personnalisée et choisissez « Uniquement mon IP ».",
+      "riskyConfirm": "Ouvrir à tout le monde"
     },
     "history": {
       "action": "Historique",

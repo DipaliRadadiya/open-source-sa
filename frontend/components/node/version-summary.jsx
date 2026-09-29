@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
@@ -35,7 +35,7 @@ import {
  */
 export function VersionSummary({ version, canManage, lifecycleAvailable = false }) {
   const t = useTranslations("node");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(false);
   /*
    * WHICH action is running, not merely that one is.
@@ -121,8 +121,8 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
     setRunning("retry");
     try {
       await installNodeVersion(version.version);
+      await refreshAndWait();
       toast.success(t("versions.retrying", { version: version.version }));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("versions.installFailedShort")));
     } finally {
@@ -134,8 +134,8 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
     setRunning("default");
     try {
       await setDefaultNodeVersion(version.version);
+      await refreshAndWait();
       toast.success(t("versions.defaultSet", { version: version.version }));
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("versions.defaultFailed")));
     } finally {
@@ -147,9 +147,9 @@ export function VersionSummary({ version, canManage, lifecycleAvailable = false 
     setRunning("remove");
     try {
       await removeNodeVersion(version.version);
+      await refreshAndWait();
       toast.success(t("versions.removed", { version: version.version }));
       setConfirming(false);
-      router.refresh();
     } catch (error) {
       // The API names every site pinning it, which is more useful than
       // anything this page could compose.

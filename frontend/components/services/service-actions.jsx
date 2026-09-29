@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import {
   RotateCw,
@@ -93,7 +93,7 @@ const PRIMARY = { active: "restart", inactive: "start", failed: "start" };
  */
 export function ServiceActions({ service, canManage, phpVersion, onBusyChange }) {
   const t = useTranslations("services");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(null);
   const [confirming, setConfirming] = useState(null);
   const configTest = useConfigTest(service);
@@ -130,6 +130,9 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
     setBusyAction(action);
     try {
       await runServiceAction(service.key, action);
+      // The row re-read before the toast: after Stop it still said "active"
+      // under "stopped" for the length of the refresh.
+      await refreshAndWait();
       showActionSuccess({
         title: t(`toast.${action}`, { name: service.label }),
         // Stop is the one action here you might regret the instant it lands.
@@ -137,7 +140,6 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
         undoLabel: action === 'stop' ? t('undoStop') : undefined,
         onUndo: action === 'stop' ? () => run('start') : undefined,
       });
-      router.refresh();
     } catch (error) {
       const data = error.response?.data;
       // Name the service and the action, and say the state is unchanged — the

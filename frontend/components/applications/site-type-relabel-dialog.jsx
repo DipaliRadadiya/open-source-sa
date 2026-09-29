@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowRight, Check, HardDrive, Tags } from "lucide-react";
@@ -88,7 +88,7 @@ export function SiteTypeRelabelDialog({
   matched = null,
 }) {
   const t = useTranslations("applications.siteTypeDetection");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
 
@@ -105,15 +105,15 @@ export function SiteTypeRelabelDialog({
     setError(null);
     try {
       await changeApplicationSiteType(application.id, target);
-      toast.success(t("applied", { type: targetTitle }));
-      onOpenChange(false);
       /*
-       * `router.refresh()`, not a local patch. The type decides which screens
-       * this site has — WordPress adds Staging, Clone and Magic Login — so the
+       * A refresh, not a local patch. The type decides which screens this
+       * site has — WordPress adds Staging, Clone and Magic Login — so the
        * sidebar and the whole nav for this application change. Patching one
        * field would leave the rail claiming the old set.
        */
-      router.refresh();
+      await refreshAndWait();
+      toast.success(t("applied", { type: targetTitle }));
+      onOpenChange(false);
     } catch (err) {
       // The backend's refusals are sentences worth reading: the git one
       // explains that relabelling would hide the Deployments and Workers

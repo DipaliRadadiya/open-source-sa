@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { KeyRound, Loader2, TriangleAlert } from "lucide-react";
@@ -35,7 +35,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
   const t = useTranslations("storage.replace");
   const tf = useTranslations("storage.form");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   const provider = destination?.provider ?? "s3";
   const fields = useMemo(() => secretFieldsFor(provider), [provider]);
@@ -65,9 +65,9 @@ export function ReplaceCredentialsDialog({ destination, open, onOpenChange }) {
       );
 
       await updateDestination(destination.id, { config });
+      await refreshAndWait();
       onOpenChange?.(false);
       form.reset(defaults);
-      router.refresh();
 
       const verdict = await probeDestination(destination.id, t("replacedButFailed"));
       if (verdict.ok) toast.success(t("replacedAndTested"));

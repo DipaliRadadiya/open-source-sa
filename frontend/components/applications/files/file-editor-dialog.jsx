@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { FileCode2, Loader2, History, Download, TriangleAlert } from "lucide-react";
@@ -47,6 +48,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   // The row that opened the editor, captured before focus moves into it.
   const [opener] = useState(() => (typeof document === "undefined" ? null : document.activeElement));
   const saved = useRef(false);
@@ -156,10 +158,10 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
     setSaveError(null);
     try {
       await saveFileContent(appId, file.path, contents);
+      await refreshAndWait();
       toast.success(t("editor.saved"));
       saved.current = true;
       onOpenChange?.(false);
-      router.refresh();
     } catch (error) {
       // Shown in the dialog, not as a toast. The dialog stays open holding
       // work that is not on disk yet, so the reason has to stay on screen for

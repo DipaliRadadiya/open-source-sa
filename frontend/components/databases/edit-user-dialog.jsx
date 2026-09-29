@@ -1,6 +1,6 @@
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Pencil, Sparkles } from "lucide-react";
@@ -35,7 +35,7 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
   const t = useTranslations("databases.users");
   const restart = useRestartConfirm();
   const tc = useTranslations("common");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const isMongo = database?.driver === "mongo";
 
   const defaults = {
@@ -79,9 +79,9 @@ export function EditUserDialog({ database, user, open, onOpenChange, remoteUsers
 
     try {
       await updateDatabaseUser(database.id, user.id, payload);
+      await refreshAndWait();
       toast.success(t("updated"));
       onOpenChange?.(false);
-      router.refresh();
     } catch (error) {
       const restartAnswer = restart.ask(error);
       if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ChevronDown, Info, Loader2, SearchX, TriangleAlert } from "lucide-react";
@@ -58,6 +59,7 @@ function driftOf(extension) {
 export function ExtensionsCard({ version, extensions, panelRequired = [], toggleSupported = true, canManage }) {
   const t = useTranslations("php");
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   // Which extension is mid-request AND which way it is going, so the row can
@@ -111,6 +113,7 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
     setPending({ name: extension.name, on: next });
     try {
       const response = await setPhpExtension(version, extension.name, next);
+      await refreshAndWait();
       // 202 means apt is queued — minutes, not milliseconds — so the message
       // says so rather than implying it is already done.
       toast.success(
@@ -120,7 +123,6 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
             ? t("extensions.enabled", { name: extension.name })
             : t("extensions.disabled", { name: extension.name }),
       );
-      router.refresh();
     } catch (error) {
       // apiMessage keeps the reference: a 500 here is exactly when someone
       // will be asked to quote it.

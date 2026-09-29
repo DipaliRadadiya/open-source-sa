@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import {
 } from "@/lib/api/firewall";
 import { riskyExposure } from "@/lib/firewall/exposure";
 import { isPortOpen, matchRule } from "@/lib/firewall/quick-tiles";
+import { deleteRuleBodyKey } from "@/lib/firewall/state";
 import {
   Card,
   CardContent,
@@ -54,9 +55,10 @@ const STACK_KEYS = ["http", "https", "ssh"];
  */
 export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, riskyPorts = [] }) {
   const t = useTranslations("firewall");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [pending, setPending] = useState(null);
   const [confirming, setConfirming] = useState(null);
+  const [opening, setOpening] = useState(null);
 
   // SSH follows the port Settings configured, not the preset's 22. Hardcoding it
   // would open a port nobody listens on and report success, then lock the user
@@ -116,6 +118,9 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
       // rule could not be added", which reads as "nothing happened".
       failed = apiMessage(error, t("quick.failed"));
     } finally {
+      // Always: rules were created even on the failing path. Before the toasts,
+      // so "Added" never sits over a tile that still offers the add.
+      await refreshAndWait();
       // Say which of the things happened — including when only some did.
       if (created.length) {
         toast.success(t("quick.added", { names: created.join(", ") }));
@@ -126,9 +131,8 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
         toast.info(t("quick.alreadyThere", { names: already.join(", ") }));
       }
       if (failed) toast.error(failed);
-      // Always: rules were created even on the failing path.
-      router.refresh();
       setPending(null);
+      setOpening(null);
     }
   }
 
@@ -137,9 +141,9 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
     setPending(key);
     try {
       await deleteFirewallRule(rule.id);
+      await refreshAndWait();
       toast.success(t("rules.deleted"));
       setConfirming(null);
-      router.refresh();
     } catch (error) {
       toast.error(
         apiMessage(error, t("rules.deleteFailed")),
@@ -220,7 +224,9 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
                 onClick={() =>
                   done
                     ? setConfirming({ rule, key: preset.key })
-                    : add([preset], preset.key)
+                    : risky && !off
+                      ? setOpening({ preset, name: risky })
+                      : add([preset], preset.key)
                 }
               />
             );
@@ -256,7 +262,7 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
           title={t("rules.confirmTitle")}
           description={
             confirming
-              ? t(enabled ? "rules.confirmBodyOn" : "rules.confirmBodyOff", {
+              ? t(deleteRuleBodyKey(enabled, confirming.rule), {
                   rule:
                     confirming.rule.description ||
                     confirming.rule.summary ||
@@ -268,6 +274,22 @@ export function QuickAddCard({ presets, rules, enabled, canManage, sshPort, risk
           confirmLabel={t("rules.delete")}
           pending={pending !== null}
           onConfirm={remove}
+        />
+
+        {/* A database open to everyone was one click on a tile whose own text
+            says not to do it. */}
+        <ConfirmDialog
+          open={opening !== null}
+          onOpenChange={(open) => !pending && setOpening(open ? opening : null)}
+          icon={TriangleAlert}
+          tone="warning"
+          title={opening ? t("quick.riskyTitle", { name: opening.preset.label }) : ""}
+          description={opening ? t("quick.riskyBody", { name: opening.name, port: opening.preset.port }) : ""}
+          cancelLabel={t("common.cancel")}
+          confirmLabel={t("quick.riskyConfirm")}
+          confirmVariant="destructive"
+          pending={pending !== null}
+          onConfirm={() => add([opening.preset], opening.preset.key)}
         />
       </Card>
     </DisabledReasonProvider>

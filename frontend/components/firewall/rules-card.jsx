@@ -3,10 +3,12 @@
 import { useBrowserIp } from "@/components/network/browser-ip";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { SearchX, ShieldX, Trash2, Pencil } from "lucide-react";
 import { deleteFirewallRule, updateFirewallRule } from "@/lib/api/firewall";
+import { deleteRuleBodyKey } from "@/lib/firewall/state";
 import { unreachablePorts } from "@/lib/firewall/listening";
 import { PendingSwitch } from "@/components/ui/pending-switch";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
@@ -135,6 +137,7 @@ export function RulesCard({
   // The reader's address as the browser sees it — see components/network/browser-ip.jsx.
   const yourIp = useBrowserIp();
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const searchParams = useSearchParams();
   const tc = useTranslations("common");
   const setQuery = useSetQuery();
@@ -231,9 +234,9 @@ export function RulesCard({
     setDeletingId(rule.id);
     try {
       await deleteFirewallRule(rule.id);
+      await refreshAndWait();
       toast.success(t("rules.deleted"));
       setConfirming(null);
-      router.refresh();
     } catch (error) {
       toast.error(
         apiMessage(error, t("rules.deleteFailed")),
@@ -458,9 +461,9 @@ export function RulesCard({
         title={t("rules.confirmTitle")}
         description={
           confirming
-            ? enabled
-              ? t("rules.confirmBodyOn", { rule: confirming.description || confirming.summary || confirming.port_from })
-              : t("rules.confirmBodyOff", { rule: confirming.description || confirming.summary || confirming.port_from })
+            ? t(deleteRuleBodyKey(enabled, confirming), {
+                rule: confirming.description || confirming.summary || confirming.port_from,
+              })
             : ""
         }
         cancelLabel={t("common.cancel")}

@@ -50,5 +50,5 @@ test("a newer server render retires the polled override", () => {
 });
 
 test("deleting an export asks the server for the list again", () => {
-  assert.ok(/await deleteExport\([\s\S]*?router\.refresh\(\)/.test(source));
+  assert.ok(/await deleteExport\([^;]*\);\s*await refreshAndWait\(\);/.test(source));
 });

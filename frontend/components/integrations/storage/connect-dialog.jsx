@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ExternalLink, HardDrive, Loader2 } from "lucide-react";
@@ -30,7 +30,7 @@ const DEFAULT_PRESET = "aws";
  */
 export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri }) {
   const t = useTranslations("storage.connect");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
 
   // The preset lives in component state rather than the form, because it
   // selects the *schema* — a resolver cannot be rebuilt from a value it is
@@ -61,10 +61,10 @@ export function ConnectDestinationDialog({ open, onOpenChange, oauthRedirectUri 
       });
 
       const created = data?.storage_destination;
+      await refreshAndWait();
       toast.success(t("added"));
       onOpenChange?.(false);
       reset(DEFAULT_PRESET);
-      router.refresh();
 
       /*
        * A Drive destination cannot pass this check on the way in.

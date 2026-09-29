@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -44,7 +44,7 @@ const schema = z.object({
 
 export function WebRootDialog({ application, open, onOpenChange }) {
   const t = useTranslations("applications.webRoot");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [saving, setSaving] = useState(false);
 
   const form = useForm({
@@ -57,9 +57,9 @@ export function WebRootDialog({ application, open, onOpenChange }) {
     setSaving(true);
     try {
       await updateWebRoot(application.id, values.web_root);
+      await refreshAndWait();
       toast.success(t("saved"));
       onOpenChange?.(false);
-      router.refresh();
     } catch (error) {
       if (error.response?.data?.errors) handleValidationError(error, form);
       else toast.error(apiMessage(error, t("failed")));

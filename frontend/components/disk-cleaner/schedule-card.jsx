@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CalendarClock, Loader2 } from "lucide-react";
@@ -50,7 +50,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
   // The hour is rendered in the reader's clock convention (AM/PM vs 24h) but
   // never their timezone — same rule as a backup's schedule time.
   const format = useFormatter();
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -92,9 +92,9 @@ export function ScheduleCard({ schedule, categories, canManage }) {
        */
       if (!enabled && picked.size === 0) {
         await deleteCleanerSchedule();
+        await refreshAndWait();
         toast.success(t("schedule.saved"));
         setOpen(false);
-        router.refresh();
         return;
       }
 
@@ -110,9 +110,9 @@ export function ScheduleCard({ schedule, categories, canManage }) {
         // purely so this form never rewrites a field it does not own.
         notify: schedule?.notify ?? false,
       });
+      await refreshAndWait();
       toast.success(t("schedule.saved"));
       setOpen(false);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("schedule.failed")));
     } finally {

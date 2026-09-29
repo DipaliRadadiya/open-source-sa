@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { CircleCheck, CircleX, Loader2, Plug } from "lucide-react";
@@ -62,7 +62,7 @@ const DEFAULT_SOCKET = "/var/run/mysqld/mysqld.sock";
 export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
   const t = useTranslations("databases.connection");
   const tc = useTranslations("databases");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [testing, setTesting] = useState(false);
   // What the last test said, so the answer stays on screen instead of vanishing
   // with a toast the moment you look away.
@@ -104,6 +104,7 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
     try {
       const { data } = await updateConnection(engine.engine, payload);
       const saved = data?.[engine.engine];
+      await refreshAndWait();
       // Saved and reachable are different outcomes, and saying only "Saved"
       // when the panel still can't connect is the failure this screen exists
       // to end.
@@ -115,7 +116,6 @@ export function ConnectionDialog({ engine, connection, open, onOpenChange }) {
         toast.warning(t("savedNotConnected"));
       }
       form.reset({ ...submitted, password: "" });
-      router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }

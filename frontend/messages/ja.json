@@ -1617,6 +1617,8 @@
       "protectedReason": "接続を維持するためのルールです。無効にするとサーバーから締め出されたり、アプリケーションが一時停止したりする可能性があります。",
       "confirmTitle": "このルールを削除しますか？",
       "confirmBodyOn": "{rule} — すぐに反映されます。このルールで許可されていた通信はブロックされます。",
+      "confirmBodyOnDeny": "{rule} — すぐに反映されます。このルールでブロックされていた通信は許可されます。",
+      "confirmBodyRuleOff": "{rule} — このルールは無効のため、本日は変更されません。",
       "confirmBodyOff": "{rule} — ファイアウォールが無効のため本日は変更されません。ただし、再度有効にしてもこのルールは復元されません。",
       "name": "名前",
       "action": "操作",
@@ -1715,7 +1717,10 @@
       "stackAddHint": "クリックでこれらのルールを追加",
       "switchedOn": "{names} を再度有効にしました。",
       "tileOffBody": "ポート {port} への通信はありません — このルールは無効です。",
-      "tileOffHint": "クリックで再度有効化"
+      "tileOffHint": "クリックで再度有効化",
+      "riskyTitle": "{name} を全員に公開しますか？",
+      "riskyBody": "インターネット上の誰でもポート {port} の {name} に接続できるようになります。より安全な方法: カスタムルールで「自分の IP のみ」を選んでください。",
+      "riskyConfirm": "全員に公開"
     },
     "history": {
       "action": "履歴",

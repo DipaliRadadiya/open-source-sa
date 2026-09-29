@@ -308,3 +308,71 @@ test("Code review C–G: settings survive an unexpected PermitRootLogin; PHP rem
   assert.match(read("components/runtime/version-status.jsx"), /if \(removeFailed\(version\)\) return null;/);
   assert.match(read("app/(app)/php/page.jsx"), /const installState = versionState\(current\);/);
 });
+
+test("Flicker sweep: two waiters on one hook both resolve", () => {
+  const src = read("hooks/use-refresh.js");
+  assert.match(src, /const after = useRef\(\[\]\);/);
+  assert.match(src, /waiting\.forEach\(\(run\) => run\(\)\);/);
+  assert.doesNotMatch(src, /after\.current = (fn|resolve);/);
+});
+
+test("Flicker sweep: dialogs re-read the page before they close and toast", () => {
+  assert.match(read("hooks/use-action.js"), /if \(refresh\) await refreshAndWait\(\);\s*if \(success\) toast\.success/);
+  const swept = {
+    "components/firewall/rules-card.jsx": "deleteFirewallRule",
+    "components/firewall/quick-add-card.jsx": "deleteFirewallRule",
+    "components/firewall/firewall-status-card.jsx": "toggleFirewall",
+    "components/firewall/add-rule-dialog.jsx": "createFirewallRule",
+    "components/fail2ban/ban-ip-dialog.jsx": "banIp",
+    "components/fail2ban/banned-card.jsx": "unbanIp",
+    "components/services/service-actions.jsx": "runServiceAction",
+    "components/admin/users/reset-password-dialog.jsx": "resetUserPassword",
+    "components/admin/users/user-form-dialog.jsx": "createUser",
+    "components/admin/roles/sync-permissions-button.jsx": "syncPermissions",
+    "components/admin/central/central-panel.jsx": "disableCentral",
+    "components/php/version-summary.jsx": "removePhpVersion",
+    "components/node/version-summary.jsx": "removeNodeVersion",
+    "components/php/ioncube-card.jsx": "removeIonCube",
+    "components/php/extensions-card.jsx": "setPhpExtension",
+    "components/integrations/git/disconnect-dialog.jsx": "disconnectAccount",
+    "components/integrations/git/replace-token-dialog.jsx": "updateAccount",
+    "components/integrations/git/edit-dialog.jsx": "updateAccount",
+    "components/applications/relink-git-account-dialog.jsx": "relinkGitAccount",
+    "components/applications/web-root-dialog.jsx": "updateWebRoot",
+    "components/applications/attach-database-dialog.jsx": "attachDatabase",
+    "components/applications/staging/push-staging-dialog.jsx": "pushApplicationStaging",
+    "components/applications/files/file-editor-dialog.jsx": "saveFileContent",
+    "components/databases/database-exports.jsx": "deleteExport",
+  };
+  for (const [file, call] of Object.entries(swept)) {
+    const src = read(file);
+    const at = src.indexOf(`await ${call}(`);
+    assert.ok(at > 0, `${file}: ${call}`);
+    const after = src.slice(at, src.indexOf("} catch", at));
+    assert.match(after, /await refreshAndWait\(\);[\s\S]*toast\.success|await refreshAndWait\(\);[\s\S]*showActionSuccess/, file);
+    assert.doesNotMatch(after, /router\.refresh\(\);/, file);
+  }
+});
+
+test("Deleting a Block rule does not say it will block things", async () => {
+  const { deleteRuleBodyKey } = await import("../lib/firewall/state.js");
+  assert.equal(deleteRuleBodyKey(true, { action: "allow" }), "rules.confirmBodyOn");
+  assert.equal(deleteRuleBodyKey(true, { action: "deny" }), "rules.confirmBodyOnDeny");
+  assert.equal(deleteRuleBodyKey(true, { action: "allow", enabled: false }), "rules.confirmBodyRuleOff");
+  assert.equal(deleteRuleBodyKey(false, { action: "deny" }), "rules.confirmBodyOff");
+  for (const l of locales) {
+    const r = JSON.parse(read(`messages/${l}.json`)).firewall.rules;
+    assert.ok(r.confirmBodyOnDeny.includes("{rule}") && r.confirmBodyRuleOff.includes("{rule}"), l);
+  }
+});
+
+test("A risky Quick add tile asks before opening a database to everyone", () => {
+  const src = read("components/firewall/quick-add-card.jsx");
+  assert.match(src, /risky && !off\s*\?\s*setOpening\(\{ preset, name: risky \}\)/);
+  assert.match(src, /onConfirm=\{\(\) => add\(\[opening\.preset\], opening\.preset\.key\)\}/);
+  assert.match(src, /\} finally \{[\s\S]{0,200}await refreshAndWait\(\);[\s\S]*?toast\.success\(t\("quick\.added"/);
+  for (const l of locales) {
+    const q = JSON.parse(read(`messages/${l}.json`)).firewall.quick;
+    assert.ok(q.riskyTitle.includes("{name}") && q.riskyBody.includes("{port}") && q.riskyConfirm, l);
+  }
+});

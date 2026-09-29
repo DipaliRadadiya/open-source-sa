@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ export function UserFormDialog({
   onOpenChange,
 }) {
   const t = useTranslations("users");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const isEdit = mode === "edit";
   const didAutoFocus = useRef(false);
 
@@ -92,14 +92,15 @@ export function UserFormDialog({
           is_admin: values.is_admin,
         });
         await syncUserRoles(user.id, values.role_ids);
+        await refreshAndWait();
         toast.success(t("toast.updated"));
       } else {
         await createUser(values);
+        await refreshAndWait();
         toast.success(t("toast.created"));
       }
       onOpenChange?.(false);
       form.reset();
-      router.refresh();
     } catch (error) {
       handleValidationError(error, form);
     }

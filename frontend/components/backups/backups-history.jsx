@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations, useFormatter } from "next-intl";
 import { toast } from "sonner";
 import { Archive, CircleAlert, Loader2, RotateCw } from "lucide-react";
@@ -51,6 +52,7 @@ export function BackupsHistory({
   const tr = useTranslations("backups.restore");
   const format = useFormatter();
   const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const params = useSearchParams();
   const { active, start } = useRestoreWatch();
   const [retrying, setRetrying] = useState(null);
@@ -120,9 +122,9 @@ export function BackupsHistory({
     setBusyId(backup.id);
     try {
       await clearStuckBackup(backup.id);
+      await refreshAndWait();
       toast.success(t("clear.done", { name: backup.application_name ?? "" }));
       setClearing(null);
-      router.refresh();
     } catch (error) {
       toast.error(apiMessage(error, t("clear.failed")));
     } finally {
@@ -165,7 +167,8 @@ export function BackupsHistory({
     // a mistake. Deleting also removes the archive from the customer's bucket,
     // so it is not a schedule-level action.
     canDelete: canRestore,
-    onDeleted: () => router.refresh(),
+    // The delete dialog re-reads the list itself before it closes.
+    onDeleted: () => {},
     canRun,
     onRestore: setRestoring,
     onRetry: askRetry,

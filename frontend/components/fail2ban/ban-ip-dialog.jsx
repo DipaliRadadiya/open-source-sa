@@ -1,5 +1,4 @@
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Plus, ShieldBan, TriangleAlert } from "lucide-react";
@@ -10,7 +9,7 @@ import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormModal } from "@/components/ui/form-modal";
-import { useNavTransition } from "@/components/data-table/nav-transition";
+import { useRefresh } from "@/hooks/use-refresh";
 import {
   Select,
   SelectContent,
@@ -37,10 +36,7 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
   // directly: the ban lands on the server long before the page has re-read it,
   // and this is what makes the list say so instead of standing still. The
   // fallback keeps the dialog usable outside a provider, same as RefreshButton.
-  const nav = useNavTransition();
-  const router = useRouter();
-  const [, startLocal] = useTransition();
-  const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
+  const { refreshAndWait } = useRefresh();
   const [open, setOpen] = useState(false);
   const [ip, setIp] = useState("");
   // The chosen jail, or null while nothing has been chosen. A plain
@@ -95,10 +91,10 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
     setError(null);
     try {
       await banIp(ip.trim(), jail);
+      await refreshAndWait();
       toast.success(t("ban.banned", { ip: ip.trim() }));
       setOpen(false);
       resetFields();
-      refresh();
     } catch (err) {
       // 422 is usually "that address is on the ignore list" — the ban would be
       // dropped at the next reload, so the server's reason is the useful text.

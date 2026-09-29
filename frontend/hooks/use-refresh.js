@@ -37,13 +37,21 @@ export function useRefresh() {
 
   const pending = nav ? nav.isPending : localPending;
   const refresh = nav ? nav.refresh : () => startLocal(() => router.refresh());
-  const after = useRef(null);
+  // A queue, not a slot: two rows deleted back to back share one hook, and a
+  // second waiter overwriting the first left the first button spinning.
+  const after = useRef([]);
+  const wait = (fn) => {
+    after.current.push(fn);
+  };
+  const flush = () => {
+    const waiting = after.current;
+    after.current = [];
+    waiting.forEach((run) => run());
+  };
 
   useEffect(() => {
-    if (pending || !after.current) return;
-    const run = after.current;
-    after.current = null;
-    run();
+    if (pending || after.current.length === 0) return;
+    flush();
   }, [pending]);
 
   /*
@@ -52,22 +60,22 @@ export function useRefresh() {
    * never sees `pending` fall, and "Worker deleted." was never shown. Run the
    * waiting step on the way out instead — by then the refresh has landed.
    */
-  useEffect(
-    () => () => {
-      const run = after.current;
-      after.current = null;
-      run?.();
-    },
-    [],
-  );
+  useEffect(() => () => flush(), []);
 
   return {
     pending,
     refresh,
     refreshThen: (fn) => {
-      after.current = fn;
+      wait(fn);
       refresh();
     },
+    // The same, awaitable: `await refreshAndWait()` before the success toast
+    // and the close, so a dialog never uncovers the state it just changed.
+    refreshAndWait: () =>
+      new Promise((resolve) => {
+        wait(resolve);
+        refresh();
+      }),
     /*
      * Same, but lands on a different page of the list. For the last row of a
      * page leaving it: a refresh re-renders the now-empty page, the server
@@ -80,7 +88,7 @@ export function useRefresh() {
         fn();
         return;
       }
-      after.current = fn;
+      wait(fn);
       nav.setQuery(updates);
     },
   };

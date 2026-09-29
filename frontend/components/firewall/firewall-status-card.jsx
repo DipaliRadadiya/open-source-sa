@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -37,7 +37,7 @@ import { apiMessage } from "@/lib/api/error-message";
  */
 export function FirewallStatusCard({ enabled, reference = null, policy, ruleCount, canManage }) {
   const t = useTranslations("firewall");
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [confirming, setConfirming] = useState(null);
   const [pending, setPending] = useState(false);
 
@@ -56,11 +56,11 @@ export function FirewallStatusCard({ enabled, reference = null, policy, ruleCoun
     setPending(true);
     try {
       await toggleFirewall(next);
+      await refreshAndWait();
       toast.success(
         secured ? t("status.secured") : next ? t("status.turnedOn") : t("status.turnedOff"),
       );
       setConfirming(null);
-      router.refresh();
     } catch (error) {
       toast.error(
         apiMessage(error, t("status.toggleFailed")),

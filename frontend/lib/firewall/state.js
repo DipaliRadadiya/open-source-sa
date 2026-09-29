@@ -35,3 +35,11 @@ export function firewallState(enabled, policy) {
 
   return incoming === "allow" ? "exposed" : "on";
 }
+
+// What deleting a rule changes today. A Block rule going lets traffic in, not
+// out, and a switched-off rule is not being enforced at all.
+export function deleteRuleBodyKey(firewallOn, rule) {
+  if (!firewallOn) return "rules.confirmBodyOff";
+  if (rule?.enabled === false) return "rules.confirmBodyRuleOff";
+  return rule?.action === "deny" ? "rules.confirmBodyOnDeny" : "rules.confirmBodyOn";
+}
