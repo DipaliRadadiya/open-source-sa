@@ -12,6 +12,8 @@ return [
     'types' => [
         'docker' => ['title' => 'Conteneur Docker', 'tagline' => 'N\'importe quelle image, de n\'importe quel registre, servie via nginx.'],
         'ghost' => ['title' => 'Ghost', 'tagline' => 'Publication et newsletters — fonctionne avec son propre MySQL'],
+        'matomo' => ['title' => 'Matomo', 'tagline' => 'Analyse web sur votre propre serveur — une alternative à Google Analytics'],
+        'mattermost' => ['title' => 'Mattermost', 'tagline' => 'Chat d\'équipe — fonctionne avec son propre PostgreSQL'],
         'forgejo' => ['title' => 'Forgejo', 'tagline' => 'Hébergement Git — fork de Gitea géré par la communauté'],
         'freshrss' => ['title' => 'FreshRSS', 'tagline' => 'Lecteur de flux auto-hébergé'],
         'gitea' => ['title' => 'Gitea', 'tagline' => 'Hébergement Git avec tickets et pull requests'],

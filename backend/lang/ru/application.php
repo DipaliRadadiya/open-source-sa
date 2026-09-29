@@ -12,6 +12,8 @@ return [
     'types' => [
         'docker' => ['title' => 'Контейнер Docker', 'tagline' => 'Любой образ из любого реестра, через nginx.'],
         'ghost' => ['title' => 'Ghost', 'tagline' => 'Публикации и рассылки — работает со своим MySQL'],
+        'matomo' => ['title' => 'Matomo', 'tagline' => 'Веб-аналитика на своём сервере — замена Google Analytics'],
+        'mattermost' => ['title' => 'Mattermost', 'tagline' => 'Командный чат — работает со своим PostgreSQL'],
         'forgejo' => ['title' => 'Forgejo', 'tagline' => 'Хостинг Git — форк Gitea под управлением сообщества'],
         'freshrss' => ['title' => 'FreshRSS', 'tagline' => 'Читалка лент на своём сервере'],
         'gitea' => ['title' => 'Gitea', 'tagline' => 'Хостинг Git с задачами и pull request\'ами'],

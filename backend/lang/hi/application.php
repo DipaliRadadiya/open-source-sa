@@ -12,6 +12,8 @@ return [
     'types' => [
         'docker' => ['title' => 'Docker कंटेनर', 'tagline' => 'किसी भी रजिस्ट्री से कोई भी इमेज, nginx के माध्यम से।'],
         'ghost' => ['title' => 'Ghost', 'tagline' => 'प्रकाशन और न्यूज़लेटर — अपने MySQL के साथ चलता है'],
+        'matomo' => ['title' => 'Matomo', 'tagline' => 'अपने सर्वर पर वेब एनालिटिक्स — Google Analytics का विकल्प'],
+        'mattermost' => ['title' => 'Mattermost', 'tagline' => 'टीम चैट — अपने PostgreSQL के साथ चलता है'],
         'forgejo' => ['title' => 'Forgejo', 'tagline' => 'Git होस्टिंग — कम्युनिटी द्वारा संचालित Gitea फ़ोर्क'],
         'freshrss' => ['title' => 'FreshRSS', 'tagline' => 'स्व-होस्टेड फ़ीड रीडर'],
         'gitea' => ['title' => 'Gitea', 'tagline' => 'इश्यू और पुल रिक्वेस्ट के साथ Git होस्टिंग'],

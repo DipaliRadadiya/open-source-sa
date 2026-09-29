@@ -12,6 +12,8 @@ return [
     'types' => [
         'docker' => ['title' => 'Docker コンテナ', 'tagline' => '任意のレジストリの任意のイメージを nginx 経由で公開します。'],
         'ghost' => ['title' => 'Ghost', 'tagline' => 'パブリッシングとニュースレター — 専用の MySQL 付きで動作'],
+        'matomo' => ['title' => 'Matomo', 'tagline' => '自分のサーバーで動くウェブ解析 — Google Analytics の代替'],
+        'mattermost' => ['title' => 'Mattermost', 'tagline' => 'チームチャット — 専用の PostgreSQL 付きで動作'],
         'forgejo' => ['title' => 'Forgejo', 'tagline' => 'Git ホスティング — コミュニティ運営の Gitea フォーク'],
         'freshrss' => ['title' => 'FreshRSS', 'tagline' => 'セルフホスト型フィードリーダー'],
         'gitea' => ['title' => 'Gitea', 'tagline' => 'Issue とプルリクエスト付きの Git ホスティング'],

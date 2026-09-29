@@ -86,6 +86,8 @@ dataset('docker apps', [
     'nocodb' => ['nocodb', 8080, ['data', 'db']],
     'metabase' => ['metabase', 3000, ['db']],
     'wikijs' => ['wikijs', 3000, ['db']],
+    'mattermost' => ['mattermost', 8065, ['data', 'config', 'plugins', 'db']],
+    'matomo' => ['matomo', 80, ['app', 'db']],
     // Group A: one container each, rendered from the shared template.
     'vaultwarden' => ['vaultwarden', 80, ['data']],
     'gitea' => ['gitea', 3000, ['data']],

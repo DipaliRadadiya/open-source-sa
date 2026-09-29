@@ -17,6 +17,8 @@ return [
     'types' => [
         'docker' => ['title' => 'Docker container', 'tagline' => 'Any image, from any registry, proxied by nginx.'],
         'ghost' => ['title' => 'Ghost', 'tagline' => 'Publishing and newsletters — runs with its own MySQL'],
+        'matomo' => ['title' => 'Matomo', 'tagline' => 'Web analytics on your own server — a Google Analytics replacement'],
+        'mattermost' => ['title' => 'Mattermost', 'tagline' => 'Team chat — runs with its own PostgreSQL'],
         'forgejo' => ['title' => 'Forgejo', 'tagline' => 'Git hosting — community-governed fork of Gitea'],
         'freshrss' => ['title' => 'FreshRSS', 'tagline' => 'Self-hosted feed reader'],
         'gitea' => ['title' => 'Gitea', 'tagline' => 'Git hosting with issues and pull requests'],

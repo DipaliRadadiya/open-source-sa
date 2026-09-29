@@ -12,6 +12,8 @@ use App\Services\Applications\Types\GlanceSiteType;
 use App\Services\Applications\Types\HomepageSiteType;
 use App\Services\Applications\Types\ItToolsSiteType;
 use App\Services\Applications\Types\JoomlaSiteType;
+use App\Services\Applications\Types\MatomoSiteType;
+use App\Services\Applications\Types\MattermostSiteType;
 use App\Services\Applications\Types\MauticSiteType;
 use App\Services\Applications\Types\MetabaseSiteType;
 use App\Services\Applications\Types\MoodleSiteType;
@@ -1408,6 +1410,14 @@ return [
         // Every Docker app maps to the one installer: the differences between
         // them live entirely in the site type — template, port, volumes, secrets
         // — so a class per app would be five methods of delegation each.
+        'matomo' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
+        'mattermost' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
         'metabase' => [
             'driver' => DockerAppInstaller::class,
         ],
@@ -1625,6 +1635,18 @@ return [
     |
     */
     'docker_apps' => [
+        'matomo' => [
+            'image' => env('DOCKER_APP_MATOMO_IMAGE', 'matomo:5-apache'),
+            // MariaDB, not MySQL: Matomo's own documentation and its schema
+            // assumptions are written against it, and 10.11 is the LTS line.
+            'db_image' => env('DOCKER_APP_MATOMO_DB_IMAGE', 'mariadb:10.11'),
+        ],
+
+        'mattermost' => [
+            'image' => env('DOCKER_APP_MATTERMOST_IMAGE', 'mattermost/mattermost-team-edition:release-10'),
+            'db_image' => env('DOCKER_APP_MATTERMOST_DB_IMAGE', 'postgres:16-alpine'),
+        ],
+
         'metabase' => [
             'image' => env('DOCKER_APP_METABASE_IMAGE', 'metabase/metabase:latest'),
             'db_image' => env('DOCKER_APP_METABASE_DB_IMAGE', 'postgres:16-alpine'),
@@ -1702,6 +1724,8 @@ return [
         GlanceSiteType::class,
         HomepageSiteType::class,
         NocoDbSiteType::class,
+        MatomoSiteType::class,
+        MattermostSiteType::class,
         MetabaseSiteType::class,
         WikiJsSiteType::class,
         WordPressSiteType::class,
