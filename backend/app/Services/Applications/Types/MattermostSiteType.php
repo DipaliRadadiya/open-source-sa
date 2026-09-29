@@ -68,13 +68,34 @@ class MattermostSiteType extends AbstractDockerAppType
         return '1g';
     }
 
-    /** @return array<string, string> */
+    /**
+     * Five volumes plus the database, and every one is named deliberately.
+     *
+     * **The last two exist because the image declares them.** Mattermost's
+     * Dockerfile has `VOLUME` for `/mattermost/logs` and
+     * `/mattermost/client/plugins`, so leaving them out does not mean "no volume"
+     * — it means Docker creates an ANONYMOUS one. Measured on a running
+     * container: two volumes with 64-character hex names that the Docker page
+     * cannot attribute to anything, that the delete guards cannot protect, and
+     * that are replaced by fresh ones every time the container is recreated.
+     *
+     * `client/plugins` is the one with teeth: it holds the browser half of an
+     * installed plugin while `plugins` holds the server half. Persist one and not
+     * the other and a marketplace plugin comes back after a rebuild with no UI.
+     *
+     * The lesson generalises to every app added here: read the image's declared
+     * volumes, not just its documentation.
+     *
+     * @return array<string, string>
+     */
     public function volumeRoles(): array
     {
         return [
             'data' => '/mattermost/data',
             'config' => '/mattermost/config',
             'plugins' => '/mattermost/plugins',
+            'client-plugins' => '/mattermost/client/plugins',
+            'logs' => '/mattermost/logs',
             'db' => '/var/lib/postgresql/data',
         ];
     }

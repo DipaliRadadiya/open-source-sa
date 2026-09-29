@@ -33,6 +33,13 @@ services:
       - {{ $volumes['data'] }}:/mattermost/data
       - {{ $volumes['config'] }}:/mattermost/config
       - {{ $volumes['plugins'] }}:/mattermost/plugins
+      {{-- Named because the IMAGE declares them. Omitted, Docker creates
+           anonymous volumes with hex names the panel cannot attribute, cannot
+           guard and replaces on every recreate — and `client/plugins` is the
+           browser half of an installed plugin, so losing it leaves the server
+           half running with no UI. --}}
+      - {{ $volumes['client-plugins'] }}:/mattermost/client/plugins
+      - {{ $volumes['logs'] }}:/mattermost/logs
 
     depends_on:
       - db
