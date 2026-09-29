@@ -439,13 +439,15 @@ it('creates the directory before writing into it', function () {
         fn (array $args): bool => ($args[0] ?? '') === $binary
     );
 
-    // The mkdir must come BEFORE the tee, not merely exist somewhere.
+    // Order is the whole assertion: mkdir, then tee, then chown. `tee` runs
+    // elevated, so a chown before it leaves the FILE owned by root while the
+    // directory looks right — measured on a real site as
+    // `-rw-r--r-- 1 root root glance.yml`, which the File Manager cannot edit.
     expect($index('mkdir'))->not->toBeFalse('nothing created the config directory')
         ->and($index('tee'))->not->toBeFalse()
+        ->and($index('chown'))->not->toBeFalse('the file was left root-owned')
         ->and($index('mkdir'))->toBeLessThan($index('tee'))
-        // And owned by the site user, or the File Manager cannot edit the file it
-        // is being told to edit.
-        ->and($index('chown'))->not->toBeFalse('the directory was left root-owned');
+        ->and($index('tee'))->toBeLessThan($index('chown'));
 });
 
 it('fails provisioning when the starter file cannot be written', function () {

@@ -365,9 +365,20 @@ class DockerAppInstaller implements SiteInstaller
                 throw new ProvisioningFailedException('docker_app_starter', $made->reference);
             }
 
-            // Owned by the site user, or the File Manager cannot edit the file it
-            // is being told to edit — Docker creates a missing bind source as
-            // root, which is how this directory came to be root-owned.
+            // The result is READ. Ignoring it is what made the missing directory
+            // silent: provisioning reported success and the container had no
+            // config.
+            $written = $this->files->put($file, $this->dedent($contents), $context);
+
+            if ($written->failed()) {
+                throw new ProvisioningFailedException('docker_app_starter', $written->reference);
+            }
+
+            // **After** the write, not before. `tee` runs elevated, so the file it
+            // creates is root's — a chown of the directory beforehand leaves the
+            // file root-owned and the File Manager unable to edit the very file the
+            // panel tells you to edit. Measured: `-rw-r--r-- 1 root root
+            // glance.yml` after a repair that otherwise worked.
             $user = (string) ($application->systemUser?->username ?? '');
 
             if ($user !== '') {
@@ -376,15 +387,6 @@ class DockerAppInstaller implements SiteInstaller
                     $context + ['op' => 'docker_app_starter_chown'],
                     timeout: 15,
                 );
-            }
-
-            // The result is READ. Ignoring it is what made the missing directory
-            // silent: provisioning reported success and the container had no
-            // config.
-            $written = $this->files->put($file, $this->dedent($contents), $context);
-
-            if ($written->failed()) {
-                throw new ProvisioningFailedException('docker_app_starter', $written->reference);
             }
         }
 
