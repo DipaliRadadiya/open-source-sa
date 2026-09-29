@@ -124,7 +124,7 @@ it('installs wordpress end to end after the site is serving', function () {
     // served from it. Without that step every PHP site ran as the shared
     // www-data and could read every other site's configuration.
     expect($app->steps)->toBe([
-        'ensure_account', 'create_directory', 'placeholder', 'set_ownership', 'harden_php', 'create_php_pool',
+        'ensure_account', 'create_directory', 'set_ownership', 'placeholder', 'harden_php', 'create_php_pool',
         'write_config', 'test_config', 'reload',
         'create_database', 'download', 'extract', 'configure', 'install_app',
     ]);
@@ -560,7 +560,7 @@ it('skips the installer entirely for site types that have none', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     expect($app->steps)->toBe([
-        'ensure_account', 'create_directory', 'placeholder', 'set_ownership', 'write_config', 'test_config', 'reload',
+        'ensure_account', 'create_directory', 'set_ownership', 'placeholder', 'write_config', 'test_config', 'reload',
     ]);
     expect(Database::where('application_id', $app->id)->count())->toBe(0);
     Process::assertNotRan(fn ($p) => $p->command[0] === 'curl');

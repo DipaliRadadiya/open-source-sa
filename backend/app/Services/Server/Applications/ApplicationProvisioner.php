@@ -268,30 +268,35 @@ class ApplicationProvisioner
                 return $result;
             }
 
+            // `-h`: where the site has a web root, `.env` sits in a folder the
+            // site user owns, and a plain chown follows a link planted there —
+            // handing its target to the user (the `.panel` class of bug,
+            // 2026-09-29). With -h a link is changed itself, never followed.
             return $this->serverOps->run(
-                ['chown', "{$user->username}:{$user->username}", $env],
+                ['chown', '-h', "{$user->username}:{$user->username}", $env],
                 ['feature' => 'application', 'op' => 'chown_env', 'application' => $application->id],
             );
         });
-
-        // Written *before* ownership is set, not after. `tee` runs elevated,
-        // so a placeholder written after the `chown` is a root-owned file
-        // sitting in the site user's own directory: the File Manager runs as
-        // that user and could list it but never edit, rename or delete it —
-        // and on a blank site it is the one file they immediately want to
-        // replace.
-        if ($this->wantsPlaceholder($application, $skipInstaller)) {
-            $this->step('placeholder', fn () => $this->serverOps->run(
-                ['tee', $this->placeholderPath($application, $documentRoot)],
-                ['feature' => 'application', 'op' => 'placeholder', 'application' => $application->id],
-                input: $this->placeholderContents($application),
-            ));
-        }
 
         $this->step('set_ownership', fn () => $this->serverOps->run(
             ['chown', '-R', "{$user->username}:{$user->username}", $documentRoot],
             ['feature' => 'application', 'op' => 'chown', 'application' => $application->id],
         ));
+
+        // Written *as the site user*, after ownership is set. It was written
+        // by root before the chown, so that the chown would hand it over —
+        // but this runs on every provision, "Retry setup" included, into a
+        // document root the user already controls, and root's `tee` follows
+        // a link planted at `index.php` (the `.panel` class of bug,
+        // 2026-09-29). As the user the file is theirs by construction, which
+        // is what writing it first was for.
+        if ($this->wantsPlaceholder($application, $skipInstaller)) {
+            $this->step('placeholder', fn () => $this->serverOps->run(
+                ['runuser', '-u', $user->username, '--', 'tee', $this->placeholderPath($application, $documentRoot)],
+                ['feature' => 'application', 'op' => 'placeholder', 'application' => $application->id],
+                input: $this->placeholderContents($application),
+            ));
+        }
 
         // Every PHP site gets its own pool from the start, not as an opt-in
         // afterthought. Before this, a freshly provisioned site ran on the

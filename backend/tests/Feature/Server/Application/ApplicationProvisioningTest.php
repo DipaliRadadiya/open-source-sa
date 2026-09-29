@@ -75,7 +75,7 @@ it('creates the directory, writes a tested config and reloads', function () {
     $app->refresh();
     expect($app->status->value)->toBe('active');
     expect($app->steps)->toBe([
-        'ensure_account', 'create_directory', 'placeholder', 'set_ownership', 'harden_php', 'create_php_pool', 'write_config', 'test_config', 'reload',
+        'ensure_account', 'create_directory', 'set_ownership', 'placeholder', 'harden_php', 'create_php_pool', 'write_config', 'test_config', 'reload',
     ]);
 
     // `{home}/{slug}/public_html` — the document root, not the site directory:
@@ -179,8 +179,8 @@ it('is idempotent when the job runs twice', function () {
     expect($app->steps)->toBe([
         'ensure_account',
         'create_directory',
-        'placeholder',
         'set_ownership',
+        'placeholder',
         'harden_php',
         'create_php_pool',
         'write_config',

@@ -151,7 +151,11 @@ it('gives a git site an .env above the document root, owned by the site user', f
 
     // `touch` runs elevated; left root-owned, the site's own process could not
     // write it and the File Manager could not edit it.
+    // `-h`: where a site has a web root, `.env` is in the user's own folder,
+    // and a plain chown follows a link planted there (the `.panel` class of
+    // bug, 2026-09-29).
     expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'chown'
+        && ($args[1] ?? '') === '-h'
         && in_array('deploy:deploy', $args, true)
         && in_array($env, $args, true)))->toBeTrue();
 });
@@ -163,13 +167,13 @@ it('does not write a placeholder into a git site', function () {
     app(ApplicationProvisioner::class)->provision($app->load('systemUser'));
 
     // The placeholder is what made `git clone` refuse the directory.
-    expect(firstDeployRan($ran, fn ($args) => ($args[0] ?? '') === 'tee'
-        && str_contains((string) ($args[1] ?? ''), 'index.php')))->toBeFalse();
+    expect(firstDeployRan($ran, fn ($args) => in_array('tee', $args, true)
+        && str_contains((string) end($args), 'index.php')))->toBeFalse();
 
     expect($app->fresh()->steps)->not->toContain('placeholder');
 });
 
-it('still writes a placeholder for a blank PHP site, before taking ownership', function () {
+it('still writes a placeholder for a blank PHP site, as the site user after taking ownership', function () {
     $app = firstDeployApp(['site_type' => 'php', 'repository_url' => null, 'branch' => null]);
     $ran = fakeFirstDeploy();
 
@@ -178,15 +182,19 @@ it('still writes a placeholder for a blank PHP site, before taking ownership', f
     $order = [];
 
     foreach ($ran as $args) {
-        if (in_array($args[0] ?? '', ['tee', 'chown'], true)) {
-            $order[] = $args[0];
+        if (($args[0] ?? '') === 'chown' && ($args[1] ?? '') === '-R') {
+            $order[] = 'chown';
+        } elseif (($args[0] ?? '') === 'runuser' && ($args[4] ?? '') === 'tee' && str_ends_with((string) end($args), '/index.php')) {
+            $order[] = 'tee as user';
+        } elseif (($args[0] ?? '') === 'tee' && str_ends_with((string) end($args), '/index.php')) {
+            $order[] = 'tee as root';
         }
     }
 
-    // `tee` runs elevated, so a placeholder written after the chown is a
-    // root-owned file the site's own user cannot edit or delete.
-    expect($order[0] ?? null)->toBe('tee')
-        ->and($order[1] ?? null)->toBe('chown');
+    // As the user it is theirs by construction; as root it followed a link
+    // planted at index.php on every re-provision (the `.panel` class of bug,
+    // 2026-09-29).
+    expect($order)->toBe(['chown', 'tee as user']);
 });
 
 it('uses init, not clone, even when the directory is empty', function () {
@@ -464,8 +472,11 @@ describe('the page a new site serves', function () {
         Process::fake(function ($process) use ($written) {
             $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
 
-            if (($args[0] ?? '') === 'tee' && isset($args[1])) {
-                $written[$args[1]] = (string) ($process->input ?? '');
+            // Directly, or as the site user (`runuser -u <user> -- tee <path>`).
+            $tee = ($args[0] ?? '') === 'runuser' ? array_slice($args, 4) : $args;
+
+            if (($tee[0] ?? '') === 'tee' && isset($tee[1])) {
+                $written[$tee[1]] = (string) ($process->input ?? '');
             }
 
             if (($args[0] ?? '') === 'test' && ($args[1] ?? '') === '-d') {

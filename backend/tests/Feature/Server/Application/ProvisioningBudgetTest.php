@@ -136,7 +136,9 @@ describe('live progress', function () {
     it('keeps the steps it got through when a step fails', function () {
         // A failure used to leave `steps` empty, so the user could see which
         // step broke and nothing about how far it had got.
-        Process::fake(fn ($process) => $process->command[0] === 'tee'
+        // The placeholder write — as the site user, after ownership.
+        Process::fake(fn ($process) => in_array('tee', $process->command, true)
+            && str_ends_with((string) end($process->command), '/index.php')
             ? Process::result(errorOutput: 'no space left on device', exitCode: 1)
             : Process::result(exitCode: 0));
 
@@ -151,13 +153,14 @@ describe('live progress', function () {
 
         expect($app->status->value)->toBe('failed');
         expect($app->failed_step)->toBe('placeholder');
-        expect($app->steps)->toBe(['ensure_account', 'create_directory']);
+        expect($app->steps)->toBe(['ensure_account', 'create_directory', 'set_ownership']);
     });
 
     it('starts a retry from an empty list rather than the previous attempt', function () {
         $app = budgetApp();
 
-        Process::fake(fn ($process) => $process->command[0] === 'tee'
+        Process::fake(fn ($process) => in_array('tee', $process->command, true)
+            && str_ends_with((string) end($process->command), '/index.php')
             ? Process::result(exitCode: 1)
             : Process::result(exitCode: 0));
 
