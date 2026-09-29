@@ -552,3 +552,19 @@ it('still refuses a target contained in the live commit', function () {
     expect(inPlaceScript())->toContain('merge-base --is-ancestor')
         ->and(inPlaceScript())->toContain('target_not_newer');
 });
+
+it('puts the old dependencies back when it rolls back after composer ran', function () {
+    // The checkout restores the old code, not vendor/: without a reinstall a
+    // failed migrate left the old release running on the new packages.
+    $script = inPlaceScript();
+    $rollback = str($script)->between('rollback() {', "\n}")->toString();
+
+    expect($rollback)->toContain('if [ "$DEPS_CHANGED" = 1 ]; then')
+        ->and(strpos($rollback, 'composer install'))->toBeGreaterThan(strpos($rollback, 'checkout --force'))
+        // Best-effort: a failed reinstall must not stop the rest of the rollback.
+        ->and($rollback)->toMatch('/composer install[^\n]*\|\| true/')
+        // Set only once composer is about to change vendor/, so an earlier
+        // failure does not pay for a reinstall it does not need.
+        ->and(strpos($script, 'DEPS_CHANGED=1'))->toBeGreaterThan(strpos($script, 'note composer_install'))
+        ->and(strpos($script, 'DEPS_CHANGED=0'))->toBeLessThan(strpos($script, 'trap rollback ERR'));
+});

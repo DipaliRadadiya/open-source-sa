@@ -189,6 +189,14 @@ class UpdateScript
             local failed_step="\$STEP"
             note "rollback"
             {$run}{$git} checkout --force {$rollbackTo}
+            # The old code needs the old dependencies. The checkout above puts
+            # the code back and leaves vendor/ as the new release's composer
+            # install made it, so a failure at or after composer_install left
+            # the old code running against new packages (found in code review
+            # 2026-09-29). Best-effort: a rollback must still finish.
+            if [ "\$DEPS_CHANGED" = 1 ]; then
+                {$asUser}composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d {$backend} || true
+            fi
             # Clear workers and OPcache that may have loaded the failed tree.
             {$run}sudo systemctl restart {$this->service('php_fpm')}
             {$run}sudo systemctl restart {$this->service('frontend')}
@@ -198,6 +206,7 @@ class UpdateScript
             exit 1
         }
 
+        DEPS_CHANGED=0
         trap rollback ERR
         set -e
 
@@ -245,6 +254,7 @@ class UpdateScript
         {$run}{$git} checkout --force {$tag}
 
         note composer_install
+        DEPS_CHANGED=1
         {$asUser}composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d {$backend}
 
         note migrate
