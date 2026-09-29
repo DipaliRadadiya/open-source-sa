@@ -1719,7 +1719,7 @@ All health signals for this application in one call.
 ## Application — Environment (`.env` editor)
 
 ### GET `/applications/{application}/environment`
-**Permission:** `app_environment` (view)
+**Permission:** `app_environment` (**manage**) — was view until 2026-09-29. The `.env` screen is shown only to who may edit it: a view-only grant no longer opens it, and neither the sidebar nor `GET /permissions` reports `view: true` for `app_environment` (or `app_magic_login`, whose routes were always manage-only) unless `manage` is granted too. `GET …/environment/history` is manage as well.
 
 **`404`**, not `403`, for site types that don't use a `.env` (e.g. WordPress — it uses `wp-config.php`). The screen does not exist there, which is a different statement from "you may not have it"; `403` is reserved for a caller who lacks the permission on a site that does have the screen.
 
@@ -1759,7 +1759,7 @@ All of this comes from **one read** of the file. A raw endpoint plus a parsed en
 
 **A secret's `value` is `null`, not a masked string.** Don't render dots from the API; render them from `secret: true`.
 
-**`raw` is `null` unless the caller has `app_environment` (manage)** (2026-09-29): it is the whole file, secrets included, and it went to view-only roles while `variables` nulled the same values. A viewer gets `variables` and `checks` — neither ever carries a secret value — so show those read-only rather than an empty editor.
+**`raw` is `null` unless the caller has `app_environment` (manage)** (2026-09-29): it is the whole file, secrets included, and it went to view-only roles while `variables` nulled the same values. Since the same day the whole endpoint is manage-only, so this is a second line rather than the first.
 
 **`requires_restart` and `requires_apply` are the two ways a save can appear to do nothing**, answered up front so the button can say what it will actually do:
 - `requires_restart` — the application runs a process of its own, which is holding the old values in memory.

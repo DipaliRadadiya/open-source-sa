@@ -121,3 +121,45 @@ it('filters by application type — static site does not show workers or php', f
 
     expect($names)->not->toContain('app_php', 'app_worker');
 });
+
+it('shows the .env and magic-login screens only to who may manage them', function (string $siteType, string $screen) {
+    // Operator decision 2026-09-29: a view grant alone does not put these in
+    // the sidebar — there is nothing on them for a viewer to do. The routes
+    // enforce the same rule (VisiblePermissions::MANAGE_ONLY).
+    $site = Application::factory()->create(['system_user_id' => $this->systemUser->id, 'site_type' => $siteType]);
+
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'application');
+    grantPermission($viewer, 'app_dashboard');
+    grantPermission($viewer, $screen);
+    Sanctum::actingAs($viewer);
+
+    $names = collect($this->getJson("/api/applications/{$site->id}/sidebar")->assertOk()->json('items'))->pluck('name');
+
+    expect($names)->toContain('app_dashboard')->and($names)->not->toContain($screen);
+
+    $editor = User::factory()->create();
+    grantPermission($editor, 'application');
+    grantPermission($editor, $screen, manage: true);
+    Sanctum::actingAs($editor);
+
+    $item = collect($this->getJson("/api/applications/{$site->id}/sidebar")->assertOk()->json('items'))->firstWhere('name', $screen);
+
+    expect($item['permissions'] ?? null)->toBe(['view' => true, 'manage' => true]);
+})->with([
+    '.env on a git site' => ['git', 'app_environment'],
+    'magic login on WordPress' => ['wordpress', 'app_magic_login'],
+]);
+
+it('still shows other screens to a view-only role', function () {
+    $viewer = User::factory()->create();
+    grantPermission($viewer, 'application');
+    grantPermission($viewer, 'app_worker');
+    Sanctum::actingAs($viewer);
+
+    $git = Application::factory()->create(['system_user_id' => $this->systemUser->id, 'site_type' => 'git']);
+
+    $item = collect($this->getJson("/api/applications/{$git->id}/sidebar")->assertOk()->json('items'))->firstWhere('name', 'app_worker');
+
+    expect($item['permissions'] ?? null)->toBe(['view' => true, 'manage' => false]);
+});

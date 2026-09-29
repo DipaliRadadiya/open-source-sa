@@ -250,29 +250,17 @@ describe('site types that keep no .env', function () {
 });
 
 describe('permissions', function () {
-    it('lets a viewer read but not write', function () {
+    it('does not show the screen to a view-only role at all', function () {
+        // Operator decision 2026-09-29: the `.env` screen is for whoever may
+        // edit it. A view grant opens neither the file, its history, nor a
+        // save (see VisiblePermissions::MANAGE_ONLY for the sidebar half).
         fakeSite();
         $user = User::factory()->create();
         grantPermission($user, 'app_environment', view: true, manage: false);
 
-        $this->actingAs($user)->getJson(envUrl())->assertOk();
+        $this->actingAs($user)->getJson(envUrl())->assertForbidden();
+        $this->actingAs($user)->getJson(envUrl('/history'))->assertForbidden();
         $this->actingAs($user)->putJson(envUrl(), ['raw' => "A=1\n"])->assertForbidden();
-    });
-
-    it('gives a viewer the variables but not the file with its secrets in it', function () {
-        // `raw` went to every viewer, APP_KEY and DB_PASSWORD included, while
-        // `variables` beside it nulled the same values (found live
-        // 2026-09-29 — the DB-01 class).
-        fakeSite();
-        $viewer = User::factory()->create();
-        grantPermission($viewer, 'app_environment', view: true, manage: false);
-
-        $response = $this->actingAs($viewer)->getJson(envUrl())->assertOk();
-
-        expect($response->json('environment.raw'))->toBeNull()
-            ->and($response->getContent())->not->toContain('hunter2')
-            ->and($response->getContent())->not->toContain('base64:abc')
-            ->and(collect($response->json('environment.variables'))->pluck('key')->all())->toContain('DB_PASSWORD');
     });
 
     it('still gives the whole file to someone who may edit it', function () {
@@ -519,15 +507,13 @@ describe('the history of who changed it', function () {
         $this->actingAs($outsider)->getJson(envUrl('/history'))->assertForbidden();
     });
 
-    it('is readable by someone who can view but not edit', function () {
-        // Who last touched the file reveals nothing about its values — which
-        // a viewer no longer gets (`raw` is manage-only since 2026-09-29).
+    it('is readable by someone who may edit the file', function () {
         fakeSite();
 
-        $viewer = User::factory()->create();
-        grantPermission($viewer, 'app_environment', view: true, manage: false);
+        $editor = User::factory()->create();
+        grantPermission($editor, 'app_environment', view: true, manage: true);
 
-        $this->actingAs($viewer)->getJson(envUrl('/history'))->assertOk();
+        $this->actingAs($editor)->getJson(envUrl('/history'))->assertOk();
     });
 
     it('keeps two saves in the same second apart', function () {
