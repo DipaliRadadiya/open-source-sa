@@ -104,14 +104,15 @@ it('keeps a volume another site also mounts', function () {
         ->and($outcome['kept'])->toBe(['shared_db']);
 });
 
-it('keeps a volume a container is still holding', function () {
-    // The same guard the Docker page enforces. A running container means data is
-    // being written to it right now.
+it('keeps a volume a FOREIGN container is still holding', function () {
+    // Something outside this site is writing to it — a container somebody started
+    // by hand, or another project's.
     $site = dockerSite('alpha', ['volume_mounts' => [['volume' => 'busy_db', 'path' => '/data']]]);
 
     $ran = [];
     fakeDockerState([[
-        'name' => 'busy_db', 'in_use' => true, 'containers' => 1, 'container_names' => ['x'],
+        'name' => 'busy_db', 'in_use' => true, 'containers' => 1,
+        'container_names' => ['someone-elses-container'],
         'sites' => [['id' => $site->id, 'name' => 'alpha', 'path' => '/data']],
     ]], [], $ran);
 
@@ -200,4 +201,55 @@ it('records what it kept as well as what it removed', function () {
 
     expect($log)->not->toBeNull()
         ->and($log->properties['kept'])->toBe(['busy_db']);
+});
+
+it('removes a volume its OWN container is still holding', function () {
+    // The bug this test exists for, measured on a real box. The action runs before
+    // `compose down`, so the site's own container is still attached to its own
+    // volume — and guarding on `in_use` made the flag a no-op for every running
+    // site, which is the only case that matters. The log said `kept` and the
+    // volume stayed.
+    $site = dockerSite('alpha', ['volume_mounts' => [['volume' => 'alpha_db', 'path' => '/data']]]);
+
+    $ran = [];
+    fakeDockerState([[
+        'name' => 'alpha_db', 'in_use' => true, 'containers' => 1,
+        // Compose names it `<project>-<service>-1`, and the project is `sv-app-<id>`.
+        'container_names' => ["sv-app-{$site->id}-app-1"],
+        'sites' => [['id' => $site->id, 'name' => 'alpha', 'path' => '/data']],
+    ]], [], $ran);
+
+    expect(app(DeleteApplicationDockerResources::class)->execute($site)['removed'])
+        ->toBe(['volume:alpha_db']);
+});
+
+it('removes a network only its OWN containers are attached to', function () {
+    // Same reasoning as the volume: at this point the site has not been stopped.
+    $site = dockerSite('alpha', ['docker_network' => 'alpha-net']);
+
+    $ran = [];
+    fakeDockerState([], [[
+        'name' => 'alpha-net', 'built_in' => false,
+        'containers' => [['name' => "sv-app-{$site->id}-app-1", 'ports' => [], 'published' => false]],
+        'sites' => [['id' => $site->id, 'name' => 'alpha']],
+    ]], $ran);
+
+    expect(app(DeleteApplicationDockerResources::class)->execute($site)['removed'])
+        ->toBe(['network:alpha-net']);
+});
+
+it('keeps a network a foreign container is attached to', function () {
+    // Somebody ran `docker network connect` by hand. Removing it would detach a
+    // container the panel knows nothing about.
+    $site = dockerSite('alpha', ['docker_network' => 'alpha-net']);
+
+    $ran = [];
+    fakeDockerState([], [[
+        'name' => 'alpha-net', 'built_in' => false,
+        'containers' => [['name' => 'stranger', 'ports' => [], 'published' => false]],
+        'sites' => [['id' => $site->id, 'name' => 'alpha']],
+    ]], $ran);
+
+    expect(app(DeleteApplicationDockerResources::class)->execute($site)['kept'])->toBe(['alpha-net']);
+    expect($ran)->toBe([]);
 });

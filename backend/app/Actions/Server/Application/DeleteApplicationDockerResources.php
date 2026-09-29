@@ -4,6 +4,7 @@ namespace App\Actions\Server\Application;
 
 use App\Models\Application;
 use App\Services\ActivityLogger;
+use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\Docker\DockerResources;
 
 /**
@@ -27,6 +28,7 @@ class DeleteApplicationDockerResources
     public function __construct(
         private DockerResources $docker,
         private ActivityLogger $activityLogger,
+        private ContainerSupervisor $containers,
     ) {}
 
     /**
@@ -55,13 +57,28 @@ class DeleteApplicationDockerResources
                 continue;
             }
 
-            // Another site mounts it, or a container still holds it. `sites`
-            // includes the one being deleted, so it is excluded by id rather than
-            // by count — counting would keep every volume of every site.
+            // Another site mounts it, or a container that is not this site's holds
+            // it. `sites` includes the one being deleted, so it is excluded by id
+            // rather than by count — counting would keep every volume of every
+            // site.
             $others = collect($volume['sites'] ?? [])
                 ->reject(fn (array $site): bool => (int) $site['id'] === (int) $application->id);
 
-            if ($others->isNotEmpty() || ($volume['in_use'] ?? false)) {
+            // **Not `in_use`.** This runs before `compose down`, so the site's OWN
+            // container is still holding its own volume and `in_use` is true for
+            // every volume of every running site — which made the whole flag a
+            // no-op in the only case that matters. Measured on a real box: a site
+            // deleted with the flag kept its volume and the log said so.
+            //
+            // The question is whether a FOREIGN container holds it. Compose names
+            // a container `<project>-<service>-1`, and the project is
+            // `sv-app-<id>`, so this site's own are recognisable by prefix.
+            $ownPrefix = $this->containers->project($application).'-';
+
+            $foreign = collect($volume['container_names'] ?? [])
+                ->reject(fn (string $container): bool => str_starts_with($container, $ownPrefix));
+
+            if ($others->isNotEmpty() || $foreign->isNotEmpty()) {
                 $kept[] = $name;
 
                 continue;
@@ -82,10 +99,18 @@ class DeleteApplicationDockerResources
 
             // `built_in` last but absolutely: `bridge`, `host` and `none` are
             // Docker's own and a site could have been pointed at one.
+            // Same reasoning for the network: its own containers are still
+            // attached at this point, so only a FOREIGN attachment is a reason to
+            // keep it.
+            $ownPrefix = $this->containers->project($application).'-';
+
+            $foreign = collect($row['containers'] ?? [])
+                ->reject(fn (array $container): bool => str_starts_with((string) $container['name'], $ownPrefix));
+
             $removable = $row !== null
                 && ! ($row['built_in'] ?? false)
                 && $others->isEmpty()
-                && ($row['containers'] ?? []) === [];
+                && $foreign->isEmpty();
 
             if ($removable && ! $this->docker->removeNetwork($network)->failed()) {
                 $removed[] = "network:{$network}";
