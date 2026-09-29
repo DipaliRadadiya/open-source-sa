@@ -2250,6 +2250,10 @@
       "eol": "Sin soporte",
       "endsOn": "El soporte termina el {date}.",
       "endedOn": "El soporte terminó el {date}."
+    },
+    "unavailable": {
+      "title": "Node.js no se gestiona en este servidor",
+      "body": "Este servidor aloja contenedores y no ejecuta aplicaciones en el propio host, así que no hay versiones de Node.js que gestionar. Un contenedor trae su propio entorno de ejecución."
     }
   },
   "diskCleaner": {
@@ -2916,6 +2920,10 @@
       "action": "Mostrarlas",
       "filtered": "Mostrando solo bases de datos sin vincular a una aplicación",
       "showAll": "Mostrar todas"
+    },
+    "unavailable": {
+      "title": "Las bases de datos no se gestionan en este servidor",
+      "body": "Este servidor aloja contenedores. Una aplicación que necesita una base de datos trae la suya como contenedor, así que el panel no gestiona ningún motor aquí, y sus propios datos están en SQLite de todos modos."
     }
   },
   "git": {

@@ -2250,6 +2250,10 @@
       "eol": "Nicht mehr unterstützt",
       "endsOn": "Support endet am {date}.",
       "endedOn": "Support endete am {date}."
+    },
+    "unavailable": {
+      "title": "Node.js wird auf diesem Server nicht verwaltet",
+      "body": "Dieser Server hostet Container und führt auf dem Host selbst keine Anwendungen aus, daher gibt es keine Node.js-Versionen zu verwalten. Ein Container bringt seine eigene Laufzeitumgebung mit."
     }
   },
   "diskCleaner": {
@@ -2916,6 +2920,10 @@
       "action": "Anzeigen",
       "filtered": "Es werden nur Datenbanken ohne Anwendungsverknüpfung angezeigt",
       "showAll": "Alle anzeigen"
+    },
+    "unavailable": {
+      "title": "Datenbanken werden auf diesem Server nicht verwaltet",
+      "body": "Dieser Server hostet Container. Eine Anwendung, die eine Datenbank braucht, bringt sie als eigenen Container mit, daher verwaltet das Panel hier keine Engine — und seine eigenen Daten liegen ohnehin in SQLite."
     }
   },
   "git": {

@@ -30,14 +30,12 @@ class EnsureServerManagesDatabases
 
     public function handle(Request $request, Closure $next): Response
     {
-        // Asked of the hosted profiles rather than the stack name, so a stack
-        // added later gets the right answer without editing this file.
-        foreach (['php', 'node'] as $profile) {
-            if ($this->capabilities->hosts($profile)) {
-                return $next($request);
-            }
-        }
+        // The rule itself lives on ServerCapabilities, because the sidebar asks the
+        // same question and two copies of a two-line rule is one copy that gets
+        // fixed. Asked of the hosted profiles rather than the stack name, so a
+        // stack added later gets the right answer without editing anything here.
+        abort_unless($this->capabilities->managesDatabases(), 409, __('errors/server.databases_not_managed'));
 
-        abort(409, __('errors/server.databases_not_managed'));
+        return $next($request);
     }
 }

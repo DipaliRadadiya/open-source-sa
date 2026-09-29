@@ -71,6 +71,54 @@ class ServerCapabilities
     }
 
     /**
+     * Whether this server manages database engines of its own.
+     *
+     * The question is not "is MariaDB installed" but "does anything here want a
+     * panel-managed database". A Docker box says no: an application that needs one
+     * brings it as a container, and the panel's own data is SQLite regardless.
+     *
+     * Here rather than in the middleware that first needed it, because a second
+     * caller arrived — the sidebar — and a two-line rule copied into two files is
+     * a rule that gets fixed in one of them. Adding a stack should change this
+     * method and nothing else.
+     */
+    public function managesDatabases(): bool
+    {
+        return $this->runsHostApplications();
+    }
+
+    /**
+     * Whether this server runs applications on the host at all, as opposed to
+     * only inside containers.
+     *
+     * The line every "does this stack do X" question above the container boundary
+     * turns out to want. A Docker box answers false: nothing runs on the host but
+     * the panel, so host runtimes and host database engines are all screens about
+     * nothing. Every other stack answers true.
+     *
+     * Deliberately NOT `hosts('node')` for the Node question, and the difference
+     * is not pedantry. A LEMP box hosts no Node *sites*, but Node is a build tool
+     * for PHP ones — the panel's own `build_command` placeholder is
+     * `npm ci && npm run build`, offered on any git-deployed site. Hiding the Node
+     * screen wherever `hosts('node')` is false would take it away from every
+     * Laravel site that builds its assets.
+     *
+     * A server with no recorded stack answers true, like everything else here: the
+     * permissive default is the only safe one for a box migrated in from another
+     * panel.
+     */
+    public function runsHostApplications(): bool
+    {
+        foreach (['php', 'node'] as $profile) {
+            if ($this->hosts($profile)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @return list<string>
      */
     public function servingProfiles(): array

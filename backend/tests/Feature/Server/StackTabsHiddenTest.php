@@ -2,10 +2,12 @@
 
 use App\Models\ServerCapability;
 use App\Models\User;
+use App\Services\Server\Capabilities\ServerCapabilities;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Collection;
 
 /**
- * PHP is not a thing a Docker box does.
+ * What a Docker box does not do, and therefore does not show.
  *
  * `--stack=docker` serves containers and nothing else, so versions, ini files and
  * extensions are a screen about nothing there. Reported as "hide the PHP tab",
@@ -45,6 +47,14 @@ function dockerStackAs(string $stack, array $profiles): void
 function phpTabHeaders(): array
 {
     return ['Authorization' => 'Bearer '.test()->admin->createToken('t')->plainTextToken];
+}
+
+/** Every server-level tab this user would be shown. */
+function serverTabs(): Collection
+{
+    return collect(
+        test()->withHeaders(phpTabHeaders())->getJson('/api/permissions?level=server')->json('permissions')
+    )->pluck('name');
 }
 
 /** Is `php` in the server-level menu this user would be shown? */
@@ -91,17 +101,93 @@ it('hides it from the unfiltered menu too, not only from level=server', function
         ->toBeFalse();
 });
 
-it('leaves the other server tabs alone', function () {
-    // Deliberately NOT widened: Databases and Node.js on a Docker box, and Docker
-    // on a LEMP box, are the same argument — but how much of the sidebar vanishes
-    // is a product decision, and this test records that it was left undecided
-    // rather than overlooked.
+it('hides the Databases tab on a Docker server', function () {
+    // An application that wants a database there brings one as a container, so the
+    // panel manages no engine — and these endpoints already answered 409, which
+    // made this the one tab that was visibly broken rather than merely pointless.
     dockerStackAs('docker', ['docker']);
 
-    $names = collect($this->withHeaders(phpTabHeaders())->getJson('/api/permissions?level=server')->json('permissions'))
-        ->pluck('name');
+    expect(serverTabs())->not->toContain('database');
+});
 
-    expect($names)->toContain('database')->toContain('node')->toContain('docker');
+it('keeps the Databases tab wherever an engine is managed', function (string $stack, array $profiles) {
+    dockerStackAs($stack, $profiles);
+
+    expect(serverTabs())->toContain('database');
+})->with([
+    ['lemp', ['php', 'static']],
+    ['mern', ['node', 'static']],
+]);
+
+it('keeps the Databases tab on a server with no recorded capabilities', function () {
+    ServerCapability::query()->delete();
+
+    expect(serverTabs())->toContain('database');
+});
+
+it('hides the Node.js tab on a Docker server', function () {
+    dockerStackAs('docker', ['docker']);
+
+    expect(serverTabs())->not->toContain('node');
+});
+
+it('KEEPS the Node.js tab on a LEMP box, which hosts no Node sites', function () {
+    // The assertion this whole rule was designed around. `hosts('node')` is false
+    // here — a LEMP box serves no Node applications — and hiding the screen on that
+    // basis would take Node away from every Laravel site that builds its assets
+    // with it. The panel's own build_command placeholder is `npm ci && npm run
+    // build`. What makes a Docker box different is that it runs no sites at all.
+    dockerStackAs('lemp', ['php', 'static']);
+
+    expect(serverTabs())->toContain('node');
+});
+
+it('keeps the Node endpoints answering on a LEMP box', function () {
+    // The same point at the API, because the middleware could have been written
+    // with the wrong predicate just as easily as the sidebar.
+    dockerStackAs('lemp', ['php', 'static']);
+
+    $this->withHeaders(phpTabHeaders())->getJson('/api/node')->assertStatus(200);
+});
+
+it('refuses the Node endpoints on a Docker server', function () {
+    dockerStackAs('docker', ['docker']);
+
+    foreach ([
+        ['getJson', '/api/node'],
+        ['putJson', '/api/node/default'],
+        ['postJson', '/api/node/versions'],
+    ] as [$method, $url]) {
+        $this->withHeaders(phpTabHeaders())->{$method}($url, [])->assertStatus(409);
+    }
+});
+
+it('leaves the tab nobody asked about alone', function () {
+    // Docker on a LEMP box is the same argument and is deliberately still shown:
+    // hiding it is a decision about a different stack, and nobody has asked.
+    // Asserted so it reads as a decision rather than an oversight.
+    dockerStackAs('lemp', ['php', 'static']);
+
+    expect(serverTabs())->toContain('docker');
+});
+
+it('has the Node refusal translated in every locale', function () {
+    foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
+        $line = __('errors/node.not_a_node_server', [], $locale);
+
+        expect($line)->not->toBe('errors/node.not_a_node_server')->and($line)->not->toBeEmpty();
+    }
+});
+
+it('asks one source for whether databases are managed', function () {
+    // The rule was `foreach (['php','node'])` inside the middleware, and the
+    // sidebar needed the same answer. Two copies of a two-line rule is one copy
+    // that gets fixed, so both now call this.
+    dockerStackAs('docker', ['docker']);
+    expect(app(ServerCapabilities::class)->managesDatabases())->toBeFalse();
+
+    dockerStackAs('lemp', ['php', 'static']);
+    expect(app(ServerCapabilities::class)->managesDatabases())->toBeTrue();
 });
 
 /*

@@ -2250,6 +2250,10 @@
       "eol": "No longer supported",
       "endsOn": "Support ends on {date}.",
       "endedOn": "Support ended on {date}."
+    },
+    "unavailable": {
+      "title": "Node.js is not managed on this server",
+      "body": "This server hosts containers and runs no applications on the host itself, so there are no Node.js versions to manage. A container brings its own runtime."
     }
   },
   "diskCleaner": {
@@ -2916,6 +2920,10 @@
       "action": "Show them",
       "filtered": "Showing only databases not linked to an application",
       "showAll": "Show all"
+    },
+    "unavailable": {
+      "title": "Databases are not managed on this server",
+      "body": "This server hosts containers. An application that needs a database brings one as a container of its own, so the panel manages no engine here — and its own data is SQLite regardless."
     }
   },
   "git": {

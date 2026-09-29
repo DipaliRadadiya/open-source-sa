@@ -5,6 +5,7 @@ use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\EnsureServerHostsContainers;
 use App\Http\Middleware\EnsureServerHostsPhpSites;
 use App\Http\Middleware\EnsureServerManagesDatabases;
+use App\Http\Middleware\EnsureServerRunsHostApplications;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\ThrottleRequestsPerRoute;
 use App\Services\Admin\ApiErrorLogWriter;
@@ -103,6 +104,10 @@ return Application::configure(basePath: dirname(__DIR__))
             // PHP sites, so managing versions and ini files there is managing
             // nothing.
             'hosts-php' => EnsureServerHostsPhpSites::class,
+            // Node's screens, on a server that runs anything on the host at all.
+            // Not "hosts Node sites": a LEMP box needs Node to build a PHP site's
+            // assets. See the class.
+            'runs-host-apps' => EnsureServerRunsHostApplications::class,
             'central' => CentralSystemGuard::class,
             // One counter per route for `throttle:N,M`; see the class.
             'throttle' => ThrottleRequestsPerRoute::class,

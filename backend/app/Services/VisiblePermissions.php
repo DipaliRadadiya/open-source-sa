@@ -46,27 +46,44 @@ class VisiblePermissions
             );
         }
 
-        // The third filter, and the server-level counterpart of the one above:
-        // a feature the STACK cannot do is a screen about nothing.
+        // The third filter, and the server-level counterpart of the one above: a
+        // feature the STACK cannot do is a screen about nothing.
         //
-        // Only `php` for now, deliberately. The same reasoning applies to
-        // Databases and Node.js on a Docker box, and to Docker on a LEMP box —
-        // Databases in particular already answers 409 there, so that tab is
-        // live-broken today. Those are a product decision about how much of the
-        // sidebar vanishes, not a mechanical consequence of this one, so they are
-        // left to be asked for rather than assumed.
+        // A map rather than a chain of ifs, because each entry is one fact and the
+        // next stack should add a line rather than a branch. Each answer comes from
+        // `ServerCapabilities`, which is where the rule lives for the middleware
+        // that refuses the same endpoints — a screen hidden here whose routes still
+        // answer is the worse state, so the two must agree by construction rather
+        // than by both being remembered.
         //
-        // `hosts('php')`, never `can('php')`: PHP is installed on a Docker box
-        // because the panel is a Laravel application, and gating on that would
-        // hide this nowhere. A server with no recorded stack answers `true` by
-        // design — refusing a working migrated LEMP box its PHP screen because
-        // nobody wrote a capability row is a far worse failure than one extra tab.
+        // `php` asks `hosts('php')` and never `can('php')`: PHP is installed on a
+        // Docker box because the panel is a Laravel application, so the latter
+        // would hide it nowhere. A server with no recorded stack answers true to
+        // both by design — refusing a working migrated box its screens because
+        // nobody wrote a capability row is far worse than an extra tab.
+        //
+        // Docker is deliberately absent: its screens are already refused on a LEMP
+        // box, but nobody has asked for that tab to go and hiding it is a decision
+        // about a different stack. One line here when it is wanted.
         if ($level === 'server' || $level === null) {
-            $hostsPhp = app(ServerCapabilities::class)->hosts('php');
+            $capabilities = app(ServerCapabilities::class);
 
-            if (! $hostsPhp) {
+            $unavailable = array_keys(array_filter([
+                'php' => ! $capabilities->hosts('php'),
+                // Both of these ask whether anything runs on the HOST, not
+                // whether the matching runtime is hosted. For databases that is
+                // the rule the middleware already used; for Node it is the
+                // deliberate difference — see `runsHostApplications()` for why
+                // `hosts('node')` would take the screen away from every LEMP box
+                // whose sites build their assets with npm.
+                'node' => ! $capabilities->runsHostApplications(),
+                'database' => ! $capabilities->managesDatabases(),
+            ]));
+
+            if ($unavailable !== []) {
                 $permissions = $permissions->reject(
-                    fn (Permission $permission) => $permission->level === 'server' && $permission->name === 'php'
+                    fn (Permission $permission) => $permission->level === 'server'
+                        && in_array($permission->name, $unavailable, true)
                 );
             }
         }
