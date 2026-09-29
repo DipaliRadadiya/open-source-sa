@@ -28,6 +28,24 @@ class Restore extends Model
         ];
     }
 
+    /**
+     * Whether this application has a restore queued or running.
+     *
+     * A backup taken while a restore is extracting, loading the database or
+     * swapping files captures a half-restored site, is marked verified, and
+     * then lets retention prune an older good backup to make room for it
+     * (found in code review 2026-09-29). Every way a backup is started asks
+     * this first; the restore's own safety backup runs the runner directly
+     * and is not affected.
+     */
+    public static function inProgressFor(int $applicationId): bool
+    {
+        return static::query()
+            ->where('application_id', $applicationId)
+            ->whereIn('status', [RestoreStatus::Pending->value, RestoreStatus::Running->value])
+            ->exists();
+    }
+
     public function backup(): BelongsTo
     {
         return $this->belongsTo(Backup::class);

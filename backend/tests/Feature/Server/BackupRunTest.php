@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /*
  * The value here is the whole chain: dump → archive → upload → verify → prune.
@@ -224,6 +225,60 @@ describe('retention', function () {
         // make room for one that never arrived.
         expect(Backup::find($good->id))->not->toBeNull();
         $this->fakeDisk->assertExists($good->manifest['key']);
+    });
+
+    it('never prunes regular backups for a restore\'s safety backup', function () {
+        // A safety backup is not one of the N the user keeps, yet the prune
+        // step ran for it and kept N-1 regular backups: every restore deleted
+        // the oldest kept backup — row and artefact — and when that was the
+        // one being restored, it was gone once the restore finished (found in
+        // code review 2026-09-29).
+        fakeTar();
+        $target = backupTarget(['retention_count' => 2]);
+        $runner = app(BackupRunner::class);
+
+        $older = $runner->run($target);
+        $newer = $runner->run($target);
+
+        $safety = $runner->run($target, isSafety: true);
+
+        expect($safety->is_safety)->toBeTrue()
+            ->and(Backup::find($older->id))->not->toBeNull()
+            ->and(Backup::find($newer->id))->not->toBeNull();
+        $this->fakeDisk->assertExists($older->manifest['key']);
+    });
+
+    it('stays verified when an old backup\'s destination can no longer be reached', function () {
+        // The new backup is already uploaded and verified when pruning runs.
+        // Building the disk for an *old* backup's destination sat outside the
+        // try, so a destination that had gone away failed the backup that had
+        // just succeeded — and a failed row is never offered for restore nor
+        // counted by retention (found in code review 2026-09-29).
+        fakeTar();
+        $target = backupTarget(['retention_count' => 1]);
+        $runner = app(BackupRunner::class);
+
+        $old = $runner->run($target);
+
+        $gone = StorageDestination::create([
+            'name' => 'Gone',
+            'provider' => 's3',
+            'config' => ['endpoint' => '', 'region' => 'us-east-1', 'bucket' => 'gone', 'access_key' => 'key', 'secret_key' => 'secret'],
+        ]);
+        $old->forceFill(['storage_destination_id' => $gone->id])->save();
+
+        $this->app->bind(DestinationDisk::class, fn () => new DestinationDisk(
+            app(StorageDriverFactory::class),
+            fn (array $config) => ($config['bucket'] ?? null) === 'gone'
+                ? throw new RuntimeException('destination unreachable')
+                : $this->fakeDisk,
+        ));
+
+        $new = app(BackupRunner::class)->run($target);
+
+        expect($new->status)->toBe(BackupStatus::Verified)
+            // Could not be deleted, so it is kept rather than half-forgotten.
+            ->and(Backup::find($old->id))->not->toBeNull();
     });
 
     it('does not count failed backups towards retention', function () {

@@ -33,7 +33,13 @@ class PruneOldBackups implements BackupStep
 
     public function appliesTo(BackupContext $context): bool
     {
-        return $context->target->retention_count > 0;
+        // Not for a restore's safety backup. It is not one of the N the user
+        // keeps, but this step counts the backup being made as one of them and
+        // keeps N-1 regular backups — so every restore deleted the oldest
+        // kept backup, row and artefact, including the one being restored when
+        // that was the oldest (found in code review 2026-09-29). Safety
+        // backups have their own limit (SafetyBackup::KEEP).
+        return $context->target->retention_count > 0 && ! $context->backup->is_safety;
     }
 
     public function run(BackupContext $context): void
@@ -84,9 +90,13 @@ class PruneOldBackups implements BackupStep
                 continue;
             }
 
-            $disk = $disks[$destination->id] ??= $this->disks->for($destination);
-
             try {
+                // Inside the try: this backup has already been uploaded and
+                // verified, and a destination an *old* backup points at that
+                // can no longer be reached (credentials changed, removed) must
+                // not turn it into a failed one.
+                $disk = $disks[$destination->id] ??= $this->disks->for($destination);
+
                 if (is_string($key) && $disk->exists($key)) {
                     $disk->delete($key);
                 }

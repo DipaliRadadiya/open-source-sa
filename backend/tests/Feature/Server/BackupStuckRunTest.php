@@ -1,12 +1,16 @@
 <?php
 
 use App\Enums\BackupStatus;
+use App\Enums\RestoreStatus;
 use App\Jobs\RunBackup;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\Restore;
 use App\Models\StorageDestination;
 use App\Models\User;
+use App\Services\ActivityLogger;
+use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\StaleBackupReaper;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -227,5 +231,34 @@ describe('POST /backups/{backup}/clear', function () {
         $this->actingAs($other);
 
         $this->postJson("/api/backups/{$stale->id}/clear")->assertForbidden();
+    });
+});
+
+describe('while a restore of the same site is in progress', function () {
+    // A backup taken mid-restore captures a half-restored site, is marked
+    // verified, and lets retention prune an older good backup to make room
+    // for it (found in code review 2026-09-29).
+    beforeEach(function () {
+        Restore::forceCreate([
+            'application_id' => $this->application->id,
+            'status' => RestoreStatus::Running,
+            'type' => 'full',
+        ]);
+    });
+
+    it('refuses "back up now" with a message that says why', function () {
+        Queue::fake();
+
+        $this->postJson("/api/applications/{$this->application->id}/backups")
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'A restore for this application is already running.']);
+
+        Queue::assertNothingPushed();
+    });
+
+    it('skips a scheduled run rather than backing up a half-restored site', function () {
+        (new RunBackup($this->backupTarget->id))->handle(app(BackupRunner::class), app(ActivityLogger::class));
+
+        expect(Backup::where('backup_target_id', $this->backupTarget->id)->count())->toBe(0);
     });
 });

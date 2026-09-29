@@ -6,6 +6,7 @@ use App\Enums\BackupStatus;
 use App\Jobs\Concerns\ExpiresUniqueLock;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\Restore;
 use App\Services\ActivityLogger;
 use App\Services\Server\Backups\BackupRunner;
 use App\Services\Server\Backups\StaleBackupReaper;
@@ -106,6 +107,18 @@ class RunBackup implements ShouldBeUniqueUntilProcessing, ShouldQueue
         // is the check that cannot be raced, because it happens on the worker
         // that is about to start writing. Two concurrent runs would archive one
         // site twice, to one key, on one disk.
+        // A scheduled run that falls during a restore: skipped, not queued
+        // behind it — the next schedule takes the restored site. See
+        // Restore::inProgressFor().
+        if (Restore::inProgressFor($target->application_id)) {
+            Log::channel('server-ops')->info('backup skipped, a restore of this application is in progress', [
+                'feature' => 'backup',
+                'backup_target' => $this->backupTargetId,
+            ]);
+
+            return;
+        }
+
         if (app(StaleBackupReaper::class)->hasLiveRun($target)) {
             Log::channel('server-ops')->info('backup skipped, one is already running', [
                 'feature' => 'backup',

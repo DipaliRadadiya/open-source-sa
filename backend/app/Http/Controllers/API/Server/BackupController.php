@@ -20,6 +20,7 @@ use App\Jobs\RunBackup;
 use App\Models\Application;
 use App\Models\Backup;
 use App\Models\BackupTarget;
+use App\Models\Restore;
 use App\Services\ActivityLogger;
 use App\Services\Server\Backups\StaleBackupReaper;
 use App\Services\Server\Backups\Storage\DestinationDisk;
@@ -281,6 +282,12 @@ class BackupController extends Controller
         // Reaps abandoned rows before answering. Without this a run stranded by
         // a killed worker blocks the site forever: it is in flight by status
         // and gone in fact, and nothing else ever revisits it.
+        if (Restore::inProgressFor($target->application_id)) {
+            throw ValidationException::withMessages([
+                'application' => [__('backup.errors.restore_already_running')],
+            ]);
+        }
+
         if ($reaper->hasLiveRun($target)) {
             // Two archives of the same site at once would compete for the same
             // disk and the same lock. The job is unique per target as well;
@@ -446,6 +453,12 @@ class BackupController extends Controller
         if ($target === null) {
             throw ValidationException::withMessages([
                 'backup' => [__('backup.errors.retry_no_target')],
+            ]);
+        }
+
+        if (Restore::inProgressFor($target->application_id)) {
+            throw ValidationException::withMessages([
+                'application' => [__('backup.errors.restore_already_running')],
             ]);
         }
 
