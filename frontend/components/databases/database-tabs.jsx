@@ -51,9 +51,6 @@ export function DatabaseTabs({ users, tables, exports: exportsNode, counts, init
   return (
     <div className="space-y-4">
       <Tabs value={tab} onValueChange={select}>
-        {/* Wraps rather than overflowing: three tabs with a count each are 7px
-            too wide for a 390px phone, and `w-fit` on a non-wrapping row means
-            the whole page scrolls sideways to hide it. */}
         {/* Scrolls rather than wraps, same as the Settings tab bar: a bar that
             reflows to two rows stops reading as one control. ScrollFade is what
             says there is more to the side. */}
@@ -68,9 +65,11 @@ export function DatabaseTabs({ users, tables, exports: exportsNode, counts, init
                 {section.label}
                 {/* Zero is worth showing too: "Users 0" is the fact that nothing
                     can connect, which is exactly what someone needs to see. */}
-                <Badge variant="secondary" className="ml-1.5 font-normal tabular-nums">
-                  {section.count}
-                </Badge>
+                {section.count === null ? null : (
+                  <Badge variant="secondary" className="ml-1.5 font-normal tabular-nums">
+                    {section.count}
+                  </Badge>
+                )}
               </TabsTrigger>
             ))}
           </TabsList>

@@ -806,7 +806,9 @@
     "rangeWorkers": "Saisissez un nombre de 1 à 100.",
     "rangeMaxRequests": "Saisissez de 0 à 100000. Avec 0, un worker n'est jamais redémarré.",
     "pathNoTraversal": "Le chemin ne peut pas contenir ..",
-    "securityUsernameSpaces": "Ne peut pas contenir d'espaces."
+    "securityUsernameSpaces": "Ne peut pas contenir d'espaces.",
+    "databaseUsernameReserved": "Ce nom appartient au serveur de base de données. Choisissez-en un autre.",
+    "databaseHost": "Saisissez une adresse IPv4 comme 203.0.113.5, ou une plage comme 203.0.113.0/24."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -2633,7 +2635,9 @@
       "copyString": "Copier",
       "connectionStringHint": "La plupart des applications n'ont besoin que de cette ligne.",
       "passwordEscaped": "Le mot de passe est échappé dans la chaîne de connexion, ce qui la fait paraître différente. Les deux sont corrects.",
-      "noUserWarning": "Cette base n'a pas encore d'utilisateur, donc rien ne peut s'y connecter. Ajoutez-en un depuis la ligne de la base."
+      "noUserWarning": "Cette base n'a pas encore d'utilisateur, donc rien ne peut s'y connecter. Ajoutez-en un depuis la ligne de la base.",
+      "userTitle": "{username} peut se connecter maintenant",
+      "userSubtitle": "Donnez ces informations à l'application qui l'utilise. Elles restent dans la liste des utilisateurs ci-dessous."
     },
     "delete": {
       "action": "Supprimer",
@@ -2793,7 +2797,8 @@
       "charset": "Jeu de caractères",
       "collation": "Collation",
       "created": "Créé le",
-      "createdWhen": "créé le {when}"
+      "createdWhen": "créé le {when}",
+      "engineDown": "{engine} n'est pas en cours d'exécution, donc rien ne peut se connecter à cette base de données. Sa taille et ses tables ne peuvent pas être lues tant qu'il n'est pas relancé."
     },
     "exports": {
       "title": "Exports",
@@ -2828,7 +2833,8 @@
       "freeSpace": "{free} libres sur ce serveur.",
       "inProgress": "Exportation…",
       "diskUsed": "{count, plural, one {# export conservé} other {# exports conservés}} — {size}. Rien ne les supprime pour vous.",
-      "takingLonger": "Cela prend plus de temps que d'habitude. Les bases volumineuses peuvent prendre quelques minutes."
+      "takingLonger": "Cela prend plus de temps que d'habitude. Les bases volumineuses peuvent prendre quelques minutes.",
+      "loadFailed": "Impossible de charger les exports."
     },
     "manage": "Gérer",
     "monitor": {
@@ -2908,7 +2914,9 @@
           "slowRateHigh": "Environ {rate} requêtes lentes par heure depuis le dernier redémarrage.",
           "slowRateCritical": "Environ {rate} requêtes lentes par heure — il vaut mieux consulter le journal des requêtes lentes.",
           "recentlyRestarted": "Ce moteur a redémarré récemment, les compteurs et l'historique se remplissent encore."
-        }
+        },
+        "unknownTitle": "Santé inconnue",
+        "unknownBody": "{engine} n'a pas répondu à la vérification de santé. Réessayez dans un instant."
       },
       "longRunning": "Requête longue",
       "meta": {
@@ -2925,7 +2933,8 @@
       "longRunningCount": "{count, plural, one {# longue} other {# longues}}",
       "chartDescription": "Requêtes par seconde, connexions et threads actifs, échantillonnés toutes les 5 minutes.",
       "zoomHint": "Faites glisser les poignées sous le graphique, ou utilisez la molette, pour zoomer sur une plage de temps.",
-      "cannotStopOwn": "C'est la connexion du panel lui-même à la base de données. L'arrêter couperait cette page."
+      "cannotStopOwn": "C'est la connexion du panel lui-même à la base de données. L'arrêter couperait cette page.",
+      "loadFailed": "Impossible de vérifier les moteurs de base de données."
     },
     "tables": {
       "title": "Tables",
@@ -2936,7 +2945,9 @@
       "empty": "Aucune table pour l'instant.",
       "rowCount": "{rows} lignes",
       "rowsEstimated": "Les nombres de lignes sont des estimations du moteur, pas des comptages exacts.",
-      "charsetLine": "Jeu de caractères {charset} · collation {collation}"
+      "charsetLine": "Jeu de caractères {charset} · collation {collation}",
+      "loadFailed": "Impossible de lire les tables de cette base de données.",
+      "unavailable": "Illisible tant que {engine} n'est pas en cours d'exécution."
     },
     "tabs": {
       "users": "Utilisateurs",

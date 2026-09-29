@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, UserRoundPlus } from "lucide-react";
@@ -19,7 +19,7 @@ import { CreatedCredentials } from "@/components/databases/created-credentials";
 export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true }) {
   const t = useTranslations("databases.users");
   const restart = useRestartConfirm();
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   // Set on success: the new credential replaces the form, because a password
   // you are never shown is a password nobody can use.
   const [created, setCreated] = useState(null);
@@ -57,9 +57,11 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
 
     try {
       const { data } = await createDatabaseUser(database.id, payload);
+      // The list behind has the user before this panel appears, so Done never
+      // uncovers a table without it.
+      await refreshAndWait();
       toast.success(t("added", { username: submitted.username }));
       setCreated({ ...database, users: [data?.user].filter(Boolean) });
-      router.refresh();
     } catch (error) {
       const restartAnswer = restart.ask(error);
       if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });
@@ -78,6 +80,7 @@ export function AddUserDialog({ database, open, onOpenChange, remoteUsers = true
   if (created) {
     return (
       <CreatedCredentials
+        forUser
         database={created}
         open={open}
         onOpenChange={handleOpenChange}

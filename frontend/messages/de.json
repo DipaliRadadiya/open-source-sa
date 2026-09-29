@@ -806,7 +806,9 @@
     "rangeWorkers": "Geben Sie eine Zahl von 1 bis 100 ein.",
     "rangeMaxRequests": "Geben Sie 0 bis 100000 ein. Bei 0 wird ein Worker nie neu gestartet.",
     "pathNoTraversal": "Der Pfad darf kein .. enthalten",
-    "securityUsernameSpaces": "Darf keine Leerzeichen enthalten."
+    "securityUsernameSpaces": "Darf keine Leerzeichen enthalten.",
+    "databaseUsernameReserved": "Dieser Name gehört dem Datenbankserver. Wählen Sie einen anderen.",
+    "databaseHost": "Geben Sie eine IPv4-Adresse wie 203.0.113.5 oder einen Bereich wie 203.0.113.0/24 ein."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -2633,7 +2635,9 @@
       "copyString": "Kopieren",
       "connectionStringHint": "Die meisten Anwendungen brauchen nur diese Zeile.",
       "passwordEscaped": "Das Passwort ist in der Verbindungszeichenfolge maskiert und sieht dort deshalb anders aus. Beide sind richtig.",
-      "noUserWarning": "Diese Datenbank hat noch keinen Benutzer, es kann sich also nichts verbinden. Fügen Sie einen aus der Zeile der Datenbank hinzu."
+      "noUserWarning": "Diese Datenbank hat noch keinen Benutzer, es kann sich also nichts verbinden. Fügen Sie einen aus der Zeile der Datenbank hinzu.",
+      "userTitle": "{username} kann sich jetzt verbinden",
+      "userSubtitle": "Geben Sie diese Angaben der Anwendung, die ihn nutzt. Sie bleiben unten in der Benutzerliste."
     },
     "delete": {
       "action": "Löschen",
@@ -2793,7 +2797,8 @@
       "charset": "Zeichensatz",
       "collation": "Sortierung",
       "created": "Erstellt",
-      "createdWhen": "erstellt {when}"
+      "createdWhen": "erstellt {when}",
+      "engineDown": "{engine} läuft nicht, daher kann sich nichts mit dieser Datenbank verbinden. Größe und Tabellen lassen sich erst wieder lesen, wenn es läuft."
     },
     "exports": {
       "title": "Exporte",
@@ -2828,7 +2833,8 @@
       "freeSpace": "{free} frei auf diesem Server.",
       "inProgress": "Wird exportiert…",
       "diskUsed": "{count, plural, one {# Export} other {# Exporte}} hier gespeichert — {size}. Diese werden für Sie nicht gelöscht.",
-      "takingLonger": "Das dauert länger als üblich. Große Datenbanken können einige Minuten brauchen."
+      "takingLonger": "Das dauert länger als üblich. Große Datenbanken können einige Minuten brauchen.",
+      "loadFailed": "Die Exporte konnten nicht geladen werden."
     },
     "manage": "Verwalten",
     "monitor": {
@@ -2908,7 +2914,9 @@
           "slowRateHigh": "Etwa {rate} langsame Abfragen pro Stunde seit dem letzten Neustart.",
           "slowRateCritical": "Etwa {rate} langsame Abfragen pro Stunde — ein Blick ins Protokoll der langsamen Abfragen lohnt sich.",
           "recentlyRestarted": "Diese Engine wurde kürzlich neu gestartet, Zähler und Verlauf füllen sich also noch."
-        }
+        },
+        "unknownTitle": "Zustand unbekannt",
+        "unknownBody": "{engine} hat auf die Zustandsprüfung nicht geantwortet. Versuchen Sie es gleich noch einmal."
       },
       "longRunning": "Lang laufende Abfrage",
       "meta": {
@@ -2925,7 +2933,8 @@
       "longRunningCount": "{count, plural, one {# lang laufend} other {# lang laufend}}",
       "chartDescription": "Abfragen pro Sekunde, Verbindungen und laufende Threads, alle 5 Minuten gemessen.",
       "zoomHint": "Ziehen Sie die Griffe unter dem Diagramm oder scrollen Sie darauf, um in einen Zeitraum zu zoomen.",
-      "cannotStopOwn": "Das ist die eigene Verbindung des Panels zur Datenbank. Sie zu stoppen würde diese Seite abschneiden."
+      "cannotStopOwn": "Das ist die eigene Verbindung des Panels zur Datenbank. Sie zu stoppen würde diese Seite abschneiden.",
+      "loadFailed": "Die Datenbank-Engines konnten nicht geprüft werden."
     },
     "tables": {
       "title": "Tabellen",
@@ -2936,7 +2945,9 @@
       "empty": "Noch keine Tabellen.",
       "rowCount": "{rows} Zeilen",
       "rowsEstimated": "Die Zeilenzahlen sind die eigene Schätzung der Engine, keine genaue Zählung.",
-      "charsetLine": "Zeichensatz {charset} · Sortierung {collation}"
+      "charsetLine": "Zeichensatz {charset} · Sortierung {collation}",
+      "loadFailed": "Die Tabellen dieser Datenbank konnten nicht gelesen werden.",
+      "unavailable": "Nicht lesbar, solange {engine} nicht läuft."
     },
     "tabs": {
       "users": "Benutzer",

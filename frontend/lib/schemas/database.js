@@ -221,6 +221,25 @@ export const untrackedResponseSchema = z.object({
  * engines the server actually reported. Called with no argument it behaves
  * exactly as the constant did.
  */
+// The API's rules for a database user (StoreDatabaseUserRequest): 32 is
+// MySQL 8's limit for every engine, and the server's own accounts are refused.
+// Without them the refusal came back as the API's raw English sentence.
+const RESERVED_DATABASE_USERS = new Set(["root"]);
+
+export function databaseUsernameProblem(value) {
+  if (!/^[A-Za-z0-9_]+$/.test(value)) return "databaseUsername";
+  if (value.length > 32) return "max32";
+  if (RESERVED_DATABASE_USERS.has(value)) return "databaseUsernameReserved";
+  return null;
+}
+
+// IPv4 or IPv4/CIDR, as the API accepts; it refuses hostnames and IPv6.
+export function hostProblem(value) {
+  if (!value) return "required_host";
+  if (!/^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/.test(value)) return "databaseHost";
+  return null;
+}
+
 export const createDatabaseSchema = (reserved = reservedNames()) =>
   z
   .object({
@@ -253,19 +272,15 @@ export const createDatabaseSchema = (reserved = reservedNames()) =>
         path: ["username"],
         message: "required_username",
       });
-    } else if (!/^[A-Za-z0-9_]+$/.test(values.username)) {
-      // Deliberately no max length: MySQL allows 32 and MariaDB 80, and the API
-      // is the authority. Guessing stricter would refuse names it accepts.
-      ctx.addIssue({
-        code: "custom",
-        path: ["username"],
-        message: "databaseUsername",
-      });
+    } else {
+      const problem = databaseUsernameProblem(values.username);
+      if (problem) ctx.addIssue({ code: "custom", path: ["username"], message: problem });
     }
 
     // The API requires a host for `remote` — `anywhere` is the wildcard.
-    if (values.connection_preference === "remote" && !values.host) {
-      ctx.addIssue({ code: "custom", path: ["host"], message: "required_host" });
+    if (values.connection_preference === "remote") {
+      const problem = hostProblem(values.host);
+      if (problem) ctx.addIssue({ code: "custom", path: ["host"], message: problem });
     }
   });
 
@@ -328,22 +343,30 @@ export const databaseUserFormSchema = z
       .string()
       .trim()
       .min(1, "required_username")
-      // No max length on purpose: MySQL allows 32 and MariaDB 80, and the API
-      // is the authority. Guessing stricter would refuse names it accepts.
-      .regex(/^[A-Za-z0-9_]+$/, "databaseUsername"),
-    password: z.string().optional(),
+      .superRefine((value, ctx) => {
+        const problem = databaseUsernameProblem(value);
+        if (problem) ctx.addIssue({ code: "custom", message: problem });
+      }),
+    // Blank means "generate one" (add) or "keep it" (edit); anything typed has
+    // to meet the API's 8–255.
+    password: z
+      .string()
+      .optional()
+      .refine((value) => !value || value.length >= 8, "min8")
+      .refine((value) => !value || value.length <= 255, "max255"),
     connection_preference: z.enum(CONNECTION_PREFERENCES).default("localhost"),
     host: z.string().trim().optional(),
   })
   .superRefine((values, ctx) => {
     // `anywhere` is the wildcard; only `remote` names an address.
-    if (values.connection_preference === "remote" && !values.host) {
-      ctx.addIssue({ code: "custom", path: ["host"], message: "required_host" });
+    if (values.connection_preference === "remote") {
+      const problem = hostProblem(values.host);
+      if (problem) ctx.addIssue({ code: "custom", path: ["host"], message: problem });
     }
   });
 
 export const passwordFormSchema = z.object({
-  password: z.string().min(8, "min8"),
+  password: z.string().min(8, "min8").max(255, "max255"),
 });
 
 /**

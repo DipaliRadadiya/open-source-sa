@@ -8,11 +8,11 @@ import { getTranslations } from "next-intl/server";
  * they describe the storage, they are read once at most, and they were sitting
  * above the connection details people actually came for.
  */
-export async function DatabaseFacts({ database }) {
+export async function DatabaseFacts({ database, hideSize = false }) {
   const t = await getTranslations("databases.detail");
 
   const facts = [
-    database.size_human,
+    hideSize ? null : database.size_human,
     database.created_at_human
       ? t("createdWhen", { when: database.created_at_human })
       : null,

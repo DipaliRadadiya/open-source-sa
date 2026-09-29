@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ChevronDown, DatabasePlus, Loader2 } from "lucide-react";
@@ -72,7 +72,7 @@ export function CreateDatabaseDialog({
   const t = useTranslations("databases");
   const tEngines = useTranslations("databases.engines");
   const restart = useRestartConfirm();
-  const router = useRouter();
+  const { refreshAndWait } = useRefresh();
   const [advanced, setAdvanced] = useState(false);
   // Set on success. The dialog then shows the credential instead of the form —
   // a closed dialog and a toast leaves you hunting for the connection details
@@ -173,9 +173,9 @@ export function CreateDatabaseDialog({
 
     try {
       const { data } = await createDatabase(payload);
+      await refreshAndWait();
       toast.success(t("create.created", { name: submitted.name }));
       setCreated(data?.database ?? null);
-      router.refresh();
     } catch (error) {
       const restartAnswer = restart.ask(error);
       if (restartAnswer && (await restartAnswer)) return onSubmit({ ...submitted, restart_cluster: true });

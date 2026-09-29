@@ -4,6 +4,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { Table2 } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";
 import { Card, CardContent } from "@/components/ui/card";
+import { LoadFailed } from "@/components/data-table/load-failed";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 
 /**
@@ -20,7 +21,7 @@ import { RefreshButton } from "@/components/data-table/refresh-button";
  * `OPTIMIZE TABLE` on InnoDB is a whole-table rebuild that ran inside the HTTP
  * request. Read-only now, which is what the card was always for.
  */
-export function DatabaseTables({ database, tables = [] }) {
+export function DatabaseTables({ database, tables = [], read = null, unavailable = null }) {
   const t = useTranslations("databases.tables");
   const format = useFormatter();
 
@@ -55,7 +56,20 @@ export function DatabaseTables({ database, tables = [] }) {
       </div>
 
       <CardContent className="px-5 py-0">
-        {tables.length === 0 ? (
+        {unavailable ? (
+          <div className="py-8 text-center">
+            <p className="text-sm text-muted-foreground">{t("unavailable", { engine: unavailable })}</p>
+          </div>
+        ) : read?.failed ? (
+          <div className="py-5">
+            <LoadFailed
+              description={t("loadFailed")}
+              status={read.status}
+              failure={read.failure}
+              message={read.message}
+            />
+          </div>
+        ) : tables.length === 0 ? (
           <div className="py-8 text-center">
             <p className="text-sm text-muted-foreground">{t("empty")}</p>
           </div>

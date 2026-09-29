@@ -806,7 +806,9 @@
     "rangeWorkers": "Informe um número de 1 a 100.",
     "rangeMaxRequests": "Informe de 0 a 100000. Com 0, um worker nunca é reiniciado.",
     "pathNoTraversal": "O caminho não pode conter ..",
-    "securityUsernameSpaces": "Não pode conter espaços."
+    "securityUsernameSpaces": "Não pode conter espaços.",
+    "databaseUsernameReserved": "Esse nome pertence ao servidor de banco de dados. Escolha outro.",
+    "databaseHost": "Digite um endereço IPv4 como 203.0.113.5, ou um intervalo como 203.0.113.0/24."
   },
   "serverDashboard": {
     "title": "Painel",
@@ -2633,7 +2635,9 @@
       "copyString": "Copiar",
       "connectionStringHint": "A maioria das aplicações precisa apenas desta linha.",
       "passwordEscaped": "A senha está escapada dentro da string de conexão, por isso parece diferente ali. Ambas estão corretas.",
-      "noUserWarning": "Este banco de dados ainda não tem usuário, então nada pode se conectar a ele. Adicione um a partir da linha do banco de dados."
+      "noUserWarning": "Este banco de dados ainda não tem usuário, então nada pode se conectar a ele. Adicione um a partir da linha do banco de dados.",
+      "userTitle": "{username} já pode se conectar",
+      "userSubtitle": "Passe estes dados para a aplicação que vai usá-lo. Eles continuam na lista de usuários abaixo."
     },
     "delete": {
       "action": "Excluir",
@@ -2793,7 +2797,8 @@
       "charset": "Charset",
       "collation": "Collation",
       "created": "Criado em",
-      "createdWhen": "criado {when}"
+      "createdWhen": "criado {when}",
+      "engineDown": "{engine} não está em execução, então nada consegue se conectar a este banco de dados. O tamanho e as tabelas só podem ser lidos quando ele voltar."
     },
     "exports": {
       "title": "Exportações",
@@ -2828,7 +2833,8 @@
       "freeSpace": "{free} livres neste servidor.",
       "inProgress": "Exportando…",
       "diskUsed": "{count, plural, one {# exportação} other {# exportações}} mantida(s) aqui — {size}. Nada as exclui por você.",
-      "takingLonger": "Está demorando mais que o normal. Bancos de dados grandes podem levar alguns minutos."
+      "takingLonger": "Está demorando mais que o normal. Bancos de dados grandes podem levar alguns minutos.",
+      "loadFailed": "Não foi possível carregar as exportações."
     },
     "manage": "Gerenciar",
     "monitor": {
@@ -2908,7 +2914,9 @@
           "slowRateHigh": "Cerca de {rate} consultas lentas por hora desde a última reinicialização.",
           "slowRateCritical": "Cerca de {rate} consultas lentas por hora — vale olhar o log de consultas lentas.",
           "recentlyRestarted": "Este engine foi reiniciado recentemente, então os contadores e o histórico ainda estão sendo preenchidos."
-        }
+        },
+        "unknownTitle": "Estado desconhecido",
+        "unknownBody": "{engine} não respondeu à verificação de estado. Tente novamente em instantes."
       },
       "longRunning": "Consulta longa",
       "meta": {
@@ -2925,7 +2933,8 @@
       "longRunningCount": "{count, plural, one {# longa} other {# longas}}",
       "chartDescription": "Consultas por segundo, conexões e threads em execução, amostrados a cada 5 minutos.",
       "zoomHint": "Arraste as alças abaixo do gráfico, ou role sobre ele, para ampliar um intervalo de tempo.",
-      "cannotStopOwn": "Esta é a própria conexão do painel com o banco de dados. Interrompê-la cortaria esta página."
+      "cannotStopOwn": "Esta é a própria conexão do painel com o banco de dados. Interrompê-la cortaria esta página.",
+      "loadFailed": "Não foi possível verificar os motores de banco de dados."
     },
     "tables": {
       "title": "Tabelas",
@@ -2936,7 +2945,9 @@
       "empty": "Nenhuma tabela ainda.",
       "rowCount": "{rows} linhas",
       "rowsEstimated": "A contagem de linhas é uma estimativa do próprio engine, não uma contagem exata.",
-      "charsetLine": "Charset {charset} · collation {collation}"
+      "charsetLine": "Charset {charset} · collation {collation}",
+      "loadFailed": "Não foi possível ler as tabelas deste banco de dados.",
+      "unavailable": "Não é possível ler enquanto {engine} não estiver em execução."
     },
     "tabs": {
       "users": "Usuários",

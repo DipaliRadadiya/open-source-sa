@@ -806,7 +806,9 @@
     "rangeWorkers": "1〜100 の数値を入力してください。",
     "rangeMaxRequests": "0〜100000 で入力してください。0 の場合、ワーカーは再起動されません。",
     "pathNoTraversal": "パスに .. を含めることはできません",
-    "securityUsernameSpaces": "スペースは使用できません。"
+    "securityUsernameSpaces": "スペースは使用できません。",
+    "databaseUsernameReserved": "その名前はデータベースサーバーが使用しています。別の名前を選んでください。",
+    "databaseHost": "203.0.113.5 のような IPv4 アドレス、または 203.0.113.0/24 のような範囲を入力してください。"
   },
   "serverDashboard": {
     "title": "ダッシュボード",
@@ -2633,7 +2635,9 @@
       "copyString": "コピー",
       "connectionStringHint": "ほとんどのアプリケーションではこの行だけで十分です。",
       "passwordEscaped": "パスワードは接続文字列内でエスケープされているため、表示が異なりますがどちらも正しいものです。",
-      "noUserWarning": "このデータベースにはまだユーザーがいないため、何も接続できません。データベースの行から追加してください。"
+      "noUserWarning": "このデータベースにはまだユーザーがいないため、何も接続できません。データベースの行から追加してください。",
+      "userTitle": "{username} で接続できるようになりました",
+      "userSubtitle": "この情報を利用するアプリケーションに設定してください。下のユーザー一覧でいつでも確認できます。"
     },
     "delete": {
       "action": "削除",
@@ -2793,7 +2797,8 @@
       "charset": "文字セット",
       "collation": "照合順序",
       "created": "作成日",
-      "createdWhen": "{when} に作成"
+      "createdWhen": "{when} に作成",
+      "engineDown": "{engine} が実行されていないため、このデータベースには接続できません。再開するまでサイズとテーブルを読み取れません。"
     },
     "exports": {
       "title": "エクスポート",
@@ -2828,7 +2833,8 @@
       "freeSpace": "このサーバーの空き容量：{free}",
       "inProgress": "エクスポート中…",
       "diskUsed": "{count, plural, other {エクスポート # 件を保持中 — {size}。これらは自動削除されません。}}",
-      "takingLonger": "通常より時間がかかっています。大きいデータベースは数分かかる場合があります。"
+      "takingLonger": "通常より時間がかかっています。大きいデータベースは数分かかる場合があります。",
+      "loadFailed": "エクスポートを読み込めませんでした。"
     },
     "manage": "管理",
     "monitor": {
@@ -2908,7 +2914,9 @@
           "slowRateHigh": "前回の再起動以降、1時間あたり約 {rate} 件のスロークエリが発生しています。",
           "slowRateCritical": "1時間あたり約 {rate} 件のスロークエリが発生しています — スロークエリログを確認することをおすすめします。",
           "recentlyRestarted": "このエンジンは最近再起動されたため、カウンターと履歴は集計中です。"
-        }
+        },
+        "unknownTitle": "状態を確認できません",
+        "unknownBody": "{engine} がヘルスチェックに応答しませんでした。しばらくしてからもう一度お試しください。"
       },
       "longRunning": "長時間実行中のクエリ",
       "meta": {
@@ -2925,7 +2933,8 @@
       "longRunningCount": "{count, plural, other {長時間実行中 # 件}}",
       "chartDescription": "1秒あたりのクエリ数、接続数、実行中のスレッド数を5分ごとに計測しています。",
       "zoomHint": "チャート下のハンドルをドラッグするか、チャート上をスクロールすると時間範囲を拡大できます。",
-      "cannotStopOwn": "これはパネルのデータベースへの接続です。停止するとこのページが切断されます。"
+      "cannotStopOwn": "これはパネルのデータベースへの接続です。停止するとこのページが切断されます。",
+      "loadFailed": "データベースエンジンを確認できませんでした。"
     },
     "tables": {
       "title": "テーブル",
@@ -2936,7 +2945,9 @@
       "empty": "テーブルはまだありません。",
       "rowCount": "{rows} 行",
       "rowsEstimated": "行数はエンジンによる概算であり、正確な数値ではありません。",
-      "charsetLine": "文字セット {charset} · 照合順序 {collation}"
+      "charsetLine": "文字セット {charset} · 照合順序 {collation}",
+      "loadFailed": "このデータベースのテーブルを読み取れませんでした。",
+      "unavailable": "{engine} が実行されていない間は読み取れません。"
     },
     "tabs": {
       "users": "ユーザー",

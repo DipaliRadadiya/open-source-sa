@@ -127,7 +127,7 @@ function ApplicationCell({ database, applications, onAttach }) {
       type="button"
       onClick={() => onAttach(database)}
       className="rounded-full focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-      aria-label={t("columns.attachFor", { name: database.name })}
+      aria-label={`${t("columns.notLinked")}. ${t("columns.attachFor", { name: database.name })}`}
     >
       <Badge
         variant="warning"

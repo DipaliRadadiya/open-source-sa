@@ -427,3 +427,46 @@ test("Backups: Check again on a stalled restore asks about that restore and resu
   assert.match(src, /onClick=\{checkAgain\}/);
   for (const l of locales) assert.ok(JSON.parse(read(`messages/${l}.json`)).backups.progress.checkFailed, l);
 });
+
+test("Database user and host rules match the API, so refusals are translated", async () => {
+  const { databaseUsernameProblem, hostProblem, databaseUserFormSchema, createDatabaseSchema, passwordFormSchema } = await import("../lib/schemas/database.js");
+  assert.equal(databaseUsernameProblem("u".repeat(32)), null);
+  assert.equal(databaseUsernameProblem("u".repeat(33)), "max32");
+  assert.equal(databaseUsernameProblem("root"), "databaseUsernameReserved");
+  assert.equal(databaseUsernameProblem("a-b"), "databaseUsername");
+  assert.equal(hostProblem("203.0.113.0/24"), null);
+  assert.equal(hostProblem("example.com"), "databaseHost");
+  assert.equal(hostProblem("2001:db8::1"), "databaseHost");
+  assert.equal(hostProblem(""), "required_host");
+  const add = databaseUserFormSchema.safeParse({ username: "ok_user", password: "short", connection_preference: "localhost" });
+  assert.equal(add.success, false);
+  assert.equal(databaseUserFormSchema.safeParse({ username: "ok_user", password: "", connection_preference: "localhost" }).success, true);
+  const create = createDatabaseSchema(new Set()).safeParse({ name: "db1", engine: "mariadb", create_user: true, username: "root", connection_preference: "remote", host: "example.com" });
+  assert.deepEqual(create.error.issues.map((i) => i.message).sort(), ["databaseHost", "databaseUsernameReserved"]);
+  assert.equal(passwordFormSchema.safeParse({ password: "x".repeat(256) }).success, false);
+  for (const l of locales) {
+    const v = JSON.parse(read(`messages/${l}.json`)).validation;
+    assert.ok(v.databaseUsernameReserved && v.databaseHost && v.max32 && v.max255, l);
+  }
+});
+
+test("Databases QA: honest states and quieter dialogs", () => {
+  const bar = read("components/databases/engine-bar.jsx");
+  assert.match(bar, /const stopped = list\.filter\(/);
+  assert.match(bar, /stopped\.map\(\(engine\) =>[\s\S]*?t\("engineList\.unreachable"\)[\s\S]*?href="\/services"/);
+  const page = read("app/(app)/databases/[database]/page.jsx");
+  assert.match(page, /const engineDown = Boolean\(engineRow\?\.installed\) && !engineRow\.running;/);
+  assert.match(page, /tables: tables\.failed \|\| engineDown \? null/);
+  assert.match(read("lib/databases/get-monitor.js"), /const result = await read\(`\/databases\/\$\{databaseId\}\/tables`/);
+  assert.match(read("components/databases/database-tabs.jsx"), /section\.count === null \? null/);
+  assert.match(read("components/databases/health-summary.jsx"), /if \(!status\) \{[\s\S]*?t\("unknownTitle"\)/);
+  assert.match(read("app/(app)/databases/monitor/page.jsx"), /\{tEngines\(engine\.engine\)\}/);
+  assert.match(read("components/databases/process-list.jsx"), /onDone: async \(\) => \{[\s\S]*?await refreshAndWait\(\);[\s\S]*?toast\.success\(t\("killed"\)\)/);
+  for (const f of ["create-database-dialog.jsx", "add-user-dialog.jsx"]) assert.match(read(`components/databases/${f}`), /await refreshAndWait\(\);\s*toast\.success/, f);
+  assert.match(read("components/databases/add-user-dialog.jsx"), /<CreatedCredentials\s+forUser/);
+  assert.match(read("components/databases/databases-table.jsx"), /aria-label=\{`\$\{t\("columns\.notLinked"\)\}\. /);
+  for (const l of locales) {
+    const d = JSON.parse(read(`messages/${l}.json`)).databases;
+    assert.ok(d.detail.engineDown.includes("{engine}") && d.tables.unavailable.includes("{engine}") && d.monitor.health.unknownBody.includes("{engine}") && d.created.userTitle.includes("{username}") && d.monitor.loadFailed, l);
+  }
+});
