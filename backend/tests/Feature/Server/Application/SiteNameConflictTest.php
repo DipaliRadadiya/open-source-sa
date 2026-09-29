@@ -30,17 +30,23 @@ class ConflictFake
     /** @var array<int, string> paths that exist on the fake server */
     public static array $present = [];
 
-    /** When set, `ls` gets no answer at all: sudo refused. */
+    /** When set, the listing gets no answer at all: sudo refused. */
     public static bool $refused = false;
 
     /** @var array<int, string> every directory actually listed */
     public static array $probed = [];
+
+    /** @var array<int, string> directories only root (via sudo) can read */
+    public static array $rootOnly = [];
 
     public static function reset(): void
     {
         self::$present = [];
         self::$refused = false;
         self::$probed = [];
+        // OpenLiteSpeed's vhosts directory is `lsadm:nogroup 0750` on a real
+        // box; sites-available and pool.d are world-readable.
+        self::$rootOnly = ['/usr/local/lsws/conf/vhosts'];
     }
 }
 
@@ -60,6 +66,12 @@ beforeEach(function () {
 
     ConflictFake::reset();
 
+    // On, as on a real server. The suite turns elevation off globally, which
+    // is exactly what let an unelevated `ls` pass here while it read nothing
+    // on OpenLiteSpeed: the fake cannot tell who is asking unless the
+    // command says so.
+    config()->set('server.privilege.sudo', true);
+
     // The versions this "server" has. Without this the probe asks whatever
     // happens to be installed on the machine running the suite, and the
     // multi-version test measures nothing.
@@ -68,17 +80,25 @@ beforeEach(function () {
     app()->instance(PhpVersionManager::class, $versions);
 
     Process::fake(function ($process) {
-        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $elevated = $process->command[0] === 'sudo';
+        $args = $elevated ? array_slice($process->command, 2) : $process->command;
 
-        if (($args[0] ?? '') === 'ls') {
-            $dir = $args[2] ?? '';
+        if (in_array($args[0] ?? '', ['ls', 'find'], true)) {
+            // The first operand that is not an option, for either command.
+            $dir = (string) collect(array_slice($args, 1))->first(fn ($arg) => ! str_starts_with((string) $arg, '-'));
             ConflictFake::$probed[] = $dir;
 
             if (ConflictFake::$refused) {
                 return Process::result(errorOutput: 'sudo: a password is required', exitCode: 1);
             }
 
-            // Only the entries of the directory asked for, the way `ls -1`
+            // What the live OLS box answered to an unelevated listing — and
+            // what used to read as "nothing here" (2026-09-29).
+            if (! $elevated && in_array($dir, ConflictFake::$rootOnly, true)) {
+                return Process::result(errorOutput: "{$args[0]}: cannot open directory '{$dir}': Permission denied", exitCode: 2);
+            }
+
+            // Only the entries of the directory asked for, the way the listing
             // really answers — a fake that returned full paths would let a
             // basename comparison pass while measuring nothing.
             $entries = [];

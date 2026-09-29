@@ -12,6 +12,8 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\SitePhpIni;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * OpenLiteSpeed.
@@ -227,6 +229,22 @@ class OlsDriver extends AbstractWebServerDriver
         $this->assertHasSystemUser($application);
 
         $context = ['feature' => 'application', 'op' => 'write_config', 'application' => $application->id];
+
+        // Before anything is written. A site whose name is already one of the
+        // server's own vhosts would overwrite that vhost's `vhconf.conf` two
+        // steps below, long before the shared config refuses it — which is
+        // how a site named `panel` took the panel's UI down (2026-09-29).
+        if ($this->shared->ownedByServer($this->fileName($application))) {
+            $reference = (string) Str::uuid();
+
+            Log::channel('server-ops')->error('ols vhost refused: name belongs to a vhost that is not a site', $context + [
+                'reference' => $reference,
+                'vhost' => $this->fileName($application),
+            ]);
+
+            return new ServerOpsResult(false, $reference);
+        }
+
         $fallback = $this->ensureTlsFallback($application);
 
         if ($fallback->failed()) {

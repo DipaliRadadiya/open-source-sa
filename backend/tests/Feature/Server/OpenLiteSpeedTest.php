@@ -355,6 +355,58 @@ describe('the shared httpd_config.conf', function () {
             ->and(sharedConfig())->toContain('virtualHost legacy {');
     });
 
+    it('refuses to take over a vhost that is not a site', function (string $name, string $root) {
+        /*
+         * The other side of the takeover above, and the one that happened on a
+         * live box (2026-09-29): a site created as `panel` absorbed the
+         * panel's own `virtualHost panel` and both of its maps, and the UI
+         * answered 404. A name is not enough to tell a site from the server's
+         * own vhosts; where it is rooted is — a site's vhRoot is its folder,
+         * install.sh roots the panel in the config directory, and
+         * OpenLiteSpeed's sample uses a relative path.
+         */
+        $original = <<<CONF
+        serverName                SomeServer
+
+        listener Default {
+          address                 *:80
+          map                     {$name} {$name}.example.test
+        }
+
+        virtualHost {$name} {
+          vhRoot                  {$root}
+          configFile              \$SERVER_ROOT/conf/vhosts/{$name}/vhconf.conf
+        }
+        CONF;
+
+        fakeOls($original);
+
+        $result = app(OlsSharedConfig::class)->register($name, ['qa.example.test'], '/home/shopuser/'.$name);
+
+        expect($result->ok)->toBeFalse()
+            ->and($result->reference)->not->toBeNull()
+            // Not touched at all — the server's own entry, and its map, as
+            // they were.
+            ->and(sharedConfig())->toBe($original)
+            ->and(app(OlsSharedConfig::class)->ownedByServer($name))->toBeTrue();
+    })->with([
+        'the panel, rooted in the config directory' => ['panel', '/usr/local/lsws/conf/vhosts/panel/'],
+        'OpenLiteSpeed\'s sample, rooted relatively' => ['Example', 'Example/'],
+    ]);
+
+    it('still counts a migrated site, rooted in its own folder, as a site', function () {
+        fakeOls(<<<'CONF'
+        virtualHost shop.test {
+          vhRoot                  /home/shopuser/shop.test/
+          configFile              /etc/sureshcloud-ols/shop.test/main.conf
+        }
+        CONF);
+
+        // The takeover test above depends on this answering false; pinned on
+        // its own so a guard widened by mistake fails here, by name.
+        expect(app(OlsSharedConfig::class)->ownedByServer('shop.test'))->toBeFalse();
+    });
+
     it('points vhRoot at the site, not at the config directory', function () {
         fakeOls(olsConfig());
 
@@ -538,6 +590,28 @@ describe('the driver', function () {
             ->and($vhost)->toMatch('/^\s*authName\s+Restricted$/m')
             ->and($vhost)->toMatch('/^realm '.$realm.' \{\n  userDB \{\n    location\s+\/home\/shopuser\/shop\/\.panel\/\.htpasswd\n  \}\n\}/m');
     })->with(['php', 'static', 'node']);
+
+    it('writes nothing for a site whose name is one of the server\'s own vhosts', function () {
+        // The shared config refuses on its own, but by then the site's
+        // `vhconf.conf` has been written — into the panel's own vhost folder,
+        // which is what took the UI down on 2026-09-29. So the driver asks
+        // first.
+        $this->app_->forceFill(['slug' => 'panel'])->save();
+
+        $runs = fakeOls(<<<'CONF'
+        virtualHost panel {
+          vhRoot                  /usr/local/lsws/conf/vhosts/panel/
+          configFile              /usr/local/lsws/conf/vhosts/panel/vhconf.conf
+        }
+        CONF);
+
+        $result = app(OlsDriver::class)->apply($this->app_->fresh('systemUser'), '/home/shopuser/panel/public_html');
+
+        $writes = collect($runs)->filter(fn (array $run) => in_array($run['command'][0], ['tee', 'mkdir', 'cp'], true));
+
+        expect($result->ok)->toBeFalse()
+            ->and($writes->all())->toBe([]);
+    });
 
     it('is resolved for a server running OpenLiteSpeed', function () {
         expect(app(WebServerManager::class)->driver())->toBeInstanceOf(OlsDriver::class);

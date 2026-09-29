@@ -170,7 +170,7 @@ class SlugConflict
      *
      * That is also where the fail-open property actually lives. The
      * `answered && ok` test below reads like the thing holding the door open
-     * and is not: removing it leaves `true ? parse : []`, and a refused `ls`
+     * and is not: removing it leaves `true ? parse : []`, and a refused listing
      * has no output to parse, so the answer is the empty list either way.
      * Measured — the sabotage is green. It is kept for what it says about
      * intent, not for what it does.
@@ -180,8 +180,19 @@ class SlugConflict
     private function entries(string $dir, array &$cache): array
     {
         if (! array_key_exists($dir, $cache)) {
+            // `find`, not `ls`: only binaries on the privilege allowlist run
+            // under sudo, and `ls` is not on it. Unelevated, `ls` could read
+            // `sites-available` and `pool.d` (world-readable) and not
+            // OpenLiteSpeed's vhosts directory (`lsadm`, 0750) — so on OLS
+            // every listing came back "Permission denied", read as empty, and
+            // a site named `panel` took over the panel's own vhost
+            // (2026-09-29, live). `find` is granted on every installed box, so
+            // this needs no `panel:sudoers` run to take effect.
             $result = $this->serverOps->probe(
-                ['ls', '-1', $dir],
+                // `-H`: follow the directory itself when it is a symlink, as
+                // `ls` did. Without it `find` lists nothing inside a linked
+                // `sites-available` or `pool.d`, which reads as "clear".
+                ['find', '-H', $dir, '-mindepth', '1', '-maxdepth', '1', '-printf', '%f\n'],
                 ['feature' => 'application', 'op' => 'slug_conflict', 'dir' => $dir],
                 timeout: 15,
             );
