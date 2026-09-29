@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Application;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\EnvFilePrivacy;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\SiteConfigResyncer;
 use App\Services\Server\Applications\SiteRootLock;
@@ -66,8 +67,30 @@ class ResyncSiteConfigs extends Command
         // and by the same means — see PanelDirectoryAccess.
         $this->call('panel:close-directory');
         $this->refreshUnits(app(ProcessSupervisor::class), app(ApplicationProvisioner::class));
+        $this->narrowEnvFiles(app(EnvFilePrivacy::class));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Take world access off every site's `.env` — see EnvFilePrivacy. Here
+     * because the installs that left it 0644 happened before the fix did.
+     * Only ever narrows, so a file the user tightened is left as it is.
+     */
+    private function narrowEnvFiles(EnvFilePrivacy $privacy): void
+    {
+        $count = 0;
+
+        foreach (Application::query()->with('systemUser')->get() as $application) {
+            if ($application->systemUser === null) {
+                continue;
+            }
+
+            $privacy->narrow($application);
+            $count++;
+        }
+
+        $this->info("Environment files: world access removed where present ({$count} site(s) checked).");
     }
 
     /**

@@ -202,3 +202,16 @@ it('gives the project root to the site user before copying into it as them', fun
         ->and($copy)->not->toBeFalse()
         ->and($chown)->toBeLessThan($copy);
 });
+
+it('takes world access off the .env once everything that writes it has run', function () {
+    // Statamic's create-project script copies `.env.example`: 0644.
+    $commands = collect(installStatamic())->pluck('command')->values();
+
+    $makeUser = $commands->search(fn (array $c) => in_array('make:user', $c, true));
+    $narrow = $commands->search(fn (array $c) => ($c[4] ?? null) === 'chmod' && ($c[5] ?? null) === 'o-rwx,g-w'
+        && ($c[6] ?? null) === test()->projectRoot.'/.env');
+
+    expect($makeUser)->not->toBeFalse()
+        ->and($narrow)->not->toBeFalse()
+        ->and($narrow)->toBeGreaterThan($makeUser);
+});

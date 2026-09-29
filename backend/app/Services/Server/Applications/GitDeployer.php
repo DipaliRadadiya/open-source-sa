@@ -45,6 +45,7 @@ class GitDeployer
         private ProvisionProgress $progress,
         private DeploymentRecorder $recorder,
         private PhpShim $shim,
+        private EnvFilePrivacy $envPrivacy,
     ) {}
 
     /**
@@ -166,6 +167,8 @@ class GitDeployer
             // Before the deploy script, which is where `php artisan migrate`
             // lives: it reads the file this seeds.
             $this->seedEnvironment($application, $documentRoot);
+            // The seed is a copy of the repository's example, 0644.
+            $this->envPrivacy->narrow($application);
 
             if (filled($this->script($application))) {
                 $this->runScript($application, $documentRoot);

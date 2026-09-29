@@ -42,6 +42,7 @@ class ApplicationProvisioner
         private ApplicationArtifacts $artifacts,
         private HttpReadinessCheck $readiness,
         private SiteRootLock $rootLock,
+        private EnvFilePrivacy $envPrivacy,
     ) {}
 
     /**
@@ -416,6 +417,10 @@ class ApplicationProvisioner
             // `systemctl start` succeeds, the process dies immediately, and
             // provisioning fails on a site that is otherwise fine.
             $this->startProcess($application, $documentRoot);
+
+            // After everything that may write a `.env` — installers and the
+            // first-start step alike. Several leave it 0644.
+            $this->envPrivacy->narrow($application);
         }
 
         // Last, and unable to fail the provision. The site is created, serving
