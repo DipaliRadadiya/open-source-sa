@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\Application\PullContainerImage;
 use App\Actions\Server\Application\UpdateContainerSettings;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Server\Application\UpdateContainerRequest;
 use App\Http\Resources\ApplicationResource;
@@ -66,8 +67,25 @@ class ApplicationContainerController extends Controller
             __('errors/application.not_a_container'),
         );
 
+        try {
+            $pulled = $action->execute($application);
+        } catch (ProvisioningFailedException $e) {
+            // 422 with the reason, not a 500 with "Server Error". The step and the
+            // reference are what support needs; the titled reason is what the
+            // person pressing the button needs, and a wrong credential is their
+            // problem to fix rather than a server fault to report.
+            return response()->json([
+                'message' => $e->reason !== null
+                    ? __('application.failure_reason.'.$e->reason)
+                    : __('errors/application.container_pull_failed'),
+                'step' => $e->step,
+                'reason' => $e->reason,
+                'reference' => $e->reference,
+            ], 422);
+        }
+
         return response()->json([
-            'application' => ApplicationResource::make($action->execute($application))->resolve(),
+            'application' => ApplicationResource::make($pulled)->resolve(),
         ]);
     }
 

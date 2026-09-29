@@ -3,6 +3,7 @@
 namespace App\Actions\Server\Application;
 
 use App\Enums\ApplicationStatus;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\ActivityLogger;
 use App\Services\Server\Applications\ApplicationProvisioner;
@@ -41,10 +42,31 @@ class PullContainerImage
             'registry_id' => $application->registry_id,
         ]);
 
-        $this->containers->pull(
-            $application,
-            $this->provisioner->documentRoot($application),
-        );
+        // Cleared first, so a row that failed last time does not keep showing
+        // yesterday's reason beside today's success.
+        $application->forceFill(['failed_step' => null, 'failed_reason' => null])->save();
+
+        try {
+            $this->containers->pull(
+                $application,
+                $this->provisioner->documentRoot($application),
+            );
+        } catch (ProvisioningFailedException $e) {
+            // Recorded on the row, not only thrown. The provisioning JOB does this
+            // for every other failure, and this endpoint is synchronous — so
+            // without it the card beside the button shows a healthy site while the
+            // pull that just failed is reported only by a toast that clears itself.
+            //
+            // Found on a real box: a rejected credential returned a bare 500
+            // "Server Error" and left `failed_reason` null, which is exactly the
+            // uninformative failure this whole feature exists to replace.
+            $application->forceFill([
+                'failed_step' => $e->step,
+                'failed_reason' => $e->reason,
+            ])->save();
+
+            throw $e;
+        }
 
         return $application->fresh(['systemUser', 'registry']);
     }

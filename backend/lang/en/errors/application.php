@@ -36,6 +36,7 @@ return [
     'not_a_git_application' => 'The application is not a git deployment, so there is nothing to fetch.',
     'not_a_container' => 'This application does not run in a container, so it has no container settings.',
     'container_not_running' => 'This container is not running, so there is nothing to update. Provision or enable the site first.',
+    'container_pull_failed' => 'The image could not be pulled. Reference :reference.',
     'docker_removal_not_permitted' => 'You don\'t have permission to delete Docker networks or volumes. Remove the site without them, or ask someone with Docker access.',
     'no_database_engine' => 'No database engine is available. Install and configure MySQL or MariaDB before creating this application.',
     'no_process' => '\":name\" does not run a process of its own.',

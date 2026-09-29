@@ -56,9 +56,9 @@ beforeEach(function () {
  *
  * @param  callable|null  $onUp  return a failure to make `compose up` fail.
  */
-function recordPull(array &$ran, ?callable $onUp = null): void
+function recordPull(array &$ran, ?callable $onUp = null, string $failVerb = 'up'): void
 {
-    Process::fake(function ($process) use (&$ran, $onUp) {
+    Process::fake(function ($process) use (&$ran, $onUp, $failVerb) {
         $args = $process->command;
 
         // `sudo -n` and `sudo -n env X=y` wrappers are ServerOps' business, not
@@ -69,7 +69,7 @@ function recordPull(array &$ran, ?callable $onUp = null): void
 
         $ran[] = ['args' => $args, 'input' => $process->input];
 
-        if (($args[0] ?? '') === 'docker' && in_array('up', $args, true) && $onUp !== null) {
+        if (($args[0] ?? '') === 'docker' && in_array($failVerb, $args, true) && $onUp !== null) {
             return $onUp();
         }
 
@@ -327,4 +327,65 @@ it('pulls and reports the site back', function () {
         ->assertJsonPath('application.registry_id', $this->registry->id);
 
     expect(composeCall($ran, 'pull'))->not->toBeNull();
+});
+
+/*
+ * The endpoint's failure shape. Found on a real box, not here: the classifier was
+ * asserted from the supervisor and nothing checked that the ENDPOINT surfaced it,
+ * so a rejected credential answered a bare 500 "Server Error" and left the row
+ * claiming the site was fine — which is the uninformative failure this whole
+ * feature exists to replace.
+ */
+
+it('answers 422 with the reason, not 500 with nothing', function () {
+    $ran = [];
+    recordPull($ran, fn () => Process::result(
+        output: '',
+        errorOutput: 'Error response from daemon: authentication required - incorrect username or password',
+        exitCode: 18,
+    ));
+
+    $response = $this->withHeaders(['Authorization' => 'Bearer '.$this->admin->createToken('t')->plainTextToken])
+        ->postJson('/api/applications/'.$this->application->id.'/container/pull')
+        ->assertStatus(422)
+        ->assertJsonPath('reason', 'registry_credentials_rejected');
+
+    // The titled reason, so the person who pressed the button is told what to fix
+    // rather than being handed a log reference and a shrug.
+    expect($response->json('message'))->toBe(__('application.failure_reason.registry_credentials_rejected'))
+        ->and($response->json('reference'))->not->toBeEmpty();
+});
+
+it('records the failure on the row, so the card does not claim the site is fine', function () {
+    // Failing `pull` rather than `up`, so the recorded STEP is the pull's own —
+    // `container_start` would be the honest answer for a failure after the image
+    // arrived, and the two are not interchangeable in a support conversation.
+    $ran = [];
+    recordPull($ran, fn () => Process::result(
+        output: '',
+        errorOutput: 'Error response from daemon: pull access denied for x/y, repository does not exist or may require \'docker login\'',
+        exitCode: 18,
+    ), failVerb: 'pull');
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$this->admin->createToken('t')->plainTextToken])
+        ->postJson('/api/applications/'.$this->application->id.'/container/pull')
+        ->assertStatus(422);
+
+    expect($this->application->fresh()->failed_reason)->toBe('registry_auth')
+        ->and($this->application->fresh()->failed_step)->toBe('image_pull');
+});
+
+it('clears a previous failure when a pull succeeds', function () {
+    // Otherwise the row keeps showing yesterday's reason beside today's success.
+    $this->application->forceFill(['failed_step' => 'image_pull', 'failed_reason' => 'registry_auth'])->save();
+
+    $ran = [];
+    recordPull($ran);
+
+    $this->withHeaders(['Authorization' => 'Bearer '.$this->admin->createToken('t')->plainTextToken])
+        ->postJson('/api/applications/'.$this->application->id.'/container/pull')
+        ->assertOk();
+
+    expect($this->application->fresh()->failed_reason)->toBeNull()
+        ->and($this->application->fresh()->failed_step)->toBeNull();
 });
