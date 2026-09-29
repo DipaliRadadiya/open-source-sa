@@ -416,6 +416,29 @@ describe('restarting', function () {
             ->toBeTrue();
     });
 
+    it('asks as the account the worker runs as, never the panel\'s', function (string $kind, string $command, string $verb) {
+        // As the panel's own account `queue:restart` could read the site's
+        // code but not write its `storage/`: Laravel could not open its log,
+        // exited 1, and every graceful restart — the button and every
+        // restart-on-deploy — fell back to a hard supervisor restart that
+        // kills the running job (found live 2026-09-29).
+        fakeWorkerSupervisor();
+        $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload([
+            'name' => 'Q', 'command' => $command, 'kind' => $kind,
+        ]));
+        $worker = Worker::first();
+
+        WorkerFake::$ran = [];
+        $this->actingAs($this->admin)->postJson(workerUrl("/{$worker->id}/restart"))->assertOk();
+
+        $graceful = collect(WorkerFake::$ran)->first(fn (string $c) => str_contains($c, "artisan {$verb}"));
+
+        expect($graceful)->toStartWith('runuser -u workerowner -- ');
+    })->with([
+        'queue' => ['queue', 'php8.4 artisan queue:work', 'queue:restart'],
+        'horizon' => ['horizon', 'php8.4 artisan horizon', 'horizon:terminate'],
+    ]);
+
     it('uses horizon:terminate for Horizon', function () {
         fakeWorkerSupervisor();
         $this->actingAs($this->admin)->postJson(workerUrl(), workerPayload([

@@ -2911,7 +2911,7 @@ Workers are **supervisord programs** — one `[program:sv-worker-{slug}]` block 
 
 `extra_config` is appended to the program block verbatim, so a directive there wins over everything the panel wrote — the same shape as `additional_directives` on PHP settings. It **may not contain `[`**: a section header would define a second program the panel does not know about and would never stop. Max 2000 characters; both are 422s.
 
-`kind` is `queue`, `horizon` or `custom`, and it decides **how** a restart happens: `queue:restart` for a queue worker, `horizon:terminate` for Horizon, a direct unit restart otherwise. It is not cosmetic. A queue worker and Horizon on the same application both consume the same queue and would run every job twice — neither tool can detect the other, so the request layer rejects the combination.
+`kind` is `queue`, `horizon` or `custom`, and it decides **how** a restart happens: `queue:restart` for a queue worker, `horizon:terminate` for Horizon (both run as the worker's own account), a supervisor restart otherwise — and also whenever the graceful command fails. It is not cosmetic. A queue worker and Horizon on the same application both consume the same queue and would run every job twice — neither tool can detect the other, so the request layer rejects the combination.
 
 `restart_on_deploy` makes the worker pick up new code after a deploy; without it a deploy leaves the site on new code and the queue on old code, with nothing anywhere connecting the two.
 
@@ -2969,7 +2969,7 @@ Add a worker.
 
 Update worker settings. Changes rewrite the program block, then `supervisorctl reread` followed by `update`, and restart the worker.
 
-**Request:** `{"processes": 4, "enabled": false}` — same fields as create, all optional.
+**Request:** the same fields as create, with **`name` and `command` required** (it is the create form sent again — the panel's edit dialog always sends the whole form). Corrected 2026-09-29: this said all fields were optional, and a partial body like `{"processes": 4}` is a 422.
 
 **Response `200`:** `{"worker": {...updated...}}`
 
