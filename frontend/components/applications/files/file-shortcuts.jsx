@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { useTranslations } from "next-intl";
 import { Image as ImageIcon, Palette, Plug, FileCog } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,7 @@ const ICONS = { uploads: ImageIcon, themes: Palette, plugins: Plug, config: File
  * Its own slim row under the breadcrumb, not part of the toolbar: these are
  * places to go, not things to do to this folder.
  */
-export function FileShortcuts({ appId, siteType, path, onAction }) {
+export function FileShortcuts({ appId, siteType, path, onAction, canManage = true }) {
   const t = useTranslations("applications.files");
   const shortcuts = appShortcuts(siteType);
   if (!shortcuts.length) return null;
@@ -36,15 +37,17 @@ export function FileShortcuts({ appId, siteType, path, onAction }) {
           // navigating to a folder view that would only show its parent.
           const name = target.split("/").pop();
           return (
-            <button
-              key={key}
-              type="button"
-              className={chip}
-              onClick={() => onAction("edit", { name, path: target, type: "file" })}
-            >
-              <Icon className="size-3.5 text-muted-foreground" aria-hidden />
-              <span className="font-mono">{label}</span>
-            </button>
+            <ReasonTooltip key={key} reason={canManage ? null : t("noPermission")}>
+              <button
+                type="button"
+                className={cn(chip, !canManage && "cursor-not-allowed opacity-50 hover:bg-card")}
+                disabled={!canManage}
+                onClick={() => onAction("edit", { name, path: target, type: "file" })}
+              >
+                <Icon className="size-3.5 text-muted-foreground" aria-hidden />
+                <span className="font-mono">{label}</span>
+              </button>
+            </ReasonTooltip>
           );
         }
         const here = path === target;

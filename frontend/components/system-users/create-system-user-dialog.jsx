@@ -127,9 +127,17 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
   const isSubmitting = form.formState.isSubmitting;
 
   const [sudoOn, chosenShell] = useWatch({ control: form.control, name: ["sudo", "shell"] });
-  const sshViaSudo =
-    sudoOn &&
-    shells.find((entry) => entry.value === (chosenShell || DEFAULT_SHELL))?.allows_login !== false;
+  const chosenShellEntry = shells.find((entry) => entry.value === (chosenShell || DEFAULT_SHELL));
+  const sshViaSudo = sudoOn && chosenShellEntry?.allows_login !== false;
+  // A shell that refuses login cannot carry SSH access — the API refuses the
+  // pair — so the switch goes off and stays off while that shell is chosen.
+  const noLoginShell = chosenShellEntry?.allows_login === false;
+  useEffect(() => {
+    if (noLoginShell && form.getValues("ssh_access")) {
+      form.setValue("ssh_access", false, { shouldDirty: true });
+      form.clearErrors("ssh_access");
+    }
+  }, [noLoginShell, form]);
 
   function handleOpenChange(next) {
     if (!next) {
@@ -316,8 +324,13 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
                   label: t("create.sshAccess"),
                   // Same rule as the list: sudo users always get SSH, so the
                   // switch shows that and stays out of the way.
-                  hint: sshViaSudo ? t("sshViaSudo") : t("create.sshAccessHint"),
-                  locked: sshViaSudo,
+                  hint: noLoginShell
+                    ? t("create.sshNeedsLoginShell", { shell: chosenShellEntry.title })
+                    : sshViaSudo
+                      ? t("sshViaSudo")
+                      : t("create.sshAccessHint"),
+                  locked: sshViaSudo || noLoginShell,
+                  lockedValue: !noLoginShell,
                 },
               ].map((toggle) => (
                 <FormField
@@ -341,7 +354,7 @@ export function CreateSystemUserDialog({ open, onOpenChange, onCreated, initialS
                         <div className="flex h-5 shrink-0 items-center">
                           <FormControl>
                             <Switch
-                              checked={toggle.locked ? true : field.value}
+                              checked={toggle.locked ? toggle.lockedValue : field.value}
                               disabled={toggle.locked}
                               disabledReason={toggle.locked ? toggle.hint : undefined}
                               onCheckedChange={field.onChange}

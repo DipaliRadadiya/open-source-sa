@@ -767,7 +767,6 @@
       "remove": "Eliminar clave",
       "removeTitle": "¿Eliminar clave SSH?",
       "removeDescription": "Esto elimina “{name}” de las claves autorizadas del usuario.",
-      "removeConfirm": "Quitar",
       "publicKeyHint": "La mitad .pub de un par de claves SSH. Es seguro compartirla: así es como el servidor lo reconoce. Nunca pegue aquí la clave privada.",
       "nameHint": "Un nombre para que pueda distinguir esta clave más adelante, por ejemplo, a qué portátil pertenece."
     },
@@ -800,7 +799,7 @@
     },
     "loadFailed": "No se pudieron cargar tus usuarios del sistema. No se han modificado ni eliminado.",
     "sshNotEnforced": {
-      "body": "Los interruptores SSH aún no están activos, así que todos los usuarios pueden entrar por SSH. Guarda Ajustes → Acceso y seguridad para activarlos.",
+      "body": "Los interruptores SSH aún no están activos: todos los usuarios pueden entrar por SSH hasta que se guarde Acceso y seguridad.",
       "action": "Abrir Acceso y seguridad"
     },
     "sshViaSudo": "Los usuarios con sudo siempre pueden entrar por SSH. Desactiva sudo para controlar el SSH aquí."
@@ -2715,7 +2714,8 @@
       "password": "Contraseña",
       "copyString": "Copiar cadena de conexión",
       "copyField": "Copiar {field}",
-      "otherUsers": "{count, plural, =1 {Un usuario más puede conectarse a esta base de datos.} other {# usuarios más pueden conectarse a esta base de datos.}} Consulta la pestaña Usuarios."
+      "otherUsers": "{count, plural, =1 {Un usuario más puede conectarse a esta base de datos.} other {# usuarios más pueden conectarse a esta base de datos.}} Consulta la pestaña Usuarios.",
+      "passwordWithheld": "Oculta: tu rol no puede gestionar bases de datos."
     },
     "users": {
       "title": "Usuarios",
@@ -2767,7 +2767,8 @@
       "newPasswordRequired": "Nueva contraseña (obligatoria para renombrar en MongoDB)",
       "nameIsFixed": "El nombre de un usuario de base de datos no se puede cambiar después de crearlo. Crea otro usuario en su lugar.",
       "newPasswordRequiredHint": "MongoDB no puede renombrar un usuario, así que la cuenta se vuelve a crear desde cero. Por eso es necesario establecer una contraseña.",
-      "passwordUnknown": "El panel no conoce la contraseña: esta cuenta viene de otro servidor. Cambia la contraseña para obtener una cadena de conexión."
+      "passwordUnknown": "El panel no conoce la contraseña: esta cuenta viene de otro servidor. Cambia la contraseña para obtener una cadena de conexión.",
+      "passwordWithheld": "Contraseña oculta: tu rol no puede gestionar bases de datos."
     },
     "detail": {
       "size": "Tamaño",
@@ -3872,7 +3873,8 @@
         "added": "Webhook añadido al repositorio",
         "addedBody": "El panel lo añadió en {provider} por ti, así que no hay nada que pegar. Cada push a {branch} se despliega automáticamente.",
         "rotateConfirmBodyRegistered": "Se genera un nuevo secreto y el actual deja de funcionar. El panel actualiza el webhook en {provider} por ti, así que el despliegue automático sigue funcionando.",
-        "tokenTooShort": "El token de firma debe tener al menos 16 caracteres."
+        "tokenTooShort": "El token de firma debe tener al menos 16 caracteres.",
+        "secretWithheld": "El secreto solo se muestra a quien puede desplegar."
       },
       "cancel": "Cancelar",
       "runtime": {
@@ -5057,33 +5059,26 @@
         "domainLabelHint": "La dirección para la copia de staging. Use algo que obviamente no sea su aplicación en producción."
       },
       "pushDialog": {
-        "title": "¿Publicar pruebas sobre {domain}?",
-        "description": "Todo lo que hay en {staging} se copia sobre {production}. No se puede deshacer.",
-        "downtime": "Tu aplicación se queda fuera de servicio mientras se ejecuta, y los visitantes verán una página de mantenimiento hasta que termine.",
-        "failSafe": "Si la publicación falla a mitad, producción vuelve a quedar como estaba.",
-        "whatToPush": "Qué se debe copiar",
+        "title": "¿Publicar pruebas en producción?",
+        "whatToPush": "Qué publicar",
         "modes": {
           "files": {
             "label": "Solo archivos",
-            "replaces": "Los archivos de la aplicación",
-            "deletes": "Los archivos que solo existen en producción. Los archivos subidos se conservan.",
-            "undo": "Ninguno una vez terminada"
+            "summary": "Los archivos de la aplicación. La base de datos no se toca.",
+            "consequence": "Se eliminan los archivos que solo existen en producción. Los archivos subidos se conservan."
           },
           "database": {
             "label": "Solo base de datos",
-            "replaces": "La base de datos",
-            "deletes": "Todo lo escrito desde que se hizo la copia: pedidos, comentarios, entradas",
-            "undo": "Ninguno desde el panel. La base de datos anterior se guarda en el servidor.",
-            "note": "Producción necesita los mismos plugins y temas que staging. La base de datos los espera, y si falta alguno la aplicación puede quedarse en blanco."
+            "summary": "Contenido y ajustes. Los archivos no se tocan.",
+            "consequence": "Se reemplaza todo lo escrito en producción desde que se hizo la copia: pedidos, comentarios, entradas. Producción también necesita los mismos plugins y temas que staging, o la aplicación puede quedarse en blanco."
           },
           "full": {
             "label": "Archivos y base de datos",
-            "replaces": "Los archivos de la aplicación y la base de datos",
-            "deletes": "Los archivos que solo están en producción (los archivos subidos se conservan) y todo lo escrito desde la copia",
-            "undo": "Ninguno desde el panel. La base de datos anterior se guarda en el servidor; los archivos no."
+            "summary": "Archivos y base de datos. Producción pasa a ser una copia de staging.",
+            "consequence": "Se eliminan los archivos que solo están en producción (los archivos subidos se conservan) y se reemplaza todo lo escrito en producción desde la copia: pedidos, comentarios, entradas."
           }
         },
-        "backupFirst": "No hay vuelta atrás. <link>Haz antes una copia de seguridad</link> si aún no la tienes.",
+        "backupFirst": "No se puede deshacer una vez terminado: <link>haz antes una copia de seguridad</link>.",
         "confirmLabel": "Escribe {domain} para confirmar",
         "pickMode": "Elige qué copiar",
         "typeToUnlock": "Escribe el dominio de producción para confirmar",
@@ -5094,12 +5089,7 @@
         "failed": "La publicación no terminó.",
         "copyAge": "Copia hecha {age}",
         "copyDomain": "Copiar dominio",
-        "whatToPushHint": "Archivos copia el código y los archivos subidos. Base de datos copia el contenido. Ambos copia todo.",
-        "facts": {
-          "replaces": "Reemplaza",
-          "deletes": "Elimina",
-          "undo": "Deshacer"
-        }
+        "whileRunning": "La aplicación queda fuera de servicio mientras se ejecuta. Si falla a mitad, producción vuelve a quedar como estaba."
       },
       "isCopy": {
         "title": "Esta aplicación es una copia de pruebas",

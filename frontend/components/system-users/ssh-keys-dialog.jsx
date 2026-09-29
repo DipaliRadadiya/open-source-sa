@@ -126,7 +126,10 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
     }
   }
 
+  // One click (Krishna, 2026-09-29): the second "Remove / Cancel" step inside
+  // this dialog read as asking twice. The row shows the removal while it runs.
   async function onRemove(id) {
+    setRemoving(id);
     setPending(true);
     try {
       await deleteSystemUserSshKey(user.id, id);
@@ -142,6 +145,7 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
         if (await load()) toast.success(t("toast.keyRemoved"));
         return;
       }
+      setRemoving(null);
       toast.error(apiMessage(error, genericErrorMessage()));
     } finally {
       setPending(false);
@@ -224,41 +228,22 @@ export function SshKeysDialog({ user, open, onOpenChange, canManage = true }) {
                           </p>
                         </div>
                       </div>
-                      {!canManage ? null : removing === key.id ? (
-                        <div className="flex shrink-0 items-center gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setRemoving(null)}
-                            disabled={pending}
-                          >
-                            {t("cancel")}
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => onRemove(key.id)}
-                            disabled={pending}
-                          >
-                            {pending && (
-                              <Loader2 className="size-3.5 animate-spin" />
-                            )}
-                            {t("sshForm.removeConfirm")}
-                          </Button>
-                        </div>
-                      ) : (
+                      {!canManage ? null : (
                         <IconTooltip label={t("sshForm.remove")}>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => setRemoving(key.id)}
+                            className="size-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => onRemove(key.id)}
+                            disabled={pending}
                             aria-label={t("sshForm.remove")}
                           >
-                            <Trash2 className="size-4" />
+                            {removing === key.id ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-4" />
+                            )}
                           </Button>
                         </IconTooltip>
                       )}

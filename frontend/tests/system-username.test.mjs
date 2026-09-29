@@ -16,3 +16,10 @@ test("a taken name gets a suffix and stays within 32 characters", () => {
   assert.ok(long.length <= 32 && long.endsWith("-2"));
   assert.match(long, /^[a-z_][a-z0-9_-]{0,31}$/);
 });
+
+test("with no usable app name, the backend's app-xxxx shape is used, never an empty field", async () => {
+  const { fallbackSystemUsername } = await import("../lib/applications/system-username.js");
+  const name = fallbackSystemUsername(["app-aaaa"]);
+  assert.match(name, /^app-[a-z0-9]{4}$/);
+  assert.notEqual(name, "app-aaaa");
+});

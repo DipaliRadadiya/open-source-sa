@@ -120,6 +120,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
       if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
         form.setError("root.server", { message: t("edit.failedStopped") });
         refresh();
+        scrollToFirstError();
         return;
       }
       /*
@@ -130,6 +131,8 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
        * refusal on the form, where it stays put while the dialog does.
        */
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
+      // The dialog scrolls; the reason can land above or below what is on screen.
+      scrollToFirstError();
     }
   }
 
@@ -174,6 +177,7 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
         {serverError ? (
           <p
             role="alert"
+            data-form-error
             className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive"
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />

@@ -96,7 +96,7 @@ import {
 } from "@/lib/applications/form-reset";
 import { CreateReadinessPanel } from "@/components/applications/create-readiness-panel";
 import { createSystemUser, deleteSystemUser } from "@/lib/api/system-users";
-import { suggestSystemUsername } from "@/lib/applications/system-username";
+import { fallbackSystemUsername, suggestSystemUsername } from "@/lib/applications/system-username";
 
 const COMMON_FIELD_NAMES = new Set([
   "site_type",
@@ -805,6 +805,8 @@ export function CreateApplicationForm({
   // Set once the username is typed in, so renaming the application stops
   // overwriting it.
   const usernameEdited = useRef(false);
+  // Used until the name gives a usable one, so the field is never blank.
+  const fallbackUsername = useRef("");
   // A second click lands before React has disabled the button, and would
   // create the same system user twice.
   const submitting = useRef(false);
@@ -877,9 +879,12 @@ export function CreateApplicationForm({
   }, [form]);
   useEffect(() => {
     if (usernameEdited.current) return;
+    const taken = systemUsers.map((user) => user.username);
+    const suggested = suggestSystemUsername(name, taken);
+    if (!suggested && !fallbackUsername.current) fallbackUsername.current = fallbackSystemUsername(taken);
     form.setValue(
       "system_user_username",
-      suggestSystemUsername(name, systemUsers.map((user) => user.username)),
+      suggested || fallbackUsername.current,
       { shouldValidate: Boolean(form.formState.errors.system_user_username) },
     );
   }, [name, form, systemUsers]);

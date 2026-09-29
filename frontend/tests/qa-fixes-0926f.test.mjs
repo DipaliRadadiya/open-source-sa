@@ -23,7 +23,7 @@ test("ST-B: push is only offered for a copy that finished being created", () => 
 
 test("ST-D: a failed push or create re-reads the page", () => {
   assert.match(push, /toast\.error\(apiMessage\(error, t\("failed"\)\)\);\n\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*router\.refresh\(\);/);
-  assert.match(create, /router\.refresh\(\);\n\s*\}\n\s*\} finally/);
+  assert.match(create, /toast\.error\(apiMessage\(error, t\("failed"\)\)\);[\s\S]{0,200}router\.refresh\(\);/);
 });
 
 test("ST-E: view-only is told why there is no button", () => {
@@ -56,12 +56,11 @@ test("ST-C: the push wording matches the backend, in every locale", () => {
   for (const l of LOCALES) {
     const s = JSON.parse(read(`messages/${l}.json`)).applications.staging;
     for (const k of ["noPermission"]) assert.ok(s[k], `${l} ${k}`);
-    assert.ok(s.push.notReady && s.pushDialog.failSafe, l);
-    const m = s.pushDialog.modes;
-    for (const [mode, row] of [["files", "undo"], ["database", "undo"], ["full", "undo"]]) assert.ok(m[mode][row], `${l} ${mode}.${row}`);
+    assert.ok(s.push.notReady && s.pushDialog.whileRunning, l);
+    for (const mode of ["files", "database", "full"]) assert.ok(s.pushDialog.modes[mode].consequence, `${l} ${mode}`);
   }
-  const en = JSON.parse(read("messages/en.json")).applications.staging.pushDialog.modes;
-  assert.match(en.files.deletes, /Uploads are kept/);
-  assert.doesNotMatch(en.files.undo, /nothing is copied first/);
-  assert.match(en.database.undo, /None from the panel/);
+  const en = JSON.parse(read("messages/en.json")).applications.staging.pushDialog;
+  assert.match(en.modes.files.consequence, /Uploads are kept/);
+  assert.match(en.whileRunning, /put back as it was/);
+  assert.match(en.backupFirst, /no undo/);
 });

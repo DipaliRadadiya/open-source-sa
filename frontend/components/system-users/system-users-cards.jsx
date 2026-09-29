@@ -36,7 +36,7 @@ export function SystemUsersCards({ users, shells = [], canManage = false, prevPa
                 {/* Same rule as the table: the Password fact below already
                     says "Not set" for a manager, and only a viewer — who has
                     no such fact — needs the badge. */}
-                {!canManage && !user.password ? (
+                {!canManage && !(user.password_known ?? user.password) ? (
                   <Badge variant="warning" className="font-normal">
                     {t("noPassword")}
                   </Badge>

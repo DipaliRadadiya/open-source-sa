@@ -62,7 +62,7 @@ export function FilesPanel({
   // An image opens in the preview, text in the editor; anything else (an
   // archive, a binary) has nowhere to open, so its row is highlighted instead.
   const [action, setAction] = useState(() =>
-    openedFile && canOpenFile(openedFile.name)
+    openedFile && canManage && canOpenFile(openedFile.name)
       ? { type: isImageFile(openedFile.name) ? "preview" : "edit", file: openedFile }
       : null,
   ); // { type, file }
@@ -375,7 +375,7 @@ export function FilesPanel({
         ) : null}
       </div>
 
-      <FileShortcuts appId={appId} siteType={siteType} path={path} onAction={onAction} />
+      <FileShortcuts appId={appId} siteType={siteType} path={path} onAction={onAction} canManage={canManage} />
 
       {/*
         One toolbar on one surface, instead of eight controls floating on the
@@ -459,7 +459,7 @@ export function FilesPanel({
       )}
 
       {siteSearch ? (
-        <SiteSearchResults appId={appId} query={query} onAction={onAction} />
+        <SiteSearchResults appId={appId} query={query} onAction={onAction} canManage={canManage} />
       ) : files.length === 0 && !showHidden && hiddenCount > 0 ? (
         /*
          * There ARE files here — they are just hidden.

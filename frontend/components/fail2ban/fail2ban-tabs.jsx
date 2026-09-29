@@ -1,5 +1,6 @@
 "use client";
 
+import { useBrowserIp } from "@/components/network/browser-ip";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ShieldCheck, SlidersHorizontal } from "lucide-react";
@@ -22,8 +23,11 @@ const TRIGGER = "gap-2 px-3 py-1.5";
  * The one thing that must NOT hide behind a tab is the lockout risk, so an
  * unignored address puts a marker on the settings trigger.
  */
-export function Fail2banTabs({ live, settings, needsAttention, status }) {
+export function Fail2banTabs({ live, settings, ignoreIps = [], status }) {
   const t = useTranslations("fail2ban");
+  // Your address, as the browser sees it, is not on the ignore list.
+  const yourIp = useBrowserIp();
+  const needsAttention = Boolean(yourIp && !ignoreIps.includes(yourIp));
   const [tab, setTab] = useState("live");
 
   return (

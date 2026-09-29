@@ -66,7 +66,7 @@ export function FilesCards({
                   <Link2 className="size-4 shrink-0 text-muted-foreground" />
                 )
               ) : (
-                <FileThumb file={file} appId={appId} className="size-5" />
+                <FileThumb file={file} appId={appId} className="size-5" canPreview={canManage} />
               )}
               <div className="min-w-0">
                 {file.type === "dir" ? (
@@ -99,7 +99,7 @@ export function FilesCards({
                   // already wider than the column — and the name spilled across
                   // the row's action icons instead of ellipsing.
                   // Nothing to open — see the note in files-table.
-                  !canOpenFile(file.name) ? (
+                  !canManage || !canOpenFile(file.name) ? (
                     <span className={cn("block w-full font-medium", FILE_NAME)} title={file.name}>
                       {file.name}
                     </span>

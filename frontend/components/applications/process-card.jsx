@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRefresh } from "@/hooks/use-refresh";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Play, RotateCw, Square } from "lucide-react";
@@ -35,17 +35,24 @@ export function ProcessCard({ application, canManage = false, className }) {
   const t = useTranslations("applications.process");
   const tApp = useTranslations("applications");
   const format = useFormatter();
-  const router = useRouter();
+  const { refreshThen } = useRefresh();
   const [pending, setPending] = useState(null);
   const [confirmStop, setConfirmStop] = useState(false);
-  // systemd records a stopped Node process as "failed" (it exits on SIGTERM),
-  // so the card called the Stop someone just pressed a crash. Remembered for
-  // this visit only; the server's own answer is still the one after a reload.
-  const [stoppedHere, setStoppedHere] = useState(false);
+  // What the last button here should have done. systemd records a stopped
+  // Node process as "failed" (it exits on SIGTERM), so after Stop that reads
+  // as stopped for this visit. After Start/Restart the old state is still on
+  // the page until the re-read lands; it showed "Process failed" under a
+  // success toast, so it reads as starting until then.
+  const [expected, setExpected] = useState(null);
 
   const process = application.process ?? {};
   const rawState = process.state ?? "unknown";
-  const state = stoppedHere && rawState === "failed" ? "inactive" : rawState;
+  const state =
+    expected === "stopped" && rawState === "failed"
+      ? "inactive"
+      : expected === "running" && rawState !== "active"
+        ? "activating"
+        : rawState;
   const stateLabel =
     state === "active"
       ? tApp("status.active")
@@ -67,13 +74,16 @@ export function ProcessCard({ application, canManage = false, className }) {
     setPending(action);
     try {
       await controlApplicationProcess(application.id, action);
-      setStoppedHere(action === "stop");
       setConfirmStop(false);
-      toast.success(t(DONE_KEY[action]));
-      router.refresh();
+      setExpected(action === "stop" ? "stopped" : "running");
+      // Busy until the page has the new state, and the toast with it.
+      refreshThen(() => {
+        toast.success(t(DONE_KEY[action]));
+        setPending(null);
+        if (action !== "stop") setExpected(null);
+      });
     } catch (error) {
       toast.error(apiMessage(error, t("failed")));
-    } finally {
       setPending(null);
     }
   }

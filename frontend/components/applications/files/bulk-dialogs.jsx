@@ -43,7 +43,11 @@ import { useRefresh } from "@/hooks/use-refresh";
  * and let the panel decide what to show. None of them reports success itself
  * when something failed — a toast cannot carry a list of paths.
  */
-export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChange, onResult }) {
+export function BulkDialogs({ appId, action, paths: selectedPaths, files = [], path, onOpenChange, onResult }) {
+  // Fixed at open. The list refreshes before the dialog closes, and after a
+  // move the selection is no longer on screen — the live value went empty and
+  // `dirname(paths[0])` took the whole page down.
+  const [paths] = useState(selectedPaths);
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const { pending: refreshing, refreshThen } = useRefresh();
@@ -110,9 +114,9 @@ export function BulkDialogs({ appId, action, paths, files = [], path, onOpenChan
   const [mode, setMode] = useState(() => currentMode ?? "");
   const [error, setError] = useState(null);
   const archiveFormat = useArchiveFormat();
-  // Off every time the dialog mounts. BulkDialogs is mounted per action by the
-  // panel, so there is no stale value to carry between two deletes.
-  const [permanent, setPermanent] = useState(false);
+  // On every time the dialog mounts (Krishna, 2026-09-29). BulkDialogs is
+  // mounted per action by the panel, so no value carries between two deletes.
+  const [permanent, setPermanent] = useState(true);
 
   async function run(call) {
     if (busy) return;

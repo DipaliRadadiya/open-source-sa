@@ -187,7 +187,6 @@
       "remove": "Retirer la clé",
       "removeTitle": "Retirer la clé SSH ?",
       "removeDescription": "Ceci retire « {name} » des clés autorisées de l'utilisateur.",
-      "removeConfirm": "Retirer",
       "publicKeyHint": "La moitié .pub d’une paire de clés SSH. Elle peut être partagée sans risque : c’est grâce à elle que le serveur vous reconnaît. Ne collez jamais la clé privée ici.",
       "nameHint": "Un nom pour pouvoir reconnaître cette clé plus tard — par exemple, l'ordinateur portable auquel elle appartient."
     },
@@ -220,7 +219,7 @@
     },
     "loadFailed": "Vos utilisateurs système n'ont pas pu être chargés. Ils n'ont pas été modifiés ni supprimés.",
     "sshNotEnforced": {
-      "body": "Les interrupteurs SSH ne sont pas encore actifs : tous les utilisateurs peuvent toujours se connecter en SSH. Enregistrez Paramètres → Accès et sécurité pour les activer.",
+      "body": "Les interrupteurs SSH ne sont pas encore actifs : tous les utilisateurs peuvent se connecter en SSH tant qu'Accès et sécurité n'est pas enregistré.",
       "action": "Ouvrir Accès et sécurité"
     },
     "sshViaSudo": "Les utilisateurs sudo peuvent toujours se connecter en SSH. Désactivez sudo pour contrôler le SSH ici."
@@ -2715,7 +2714,8 @@
       "password": "Mot de passe",
       "copyString": "Copier la chaîne de connexion",
       "copyField": "Copier {field}",
-      "otherUsers": "{count, plural, =1 {Un autre utilisateur peut se connecter à cette base.} other {# autres utilisateurs peuvent se connecter à cette base.}} Voir l'onglet Utilisateurs."
+      "otherUsers": "{count, plural, =1 {Un autre utilisateur peut se connecter à cette base.} other {# autres utilisateurs peuvent se connecter à cette base.}} Voir l'onglet Utilisateurs.",
+      "passwordWithheld": "Masqué — votre rôle ne peut pas gérer les bases de données."
     },
     "users": {
       "title": "Utilisateurs",
@@ -2767,7 +2767,8 @@
       "newPasswordRequired": "Nouveau mot de passe (requis pour renommer sur MongoDB)",
       "nameIsFixed": "Le nom d'un utilisateur de base de données ne peut pas être modifié après sa création. Créez un autre utilisateur.",
       "newPasswordRequiredHint": "MongoDB ne peut pas renommer un utilisateur, donc le compte est recréé de zéro. C’est pourquoi il faut définir un mot de passe.",
-      "passwordUnknown": "Le panneau ne connaît pas le mot de passe : ce compte provient d'un autre serveur. Changez le mot de passe pour obtenir une chaîne de connexion."
+      "passwordUnknown": "Le panneau ne connaît pas le mot de passe : ce compte provient d'un autre serveur. Changez le mot de passe pour obtenir une chaîne de connexion.",
+      "passwordWithheld": "Mot de passe masqué — votre rôle ne peut pas gérer les bases de données."
     },
     "detail": {
       "size": "Taille",
@@ -3872,7 +3873,8 @@
         "added": "Webhook ajouté au dépôt",
         "addedBody": "Le panneau l'a ajouté pour vous sur {provider} : il n'y a rien à coller. Chaque push sur {branch} est déployé automatiquement.",
         "rotateConfirmBodyRegistered": "Un nouveau secret est généré et l'ancien cesse de fonctionner. Le panneau met à jour le webhook dans {provider} pour vous, le déploiement automatique continue donc de fonctionner.",
-        "tokenTooShort": "Le jeton de signature doit comporter au moins 16 caractères."
+        "tokenTooShort": "Le jeton de signature doit comporter au moins 16 caractères.",
+        "secretWithheld": "Le secret n'est visible que par les personnes autorisées à déployer."
       },
       "cancel": "Annuler",
       "runtime": {
@@ -5057,33 +5059,26 @@
         "domainLabelHint": "L’adresse pour la copie de préproduction. Utilisez quelque chose qui ne ressemble clairement pas à votre application en production."
       },
       "pushDialog": {
-        "title": "Pousser la préproduction vers {domain} ?",
-        "description": "Tout ce qui se trouve sur {staging} est copié vers {production}. C'est irréversible.",
-        "downtime": "Votre application est mise hors ligne pendant l'opération, et les visiteurs voient une page de maintenance jusqu'à la fin.",
-        "failSafe": "Si l'envoi échoue en cours de route, la production est remise dans son état d'avant.",
-        "whatToPush": "Que faut-il copier",
+        "title": "Pousser la préproduction vers la production ?",
+        "whatToPush": "Ce qui est envoyé",
         "modes": {
           "files": {
             "label": "Fichiers uniquement",
-            "replaces": "Les fichiers de l'application",
-            "deletes": "Les fichiers présents uniquement en production. Les téléversements sont conservés.",
-            "undo": "Aucun une fois terminé"
+            "summary": "Les fichiers de l'application. La base de données n'est pas modifiée.",
+            "consequence": "Les fichiers présents uniquement en production sont supprimés. Les téléversements sont conservés."
           },
           "database": {
             "label": "Base de données uniquement",
-            "replaces": "La base de données",
-            "deletes": "Tout ce qui a été écrit depuis la copie : commandes, commentaires, articles",
-            "undo": "Aucun depuis le panneau. L'ancienne base de données est conservée sur le serveur.",
-            "note": "La production a besoin des mêmes extensions et thèmes que la préproduction. La base de données les attend, et s'il en manque un l'application peut rester blanche."
+            "summary": "Le contenu et les réglages. Les fichiers ne sont pas modifiés.",
+            "consequence": "Tout ce qui a été écrit en production depuis la copie — commandes, commentaires, articles — est remplacé. La production a aussi besoin des mêmes extensions et thèmes que la préproduction, sinon l'application peut rester blanche."
           },
           "full": {
             "label": "Fichiers et base de données",
-            "replaces": "Les fichiers de l'application et la base de données",
-            "deletes": "Les fichiers présents uniquement en production (les téléversements sont conservés), et tout ce qui a été écrit depuis la copie",
-            "undo": "Aucun depuis le panneau. L'ancienne base de données est conservée sur le serveur, pas les fichiers."
+            "summary": "Fichiers et base de données. La production devient une copie de la préproduction.",
+            "consequence": "Les fichiers présents uniquement en production sont supprimés (les téléversements sont conservés), et tout ce qui a été écrit en production depuis la copie — commandes, commentaires, articles — est remplacé."
           }
         },
-        "backupFirst": "C'est irréversible. <link>Faites d'abord une sauvegarde</link> si ce n'est pas fait.",
+        "backupFirst": "Impossible d'annuler une fois terminé — <link>faites d'abord une sauvegarde</link>.",
         "confirmLabel": "Saisissez {domain} pour confirmer",
         "pickMode": "Choisissez ce qu'il faut copier",
         "typeToUnlock": "Saisissez le domaine de production pour confirmer",
@@ -5094,12 +5089,7 @@
         "failed": "L'envoi ne s'est pas terminé.",
         "copyAge": "Copie effectuée {age}",
         "copyDomain": "Copier le domaine",
-        "whatToPushHint": "Fichiers copie le code et les téléversements. Base de données copie le contenu. Les deux copient tout.",
-        "facts": {
-          "replaces": "Remplace",
-          "deletes": "Supprime",
-          "undo": "Retour"
-        }
+        "whileRunning": "L'application est hors ligne pendant l'opération. Si elle échoue en cours de route, la production est remise dans son état d'avant."
       },
       "isCopy": {
         "title": "Cette application est une copie de préproduction",

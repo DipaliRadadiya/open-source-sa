@@ -1,5 +1,6 @@
 "use client";
 
+import { useBrowserIp } from "@/components/network/browser-ip";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -38,7 +39,8 @@ const MAX_IGNORE_IPS = 100;
  * Saves the whole settings object because the backend rewrites the file as a
  * unit — sending only the list would drop the numbers the other card owns.
  */
-export function IgnoreListCard({ settings, yourIp, canManage }) {
+export function IgnoreListCard({ settings, canManage }) {
+  const yourIp = useBrowserIp();
   const t = useTranslations("fail2ban");
   const router = useRouter();
 

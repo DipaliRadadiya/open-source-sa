@@ -35,11 +35,12 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  * halves of that are said, because a half-truth here is what leaves somebody
  * paying for buckets they cannot find.
  */
-export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo }) {
+export function DeleteApplicationDialog({ application, open, onOpenChange, afterDelete, redirectTo, closeWhenGone = false }) {
   const t = useTranslations("applications.delete");
   const router = useRouter();
   const { refreshThen } = useRefresh();
   const [pending, setPending] = useState(false);
+  const [awaitingPage, setAwaitingPage] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [removeFiles, setRemoveFiles] = useState(true);
   // Null when the user is gone; absent (undefined) when it was not loaded.
@@ -95,6 +96,16 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     }
     onOpenChange?.(next);
   }
+
+  useEffect(() => {
+    if (!awaitingPage) return undefined;
+    const timer = window.setTimeout(() => {
+      setAwaitingPage(false);
+      setPending(false);
+      onOpenChange?.(false);
+    }, 20000);
+    return () => window.clearTimeout(timer);
+  }, [awaitingPage, onOpenChange]);
 
   async function onConfirm() {
     if (!matches) return;
@@ -163,6 +174,16 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
       handleOpenChange(false);
       setPending(false);
     };
+    // For a caller whose page swaps this dialog out once the application is
+    // gone (the staging page): stay on "Deleting…" until that happens, rather
+    // than trusting the refresh to land before the dialog closes — it did not
+    // on a real server, and the old card showed for a moment.
+    if (closeWhenGone) {
+      say();
+      router.refresh();
+      setAwaitingPage(true);
+      return;
+    }
     if (redirectTo) {
       router.push(redirectTo);
       done();

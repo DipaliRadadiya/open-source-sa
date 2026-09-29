@@ -1,5 +1,6 @@
 "use client";
 
+import { useBrowserIp } from "@/components/network/browser-ip";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -127,11 +128,12 @@ export function RulesCard({
   presets,
   canManage,
   isAdmin,
-  yourIp,
   riskyPorts = [],
   listening = [],
 }) {
   const t = useTranslations("firewall");
+  // The reader's address as the browser sees it — see components/network/browser-ip.jsx.
+  const yourIp = useBrowserIp();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tc = useTranslations("common");

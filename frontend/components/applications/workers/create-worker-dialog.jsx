@@ -136,12 +136,15 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
       // already removed the worker it could not start.
       if (!error.response?.data?.errors && (error.response?.status ?? 0) >= 500) {
         form.setError("root.server", { message: apiMessage(error, t("create.failed")) });
+        scrollToFirstError();
         return;
       }
       // `kind` has no control here either — picking the Horizon preset on a
       // site that already has a queue worker is the exact path to the API's
       // conflict, and it landed nowhere.
       handleValidationError(error, form, { formError: true, unrendered: ["kind"] });
+      // The dialog scrolls; the reason can land above or below what is on screen.
+      scrollToFirstError();
     }
   }
 
@@ -192,6 +195,7 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
         {serverError ? (
           <p
             role="alert"
+            data-form-error
             className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive"
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,6 +38,15 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
   const t = useTranslations("applications.staging.createDialog");
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [awaitingPage, setAwaitingPage] = useState(false);
+  useEffect(() => {
+    if (!awaitingPage) return undefined;
+    const timer = window.setTimeout(() => {
+      setPending(false);
+      onOpenChange(false);
+    }, 20000);
+    return () => window.clearTimeout(timer);
+  }, [awaitingPage, onOpenChange]);
 
   // Offered, not imposed: `staging.` in front of the production domain is what
   // almost everyone types, and an empty box makes them invent it. Anyone with
@@ -55,9 +64,13 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
     setPending(true);
     try {
       await createApplicationStaging(appId, values.domain);
-      onOpenChange(false);
+      // Open on "Creating…" until the page shows the copy — this dialog lives
+      // in the no-staging state, so it goes when that state does. Closing
+      // first uncovered "Create staging" for the length of the refresh.
       toast.success(t("done", { domain: values.domain }));
       router.refresh();
+      setAwaitingPage(true);
+      return;
     } catch (error) {
       if (error.response?.data?.errors) {
         handleValidationError(error, form);
@@ -67,9 +80,8 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
         // offered to create one. Re-read so it shows the copy that exists.
         router.refresh();
       }
-    } finally {
-      setPending(false);
     }
+    setPending(false);
   }
 
   return (

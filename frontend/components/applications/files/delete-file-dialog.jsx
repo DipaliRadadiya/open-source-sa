@@ -12,10 +12,10 @@ export function DeleteFileDialog({ appId, file, open, onOpenChange }) {
   const t = useTranslations("applications.files");
   const { pending: refreshing, refreshThen } = useRefresh();
   const [pending, setPending] = useState(false);
-  // Cleared whenever the dialog opens, not when it closes: a dialog opened from
-  // a row's own menu never sees onOpenChange(false), so state left behind here
-  // would arrive already ticked on the next file.
-  const [permanent, setPermanent] = useState(false);
+  // Ticked by default (Krishna, 2026-09-29). Reset whenever the dialog opens,
+  // not when it closes: a dialog opened from a row's own menu never sees
+  // onOpenChange(false), so an unticked box would carry over to the next file.
+  const [permanent, setPermanent] = useState(true);
 
   async function onConfirm() {
     setPending(true);
@@ -39,7 +39,7 @@ export function DeleteFileDialog({ appId, file, open, onOpenChange }) {
     <ConfirmDialog
       open={open}
       onOpenChange={(next) => {
-        if (next) setPermanent(false);
+        if (next) setPermanent(true);
         onOpenChange?.(next);
       }}
       icon={Trash2}

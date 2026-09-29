@@ -8,6 +8,7 @@ import { InstallPrompt } from "@/components/fail2ban/install-prompt";
 import { ProtectionSection } from "@/components/fail2ban/protection-section";
 import { BanRulesCard } from "@/components/fail2ban/ban-rules-card";
 import { IgnoreListCard } from "@/components/fail2ban/ignore-list-card";
+import { BrowserIpProvider } from "@/components/network/browser-ip";
 import { Fail2banTabs } from "@/components/fail2ban/fail2ban-tabs";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
@@ -67,11 +68,10 @@ export default async function Fail2banPage() {
               is happening to my server right now, and what did I configure.
               Both at once was five blocks of equal weight and nowhere to look
               first. */}
+          <BrowserIpProvider source="fail2ban">
           <Fail2banTabs
             status={data.running ? <RunningBadge data={data} t={t} /> : null}
-            needsAttention={Boolean(
-              data.your_ip && !(data.settings?.ignore_ips ?? []).includes(data.your_ip),
-            )}
+            ignoreIps={data.settings?.ignore_ips ?? []}
             live={
               // One client component for the setup card, the switches and the
               // ban list: the ban list's visibility follows the switches, so
@@ -80,7 +80,6 @@ export default async function Fail2banPage() {
                 jails={data.jails}
                 settings={data.settings}
                 banned={data.banned}
-                yourIp={data.your_ip}
                 ignoreIps={data.settings?.ignore_ips ?? []}
                 canManage={canManage}
                 logHref={logHref}
@@ -99,13 +98,13 @@ export default async function Fail2banPage() {
                   />
                   <IgnoreListCard
                     settings={data.settings}
-                    yourIp={data.your_ip}
                     canManage={canManage}
                   />
                 </div>
               ) : null
             }
           />
+          </BrowserIpProvider>
         </div>
       )}
     </div>

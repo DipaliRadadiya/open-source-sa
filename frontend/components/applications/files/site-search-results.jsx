@@ -44,7 +44,7 @@ const STRETCH = "after:absolute after:inset-0 after:rounded-xl";
  * overlay keeps one real control per destination and lifts the folder link
  * above it.
  */
-export function SiteSearchResults({ appId, query, onAction }) {
+export function SiteSearchResults({ appId, query, onAction, canManage = true }) {
   const t = useTranslations("applications.files");
   const [remote, setRemote] = useState({ status: "loading", files: [], message: null });
 
@@ -121,7 +121,7 @@ export function SiteSearchResults({ appId, query, onAction }) {
         // "open this folder". Sharing it meant clicking a search hit landed
         // you one level above the thing you clicked.
         const openDirHref = `/applications/${appId}/files?path=${encodeURIComponent(file.path)}`;
-        const openable = !symlink && !isDir && canOpenFile(file.name);
+        const openable = canManage && !symlink && !isDir && canOpenFile(file.name);
         // Only rows that lead somewhere get the row-wide affordance; a
         // hover state on a row that cannot be opened is a lie.
         const interactive = isDir || openable;

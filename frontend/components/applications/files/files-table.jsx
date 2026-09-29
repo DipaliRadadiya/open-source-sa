@@ -90,7 +90,7 @@ function SelectAllHeader({ table }) {
 function NameCell({ row, table }) {
   const t = useTranslations("applications.files");
   const file = row.original;
-  const { appId, onAction } = table.options.meta;
+  const { appId, onAction, canManage } = table.options.meta;
 
   if (file.type === "dir") {
     const href = `/applications/${appId}/files?path=${encodeURIComponent(file.path)}`;
@@ -148,10 +148,12 @@ function NameCell({ row, table }) {
   // isn't text" and the preview cannot decode it. Offering the click and then
   // refusing it is a worse answer than not offering it — download and extract
   // are still on the row's menu.
-  if (!canOpenFile(file.name)) {
+  // Opening reads the file, which needs File Manager manage — a view-only
+  // role gets the name, not a click that answers 403.
+  if (!canManage || !canOpenFile(file.name)) {
     return (
       <span className="flex w-full min-w-0 items-center gap-2 font-medium">
-        <FileThumb file={file} appId={appId} className="size-5" />
+        <FileThumb file={file} appId={appId} className="size-5" canPreview={canManage} />
         <span className={FILE_NAME} title={file.name}>
           {file.name}
         </span>
@@ -171,7 +173,7 @@ function NameCell({ row, table }) {
       // fill the cell.
       className="flex w-full min-w-0 items-center gap-2 rounded text-left font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
-      <FileThumb file={file} appId={appId} className="size-5" />
+      <FileThumb file={file} appId={appId} className="size-5" canPreview={canManage} />
       <span className={FILE_NAME} title={file.name}>
         {file.name}
       </span>

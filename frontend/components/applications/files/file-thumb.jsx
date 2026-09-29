@@ -12,11 +12,13 @@ const NO_THUMBNAIL = /\.svgz?$/i;
  * everything else (dirs, symlinks, non-image files, SVG) still uses the icon.
  * Falls back to the icon on load failure.
  */
-export function FileThumb({ file, appId, className }) {
+export function FileThumb({ file, appId, className, canPreview = true }) {
   const [failed, setFailed] = useState(false);
   const imgRef = useRef(null);
   const { icon: Icon, className: iconClassName } = fileIconFor(file.name);
-  const thumbnail = isImageFile(file.name) && !NO_THUMBNAIL.test(file.name);
+  // `canPreview` false: the preview endpoint needs File Manager manage, and
+  // a view-only row would request a 403 per image.
+  const thumbnail = canPreview && isImageFile(file.name) && !NO_THUMBNAIL.test(file.name);
 
   /*
    * An image that failed BEFORE hydration never reaches `onError`.

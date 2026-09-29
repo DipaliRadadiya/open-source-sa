@@ -23,8 +23,7 @@ function base(name) {
 
 /**
  * A system user name for an application called `name`, avoiding `taken`.
- * Empty while the name has nothing usable in it, so the field waits for one
- * instead of filling with a random `app-xxxx`.
+ * Empty when the name has nothing usable in it; see fallbackSystemUsername.
  */
 export function suggestSystemUsername(name, taken = []) {
   const first = base(name);
@@ -38,4 +37,20 @@ export function suggestSystemUsername(name, taken = []) {
     const candidate = `${first.slice(0, MAX - suffix.length).replace(/-+$/, "")}${suffix}`;
     if (!used.has(candidate)) return candidate;
   }
+}
+
+/**
+ * What the backend names an account when the application name has nothing
+ * usable in it: `app-` and four random characters. Called after mount only —
+ * a random value rendered on the server would not match the browser's.
+ */
+export function fallbackSystemUsername(taken = []) {
+  const used = new Set(taken);
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let candidate;
+  do {
+    const bytes = crypto.getRandomValues(new Uint8Array(4));
+    candidate = `app-${[...bytes].map((n) => chars[n % chars.length]).join("")}`;
+  } while (used.has(candidate));
+  return candidate;
 }

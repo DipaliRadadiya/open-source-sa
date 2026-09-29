@@ -23,7 +23,8 @@ export function FileRowActions({ file, appId, canManage, onAction }) {
   const symlink = file.type === "symlink";
   const symlinkReason = symlink ? t("symlinkHint") : null;
   const canWrite = canManage;
-  const downloadReason = symlinkReason;
+  // Downloading reads the file, which needs File Manager manage.
+  const downloadReason = symlinkReason ?? (canManage ? null : t("noPermission"));
 
   async function copyPath() {
     try {
@@ -42,11 +43,19 @@ export function FileRowActions({ file, appId, canManage, onAction }) {
           destructive is one accidental click away. */}
       {file.type !== "dir" ? (
         <IconTooltip label={t("actions.download")} reason={downloadReason}>
-          <Button variant="ghost" size="icon" className="size-8" disabled={symlink} asChild>
-            <a href={fileDownloadUrl(appId, file.path)} download={file.name} aria-label={t("actions.download")}>
+          {/* A real disabled button when blocked: `disabled` on an <a> does
+              nothing, so the link still downloaded. */}
+          {downloadReason ? (
+            <Button variant="ghost" size="icon" className="size-8" disabled aria-label={t("actions.download")}>
               <Download className="size-4" />
-            </a>
-          </Button>
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" className="size-8" asChild>
+              <a href={fileDownloadUrl(appId, file.path)} download={file.name} aria-label={t("actions.download")}>
+                <Download className="size-4" />
+              </a>
+            </Button>
+          )}
         </IconTooltip>
       ) : null}
       <IconTooltip label={t("actions.copyPath")}>

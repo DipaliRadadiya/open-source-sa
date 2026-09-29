@@ -41,8 +41,8 @@ test("the token is posted, never put in a URL", () => {
   // A token in a query string is written to the site's access log, the
   // browser's history and any outbound Referer — and this one buys a full
   // administrator session. The legacy product put it in the URL.
-  assert.match(tabs, /form\.method = "POST"/);
-  assert.match(tabs, /field\.name = "sv_magic_login"/);
+  assert.match(newTab, /form\.method = "POST"/);
+  assert.match(tabs, /postInNewTab\(session\.url, \{ sv_magic_login: session\.token \}\)/);
   assert.doesNotMatch(code(tabs), /sv_magic_login=/);
   assert.doesNotMatch(code(tabs), /\?.*token/i);
   // And no caller may reach for the URL form instead.
@@ -54,17 +54,17 @@ test("the token is posted, never put in a URL", () => {
 test("the form is built through the DOM, not written as HTML", () => {
   // Interpolating the token and the site URL into markup is injection-shaped.
   // "The token is alphanumeric" stops being true the day the format changes.
-  assert.match(tabs, /createElement\("form"\)/);
-  assert.match(tabs, /createElement\("input"\)/);
-  assert.doesNotMatch(tabs, /document\.write/);
-  assert.doesNotMatch(tabs, /innerHTML/);
+  assert.match(newTab, /createElement\("form"\)/);
+  assert.match(newTab, /createElement\("input"\)/);
+  assert.doesNotMatch(newTab, /document\.write/);
+  assert.doesNotMatch(newTab, /innerHTML/);
 });
 
 test("the opened tab cannot reach back into the panel", () => {
   // `noopener` in the feature string would make window.open return null and
   // cost us the handle the form needs, so the opener is severed by hand.
   assert.match(newTab, /tab\.opener = null/);
-  assert.doesNotMatch(tabs, /window\.open\([^)]*noopener/);
+  assert.match(newTab, /form\.rel = "noopener"/);
 });
 
 test("the button is gated by the permission, not by a hardcoded site type", () => {
@@ -131,14 +131,18 @@ test("no tab opens until the login link exists (Krishna, 2026-09-29)", () => {
    */
   for (const [name, source] of [["hook", hook], ["dialog", dialog]]) {
     const body = code(source);
-    assert.doesNotMatch(body, /openBlankTab\(\)|paintPlaceholder|discardTab/, `${name} still opens a blank tab`);
+    assert.doesNotMatch(body, /openBlankTab|paintPlaceholder|discardTab/, `${name} still opens a blank tab`);
     assert.ok(body.lastIndexOf("launchMagicLogin(session, t)") > body.indexOf("await createMagicLogin"), `${name} opens before the link is ready`);
   }
   // When the browser no longer counts the click as permission, a button that
   // is a fresh click — never a silent failure.
-  assert.match(hook, /if \(openMagicLogin\(session, holding\)\) return;[\s\S]{0,200}action: \{\s*label: t\("openAdmin"\)/);
+  assert.match(hook, /if \(openMagicLogin\(session\)\) return;[\s\S]{0,200}action: \{\s*label: t\("openAdmin"\)/);
+  // Krishna 2026-09-29 (second report): not even an empty tab filled in later —
+  // the form posts straight into a new tab.
+  assert.match(newTab, /form\.target = "_blank"/);
+  assert.doesNotMatch(newTab, /window\.open\(""/);
   // The token still goes by POST, never in a URL.
-  assert.match(read("lib/applications/magic-login-window.js"), /submitMagicLogin\(tab, session\);\s*return true;/);
+  assert.match(read("lib/applications/magic-login-window.js"), /return postInNewTab\(session\.url, \{ sv_magic_login: session\.token \}\);/);
 });
 
 test("a permission with no url is kept out of the sidebar", () => {

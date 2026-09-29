@@ -419,6 +419,10 @@ export function WebhookCard({ application, providers, canManage, onChange }) {
                     value={webhook.secret}
                     secret
                   />
+                ) : !canManage ? (
+                  // Only sent to someone who may deploy: with it and the URL,
+                  // anyone can sign a push.
+                  <p className="text-xs text-muted-foreground">{t("webhook.secretWithheld")}</p>
                 ) : null}
                 <p className="text-xs text-muted-foreground">
                   {t("webhook.lastDelivered")}:{" "}

@@ -213,6 +213,9 @@ function UserRow({ user, canManage, onEdit, onPassword, onDelete }) {
              rather than as a fact about the account.
           */
           <p className="text-xs text-muted-foreground">{t("passwordUnknown")}</p>
+        ) : !canManage && user.password_known ? (
+          // Withheld from a role without `database` manage (DB-01).
+          <p className="text-xs text-muted-foreground">{t("passwordWithheld")}</p>
         ) : null}
       </div>
 

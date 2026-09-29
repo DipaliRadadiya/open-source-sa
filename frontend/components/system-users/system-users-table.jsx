@@ -47,7 +47,7 @@ function UsernameCell({ row, table }) {
   // the column, which says "Not set" in the place they are already looking, so
   // the badge would only repeat it. A viewer has no column, and this is then
   // the only thing telling them the account cannot be logged into.
-  const showBadge = !table.options.meta.canManage && !row.original.password;
+  const showBadge = !table.options.meta.canManage && !(row.original.password_known ?? row.original.password);
 
   // Home under the name, not in a column of its own: the column cost ~160 px
   // of a table that did not fit at 1280, for a value that is read alongside
@@ -228,15 +228,19 @@ function SystemUsersList({ data, meta, shells = [], canManage = false, canOpenSe
       {/* Managers only: the fix it points to is theirs, and a viewer could
           neither change the switches nor save the setting. */}
       {canManage && sshEnforced === false && data.length ? (
-        <Caution size="md">
+        <Caution
+          size="md"
+          action={
+            canOpenSecurity ? (
+              <Button asChild size="sm" variant="outline" className="h-8">
+                <Link href="/settings/security" prefetch={false}>
+                  {t("sshNotEnforced.action")}
+                </Link>
+              </Button>
+            ) : null
+          }
+        >
           <p>{t("sshNotEnforced.body")}</p>
-          {canOpenSecurity ? (
-            <Button asChild size="sm" variant="outline">
-              <Link href="/settings/security" prefetch={false}>
-                {t("sshNotEnforced.action")}
-              </Link>
-            </Button>
-          ) : null}
         </Caution>
       ) : null}
 

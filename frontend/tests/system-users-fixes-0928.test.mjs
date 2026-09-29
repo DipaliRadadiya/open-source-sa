@@ -102,6 +102,6 @@ test("SU-16/17: viewers reach SSH keys read-only; the enforcement notice is for 
   assert.match(actions, /<SshKeysDialog[^>]*canManage=\{canManage\}/);
   assert.match(actions, /disabled=\{!canManage \|\| ownsApps\}/);
   const keys = su("ssh-keys-dialog.jsx");
-  assert.match(keys, /\{!canManage \? null : removing === key\.id/);
+  assert.match(keys, /\{!canManage \? null : \(\s*<IconTooltip label=\{t\("sshForm\.remove"\)\}>/);
   assert.match(table, /canManage && sshEnforced === false/);
 });

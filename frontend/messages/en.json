@@ -187,7 +187,6 @@
       "remove": "Remove key",
       "removeTitle": "Remove SSH key?",
       "removeDescription": "This removes “{name}” from the user's authorized keys.",
-      "removeConfirm": "Remove",
       "publicKeyHint": "The .pub half of an SSH key pair. It is safe to share — it is how the server recognises you. Never paste the private key here.",
       "nameHint": "A name so you can tell this key apart later — whose laptop it belongs to, for instance."
     },
@@ -220,7 +219,7 @@
     },
     "loadFailed": "Your system users could not be loaded. They have not been changed or removed.",
     "sshNotEnforced": {
-      "body": "SSH switches aren't active yet, so every user can still sign in over SSH. Save Settings → Access & security to turn them on.",
+      "body": "SSH switches aren't active yet — every user can sign in over SSH until Access & security is saved.",
       "action": "Open Access & security"
     },
     "sshViaSudo": "Sudo users can always sign in over SSH. Turn off sudo to control SSH here."
@@ -2715,7 +2714,8 @@
       "password": "Password",
       "copyString": "Copy connection string",
       "copyField": "Copy {field}",
-      "otherUsers": "{count, plural, =1 {One more user can connect to this database.} other {# more users can connect to this database.}} See the Users tab."
+      "otherUsers": "{count, plural, =1 {One more user can connect to this database.} other {# more users can connect to this database.}} See the Users tab.",
+      "passwordWithheld": "Hidden — your role can't manage databases."
     },
     "users": {
       "title": "Users",
@@ -2767,7 +2767,8 @@
       "newPasswordRequired": "New password (required to rename on MongoDB)",
       "nameIsFixed": "A database user's name cannot be changed after it is created. Create another user instead.",
       "newPasswordRequiredHint": "MongoDB cannot rename a user, so the account is created again from scratch. That is why it needs a password set.",
-      "passwordUnknown": "Password not known to the panel — this account came from another server. Change the password to get a connection string."
+      "passwordUnknown": "Password not known to the panel — this account came from another server. Change the password to get a connection string.",
+      "passwordWithheld": "Password hidden — your role can't manage databases."
     },
     "detail": {
       "size": "Size",
@@ -3872,7 +3873,8 @@
         "added": "Webhook added to the repository",
         "addedBody": "The panel added it to {provider} for you, so there is nothing to paste. Pushing to {branch} deploys automatically.",
         "rotateConfirmBodyRegistered": "A new secret is generated and the current one stops working. The panel updates the webhook in {provider} for you, so deploy on push keeps working.",
-        "tokenTooShort": "The signing token must be at least 16 characters."
+        "tokenTooShort": "The signing token must be at least 16 characters.",
+        "secretWithheld": "The secret is only shown to people who can deploy."
       },
       "cancel": "Cancel",
       "runtime": {
@@ -5057,33 +5059,26 @@
         "domainLabelHint": "The address for the staging copy. Use something obviously not your live application."
       },
       "pushDialog": {
-        "title": "Push staging over {domain}?",
-        "description": "Everything on {staging} is copied over {production}. This cannot be undone.",
-        "downtime": "Your application is taken offline while this runs, and visitors see a maintenance page until it finishes.",
-        "failSafe": "If the push fails partway, production is put back as it was.",
-        "whatToPush": "What should be copied",
+        "title": "Push staging to production?",
+        "whatToPush": "What to push",
         "modes": {
           "files": {
             "label": "Files only",
-            "replaces": "The application's files",
-            "deletes": "Files that exist only on production. Uploads are kept.",
-            "undo": "None once it finishes"
+            "summary": "The application's files. The database is not touched.",
+            "consequence": "Files that exist only on production are deleted. Uploads are kept."
           },
           "database": {
             "label": "Database only",
-            "replaces": "The database",
-            "deletes": "Everything written since the copy — orders, comments, posts",
-            "undo": "None from the panel. The old database is kept on the server.",
-            "note": "Production needs the same plugins and themes as staging. The database expects them, and a missing one can leave the application blank."
+            "summary": "Content and settings. Files are not touched.",
+            "consequence": "Everything written on production since the copy was made — orders, comments, posts — is replaced. Production also needs the same plugins and themes as staging, or the application can go blank."
           },
           "full": {
             "label": "Files and database",
-            "replaces": "The application's files and the database",
-            "deletes": "Files only on production (uploads are kept), and everything written since the copy",
-            "undo": "None from the panel. The old database is kept on the server; the files are not."
+            "summary": "Files and database. Production becomes a copy of staging.",
+            "consequence": "Files only on production are deleted (uploads are kept), and everything written on production since the copy was made — orders, comments, posts — is replaced."
           }
         },
-        "backupFirst": "There is no way back from this. <link>Take a backup first</link> if you have not.",
+        "backupFirst": "There is no undo once it finishes — <link>take a backup first</link>.",
         "confirmLabel": "Type {domain} to confirm",
         "pickMode": "Choose what to copy",
         "typeToUnlock": "Type the production domain to confirm",
@@ -5094,12 +5089,7 @@
         "failed": "The push did not finish.",
         "copyAge": "Copy made {age}",
         "copyDomain": "Copy domain",
-        "whatToPushHint": "Files copies code and uploads. Database copies content. Both copies everything.",
-        "facts": {
-          "replaces": "Replaces",
-          "deletes": "Deletes",
-          "undo": "Undo"
-        }
+        "whileRunning": "The application is offline while this runs. If it fails partway, production is put back as it was."
       },
       "isCopy": {
         "title": "This application is a staging copy",

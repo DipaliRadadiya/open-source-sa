@@ -187,7 +187,7 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
         </CardContent>
       </Card>
 
-      <DeleteApplicationDialog application={staging} open={removing} onOpenChange={setRemoving} />
+      <DeleteApplicationDialog application={staging} open={removing} onOpenChange={setRemoving} closeWhenGone />
 
       {/* Same contract, and it matters more here: the typed domain is the
           safeguard, so it must never be pre-filled from a previous visit. */}

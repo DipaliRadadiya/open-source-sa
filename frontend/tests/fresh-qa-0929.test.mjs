@@ -162,3 +162,109 @@ test("Application skeletons above a section draw that section, not their own pag
 test("The sidebar logo asks before leaving unsaved changes, like every other sidebar link", () => {
   assert.match(read("components/sections/app-sidebar.jsx"), /href="\/dashboard"[\s\S]{0,120}guardNavigation\("\/dashboard"\)\) event\.preventDefault\(\);/);
 });
+
+test("Bulk dialogs keep the paths they opened with, so a move that empties the list does not crash the page", () => {
+  const src = read("components/applications/files/bulk-dialogs.jsx");
+  assert.match(src, /paths: selectedPaths[\s\S]{0,400}const \[paths\] = useState\(selectedPaths\);/);
+});
+
+test("Saving a file returns focus to its row without the focus ring", () => {
+  const src = read("components/applications/files/file-editor-dialog.jsx");
+  assert.match(src, /saved\.current = true;\s*onOpenChange\?\.\(false\);/);
+  assert.match(src, /onCloseAutoFocus=\{\(event\) => \{\s*if \(!saved\.current\) return;\s*event\.preventDefault\(\);\s*opener\?\.focus\?\.\(\{ preventScroll: true, focusVisible: false \}\);/);
+});
+
+test("Creating or removing a staging copy keeps the dialog open until the page shows the result", () => {
+  // Driven by the data, not the refresh timing: the dialog lives in the state
+  // it changes, so it goes when that state does (20 s fallback).
+  const create = read("components/applications/staging/create-staging-dialog.jsx");
+  assert.match(create, /await createApplicationStaging\(appId, values\.domain\);[\s\S]{0,500}router\.refresh\(\);\s*setAwaitingPage\(true\);/);
+  assert.doesNotMatch(create, /refreshThen/);
+  assert.match(read("components/applications/staging/staging-panel.jsx"), /<DeleteApplicationDialog [^>]*closeWhenGone \/>/);
+  assert.match(read("components/applications/delete-application-dialog.jsx"), /if \(closeWhenGone\) \{\s*say\(\);\s*router\.refresh\(\);\s*setAwaitingPage\(true\);/);
+});
+
+test("Worker form errors, from the form or the server, are scrolled into view", () => {
+  for (const f of ["create-worker-dialog.jsx", "edit-worker-dialog.jsx"]) {
+    const src = read(`components/applications/workers/${f}`);
+    assert.equal((src.match(/scrollToFirstError\(\);/g) ?? []).length, 2, f);
+    assert.match(src, /role="alert"\s*data-form-error/, f);
+  }
+  assert.match(read("lib/forms/scroll-to-first-error.js"), /querySelector\('\[data-form-error\], \[aria-invalid="true"\]'\)/);
+});
+
+test("Starting a process reads as starting until the page has the new state, never as failed", () => {
+  const src = read("components/applications/process-card.jsx");
+  assert.match(src, /expected === "running" && rawState !== "active"\s*\?\s*"activating"/);
+  assert.match(src, /refreshThen\(\(\) => \{\s*toast\.success\(t\(DONE_KEY\[action\]\)\);/);
+});
+
+test("View-only File Manager roles cannot open, download or preview files (backend d91f2b41)", () => {
+  const dir = "components/applications/files";
+  assert.match(read(`${dir}/files-table.jsx`), /if \(!canManage \|\| !canOpenFile\(file\.name\)\)/);
+  assert.match(read(`${dir}/files-cards.jsx`), /!canManage \|\| !canOpenFile\(file\.name\)/);
+  assert.match(read(`${dir}/site-search-results.jsx`), /const openable = canManage && /);
+  assert.match(read(`${dir}/files-panel.jsx`), /openedFile && canManage && canOpenFile/);
+  assert.match(read(`${dir}/file-shortcuts.jsx`), /disabled=\{!canManage\}/);
+  assert.match(read(`${dir}/file-thumb.jsx`), /const thumbnail = canPreview && /);
+  for (const f of ["file-row-actions.jsx", "file-actions-menu.jsx"]) {
+    assert.match(read(`${dir}/${f}`), /downloadReason = symlinkReason \?\? \(canManage \? null : t\("noPermission"\)\)/, f);
+  }
+  // A blocked download is a real disabled button, not a link with `disabled`.
+  assert.match(read(`${dir}/file-row-actions.jsx`), /\{downloadReason \? \(\s*<Button[^>]*disabled/);
+});
+
+test("SSH keys: one red click removes a key; no second Remove/Cancel step", () => {
+  const src = read("components/system-users/ssh-keys-dialog.jsx");
+  assert.match(src, /className="size-8 shrink-0 text-destructive hover:bg-destructive\/10 hover:text-destructive"\s*onClick=\{\(\) => onRemove\(key\.id\)\}/);
+  assert.doesNotMatch(src, /removeConfirm/);
+  for (const l of locales) assert.equal(JSON.parse(read(`messages/${l}.json`)).systemUsers.sshForm.removeConfirm, undefined, l);
+});
+
+test("No-login shell turns SSH access off and locks it on Create System User", () => {
+  const src = read("components/system-users/create-system-user-dialog.jsx");
+  assert.match(src, /const noLoginShell = chosenShellEntry\?\.allows_login === false;/);
+  assert.match(src, /if \(noLoginShell && form\.getValues\("ssh_access"\)\) \{\s*form\.setValue\("ssh_access", false/);
+  assert.match(src, /locked: sshViaSudo \|\| noLoginShell/);
+});
+
+test("The SSH-not-enforced notice is one soft row with its action at the end", () => {
+  const caution = read("components/ui/caution.jsx");
+  assert.match(caution, /\{action \? <div className="shrink-0">\{action\}<\/div> : null\}/);
+  // flex-1 beside a shrink-0 button squeezed the text to a word per line on a phone.
+  assert.match(caution, /action \? "flex-wrap items-center" : "items-start"/);
+  assert.match(caution, /action \? "min-w-48" : "min-w-0"/);
+  assert.match(read("components/system-users/system-users-table.jsx"), /<Caution\s+size="md"\s+action=\{/);
+});
+
+test("File delete starts with Permanently delete ticked, single and bulk", () => {
+  const single = read("components/applications/files/delete-file-dialog.jsx");
+  assert.match(single, /const \[permanent, setPermanent\] = useState\(true\);/);
+  assert.match(single, /if \(next\) setPermanent\(true\);/);
+  assert.match(read("components/applications/files/bulk-dialogs.jsx"), /const \[permanent, setPermanent\] = useState\(true\);/);
+});
+
+test("View-only database and system-user roles: withheld secrets read as withheld, phpMyAdmin hidden (backend 30ef82b9)", () => {
+  assert.match(read("components/databases/phpmyadmin-button.jsx"), /if \(state === "hidden" \|\| !canManage\) return null;/);
+  assert.match(read("components/databases/connection-details.jsx"), /withheld: !canManage && !user\.password && user\.password_known !== false/);
+  assert.match(read("components/databases/database-users.jsx"), /!canManage && user\.password_known \? \([\s\S]{0,200}t\("passwordWithheld"\)/);
+  assert.match(read("components/system-users/system-users-table.jsx"), /!\(row\.original\.password_known \?\? row\.original\.password\)/);
+  assert.match(read("components/system-users/system-users-cards.jsx"), /!\(user\.password_known \?\? user\.password\)/);
+  assert.match(read("components/applications/deployment/webhook-card.jsx"), /!canManage \? \([\s\S]{0,200}t\("webhook\.secretWithheld"\)/);
+  for (const l of locales) {
+    const m = JSON.parse(read(`messages/${l}.json`));
+    assert.ok(m.databases.credentials.passwordWithheld && m.databases.users.passwordWithheld && m.applications.deployment.webhook.secretWithheld, l);
+  }
+});
+
+test("Firewall and Fail2ban use the address the BROWSER connects from, never the one rendered with the page", () => {
+  const ip = read("components/network/browser-ip.jsx");
+  assert.match(ip, /firewall: \{ load: getFirewall, pick: \(data\) => data\?\.your_ip \}/);
+  assert.match(ip, /fail2ban: \{ load: getFail2ban, pick: \(data\) => data\?\.fail2ban\?\.your_ip \}/);
+  assert.doesNotMatch(read("app/(app)/firewall/page.jsx"), /your_ip/);
+  assert.doesNotMatch(read("app/(app)/fail2ban/page.jsx"), /your_ip/);
+  assert.match(read("components/firewall/rules-card.jsx"), /const yourIp = useBrowserIp\(\);/);
+  for (const f of ["fail2ban-tabs.jsx", "protection-section.jsx", "ignore-list-card.jsx"]) {
+    assert.match(read(`components/fail2ban/${f}`), /const yourIp = useBrowserIp\(\);/, f);
+  }
+});

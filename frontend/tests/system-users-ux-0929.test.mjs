@@ -18,8 +18,9 @@ test("UX-1: a sudo user's SSH switch shows on, locked, with the reason", () => {
   assert.match(src, /disabled=\{!canManage \|\| locked\}/);
   assert.match(src, /t\("sshViaSudo"\)/);
   const create = su("create-system-user-dialog.jsx");
-  assert.match(create, /hint: sshViaSudo \? t\("sshViaSudo"\)/);
-  assert.match(create, /checked=\{toggle\.locked \? true : field\.value\}/);
+  assert.match(create, /: sshViaSudo\s*\?\s*t\("sshViaSudo"\)/);
+  assert.match(create, /checked=\{toggle\.locked \? toggle\.lockedValue : field\.value\}/);
+  assert.match(create, /lockedValue: !noLoginShell/);
   for (const l of locales) assert.ok(msgs(l).sshViaSudo, l);
 });
 

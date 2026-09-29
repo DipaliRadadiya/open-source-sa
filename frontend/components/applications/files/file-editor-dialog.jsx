@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -47,6 +47,9 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
   const t = useTranslations("applications.files");
   const tc = useTranslations("common");
   const router = useRouter();
+  // The row that opened the editor, captured before focus moves into it.
+  const [opener] = useState(() => (typeof document === "undefined" ? null : document.activeElement));
+  const saved = useRef(false);
   // Mounted fresh per file (see files-panel.jsx), so these start at the
   // "about to load" state directly rather than being reset by an effect.
   const tooLarge = file.size > EDITOR_MAX_BYTES;
@@ -154,6 +157,7 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
     try {
       await saveFileContent(appId, file.path, contents);
       toast.success(t("editor.saved"));
+      saved.current = true;
       onOpenChange?.(false);
       router.refresh();
     } catch (error) {
@@ -201,6 +205,14 @@ export function FileEditorDialog({ appId, file, canManage, open, onOpenChange })
           which is the thing this is displacing. */}
       <DialogContent
         className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-6xl"
+        // After a save, focus still goes back to the file's row but without the
+        // ring: typing in the editor makes the browser treat the returned focus
+        // as keyboard focus, and the row looked selected.
+        onCloseAutoFocus={(event) => {
+          if (!saved.current) return;
+          event.preventDefault();
+          opener?.focus?.({ preventScroll: true, focusVisible: false });
+        }}
         onKeyDown={(event) => {
           if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
             event.preventDefault();

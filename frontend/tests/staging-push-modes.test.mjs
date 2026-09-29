@@ -29,39 +29,25 @@ test("the modes offered are exactly the modes the API accepts", () => {
   assert.deepEqual([...PUSH_MODES].sort(), [...accepted].sort());
 });
 
-test("every mode answers the same three questions in every locale", () => {
+test("every mode has a one-line meaning and its own consequence in every locale", () => {
   /*
-   * They were three paragraphs of 25, 58 and 34 words, each answering the same
-   * three questions in a different order: what is replaced, what is destroyed,
-   * whether there is any way back. Comparing three options meant extracting
-   * that from prose three times.
-   *
-   * All eight locales, because a mode that loses one of the three rows in one
-   * language is a card with a hole in it — and this is the screen where the
-   * missing row would be "Undo: none".
+   * Krishna 2026-09-29: the Replaces/Deletes/Undo table under every option made
+   * the dialog "too long and confusing" (research-staging-push-ui: no panel
+   * surveyed shows one). Each option now says what it is in a line, and what
+   * it costs is shown for the one chosen. A mode missing either in one
+   * language is a hole on the most destructive screen in the panel.
    */
   for (const locale of locales) {
-    const messages = JSON.parse(
-      fs.readFileSync(path.join(root, `messages/${locale}.json`), "utf8"),
-    );
-    const dialog = messages.applications.staging.pushDialog;
-
-    for (const key of ["replaces", "deletes", "undo"]) {
-      assert.ok(dialog.facts?.[key], `missing facts.${key} in ${locale}`);
-    }
-
+    const dialog = JSON.parse(fs.readFileSync(path.join(root, `messages/${locale}.json`), "utf8")).applications.staging.pushDialog;
+    assert.equal(dialog.facts, undefined, `${locale} kept the facts table`);
     for (const mode of PUSH_MODES) {
-      assert.ok(dialog.modes[mode]?.label, `missing modes.${mode}.label in ${locale}`);
-      for (const key of ["replaces", "deletes", "undo"]) {
+      for (const key of ["label", "summary", "consequence"]) {
         assert.ok(dialog.modes[mode]?.[key], `missing modes.${mode}.${key} in ${locale}`);
       }
-      // The prose these replaced, so a half-migrated locale cannot sit here
-      // rendering one option as a paragraph and the next as three rows.
-      assert.equal(dialog.modes[mode].description, undefined, `${locale} ${mode} kept its prose`);
     }
+    assert.ok(dialog.whileRunning && dialog.backupFirst.includes("<link>"), locale);
   }
 });
-
 test("the schema accepts each mode and refuses anything else", () => {
   for (const mode of PUSH_MODES) {
     assert.equal(pushStagingFormSchema.safeParse({ mode }).success, true, mode);
@@ -83,7 +69,7 @@ test("database-only names the risk that makes it not the safe middle option", ()
   // It moved out of the prose into its own warning row, which is the only row
   // any mode has that the other two do not — so it must not quietly vanish in
   // the move.
-  const note = messages.applications.staging.pushDialog.modes.database.note;
+  const note = messages.applications.staging.pushDialog.modes.database.consequence;
 
   assert.ok(note, "database-only lost its blank-site warning");
   assert.match(note, /plugin/i);
@@ -93,7 +79,7 @@ test("database-only names the risk that makes it not the safe middle option", ()
     path.join(root, "components/applications/staging/push-staging-dialog.jsx"),
     "utf8",
   );
-  assert.match(dialog, /mode === "database" \? t\("modes\.database\.note"\) : null/);
+  assert.match(dialog, /t\(`modes\.\$\{mode\}\.consequence`\)/);
 });
 
 /* -------------------------------------------------------------------------
@@ -139,23 +125,20 @@ test("the irreversibility warning sits above the choice, not below it", () => {
   assert.ok(backup < choice, "the warning must come before the options");
 });
 
-test("the two costs are one block, not two competing banners", () => {
-  // Two full-width warnings shout equally loudly and the second stops being
-  // read — the same finding as the clone page's pre-flight list.
+test("one consequence box, for the chosen option only", () => {
   const src = stripped(readSrc("components/applications/staging/push-staging-dialog.jsx"));
-  const blocks = src.match(/border-destructive\/30 bg-destructive\/5/g) ?? [];
-  assert.equal(blocks.length, 1);
+  assert.equal((src.match(/border-destructive\/30 bg-destructive\/5/g) ?? []).length, 0);
+  assert.match(src, /\{mode \? \([\s\S]{0,500}t\(`modes\.\$\{mode\}\.consequence`\)/);
 });
-
-test("the age of the copy sits beside the choice it informs", () => {
-  // It was a bare grey line floating between a red panel and a heading,
-  // belonging to neither. It is the fact that decides whether this push is
-  // routine or a mistake.
+test("the age of the copy is read before the choice it informs", () => {
   const src = stripped(readSrc("components/applications/staging/push-staging-dialog.jsx"));
-  const label = src.indexOf('t("whatToPush")');
   const age = src.indexOf('t("copyAge"');
   const choice = src.indexOf("<ChoiceField");
-  assert.ok(label < age && age < choice, "age belongs between the heading and the options");
+  assert.ok(age > 0 && age < choice, "age belongs with the domains, before the options");
+});
+test("Take a backup first opens in a new tab, so the push is not lost", () => {
+  const src = readSrc("components/applications/staging/push-staging-dialog.jsx");
+  assert.match(src, /href=\{`\/applications\/\$\{appId\}\/backups`\}\s*target="_blank"\s*rel="noopener noreferrer"/);
 });
 
 test("an option icon is optional, so every other ChoiceField is unchanged", () => {

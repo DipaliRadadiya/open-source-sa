@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { can } from "@/lib/permissions/can";
 import { getFirewall, getFirewallPresets, getFirewallRules } from "@/lib/firewall/get-firewall";
 import { FirewallStatusCard } from "@/components/firewall/firewall-status-card";
+import { BrowserIpProvider } from "@/components/network/browser-ip";
 import { RulesCard } from "@/components/firewall/rules-card";
 import { QuickAddCard } from "@/components/firewall/quick-add-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -91,6 +92,7 @@ export default async function FirewallPage({ searchParams }) {
                 failure={rulesFailure} message={rulesMessage}
               />
             ) : (
+              <BrowserIpProvider source="firewall">
               <RulesCard
                 rules={rules}
                 allRules={data.rules}
@@ -98,10 +100,10 @@ export default async function FirewallPage({ searchParams }) {
                 presets={presets}
                 canManage={canManage}
                 isAdmin={isAdmin}
-                yourIp={data.your_ip ?? null}
                 riskyPorts={data.risky_ports}
                 listening={data.listening}
               />
+              </BrowserIpProvider>
             )}
 
             {!rulesFailed && rules.length > 0 ? (

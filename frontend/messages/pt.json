@@ -187,7 +187,6 @@
       "remove": "Remover chave",
       "removeTitle": "Remover chave SSH?",
       "removeDescription": "Isso remove \"{name}\" das chaves autorizadas do usuário.",
-      "removeConfirm": "Remover",
       "publicKeyHint": "A metade .pub de um par de chaves SSH. Pode ser compartilhada sem riscos — é assim que o servidor te reconhece. Nunca cole a chave privada aqui.",
       "nameHint": "Um nome para que você consiga diferenciar esta chave depois — de qual laptop ela é, por exemplo."
     },
@@ -220,7 +219,7 @@
     },
     "loadFailed": "Seus usuários de sistema não puderam ser carregados. Eles não foram alterados nem removidos.",
     "sshNotEnforced": {
-      "body": "As chaves SSH ainda não estão ativas, então qualquer usuário ainda consegue fazer login via SSH. Salve Configurações → Acesso e segurança para ativá-las.",
+      "body": "As chaves SSH ainda não estão ativas — qualquer usuário consegue entrar via SSH até que Acesso e segurança seja salvo.",
       "action": "Abrir Acesso e segurança"
     },
     "sshViaSudo": "Usuários com sudo sempre conseguem fazer login via SSH. Desligue o sudo para controlar o SSH aqui."
@@ -2715,7 +2714,8 @@
       "password": "Senha",
       "copyString": "Copiar string de conexão",
       "copyField": "Copiar {field}",
-      "otherUsers": "{count, plural, =1 {Mais um usuário pode se conectar a este banco de dados.} other {# outros usuários podem se conectar a este banco de dados.}} Veja a aba Usuários."
+      "otherUsers": "{count, plural, =1 {Mais um usuário pode se conectar a este banco de dados.} other {# outros usuários podem se conectar a este banco de dados.}} Veja a aba Usuários.",
+      "passwordWithheld": "Oculta — seu papel não pode gerenciar bancos de dados."
     },
     "users": {
       "title": "Usuários",
@@ -2767,7 +2767,8 @@
       "newPasswordRequired": "Nova senha (obrigatória para renomear no MongoDB)",
       "nameIsFixed": "O nome de um usuário de banco de dados não pode ser alterado depois de criado. Crie outro usuário.",
       "newPasswordRequiredHint": "O MongoDB não consegue renomear um usuário, então a conta é criada novamente do zero. Por isso é preciso definir uma senha.",
-      "passwordUnknown": "O painel não conhece a palavra-passe — esta conta veio de outro servidor. Altere a palavra-passe para obter uma string de ligação."
+      "passwordUnknown": "O painel não conhece a palavra-passe — esta conta veio de outro servidor. Altere a palavra-passe para obter uma string de ligação.",
+      "passwordWithheld": "Senha oculta — seu papel não pode gerenciar bancos de dados."
     },
     "detail": {
       "size": "Tamanho",
@@ -3872,7 +3873,8 @@
         "added": "Webhook adicionado ao repositório",
         "addedBody": "O painel o adicionou no {provider} para você, então não há nada para colar. Cada push para {branch} faz o deploy automaticamente.",
         "rotateConfirmBodyRegistered": "Um novo segredo é gerado e o atual para de funcionar. O painel atualiza o webhook no {provider} para você, então o auto-deploy continua funcionando.",
-        "tokenTooShort": "O token de assinatura deve ter pelo menos 16 caracteres."
+        "tokenTooShort": "O token de assinatura deve ter pelo menos 16 caracteres.",
+        "secretWithheld": "O segredo só aparece para quem pode fazer deploy."
       },
       "cancel": "Cancelar",
       "runtime": {
@@ -5057,33 +5059,26 @@
         "domainLabelHint": "O endereço para a cópia de staging. Use algo claramente diferente da sua aplicação no ar."
       },
       "pushDialog": {
-        "title": "Enviar staging sobre {domain}?",
-        "description": "Tudo em {staging} é copiado sobre {production}. Não tem como desfazer.",
-        "downtime": "Sua aplicação fica offline durante o processo, e os visitantes veem uma página de manutenção até terminar.",
-        "failSafe": "Se o envio falhar no meio, a produção volta a ficar como estava.",
-        "whatToPush": "O que deve ser copiado",
+        "title": "Enviar staging para a produção?",
+        "whatToPush": "O que enviar",
         "modes": {
           "files": {
             "label": "Apenas arquivos",
-            "replaces": "Os arquivos da aplicação",
-            "deletes": "Os arquivos que só existem em produção. Os uploads são mantidos.",
-            "undo": "Nenhuma depois de concluído"
+            "summary": "Os arquivos da aplicação. O banco de dados não é alterado.",
+            "consequence": "Os arquivos que só existem em produção são excluídos. Os uploads são mantidos."
           },
           "database": {
             "label": "Apenas banco de dados",
-            "replaces": "O banco de dados",
-            "deletes": "Tudo que foi escrito desde a cópia: pedidos, comentários, posts",
-            "undo": "Nenhuma pelo painel. O banco de dados antigo fica salvo no servidor.",
-            "note": "A produção precisa dos mesmos plugins e temas do staging. O banco de dados conta com eles, e se faltar algum a aplicação pode ficar em branco."
+            "summary": "Conteúdo e configurações. Os arquivos não são alterados.",
+            "consequence": "Tudo que foi escrito em produção desde a cópia — pedidos, comentários, posts — é substituído. A produção também precisa dos mesmos plugins e temas do staging, ou a aplicação pode ficar em branco."
           },
           "full": {
             "label": "Arquivos e banco de dados",
-            "replaces": "Os arquivos da aplicação e o banco de dados",
-            "deletes": "Os arquivos que só existem em produção (os uploads são mantidos) e tudo que foi escrito desde a cópia",
-            "undo": "Nenhuma pelo painel. O banco de dados antigo fica salvo no servidor; os arquivos não."
+            "summary": "Arquivos e banco de dados. A produção vira uma cópia do staging.",
+            "consequence": "Os arquivos que só existem em produção são excluídos (os uploads são mantidos), e tudo que foi escrito em produção desde a cópia — pedidos, comentários, posts — é substituído."
           }
         },
-        "backupFirst": "Não tem volta. <link>Faça um backup antes</link> se ainda não fez.",
+        "backupFirst": "Não tem como desfazer depois de concluído — <link>faça um backup antes</link>.",
         "confirmLabel": "Digite {domain} para confirmar",
         "pickMode": "Escolha o que copiar",
         "typeToUnlock": "Digite o domínio de produção para confirmar",
@@ -5094,12 +5089,7 @@
         "failed": "O envio não foi concluído.",
         "copyAge": "Cópia feita {age}",
         "copyDomain": "Copiar domínio",
-        "whatToPushHint": "Arquivos copia código e uploads. Banco de dados copia conteúdo. Ambos copiam tudo.",
-        "facts": {
-          "replaces": "Substitui",
-          "deletes": "Apaga",
-          "undo": "Volta"
-        }
+        "whileRunning": "A aplicação fica offline durante o processo. Se falhar no meio, a produção volta a ficar como estava."
       },
       "isCopy": {
         "title": "Esta aplicação é uma cópia de staging",

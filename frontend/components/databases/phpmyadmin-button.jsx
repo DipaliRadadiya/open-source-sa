@@ -9,7 +9,7 @@ import Link from "next/link";
 import { ChevronDown, Download, Loader2, TableProperties } from "lucide-react";
 import { phpmyadminSso } from "@/lib/api/databases";
 import { phpmyadminState, userCount } from "@/lib/databases/phpmyadmin-state";
-import { openBlankTab, paintPlaceholder } from "@/lib/browser/new-tab";
+import { openUrlInNewTab } from "@/lib/browser/new-tab";
 import { apiMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -88,33 +88,21 @@ export function PhpmyadminButton({
     users: userCount(database),
   });
 
-  if (state === "hidden") return null;
+  // Signing in to phpMyAdmin writes as the database's own user, so the API
+  // puts it behind `database` manage (DB-02). A view-only role gets no button.
+  if (state === "hidden" || !canManage) return null;
 
   // Nothing to open: offer the install instead. A link, not a fetch — this
   // goes to the ordinary create-application flow with the type already chosen,
   // so the domain and the confirmation stay the user's.
   if (state === "install") {
     return (
-      <ReasonTooltip reason={canManage ? null : t("noPermission")}>
-        <Button
-          asChild={canManage}
-          variant="outline"
-          size="sm"
-          disabled={!canManage}
-        >
-          {canManage ? (
-            <Link href="/applications/create?type=phpmyadmin">
-              <Download className="size-4" />
-              {t("install")}
-            </Link>
-          ) : (
-            <>
-              <Download className="size-4" />
-              {t("install")}
-            </>
-          )}
-        </Button>
-      </ReasonTooltip>
+      <Button asChild variant="outline" size="sm">
+        <Link href="/applications/create?type=phpmyadmin">
+          <Download className="size-4" />
+          {t("install")}
+        </Link>
+      </Button>
     );
   }
 
@@ -133,10 +121,9 @@ export function PhpmyadminButton({
 
   async function open(applicationId) {
     /*
-     * No tab until the login URL exists (Krishna, 2026-09-29). Opening
-     * about:blank on the click kept the browser's permission to open a tab,
-     * but showed an empty page for the whole round trip. The button carries
-     * the wait ("Signing you in…"); the tab opens straight onto phpMyAdmin.
+     * No tab until the login URL exists, and then straight onto it (Krishna,
+     * 2026-09-29) — never an empty tab filled in later. The button carries
+     * the wait ("Signing you in…").
      * Chrome and Firefox still count the click for ~5 s, which the SSO call
      * fits inside; when it does not, the toast's button is a fresh click.
      */
@@ -146,13 +133,7 @@ export function PhpmyadminButton({
       const url = data?.redirect_url;
       if (!url) throw new Error("no url");
 
-      const tab = openBlankTab();
-      if (tab) {
-        // `replace`, so nothing is left in the new tab's history for Back.
-        paintPlaceholder(tab, t("signingIn"), "phpMyAdmin");
-        tab.location.replace(url);
-        return;
-      }
+      if (openUrlInNewTab(url)) return;
 
       // The browser no longer treats the click as permission. The token is good
       // for the rest of its minute, so offer a click it will honour.
@@ -160,7 +141,7 @@ export function PhpmyadminButton({
         duration: 55000,
         action: {
           label: t("openAnyway"),
-          onClick: () => window.open(url, "_blank", "noopener"),
+          onClick: () => openUrlInNewTab(url),
         },
       });
     } catch (error) {

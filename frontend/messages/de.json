@@ -187,7 +187,6 @@
       "remove": "Schlüssel entfernen",
       "removeTitle": "SSH-Schlüssel entfernen?",
       "removeDescription": "Dies entfernt „{name}“ aus den autorisierten Schlüsseln des Benutzers.",
-      "removeConfirm": "Entfernen",
       "publicKeyHint": "Die .pub-Hälfte eines SSH-Schlüsselpaars. Sie darf weitergegeben werden — so erkennt der Server Sie. Fügen Sie hier niemals den privaten Schlüssel ein.",
       "nameHint": "Ein Name, damit Sie diesen Schlüssel später unterscheiden können – zum Beispiel, von welchem Laptop er stammt."
     },
@@ -220,7 +219,7 @@
     },
     "loadFailed": "Ihre Systembenutzer konnten nicht geladen werden. Sie wurden nicht geändert oder entfernt.",
     "sshNotEnforced": {
-      "body": "Die SSH-Schalter sind noch nicht aktiv, daher kann sich jeder Benutzer weiterhin über SSH anmelden. Speichern Sie Einstellungen → Zugang & Sicherheit, um sie zu aktivieren.",
+      "body": "Die SSH-Schalter sind noch nicht aktiv – jeder Benutzer kann sich über SSH anmelden, bis Zugang & Sicherheit gespeichert ist.",
       "action": "Zugang & Sicherheit öffnen"
     },
     "sshViaSudo": "Sudo-Benutzer können sich immer über SSH anmelden. Schalten Sie sudo aus, um SSH hier zu steuern."
@@ -2715,7 +2714,8 @@
       "password": "Passwort",
       "copyString": "Verbindungszeichenfolge kopieren",
       "copyField": "{field} kopieren",
-      "otherUsers": "{count, plural, =1 {Ein weiterer Benutzer kann sich mit dieser Datenbank verbinden.} other {# weitere Benutzer können sich mit dieser Datenbank verbinden.}} Siehe den Tab „Benutzer“."
+      "otherUsers": "{count, plural, =1 {Ein weiterer Benutzer kann sich mit dieser Datenbank verbinden.} other {# weitere Benutzer können sich mit dieser Datenbank verbinden.}} Siehe den Tab „Benutzer“.",
+      "passwordWithheld": "Verborgen – Ihre Rolle darf keine Datenbanken verwalten."
     },
     "users": {
       "title": "Benutzer",
@@ -2767,7 +2767,8 @@
       "newPasswordRequired": "Neues Passwort (zum Umbenennen bei MongoDB erforderlich)",
       "nameIsFixed": "Der Name eines Datenbankbenutzers lässt sich nach dem Anlegen nicht ändern. Legen Sie stattdessen einen weiteren Benutzer an.",
       "newPasswordRequiredHint": "MongoDB kann einen Benutzer nicht umbenennen, deshalb wird das Konto von Grund auf neu erstellt. Deshalb muss ein Passwort gesetzt werden.",
-      "passwordUnknown": "Das Panel kennt das Passwort nicht – dieses Konto stammt von einem anderen Server. Ändern Sie das Passwort, um eine Verbindungszeichenfolge zu erhalten."
+      "passwordUnknown": "Das Panel kennt das Passwort nicht – dieses Konto stammt von einem anderen Server. Ändern Sie das Passwort, um eine Verbindungszeichenfolge zu erhalten.",
+      "passwordWithheld": "Passwort verborgen – Ihre Rolle darf keine Datenbanken verwalten."
     },
     "detail": {
       "size": "Größe",
@@ -3872,7 +3873,8 @@
         "added": "Webhook zum Repository hinzugefügt",
         "addedBody": "Das Panel hat ihn für Sie bei {provider} eingetragen, es gibt also nichts einzufügen. Ein Push auf {branch} wird automatisch deployt.",
         "rotateConfirmBodyRegistered": "Ein neues Secret wird erzeugt und das aktuelle funktioniert nicht mehr. Das Panel aktualisiert den Webhook bei {provider} für Sie, das automatische Deployen läuft also weiter.",
-        "tokenTooShort": "Das Signing-Token muss mindestens 16 Zeichen lang sein."
+        "tokenTooShort": "Das Signing-Token muss mindestens 16 Zeichen lang sein.",
+        "secretWithheld": "Das Geheimnis sehen nur Personen, die bereitstellen dürfen."
       },
       "cancel": "Abbrechen",
       "runtime": {
@@ -5057,33 +5059,26 @@
         "domainLabelHint": "Die Adresse für die Staging-Kopie. Verwenden Sie etwas, das offensichtlich nicht Ihre Live-Seite ist."
       },
       "pushDialog": {
-        "title": "Staging über {domain} übertragen?",
-        "description": "Alles auf {staging} wird über {production} kopiert. Das lässt sich nicht zurücknehmen.",
-        "downtime": "Ihre Anwendung wird währenddessen offline genommen, und Besucher sehen bis zum Ende eine Wartungsseite.",
-        "failSafe": "Schlägt die Übertragung mittendrin fehl, wird die Produktion wieder in den vorherigen Zustand versetzt.",
-        "whatToPush": "Was kopiert werden soll",
+        "title": "Staging in die Produktion übertragen?",
+        "whatToPush": "Was übertragen wird",
         "modes": {
           "files": {
             "label": "Nur Dateien",
-            "replaces": "Die Dateien der Anwendung",
-            "deletes": "Dateien, die es nur auf Produktion gibt. Uploads bleiben erhalten.",
-            "undo": "Keiner, sobald sie abgeschlossen ist"
+            "summary": "Die Dateien der Anwendung. Die Datenbank bleibt unverändert.",
+            "consequence": "Dateien, die es nur auf Produktion gibt, werden gelöscht. Uploads bleiben erhalten."
           },
           "database": {
             "label": "Nur Datenbank",
-            "replaces": "Die Datenbank",
-            "deletes": "Alles seit der Kopie Geschriebene: Bestellungen, Kommentare, Beiträge",
-            "undo": "Keiner über das Panel. Die alte Datenbank bleibt auf dem Server gespeichert.",
-            "note": "Produktion braucht dieselben Plugins und Themes wie Staging. Die Datenbank erwartet sie, und fehlt eines, kann die Anwendung leer bleiben."
+            "summary": "Inhalte und Einstellungen. Die Dateien bleiben unverändert.",
+            "consequence": "Alles, was seit der Kopie auf Produktion geschrieben wurde – Bestellungen, Kommentare, Beiträge –, wird ersetzt. Produktion braucht außerdem dieselben Plugins und Themes wie Staging, sonst kann die Anwendung leer bleiben."
           },
           "full": {
             "label": "Dateien und Datenbank",
-            "replaces": "Die Dateien der Anwendung und die Datenbank",
-            "deletes": "Dateien, die es nur auf Produktion gibt (Uploads bleiben erhalten), und alles seit der Kopie Geschriebene",
-            "undo": "Keiner über das Panel. Die alte Datenbank bleibt auf dem Server gespeichert, die Dateien nicht."
+            "summary": "Dateien und Datenbank. Die Produktion wird zur Kopie von Staging.",
+            "consequence": "Dateien, die es nur auf Produktion gibt, werden gelöscht (Uploads bleiben erhalten), und alles, was seit der Kopie auf Produktion geschrieben wurde – Bestellungen, Kommentare, Beiträge –, wird ersetzt."
           }
         },
-        "backupFirst": "Von hier gibt es kein Zurück. <link>Machen Sie zuerst ein Backup</link>, falls noch nicht geschehen.",
+        "backupFirst": "Nach dem Abschluss gibt es kein Zurück – <link>machen Sie zuerst ein Backup</link>.",
         "confirmLabel": "Tippen Sie {domain}, um zu bestätigen",
         "pickMode": "Wählen Sie, was kopiert wird",
         "typeToUnlock": "Tippen Sie die Produktions-Domain, um zu bestätigen",
@@ -5094,12 +5089,7 @@
         "failed": "Die Übertragung wurde nicht abgeschlossen.",
         "copyAge": "Kopie erstellt {age}",
         "copyDomain": "Domain kopieren",
-        "whatToPushHint": "Dateien kopiert Code und Uploads. Datenbank kopiert Inhalte. Beides kopiert alles.",
-        "facts": {
-          "replaces": "Ersetzt",
-          "deletes": "Löscht",
-          "undo": "Rückweg"
-        }
+        "whileRunning": "Die Anwendung ist währenddessen offline. Schlägt es mittendrin fehl, wird die Produktion wieder in den vorherigen Zustand versetzt."
       },
       "isCopy": {
         "title": "Diese Anwendung ist eine Staging-Kopie",

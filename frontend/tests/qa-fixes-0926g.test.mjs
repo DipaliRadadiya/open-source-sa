@@ -46,7 +46,7 @@ test("AD-G: pause and resume speak after the refresh", () => {
 });
 
 test("AD-H / AD-K: a deliberate stop is 'stopped'; since is formatted", () => {
-  assert.match(proc, /stoppedHere && rawState === "failed" \? "inactive" : rawState/);
+  assert.match(proc, /expected === "stopped" && rawState === "failed"\s*\?\s*"inactive"/);
   assert.match(proc, /formatSince\(process\.since, format\)/);
 });
 

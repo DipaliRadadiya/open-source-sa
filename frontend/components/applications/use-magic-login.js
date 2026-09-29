@@ -14,14 +14,13 @@ import { openMagicLogin } from "@/lib/applications/magic-login-window";
  * that does, for as long as the one-minute token lasts.
  */
 export function launchMagicLogin(session, t) {
-  const holding = { message: t("redirecting"), title: t("action") };
-  if (openMagicLogin(session, holding)) return;
+  if (openMagicLogin(session)) return;
   toast(t("linkReady"), {
     duration: 55000,
     action: {
       label: t("openAdmin"),
       onClick: () => {
-        if (!openMagicLogin(session, holding)) toast.error(t("popupBlocked"));
+        if (!openMagicLogin(session)) toast.error(t("popupBlocked"));
       },
     },
   });
