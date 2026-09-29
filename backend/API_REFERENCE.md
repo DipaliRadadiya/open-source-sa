@@ -1895,7 +1895,7 @@ Folder size on disk.
 ---
 
 ### GET `/applications/{application}/files/content`
-**Permission:** `app_file` (view) | **Throttle:** 60/min
+**Permission:** `app_file` (**manage**) — **manage**, not view, since 2026-09-29: a file's contents (`wp-config.php`, `.env`) are exactly the secrets the rest of the API withholds from view-only roles. `view` is browse, search, sizes and the trash list; hide open/download/preview for it. | **Throttle:** 60/min
 
 Read a file.
 
@@ -2007,7 +2007,7 @@ Abandons an upload and removes its part file. **Response:** `{"aborted": true}`.
 ---
 
 ### GET `/applications/{application}/files/download`
-**Permission:** `app_file` (view) | **Throttle:** 20/min
+**Permission:** `app_file` (**manage**) — **manage**, not view, since 2026-09-29: a file's contents (`wp-config.php`, `.env`) are exactly the secrets the rest of the API withholds from view-only roles. `view` is browse, search, sizes and the trash list; hide open/download/preview for it. | **Throttle:** 20/min
 
 Download a file. **Streamed, with no size limit** (changed 11-08-2026 — it was
 previously capped at 5 MB).
@@ -2022,7 +2022,7 @@ The response is a stream, not a buffered body: read it as a blob, not as text.
 ---
 
 ### GET `/applications/{application}/files/preview`
-**Permission:** `app_file` (view) | **Throttle:** 60/min
+**Permission:** `app_file` (**manage**) — **manage**, not view, since 2026-09-29: a file's contents (`wp-config.php`, `.env`) are exactly the secrets the rest of the API withholds from view-only roles. `view` is browse, search, sizes and the trash list; hide open/download/preview for it. | **Throttle:** 60/min
 
 Stream an **image** with its real content type, so it can be rendered rather
 than saved. The only response in this API a browser is meant to interpret;

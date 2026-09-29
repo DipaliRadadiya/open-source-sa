@@ -1162,17 +1162,31 @@ describe('browsing', function () {
     });
 
     describe('permissions', function () {
-        it('lets a viewer browse, view and download but not edit', function () {
+        it('lets a viewer browse and search, but not read a file\'s contents', function () {
+            // Operator decision 2026-09-29 (option A). Reading contents let a
+            // view-only role open wp-config.php or .env and read the database
+            // password and APP_KEY every other screen hides from it.
             fakeFileBrowserServer();
             $user = User::factory()->create();
             grantPermission($user, 'app_file', view: true, manage: false);
 
             $this->actingAs($user)->getJson(filesUrl())->assertOk();
-            $this->actingAs($user)->getJson(filesUrl('/content?path=index.php'))->assertOk();
-            $this->actingAs($user)->getJson(filesUrl('/download?path=index.php'))->assertOk();
+            $this->actingAs($user)->getJson(filesUrl('/search?q=index'))->assertOk();
+            $this->actingAs($user)->getJson(filesUrl('/content?path=index.php'))->assertForbidden();
+            $this->actingAs($user)->getJson(filesUrl('/download?path=index.php'))->assertForbidden();
+            $this->actingAs($user)->getJson(filesUrl('/preview?path=index.php'))->assertForbidden();
             $this->actingAs($user)
                 ->putJson(filesUrl('/content'), ['path' => 'index.php', 'content' => 'x'])
                 ->assertForbidden();
+        });
+
+        it('lets someone who may manage files read them', function () {
+            fakeFileBrowserServer();
+            $user = User::factory()->create();
+            grantPermission($user, 'app_file', view: true, manage: true);
+
+            $this->actingAs($user)->getJson(filesUrl('/content?path=index.php'))->assertOk();
+            $this->actingAs($user)->getJson(filesUrl('/download?path=index.php'))->assertOk();
         });
 
         it('denies an unauthenticated caller', function () {
