@@ -187,3 +187,18 @@ it('follows the domain when it changes, and clears the config cache that would o
 
     expect(collect($runs)->contains(fn ($run) => in_array('config:clear', $run['command'], true)))->toBeTrue();
 });
+
+it('gives the project root to the site user before copying into it as them', function () {
+    // The web root is `public_html/public`, so the provisioner leaves
+    // `public_html` root-owned; the user's `cp` was refused on every file and
+    // every Composer install failed at extract (found live 2026-09-29).
+    $commands = collect(installStatamic())->pluck('command')->values();
+
+    $chown = $commands->search(fn (array $c) => $c === ['chown', '-h', 'statuser:statuser', test()->projectRoot]);
+    $copy = $commands->search(fn (array $c) => ($c[0] ?? null) === 'runuser' && ($c[4] ?? null) === 'cp'
+        && end($c) === test()->projectRoot);
+
+    expect($chown)->not->toBeFalse()
+        ->and($copy)->not->toBeFalse()
+        ->and($chown)->toBeLessThan($copy);
+});

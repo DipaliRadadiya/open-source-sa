@@ -503,13 +503,6 @@ abstract class AbstractSiteInstaller implements SiteInstaller
     public function afterStart(Application $application, string $documentRoot): void {}
 
     /**
-     * Run a command as the site's own user.
-     *
-     * @param  array<int, string>  $command
-     *
-     * @throws ProvisioningFailedException
-     */
-    /**
      * Copy a prepared tree into the site — as the site's own user.
      *
      * The destination is not always new. "Retry setup" copies into a document
@@ -523,6 +516,14 @@ abstract class AbstractSiteInstaller implements SiteInstaller
      * The staging tree is handed to the user first so they can read it; it is
      * the panel's own temporary directory, under a name nobody could guess.
      *
+     * So is the destination directory itself, and only that: where the web
+     * root is a subfolder (Statamic, Craft serve `public_html/public`) the
+     * provisioner leaves `public_html` root-owned, and the user's `cp` was
+     * refused on every file — every Composer install failed at `extract`
+     * (found live 2026-09-29). Root copying used to hide it, and the
+     * `chown -R` afterwards is what made it the user's. `-h`, so a link at
+     * that path is the one thing changed, never what it points to.
+     *
      * @param  string  $work  the staging directory to hand over (the source or its parent)
      */
     protected function copyIntoSite(Application $application, string $source, string $destination, string $work): void
@@ -530,9 +531,17 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         $owner = $application->systemUser->username;
 
         $this->run('extract', ['chown', '-R', "{$owner}:{$owner}", $work], $application);
+        $this->run('extract', ['chown', '-h', "{$owner}:{$owner}", $destination], $application);
         $this->runAsSiteUser('extract', $application, ['cp', '-r', "{$source}/.", $destination]);
     }
 
+    /**
+     * Run a command as the site's own user.
+     *
+     * @param  array<int, string>  $command
+     *
+     * @throws ProvisioningFailedException
+     */
     protected function runAsSiteUser(string $step, Application $application, array $command, ?string $input = null, ?string $cwd = null): ServerOpsResult
     {
         return $this->run($step, array_merge(
