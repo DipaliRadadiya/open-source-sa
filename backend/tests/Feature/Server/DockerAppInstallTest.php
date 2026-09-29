@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
@@ -10,6 +11,7 @@ use App\Services\Server\Applications\Installers\DockerAppInstaller;
 use App\Services\Server\ServerOps;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Process;
 use Symfony\Component\Yaml\Yaml;
 
 uses(RefreshDatabase::class);
@@ -32,6 +34,21 @@ uses(RefreshDatabase::class);
  *  - The database is not published to the host.
  */
 beforeEach(function () {
+    // A permissive default, so a test about the rendered compose file does not
+    // also have to describe the box. `cat` fails because it is the existence
+    // probe for starter files and they should be written; everything else
+    // succeeds. Individual tests re-fake when the box is what they are about.
+    //
+    // This was absent, and the dataset tests passed only because a failed write
+    // was being ignored — the same silence that let Glance ship without a config.
+    Process::fake(function ($process) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        return ($args[0] ?? '') === 'cat'
+            ? Process::result(exitCode: 1, errorOutput: 'No such file')
+            : Process::result(exitCode: 0);
+    });
+
     ServerCapability::query()->delete();
     ServerCapability::create([
         'stack' => 'docker', 'web_server' => 'nginx',
@@ -397,6 +414,59 @@ it('still generates a secret the app has gained since install', function () {
 
     expect($after['MYSQL_ROOT_PASSWORD'])->toBe($partial['MYSQL_ROOT_PASSWORD'])
         ->and($after['GHOST_DB_PASSWORD'] ?? null)->not->toBeNull();
+});
+
+it('creates the directory before writing into it', function () {
+    // `ManagedFile::put()` is `tee <path>` and nothing more, so a write into a
+    // directory that does not exist fails. Measured on a real site: the bind mount
+    // was correct, the config was never written, and Glance crash-looped for
+    // sixteen hours on the very error the starter file exists to prevent.
+    $ran = [];
+    Process::fake(function ($process) use (&$ran) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+        $ran[] = $args;
+
+        if (($args[0] ?? '') === 'cat') {
+            return Process::result(exitCode: 1, errorOutput: 'No such file');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    installDockerApp(dockerAppSite('glance'));
+
+    $index = fn (string $binary): int|false => collect($ran)->search(
+        fn (array $args): bool => ($args[0] ?? '') === $binary
+    );
+
+    // The mkdir must come BEFORE the tee, not merely exist somewhere.
+    expect($index('mkdir'))->not->toBeFalse('nothing created the config directory')
+        ->and($index('tee'))->not->toBeFalse()
+        ->and($index('mkdir'))->toBeLessThan($index('tee'))
+        // And owned by the site user, or the File Manager cannot edit the file it
+        // is being told to edit.
+        ->and($index('chown'))->not->toBeFalse('the directory was left root-owned');
+});
+
+it('fails provisioning when the starter file cannot be written', function () {
+    // Ignoring `put()`'s result is what made the missing directory silent:
+    // provisioning reported success and the container had no config.
+    Process::fake(function ($process) {
+        $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+
+        if (($args[0] ?? '') === 'cat') {
+            return Process::result(exitCode: 1, errorOutput: 'No such file');
+        }
+
+        if (($args[0] ?? '') === 'tee') {
+            return Process::result(exitCode: 1, errorOutput: 'Permission denied');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    expect(fn () => installDockerApp(dockerAppSite('glance')))
+        ->toThrow(ProvisioningFailedException::class);
 });
 
 it('writes the files an app cannot start without', function () {

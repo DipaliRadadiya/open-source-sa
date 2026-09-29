@@ -3,11 +3,13 @@
 namespace App\Services\Server\Applications\Installers;
 
 use App\Contracts\SiteInstaller;
+use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\Types\AbstractDockerAppType;
 use App\Services\Server\Applications\ContainerSupervisor;
 use App\Services\Server\ManagedFile;
+use App\Services\Server\ServerOps;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
@@ -44,6 +46,7 @@ class DockerAppInstaller implements SiteInstaller
         private SiteTypeManager $siteTypes,
         private ContainerSupervisor $containers,
         private ManagedFile $files,
+        private ServerOps $serverOps,
     ) {}
 
     /**
@@ -345,7 +348,44 @@ class DockerAppInstaller implements SiteInstaller
                 continue;
             }
 
-            $this->files->put($file, $this->dedent($contents), $context);
+            // **The directory first.** `ManagedFile::put()` is `tee <path>` and
+            // nothing more, so writing into a directory that does not exist fails
+            // — which is exactly what happened on a real site: the bind mount was
+            // correct, the config was never written, and Glance crash-looped for
+            // sixteen hours on the same missing-file error the starter exists to
+            // prevent. I had even written a comment about the directory mattering
+            // and then not created one.
+            $made = $this->serverOps->run(
+                ['mkdir', '-p', $host],
+                $context + ['op' => 'docker_app_starter_dir'],
+                timeout: 15,
+            );
+
+            if ($made->failed()) {
+                throw new ProvisioningFailedException('docker_app_starter', $made->reference);
+            }
+
+            // Owned by the site user, or the File Manager cannot edit the file it
+            // is being told to edit — Docker creates a missing bind source as
+            // root, which is how this directory came to be root-owned.
+            $user = (string) ($application->systemUser?->username ?? '');
+
+            if ($user !== '') {
+                $this->serverOps->run(
+                    ['chown', '-R', "{$user}:{$user}", $host],
+                    $context + ['op' => 'docker_app_starter_chown'],
+                    timeout: 15,
+                );
+            }
+
+            // The result is READ. Ignoring it is what made the missing directory
+            // silent: provisioning reported success and the container had no
+            // config.
+            $written = $this->files->put($file, $this->dedent($contents), $context);
+
+            if ($written->failed()) {
+                throw new ProvisioningFailedException('docker_app_starter', $written->reference);
+            }
         }
 
         return $binds;
