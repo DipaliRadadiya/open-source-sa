@@ -32,11 +32,24 @@ class DeleteApplicationDockerResources
     ) {}
 
     /**
-     * @return array{removed: list<string>, kept: list<string>}
+     * Decide what may be removed, while the application still exists.
+     *
+     * **Two phases, and the split is not tidiness.** The decision needs the row:
+     * "does another site mount this" is a query over applications, and after the
+     * delete every volume looks unclaimed. But the REMOVAL needs the containers
+     * gone: `docker volume rm` refuses a volume any container references, running or
+     * not, and `docker network rm` refuses a network with an attached endpoint.
+     *
+     * Running both halves before deprovision was the first attempt and it failed on
+     * a real box with `solo-net:remove-failed` — the site's own container was still
+     * attached, because that is exactly what had not happened yet. This is the same
+     * before/after split the controller already makes for databases.
+     *
+     * @return array{volumes: list<string>, network: ?string, kept: list<string>}
      */
-    public function execute(Application $application): array
+    public function plan(Application $application): array
     {
-        $removed = [];
+        $removable = [];
         $kept = [];
 
         $volumes = collect((array) ($application->volume_mounts ?? []))
@@ -103,12 +116,11 @@ class DeleteApplicationDockerResources
                 continue;
             }
 
-            if (! $this->docker->removeVolume($name)->failed()) {
-                $removed[] = "volume:{$name}";
-            }
+            $removable[] = $name;
         }
 
         $network = (string) ($application->docker_network ?? '');
+        $removableNetwork = null;
 
         if ($network !== '') {
             $row = collect($this->docker->networks())->firstWhere('name', $network);
@@ -134,17 +146,52 @@ class DeleteApplicationDockerResources
                 $kept[] = "{$network}:joined-by-".$others->pluck('name')->implode(',');
             } elseif ($foreign->isNotEmpty()) {
                 $kept[] = "{$network}:attached-".$foreign->pluck('name')->implode(',');
-            } elseif ($this->docker->removeNetwork($network)->failed()) {
-                $kept[] = "{$network}:remove-failed";
             } else {
-                $removed[] = "network:{$network}";
+                $removableNetwork = $network;
+            }
+        }
+
+        return ['volumes' => $removable, 'network' => $removableNetwork, 'kept' => $kept];
+    }
+
+    /**
+     * Remove what the plan approved, once the containers are gone.
+     *
+     * Failures are recorded rather than thrown: the site itself is already deleted
+     * by this point, and turning "a volume would not go" into a 500 would report
+     * the whole delete as failed when the only thing it did not finish is cleanup
+     * somebody can do by hand from the Docker page.
+     *
+     * @param  array{volumes: list<string>, network: ?string, kept: list<string>}  $plan
+     * @return array{removed: list<string>, kept: list<string>}
+     */
+    public function apply(Application $application, array $plan): array
+    {
+        $removed = [];
+        $kept = $plan['kept'];
+
+        foreach ($plan['volumes'] as $name) {
+            if ($this->docker->removeVolume($name)->failed()) {
+                $kept[] = "{$name}:remove-failed";
+
+                continue;
+            }
+
+            $removed[] = "volume:{$name}";
+        }
+
+        if ($plan['network'] !== null) {
+            if ($this->docker->removeNetwork($plan['network'])->failed()) {
+                $kept[] = "{$plan['network']}:remove-failed";
+            } else {
+                $removed[] = "network:{$plan['network']}";
             }
         }
 
         $this->activityLogger->log('application.docker_resources_removed', $application, [
             'removed' => $removed,
-            // Recorded, because "we did not delete this" is the half somebody will
-            // come looking for when they find a volume still on the server.
+            // Recorded, because "we did not delete this" is the half somebody comes
+            // looking for when they find a volume still on the server.
             'kept' => $kept,
         ]);
 

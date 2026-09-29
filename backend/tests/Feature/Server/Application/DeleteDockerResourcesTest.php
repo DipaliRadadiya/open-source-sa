@@ -11,6 +11,21 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+/**
+ * The action is two phases on purpose — decide while the row exists, remove once the
+ * containers are gone. Tests drive both, because either alone proves nothing: the
+ * plan without the apply removes nothing, and the apply without the plan has no
+ * safety checks.
+ *
+ * @return array{removed: list<string>, kept: list<string>}
+ */
+function deleteDockerResources(Application $site): array
+{
+    $action = app(DeleteApplicationDockerResources::class);
+
+    return $action->apply($site, $action->plan($site));
+}
+
 /*
  * Deleting a site's Docker network and volumes, when asked to.
  *
@@ -77,7 +92,7 @@ it('removes a volume only this site mounts', function () {
         'sites' => [['id' => $site->id, 'name' => 'alpha', 'path' => '/var/lib/mysql']],
     ]], [], $ran);
 
-    $outcome = app(DeleteApplicationDockerResources::class)->execute($site);
+    $outcome = deleteDockerResources($site);
 
     expect($ran)->toBe(['volume:alpha_db'])
         ->and($outcome['removed'])->toBe(['volume:alpha_db']);
@@ -98,7 +113,7 @@ it('keeps a volume another site also mounts', function () {
         ],
     ]], [], $ran);
 
-    $outcome = app(DeleteApplicationDockerResources::class)->execute($site);
+    $outcome = deleteDockerResources($site);
 
     expect($ran)->toBe([])
         ->and($outcome['kept'])->toBe(['shared_db:mounted-by-beta']);
@@ -116,7 +131,7 @@ it('keeps a volume a FOREIGN container is still holding', function () {
         'sites' => [['id' => $site->id, 'name' => 'alpha', 'path' => '/data']],
     ]], [], $ran);
 
-    expect(app(DeleteApplicationDockerResources::class)->execute($site)['kept'])
+    expect(deleteDockerResources($site)['kept'])
         ->toBe(['busy_db:held-by-someone-elses-container']);
     expect($ran)->toBe([]);
 });
@@ -136,7 +151,7 @@ it('keeps a network another site is on', function () {
         ],
     ]], $ran);
 
-    expect(app(DeleteApplicationDockerResources::class)->execute($site)['kept'])->toBe(['shared-net:joined-by-beta']);
+    expect(deleteDockerResources($site)['kept'])->toBe(['shared-net:joined-by-beta']);
     expect($ran)->toBe([]);
 });
 
@@ -149,7 +164,7 @@ it('removes a network no other site is on', function () {
         'sites' => [['id' => $site->id, 'name' => 'alpha']],
     ]], $ran);
 
-    expect(app(DeleteApplicationDockerResources::class)->execute($site)['removed'])
+    expect(deleteDockerResources($site)['removed'])
         ->toBe(['network:alpha-net']);
 });
 
@@ -164,7 +179,7 @@ it('never removes one of Docker\'s own networks', function () {
         'sites' => [['id' => $site->id, 'name' => 'alpha']],
     ]], $ran);
 
-    app(DeleteApplicationDockerResources::class)->execute($site);
+    deleteDockerResources($site);
 
     expect($ran)->toBe([]);
 });
@@ -184,7 +199,7 @@ it('says nothing and breaks nothing when the objects are already gone', function
         'container_names' => [], 'sites' => [],
     ]], [], $ran);
 
-    $outcome = app(DeleteApplicationDockerResources::class)->execute($site);
+    $outcome = deleteDockerResources($site);
 
     // Recorded as already-gone rather than skipped in silence: a volume appearing
     // in neither list is what made the first real failure undiagnosable.
@@ -204,7 +219,7 @@ it('records what it kept as well as what it removed', function () {
         'sites' => [['id' => $site->id, 'name' => 'alpha', 'path' => '/data']],
     ]], [], $ran);
 
-    app(DeleteApplicationDockerResources::class)->execute($site);
+    deleteDockerResources($site);
 
     $log = ActivityLog::where('action', 'docker_resources_removed')->first();
 
@@ -228,7 +243,7 @@ it('removes a volume its OWN container is still holding', function () {
         'sites' => [['id' => $site->id, 'name' => 'alpha', 'path' => '/data']],
     ]], [], $ran);
 
-    expect(app(DeleteApplicationDockerResources::class)->execute($site)['removed'])
+    expect(deleteDockerResources($site)['removed'])
         ->toBe(['volume:alpha_db']);
 });
 
@@ -243,7 +258,7 @@ it('removes a network only its OWN containers are attached to', function () {
         'sites' => [['id' => $site->id, 'name' => 'alpha']],
     ]], $ran);
 
-    expect(app(DeleteApplicationDockerResources::class)->execute($site)['removed'])
+    expect(deleteDockerResources($site)['removed'])
         ->toBe(['network:alpha-net']);
 });
 
@@ -259,7 +274,7 @@ it('keeps a network a foreign container is attached to', function () {
         'sites' => [['id' => $site->id, 'name' => 'alpha']],
     ]], $ran);
 
-    expect(app(DeleteApplicationDockerResources::class)->execute($site)['kept'])->toBe(['alpha-net:attached-stranger']);
+    expect(deleteDockerResources($site)['kept'])->toBe(['alpha-net:attached-stranger']);
     expect($ran)->toBe([]);
 });
 
@@ -273,7 +288,7 @@ it('says so when Docker could not be asked at all', function () {
     $ran = [];
     fakeDockerState([], [], $ran);
 
-    $kept = app(DeleteApplicationDockerResources::class)->execute($site)['kept'];
+    $kept = deleteDockerResources($site)['kept'];
 
     expect($kept)->toContain('unreadable:docker-volume-list')
         ->and($kept)->toContain('alpha_db:not-listed')

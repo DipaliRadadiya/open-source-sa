@@ -300,20 +300,26 @@ class ApplicationController extends Controller
             ? $application->databases()->with('users')->get()
             : null;
 
-        // Docker objects BEFORE the row is deleted, because deciding whether a
-        // volume is still wanted means asking which other sites mount it — and the
-        // row being deleted is one of the answers. After the delete, every volume
-        // looks unclaimed.
+        // Decided BEFORE the row is deleted, because "does another site mount this"
+        // is a query over applications and after the delete every volume looks
+        // unclaimed. Removed AFTER deprovision, because `docker volume rm` refuses a
+        // volume any container references and `docker network rm` refuses a network
+        // with an attached endpoint — and until `compose down` runs, this site's own
+        // containers are both.
         //
-        // Before deprovision too: `compose down` stops the containers, and a
-        // volume no container holds is one the safety check can no longer tell
-        // apart from a volume nothing ever used.
-        if ($request->boolean('remove_docker_resources')) {
-            $dockerResources->execute($application);
-        }
+        // Doing both halves up front was the first attempt and failed on a real box
+        // with `solo-net:remove-failed`. Same before/after split as the databases
+        // below, for the same kind of reason.
+        $dockerPlan = $request->boolean('remove_docker_resources')
+            ? $dockerResources->plan($application)
+            : null;
 
         $deprovision->execute($application, $request->boolean('remove_files'));
         $action->execute($application);
+
+        if ($dockerPlan !== null) {
+            $dockerResources->apply($application, $dockerPlan);
+        }
 
         // Site first, databases after — never the reverse. A database dropped
         // before a site delete that then failed is the data of a site still
