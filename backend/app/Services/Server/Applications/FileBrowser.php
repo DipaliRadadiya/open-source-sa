@@ -1390,7 +1390,11 @@ class FileBrowser
             return;
         }
 
-        $this->run($application, ['rm', '-rf', $this->trashDirectory($application)], 'trash_empty');
+        // What is in it, not the directory. `.panel` is root's (c2d827a2), so
+        // the site user can no longer remove `trash` itself: `rm -rf` on it
+        // deleted everything inside, then failed on the directory and turned
+        // a successful empty into a 500 (found live 2026-09-29).
+        $this->run($application, ['find', $this->trashDirectory($application), '-mindepth', '1', '-maxdepth', '1', '-exec', 'rm', '-rf', '{}', '+'], 'trash_empty');
 
         $this->sizeChanged($application);
     }

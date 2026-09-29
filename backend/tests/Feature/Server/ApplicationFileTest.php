@@ -2407,6 +2407,37 @@ describe('trash', function () {
         expect(FileBrowserFake::$fs['qa/note.txt']['content'] ?? null)->toBe('hello v1');
     });
 
+    it('empties the trash by removing what is in it, never the directory', function () {
+        // `.panel` is root's, so the site user cannot remove `trash` itself:
+        // `rm -rf <trash>` deleted everything, then failed on the directory
+        // and reported the empty as a 500 (found live 2026-09-29).
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl('/trash'), ['confirm' => true])
+            ->assertOk();
+
+        $trash = '/home/siteowner/shop/.panel/trash';
+        $ran = collect(FileBrowserFake::$ran);
+
+        expect($ran->contains(fn (string $c) => str_contains($c, "find {$trash} -mindepth 1 -maxdepth 1 -exec rm -rf {} +")))->toBeTrue()
+            ->and($ran->contains(fn (string $c) => str_ends_with($c, "rm -rf {$trash}")))->toBeFalse();
+    });
+
+    it('empties one batch together with its record', function () {
+        fakeFileBrowserServer();
+
+        $this->actingAs($this->admin)
+            ->deleteJson(filesUrl('/trash'), ['batch' => '20260929-093707', 'confirm' => true])
+            ->assertOk();
+
+        $trash = '/home/siteowner/shop/.panel/trash';
+
+        expect(collect(FileBrowserFake::$ran)->contains(
+            fn (string $c) => str_contains($c, "rm -rf {$trash}/20260929-093707 {$trash}/20260929-093707.paths")
+        ))->toBeTrue();
+    });
+
     it('lists each item of a selection deleted from inside a folder', function () {
         fakeFileBrowserServer();
         FileBrowserFake::$fs['qa'] = ['type' => 'd'];
