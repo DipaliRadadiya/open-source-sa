@@ -1540,7 +1540,9 @@
       "removeYouDescription": "{ip} est l'adresse depuis laquelle vous êtes connecté. La retirer de cette liste permet à un jail de la bannir, ce qui vous couperait l'accès à ce serveur.",
       "removeYouConfirm": "Le retirer",
       "cancel": "Annuler",
-      "ignoreLimit": "C'est le nombre maximal d'adresses que cette liste peut contenir ({max}). Retirez-en une pour en ajouter une autre."
+      "ignoreLimit": "C'est le nombre maximal d'adresses que cette liste peut contenir ({max}). Retirez-en une pour en ajouter une autre.",
+      "maxretryRange": "Saisissez un nombre entier de 2 à 100.",
+      "findtimeRange": "Saisissez un nombre entier de secondes de 30 à 86400 (un jour)."
     },
     "tabs": {
       "live": "Protection",
@@ -1674,7 +1676,7 @@
       "created": "Règle ajoutée.",
       "errors": {
         "required": "Saisissez un port.",
-        "portRange": "Les ports vont de 1 à 65534.",
+        "portRange": "Les ports vont de 1 à 65535.",
         "portOrder": "La fin de la plage ne peut pas être inférieure au début.",
         "invalidSource": "Ce n'est pas une adresse IP ou une plage valide.",
         "portShape": "Utilisez un port comme 443, ou une plage comme 8000-8090.",

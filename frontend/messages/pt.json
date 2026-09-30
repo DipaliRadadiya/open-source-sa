@@ -1540,7 +1540,9 @@
       "removeYouDescription": "{ip} é o endereço de onde você está conectado. Tirá-lo desta lista permite que um jail o bane, o que cortaria seu acesso a este servidor.",
       "removeYouConfirm": "Remover",
       "cancel": "Cancelar",
-      "ignoreLimit": "Esse é o máximo de endereços que esta lista suporta ({max}). Remova um para adicionar outro."
+      "ignoreLimit": "Esse é o máximo de endereços que esta lista suporta ({max}). Remova um para adicionar outro.",
+      "maxretryRange": "Use um número inteiro de 2 a 100.",
+      "findtimeRange": "Use um número inteiro de segundos de 30 a 86400 (um dia)."
     },
     "tabs": {
       "live": "Proteção",
@@ -1674,7 +1676,7 @@
       "created": "Regra adicionada.",
       "errors": {
         "required": "Informe uma porta.",
-        "portRange": "As portas vão de 1 a 65534.",
+        "portRange": "As portas vão de 1 a 65535.",
         "portOrder": "O fim do intervalo não pode ser menor que o início.",
         "invalidSource": "Esse não é um endereço IP ou faixa válida.",
         "portShape": "Use uma porta como 443, ou um intervalo como 8000-8090.",

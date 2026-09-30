@@ -1540,7 +1540,9 @@
       "removeYouDescription": "{ip} es la dirección desde la que estás conectado. Si la quitas de esta lista, una jaula podrá bloquearla y perderías el acceso a este servidor.",
       "removeYouConfirm": "Quitarla",
       "cancel": "Cancelar",
-      "ignoreLimit": "Es el máximo de direcciones que admite esta lista ({max}). Elimina una para añadir otra."
+      "ignoreLimit": "Es el máximo de direcciones que admite esta lista ({max}). Elimina una para añadir otra.",
+      "maxretryRange": "Usa un número entero del 2 al 100.",
+      "findtimeRange": "Usa un número entero de segundos entre 30 y 86400 (un día)."
     },
     "tabs": {
       "live": "Protección",
@@ -1674,7 +1676,7 @@
       "created": "Regla añadida.",
       "errors": {
         "required": "Escribe un puerto.",
-        "portRange": "Los puertos van del 1 al 65534.",
+        "portRange": "Los puertos van del 1 al 65535.",
         "portOrder": "El final del rango no puede ser menor que el inicio.",
         "invalidSource": "Eso no es una dirección IP ni un rango válido.",
         "portShape": "Usa un puerto como 443, o un rango como 8000-8090.",

@@ -1540,7 +1540,9 @@
       "removeYouDescription": "{ip} ist die Adresse, von der Sie verbunden sind. Nehmen Sie sie von dieser Liste, kann ein Jail sie sperren — und damit Ihren Zugang zu diesem Server abschneiden.",
       "removeYouConfirm": "Entfernen",
       "cancel": "Abbrechen",
-      "ignoreLimit": "Mehr Adressen kann diese Liste nicht aufnehmen ({max}). Entfernen Sie eine, um eine weitere hinzuzufügen."
+      "ignoreLimit": "Mehr Adressen kann diese Liste nicht aufnehmen ({max}). Entfernen Sie eine, um eine weitere hinzuzufügen.",
+      "maxretryRange": "Geben Sie eine ganze Zahl von 2 bis 100 ein.",
+      "findtimeRange": "Geben Sie eine ganze Zahl an Sekunden von 30 bis 86400 (ein Tag) ein."
     },
     "tabs": {
       "live": "Schutz",
@@ -1674,7 +1676,7 @@
       "created": "Regel hinzugefügt.",
       "errors": {
         "required": "Port eingeben.",
-        "portRange": "Ports gehen von 1 bis 65534.",
+        "portRange": "Ports gehen von 1 bis 65535.",
         "portOrder": "Das Ende des Bereichs darf nicht unter dem Anfang liegen.",
         "invalidSource": "Das ist keine gültige IP-Adresse und kein gültiger Bereich.",
         "portShape": "Verwenden Sie einen Port wie 443 oder einen Bereich wie 8000-8090.",

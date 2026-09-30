@@ -489,3 +489,17 @@ test("Backups overview: the table only shows when the widest locale fits, and it
   assert.match(table, /whitespace-normal text-muted-foreground\/80">\{t\("notSetUpLine"\)\}/);
   assert.match(table, /header: wrapping\(t\("columns\.type"\)\)/);
 });
+
+test("Firewall form accepts port 65535 like the API (PORT_MAX since 03aca0da)", () => {
+  const src = read("lib/schemas/firewall.js");
+  assert.match(src, /parsed\.from > 65535 \|\| \(parsed\.to && parsed\.to > 65535\)/);
+  for (const l of locales) assert.doesNotMatch(read(`messages/${l}.json`), /65534/, l);
+});
+
+test("Fail2ban ban rules refuse out-of-range numbers on the field, not with the API's English 422", () => {
+  const src = read("components/fail2ban/ban-rules-card.jsx");
+  assert.match(src, /const maxretryError = inRange\(maxretry, 2, 100\)/);
+  assert.match(src, /const findtimeError = inRange\(findtime, 30, 86400\)/);
+  assert.match(src, /: maxretryError \|\| findtimeError;/);
+  for (const l of locales) { const s = JSON.parse(read(`messages/${l}.json`)).fail2ban.settings; assert.ok(s.maxretryRange && s.findtimeRange, l); }
+});

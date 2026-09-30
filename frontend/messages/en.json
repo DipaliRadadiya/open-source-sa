@@ -1540,7 +1540,9 @@
       "removeYouDescription": "{ip} is the address you are connected from. Take it off this list and a jail can ban it, which would cut off your access to this server.",
       "removeYouConfirm": "Remove it",
       "cancel": "Cancel",
-      "ignoreLimit": "That is the most addresses this list can hold ({max}). Remove one to add another."
+      "ignoreLimit": "That is the most addresses this list can hold ({max}). Remove one to add another.",
+      "maxretryRange": "Use a whole number from 2 to 100.",
+      "findtimeRange": "Use a whole number of seconds from 30 to 86400 (one day)."
     },
     "tabs": {
       "live": "Protection",
@@ -1674,7 +1676,7 @@
       "created": "Rule added.",
       "errors": {
         "required": "Enter a port.",
-        "portRange": "Ports run from 1 to 65534.",
+        "portRange": "Ports run from 1 to 65535.",
         "portOrder": "The end of the range cannot be lower than the start.",
         "invalidSource": "That is not a valid IP address or range.",
         "portShape": "Use a port like 443, or a range like 8000-8090.",

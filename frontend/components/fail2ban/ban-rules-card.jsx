@@ -61,6 +61,13 @@ export function BanRulesCard({ settings, presets, canManage }) {
   // A preset list without the current value would silently change it on save.
   const hasCurrent = presets.some((p) => String(p.seconds) === String(settings.bantime));
 
+  // The API's bounds (UpdateFail2banRequest), checked here so an out-of-range
+  // number is explained on the field instead of coming back as the API's
+  // English 422 in a toast.
+  const inRange = (value, min, max) => /^\d+$/.test(value) && Number(value) >= min && Number(value) <= max;
+  const maxretryError = inRange(maxretry, 2, 100) ? null : t("settings.maxretryRange");
+  const findtimeError = inRange(findtime, 30, 86400) ? null : t("settings.findtimeRange");
+
   const dirty =
     String(settings.bantime) !== bantime ||
     String(settings.findtime) !== findtime ||
@@ -96,7 +103,7 @@ export function BanRulesCard({ settings, presets, canManage }) {
     ? t("disabled.noPermission")
     : !dirty
       ? t("disabled.noChanges")
-      : null;
+      : maxretryError || findtimeError;
 
   return (
     <DisabledReasonProvider reason={canManage ? null : t("noPermission")}>
@@ -136,11 +143,16 @@ export function BanRulesCard({ settings, presets, canManage }) {
               min={2}
               max={100}
               value={maxretry}
+              aria-invalid={maxretryError ? true : undefined}
+              aria-describedby={maxretryError ? "f2b-maxretry-error" : undefined}
               onChange={(e) => setMaxretry(e.target.value)}
               // Locked mid-save: the refresh that follows would overwrite an
               // edit made while the request was in the air, without saying so.
               disabled={!canManage || pending}
             />
+            {maxretryError ? (
+              <p id="f2b-maxretry-error" className="text-xs text-destructive">{maxretryError}</p>
+            ) : null}
           </div>
   
           <div className="space-y-2">
@@ -152,11 +164,16 @@ export function BanRulesCard({ settings, presets, canManage }) {
               min={30}
               max={86400}
               value={findtime}
+              aria-invalid={findtimeError ? true : undefined}
+              aria-describedby={findtimeError ? "f2b-findtime-error" : undefined}
               onChange={(e) => setFindtime(e.target.value)}
               disabled={!canManage || pending}
             />
             {/* The field must stay in seconds — that is what the file stores —
                 so the words go beside it rather than replacing it. */}
+            {findtimeError ? (
+              <p id="f2b-findtime-error" className="text-xs text-destructive">{findtimeError}</p>
+            ) : null}
             <p className="text-xs text-muted-foreground">
               {humanDuration(t, findtime) ? `${humanDuration(t, findtime)} — ` : null}
               {t("settings.findtimeHint")}
