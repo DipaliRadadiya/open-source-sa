@@ -63,6 +63,17 @@ class FirewallPresets
     {
         $key = strtolower(trim($term));
 
-        return self::PRESETS[$key]['port'] ?? null;
+        return self::PRESETS[self::ALIASES[$key] ?? $key]['port'] ?? null;
     }
+
+    /**
+     * Other names a preset answers to in a rule search. MariaDB is a drop-in
+     * for MySQL on the same port; the preset is labelled for both, and
+     * searching for either finds the 3306 rules.
+     *
+     * @var array<string, string>
+     */
+    public const ALIASES = [
+        'mariadb' => 'mysql',
+    ];
 }

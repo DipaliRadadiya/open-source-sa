@@ -11,7 +11,7 @@ return [
         'ssh' => 'SSH',
         'http' => 'HTTP',
         'https' => 'HTTPS',
-        'mysql' => 'MySQL',
+        'mysql' => 'MySQL / MariaDB',
         'postgresql' => 'PostgreSQL',
         'redis' => 'Redis',
         'ftp' => 'FTP',
