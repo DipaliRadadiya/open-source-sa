@@ -17,12 +17,13 @@ export function deleteDockerVolume(name) {
 }
 
 /**
- * Registry credentials, which are server-level rows rather than Docker objects —
- * hence an id in the path, unlike the networks and volumes above whose identifier
- * is the name Docker knows them by.
+ * Registry credentials. Filed under `/integrations`, with the git accounts and
+ * storage destinations, because that is what they are: a credential held somewhere
+ * else that the features consume. Hence also an id in the path, unlike the networks
+ * and volumes above whose identifier is the name Docker knows them by.
  */
 export function createRegistry(payload) {
-  return api.post("/docker/registries", payload);
+  return api.post("/integrations/registries", payload);
 }
 
 /**
@@ -31,11 +32,11 @@ export function createRegistry(payload) {
  * would wipe a working credential every time somebody fixed a typo in the name.
  */
 export function updateRegistry(id, payload) {
-  return api.patch(`/docker/registries/${id}`, payload);
+  return api.patch(`/integrations/registries/${id}`, payload);
 }
 
 export function deleteRegistry(id) {
-  return api.delete(`/docker/registries/${id}`);
+  return api.delete(`/integrations/registries/${id}`);
 }
 
 /**
@@ -46,7 +47,7 @@ export function deleteRegistry(id) {
  * body rather than in the status code.
  */
 export function testRegistry(id) {
-  return api.post(`/docker/registries/${id}/test`);
+  return api.post(`/integrations/registries/${id}/test`);
 }
 
 /**

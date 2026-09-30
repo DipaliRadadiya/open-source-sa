@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\ServerCapability;
 use App\Models\User;
 use App\Services\Server\Capabilities\ServerCapabilities;
@@ -234,5 +236,70 @@ it('has the refusal translated in every locale', function () {
         $line = __('errors/php.not_a_php_server', [], $locale);
 
         expect($line)->not->toBe('errors/php.not_a_php_server')->and($line)->not->toBeEmpty();
+    }
+});
+
+/*
+ * Registry credentials as an integration, not a corner of the Docker screen.
+ *
+ * Reported as "there is no proper instruction, bad UX", and the placement was half
+ * of that: the card sat below networks and volumes, so the panel's only
+ * private-image support was something you had to already know about to find.
+ */
+
+it('offers Docker Registries in the integrations section', function () {
+    dockerStackAs('docker', ['docker']);
+
+    $items = collect(
+        test()->withHeaders(phpTabHeaders())->getJson('/api/permissions?level=server')->json('permissions')
+    );
+
+    $registry = $items->firstWhere('name', 'registry');
+
+    expect($registry)->not->toBeNull()
+        // The sub_level is what makes the sidebar draw it under Integrations
+        // beside Git and Storage, rather than loose among the server screens.
+        ->and($registry['sub_level'])->toBe('integration')
+        ->and($registry['url'])->toBe('/integrations/registries');
+});
+
+it('is its own permission, not a corner of docker', function () {
+    // The two grants mean different things: `docker` manages networks and volumes
+    // on this box, `registry` stores a credential that can pull private code onto
+    // it. Sharing one would mean granting the second to get the first.
+    dockerStackAs('docker', ['docker']);
+
+    $role = Role::create(['name' => 'Netops', 'slug' => 'netops']);
+    $role->permissions()->attach(
+        Permission::where('name', 'docker')->sole()->id,
+        ['view' => true, 'manage' => true],
+    );
+
+    $user = User::factory()->create();
+    $user->roles()->attach($role);
+    $headers = ['Authorization' => 'Bearer '.$user->createToken('t')->plainTextToken];
+
+    // Full control of Docker's own objects...
+    $this->withHeaders($headers)->getJson('/api/docker/networks')->assertOk();
+
+    // ...and no reach into the credentials.
+    $this->withHeaders($headers)->getJson('/api/integrations/registries')->assertForbidden();
+});
+
+it('hides Docker Registries on a server that hosts no containers', function () {
+    // A credential for pulling container images is nothing on a box that runs
+    // none — and the endpoints refuse there too, so the tab and the routes agree.
+    dockerStackAs('lemp', ['php', 'static']);
+
+    expect(serverTabs())->not->toContain('registry');
+
+    $this->withHeaders(phpTabHeaders())->getJson('/api/integrations/registries')->assertStatus(409);
+});
+
+it('has the sidebar label translated in every locale', function () {
+    foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
+        $line = __('nav.registry', [], $locale);
+
+        expect($line)->not->toBe('nav.registry')->and($line)->not->toBeEmpty();
     }
 });

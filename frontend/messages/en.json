@@ -3543,7 +3543,7 @@
       "registryHint": "The stored credential this site pulls its image with. Leave it as None for a public image.",
       "missingRegistryOption": "Deleted credential — this site's next pull will be anonymous",
       "noRegistries": "No registry credentials are stored on this server, so only public images can be pulled.",
-      "noRegistriesLink": "Add one on the Docker page.",
+      "noRegistriesLink": "Add one under Integrations → Docker Registries.",
       "pullTitle": "Update the image",
       "pullHint": "Fetches the image again and recreates the container. Bringing the site up on its own does not re-check the registry, so a moved tag needs this.",
       "pull": "Pull and redeploy",
@@ -6530,7 +6530,10 @@
           "tokenHint": "The token or password for that account. Read-only access is enough — the panel only pulls.",
           "linkLabel": ""
         }
-      }
+      },
+      "subtitle": "Credentials this server uses to pull private container images.",
+      "unavailableTitle": "This server hosts no containers",
+      "unavailableBody": "Registry credentials are for pulling container images. This server runs none, so there is nothing for a credential to pull for."
     }
   }
 }

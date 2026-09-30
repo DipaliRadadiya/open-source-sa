@@ -78,6 +78,10 @@ class VisiblePermissions
                 // whose sites build their assets with npm.
                 'node' => ! $capabilities->runsHostApplications(),
                 'database' => ! $capabilities->managesDatabases(),
+                // The mirror of the three above: a credential for pulling container
+                // images is nothing on a box that runs no containers. Its endpoints
+                // are gated on the same capability, so the tab and the routes agree.
+                'registry' => ! $capabilities->hosts('docker'),
             ]));
 
             if ($unavailable !== []) {

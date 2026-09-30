@@ -3543,7 +3543,7 @@
       "registryHint": "L’identifiant enregistré avec lequel ce site récupère son image. Laissez Aucun pour une image publique.",
       "missingRegistryOption": "Identifiant supprimé — la prochaine récupération de ce site sera anonyme",
       "noRegistries": "Aucun identifiant de registre n’est enregistré sur ce serveur : seules les images publiques peuvent être récupérées.",
-      "noRegistriesLink": "Ajoutez-en un sur la page Docker.",
+      "noRegistriesLink": "Ajoutez-en un dans Intégrations → Registres Docker.",
       "pullTitle": "Mettre à jour l’image",
       "pullHint": "Récupère l’image à nouveau et recrée le conteneur. Redémarrer le site ne revérifie pas le registre : un tag déplacé nécessite ceci.",
       "pull": "Récupérer et redéployer",
@@ -6530,7 +6530,10 @@
           "tokenHint": "Le jeton ou mot de passe de ce compte. Un accès en lecture seule suffit — le panneau ne fait que récupérer.",
           "linkLabel": ""
         }
-      }
+      },
+      "subtitle": "Identifiants utilisés par ce serveur pour récupérer des images de conteneurs privées.",
+      "unavailableTitle": "Ce serveur n’héberge aucun conteneur",
+      "unavailableBody": "Les identifiants de registre servent à récupérer des images de conteneurs. Ce serveur n’en exécute aucun, il n’y a donc rien à récupérer."
     }
   }
 }

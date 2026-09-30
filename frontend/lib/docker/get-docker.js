@@ -14,24 +14,42 @@ import {
  * that looks like data.
  */
 export async function getDockerResources() {
-  const [networks, volumes, registries] = await Promise.all([
+  const [networks, volumes] = await Promise.all([
     read("/docker/networks", dockerNetworksResponseSchema),
     read("/docker/volumes", dockerVolumesResponseSchema),
-    read("/docker/registries", registriesResponseSchema),
   ]);
 
   return {
     networks: networks.failed ? [] : (networks.data?.networks ?? []),
     volumes: volumes.failed ? [] : (volumes.data?.volumes ?? []),
-    // Degrades to an empty list rather than failing the page, unlike the two
-    // above. "This server has no networks" is a lie about the machine; "no
-    // registry credentials are stored" is the true and ordinary state of every
-    // server that has not configured one, so an empty list here is honest.
-    registries: registries.failed ? [] : (registries.data?.registries ?? []),
     failed: networks.failed || volumes.failed,
     status: networks.status ?? volumes.status,
     failure: networks.failure ?? volumes.failure,
     message: networks.message ?? volumes.message,
+  };
+}
+
+/**
+ * The registries page, which must NOT degrade to an empty list.
+ *
+ * The opposite contract from `getRegistries()` below, and the difference is the
+ * same one `getDockerResources()` draws: this page makes a claim about the server
+ * ("no credentials are stored"), and making it without having heard from the API
+ * would be a lie that reads as data — someone would add a second credential they
+ * already had. The picker can degrade; a page that tells you what exists cannot.
+ */
+export async function getRegistriesPage() {
+  const result = await read(
+    "/integrations/registries",
+    registriesResponseSchema,
+  );
+
+  return {
+    registries: result.data?.registries ?? [],
+    failed: result.failed,
+    status: result.status,
+    failure: result.failure,
+    message: result.message,
   };
 }
 
@@ -43,7 +61,10 @@ export async function getDockerResources() {
  * nothing new and keep showing what the site already has.
  */
 export async function getRegistries() {
-  const registries = await read("/docker/registries", registriesResponseSchema);
+  const registries = await read(
+    "/integrations/registries",
+    registriesResponseSchema,
+  );
 
   return registries.failed ? [] : (registries.data?.registries ?? []);
 }

@@ -272,7 +272,7 @@ export function ContainerCard({
               <Note icon={KeyRound}>
                 {t("noRegistries")}{" "}
                 <Link
-                  href="/docker"
+                  href="/integrations/registries"
                   className="font-medium text-primary underline"
                 >
                   {t("noRegistriesLink")}

@@ -85,9 +85,9 @@ it('never puts the token in any response', function () {
     $registry = makeRegistry();
 
     foreach ([
-        ['getJson', '/api/docker/registries'],
-        ['getJson', '/api/docker/registries/'.$registry->id],
-        ['patchJson', '/api/docker/registries/'.$registry->id],
+        ['getJson', '/api/integrations/registries'],
+        ['getJson', '/api/integrations/registries/'.$registry->id],
+        ['patchJson', '/api/integrations/registries/'.$registry->id],
     ] as [$method, $url]) {
         $response = $this->withHeaders(registryHeaders())->{$method}($url, []);
 
@@ -100,7 +100,7 @@ it('reports that a credential exists without reporting what it is', function () 
     makeRegistry();
 
     $this->withHeaders(registryHeaders())
-        ->getJson('/api/docker/registries')
+        ->getJson('/api/integrations/registries')
         ->assertOk()
         ->assertJsonPath('registries.0.has_credentials', true)
         ->assertJsonPath('registries.0.username', 'octocat');
@@ -112,7 +112,7 @@ it('shows the key Docker will actually use, because Hub differs from what is typ
     $hub = makeRegistry(['name' => 'Hub', 'registry' => 'docker.io']);
 
     $this->withHeaders(registryHeaders())
-        ->getJson('/api/docker/registries/'.$hub->id)
+        ->getJson('/api/integrations/registries/'.$hub->id)
         ->assertOk()
         ->assertJsonPath('registry.auth_key', 'https://index.docker.io/v1/')
         ->assertJsonPath('registry.is_docker_hub', true);
@@ -137,7 +137,7 @@ it('keys every other registry by its bare host', function (string $typed, string
 
 it('refuses an address with a namespace, which is the common mistake', function () {
     $this->withHeaders(registryHeaders())
-        ->postJson('/api/docker/registries', [
+        ->postJson('/api/integrations/registries', [
             'name' => 'Mine', 'registry' => 'ghcr.io/my-org', 'username' => 'u', 'token' => 't',
         ])
         ->assertStatus(422)
@@ -148,7 +148,7 @@ it('refuses an address with credentials embedded in it', function () {
     // Otherwise a password lands in a column that is not encrypted, beside one
     // that is.
     $this->withHeaders(registryHeaders())
-        ->postJson('/api/docker/registries', [
+        ->postJson('/api/integrations/registries', [
             'name' => 'Mine', 'registry' => 'user:pass@ghcr.io', 'username' => 'u', 'token' => 't',
         ])
         ->assertStatus(422)
@@ -160,7 +160,7 @@ it('refuses a token with a newline in it', function () {
     // correct in every screen — and this feature shows it in none of them, so
     // there would be nothing to look at.
     $this->withHeaders(registryHeaders())
-        ->postJson('/api/docker/registries', [
+        ->postJson('/api/integrations/registries', [
             'name' => 'Mine', 'registry' => 'ghcr.io', 'username' => 'u', 'token' => "abc\ndef",
         ])
         ->assertStatus(422)
@@ -175,7 +175,7 @@ it('keeps the stored token when an update does not send one', function () {
     $registry = makeRegistry();
 
     $this->withHeaders(registryHeaders())
-        ->patchJson('/api/docker/registries/'.$registry->id, ['name' => 'Renamed'])
+        ->patchJson('/api/integrations/registries/'.$registry->id, ['name' => 'Renamed'])
         ->assertOk()
         ->assertJsonPath('registry.name', 'Renamed');
 
@@ -188,7 +188,7 @@ it('keeps the stored token when an update sends an explicit null', function () {
     $registry = makeRegistry();
 
     $this->withHeaders(registryHeaders())
-        ->patchJson('/api/docker/registries/'.$registry->id, ['token' => null])
+        ->patchJson('/api/integrations/registries/'.$registry->id, ['token' => null])
         ->assertOk();
 
     expect($registry->fresh()->configValue('token'))->toBe('ghp_SUPERSECRETVALUE');
@@ -198,7 +198,7 @@ it('forgets a green tick when the token is rotated', function () {
     $registry = makeRegistry(['last_tested_at' => now(), 'last_test_success' => true]);
 
     $this->withHeaders(registryHeaders())
-        ->patchJson('/api/docker/registries/'.$registry->id, ['token' => 'ghp_NEWVALUE'])
+        ->patchJson('/api/integrations/registries/'.$registry->id, ['token' => 'ghp_NEWVALUE'])
         ->assertOk()
         ->assertJsonPath('registry.status', 'never_tested');
 
@@ -211,7 +211,7 @@ it('forgets a green tick when the address changes', function () {
     $registry = makeRegistry(['last_tested_at' => now(), 'last_test_success' => true]);
 
     $this->withHeaders(registryHeaders())
-        ->patchJson('/api/docker/registries/'.$registry->id, ['registry' => 'ghcr.io.example.net'])
+        ->patchJson('/api/integrations/registries/'.$registry->id, ['registry' => 'ghcr.io.example.net'])
         ->assertOk()
         ->assertJsonPath('registry.status', 'never_tested');
 });
@@ -222,7 +222,7 @@ it('keeps a green tick when only the name changed', function () {
     $registry = makeRegistry(['last_tested_at' => now(), 'last_test_success' => true]);
 
     $this->withHeaders(registryHeaders())
-        ->patchJson('/api/docker/registries/'.$registry->id, ['name' => 'Renamed'])
+        ->patchJson('/api/integrations/registries/'.$registry->id, ['name' => 'Renamed'])
         ->assertOk()
         ->assertJsonPath('registry.status', 'connected');
 });
@@ -234,7 +234,7 @@ it('keeps a green tick when only the name changed', function () {
 
 it('records the address and the account, never the token', function () {
     $this->withHeaders(registryHeaders())
-        ->postJson('/api/docker/registries', [
+        ->postJson('/api/integrations/registries', [
             'name' => 'Mine', 'registry' => 'ghcr.io', 'username' => 'octocat', 'token' => 'ghp_SUPERSECRETVALUE',
         ])
         ->assertCreated();
@@ -249,7 +249,7 @@ it('records that a token moved without recording where to', function () {
     $registry = makeRegistry();
 
     $this->withHeaders(registryHeaders())
-        ->patchJson('/api/docker/registries/'.$registry->id, ['token' => 'ghp_NEWVALUE'])
+        ->patchJson('/api/integrations/registries/'.$registry->id, ['token' => 'ghp_NEWVALUE'])
         ->assertOk();
 
     $row = ActivityLog::where('type', 'registry')->where('action', 'updated')->sole();
@@ -275,7 +275,7 @@ it('detaches the sites instead of deleting them or refusing', function () {
     ]);
 
     $this->withHeaders(registryHeaders())
-        ->deleteJson('/api/docker/registries/'.$registry->id)
+        ->deleteJson('/api/integrations/registries/'.$registry->id)
         ->assertOk();
 
     expect(Registry::find($registry->id))->toBeNull()
@@ -293,7 +293,7 @@ it('records how many sites a delete detached', function () {
         'registry_id' => $registry->id, 'app_port' => 20001, 'status' => 'active',
     ]);
 
-    $this->withHeaders(registryHeaders())->deleteJson('/api/docker/registries/'.$registry->id)->assertOk();
+    $this->withHeaders(registryHeaders())->deleteJson('/api/integrations/registries/'.$registry->id)->assertOk();
 
     expect(ActivityLog::where('type', 'registry')->where('action', 'deleted')->sole()->properties['applications_detached'])->toBe(1);
 });
@@ -303,10 +303,10 @@ it('records how many sites a delete detached', function () {
  * this box, which is not a read by any reading.
  */
 
-it('refuses every mutation without docker manage', function () {
+it('refuses every mutation without registry manage', function () {
     $role = Role::create(['name' => 'Viewer', 'slug' => 'viewer']);
     $role->permissions()->attach(
-        Permission::where('name', 'docker')->sole()->id,
+        Permission::where('name', 'registry')->sole()->id,
         // View without manage: the exact grant the picker needs and the one every
         // mutation below must still refuse.
         ['view' => true, 'manage' => false],
@@ -318,16 +318,16 @@ it('refuses every mutation without docker manage', function () {
     $registry = makeRegistry();
     $headers = ['Authorization' => 'Bearer '.$viewer->createToken('t')->plainTextToken];
 
-    $this->withHeaders($headers)->postJson('/api/docker/registries', [
+    $this->withHeaders($headers)->postJson('/api/integrations/registries', [
         'name' => 'X', 'registry' => 'ghcr.io', 'username' => 'u', 'token' => 't',
     ])->assertForbidden();
 
-    $this->withHeaders($headers)->patchJson('/api/docker/registries/'.$registry->id, ['name' => 'Y'])->assertForbidden();
-    $this->withHeaders($headers)->deleteJson('/api/docker/registries/'.$registry->id)->assertForbidden();
-    $this->withHeaders($headers)->postJson('/api/docker/registries/'.$registry->id.'/test')->assertForbidden();
+    $this->withHeaders($headers)->patchJson('/api/integrations/registries/'.$registry->id, ['name' => 'Y'])->assertForbidden();
+    $this->withHeaders($headers)->deleteJson('/api/integrations/registries/'.$registry->id)->assertForbidden();
+    $this->withHeaders($headers)->postJson('/api/integrations/registries/'.$registry->id.'/test')->assertForbidden();
 
     // But a viewer may read the list, because the site form's picker needs it.
-    $this->withHeaders($headers)->getJson('/api/docker/registries')->assertOk();
+    $this->withHeaders($headers)->getJson('/api/integrations/registries')->assertOk();
 });
 
 it('is unavailable on a server that hosts no containers', function () {
@@ -338,7 +338,7 @@ it('is unavailable on a server that hosts no containers', function () {
         'source' => 'installer', 'verified_at' => now(),
     ]);
 
-    $this->withHeaders(registryHeaders())->getJson('/api/docker/registries')->assertStatus(409);
+    $this->withHeaders(registryHeaders())->getJson('/api/integrations/registries')->assertStatus(409);
 });
 
 /*
@@ -356,7 +356,7 @@ it('persists a failed verdict as 200, not as an error', function () {
     $registry = makeRegistry();
 
     $this->withHeaders(registryHeaders())
-        ->postJson('/api/docker/registries/'.$registry->id.'/test')
+        ->postJson('/api/integrations/registries/'.$registry->id.'/test')
         ->assertOk()
         ->assertJsonPath('success', false)
         ->assertJsonPath('registry.last_test_error', 'invalid_credentials')
@@ -372,7 +372,7 @@ it('calls an unreachable registry unreachable, not a bad password', function () 
     ));
 
     $this->withHeaders(registryHeaders())
-        ->postJson('/api/docker/registries/'.makeRegistry()->id.'/test')
+        ->postJson('/api/integrations/registries/'.makeRegistry()->id.'/test')
         ->assertOk()
         ->assertJsonPath('registry.last_test_error', 'unreachable');
 });
@@ -381,7 +381,7 @@ it('records a success', function () {
     Process::fake(fn () => Process::result(output: 'Login Succeeded'));
 
     $this->withHeaders(registryHeaders())
-        ->postJson('/api/docker/registries/'.makeRegistry()->id.'/test')
+        ->postJson('/api/integrations/registries/'.makeRegistry()->id.'/test')
         ->assertOk()
         ->assertJsonPath('success', true)
         ->assertJsonPath('registry.status', 'connected');
@@ -397,7 +397,7 @@ it('sends the token on stdin and never in a command argument', function () {
     });
 
     $this->withHeaders(registryHeaders())
-        ->postJson('/api/docker/registries/'.makeRegistry()->id.'/test')
+        ->postJson('/api/integrations/registries/'.makeRegistry()->id.'/test')
         ->assertOk();
 
     // argv is world-readable in `ps` for the life of the process. This is the

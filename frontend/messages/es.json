@@ -3543,7 +3543,7 @@
       "registryHint": "La credencial guardada con la que este sitio descarga su imagen. Déjelo en Ninguno para una imagen pública.",
       "missingRegistryOption": "Credencial eliminada: la próxima descarga de este sitio será anónima",
       "noRegistries": "No hay credenciales de registro guardadas en este servidor, así que solo se pueden descargar imágenes públicas.",
-      "noRegistriesLink": "Añada una en la página de Docker.",
+      "noRegistriesLink": "Añada una en Integraciones → Registros de Docker.",
       "pullTitle": "Actualizar la imagen",
       "pullHint": "Descarga la imagen otra vez y recrea el contenedor. Reiniciar el sitio no vuelve a consultar el registro, así que una etiqueta movida necesita esto.",
       "pull": "Descargar y volver a desplegar",
@@ -6530,7 +6530,10 @@
           "tokenHint": "El token o la contraseña de esa cuenta. Basta el acceso de solo lectura: el panel solo descarga.",
           "linkLabel": ""
         }
-      }
+      },
+      "subtitle": "Credenciales que este servidor usa para descargar imágenes de contenedor privadas.",
+      "unavailableTitle": "Este servidor no aloja contenedores",
+      "unavailableBody": "Las credenciales de registro sirven para descargar imágenes de contenedor. Este servidor no ejecuta ninguno, así que no hay nada que descargar."
     }
   }
 }

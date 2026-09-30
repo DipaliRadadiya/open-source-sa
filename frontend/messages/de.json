@@ -3543,7 +3543,7 @@
       "registryHint": "Die gespeicherten Anmeldedaten, mit denen diese Site ihr Image lädt. Für ein öffentliches Image auf Keine lassen.",
       "missingRegistryOption": "Gelöschte Anmeldedaten — der nächste Pull dieser Site ist anonym",
       "noRegistries": "Auf diesem Server sind keine Registry-Anmeldedaten gespeichert, es können also nur öffentliche Images geladen werden.",
-      "noRegistriesLink": "Fügen Sie welche auf der Docker-Seite hinzu.",
+      "noRegistriesLink": "Fügen Sie welche unter Integrationen → Docker-Registries hinzu.",
       "pullTitle": "Image aktualisieren",
       "pullHint": "Lädt das Image erneut und erstellt den Container neu. Ein Neustart der Site prüft die Registry nicht erneut — ein verschobener Tag braucht dies.",
       "pull": "Laden und neu ausrollen",
@@ -6530,7 +6530,10 @@
           "tokenHint": "Das Token oder Passwort dieses Kontos. Nur-Lese-Zugriff reicht — das Panel lädt nur.",
           "linkLabel": ""
         }
-      }
+      },
+      "subtitle": "Anmeldedaten, mit denen dieser Server private Container-Images lädt.",
+      "unavailableTitle": "Dieser Server hostet keine Container",
+      "unavailableBody": "Registry-Anmeldedaten dienen dem Laden von Container-Images. Dieser Server führt keine aus, es gibt also nichts zu laden."
     }
   }
 }

@@ -5,7 +5,6 @@ import { can } from "@/lib/permissions/can";
 import { getDockerResources } from "@/lib/docker/get-docker";
 import { getAllApplications } from "@/lib/applications/get-applications";
 import { DockerResourcesPanel } from "@/components/docker/docker-resources-panel";
-import { RegistriesCard } from "@/components/docker/registries-card";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -28,7 +27,7 @@ export default async function DockerPage() {
     return <PermissionDenied title={t("title")} />;
   const canManage = can(permissions, "docker", "manage");
 
-  const { networks, volumes, registries, failed, status, failure, message } =
+  const { networks, volumes, failed, status, failure, message } =
     await getDockerResources();
 
   // The container sites, for attaching one from this page. Only sites that are
@@ -78,22 +77,18 @@ export default async function DockerPage() {
           />
         )
       ) : (
-        <>
-          <DockerResourcesPanel
-            initialNetworks={networks}
-            initialVolumes={volumes}
-            sites={sites}
-            canManage={canManage}
-            canManageSites={canManageSites}
-          />
-          {/* Below the two Docker objects rather than above them, because it is
-              the one most servers will never configure — every public image and
-              all fifteen one-click apps need nothing here. */}
-          <RegistriesCard
-            initialRegistries={registries}
-            canManage={canManage}
-          />
-        </>
+        /* Networks and volumes only. Registry credentials used to be a third
+           card here and now live under Integrations, beside the git accounts and
+           storage destinations — a credential held somewhere else is not one of
+           Docker's own objects, and burying it under two tables it had nothing to
+           do with is what made it undiscoverable. */
+        <DockerResourcesPanel
+          initialNetworks={networks}
+          initialVolumes={volumes}
+          sites={sites}
+          canManage={canManage}
+          canManageSites={canManageSites}
+        />
       )}
     </div>
   );

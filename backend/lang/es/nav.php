@@ -20,6 +20,7 @@ return [
     'sync' => 'Sincronización del servidor',
     'git' => 'Git',
     'storage' => 'Almacenamiento',
+    'registry' => 'Registros de Docker',
 
     // Application sidebar. Separate keys from the server-level ones above:
     // `logs` is the machine's auth.log, `app_log` is one site's access log,

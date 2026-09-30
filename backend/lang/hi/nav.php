@@ -20,6 +20,7 @@ return [
     'sync' => 'सर्वर सिंक',
     'git' => 'Git',
     'storage' => 'स्टोरेज',
+    'registry' => 'Docker रजिस्ट्री',
 
     // Application sidebar. Separate keys from the server-level ones above:
     // `logs` is the machine's auth.log, `app_log` is one site's access log,

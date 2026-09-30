@@ -3543,7 +3543,7 @@
       "registryHint": "A credencial guardada com que este site obtém a sua imagem. Deixe em Nenhum para uma imagem pública.",
       "missingRegistryOption": "Credencial eliminada — a próxima obtenção deste site será anónima",
       "noRegistries": "Não há credenciais de registo guardadas neste servidor, pelo que só podem ser obtidas imagens públicas.",
-      "noRegistriesLink": "Adicione uma na página Docker.",
+      "noRegistriesLink": "Adicione uma em Integrações → Registos Docker.",
       "pullTitle": "Atualizar a imagem",
       "pullHint": "Obtém a imagem novamente e recria o contentor. Reiniciar o site não volta a consultar o registo, por isso uma etiqueta movida precisa disto.",
       "pull": "Obter e reimplantar",
@@ -6530,7 +6530,10 @@
           "tokenHint": "O token ou palavra-passe dessa conta. Basta acesso só de leitura — o painel apenas obtém.",
           "linkLabel": ""
         }
-      }
+      },
+      "subtitle": "Credenciais que este servidor usa para obter imagens de contentor privadas.",
+      "unavailableTitle": "Este servidor não aloja contentores",
+      "unavailableBody": "As credenciais de registo servem para obter imagens de contentor. Este servidor não executa nenhum, por isso não há nada para obter."
     }
   }
 }

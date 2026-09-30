@@ -75,6 +75,7 @@ const BUILT_SERVER_URLS = new Set([
   "/activity-log",
   "/integrations/git",
   "/integrations/storage",
+  "/integrations/registries",
   "/sync",
 ]);
 
@@ -83,26 +84,30 @@ export function isServerNavBuilt(url) {
 }
 
 export function isNavBuilt(panel, url) {
-  return panel === "application" ? isApplicationNavBuilt(url) : isServerNavBuilt(url);
+  return panel === "application"
+    ? isApplicationNavBuilt(url)
+    : isServerNavBuilt(url);
 }
 
 // Resolves a catalog item for the panel it belongs to: application items get
 // the `/applications/{id}` prefix, server items are already absolute.
 export function resolveNavItems(items, applicationId) {
-  return (items || [])
-    // A null `url` means the permission is not a screen. Magic Login is the
-    // first: it is a button on the Dashboard, and it needs its own permission
-    // because of what it grants, but it has nowhere to navigate to. Without
-    // this filter the sidebar renders it as a dead "not built yet" row.
-    //
-    // `""` is not null — that is the Dashboard, whose href is the application
-    // root — so the check has to be for null specifically, not falsiness.
-    .filter((item) => item.url !== null && item.url !== undefined)
-    .map((item) =>
-      item.level === "application" && applicationId
-        ? { ...item, href: applicationNavHref(applicationId, item.url) }
-        : { ...item, href: item.url },
-    );
+  return (
+    (items || [])
+      // A null `url` means the permission is not a screen. Magic Login is the
+      // first: it is a button on the Dashboard, and it needs its own permission
+      // because of what it grants, but it has nowhere to navigate to. Without
+      // this filter the sidebar renders it as a dead "not built yet" row.
+      //
+      // `""` is not null — that is the Dashboard, whose href is the application
+      // root — so the check has to be for null specifically, not falsiness.
+      .filter((item) => item.url !== null && item.url !== undefined)
+      .map((item) =>
+        item.level === "application" && applicationId
+          ? { ...item, href: applicationNavHref(applicationId, item.url) }
+          : { ...item, href: item.url },
+      )
+  );
 }
 
 /**

@@ -13,7 +13,7 @@ it('creates the Administrator system role with every permission, idempotently', 
     expect($admin)->toHaveCount(1);
     expect($admin->first()->is_system)->toBeTrue();
     // holds every permission at both levels, view+manage
-    expect($admin->first()->permissions()->count())->toBe(35);
+    expect($admin->first()->permissions()->count())->toBe(36);
     foreach ($admin->first()->permissions as $permission) {
         expect((bool) $permission->pivot->view)->toBeTrue();
         expect((bool) $permission->pivot->manage)->toBeTrue();
@@ -23,13 +23,15 @@ it('creates the Administrator system role with every permission, idempotently', 
 it('seeds the server and application permission items in order', function () {
     $this->seed(PermissionSeeder::class);
 
-    expect(Permission::count())->toBe(35);
-    expect(Permission::where('level', 'server')->count())->toBe(19);
+    expect(Permission::count())->toBe(36);
+    expect(Permission::where('level', 'server')->count())->toBe(20);
     expect(Permission::where('level', 'application')->count())->toBe(16);
 
     $server = Permission::where('level', 'server')->orderBy('order');
     expect($server->pluck('name')->first())->toBe('dashboard');
-    expect($server->pluck('name')->last())->toBe('storage');
+    // `registry` is last because it was appended rather than slotted in, so
+    // adding it moved nothing that was already there.
+    expect($server->pluck('name')->last())->toBe('registry');
 
     $app = Permission::where('level', 'application')->orderBy('order');
     expect($app->pluck('name')->first())->toBe('app_dashboard');
@@ -46,14 +48,19 @@ it('seeds the server and application permission items in order', function () {
         ->every(fn (string $name) => str_starts_with($name, 'app_')))->toBeTrue();
 });
 
-it('groups the git and storage permissions under the integration sub-level', function () {
+it('groups the git, storage and registry permissions under the integration sub-level', function () {
     $this->seed(PermissionSeeder::class);
 
     $integrations = Permission::where('sub_level', 'integration')->orderBy('order')->get();
 
-    expect($integrations->pluck('name')->all())->toBe(['git', 'storage']);
+    // Registry credentials belong here for the reason this group exists: an
+    // externally-held credential the features consume. They were a card at the
+    // bottom of the Docker page, which is what made them undiscoverable.
+    expect($integrations->pluck('name')->all())->toBe(['git', 'storage', 'registry']);
     expect($integrations->pluck('level')->unique()->all())->toBe(['server']);
-    expect($integrations->pluck('url')->all())->toBe(['/integrations/git', '/integrations/storage']);
+    expect($integrations->pluck('url')->all())->toBe([
+        '/integrations/git', '/integrations/storage', '/integrations/registries',
+    ]);
     // the existing items are untouched — no sidebar churn
     expect(Permission::where('sub_level', 'server')->count())->toBe(17);
 });

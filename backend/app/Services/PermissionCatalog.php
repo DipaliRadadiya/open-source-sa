@@ -47,6 +47,9 @@ class PermissionCatalog
             // on and write to. Splitting them would give somebody the ability
             // to delete the volume holding a database while being unable to
             // see the network it talks over.
+            //
+            // Registry credentials are NOT here, and that is the cut: those live
+            // somewhere else and are filed with the integrations below.
             ['name' => 'docker', 'title' => 'Docker', 'icon' => 'container', 'url' => '/docker', 'order' => 11.5],
             ['name' => 'setting', 'title' => 'Settings', 'icon' => 'settings', 'url' => '/settings', 'order' => 12],
             ['name' => 'disk_cleaner', 'title' => 'Disk Cleaner', 'icon' => 'trash-2', 'url' => '/disk-cleaner', 'order' => 13],
@@ -69,6 +72,18 @@ class PermissionCatalog
             // their own sub-level so the sidebar renders them as a section.
             ['name' => 'git', 'title' => 'Git', 'icon' => 'git-branch', 'url' => '/integrations/git', 'order' => 16, 'sub_level' => 'integration'],
             ['name' => 'storage', 'title' => 'Storage', 'icon' => 'hard-drive', 'url' => '/integrations/storage', 'order' => 17, 'sub_level' => 'integration'],
+            // Registry credentials. An integration rather than a corner of the
+            // Docker screen, and for the reason that section exists: it is an
+            // externally-held credential the features consume, exactly like a git
+            // account or a storage destination. It was at the bottom of the Docker
+            // page, which made the panel's only private-image support something
+            // you had to already know about to find.
+            //
+            // Its own permission, not `docker`, because the sidebar row IS the
+            // permission row — and because the two grants mean different things:
+            // `docker` manages networks and volumes on this box, while this stores
+            // a credential that can pull private code onto it.
+            ['name' => 'registry', 'title' => 'Docker Registries', 'icon' => 'key-round', 'url' => '/integrations/registries', 'order' => 18, 'sub_level' => 'integration'],
 
             // ── Application level ────────────────────────────────────────
             //
