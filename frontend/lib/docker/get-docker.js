@@ -1,5 +1,6 @@
 import { read } from "@/lib/api/read";
 import {
+  dockerLimitsResponseSchema,
   dockerNetworksResponseSchema,
   dockerVolumesResponseSchema,
   registriesResponseSchema,
@@ -95,4 +96,25 @@ export async function getDockerVolumes() {
   const volumes = await read("/docker/volumes", dockerVolumesResponseSchema);
 
   return volumes.failed ? [] : (volumes.data?.volumes ?? []);
+}
+
+/**
+ * The size of the box, for the CPU and memory fields.
+ *
+ * Degrades to nulls rather than to a guess, and that is the whole reason this has
+ * a shape instead of returning a number. A fallback of `1` would put "this server
+ * has 1 CPU" under a field on a machine with sixteen, and the hint would be the
+ * confident kind of wrong. With no answer the field drops the ceiling from its
+ * description and leaves the server as the only thing that enforces it — which it
+ * is anyway.
+ */
+export async function getDockerLimits() {
+  const limits = await read("/docker/limits", dockerLimitsResponseSchema);
+
+  return limits.failed
+    ? { cpus: null, defaultMemoryLimit: null }
+    : {
+        cpus: limits.data?.limits?.cpus ?? null,
+        defaultMemoryLimit: limits.data?.limits?.default_memory_limit ?? null,
+      };
 }

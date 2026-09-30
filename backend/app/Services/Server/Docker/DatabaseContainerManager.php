@@ -207,7 +207,15 @@ class DatabaseContainerManager
                 'root_password' => (string) $database->credential('root_password', ''),
                 'database' => (string) $database->credential('database', ''),
             ],
-            'memoryLimit' => (string) config('server.docker.default_db_memory_limit', '512m'),
+            // The instance's own size first, then the server default. Before
+            // these columns existed every engine on the box shared one number, so
+            // a Redis cache and the primary Postgres were sized identically.
+            'memoryLimit' => (string) ($database->memory_limit
+                ?: config('server.docker.default_db_memory_limit', '512m')),
+            // No fallback, deliberately: null means no CPU quota, exactly as it
+            // does for a site. A default here would throttle every database
+            // already running on the box the next time it was recreated.
+            'cpuLimit' => $database->cpu_limit ?: null,
         ])->render();
     }
 

@@ -4,6 +4,7 @@ import { getPermissions } from "@/lib/permissions/get-permissions";
 import { can } from "@/lib/permissions/can";
 import { getApplication } from "@/lib/applications/get-applications";
 import {
+  getDockerLimits,
   getDockerNetworks,
   getDockerVolumes,
   getRegistries,
@@ -81,14 +82,18 @@ export default async function ApplicationContainerPage({ params }) {
   // Only once it is serving. The Docker endpoints are gated on the same profile,
   // and asking a pending site's box for networks is a request that builds choosers
   // for controls that cannot be applied yet.
-  const [networks, volumes, registries] =
+  const [networks, volumes, registries, limits] =
     application.status === "active"
       ? await Promise.all([
           getDockerNetworks(),
           getDockerVolumes(),
           getRegistries(),
+          // So the CPU field can name this server's core count instead of
+          // describing the rule, and the memory field can show the default it
+          // falls back to. Both degrade to null rather than to a guess.
+          getDockerLimits(),
         ])
-      : [[], [], []];
+      : [[], [], [], {}];
 
   return (
     <div className="space-y-6">
@@ -98,6 +103,7 @@ export default async function ApplicationContainerPage({ params }) {
         networks={networks}
         volumes={volumes}
         registries={registries}
+        limits={limits}
         canManage={canManage}
       />
     </div>

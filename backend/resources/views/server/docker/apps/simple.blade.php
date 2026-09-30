@@ -15,7 +15,7 @@ name: {{ $project }}
 services:
   app:
     image: {{ $image }}
-    @include('server.docker.apps.limits', ['limit' => $memoryLimit])
+    @include('server.docker.apps.limits', ['limit' => $memoryLimit, 'cpus' => $cpuLimit])
 
     {{-- Loopback ONLY. Docker writes its own rules into the DOCKER chain ahead
          of the ones ufw manages, so the form everyone writes is reachable from

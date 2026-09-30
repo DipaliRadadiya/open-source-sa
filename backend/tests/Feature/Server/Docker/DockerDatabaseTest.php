@@ -7,6 +7,7 @@ use App\Models\ServerCapability;
 use App\Models\User;
 use App\Services\Server\Applications\PortAllocator;
 use App\Services\Server\Docker\DatabaseContainerManager;
+use App\Services\Server\HostCpus;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
@@ -493,4 +494,95 @@ it('does not hang when the health status cannot be read', function () {
     });
 
     createDb(['name' => 'unreadable'])[0]->assertCreated();
+});
+
+/*
+ * Per-instance sizes.
+ *
+ * Before these columns a database read one server-wide value, so a Redis cache
+ * used as a session store and the primary Postgres behind everything were sized
+ * identically at 512m. The size is the product for anyone selling compute, and an
+ * engine's own buffers are sized from what it can see — so this is the field that
+ * decides how a database performs, and it has to be per row.
+ */
+
+it('sizes each database from its own row, not one server-wide number', function () {
+    [, $small] = createDb(['name' => 'cache', 'engine' => 'redis', 'version' => '8', 'memory_limit' => '128m', 'cpu_limit' => '0.5']);
+    [, $large] = createDb(['name' => 'primary', 'engine' => 'postgres', 'version' => '17', 'memory_limit' => '2g', 'cpu_limit' => '2']);
+
+    $manager = app(DatabaseContainerManager::class);
+    $cache = Yaml::parse($manager->contents(DockerDatabase::find($small)))['services']['db'];
+    $primary = Yaml::parse($manager->contents(DockerDatabase::find($large)))['services']['db'];
+
+    expect($cache['mem_limit'])->toBe('128m')
+        ->and($cache['cpus'])->toBe(0.5)
+        ->and($primary['mem_limit'])->toBe('2g')
+        ->and($primary['cpus'])->toBe(2);
+});
+
+it('falls back to the configured default for memory and to no quota for cpu', function () {
+    // The asymmetry is the design. A database with no memory ceiling can take the
+    // box down, so that one has a default; a database with no CPU quota is merely
+    // unthrottled, and defaulting it would have capped every engine already
+    // running here the next time it was recreated.
+    [, $id] = createDb(['name' => 'plain']);
+    $service = Yaml::parse(app(DatabaseContainerManager::class)->contents(DockerDatabase::find($id)))['services']['db'];
+
+    expect($service['mem_limit'])->toBe((string) config('server.docker.default_db_memory_limit'))
+        ->and($service)->not->toHaveKey('cpus');
+});
+
+it('refuses a cpu quota larger than the machine, at the form', function () {
+    // Docker refuses it too — `compose up` answers "range of CPUs is from 0.01 to
+    // 4.00, as there are only 4 CPUs available" — but it refuses at deploy time,
+    // which for a database means the row is created, the container never starts,
+    // and `CreateDockerDatabase` rolls the whole thing back. A field error is the
+    // same refusal where somebody can act on it.
+    app()->instance(HostCpus::class, new class extends HostCpus
+    {
+        public function count(): int
+        {
+            return 2;
+        }
+    });
+
+    [$response] = createDb(['name' => 'toobig', 'cpu_limit' => '8']);
+
+    $response->assertStatus(422)->assertJsonValidationErrors('cpu_limit');
+
+    expect(DockerDatabase::query()->where('name', 'toobig')->exists())->toBeFalse();
+});
+
+it('refuses a memory ceiling Docker would not start', function () {
+    // Docker's own floor is 6MB: "Minimum memory limit allowed is 6MB", measured.
+    // Accepted here it would be a database that saves and never runs.
+    [$tooSmall] = createDb(['name' => 'tiny', 'memory_limit' => '2m']);
+    $tooSmall->assertStatus(422)->assertJsonValidationErrors('memory_limit');
+
+    // And a bare number is BYTES to Docker, not megabytes — the mistake the
+    // message exists to name.
+    [$noUnit] = createDb(['name' => 'nounit', 'memory_limit' => '512']);
+    $noUnit->assertStatus(422)->assertJsonValidationErrors('memory_limit');
+});
+
+it('records the size it was created at', function () {
+    createDb(['name' => 'sized', 'memory_limit' => '1g', 'cpu_limit' => '1']);
+
+    $log = ActivityLog::where('type', 'docker_database')->where('action', 'created')->sole();
+
+    expect($log->properties['memory_limit'])->toBe('1g')
+        ->and($log->properties['cpu_limit'])->toBe('1');
+});
+
+it('answers the size it was given, and what an empty field would have meant', function () {
+    // The raw value, not a resolved one: the UI has to be able to distinguish
+    // "chosen" from "inherited", and a resolved number hides that difference.
+    [, $id] = createDb(['name' => 'shown', 'memory_limit' => '1g']);
+
+    $row = collect($this->withHeaders(dbHeaders())->getJson('/api/docker/databases')->json('databases'))
+        ->firstWhere('id', $id);
+
+    expect($row['memory_limit'])->toBe('1g')
+        ->and($row['cpu_limit'])->toBeNull()
+        ->and($row['default_memory_limit'])->toBe((string) config('server.docker.default_db_memory_limit'));
 });

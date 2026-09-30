@@ -3505,7 +3505,14 @@
       "containerPort": "Container port",
       "containerPortHint": "The port your application listens on inside the container.",
       "memoryLimit": "Memory limit",
-      "memoryLimitHint": "For example 512m or 2g. Empty uses the server default.",
+      "memoryLimitHint": "For example 512m or 2g. A bare number means bytes, not megabytes. Empty uses the server default of {default}.",
+      "memoryLimitHintUnknown": "For example 512m or 2g. A bare number means bytes, not megabytes. Empty uses the server default.",
+      "cpuLimit": "CPU limit",
+      "cpuLimitPlaceholder": "No limit",
+      "cpuLimitHint": "In cores — 1 for one full core, 0.5 for half. This server has {cores}. Empty means no limit at all.",
+      "cpuLimitHintUnknown": "In cores — 1 for one full core, 0.5 for half. You cannot set more than this server has. Empty means no limit at all.",
+      "limitsTitle": "How these two limits behave",
+      "limitsBody": "Both are ceilings for this container alone, not reservations — nothing is set aside for it. They fail in opposite ways, which is worth knowing before you debug one: past the memory ceiling the container is killed and restarted, so the site drops requests; past the CPU quota nothing is killed and the container simply waits, so the site is slow with no error anywhere.",
       "saveAction": "Save container settings",
       "restartNote": "Saving recreates the container, so the site is down for a few seconds.",
       "savingNote": "Rewriting the compose file and recreating the container…",
@@ -3549,7 +3556,7 @@
       "pull": "Pull and redeploy",
       "pulled": "The image was pulled and the container recreated.",
       "pullFailed": "The image could not be pulled.",
-      "pageSubtitle": "The network, ports, memory ceiling and volumes this container runs with."
+      "pageSubtitle": "The network, ports, CPU and memory limits and volumes this container runs with."
     },
     "domains": {
       "title": "Domains and SSL",

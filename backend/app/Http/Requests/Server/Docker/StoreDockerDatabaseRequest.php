@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests\Server\Docker;
 
+use App\Rules\ContainerMemoryLimit;
 use App\Rules\ExistingDockerNetwork;
 use App\Rules\NewDockerName;
+use App\Rules\SingleLine;
+use App\Rules\WithinHostCpus;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -41,6 +44,17 @@ class StoreDockerDatabaseRequest extends FormRequest
             // Null is a real answer: a database only ever reached over its
             // loopback port needs no network at all.
             'docker_network' => ['nullable', 'string', 'max:255', new ExistingDockerNetwork],
+
+            // The instance's size, and the reason these are here rather than read
+            // from config: before this, every engine on the box got the same
+            // server-wide 512m — a Redis cache and the primary Postgres sized
+            // identically. An engine's own buffers are sized from what it can see,
+            // so this is the field that decides how the database performs.
+            //
+            // Both nullable, both falling back to the configured default at render
+            // time. CPU null means no quota at all, as it does for a site.
+            'cpu_limit' => ['nullable', 'string', 'max:16', new WithinHostCpus, new SingleLine],
+            'memory_limit' => ['nullable', 'string', 'max:20', new ContainerMemoryLimit, new SingleLine],
         ];
     }
 

@@ -62,18 +62,38 @@ test("the page is gated on the docker permission", () => {
 
 test("every string the screen uses exists in every locale", () => {
   const needed = [
-    ["title"], ["subtitle"], ["create"], ["remove"], ["failed"], ["loadFailed"],
-    ["unavailable", "title"], ["unavailable", "body"],
-    ["columns", "name"], ["columns", "size"], ["columns", "usedBy"], ["columns", "attached"],
-    ["networks", "title"], ["networks", "builtIn"], ["networks", "removeTitle"],
-    ["networks", "removeBody"], ["networks", "removeBusy"], ["networks", "hint"],
-    ["volumes", "title"], ["volumes", "inUse"], ["volumes", "removeTitle"],
-    ["volumes", "removeBody"], ["volumes", "removeBusy"], ["volumes", "hint"],
+    ["title"],
+    ["subtitle"],
+    ["create"],
+    ["remove"],
+    ["failed"],
+    ["loadFailed"],
+    ["unavailable", "title"],
+    ["unavailable", "body"],
+    ["columns", "name"],
+    ["columns", "size"],
+    ["columns", "usedBy"],
+    ["columns", "attached"],
+    ["networks", "title"],
+    ["networks", "builtIn"],
+    ["networks", "removeTitle"],
+    ["networks", "removeBody"],
+    ["networks", "removeBusy"],
+    ["networks", "hint"],
+    ["volumes", "title"],
+    ["volumes", "inUse"],
+    ["volumes", "removeTitle"],
+    ["volumes", "removeBody"],
+    ["volumes", "removeBusy"],
+    ["volumes", "hint"],
   ];
 
   for (const locale of LOCALES) {
     for (const keyPath of needed) {
-      const value = keyPath.reduce((node, key) => node?.[key], messages[locale].docker);
+      const value = keyPath.reduce(
+        (node, key) => node?.[key],
+        messages[locale].docker,
+      );
       assert.ok(
         typeof value === "string" && value.length > 0,
         `${locale}: docker.${keyPath.join(".")} is missing`,
@@ -87,7 +107,10 @@ test("the busy-volume warning says what is lost, not just 'are you sure'", () =>
   // dialog should be the thing that answers it.
   for (const locale of LOCALES) {
     const busy = messages[locale].docker.volumes.removeBusy;
-    assert.ok(busy.length > 40, `${locale}: removeBusy is too terse to explain the risk`);
+    assert.ok(
+      busy.length > 40,
+      `${locale}: removeBusy is too terse to explain the risk`,
+    );
   }
 });
 
@@ -105,7 +128,9 @@ const appPage = read("app/(app)/applications/[application]/page.jsx");
 // The container's settings moved off the Dashboard onto their own sidebar screen —
 // they were a full-width card under the domains and the backups, which is a long
 // way from where anybody looks for "what is this container doing".
-const containerPage = read("app/(app)/applications/[application]/container/page.jsx");
+const containerPage = read(
+  "app/(app)/applications/[application]/container/page.jsx",
+);
 const schemas = read("lib/schemas/docker.js");
 
 test("the networks table shows which sites joined a network", () => {
@@ -145,7 +170,10 @@ test("the container card is offered only to containers", () => {
   // grant is only issued for container site types, so the screen cannot exist for
   // anything else — and a PHP site reaching the URL is told no rather than shown an
   // empty card whose only outcome would be a 422.
-  assert.match(containerPage, /can\(appPermissions, "app_container", "view", "application"\)/);
+  assert.match(
+    containerPage,
+    /can\(appPermissions, "app_container", "view", "application"\)/,
+  );
   assert.match(containerPage, /<ContainerCard/);
 
   // And it is gone from the Dashboard, so there is one home for it.
@@ -159,7 +187,10 @@ test("the empty network choice is one constant, not three strings", () => {
   // sentinel to the API as a network name.
   assert.match(card, /const DEFAULT_NETWORK = "__default__"/);
   const uses = card.match(/DEFAULT_NETWORK/g) ?? [];
-  assert.ok(uses.length >= 4, `expected the constant to be used throughout, saw ${uses.length}`);
+  assert.ok(
+    uses.length >= 4,
+    `expected the constant to be used throughout, saw ${uses.length}`,
+  );
   assert.doesNotMatch(card, /docker_network: values\.docker_network === ""/);
 });
 
@@ -244,8 +275,14 @@ test("a mount carries both a volume and a path", () => {
   assert.match(schemas, /export const volumeMountSchema/);
   assert.match(schemas, /volume: dockerNameSchema/);
   // Absolute, and no traversal.
-  assert.ok(schemas.includes(".regex(/^\\//)"), "path must be required absolute");
-  assert.ok(schemas.includes("(^|\\/)\\.\\.(\\/|$)"), "path must refuse traversal");
+  assert.ok(
+    schemas.includes(".regex(/^\\//)"),
+    "path must be required absolute",
+  );
+  assert.ok(
+    schemas.includes("(^|\\/)\\.\\.(\\/|$)"),
+    "path must refuse traversal",
+  );
 });
 
 test("the volumes list is offered only on a container site", () => {
@@ -277,15 +314,23 @@ test("the server's refusal is shown where it was typed, not only as a toast", ()
 });
 
 test("the volume schema declares sites, or Zod drops it", () => {
-  assert.match(schemas, /sites: z\.array\(z\.object\(\{ id: z\.number\(\), name: z\.string\(\) \}\)\)/);
+  assert.match(
+    schemas,
+    /sites: z\.array\(z\.object\(\{ id: z\.number\(\), name: z\.string\(\) \}\)\)/,
+  );
 });
 
 test("every volumes-list string exists in every locale", () => {
   const reference = Object.keys(messages.en.applications.container.volumes);
-  assert.ok(reference.length > 10, "expected the volumes block to be populated");
+  assert.ok(
+    reference.length > 10,
+    "expected the volumes block to be populated",
+  );
   for (const locale of LOCALES) {
     assert.deepEqual(
-      Object.keys(messages[locale].applications.container.volumes ?? {}).slice().sort(),
+      Object.keys(messages[locale].applications.container.volumes ?? {})
+        .slice()
+        .sort(),
       reference.slice().sort(),
       `${locale} disagrees with en on applications.container.volumes`,
     );
@@ -359,7 +404,9 @@ test("every attach string exists in every locale", () => {
   const reference = Object.keys(messages.en.docker.attach);
   for (const locale of LOCALES) {
     assert.deepEqual(
-      Object.keys(messages[locale].docker.attach ?? {}).slice().sort(),
+      Object.keys(messages[locale].docker.attach ?? {})
+        .slice()
+        .sort(),
       reference.slice().sort(),
       `${locale} disagrees with en on docker.attach`,
     );
@@ -418,7 +465,9 @@ test("every credentials string exists in every locale", () => {
   const reference = Object.keys(messages.en.applications.container.credentials);
   for (const locale of LOCALES) {
     assert.deepEqual(
-      Object.keys(messages[locale].applications.container.credentials ?? {}).slice().sort(),
+      Object.keys(messages[locale].applications.container.credentials ?? {})
+        .slice()
+        .sort(),
       reference.slice().sort(),
       `${locale} disagrees with en on applications.container.credentials`,
     );
@@ -429,7 +478,9 @@ test("every credentials string exists in every locale", () => {
  * Paths in the volumes table, and deleting a site's Docker objects.
  */
 
-const deleteDialog = read("components/applications/delete-application-dialog.jsx");
+const deleteDialog = read(
+  "components/applications/delete-application-dialog.jsx",
+);
 
 test("the volumes table shows where the volume is on disk", () => {
   // Wanted for the unglamorous reasons: rsyncing it elsewhere, checking what is
@@ -437,7 +488,10 @@ test("the volumes table shows where the volume is on disk", () => {
   assert.match(panel, /columns\.path/);
   assert.match(panel, /volume\.mountpoint/);
   for (const locale of LOCALES) {
-    assert.ok(messages[locale].docker.columns.path, `${locale} is missing docker.columns.path`);
+    assert.ok(
+      messages[locale].docker.columns.path,
+      `${locale} is missing docker.columns.path`,
+    );
   }
 });
 
@@ -479,7 +533,10 @@ test("the flag is omitted when not asked for", () => {
   // A delete carrying no destructive flag at all is the one you want in a request
   // log — the same treatment the other two flags get.
   const api = read("lib/api/applications.js");
-  assert.match(api, /if \(removeDockerResources\) params\.remove_docker_resources = true;/);
+  assert.match(
+    api,
+    /if \(removeDockerResources\) params\.remove_docker_resources = true;/,
+  );
 });
 
 /*
@@ -502,4 +559,93 @@ test("an unparseable depends_on does not hide the field", () => {
   // colon, so the new check has to pass them through — defaulting to hidden would
   // have silently emptied the Git card.
   assert.match(createForm, /!dependsOn\.includes\(":"\)\) return true/);
+});
+
+/*
+ * The CPU and memory limit fields.
+ *
+ * The field is easy; the instruction is the part that was asked for and the part
+ * that is easy to get wrong. Two things have to be true of it and neither is
+ * visible from the markup alone:
+ *
+ *  - The ceiling shown has to be THIS server's core count, read from the API. A
+ *    hardcoded number is wrong on every box but the one it was written on, and a
+ *    sentence describing the rule ("no more than this server has") cannot be acted
+ *    on without leaving the page.
+ *  - Empty means different things in the two fields. An empty memory field falls
+ *    back to the configured default; an empty CPU field means no limit at all.
+ *    A form that implied they were the same would be lying about one of them.
+ */
+
+const limitsFetch = read("lib/docker/get-docker.js");
+
+test("the cpu field is bounded by what the API says the box has", () => {
+  // Read, not assumed — and the fallback drops the number rather than guessing
+  // one, because "this server has 1 CPU" under a field on a sixteen-core machine
+  // is the confident kind of wrong.
+  assert.match(
+    card,
+    /limits\.cpus\s*\n?\s*\?\s*t\("cpuLimitHint", \{ cores: limits\.cpus \}\)/,
+  );
+  assert.match(card, /: t\("cpuLimitHintUnknown"\)/);
+  assert.match(limitsFetch, /cpus: null/);
+  assert.match(containerPage, /getDockerLimits\(\)/);
+});
+
+test("the two fields do not claim the same thing about being empty", () => {
+  // The whole reason both hints are spelled out rather than sharing one.
+  const en = messages.en.applications.container;
+  assert.match(en.memoryLimitHint, /server default/);
+  assert.match(en.cpuLimitHint, /no limit/);
+  assert.doesNotMatch(en.cpuLimitHint, /default/);
+  // And the placeholder says it too, because a placeholder is what people read
+  // before they read a description.
+  assert.equal(en.cpuLimitPlaceholder, "No limit");
+});
+
+test("an emptied cpu field reaches the API as null, not as an empty string", () => {
+  // Otherwise a limit once set could never be removed except by deleting the
+  // site — the field would be one-way.
+  assert.match(
+    card,
+    /cpu_limit: values\.cpu_limit === "" \? null : values\.cpu_limit/,
+  );
+});
+
+test("the hint names the unit trap rather than only the format", () => {
+  // `512` is bytes to Docker, not megabytes, and it used to save fine and
+  // produce a container that would not start. The server refuses it now; the
+  // hint is what stops somebody typing it.
+  assert.match(
+    messages.en.applications.container.memoryLimitHint,
+    /bytes, not megabytes/,
+  );
+});
+
+test("the note explains how the two limits fail, which is the part nobody knows", () => {
+  // Over the memory ceiling the container is killed; over the CPU quota it
+  // waits. Somebody debugging one while thinking of the other gets nowhere.
+  const body = messages.en.applications.container.limitsBody;
+  assert.match(body, /killed/);
+  assert.match(body, /slow/);
+  // Ceilings, not reservations — the misreading that makes people over-provision.
+  assert.match(body, /not reservations/);
+});
+
+test("every locale carries a cpu hint with the cores placeholder", () => {
+  // A translation that dropped `{cores}` would render a sentence promising a
+  // number and showing none.
+  for (const locale of LOCALES) {
+    const container = messages[locale].applications.container;
+    assert.match(
+      container.cpuLimitHint,
+      /\{cores\}/,
+      `${locale} cpuLimitHint lost the cores placeholder`,
+    );
+    assert.match(
+      container.memoryLimitHint,
+      /\{default\}/,
+      `${locale} memoryLimitHint lost the default placeholder`,
+    );
+  }
 });

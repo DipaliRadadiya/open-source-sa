@@ -3505,7 +3505,14 @@
       "containerPort": "Container-Port",
       "containerPortHint": "Der Port, auf dem Ihre Anwendung innerhalb des Containers lauscht.",
       "memoryLimit": "Speicherlimit",
-      "memoryLimitHint": "Zum Beispiel 512m oder 2g. Leer verwendet den Server-Standard.",
+      "memoryLimitHint": "Zum Beispiel 512m oder 2g. Eine Zahl ohne Einheit bedeutet Bytes, nicht Megabytes. Leer verwendet den Serverstandard {default}.",
+      "memoryLimitHintUnknown": "Zum Beispiel 512m oder 2g. Eine Zahl ohne Einheit bedeutet Bytes, nicht Megabytes. Leer verwendet den Serverstandard.",
+      "cpuLimit": "CPU-Limit",
+      "cpuLimitPlaceholder": "Kein Limit",
+      "cpuLimitHint": "In Kernen — 1 für einen ganzen Kern, 0.5 für die Hälfte. Dieser Server hat {cores}. Leer bedeutet überhaupt kein Limit.",
+      "cpuLimitHintUnknown": "In Kernen — 1 für einen ganzen Kern, 0.5 für die Hälfte. Mehr als dieser Server hat ist nicht möglich. Leer bedeutet überhaupt kein Limit.",
+      "limitsTitle": "Wie sich diese beiden Limits verhalten",
+      "limitsBody": "Beide sind Obergrenzen nur für diesen Container, keine Reservierungen — es wird nichts für ihn freigehalten. Sie versagen auf entgegengesetzte Weise, was man vor der Fehlersuche wissen sollte: über der Speichergrenze wird der Container beendet und neu gestartet, die Website verliert also Anfragen; über dem CPU-Kontingent wird nichts beendet, der Container wartet nur, die Website ist also langsam, ohne dass irgendwo ein Fehler erscheint.",
       "saveAction": "Container-Einstellungen speichern",
       "restartNote": "Beim Speichern wird der Container neu erstellt, die Website ist einige Sekunden nicht erreichbar.",
       "savingNote": "Compose-Datei wird neu geschrieben und der Container neu erstellt …",
@@ -3549,7 +3556,7 @@
       "pull": "Laden und neu ausrollen",
       "pulled": "Das Image wurde geladen und der Container neu erstellt.",
       "pullFailed": "Das Image konnte nicht geladen werden.",
-      "pageSubtitle": "Netzwerk, Ports, Speicherobergrenze und Volumes, mit denen dieser Container läuft."
+      "pageSubtitle": "Netzwerk, Ports, CPU- und Speicherlimits und Volumes, mit denen dieser Container läuft."
     },
     "domains": {
       "title": "Domains und SSL",

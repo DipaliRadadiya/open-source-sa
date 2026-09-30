@@ -166,6 +166,9 @@ class ApplicationResource extends JsonResource
             'image' => $this->image,
             'container_port' => $this->container_port,
             'memory_limit' => $this->memory_limit,
+            // Null is a meaningful answer and not a missing one: it means no CPU
+            // quota, where a null `memory_limit` means the configured default.
+            'cpu_limit' => $this->cpu_limit,
             'docker_network' => $this->docker_network,
             'volume_mounts' => $this->volume_mounts ?? [],
             // Which stored credential pulls this image, if any. The id for the

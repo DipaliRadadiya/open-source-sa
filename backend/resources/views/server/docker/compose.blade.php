@@ -67,6 +67,23 @@ services:
     {{-- A container with no ceiling can take the box down, and the panel with
          it. Overridable per application; never absent. --}}
     mem_limit: {{ $memoryLimit }}
+{{-- A CPU quota in cores, and ONLY when one was set.
+
+     The conditional contains exactly one line and nothing else — no blank
+     lines, and this comment deliberately OUTSIDE it. A site with no CPU limit
+     has to render this file byte-for-byte as it did before the field existed:
+     a stray blank line is harmless YAML that still makes every existing site's
+     compose file "changed" on its next deploy, which is a diff nobody can tell
+     from a real one. Written with a blank line inside the branch, that is
+     exactly what happened, and the test comparing the two renders is what
+     caught it.
+
+     Never written with an empty value either. Compose reads `cpus: ` as `0`,
+     and `0` means no limit — so the key that looks like a limit would be the
+     one thing that removes it. --}}
+@if ($cpuLimit !== null)
+    cpus: {{ $cpuLimit }}
+@endif
 
     {{-- Bounded, and to the local journal rather than a file the panel does
          not rotate. Docker's default json-file driver has NO max size: a

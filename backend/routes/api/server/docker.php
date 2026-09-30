@@ -40,6 +40,18 @@ Route::middleware('hosts-containers')->group(function (): void {
         ->middleware(['permission:docker,manage', 'throttle:20,1']);
 
     /*
+    | What the box can be asked for, so the CPU and memory fields can state it
+    | rather than describe the rule. `docker` (view) rather than `manage`: it is
+    | read by the same forms that read the network list, and somebody who may see
+    | a container site's settings may see how big the server is.
+    |
+    | A higher throttle than the mutations because it is page furniture — every
+    | visit to a container site's settings screen asks for it.
+    */
+    Route::get('/docker/limits', [DockerResourceController::class, 'limits'])
+        ->middleware(['permission:docker', 'throttle:60,1']);
+
+    /*
     | Containerised database engines — shared objects the container sites connect
     | to, filed here with the networks and volumes because that is what they are.
     | Bound by id, not by name: this is a panel-owned row.

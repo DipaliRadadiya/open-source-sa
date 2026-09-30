@@ -160,6 +160,20 @@ return [
 
     'custom' => [
 
+        // Docker accepts a CPU quota larger than the machine and silently
+        // clamps it, so the refusal has to come from here — and it names what
+        // the server actually has rather than saying "invalid".
+        'cpu_limit' => [
+            'format' => 'Укажите количество CPU, максимум с двумя десятичными знаками — 1, 1.5, 0.5.',
+            'positive' => 'Минимальный лимит CPU, который принимает Docker, — :minimum. Оставьте поле пустым, чтобы не задавать лимит.',
+            'too_many' => 'На этом сервере :cores CPU, и Docker не запустит контейнер, который просит больше. Выберите :cores или меньше.',
+        ],
+
+        'memory_limit' => [
+            'format' => 'Укажите размер с единицей — 512m или 2g. Число без единицы Docker понимает как байты, а не мегабайты.',
+            'too_small' => 'Docker не запустит контейнер с памятью менее 6m.',
+        ],
+
         // A registry address Docker cannot interpret is silently IGNORED at
         // pull time — the credential simply never applies and the error is
         // identical to having none. So these are refusals at the form, and each

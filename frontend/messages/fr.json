@@ -3505,7 +3505,14 @@
       "containerPort": "Port du conteneur",
       "containerPortHint": "Le port sur lequel votre application écoute à l'intérieur du conteneur.",
       "memoryLimit": "Limite de mémoire",
-      "memoryLimitHint": "Par exemple 512m ou 2g. Vide utilise la valeur par défaut du serveur.",
+      "memoryLimitHint": "Par exemple 512m ou 2g. Un nombre seul signifie des octets, pas des mégaoctets. Vide utilise la valeur par défaut du serveur : {default}.",
+      "memoryLimitHintUnknown": "Par exemple 512m ou 2g. Un nombre seul signifie des octets, pas des mégaoctets. Vide utilise la valeur par défaut du serveur.",
+      "cpuLimit": "Limite de CPU",
+      "cpuLimitPlaceholder": "Aucune limite",
+      "cpuLimitHint": "En cœurs — 1 pour un cœur entier, 0.5 pour la moitié. Ce serveur en a {cores}. Vide signifie aucune limite.",
+      "cpuLimitHintUnknown": "En cœurs — 1 pour un cœur entier, 0.5 pour la moitié. Vous ne pouvez pas dépasser ce que possède ce serveur. Vide signifie aucune limite.",
+      "limitsTitle": "Comment se comportent ces deux limites",
+      "limitsBody": "Ce sont des plafonds pour ce conteneur seul, pas des réservations — rien ne lui est mis de côté. Leurs défaillances sont opposées, ce qu’il vaut mieux savoir avant de chercher la cause : au-delà du plafond mémoire, le conteneur est tué puis redémarré et le site perd des requêtes ; au-delà du quota CPU, rien n’est tué, le conteneur attend simplement, et le site est lent sans aucune erreur.",
       "saveAction": "Enregistrer les paramètres du conteneur",
       "restartNote": "L'enregistrement recrée le conteneur : le site est indisponible quelques secondes.",
       "savingNote": "Réécriture du fichier compose et recréation du conteneur…",
@@ -3549,7 +3556,7 @@
       "pull": "Récupérer et redéployer",
       "pulled": "L’image a été récupérée et le conteneur recréé.",
       "pullFailed": "L’image n’a pas pu être récupérée.",
-      "pageSubtitle": "Le réseau, les ports, le plafond mémoire et les volumes avec lesquels ce conteneur s’exécute."
+      "pageSubtitle": "Le réseau, les ports, les limites de CPU et de mémoire et les volumes avec lesquels ce conteneur s’exécute."
     },
     "domains": {
       "title": "Domaines et SSL",

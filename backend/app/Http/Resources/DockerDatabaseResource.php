@@ -51,6 +51,14 @@ class DockerDatabaseResource extends JsonResource
 
             'network' => $this->docker_network,
 
+            // The size this instance was given. Null means the configured default
+            // for memory and no quota for CPU — the UI has to say which, so the
+            // raw value is what it gets rather than a resolved number that would
+            // hide the difference between "chosen" and "inherited".
+            'cpu_limit' => $this->cpu_limit,
+            'memory_limit' => $this->memory_limit,
+            'default_memory_limit' => (string) config('server.docker.default_db_memory_limit', '512m'),
+
             // Named without their values, so the UI can render the right fields
             // for the engine — Redis has no user and no database — and a
             // "credentials set" state without the secret going near a response.

@@ -11,7 +11,7 @@ name: {{ $project }}
 services:
   wiki:
     image: {{ $image }}
-    @include('server.docker.apps.limits', ['limit' => $memoryLimit])
+    @include('server.docker.apps.limits', ['limit' => $memoryLimit, 'cpus' => $cpuLimit])
 
     ports:
       - "127.0.0.1:{{ $appPort }}:{{ $containerPort }}"

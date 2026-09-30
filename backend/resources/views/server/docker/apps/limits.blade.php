@@ -8,6 +8,12 @@
 
      - **A memory ceiling, always.** One container with no limit can exhaust the
        machine and take the panel with it.
+     - **A CPU quota, only when one was chosen.** `$cpus` is optional and the key
+       is omitted when it is null — deliberately, and it is the one asymmetry in
+       this file. Defaulting it would cap every container site already on the box
+       the next time it deployed; and rendering `cpus:` with an empty value is
+       worse than omitting it, because Compose reads that as `0`, which means *no
+       limit* and would quietly undo a limit set anywhere else.
      - **Bounded logs.** Docker's default json-file driver has NO max size, so a
        chatty container fills the disk and the first symptom is every site on the
        box failing to write.
@@ -21,6 +27,9 @@
      column zero and the file stops being valid YAML. --}}
     restart: unless-stopped
     mem_limit: {{ $limit }}
+@if (($cpus ?? null) !== null)
+    cpus: {{ $cpus }}
+@endif
     logging:
       driver: json-file
       options:

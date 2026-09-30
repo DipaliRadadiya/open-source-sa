@@ -163,6 +163,22 @@ export const dockerVolumesResponseSchema = z.object({
 });
 
 /**
+ * What the box can be asked for, so the limit fields can state it.
+ *
+ * `cpus` is the server's core count and the ceiling the API validates against.
+ * The two defaults come with it because the empty state of the two fields is
+ * different and the form has to be able to say which: an empty memory field
+ * means the configured default, and an empty CPU field means no limit at all.
+ */
+export const dockerLimitsResponseSchema = z.object({
+  limits: z.object({
+    cpus: z.number().int().min(1),
+    default_memory_limit: z.string(),
+    default_db_memory_limit: z.string(),
+  }),
+});
+
+/**
  * A name Docker will accept.
  *
  * Mirrors `DockerResources::validName()` — `[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}`.
@@ -191,6 +207,14 @@ export const containerSettingsFormSchema = z.object({
   memory_limit: z
     .string()
     .regex(/^\d+(b|k|m|g)?$/i)
+    .or(z.literal("")),
+  // Cores, with up to two decimal places — the same shape `WithinHostCpus`
+  // accepts. Empty is a real answer and means no quota, which is why it is not
+  // `.min(1)`; the upper bound is the host's core count and stays server-side,
+  // because only the server knows how big the server is.
+  cpu_limit: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/)
     .or(z.literal("")),
   docker_network: z.string(),
 });

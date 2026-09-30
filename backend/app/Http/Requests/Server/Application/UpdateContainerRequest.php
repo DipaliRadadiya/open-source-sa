@@ -2,10 +2,12 @@
 
 namespace App\Http\Requests\Server\Application;
 
+use App\Rules\ContainerMemoryLimit;
 use App\Rules\ContainerMountPath;
 use App\Rules\ExistingDockerNetwork;
 use App\Rules\ExistingDockerVolume;
 use App\Rules\SingleLine;
+use App\Rules\WithinHostCpus;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -45,7 +47,24 @@ class UpdateContainerRequest extends FormRequest
 
             // A ceiling, never absent — null here falls back to the configured
             // default at render time rather than to no limit at all.
-            'memory_limit' => ['sometimes', 'nullable', 'string', 'max:20', 'regex:/^\d+(b|k|m|g)?$/i', new SingleLine],
+            //
+            // The format moved into a rule of its own once databases needed the
+            // same field: `regex` fails with "format is invalid", and the mistake
+            // people make is the unit rather than the shape.
+            'memory_limit' => ['sometimes', 'nullable', 'string', 'max:20', new ContainerMemoryLimit, new SingleLine],
+
+            // A CPU quota in cores — '1', '1.5', '0.5'. Unlike memory, null means
+            // **no limit at all** and not a configured fallback, which is the one
+            // asymmetry on this form worth knowing about. Giving CPU a default
+            // would cap every container site already on the box the next time it
+            // deployed, which is a behaviour change arriving through a feature
+            // nobody turned on.
+            //
+            // Bounded by the host's core count because Docker refuses an
+            // over-provisioned quota at `compose up` — so without the rule this
+            // field saves, fails to apply, and leaves the panel showing a limit the
+            // container does not have.
+            'cpu_limit' => ['sometimes', 'nullable', 'string', 'max:16', new WithinHostCpus, new SingleLine],
 
             // Null is a real answer: it means Docker's default bridge.
             'docker_network' => ['sometimes', 'nullable', 'string', 'max:255', new ExistingDockerNetwork],

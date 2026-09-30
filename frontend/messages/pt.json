@@ -3505,7 +3505,14 @@
       "containerPort": "Porta do contentor",
       "containerPortHint": "A porta em que a sua aplicação escuta dentro do contentor.",
       "memoryLimit": "Limite de memória",
-      "memoryLimitHint": "Por exemplo 512m ou 2g. Vazio usa a predefinição do servidor.",
+      "memoryLimitHint": "Por exemplo 512m ou 2g. Um número sem unidade significa bytes, não megabytes. Vazio usa o padrão do servidor: {default}.",
+      "memoryLimitHintUnknown": "Por exemplo 512m ou 2g. Um número sem unidade significa bytes, não megabytes. Vazio usa o padrão do servidor.",
+      "cpuLimit": "Limite de CPU",
+      "cpuLimitPlaceholder": "Sem limite",
+      "cpuLimitHint": "Em núcleos — 1 para um núcleo inteiro, 0.5 para metade. Este servidor tem {cores}. Vazio significa nenhum limite.",
+      "cpuLimitHintUnknown": "Em núcleos — 1 para um núcleo inteiro, 0.5 para metade. Não é possível pedir mais do que este servidor tem. Vazio significa nenhum limite.",
+      "limitsTitle": "Como estes dois limites se comportam",
+      "limitsBody": "Ambos são tetos apenas para este contêiner, não reservas — nada é separado para ele. Eles falham de formas opostas, o que vale saber antes de investigar: acima do teto de memória o contêiner é encerrado e reiniciado, e o site perde requisições; acima da cota de CPU nada é encerrado, o contêiner apenas espera, e o site fica lento sem nenhum erro em lugar algum.",
       "saveAction": "Guardar definições do contentor",
       "restartNote": "Guardar recria o contentor, por isso o site fica em baixo alguns segundos.",
       "savingNote": "A reescrever o ficheiro compose e a recriar o contentor…",
@@ -3549,7 +3556,7 @@
       "pull": "Obter e reimplantar",
       "pulled": "A imagem foi obtida e o contentor recriado.",
       "pullFailed": "Não foi possível obter a imagem.",
-      "pageSubtitle": "A rede, as portas, o limite de memória e os volumes com que este contentor corre."
+      "pageSubtitle": "A rede, as portas, os limites de CPU e memória e os volumes com que este contêiner é executado."
     },
     "domains": {
       "title": "Domínios e SSL",

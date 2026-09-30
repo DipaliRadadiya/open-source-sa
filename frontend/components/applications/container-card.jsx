@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Box, Network, KeyRound, RefreshCw } from "lucide-react";
+import { Box, Network, KeyRound, RefreshCw, Gauge } from "lucide-react";
 import Link from "next/link";
 import { containerSettingsFormSchema } from "@/lib/schemas/docker";
 import { pullContainerImage, updateContainerSettings } from "@/lib/api/docker";
@@ -80,6 +80,7 @@ export function ContainerCard({
   networks = [],
   volumes = [],
   registries = [],
+  limits = {},
   canManage = false,
   className,
 }) {
@@ -91,6 +92,7 @@ export function ContainerCard({
   const defaults = {
     container_port: application.container_port ?? 80,
     memory_limit: application.memory_limit ?? "",
+    cpu_limit: application.cpu_limit ?? "",
     // The sentinel, not `""`. Radix refuses an empty `SelectItem` value — it
     // reserves that for "nothing selected" — so "Docker's default bridge" needs
     // a value of its own, and it has to be the SAME value in the defaults, the
@@ -134,6 +136,9 @@ export function ContainerCard({
       await updateContainerSettings(application.id, {
         ...values,
         memory_limit: values.memory_limit === "" ? null : values.memory_limit,
+        // Empty means "no quota", and it has to reach the API as null rather than
+        // as "" — otherwise a limit once set could never be taken off again.
+        cpu_limit: values.cpu_limit === "" ? null : values.cpu_limit,
         docker_network:
           values.docker_network === DEFAULT_NETWORK
             ? null
@@ -380,17 +385,70 @@ export function ContainerCard({
                     <FormLabel>{t("memoryLimit")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="512m"
+                        placeholder={limits.defaultMemoryLimit ?? "512m"}
                         disabled={!canManage}
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>{t("memoryLimitHint")}</FormDescription>
+                    <FormDescription>
+                      {limits.defaultMemoryLimit
+                        ? t("memoryLimitHint", {
+                            default: limits.defaultMemoryLimit,
+                          })
+                        : t("memoryLimitHintUnknown")}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="cpu_limit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("cpuLimit")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        // The placeholder says what empty MEANS, because for this
+                        // field empty is not "the default" — it is no limit at
+                        // all, which is the opposite of what the field beside it
+                        // does with an empty value.
+                        placeholder={t("cpuLimitPlaceholder")}
+                        inputMode="decimal"
+                        disabled={!canManage}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {/* The server's real core count, not a description of the
+                          rule. "Up to the number of CPUs this server has" cannot
+                          be acted on without leaving the page, and a hardcoded
+                          number would be wrong on every box but one. Falls back
+                          to the rule only when the box could not be asked — a
+                          confident wrong number is worse than a vaguer right
+                          one. */}
+                      {limits.cpus
+                        ? t("cpuLimitHint", { cores: limits.cpus })
+                        : t("cpuLimitHintUnknown")}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            {/* What the two numbers actually do, which is the part nobody knows
+                and the part that decides whether a limit was the right tool.
+
+                They fail in opposite ways: over the memory ceiling the kernel
+                kills the container and Docker restarts it, so the symptom is a
+                site that drops requests; over the CPU quota nothing is killed,
+                the container just waits, so the symptom is slowness with no
+                error anywhere. Somebody debugging one while thinking of the
+                other gets nowhere. */}
+            <Note icon={Gauge} title={t("limitsTitle")}>
+              {t("limitsBody")}
+            </Note>
 
             {/* Its own control, not part of the form above. A mount is a discrete
                 fact that saves on add and remove — batching it into the Save

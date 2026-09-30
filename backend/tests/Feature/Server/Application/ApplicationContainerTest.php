@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\HostCpus;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -466,3 +467,143 @@ function containerUrl2(): string
 {
     return '/api/applications/'.test()->application->id.'/container/secrets';
 }
+
+/*
+ * The CPU quota, and the one thing it has to get right: refusing at the form.
+ *
+ * Docker does refuse an over-provisioned quota — measured on the test box, both
+ * `docker run --cpus 16` and `cpus: 16` in a compose file answer "range of CPUs is
+ * from 0.01 to 4.00, as there are only 4 CPUs available". It refuses at `up`,
+ * though, which means without the rule this field saves the row, fails the apply,
+ * and leaves the panel displaying a limit the container does not have. The site
+ * itself survives — compose refuses before removing the running container — so the
+ * only trace is a failure card.
+ */
+
+/** A box with a known number of CPUs, so the bound is not the runner's. */
+function withCpus(int $cores): void
+{
+    app()->instance(HostCpus::class, new class($cores) extends HostCpus
+    {
+        public function __construct(private int $cores) {}
+
+        public function count(): int
+        {
+            return $this->cores;
+        }
+    });
+}
+
+it('saves a cpu quota and applies it to the container', function () {
+    fakeDockerBox();
+    withCpus(4);
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['cpu_limit' => '1.5'])
+        ->assertOk()
+        ->assertJsonPath('application.cpu_limit', '1.5');
+
+    expect($this->application->fresh()->cpu_limit)->toBe('1.5')
+        ->and(dockerRan(fn (array $args): bool => ($args[1] ?? '') === 'compose' && in_array('up', $args, true)))
+        ->toBeTrue();
+});
+
+it('refuses more CPUs than the server has, and saves nothing', function () {
+    fakeDockerBox();
+    withCpus(2);
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['cpu_limit' => '8'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('cpu_limit');
+
+    expect($this->application->fresh()->cpu_limit)->toBeNull();
+});
+
+it('names what the server has rather than saying invalid', function () {
+    // The whole reason this is a rule and not a `numeric|max:` — "must not be
+    // greater than 2" does not tell somebody what their own box is.
+    fakeDockerBox();
+    withCpus(2);
+
+    $message = $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['cpu_limit' => '8'])
+        ->assertStatus(422)
+        ->json('errors.cpu_limit.0');
+
+    expect($message)->toContain('2 CPUs');
+});
+
+it('refuses a quota below the one Docker accepts', function () {
+    // `cpus: 0` is Docker's own spelling of "no limit", so a zero typed into the
+    // field would be a limit that removes limits. Its floor is 0.01.
+    fakeDockerBox();
+    withCpus(4);
+
+    foreach (['0', '0.001', '-1', 'one', '1.555'] as $bad) {
+        $this->withHeaders(containerHeaders())
+            ->putJson(containerUrl(), ['cpu_limit' => $bad])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('cpu_limit');
+    }
+
+    expect($this->application->fresh()->cpu_limit)->toBeNull();
+});
+
+it('clears the quota when the field is emptied', function () {
+    // Null is the answer that means "no limit", and it has to be reachable —
+    // otherwise a limit once set can never be removed except by deleting the site.
+    fakeDockerBox();
+    withCpus(4);
+    $this->application->forceFill(['cpu_limit' => '2'])->save();
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['cpu_limit' => null])
+        ->assertOk();
+
+    expect($this->application->fresh()->cpu_limit)->toBeNull();
+});
+
+it('refuses a memory ceiling Docker would not start the container with', function () {
+    // 6MB is Docker's floor, measured: "Minimum memory limit allowed is 6MB". And
+    // a bare number is bytes, not megabytes — the mistake that used to save fine
+    // and produce a container that would not start.
+    fakeDockerBox();
+
+    foreach (['2m', '512', '512MB'] as $bad) {
+        $this->withHeaders(containerHeaders())
+            ->putJson(containerUrl(), ['memory_limit' => $bad])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('memory_limit');
+    }
+});
+
+it('records the size in the activity log', function () {
+    // A site that was always slow and a site that was made smaller are different
+    // events, and the log is where somebody will look to tell them apart.
+    fakeDockerBox();
+    withCpus(4);
+
+    $this->withHeaders(containerHeaders())
+        ->putJson(containerUrl(), ['cpu_limit' => '1', 'memory_limit' => '1g'])
+        ->assertOk();
+
+    $log = ActivityLog::where('type', 'application')->where('action', 'container_updated')->sole();
+
+    expect($log->properties['cpu_limit'])->toBe('1')
+        ->and($log->properties['memory_limit'])->toBe('1g');
+});
+
+it('tells the form how big the server is', function () {
+    // So the field can state the ceiling instead of describing the rule. Its own
+    // endpoint because `/basic-info` is unauthenticated, and the size of the box
+    // is not for anonymous visitors.
+    fakeDockerBox();
+    withCpus(6);
+
+    $this->withHeaders(containerHeaders())
+        ->getJson('/api/docker/limits')
+        ->assertOk()
+        ->assertJsonPath('limits.cpus', 6)
+        ->assertJsonPath('limits.default_memory_limit', (string) config('server.docker.default_memory_limit'));
+});

@@ -353,6 +353,12 @@ class ContainerSupervisor
             'envPath' => $application->envPath(),
             'memoryLimit' => (string) ($application->memory_limit
                 ?: config('server.docker.default_memory_limit', '512m')),
+            // No fallback, unlike memory on the line above, and the asymmetry is
+            // the design rather than an omission: null here means no CPU quota at
+            // all, so a site that has never had one renders this file exactly as
+            // it did before the field existed. Giving it a default would cap every
+            // existing container site on its next deploy.
+            'cpuLimit' => $application->cpu_limit ?: null,
             // Null means Docker's default bridge, which is what a site gets
             // when nobody chose otherwise. Only reached on this branch: a
             // pasted compose file returns above, because a file that names its
@@ -408,11 +414,28 @@ class ContainerSupervisor
         $limit = (string) ($application->memory_limit
             ?: config('server.docker.default_memory_limit', '512m'));
 
+        // No fallback, so a pasted file whose site has no CPU limit gets no `cpus`
+        // key at all. Writing one with an empty value would be worse than omitting
+        // it: Compose reads `cpus: ` as `0`, which means *no limit*, and the
+        // override merges OVER the user's file — so the key that looks like a
+        // limit would silently remove one they had set themselves.
+        $cpus = $application->cpu_limit ?: null;
+
         $lines = ['# Written by the panel. Merged over compose.yml by `docker compose -f`.', 'services:'];
 
         foreach ($this->pastedServices as $service) {
             $lines[] = "  {$service}:";
             $lines[] = "    mem_limit: {$limit}";
+
+            // Applied to EVERY service in the pasted file, unlike the generated
+            // single-service template. There is no way to tell which of a
+            // hand-written file's services is "the app", and the alternative —
+            // limiting none of them — makes the field do nothing for exactly the
+            // sites most likely to need it. Each service gets the quota, so the
+            // number is a per-container ceiling and not a budget shared out.
+            if ($cpus !== null) {
+                $lines[] = "    cpus: {$cpus}";
+            }
             $lines[] = '    logging:';
             $lines[] = '      driver: json-file';
             $lines[] = '      options:';

@@ -32,7 +32,7 @@ class CreateDockerDatabase
     ) {}
 
     /**
-     * @param  array{name: string, engine: string, version: string, docker_network?: string|null}  $data
+     * @param  array{name: string, engine: string, version: string, docker_network?: string|null, cpu_limit?: string|null, memory_limit?: string|null}  $data
      *
      * @throws DatabaseContainerFailedException
      */
@@ -44,6 +44,11 @@ class CreateDockerDatabase
             'version' => $data['version'],
             'port' => $this->ports->allocate(),
             'docker_network' => $data['docker_network'] ?? null,
+            // The instance's size. Null for either means "the configured default"
+            // for memory and "no quota" for CPU — the two are not symmetric, and
+            // `DatabaseContainerManager` is the one place that resolves them.
+            'cpu_limit' => $data['cpu_limit'] ?? null,
+            'memory_limit' => $data['memory_limit'] ?? null,
             'credentials' => $this->credentials($data['engine'], $data['name']),
         ]);
 
@@ -67,6 +72,10 @@ class CreateDockerDatabase
             'version' => $database->version,
             'port' => $database->port,
             'network' => $database->docker_network,
+            // The size it was created at, because a database that was always slow
+            // and one that was made smaller are different events.
+            'cpu_limit' => $database->cpu_limit,
+            'memory_limit' => $database->memory_limit,
         ]);
 
         return $database;

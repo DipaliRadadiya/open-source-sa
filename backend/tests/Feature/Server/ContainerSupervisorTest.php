@@ -763,3 +763,141 @@ it('honours a per-site memory limit in the override', function () {
 
     expect(overrideWritten())->toContain('mem_limit: 3g');
 });
+
+/*
+ * Per-container CPU quotas.
+ *
+ * The invariant worth a test is the ABSENCE, not the presence. `cpus` is the one
+ * limit with no default: memory falls back to the configured 512m, and CPU falls
+ * back to nothing at all, because a default would have capped every container site
+ * already on the box the next time it deployed. So a site without the field has to
+ * render the file it rendered before the column existed — and the failure mode of
+ * getting that wrong is not an error, it is a diff on every site's compose file
+ * that nobody can tell from a real change.
+ *
+ * The other half is the empty key. Compose reads `cpus: ` as `0`, and `0` means no
+ * limit, so a key rendered with a null value is the one spelling that silently
+ * removes the limit it appears to set.
+ */
+it('writes a cpu quota only when the site has one', function () {
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['cpu_limit' => '1.5'])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    expect($written)->toContain('cpus: 1.5');
+});
+
+it('omits the cpus key entirely for a site with no quota, and renders the same file as before', function () {
+    $ran = [];
+    $withoutColumn = null;
+    [$ops, $files] = containerDeps([
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $withoutColumn);
+
+    $supervisor = new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops));
+    $application = containerApp();
+
+    $none = $supervisor->generated($application, '/home/shop/shop/public_html');
+
+    // Not just "no value" — no key. An empty `cpus:` is `0` to Compose, which
+    // means unlimited, so the wrong spelling of "no limit" is also the wrong
+    // spelling of "no limit set anywhere else either".
+    expect($none)->not->toContain('cpus');
+
+    // And setting one changes exactly that: the rest of the file is untouched, so
+    // a limit arriving does not read as a rewrite of the site's configuration.
+    $application->forceFill(['cpu_limit' => '2'])->save();
+    $with = $supervisor->generated($application->fresh(), '/home/shop/shop/public_html');
+
+    expect(str_replace("    cpus: 2\n", '', $with))->toBe($none);
+});
+
+it('refuses to treat a zero cpu limit as a limit', function () {
+    // `cpus: 0` is Docker's own spelling of "no quota". A site holding '0' would
+    // therefore render a key that reads as a limit and does the opposite, so the
+    // model's falsy check has to swallow it the way it swallows an empty string.
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['cpu_limit' => '0'])->save();
+
+    $generated = (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->generated($application, '/home/shop/shop/public_html');
+
+    expect($generated)->not->toContain('cpus');
+});
+
+it('gives every service in a pasted file the same cpu quota', function () {
+    // Per container, not a budget shared out. There is no way to tell which
+    // service in a hand-written file is "the app", and limiting none of them would
+    // make the field do nothing for exactly the sites most likely to need it.
+    $pasted = <<<'YAML'
+    services:
+      web:
+        image: nginx:1.27-alpine
+        ports:
+          - "127.0.0.1:20001:80"
+      worker:
+        image: nginx:1.27-alpine
+    YAML;
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => [
+                    'web' => ['image' => 'nginx:1.27-alpine', 'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']]],
+                    'worker' => ['image' => 'nginx:1.27-alpine'],
+                ],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['compose' => $pasted, 'cpu_limit' => '0.5'])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    expect(substr_count((string) overrideWritten(), 'cpus: 0.5'))->toBe(2);
+});
+
+it('writes no cpus line into the override for a pasted site with no quota', function () {
+    // The override MERGES over the user's file. A `cpus: ` with nothing after it
+    // would be read as `0` — no limit — so the panel's own override would be the
+    // thing that removed a limit the user had written themselves.
+    $pasted = "services:\n  web:\n    image: nginx:1.27-alpine\n    cpus: 2\n    ports:\n      - \"127.0.0.1:20001:80\"\n";
+
+    $ran = [];
+    $written = null;
+    [$ops, $files] = containerDeps([
+        'compose_validate' => fn () => new ServerOpsResult(
+            ok: true, reference: 'r', result: processResult(json_encode([
+                'services' => ['web' => ['image' => 'nginx:1.27-alpine', 'ports' => [['published' => '20001', 'target' => 80, 'host_ip' => '127.0.0.1']]]],
+            ])), answered: true,
+        ),
+        'compose_ps' => fn () => new ServerOpsResult(ok: true, reference: 'r', result: processResult("abc\n"), answered: true),
+    ], $ran, $written);
+
+    $application = containerApp();
+    $application->forceFill(['compose' => $pasted])->save();
+
+    (new ContainerSupervisor($ops, $files, new ComposeValidator($ops), new RegistryAuth($ops)))
+        ->apply($application, '/home/shop/shop/public_html');
+
+    expect((string) overrideWritten())->not->toContain('cpus');
+});

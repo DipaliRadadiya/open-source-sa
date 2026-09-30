@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Server;
 
 use App\Http\Controllers\Controller;
 use App\Services\Server\Docker\DockerResources;
+use App\Services\Server\HostCpus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -32,6 +33,37 @@ class DockerResourceController extends Controller
     public function volumes(DockerResources $docker): JsonResponse
     {
         return response()->json(['volumes' => $docker->volumes()]);
+    }
+
+    /**
+     * What this machine can be asked for, so a limit field can say so.
+     *
+     * Exists because the alternative is a form that describes the rule instead of
+     * the server: "up to the number of CPUs this server has" is a sentence nobody
+     * can act on without leaving the page, and a hardcoded ceiling would be wrong
+     * on every box but the one it was written on. The CPU field is bounded by this
+     * number server-side, so a hint that stated anything else would be a hint that
+     * disagrees with the validator.
+     *
+     * Its own endpoint rather than a field on `/basic-info`, which is
+     * **unauthenticated** — the size of the box is not something to hand to
+     * anonymous visitors. Gated on `docker` (view) with the rest of this file.
+     *
+     * The defaults come with it so the placeholders can show what a site gets when
+     * the field is left empty, which is the other half of "clear instruction": the
+     * memory field's empty state is 512m, and the CPU field's empty state is no
+     * limit at all. Those are different answers and the UI has to be able to say
+     * which is which without hardcoding either.
+     */
+    public function limits(HostCpus $cpus): JsonResponse
+    {
+        return response()->json([
+            'limits' => [
+                'cpus' => $cpus->count(),
+                'default_memory_limit' => (string) config('server.docker.default_memory_limit', '512m'),
+                'default_db_memory_limit' => (string) config('server.docker.default_db_memory_limit', '512m'),
+            ],
+        ]);
     }
 
     public function createNetwork(Request $request, DockerResources $docker): JsonResponse

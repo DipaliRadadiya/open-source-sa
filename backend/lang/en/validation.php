@@ -181,6 +181,21 @@ return [
 
     'custom' => [
 
+        // Docker's own bounds, moved from the daemon to the form. `compose up`
+        // refuses an over-provisioned quota — it does not clamp it — so without
+        // these the save lands as a provisioning failure with Docker's sentence
+        // in it, while the panel shows a limit the container does not have.
+        'cpu_limit' => [
+            'format' => 'Use a number of CPUs, with up to two decimal places — 1, 1.5, 0.5.',
+            'positive' => 'The smallest CPU limit Docker accepts is :minimum. Leave the field empty for no limit.',
+            'too_many' => 'This server has :cores CPUs, and Docker will not start a container asking for more. Choose :cores or less.',
+        ],
+
+        'memory_limit' => [
+            'format' => 'Use a size with a unit — 512m or 2g. A number on its own means bytes to Docker, not megabytes.',
+            'too_small' => 'Docker will not start a container with less than 6m of memory.',
+        ],
+
         // A registry address Docker cannot interpret is silently IGNORED at
         // pull time — the credential simply never applies and the error is
         // identical to having none. So these are refusals at the form, and each

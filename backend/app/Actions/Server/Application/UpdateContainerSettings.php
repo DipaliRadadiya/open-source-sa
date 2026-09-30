@@ -72,9 +72,15 @@ class UpdateContainerSettings
         }
 
         $this->activityLogger->log('application.container_updated', $application, [
+            // The renderer substitutes from PROPERTIES and nothing else —
+            // `ActivityLogResource` passes `$this->properties` to `__()` — so a
+            // sentence saying `:name` with no `name` property renders the
+            // placeholder verbatim. This one did.
+            'name' => $application->name,
             'network' => $application->docker_network,
             'container_port' => $application->container_port,
             'memory_limit' => $application->memory_limit,
+            'cpu_limit' => $application->cpu_limit,
             'volume_mounts' => count((array) ($application->volume_mounts ?? [])),
             // Which credential, by id — the registry's name would be friendlier
             // and would also go stale the moment it is renamed. The log records

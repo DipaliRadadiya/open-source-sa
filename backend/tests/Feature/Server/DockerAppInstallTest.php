@@ -763,3 +763,50 @@ it('escapes every dollar sign, because Compose interpolates its own file', funct
     expect(preg_match('/(?<!\$)\$(?!\$)[A-Za-z_{]/', $compose))
         ->toBe(0, "{$type} writes an unescaped \$variable that Compose will interpolate away");
 })->with('docker apps');
+
+/*
+ * Per-app CPU quotas.
+ *
+ * Deliberately NOT symmetric with memory, and these tests are the record of that
+ * decision. An app type may declare a memory floor — Metabase needs 2g or the JVM
+ * writes a crash log — because a floor is a fact about the software. There is no
+ * equivalent CPU fact: an app is slower on less CPU and does not fail, so a floor
+ * would be an invented policy. And a *default* would be worse than invented: it
+ * would throttle every one-click app already installed on the box the next time it
+ * deployed.
+ */
+it('gives a one-click app no cpu quota unless the user set one', function (string $type, int $port, array $roles) {
+    $parsed = Yaml::parse((string) installDockerApp(dockerAppSite($type))->compose);
+
+    foreach ($parsed['services'] as $name => $service) {
+        expect($service)->not->toHaveKey('cpus', "{$name} was given a CPU quota nobody asked for");
+    }
+})->with('docker apps');
+
+it('applies the user cpu quota to the app service only', function () {
+    // The app's number is the app's. Splitting it across a bundled database would
+    // mean guessing a ratio, and the guess is wrong for every app whose work is in
+    // its database — so the engine stays unbounded, exactly as its memory ceiling
+    // is a separate number rather than a share of the app's.
+    $application = dockerAppSite('ghost');
+    $application->forceFill(['cpu_limit' => '1.5'])->save();
+
+    $parsed = Yaml::parse((string) installDockerApp($application)->compose);
+
+    expect($parsed['services']['ghost']['cpus'])->toBe(1.5)
+        ->and($parsed['services']['ghost_db'] ?? $parsed['services'][array_key_last($parsed['services'])])
+        ->not->toHaveKey('cpus');
+});
+
+it('renders a fractional cpu quota that parses as a number', function () {
+    // `cpus: 0.5` has to survive being read back by Compose's own parser. Quoted
+    // or malformed it is a string, and Compose refuses the file at `up` — after
+    // the site has been saved, which is the shape of failure this whole feature
+    // was meant to move to the form.
+    $application = dockerAppSite('metabase');
+    $application->forceFill(['cpu_limit' => '0.5'])->save();
+
+    $parsed = Yaml::parse((string) installDockerApp($application)->compose);
+
+    expect($parsed['services']['metabase']['cpus'])->toBe(0.5);
+});

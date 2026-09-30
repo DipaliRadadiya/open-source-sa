@@ -300,6 +300,19 @@ class DockerAppInstaller implements SiteInstaller
             // means the app's ceiling is really the pair's. MySQL's own default
             // buffer pool alone is 128M.
             'dbMemoryLimit' => (string) config('server.docker.default_db_memory_limit', '512m'),
+            // The user's choice or nothing — no app floor and no server default,
+            // unlike memory above. A CPU default would cap every container site
+            // already on this box the next time it deployed, and the symptom
+            // would be unexplained slowness from a feature nobody turned on.
+            //
+            // Applied to the APP service only. A bundled database service gets no
+            // quota: splitting one number across two containers would mean
+            // guessing the ratio, and the guess would be wrong for every app whose
+            // work is in its database. So the field limits the thing the user
+            // named, and the pair's total is the app's limit plus an unbounded
+            // engine — which is the same shape memory already has, where the two
+            // ceilings are separate numbers.
+            'cpuLimit' => $application->cpu_limit ?: null,
             'url' => $url,
             'secrets' => $secrets,
             'volumes' => $volumes,

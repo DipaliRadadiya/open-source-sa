@@ -3505,7 +3505,14 @@
       "containerPort": "Puerto del contenedor",
       "containerPortHint": "El puerto en el que escucha tu aplicación dentro del contenedor.",
       "memoryLimit": "Límite de memoria",
-      "memoryLimitHint": "Por ejemplo 512m o 2g. Vacío usa el valor predeterminado del servidor.",
+      "memoryLimitHint": "Por ejemplo 512m o 2g. Un número sin unidad significa bytes, no megabytes. Vacío usa el valor por defecto del servidor: {default}.",
+      "memoryLimitHintUnknown": "Por ejemplo 512m o 2g. Un número sin unidad significa bytes, no megabytes. Vacío usa el valor por defecto del servidor.",
+      "cpuLimit": "Límite de CPU",
+      "cpuLimitPlaceholder": "Sin límite",
+      "cpuLimitHint": "En núcleos — 1 para un núcleo completo, 0.5 para la mitad. Este servidor tiene {cores}. Vacío significa sin límite alguno.",
+      "cpuLimitHintUnknown": "En núcleos — 1 para un núcleo completo, 0.5 para la mitad. No puede superar lo que tiene este servidor. Vacío significa sin límite alguno.",
+      "limitsTitle": "Cómo se comportan estos dos límites",
+      "limitsBody": "Ambos son techos solo para este contenedor, no reservas — no se aparta nada para él. Fallan de formas opuestas, y conviene saberlo antes de investigar: por encima del techo de memoria el contenedor se mata y se reinicia, así que el sitio pierde peticiones; por encima de la cuota de CPU no se mata nada, el contenedor simplemente espera, así que el sitio va lento sin ningún error.",
       "saveAction": "Guardar ajustes del contenedor",
       "restartNote": "Al guardar se recrea el contenedor, así que el sitio estará caído unos segundos.",
       "savingNote": "Reescribiendo el archivo compose y recreando el contenedor…",
@@ -3549,7 +3556,7 @@
       "pull": "Descargar y volver a desplegar",
       "pulled": "Se descargó la imagen y se recreó el contenedor.",
       "pullFailed": "No se pudo descargar la imagen.",
-      "pageSubtitle": "La red, los puertos, el techo de memoria y los volúmenes con los que se ejecuta este contenedor."
+      "pageSubtitle": "La red, los puertos, los límites de CPU y memoria y los volúmenes con los que se ejecuta este contenedor."
     },
     "domains": {
       "title": "Dominios y SSL",

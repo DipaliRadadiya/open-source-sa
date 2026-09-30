@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\Model;
  * The credentials are `encrypted:array`, like a registry's token and a storage
  * destination's keys, and read in one place.
  */
-#[Fillable(['name', 'engine', 'version', 'port', 'credentials', 'docker_network'])]
+#[Fillable(['name', 'engine', 'version', 'port', 'credentials', 'docker_network', 'cpu_limit', 'memory_limit'])]
 class DockerDatabase extends Model
 {
     protected function casts(): array
