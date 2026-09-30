@@ -27,7 +27,7 @@ class PermissionFixer
     public function __construct(
         private ServerOps $serverOps,
         private ApplicationProvisioner $provisioner,
-        private ApplicationEnvironment $environment,
+        private SecretFilePrivacy $secrets,
         private PoolManager $pool,
         private RuntimeOwnership $ownership,
     ) {}
@@ -49,17 +49,19 @@ class PermissionFixer
 
         // Re-tighten what the bulk pass above just loosened. Sourced from the
         // services that own each path, not duplicated here — a second copy of
-        // ".env is 0600" is how it drifts.
+        // ".env is 0600" is how it drifts, and it did: a flat 0600 here took
+        // the `.env` away from a site whose PHP runs as the web server's
+        // account. SecretFilePrivacy knows the mode and group per site, and
+        // covers every secret file — the bulk pass left `wp-config.php` 0644.
         //
-        // Both as the site user. They were root's, and GNU chmod follows a
-        // link named on its command line — `chmod -R` then descends into it.
-        // A user who replaced `.env` or `sessions` with a link had root chmod
-        // whatever it pointed at, recursively (reproduced live 2026-09-29 on a
-        // canary outside the site). The user owns both paths, so running as
-        // them loses nothing and a planted link reaches only what the user
-        // could already change.
-        if ($this->environment->exists($application)) {
-            $this->run($this->asUser($application, ['chmod', '0600', $this->environment->path($application)]), $application, 'chmod_env');
+        // As the site user, apart from the one chown the user cannot do (with
+        // `-h`). GNU chmod follows a link named on its command line — a user
+        // who replaced `.env` with a link had root chmod whatever it pointed
+        // at (reproduced live 2026-09-29 on a canary outside the site).
+        $failure = $this->secrets->reset($application);
+
+        if ($failure !== null) {
+            throw new FixPermissionsFailedException($failure->reference, busy: $failure->busy, staleLock: $failure->staleLock, denied: $failure->denied, timedOut: $failure->timedOut);
         }
 
         // Every site that runs as its own user has a session directory of its

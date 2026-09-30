@@ -30,11 +30,19 @@ class FixPermissionsFake
     /** Whether the site has an `.env` on disk. */
     public static bool $envExists = false;
 
+    /** @var array<int, string> other files on disk, by absolute path */
+    public static array $files = [];
+
+    /** A command containing this fails, whatever $ok says. */
+    public static ?string $failOn = null;
+
     public static function reset(): void
     {
         self::$ran = [];
         self::$ok = true;
         self::$envExists = false;
+        self::$files = [];
+        self::$failOn = null;
     }
 }
 
@@ -93,19 +101,29 @@ function fakeFileServer(): void
 
         FixPermissionsFake::$ran[] = implode(' ', $args);
 
+        // The secret-file pass asks as the site user.
+        if ($binary === 'runuser' && ($args[4] ?? '') === 'test') {
+            $args = array_slice($args, 4);
+            $binary = 'test';
+        }
+
         if ($binary === 'test' && ($args[1] ?? '') === '-f') {
             // Named, not "yes to everything": the panel asks about more than
             // one candidate path now — a `.env` beside the code is the file
             // the framework reads, and answering yes to all of them made this
             // fake describe a site with two.
             return Process::result(
-                exitCode: FixPermissionsFake::$envExists && ($args[2] ?? '') === '/home/siteowner/shop/.env' ? 0 : 1,
+                exitCode: (FixPermissionsFake::$envExists && ($args[2] ?? '') === '/home/siteowner/shop/.env')
+                    || in_array($args[2] ?? '', FixPermissionsFake::$files, true) ? 0 : 1,
             );
         }
 
+        $ok = FixPermissionsFake::$ok
+            && (FixPermissionsFake::$failOn === null || ! str_contains(implode(' ', $args), FixPermissionsFake::$failOn));
+
         return Process::result(
-            exitCode: FixPermissionsFake::$ok ? 0 : 1,
-            errorOutput: FixPermissionsFake::$ok ? '' : 'permission denied',
+            exitCode: $ok ? 0 : 1,
+            errorOutput: $ok ? '' : 'permission denied',
         );
     });
 }
@@ -138,14 +156,55 @@ it('logs the action', function () {
     expect(ActivityLog::where('type', 'application')->where('action', 'permissions_fixed')->exists())->toBeTrue();
 });
 
-it('re-tightens .env back to 0600 when one exists', function () {
+it('makes .env private to the site user when the site runs as that user', function () {
+    fakeFileServer();
+    FixPermissionsFake::$envExists = true;
+    $this->application->forceFill(['isolated_at' => now()])->save();
+
+    $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
+
+    // As the site user: root's chmod followed a `.env` that was a link.
+    expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod 0600 /home/siteowner/shop/.env')
+        ->and(collect(FixPermissionsFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'chown -h')))->toBeFalse();
+});
+
+it('leaves .env readable by PHP where PHP runs as the web server account', function () {
+    // A flat 0600 here took the file away from the site's own PHP.
     fakeFileServer();
     FixPermissionsFake::$envExists = true;
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    // As the site user: root's chmod followed a `.env` that was a link.
-    expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod 0600 /home/siteowner/shop/.env');
+    $ran = collect(FixPermissionsFake::$ran)->values();
+    $chown = $ran->search('chown -h siteowner:www-data /home/siteowner/shop/.env');
+    $chmod = $ran->search('runuser -u siteowner -- chmod 0640 /home/siteowner/shop/.env');
+
+    expect($chown)->not->toBeFalse()
+        ->and($chmod)->not->toBeFalse()
+        ->and($chown)->toBeLessThan($chmod)
+        ->and($ran->contains(fn (string $c) => str_contains($c, 'chmod 0600')))->toBeFalse();
+});
+
+it('re-tightens the config files the bulk pass loosened, not only .env', function () {
+    fakeFileServer();
+    $this->application->forceFill(['site_type' => 'wordpress', 'isolated_at' => now()])->save();
+    FixPermissionsFake::$files = ['/home/siteowner/shop/public_html/wp-config.php'];
+
+    $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
+
+    expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod 0600 /home/siteowner/shop/public_html/wp-config.php');
+});
+
+it('reports a secret file it could not tighten, rather than claiming success', function () {
+    // A `.env` swapped for a link to a root file: the user's chmod is
+    // refused, and the button must say so.
+    fakeFileServer();
+    FixPermissionsFake::$envExists = true;
+    FixPermissionsFake::$failOn = 'chmod 0640 /home/siteowner/shop/.env';
+
+    $this->actingAs($this->admin)->postJson(fixUrl())->assertStatus(500);
+
+    expect(ActivityLog::where('action', 'permissions_fixed')->exists())->toBeFalse();
 });
 
 it('does not touch .env when the site has none', function () {
@@ -153,7 +212,7 @@ it('does not touch .env when the site has none', function () {
 
     $this->actingAs($this->admin)->postJson(fixUrl())->assertOk();
 
-    expect(collect(FixPermissionsFake::$ran)->contains(fn (string $c) => str_contains($c, 'chmod 0600 /home/siteowner/shop/.env')))->toBeFalse();
+    expect(collect(FixPermissionsFake::$ran)->contains(fn (string $c) => str_contains($c, 'chmod') && str_contains($c, '/home/siteowner/shop/.env')))->toBeFalse();
 });
 
 it('re-tightens the session directory once the site is isolated', function () {

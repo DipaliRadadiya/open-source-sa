@@ -78,4 +78,17 @@ class RuntimeOwnership
     {
         return $this->runsAsOwnUser($application) ? '0600' : '0640';
     }
+
+    /**
+     * The group for a file holding this site's secrets: the account that runs
+     * its PHP. The site user's own group where it runs as itself, the web
+     * server's account where it does not — which is the only reason
+     * {@see secretFileMode()} ever leaves the group any access.
+     */
+    public function secretFileGroup(Application $application): string
+    {
+        return $this->runsAsOwnUser($application)
+            ? (string) $application->systemUser?->username
+            : (string) config('server.web_server_user', 'www-data');
+    }
 }

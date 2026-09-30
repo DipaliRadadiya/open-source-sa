@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\EnvironmentOperationException;
 use App\Models\Application;
+use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use RuntimeException;
@@ -52,6 +53,7 @@ class ApplicationEnvironment
         private ServerOps $serverOps,
         private ApplicationProvisioner $provisioner,
         private SiteRootLock $rootLock,
+        private RuntimeOwnership $ownership,
     ) {}
 
     /**
@@ -220,7 +222,7 @@ class ApplicationEnvironment
     private function replace(Application $application, string $contents): ?string
     {
         $path = $this->path($application);
-        $user = $this->asUser($application) ? null : $application->systemUser?->username;
+        $asRoot = ! $this->asUser($application);
 
         $backup = $this->exists($application) ? $this->backup($application) : null;
 
@@ -241,12 +243,21 @@ class ApplicationEnvironment
         }
 
         // Ownership and mode before the rename, so the file is never briefly
-        // in place while readable by anyone else.
-        if ($user !== null) {
-            $this->run($application, ['chown', $user.':'.$user, $temporary], $this->context($application, 'env_chown'), timeout: 15);
+        // in place while readable by anyone else — nor unreadable by the site.
+        // A flat 0600 here took the file away from a site whose PHP runs as the
+        // web server's account; mode and group follow who runs PHP
+        // (RuntimeOwnership), the same rule the installers write it under.
+        $owner = $application->systemUser?->username;
+        $group = $this->ownership->secretFileGroup($application);
+
+        if ($owner !== null && ($asRoot || $group !== $owner)) {
+            // Root's, since the user cannot give a file to the web server's
+            // group; `-h` so a link swapped in for the temporary file is
+            // changed itself rather than followed.
+            $this->serverOps->run(['chown', '-h', $owner.':'.$group, $temporary], $this->context($application, 'env_chown'), timeout: 15);
         }
 
-        $this->run($application, ['chmod', '0600', $temporary], $this->context($application, 'env_chmod'), timeout: 15);
+        $this->run($application, ['chmod', $this->ownership->secretFileMode($application), $temporary], $this->context($application, 'env_chmod'), timeout: 15);
 
         $moved = $this->run($application, ['mv', $temporary, $path], $this->context($application, 'env_swap'), timeout: 15);
 

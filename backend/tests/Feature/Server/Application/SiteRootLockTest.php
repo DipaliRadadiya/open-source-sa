@@ -221,7 +221,16 @@ describe('operations that change the top of the site root', function () {
 
         expect($touching)->not->toBeEmpty();
 
+        // One exception, and only where PHP runs as the web server's account:
+        // the user cannot give a file to that group, so root does — with
+        // `-h`, which changes a planted link itself and follows nothing.
+        $rootChown = ['chown', '-h', 'siteowner:www-data', $beside.'.panel-tmp'];
+
         foreach ($touching as $cmd) {
+            if ($cmd === $rootChown) {
+                continue;
+            }
+
             expect(array_slice($cmd, 0, 4))->toBe(['runuser', '-u', 'siteowner', '--']);
         }
 

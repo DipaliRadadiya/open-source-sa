@@ -5,6 +5,7 @@ namespace App\Services\Server\Applications;
 use App\Models\Application;
 use App\Services\Server\Php\RuntimeOwnership;
 use App\Services\Server\ServerOps;
+use App\Services\Server\ServerOpsResult;
 use Throwable;
 
 /**
@@ -27,10 +28,11 @@ use Throwable;
  * server's account the group is handed to that account (`chown -h`) and only
  * "other" is stripped, or the site would lose its own configuration.
  *
- * Only ever narrows — the chmod removes access and adds none — so a file the
- * user tightened stays as they left it. Best-effort by design: it runs at the
- * end of a provision, inside a deploy and from `sites:resync`, and a site that
- * is up must not be failed over a file mode.
+ * narrow() only ever narrows — the chmod removes access and adds none — so a
+ * file the user tightened stays as they left it. Best-effort by design: it
+ * runs at the end of a provision, inside a deploy and from `sites:resync`, and
+ * a site that is up must not be failed over a file mode. reset() is the
+ * "Fix permissions" version: absolute modes, and it reports a failure.
  */
 class SecretFilePrivacy
 {
@@ -78,7 +80,7 @@ class SecretFilePrivacy
     public function narrow(Application $application): void
     {
         try {
-            $this->apply($application);
+            $this->apply($application, reset: false);
         } catch (Throwable $e) {
             // Resolving the `.env` path throws when it cannot get an answer at
             // all; that is a reason to leave the files alone, not to fail the
@@ -87,19 +89,48 @@ class SecretFilePrivacy
         }
     }
 
-    private function apply(Application $application): void
+    /**
+     * "Fix permissions": set each secret file to exactly the mode and group
+     * the site needs, rather than only taking access away.
+     *
+     * narrow() cannot do this job. Fix permissions runs straight after a bulk
+     * 0644, and it is also the button for a site whose PHP cannot read its own
+     * configuration — a `.env` at 0600 on a site whose PHP runs as the web
+     * server account (the flat 0600 this replaced did exactly that to such a
+     * site). Only an absolute mode, with the group handed back, repairs that.
+     *
+     * Returns the first command that failed, or null. Not best-effort: the
+     * user pressed a button and should hear that it did not work.
+     */
+    public function reset(Application $application): ?ServerOpsResult
+    {
+        return $this->apply($application, reset: true);
+    }
+
+    private function apply(Application $application, bool $reset): ?ServerOpsResult
     {
         $application->loadMissing('systemUser');
         $user = $application->systemUser?->username;
 
         if ($user === null) {
-            return;
+            return null;
         }
 
         $ownUser = $this->ownership->runsAsOwnUser($application);
-        $group = (string) config('server.web_server_user', 'www-data');
+        $group = $this->ownership->secretFileGroup($application);
 
-        $mode = $ownUser ? 'go-rwx' : 'o-rwx,g-w';
+        $mode = match (true) {
+            $reset => $this->ownership->secretFileMode($application),
+            $ownUser => 'go-rwx',
+            default => 'o-rwx,g-w',
+        };
+
+        $failure = null;
+        $record = function (ServerOpsResult $result) use (&$failure): void {
+            if ($result->failed() && $failure === null) {
+                $failure = $result;
+            }
+        };
 
         foreach ($this->directories($application) as $directory => $pattern) {
             // `find` as the user never follows a link (-P is its default), so
@@ -108,10 +139,10 @@ class SecretFilePrivacy
             // group handed to the web server first, and Statamic — the one
             // type with such a directory — always runs as its own user.
             if ($ownUser) {
-                $this->serverOps->run(
+                $record($this->serverOps->run(
                     ['runuser', '-u', $user, '--', 'find', $directory, '-maxdepth', '1', '-type', 'f', '-name', $pattern, '-exec', 'chmod', $mode, '{}', '+'],
                     $this->context($application),
-                );
+                ));
             }
         }
 
@@ -125,13 +156,15 @@ class SecretFilePrivacy
 
             if (! $ownUser) {
                 // `-h`: a link at the path is changed itself, never followed.
-                $this->serverOps->run(['chown', '-h', "{$user}:{$group}", $path], $this->context($application));
+                $record($this->serverOps->run(['chown', '-h', "{$user}:{$group}", $path], $this->context($application)));
             }
 
             // As the site user, so a link planted at the path reaches only
             // what they could already change.
-            $this->serverOps->run(['runuser', '-u', $user, '--', 'chmod', $mode, $path], $this->context($application));
+            $record($this->serverOps->run(['runuser', '-u', $user, '--', 'chmod', $mode, $path], $this->context($application)));
         }
+
+        return $failure;
     }
 
     /**

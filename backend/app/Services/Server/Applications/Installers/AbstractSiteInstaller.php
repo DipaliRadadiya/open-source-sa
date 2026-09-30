@@ -491,15 +491,7 @@ abstract class AbstractSiteInstaller implements SiteInstaller
         // OpenLiteSpeed it is null for every site — so this handed the group
         // to www-data there, an account that does not run PHP on that stack,
         // breaking the very rule this docblock states.
-        $runsAsSiteUser = $this->ownership->runsAsOwnUser($application);
-
-        $user = $application->systemUser->username;
-
-        $group = $runsAsSiteUser
-            ? $user
-            : (string) config('server.web_server_user', 'www-data');
-
-        return "{$user}:{$group}";
+        return $application->systemUser->username.':'.$this->ownership->secretFileGroup($application);
     }
 
     /**
