@@ -17,4 +17,7 @@ return [
     'volume_remove_failed' => 'The volume could not be removed. Reference :reference.',
     'registry_deleted' => 'The registry credential was deleted. Sites that used it will pull anonymously from now on.',
     'registry_credential_unwritable' => 'The registry credential could not be written to disk, so Docker was never asked. Reference :reference.',
+    'database_start_failed' => 'The database could not be started (:step). Nothing was left behind — no row, no container and no port held.',
+    'database_version_unknown' => 'That engine has no version :version. Pick one the panel offers for :engine.',
+    'database_deleted' => 'The database was removed.',
 ];

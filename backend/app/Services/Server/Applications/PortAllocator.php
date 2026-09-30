@@ -4,6 +4,7 @@ namespace App\Services\Server\Applications;
 
 use App\Exceptions\Server\Application\NoPortAvailableException;
 use App\Models\Application;
+use App\Models\DockerDatabase;
 use App\Services\Server\ServerOps;
 
 /**
@@ -32,7 +33,15 @@ class PortAllocator
         $to = (int) config('server.applications.port_range.to', 3999);
 
         $taken = Application::query()->whereNotNull('app_port')->pluck('app_port')->all();
-        $unavailable = [...$taken, ...$this->listening(), ...$this->registered()];
+
+        // Containerised databases draw from the same range. Asked here rather
+        // than trusted to `listening()`, which only sees what is bound right
+        // now: between a database row being created and its container starting,
+        // its port is claimed and nothing is listening on it — and a site
+        // allocated in that window would take it, then fail to bind.
+        $databases = DockerDatabase::query()->pluck('port')->all();
+
+        $unavailable = [...$taken, ...$databases, ...$this->listening(), ...$this->registered()];
 
         for ($port = $from; $port <= $to; $port++) {
             if (! in_array($port, $unavailable, true)) {

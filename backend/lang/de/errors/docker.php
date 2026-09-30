@@ -17,4 +17,7 @@ return [
     'volume_remove_failed' => 'Das Volume konnte nicht entfernt werden. Referenz :reference.',
     'registry_deleted' => 'Die Registry-Anmeldedaten wurden gelöscht. Sites, die sie genutzt haben, laden Images ab jetzt anonym.',
     'registry_credential_unwritable' => 'Die Registry-Anmeldedaten konnten nicht auf die Festplatte geschrieben werden, daher wurde Docker nie gefragt. Referenz :reference.',
+    'database_start_failed' => 'Die Datenbank konnte nicht gestartet werden (:step). Es blieb nichts zurück — kein Eintrag, kein Container und kein belegter Port.',
+    'database_version_unknown' => 'Diese Engine hat keine Version :version. Wählen Sie eine, die das Panel für :engine anbietet.',
+    'database_deleted' => 'Die Datenbank wurde entfernt.',
 ];

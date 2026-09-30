@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\Server\DockerDatabaseController;
 use App\Http\Controllers\API\Server\DockerResourceController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,4 +39,32 @@ Route::middleware('hosts-containers')->group(function (): void {
         ->where('name', '[A-Za-z0-9][A-Za-z0-9_.-]*')
         ->middleware(['permission:docker,manage', 'throttle:20,1']);
 
+    /*
+    | Containerised database engines — shared objects the container sites connect
+    | to, filed here with the networks and volumes because that is what they are.
+    | Bound by id, not by name: this is a panel-owned row.
+    |
+    | Gated on `docker` rather than a permission of its own. A network and a volume
+    | are already in this grant, and the volume one is the guard that protects a
+    | database's data — splitting them would let somebody delete the volume holding
+    | a database while being unable to see the database.
+    |
+    | No update route. Every value an engine reads applies to an empty data
+    | directory and is ignored afterwards, so a form that appeared to change one
+    | would change the file and not the engine.
+    */
+    Route::get('/docker/databases', [DockerDatabaseController::class, 'index'])
+        ->middleware(['permission:docker', 'throttle:60,1']);
+
+    Route::post('/docker/databases', [DockerDatabaseController::class, 'store'])
+        ->middleware(['permission:docker,manage', 'throttle:10,1']);
+
+    // Throttled hardest of the three. A GET that returns a database password is
+    // worth a low ceiling against a token that has leaked, and every call is
+    // recorded.
+    Route::get('/docker/databases/{dockerDatabase}/credentials', [DockerDatabaseController::class, 'credentials'])
+        ->middleware(['permission:docker,manage', 'throttle:6,1']);
+
+    Route::delete('/docker/databases/{dockerDatabase}', [DockerDatabaseController::class, 'destroy'])
+        ->middleware(['permission:docker,manage', 'throttle:20,1']);
 });

@@ -17,4 +17,7 @@ return [
     'volume_remove_failed' => 'Le volume n\'a pas pu être supprimé. Référence :reference.',
     'registry_deleted' => 'L’identifiant de registre a été supprimé. Les sites qui l’utilisaient récupéreront désormais les images de façon anonyme.',
     'registry_credential_unwritable' => 'L’identifiant de registre n’a pas pu être écrit sur le disque, Docker n’a donc jamais été interrogé. Référence :reference.',
+    'database_start_failed' => 'La base de données n’a pas pu démarrer (:step). Rien n’a été laissé derrière : aucune entrée, aucun conteneur, aucun port réservé.',
+    'database_version_unknown' => 'Ce moteur n’a pas de version :version. Choisissez-en une proposée par le panneau pour :engine.',
+    'database_deleted' => 'La base de données a été supprimée.',
 ];

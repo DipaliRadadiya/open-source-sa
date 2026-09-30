@@ -1672,6 +1672,119 @@ return [
     | changes — only new ones.
     |
     */
+    /*
+    |--------------------------------------------------------------------------
+    | Containerised database engines
+    |--------------------------------------------------------------------------
+    |
+    | Engines a Docker box can run as shared objects for its container sites —
+    | not as applications. A database has no HTTP interface, so it gets no domain,
+    | no vhost and no certificate; see the DockerDatabase model for why that
+    | distinction is structural rather than a preference.
+    |
+    | Versions are explicit image references rather than a pattern with the
+    | version interpolated. A transform would happily invent `postgres:99-alpine`
+    | for a version somebody typed, and the failure would land at `docker pull`
+    | minutes into provisioning. Every tag below was verified against the
+    | registry's per-tag endpoint on 2026-09-30 — not against a page of recent
+    | tags, which returns the 60 most recently UPDATED and reports a live tag as
+    | missing.
+    |
+    | MySQL's 9.x innovation line is deliberately absent: `9.4` had not been
+    | rebuilt since 2025-10-18, and a stale innovation release is the wrong
+    | default for a panel to offer. 8.4 is the LTS.
+    |
+    | `data_path` is the directory the engine keeps its data in, which the panel
+    | mounts as a named volume. `port` is the port inside the container.
+    |
+    */
+    'docker_databases' => [
+        // Where the compose files live. Root-owned and outside any site's tree: a
+        // database is not a site and has no system user, and the file holds its
+        // password. Created on demand, because install.sh runs once and the
+        // updater ships code rather than directories.
+        'directory' => env('DOCKER_DATABASE_DIR', '/var/lib/panel/docker-databases'),
+
+        'engines' => [
+            'postgres' => [
+                'label' => 'PostgreSQL',
+                'port' => 5432,
+                'data_path' => '/var/lib/postgresql/data',
+                'template' => 'server.docker.databases.postgres',
+                // The default user and database the image creates on an empty
+                // data directory. Both are init-only: changing them afterwards
+                // does nothing, which is why they are fixed here rather than
+                // asked for — a field that silently stops applying is worse than
+                // no field. See `init-only env vars` in the panel's own history.
+                'versions' => [
+                    '18' => 'postgres:18-alpine',
+                    '17' => 'postgres:17-alpine',
+                    '16' => 'postgres:16-alpine',
+                ],
+            ],
+
+            'mysql' => [
+                'label' => 'MySQL',
+                'port' => 3306,
+                'data_path' => '/var/lib/mysql',
+                'template' => 'server.docker.databases.mysql',
+                'versions' => [
+                    '8.4' => 'mysql:8.4',
+                    '8.0' => 'mysql:8.0',
+                ],
+            ],
+
+            'mariadb' => [
+                'label' => 'MariaDB',
+                'port' => 3306,
+                'data_path' => '/var/lib/mysql',
+                // MariaDB's image accepts the MYSQL_* variables as well as its
+                // own, so it shares MySQL's template rather than duplicating it.
+                'template' => 'server.docker.databases.mysql',
+                'versions' => [
+                    '12.3' => 'mariadb:12.3',
+                    '11.8' => 'mariadb:11.8',
+                    '11.4' => 'mariadb:11.4',
+                ],
+            ],
+
+            'mongodb' => [
+                'label' => 'MongoDB',
+                'port' => 27017,
+                'data_path' => '/data/db',
+                'template' => 'server.docker.databases.mongodb',
+                'versions' => [
+                    '8' => 'mongo:8',
+                    '7' => 'mongo:7',
+                ],
+            ],
+
+            'redis' => [
+                'label' => 'Redis',
+                'port' => 6379,
+                'data_path' => '/data',
+                'template' => 'server.docker.databases.redis',
+                'versions' => [
+                    '8' => 'redis:8-alpine',
+                    '7' => 'redis:7-alpine',
+                ],
+            ],
+
+            'valkey' => [
+                'label' => 'Valkey',
+                'port' => 6379,
+                'data_path' => '/data',
+                // A Redis fork with the same wire protocol and the same
+                // `--requirepass`, so the same template.
+                'template' => 'server.docker.databases.redis',
+                'versions' => [
+                    '9' => 'valkey/valkey:9-alpine',
+                    '8' => 'valkey/valkey:8-alpine',
+                ],
+            ],
+        ],
+    ],
+
     'docker_apps' => [
         'matomo' => [
             'image' => env('DOCKER_APP_MATOMO_IMAGE', 'matomo:5-apache'),

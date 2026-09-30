@@ -17,4 +17,7 @@ return [
     'volume_remove_failed' => 'Não foi possível remover o volume. Referência :reference.',
     'registry_deleted' => 'A credencial do registo foi eliminada. Os sites que a usavam passarão a obter as imagens anonimamente.',
     'registry_credential_unwritable' => 'Não foi possível escrever a credencial do registo no disco, pelo que o Docker nunca foi consultado. Referência :reference.',
+    'database_start_failed' => 'Não foi possível iniciar a base de dados (:step). Não ficou nada atrás — nenhum registo, nenhum contentor e nenhuma porta reservada.',
+    'database_version_unknown' => 'Esse motor não tem a versão :version. Escolha uma das que o painel oferece para :engine.',
+    'database_deleted' => 'A base de dados foi removida.',
 ];
