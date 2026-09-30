@@ -77,6 +77,8 @@ return [
      * `migrate` can carry the `:migrated` suffix.
      */
     'reason_migrated' => 'As alterações à base de dados já tinham sido aplicadas e não podem ser revertidas: o código voltou à versão anterior, mas o esquema não. A cópia de segurança feita antes está em storage/app/panel-backups.',
+    'reason_db_restored' => 'A base de dados foi reposta no estado anterior à atualização. O estado no momento da falha fica guardado em storage/app/panel-backups (o ficheiro terminado em -failed.sqlite).',
+    'reason_db_not_restored' => 'A base de dados pode ter sido alterada pela atualização e NÃO foi reposta automaticamente. A cópia de segurança feita antes está em storage/app/panel-backups; reponha-a antes de tentar novamente.',
 
     'errors' => [
         'in_progress' => 'Já existe uma atualização em curso.',

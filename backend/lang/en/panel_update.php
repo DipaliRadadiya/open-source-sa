@@ -91,6 +91,8 @@ return [
      * `migrate` can carry the `:migrated` suffix.
      */
     'reason_migrated' => 'The database changes had already been applied and cannot be undone: the code is back on the previous version but the schema is not. The backup taken beforehand is in storage/app/panel-backups.',
+    'reason_db_restored' => 'The database was put back to how it was before the update. Its state at the failure is kept in storage/app/panel-backups (the file ending in -failed.sqlite).',
+    'reason_db_not_restored' => 'The database may have been changed by the update and was NOT restored automatically. The backup taken beforehand is in storage/app/panel-backups; restore it before trying again.',
 
     'errors' => [
         'in_progress' => 'An update is already running.',

@@ -158,6 +158,9 @@ class UpdateScript
         // /etc/sudoers.d and is the one command here that genuinely needs
         // root.
 
+        $restoreDatabase = $this->restoreDatabase($update, $dryRun);
+        $writeRestoreHelper = $this->writeRestoreHelper($update);
+
         return <<<BASH
         #!/usr/bin/env bash
         # Generated for panel update #{$update->getKey()}. Do not edit: this file
@@ -189,6 +192,13 @@ class UpdateScript
             local failed_step="\$STEP"
             note "rollback"
             {$run}{$git} checkout --force {$rollbackTo}
+            # Back onto the branch too, when it still points at that commit.
+            # A bare commit checkout left the box detached from `main`, and a
+            # manual `git pull` deploy then refuses to run (found on the test
+            # server, 2026-09-30).
+            if [ -n "\$ORIG_BRANCH" ] && [ "\$({$git} rev-parse --verify --quiet "\$ORIG_BRANCH" 2>/dev/null)" = "{$rollbackTo}" ]; then
+                {$run}{$git} checkout --force "\$ORIG_BRANCH" || true
+            fi
             # The old code needs the old dependencies. The checkout above puts
             # the code back and leaves vendor/ as the new release's composer
             # install made it, so a failure at or after composer_install left
@@ -197,16 +207,31 @@ class UpdateScript
             if [ "\$DEPS_CHANGED" = 1 ]; then
                 {$asUser}composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d {$backend} || true
             fi
+            # The database, only if this update changed it. A migration that
+            # failed halfway left its table behind with no row in `migrations`,
+            # so every later attempt at the same release failed on "table
+            # already exists" (found on the test server, 2026-09-30). The
+            # queue worker is stopped first so nothing writes while the file
+            # is swapped; it is restarted just below with the others.
+            DB_SUFFIX=""
+            if [ "\$DB_TOUCHED" = "1" ]; then
+                {$run}sudo systemctl stop {$this->service('queue')} || true
+        {$restoreDatabase}
+            fi
             # Clear workers and OPcache that may have loaded the failed tree.
             {$run}sudo systemctl restart {$this->service('php_fpm')}
             {$run}sudo systemctl restart {$this->service('frontend')}
             {$run}sudo systemctl restart {$this->service('queue')}
             {$asUser}{$php} {$backend}/artisan up
-            finish failed "\$failed_step" true
+            finish failed "\$failed_step\$DB_SUFFIX" true
             exit 1
         }
 
         DEPS_CHANGED=0
+        DB_TOUCHED=0
+        DB_BACKUP=""
+        ORIG_BRANCH=""
+        {$writeRestoreHelper}
         trap rollback ERR
         set -e
 
@@ -235,6 +260,7 @@ class UpdateScript
         # answering a different question than the caller was asking. This one
         # fails before maintenance mode goes on rather than after.
         {$asUser}test -w {$repo}/.git
+        ORIG_BRANCH="\$({$git} symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
 
         # Fetch and compare before maintenance. A panel deployed from main can
         # already contain the latest release plus newer commits; VERSION used
@@ -248,7 +274,10 @@ class UpdateScript
         {$asUser}{$php} {$backend}/artisan down --retry=60
 
         note backup_database
-        {$asUser}{$php} {$backend}/artisan panel:backup-database
+        # The last line of its output is the backup's path; the rollback needs
+        # it to put the database back.
+        DB_BACKUP="\$({$asUser}{$php} {$backend}/artisan panel:backup-database | tail -n 1)"
+        echo "\$DB_BACKUP"
 
         note checkout_release
         {$run}{$git} checkout --force {$tag}
@@ -258,6 +287,7 @@ class UpdateScript
         {$asUser}composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader -d {$backend}
 
         note migrate
+        DB_TOUCHED=1
         {$asUser}{$php} {$backend}/artisan migrate --force
 
         # Idempotent, and required on every deploy: it re-syncs the permission
@@ -450,6 +480,73 @@ class UpdateScript
     public function scriptPath(PanelUpdate $update): string
     {
         return rtrim((string) config('panel_update.state_dir'), '/').'/update-'.$update->getKey().'.sh';
+    }
+
+    /**
+     * Beside the script, for the same reason: the checkout replaces the tree,
+     * and the rollback must not depend on which version of it is present.
+     */
+    public function restoreHelperPath(PanelUpdate $update): string
+    {
+        return rtrim((string) config('panel_update.state_dir'), '/').'/update-'.$update->getKey().'-restore.php';
+    }
+
+    /**
+     * Writes resources/panel-update/restore-database.php beside the script,
+     * as the running (pre-update) version has it. A quoted heredoc: nothing
+     * in the PHP is expanded by the shell.
+     */
+    private function writeRestoreHelper(PanelUpdate $update): string
+    {
+        $path = escapeshellarg($this->restoreHelperPath($update));
+        $source = rtrim((string) file_get_contents(resource_path('panel-update/restore-database.php')), "\n");
+
+        return "cat > {$path} <<'PANEL_RESTORE_PHP'\n{$source}\nPANEL_RESTORE_PHP\nchmod 0644 {$path}";
+    }
+
+    /**
+     * The rollback's database step, rendered for this install.
+     *
+     * SQLite only: it is the one database install.sh sets up, and restoring it
+     * is a file copy. A panel pointed at another database by hand is told the
+     * database was not restored and where the backup is, rather than having a
+     * dump replayed into it unattended.
+     *
+     * Sets DB_SUFFIX, which ends up on the failure reason: `:db_restored`,
+     * `:db_not_restored`, or nothing when the database was not changed.
+     */
+    private function restoreDatabase(PanelUpdate $update, bool $dryRun): string
+    {
+        if ($dryRun) {
+            return '                echo "DRY-RUN: restore the panel database if this update changed it"';
+        }
+
+        $connection = (string) config('database.default');
+
+        if (config("database.connections.{$connection}.driver") !== 'sqlite') {
+            return '                DB_SUFFIX=":db_not_restored"';
+        }
+
+        $live = escapeshellarg((string) config("database.connections.{$connection}.database"));
+        $helper = escapeshellarg($this->restoreHelperPath($update));
+        $php = $this->php->path();
+        $user = (string) config('panel_update.app_user');
+
+        return <<<BASH
+                RESTORE_FORCE=""
+                if [ "\$failed_step" = "migrate" ]; then
+                    RESTORE_FORCE="--force"
+                fi
+                RESTORE_RC=3
+                if [ -n "\$DB_BACKUP" ] && [ -f "\$DB_BACKUP" ]; then
+                    sudo -u {$user} -H {$php} {$helper} {$live} "\$DB_BACKUP" "\${DB_BACKUP%.sqlite}-failed.sqlite" \$RESTORE_FORCE && RESTORE_RC=0 || RESTORE_RC=\$?
+                fi
+                if [ "\$RESTORE_RC" = "10" ]; then
+                    DB_SUFFIX=":db_restored"
+                elif [ "\$RESTORE_RC" != "0" ]; then
+                    DB_SUFFIX=":db_not_restored"
+                fi
+        BASH;
     }
 
     /**

@@ -77,6 +77,8 @@ return [
      * `migrate` can carry the `:migrated` suffix.
      */
     'reason_migrated' => 'データベースの変更はすでに適用されており、元に戻せません。コードは以前のバージョンに戻りましたが、スキーマは戻っていません。事前に取得したバックアップは storage/app/panel-backups にあります。',
+    'reason_db_restored' => 'データベースはアップデート前の状態に戻されました。失敗時点の状態は storage/app/panel-backups（末尾が -failed.sqlite のファイル）に保存されています。',
+    'reason_db_not_restored' => 'データベースはアップデートによって変更された可能性があり、自動では復元されていません。事前に取得したバックアップは storage/app/panel-backups にあります。再試行する前に復元してください。',
 
     'errors' => [
         'in_progress' => 'すでに更新が実行中です。',

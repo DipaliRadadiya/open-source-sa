@@ -77,6 +77,8 @@ return [
      * `migrate` can carry the `:migrated` suffix.
      */
     'reason_migrated' => 'Die Datenbankänderungen waren bereits angewendet und lassen sich nicht zurücknehmen: der Code läuft wieder auf der vorherigen Version, das Schema nicht. Die vorher erstellte Sicherung liegt in storage/app/panel-backups.',
+    'reason_db_restored' => 'Die Datenbank wurde auf den Stand vor dem Update zurückgesetzt. Ihr Zustand zum Zeitpunkt des Fehlers liegt in storage/app/panel-backups (die Datei mit der Endung -failed.sqlite).',
+    'reason_db_not_restored' => 'Die Datenbank wurde möglicherweise durch das Update verändert und wurde NICHT automatisch wiederhergestellt. Die vorher erstellte Sicherung liegt in storage/app/panel-backups; stellen Sie sie wieder her, bevor Sie es erneut versuchen.',
 
     'errors' => [
         'in_progress' => 'Es läuft bereits ein Update.',

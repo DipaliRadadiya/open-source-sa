@@ -77,6 +77,8 @@ return [
      * `migrate` can carry the `:migrated` suffix.
      */
     'reason_migrated' => 'Les modifications de la base de données avaient déjà été appliquées et ne peuvent pas être annulées : le code est revenu à la version précédente, mais pas le schéma. La sauvegarde effectuée au préalable se trouve dans storage/app/panel-backups.',
+    'reason_db_restored' => 'La base de données a été remise dans l\'état où elle était avant la mise à jour. Son état au moment de l\'échec est conservé dans storage/app/panel-backups (le fichier se terminant par -failed.sqlite).',
+    'reason_db_not_restored' => 'La base de données a peut-être été modifiée par la mise à jour et n\'a PAS été restaurée automatiquement. La sauvegarde effectuée au préalable se trouve dans storage/app/panel-backups ; restaurez-la avant de réessayer.',
 
     'errors' => [
         'in_progress' => 'Une mise à jour est déjà en cours.',
