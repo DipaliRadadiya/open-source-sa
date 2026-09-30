@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ConfigTestDialog, useConfigTest } from "@/components/services/config-test";
 import { ServiceLogItems } from "@/components/services/service-log-items";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,7 +89,8 @@ const PRIMARY = { active: "restart", inactive: "start", failed: "start" };
  * one click; what it gains is not being one pixel from Restart.
  *
  * Stop asks first: it takes something offline now, and undo can't give back the
- * seconds it was down. The rest just run.
+ * seconds it was down. Restart of a running unit asks too: it drops every
+ * connection. Start and reload just run.
  */
 export function ServiceActions({ service, canManage, phpVersion, onBusyChange }) {
   const t = useTranslations("services");
@@ -146,7 +147,11 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
       // server's own "the operation failed" says none of that, and the first
       // question after a failed restart is "so is it still up?".
       showActionError({
-        title: t(`error.${action}`, { name: service.label }),
+        // No answer at all (connection dropped) is not "left as it was": the
+        // server may have done it. The list re-reads every 3 s and shows which.
+        title: error.response
+          ? t(`error.${action}`, { name: service.label })
+          : t("error.noAnswer", { name: service.label }),
         message: apiMessage(error, undefined, { reference: false }),
         reference: data?.reference,
         copyLabel: t('copyReference'),
@@ -161,9 +166,18 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
   }
 
   function trigger(action) {
-    if (DISRUPTIVE_ACTIONS.includes(action)) setConfirming(action);
+    // Restarting a running unit cuts off everything connected to it — every
+    // database connection for MariaDB, every open request for nginx. A failed
+    // unit has nothing to cut off, so it just runs.
+    const disruptive =
+      DISRUPTIVE_ACTIONS.includes(action) ||
+      (action === "restart" && service.status === "active");
+
+    if (disruptive) setConfirming(action);
     else run(action);
   }
+
+  const confirmIsRestart = confirming === "restart";
 
   return (
     <div className="flex items-center justify-end gap-1.5">
@@ -177,7 +191,10 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
                 no-permission case is exactly when the tooltip matters. */}
             <span tabIndex={!canManage || busy ? 0 : -1} className="inline-flex">
               <Button
-                variant="outline"
+                // Neutral with the verb's own colour, on the table and on the
+                // phone cards alike: inside a card the outline variant turned
+                // blue and the orange of Restart became blue text.
+                variant="neutral"
                 size="sm"
                 className={cn(ACTION_META[primary].tone)}
                 disabled={!canManage || busy}
@@ -250,7 +267,9 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
 
             {service.testable ? (
               <DropdownMenuItem
-                disabled={!canManage || configTest.pending}
+                // A read: it runs `nginx -t` / `php-fpm -t` and changes nothing,
+                // and the API allows it with view access.
+                disabled={configTest.pending}
                 // Closing the menu is what we want — the dialog is rendered
                 // below, outside it, so it survives.
                 onSelect={() => configTest.run()}
@@ -289,13 +308,17 @@ export function ServiceActions({ service, canManage, phpVersion, onBusyChange })
       <ConfirmDialog
         open={confirming !== null}
         onOpenChange={(open) => !open && setConfirming(null)}
-        icon={TriangleAlert}
-        tone="destructive"
+        // Restart brings the service back by itself, so it warns rather than
+        // alarms; Stop leaves it down.
+        icon={confirmIsRestart ? RotateCw : TriangleAlert}
+        tone={confirmIsRestart ? "warning" : "destructive"}
         title={confirming ? t(`confirm.${confirming}.title`, { name: service.label }) : ""}
-        description={confirming ? t(`confirm.${confirming}.description`) : ""}
+        description={
+          confirming ? t(`confirm.${confirming}.description`, { name: service.label }) : ""
+        }
         cancelLabel={t("confirm.cancel")}
         confirmLabel={confirming ? t(`actions.${confirming}`) : ""}
-        confirmVariant="destructive"
+        confirmVariant={confirmIsRestart ? "default" : "destructive"}
         pending={busy}
         onConfirm={() => run(confirming)}
       />

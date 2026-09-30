@@ -68,7 +68,8 @@
       "title": "Vous n'avez pas accès à {feature}",
       "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur."
     },
-    "serverNavigation": "Menu du serveur"
+    "serverNavigation": "Menu du serveur",
+    "loadingPage": "Chargement de la page…"
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -1342,6 +1343,10 @@
       "disable": {
         "title": "Empêcher {name} de démarrer au boot ?",
         "description": "Il continue de tourner maintenant, mais ne reviendra pas après le prochain redémarrage."
+      },
+      "restart": {
+        "title": "Redémarrer {name} ?",
+        "description": "Le service s'arrête puis redémarre. Tout ce qui y est connecté est coupé un instant."
       }
     },
     "toast": {
@@ -1365,7 +1370,8 @@
       "restart": "Impossible de redémarrer {name} — il est resté tel quel.",
       "reload": "Impossible de recharger {name} — il est resté tel quel.",
       "enable": "Impossible de faire démarrer {name} au boot — rien n'a changé.",
-      "disable": "Impossible d'empêcher {name} de démarrer au boot — rien n'a changé."
+      "disable": "Impossible d'empêcher {name} de démarrer au boot — rien n'a changé.",
+      "noAnswer": "Aucune réponse du serveur pour {name}. L'action a pu être effectuée ou non : la liste affichera son état réel dans quelques secondes."
     },
     "undoStop": "Redémarrer",
     "retry": "Réessayer",
@@ -1419,7 +1425,8 @@
       "attention": "{count, plural, =1 {1 service à vérifier} other {# services à vérifier}}",
       "running": "{count, plural, =1 {1 en exécution} other {# en exécution}}",
       "installing": "{count, plural, =1 {1 en cours d'installation} other {# en cours d'installation}}",
-      "allRunning": "{count, plural, =0 {Aucun service détecté} =1 {L'unique service est en exécution} other {Les # services sont tous en exécution}}"
+      "allRunning": "{count, plural, =0 {Aucun service détecté} =1 {L'unique service est en exécution} other {Les # services sont tous en exécution}}",
+      "stopped": "{count, plural, =1 {1 arrêté} other {# arrêtés}}"
     },
     "sections": {
       "attention": {
@@ -1427,7 +1434,7 @@
         "hint": "Ils ne tournent pas. Chacun indique pourquoi et ce qu'il faut faire."
       },
       "running": {
-        "title": "Services en exécution",
+        "title": "Services installés",
         "hint": "Mémoire, utilisation du processeur et démarrage automatique de chacun."
       },
       "installing": {
@@ -1440,7 +1447,8 @@
       "unitFailed": "Installé mais pas en exécution. Son journal indique pourquoi.",
       "openDatabases": "Ouvrir les bases de données",
       "openPhp": "Ouvrir PHP",
-      "openFail2ban": "Ouvrir Fail2ban"
+      "openFail2ban": "Ouvrir Fail2ban",
+      "unitFailedNoLog": "Installé mais arrêté. Essayez de le démarrer ; s'il s'arrête à nouveau, l'erreur se trouve dans le journal système du serveur."
     },
     "moreActions": "Plus d’actions pour {name}"
   },

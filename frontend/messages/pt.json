@@ -68,7 +68,8 @@
       "title": "Você não tem acesso a {feature}",
       "description": "Sua função não inclui permissão para ver isto. Peça a um administrador para conceder."
     },
-    "serverNavigation": "Menu do servidor"
+    "serverNavigation": "Menu do servidor",
+    "loadingPage": "Carregando a página…"
   },
   "systemUsers": {
     "title": "Usuários do sistema",
@@ -1342,6 +1343,10 @@
       "disable": {
         "title": "Parar de iniciar {name} com o servidor?",
         "description": "Ele continua rodando agora, mas não voltará após o próximo reinício."
+      },
+      "restart": {
+        "title": "Reiniciar {name}?",
+        "description": "Ele para e inicia novamente. Tudo que estiver conectado a ele será cortado por um momento."
       }
     },
     "toast": {
@@ -1365,7 +1370,8 @@
       "restart": "Não foi possível reiniciar {name} — ficou como estava.",
       "reload": "Não foi possível recarregar {name} — ficou como estava.",
       "enable": "Não foi possível definir {name} para iniciar com o servidor — nada mudou.",
-      "disable": "Não foi possível impedir {name} de iniciar com o servidor — nada mudou."
+      "disable": "Não foi possível impedir {name} de iniciar com o servidor — nada mudou.",
+      "noAnswer": "Sem resposta do servidor sobre {name}. Pode ter acontecido ou não — a lista mostra o estado real em alguns segundos."
     },
     "undoStop": "Iniciar novamente",
     "retry": "Tentar novamente",
@@ -1419,7 +1425,8 @@
       "attention": "{count, plural, =1 {1 serviço precisa de atenção} other {# serviços precisam de atenção}}",
       "running": "{count, plural, =1 {1 em execução} other {# em execução}}",
       "installing": "{count, plural, =1 {1 instalando} other {# instalando}}",
-      "allRunning": "{count, plural, =0 {Nenhum serviço detectado} =1 {O único serviço está em execução} other {Todos os # serviços estão em execução}}"
+      "allRunning": "{count, plural, =0 {Nenhum serviço detectado} =1 {O único serviço está em execução} other {Todos os # serviços estão em execução}}",
+      "stopped": "{count, plural, =1 {1 parado} other {# parados}}"
     },
     "sections": {
       "attention": {
@@ -1427,7 +1434,7 @@
         "hint": "Estes não estão em execução. Cada um informa o motivo e o que fazer."
       },
       "running": {
-        "title": "Serviços em execução",
+        "title": "Serviços instalados",
         "hint": "Memória, uso de processador e se cada um inicia com o servidor."
       },
       "installing": {
@@ -1440,7 +1447,8 @@
       "unitFailed": "Instalado, mas não está em execução. O log dirá o motivo.",
       "openDatabases": "Abrir bancos de dados",
       "openPhp": "Abrir PHP",
-      "openFail2ban": "Abrir Fail2ban"
+      "openFail2ban": "Abrir Fail2ban",
+      "unitFailedNoLog": "Instalado, mas parado. Tente iniciá-lo; se parar de novo, o erro está no journal do sistema do servidor."
     },
     "moreActions": "Mais ações para {name}"
   },

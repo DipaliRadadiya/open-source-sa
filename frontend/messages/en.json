@@ -68,7 +68,8 @@
       "title": "You don't have access to {feature}",
       "description": "Your role doesn't include permission to view this. Ask an administrator to grant it."
     },
-    "serverNavigation": "Server menu"
+    "serverNavigation": "Server menu",
+    "loadingPage": "Loading page…"
   },
   "systemUsers": {
     "title": "System Users",
@@ -1342,6 +1343,10 @@
       "disable": {
         "title": "Stop {name} starting on boot?",
         "description": "It keeps running now, but it will not come back after the next reboot."
+      },
+      "restart": {
+        "title": "Restart {name}?",
+        "description": "It stops and starts again. Anything connected to it is cut off for a moment."
       }
     },
     "toast": {
@@ -1365,7 +1370,8 @@
       "restart": "Could not restart {name} — it was left as it was.",
       "reload": "Could not reload {name} — it was left as it was.",
       "enable": "Could not set {name} to start on boot — nothing changed.",
-      "disable": "Could not stop {name} starting on boot — nothing changed."
+      "disable": "Could not stop {name} starting on boot — nothing changed.",
+      "noAnswer": "No answer from the server about {name}. It may or may not have happened — the list shows its real state in a few seconds."
     },
     "undoStop": "Start again",
     "retry": "Try again",
@@ -1419,7 +1425,8 @@
       "attention": "{count, plural, =1 {1 service needs attention} other {# services need attention}}",
       "running": "{count, plural, =1 {1 running} other {# running}}",
       "installing": "{count, plural, =1 {1 installing} other {# installing}}",
-      "allRunning": "{count, plural, =0 {No services detected} =1 {The one service is running} other {All # services are running}}"
+      "allRunning": "{count, plural, =0 {No services detected} =1 {The one service is running} other {All # services are running}}",
+      "stopped": "{count, plural, =1 {1 stopped} other {# stopped}}"
     },
     "sections": {
       "attention": {
@@ -1427,7 +1434,7 @@
         "hint": "These are not running. Each one says why, and what to do about it."
       },
       "running": {
-        "title": "Running services",
+        "title": "Installed services",
         "hint": "Memory, processor use and whether each one starts with the server."
       },
       "installing": {
@@ -1440,7 +1447,8 @@
       "unitFailed": "Installed but not running. Its log will say why.",
       "openDatabases": "Open databases",
       "openPhp": "Open PHP",
-      "openFail2ban": "Open Fail2ban"
+      "openFail2ban": "Open Fail2ban",
+      "unitFailedNoLog": "Installed but not running. Try starting it; if it stops again, its error is in the server's system journal."
     },
     "moreActions": "More actions for {name}"
   },

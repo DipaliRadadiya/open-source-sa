@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -185,7 +185,8 @@ export function ServicesTable({ data, phpVersions = [], canManage = false, busy,
     },
     {
       id: "boot",
-      header: t("columns.boot"),
+      // Wraps: "Beim Systemstart starten" is twice the column's width.
+      header: () => <span className="block whitespace-normal leading-tight">{t("columns.boot")}</span>,
       meta: { className: "w-[15%]" },
       cell: BootCell,
     },

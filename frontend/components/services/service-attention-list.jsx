@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ServiceActions } from "@/components/services/service-actions";
@@ -39,7 +39,11 @@ export function ServiceAttentionList({ services, phpVersions = [], canManage, bu
           ? service.install_reason && service.install_reason !== "unknown"
             ? service.install_message
             : t("state.install_failed")
-          : t("attention.unitFailed");
+          : (service.log_keys ?? []).length > 0
+            ? t("attention.unitFailed")
+            // No log the panel can open (MariaDB, PostgreSQL): "Its log will
+            // say why" pointed at nothing on this screen.
+            : t("attention.unitFailedNoLog");
 
         return (
           <li

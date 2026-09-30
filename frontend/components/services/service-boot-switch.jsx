@@ -54,7 +54,11 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
       setAsked(null);
       const data = error.response?.data;
       showActionError({
-        title: t(`error.${action}`, { name: service.label }),
+        // No answer at all (connection dropped) is not "left as it was": the
+        // server may have done it. The list re-reads every 3 s and shows which.
+        title: error.response
+          ? t(`error.${action}`, { name: service.label })
+          : t("error.noAnswer", { name: service.label }),
         message: apiMessage(error, undefined, { reference: false }),
         reference: data?.reference,
         copyLabel: t('copyReference'),
@@ -86,7 +90,7 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
         <TooltipTrigger asChild>
           <span
             tabIndex={0}
-            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded text-sm text-muted-foreground"
+            className="inline-flex items-center gap-1.5 rounded text-sm whitespace-normal text-muted-foreground"
           >
             <Lock className="size-3.5" />
             {t("alwaysOn")}

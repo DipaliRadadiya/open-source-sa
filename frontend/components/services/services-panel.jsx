@@ -86,6 +86,10 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
   const running = services.filter(
     (s) => (s.state ?? "installed") === "installed" && s.status !== "failed",
   );
+  // The table lists stopped units with the running ones; the counts must not.
+  // "All 8 services are running" sat above a row that said Stopped.
+  const active = running.filter((s) => s.status !== "inactive");
+  const stopped = running.length - active.length;
 
   return (
     <div className="space-y-6">
@@ -107,8 +111,16 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
               {t("summary.attention", { count: attention.length })}
             </span>
             <span className="text-muted-foreground">
-              {t("summary.running", { count: running.length })}
+              {t("summary.running", { count: active.length })}
             </span>
+            {stopped > 0 ? (
+              <span className="text-muted-foreground">{t("summary.stopped", { count: stopped })}</span>
+            ) : null}
+          </>
+        ) : stopped > 0 ? (
+          <>
+            <span className="text-muted-foreground">{t("summary.running", { count: active.length })}</span>
+            <span className="font-medium text-foreground">{t("summary.stopped", { count: stopped })}</span>
           </>
         ) : (
           <span className="text-muted-foreground">
@@ -163,11 +175,14 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
           thing that can explain an otherwise blank page. */}
       {running.length > 0 || services.length === 0 ? (
       <Section title={t("sections.running.title")} hint={t("sections.running.hint")}>
-        {/* Cards on narrow screens, the table from lg up. The table scrolls
+        {/* Cards when the content area is narrow, the table when it has room.
+            A container query, not lg: with the sidebar open at 1024 the table
+            got ~700px and "Memory" and "CPU" no longer fitted their columns;
+            900px is where the widest locale's headers fit. The table scrolls
             sideways on a phone, but its action buttons land off-screen with
-            nothing hinting at a swipe — the one thing you opened the page to do
-            is the one thing you can't see. */}
-        <div className="lg:hidden">
+            nothing hinting at a swipe. */}
+        <div className="@container/svc">
+        <div className="@min-[900px]/svc:hidden">
           <ServicesCards
             data={running}
             phpVersions={phpVersions}
@@ -176,7 +191,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
             setRowBusy={setRowBusy}
           />
         </div>
-        <div className="hidden lg:block">
+        <div className="hidden @min-[900px]/svc:block">
           <ServicesTable
             data={running}
             phpVersions={phpVersions}
@@ -184,6 +199,7 @@ export function ServicesPanel({ initialServices, initialCheckedAt, phpVersions, 
             busy={busy}
             setRowBusy={setRowBusy}
           />
+        </div>
         </div>
       </Section>
       ) : null}
