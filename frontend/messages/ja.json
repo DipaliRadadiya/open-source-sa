@@ -2159,7 +2159,7 @@
       "retry": "再試行",
       "retrying": "PHP {version} を再度インストールしています…",
       "incomplete": "不完全",
-      "incompleteDetail": "{packages} がありません。パネルではなく別のパッケージによってインストールされたためです。",
+      "incompleteDetail": "{packages} がありません。インストールを完了すると追加されます。",
       "completeInstall": "インストールを完了する",
       "completing": "PHP {version} を完了しています…",
       "incompleteDefault": "先にインストールを完了してください。デフォルトの PHP は、バージョンが指定されていないすべての処理で使われます。",

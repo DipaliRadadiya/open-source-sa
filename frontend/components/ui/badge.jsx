@@ -30,7 +30,7 @@ const badgeVariants = cva(
         // Text mixed towards the foreground in light mode: on a tinted card
         // the plain token fell to 4.4:1 (dashboard, 30 Sep).
         success:
-          "bg-success/10 text-[color-mix(in_oklch,var(--success)_80%,var(--foreground))] dark:bg-success/20 dark:text-success",
+          "bg-success/10 text-[color-mix(in_oklch,var(--success)_80%,var(--foreground))] dark:bg-success/20 dark:text-[color-mix(in_oklch,var(--success)_85%,var(--foreground))]",
         warning:
           "bg-warning/15 text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:bg-warning/20 dark:text-warning",
         // A status that is filled like its siblings but carries no alarm.

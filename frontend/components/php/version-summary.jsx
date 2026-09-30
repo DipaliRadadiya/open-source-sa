@@ -1,7 +1,7 @@
 "use client";
 
 import { removeFailed, versionState } from "@/components/runtime/version-status";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -33,6 +33,33 @@ import { apiMessage } from "@/lib/api/error-message";
  * `children` carries the php.ini button, owned by the page (a Server
  * Component). Install lives beside the version picker, not here.
  */
+/**
+ * apt's output, held at its last line. apt says why it stopped at the END —
+ * "E: Held packages were changed…" — and the box opened at the top, on
+ * "Reading package lists…", so a failed install showed everything except the
+ * reason.
+ */
+function AptOutput({ text }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+  }, [text]);
+
+  return (
+    <pre
+      ref={ref}
+      className="mt-2 max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs leading-relaxed text-muted-foreground"
+      // Announced politely: this updates every poll while an install
+      // runs, and an assertive region would interrupt a screen reader
+      // several times a minute for output nobody asked to hear.
+      aria-live="polite"
+    >
+      {text}
+    </pre>
+  );
+}
+
 export function VersionSummary({
   version,
   canManage,
@@ -203,7 +230,7 @@ export function VersionSummary({
           {/* Said out loud. A version whose install failed used to look exactly
               like a healthy one — same title, same "no sites use this yet". */}
           {removeFailed(version) ? (
-            <Badge variant="destructive" className="font-normal" title={version.message ?? undefined}>
+            <Badge variant="destructive" className="font-normal">
               {t("versions.statusRemoveFailed")}
             </Badge>
           ) : installState === "failed" ? (
@@ -346,6 +373,21 @@ export function VersionSummary({
           {/* Named, not counted. "5 packages missing" tells nobody whether
               their application will run; "curl, sqlite3, redis" tells them
               immediately. */}
+          {/* Why the removal stopped, where it can be read. It was only the
+              badge's `title`, which touch and keyboard never show — so a failed
+              removal said "Removal failed" and nothing else. */}
+          {removeFailed(version) ? (
+            <span className="block text-destructive">
+              {/* The job records no sentence of its own for this (message is
+                  null), so our own one stands in rather than a bare badge. */}
+              {version.message ?? t("versions.removeFailed")}
+              {version.reference ? (
+                <span className="ml-1.5 font-mono whitespace-nowrap text-muted-foreground">
+                  {version.reference}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
           {incomplete ? (
             <span className="block text-warning">
               {t("versions.incompleteDetail", { packages: missingPackages.join(", ") })}
@@ -374,15 +416,7 @@ export function VersionSummary({
             Kept after the failure too, deliberately: the moment someone wants
             to read the output is the moment it went wrong. */}
         {installState && version.output ? (
-          <pre
-            className="mt-2 max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs leading-relaxed text-muted-foreground"
-            // Announced politely: this updates every poll while an install
-            // runs, and an assertive region would interrupt a screen reader
-            // several times a minute for output nobody asked to hear.
-            aria-live="polite"
-          >
-            {version.output.trimEnd()}
-          </pre>
+          <AptOutput text={version.output.trimEnd()} />
         ) : null}
 
         {/* Tags, not prose: each name is one scannable unit, so the near-

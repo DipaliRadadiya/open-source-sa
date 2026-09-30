@@ -10,7 +10,7 @@ test("view-only opens php.ini read-only: GET …/ini only needs view", () => {
   const src = read("components/php/ini-editor.jsx");
   assert.match(src, /const readOnly = !canManage;/);
   assert.match(src, /readOnly=\{readOnly\}/);
-  assert.match(src, /disabled=\{loading \|\| Boolean\(unavailableReason\)\}/);
+  assert.match(src, /disabled=\{Boolean\(unavailableReason\)\}\n\s*onClick=\{load\}/);
   assert.match(src, /\{readOnly \? null : \(\s*\n\s*<ReasonTooltip reason=\{blockedReason\}>/);
   const en = JSON.parse(read("messages/en.json")).services.phpIni;
   assert.equal(en.viewAction, "View php.ini");
@@ -45,4 +45,26 @@ test("a change that got no answer never claims it failed", async () => {
   // An answer, even an error, is still the server's word.
   const answered = { isAxiosError: true, config: { method: "put" }, response: { status: 500, data: { message: "Server Error", reference: "R1" } } };
   assert.equal(apiMessage(answered, "That failed."), "That failed. · R1");
+});
+
+test("a failed install shows apt's last line, where apt says why", () => {
+  const src = read("components/php/version-summary.jsx");
+  assert.match(src, /ref\.current\.scrollTop = ref\.current\.scrollHeight/);
+  assert.match(src, /<AptOutput text=\{version\.output\.trimEnd\(\)\} \/>/);
+});
+
+test("a failed removal says why on the card, not only in a hover title", () => {
+  const src = read("components/php/version-summary.jsx");
+  assert.match(src, /\{version\.message \?\? t\("versions\.removeFailed"\)\}/);
+  assert.doesNotMatch(src, /title=\{version\.message \?\? undefined\}/);
+});
+
+test("the incomplete note states what is missing, not a guessed cause", () => {
+  const en = JSON.parse(read("messages/en.json")).php.versions.incompleteDetail;
+  assert.equal(en, "Missing {packages}. Complete the install to add them.");
+});
+
+test("console muted text and dark success badges clear 4.5:1", () => {
+  assert.match(read("app/globals.css"), /--console-muted: oklch\(0\.62 /);
+  assert.match(read("components/ui/badge.jsx"), /dark:text-\[color-mix\(in_oklch,var\(--success\)_85%,var\(--foreground\)\)\]/);
 });

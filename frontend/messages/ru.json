@@ -2159,7 +2159,7 @@
       "retry": "Повторить",
       "retrying": "Повторная установка PHP {version}…",
       "incomplete": "Неполная",
-      "incompleteDetail": "Отсутствуют {packages} — её установил другой пакет, а не панель.",
+      "incompleteDetail": "Отсутствуют {packages}. Завершите установку, чтобы добавить их.",
       "completeInstall": "Завершить установку",
       "completing": "Завершается установка PHP {version}…",
       "incompleteDefault": "Сначала завершите установку — PHP по умолчанию работает везде, где версия не задана явно.",

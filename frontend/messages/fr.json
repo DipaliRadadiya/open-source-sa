@@ -2159,7 +2159,7 @@
       "retry": "Réessayer",
       "retrying": "Réinstallation de PHP {version}…",
       "incomplete": "Incomplète",
-      "incompleteDetail": "Il manque {packages} — elle a été installée par un autre paquet, pas par le panneau.",
+      "incompleteDetail": "Il manque {packages}. Complétez l'installation pour les ajouter.",
       "completeInstall": "Compléter l'installation",
       "completing": "Finalisation de PHP {version}…",
       "incompleteDefault": "Complétez d'abord l'installation — le PHP par défaut est celui qui s'exécute quand rien ne fixe de version.",

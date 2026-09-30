@@ -107,9 +107,12 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
           of its own alongside the things people actually came for. */}
       {/* There is no file to edit until the install finishes. */}
       <ReasonTooltip reason={unavailableReason}>
+        {/* Not disabled while the file loads: the dialog is already open over
+            it, and a disabled button drops focus to the page, so closing the
+            dialog left a keyboard user at the top instead of back here. */}
         <Button
           variant="outline"
-          disabled={loading || Boolean(unavailableReason)}
+          disabled={Boolean(unavailableReason)}
           onClick={load}
         >
           {loading ? <Loader2 className="size-4 animate-spin" /> : <FileCode2 className="size-4" />}

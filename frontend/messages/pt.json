@@ -2159,7 +2159,7 @@
       "retry": "Tentar novamente",
       "retrying": "Instalando PHP {version} novamente…",
       "incomplete": "Incompleta",
-      "incompleteDetail": "Faltam {packages} — foi instalada por outro pacote, não pelo painel.",
+      "incompleteDetail": "Faltam {packages}. Conclua a instalação para adicioná-los.",
       "completeInstall": "Concluir a instalação",
       "completing": "Concluindo o PHP {version}…",
       "incompleteDefault": "Conclua a instalação primeiro — o PHP padrão é o que roda quando nada fixa uma versão.",
