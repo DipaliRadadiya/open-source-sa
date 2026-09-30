@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Applications\SiteTypeManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -529,4 +530,40 @@ it('has the Container label translated in every locale', function () {
 
         expect($line)->not->toBe('nav.app_container')->and($line)->not->toBeEmpty();
     }
+});
+
+/*
+ * The one-click apps, which is where this went wrong.
+ *
+ * `app_container` and `app_compose` were added by `DockerSiteType` alone, so all
+ * fifteen one-click app types went without them — and since the credentials
+ * endpoint moved onto `app_container`, it answered 404 for exactly the sites that
+ * HAVE generated credentials. Found by installing Ghost on a real box; every test
+ * that touched the endpoint had used the BYO-image type.
+ */
+
+it('offers both container screens to every container-served type', function (string $type) {
+    $siteType = app(SiteTypeManager::class)->find($type);
+    $features = $siteType->features();
+
+    expect($features)->toContain('app_container')->toContain('app_compose')
+        // And never the Environment screen: a container's variables live in the
+        // compose file, which is why that screen is replaced rather than joined.
+        ->and($features)->not->toContain('app_environment');
+})->with(['docker', 'ghost', 'matomo', 'gitea', 'vaultwarden', 'metabase']);
+
+it('keeps the credentials endpoint reachable on a one-click app', function () {
+    // The regression itself, at the endpoint rather than at the feature list.
+    $ghost = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id,
+        'name' => 'Ghost', 'slug' => 'ghostie', 'domain' => 'ghostie.test',
+        'site_type' => 'ghost', 'serving_profile' => 'docker', 'web_root' => 'public_html',
+        'app_port' => 20002, 'status' => 'active',
+        'docker_secrets' => ['MYSQL_ROOT_PASSWORD' => 'a', 'GHOST_DB_PASSWORD' => 'b'],
+    ]);
+
+    $this->withHeaders(composeHeaders())
+        ->getJson('/api/applications/'.$ghost->id.'/container/secrets')
+        ->assertOk()
+        ->assertJsonPath('secrets.GHOST_DB_PASSWORD', 'b');
 });

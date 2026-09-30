@@ -99,19 +99,11 @@ class DockerSiteType extends AbstractSiteType
      */
     public function features(): array
     {
-        return array_values([
-            ...array_diff(parent::features(), ['app_clone', 'app_backup']),
-            // The compose file, which for a container replaces the Environment
-            // screen it does not get: a container's variables are in this file, not
-            // in a `.env` the panel owns. Added by the type rather than by the
-            // parent for the reason `app_staging` is — only the type that has the
-            // thing advertises it.
-            // What it runs as, and the file it runs. Two screens because they are
-            // two questions — a chooser and three fields, versus sixty lines of
-            // YAML — and one of them is the other's escape hatch.
-            'app_container',
-            'app_compose',
-        ]);
+        // `app_container` and `app_compose` are NOT added here. They belong to
+        // every container-served type, so the parent adds them on
+        // `servingProfile() === 'docker'` — adding them here as well left the
+        // fifteen one-click apps without them.
+        return array_values(array_diff(parent::features(), ['app_clone', 'app_backup']));
     }
 
     /**
