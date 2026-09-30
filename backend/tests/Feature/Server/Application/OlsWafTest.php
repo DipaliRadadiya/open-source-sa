@@ -152,7 +152,9 @@ describe('the rendered vhost', function () {
         $config = olsVhost('enforce', [], [], ['method'], $profile);
 
         expect($config)->toContain('rewrite {')->toContain('%{REQUEST_METHOD} (?:^(?:connect|debug|move|trace|track)) [NC]');
-    })->with(['static', 'node']);
+        // Wrapped: a bare 'static' string is checked as a callable by Pest and
+        // raises a deprecation.
+    })->with([['static'], ['node']]);
 
     it('renders nothing of the firewall when it is off', function () {
         $this->site->forceFill(['waf_enabled' => false])->save();
