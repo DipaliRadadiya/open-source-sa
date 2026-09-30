@@ -241,11 +241,14 @@ export function ExtensionsCard({ version, extensions, panelRequired = [], toggle
 
                         {/* What it's FOR, in plain words. Only the extensions we
                             have real copy for get a line; a generic filler would
-                            be worse than none. Truncated rather than wrapped so a
-                            long description can't widen the table past the screen
-                            and take the switch with it. */}
+                            be worse than none. Wrapped, not truncated: at 1280
+                            every locale fits on one line anyway, and on a phone
+                            truncation cut most of the sentence with no way to
+                            read the rest by touch. `max-w-0` on the cell keeps it
+                            from widening the table; `whitespace-normal` undoes
+                            the nowrap every TableCell carries. */}
                         {t.has(`extensionInfo.${extension.name}`) ? (
-                          <span className="block truncate text-xs text-muted-foreground">
+                          <span className="block text-xs whitespace-normal text-muted-foreground">
                             {t(`extensionInfo.${extension.name}`)}
                           </span>
                         ) : null}

@@ -194,7 +194,10 @@ export default async function PhpPage({ searchParams }) {
              */
             <PhpVersionTabs
               initial={sp?.tab}
-              extensionCount={extensions?.extensions?.length}
+              // The same total the card counts from ("15 of 80 turned on").
+              // Built-ins are listed apart with their own count, so counting
+              // them here made the tab and the card disagree.
+              extensionCount={extensions?.extensions?.filter((e) => !e.builtin).length}
               ionCubeState={ioncube}
               ionCubeFailed={ionCubeFailed}
               extensions={

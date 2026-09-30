@@ -2,7 +2,11 @@
 
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { setGenericErrorMessage, setRateLimitedMessage } from "@/lib/api/generic-error";
+import {
+  setGenericErrorMessage,
+  setNoAnswerMessage,
+  setRateLimitedMessage,
+} from "@/lib/api/generic-error";
 
 /**
  * Hands the translated last-resort and rate-limit sentences to the plain
@@ -17,6 +21,7 @@ export function ErrorCopy() {
   useEffect(() => {
     setGenericErrorMessage(t("title"));
     setRateLimitedMessage(t("rateLimited.body"));
+    setNoAnswerMessage(t("noAnswer"));
   }, [t]);
 
   return null;

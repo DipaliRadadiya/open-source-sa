@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { LifecycleBadge } from "@/components/runtime/lifecycle-badge";
 import { ScrollFade } from "@/components/ui/scroll-fade";
+import { compareVersions } from "@/lib/runtime/version-range";
 
 /**
  * Which version the rest of the page is about. Shared by PHP and Node.
@@ -31,6 +32,10 @@ export function VersionBar({
   const t = useTranslations(namespace);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // Newest first, whatever order the API sends. It lists a version still
+  // installing ahead of the installed ones, so without this the chips swapped
+  // places under the pointer the moment an install finished.
+  const ordered = [...versions].sort((a, b) => compareVersions(b.version, a.version));
 
   return (
     <div className="space-y-2">
@@ -40,7 +45,7 @@ export function VersionBar({
 
       <ScrollFade className="-mx-1 px-1 pb-1">
         <nav aria-label={t("versions.pickerLabel")} className="flex w-fit items-center gap-2">
-          {versions.map((version) => {
+          {ordered.map((version) => {
             const active = version.version === selected;
             const params = new URLSearchParams(searchParams);
             params.set("version", version.version);

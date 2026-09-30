@@ -1213,7 +1213,8 @@
         "next": "Normalmente el panel y la API son versiones distintas, o algo entre medias reescribe las peticiones. Actualiza ambos a la misma versión."
       }
     },
-    "whatToDo": "Qué hacer"
+    "whatToDo": "Qué hacer",
+    "noAnswer": "El servidor no respondió. Puede que se haya hecho o no; recarga la página para ver cómo quedó."
   },
   "logs": {
     "title": "Registros del sistema",
@@ -1408,7 +1409,10 @@
       "blockedNoChanges": "No hay nada que guardar: el archivo no ha cambiado.",
       "blockedAcknowledge": "Primero confirma que entiendes el riesgo.",
       "pathUnknown": "Cargando…",
-      "shortAction": "Editar php.ini"
+      "shortAction": "Editar php.ini",
+      "viewAction": "Ver php.ini",
+      "readOnlyDescription": "El archivo completo, tal como lo lee PHP.",
+      "close": "Cerrar"
     },
     "notMeasured": "Sin medir",
     "phpSettings": "Ajustes de PHP",

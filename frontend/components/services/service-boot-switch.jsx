@@ -59,7 +59,8 @@ export function ServiceBootSwitch({ service, canManage, onBusyChange }) {
         title: error.response
           ? t(`error.${action}`, { name: service.label })
           : t("error.noAnswer", { name: service.label }),
-        message: apiMessage(error, undefined, { reference: false }),
+        // The title already says there was no answer.
+        message: error.response ? apiMessage(error, undefined, { reference: false }) : undefined,
         reference: data?.reference,
         copyLabel: t('copyReference'),
         copiedLabel: t('copiedReference'),

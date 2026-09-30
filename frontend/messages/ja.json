@@ -1213,7 +1213,8 @@
         "next": "多くの場合、パネルと API のバージョンが異なるか、途中で何かがリクエストを書き換えています。両方を同じリリースに更新してください。"
       }
     },
-    "whatToDo": "対処方法"
+    "whatToDo": "対処方法",
+    "noAnswer": "サーバーから応答がありません。実行されたかどうかは不明です。ページを再読み込みして現在の状態を確認してください。"
   },
   "logs": {
     "title": "システムログ",
@@ -1408,7 +1409,10 @@
       "blockedNoChanges": "保存する内容がありません — ファイルは変更されていません。",
       "blockedAcknowledge": "まずリスクを理解した旨を確認してください。",
       "pathUnknown": "読み込み中…",
-      "shortAction": "php.ini を編集"
+      "shortAction": "php.ini を編集",
+      "viewAction": "php.ini を表示",
+      "readOnlyDescription": "PHP が読み込むファイル全体です。",
+      "close": "閉じる"
     },
     "notMeasured": "未計測",
     "phpSettings": "PHP 設定",

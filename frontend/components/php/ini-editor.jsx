@@ -37,6 +37,11 @@ import { apiMessage } from "@/lib/api/error-message";
  */
 export function IniEditor({ version, canManage, unavailableReason = null }) {
   const t = useTranslations("services");
+  const tPhp = useTranslations("php");
+  // Reading is allowed with view access (GET …/ini is `permission:php`), so a
+  // view-only user gets the file without the save path — the same call the
+  // Services page makes for config test.
+  const readOnly = !canManage;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -101,14 +106,14 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
           it sits with the version's other actions instead of taking a section
           of its own alongside the things people actually came for. */}
       {/* There is no file to edit until the install finishes. */}
-      <ReasonTooltip reason={unavailableReason ?? (canManage ? null : t("noPermission"))}>
+      <ReasonTooltip reason={unavailableReason}>
         <Button
           variant="outline"
-          disabled={!canManage || loading || Boolean(unavailableReason)}
+          disabled={loading || Boolean(unavailableReason)}
           onClick={load}
         >
           {loading ? <Loader2 className="size-4 animate-spin" /> : <FileCode2 className="size-4" />}
-          {t("phpIni.shortAction")}
+          {readOnly ? t("phpIni.viewAction") : t("phpIni.shortAction")}
         </Button>
       </ReasonTooltip>
 
@@ -123,12 +128,20 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
         <DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto] h-[85vh] sm:max-w-5xl">
           <DialogHeader>
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
-                <TriangleAlert className="size-5" />
+              <span
+                className={
+                  readOnly
+                    ? "flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                    : "flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning"
+                }
+              >
+                {readOnly ? <FileCode2 className="size-5" /> : <TriangleAlert className="size-5" />}
               </span>
               <DialogTitle>{t("phpIni.title", { version })}</DialogTitle>
             </div>
-            <DialogDescription className="pt-1">{t("phpIni.description")}</DialogDescription>
+            <DialogDescription className="pt-1">
+              {readOnly ? t("phpIni.readOnlyDescription") : t("phpIni.description")}
+            </DialogDescription>
           </DialogHeader>
 
         {/* The only part that scrolls. It scrolls rather than merely clipping
@@ -163,6 +176,7 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
                 placeholder={t("iniPlaceholder")}
                 value={contents}
                 onChange={(e) => setContents(e.target.value)}
+                readOnly={readOnly}
                 spellCheck={false}
                 // The whole file, edited as a file. A code-editor dependency for
                 // one textarea would be a lot of bundle for syntax colouring.
@@ -182,6 +196,9 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
             </p>
           ) : null}
 
+            {readOnly ? (
+              <p className="shrink-0 text-sm text-muted-foreground">{tPhp("noPermission")}</p>
+            ) : (
             <div className="flex shrink-0 items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 p-3">
               <Checkbox
                 id={`ack-${version}`}
@@ -196,22 +213,25 @@ export function IniEditor({ version, canManage, unavailableReason = null }) {
                 {t("phpIni.acknowledge", { version })}
               </Label>
             </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
-              {t("phpIni.cancel")}
+              {readOnly ? t("phpIni.close") : t("phpIni.cancel")}
             </Button>
             {/* Three gates, and each is a different question: did anything
                 change, is it ticked, and are we mid-save. The button says which
                 one is holding it — a disabled control that won't explain itself
                 is a dead end, and this is the last step of a risky edit. */}
+            {readOnly ? null : (
             <ReasonTooltip reason={blockedReason}>
               <Button onClick={save} disabled={Boolean(blockedReason) || saving || loading}>
                 {saving ? <Loader2 className="size-4 animate-spin" /> : null}
                 {t("phpIni.save")}
               </Button>
             </ReasonTooltip>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

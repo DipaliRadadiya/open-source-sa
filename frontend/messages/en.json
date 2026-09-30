@@ -1213,7 +1213,8 @@
         "next": "Usually the panel and the API are different versions, or something between them is rewriting requests. Update both to the same release."
       }
     },
-    "whatToDo": "What to do"
+    "whatToDo": "What to do",
+    "noAnswer": "No answer from the server. It may or may not have happened — reload the page to see where it stands."
   },
   "logs": {
     "title": "System Logs",
@@ -1408,7 +1409,10 @@
       "blockedNoChanges": "Nothing to save — the file has not been changed.",
       "blockedAcknowledge": "Confirm you understand the risk first.",
       "pathUnknown": "Loading…",
-      "shortAction": "Edit php.ini"
+      "shortAction": "Edit php.ini",
+      "viewAction": "View php.ini",
+      "readOnlyDescription": "The whole file, as PHP reads it.",
+      "close": "Close"
     },
     "notMeasured": "Not measured",
     "phpSettings": "PHP settings",

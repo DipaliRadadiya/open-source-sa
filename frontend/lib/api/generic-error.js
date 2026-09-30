@@ -48,3 +48,20 @@ export function setRateLimitedMessage(next) {
 export function rateLimitedMessage() {
   return rateLimited;
 }
+
+/**
+ * A change that got no answer at all — the connection dropped, the request
+ * timed out. The server may have done it before the line went quiet, so the
+ * fallback every caller passes ("That version could not be removed.") would be
+ * a claim nobody can back. Handed over by the shell the same way.
+ */
+let noAnswer =
+  "No answer from the server. It may or may not have happened — reload the page to see where it stands.";
+
+export function setNoAnswerMessage(next) {
+  if (typeof next === "string" && next.trim()) noAnswer = next;
+}
+
+export function noAnswerMessage() {
+  return noAnswer;
+}

@@ -1,4 +1,4 @@
-import { rateLimitedMessage } from "./generic-error.js";
+import { noAnswerMessage, rateLimitedMessage } from "./generic-error.js";
 
 /**
  * The message to show a person when a request fails.
@@ -34,7 +34,19 @@ import { rateLimitedMessage } from "./generic-error.js";
 const FRAMEWORK_RATE_LIMIT = /^too many (attempts|requests)\.?$/i;
 const FRAMEWORK_SERVER_ERROR = /^server error\.?$/i;
 
+/**
+ * A write that never got a response. Reads are left to their own fallback —
+ * "could not be read" is simply true when nothing came back.
+ */
+export function isUnansweredWrite(error) {
+  if (!error?.isAxiosError || error.response || error.code === "ERR_CANCELED") return false;
+  const method = String(error.config?.method ?? "get").toLowerCase();
+  return !["get", "head", "options"].includes(method);
+}
+
 export function apiMessage(error, fallback, { reference: withReference = true } = {}) {
+  if (isUnansweredWrite(error)) return noAnswerMessage();
+
   const data = error?.response?.data;
   const message = data?.message;
   const trimmed = typeof message === "string" ? message.trim() : "";
