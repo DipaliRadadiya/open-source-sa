@@ -6443,7 +6443,7 @@
       "edit": "Editar",
       "remove": "Remover",
       "test": "Testar conexão",
-      "hint": "Credenciais guardadas para obter imagens privadas. Um site escolhe uma ao ser criado, ou depois nas definições do contentor. Se o registo de um site ficar vazio, obtém a imagem anonimamente, o que é correto para qualquer imagem pública.",
+      "hint": "Adicione uma credencial aqui e depois escolha-a num site de contentor — no formulário de criação, ou depois nas definições de Contentor do site. Os sites deixados em «Nenhum» obtêm a imagem anonimamente, o que é correto para qualquer imagem pública.",
       "empty": "Não há credenciais de registo guardadas. Adicione uma para executar uma imagem privada.",
       "failed": "Isso não funcionou.",
       "created": "{name} foi adicionado.",
@@ -6451,7 +6451,6 @@
       "removed": "{name} foi excluído.",
       "tested": "O registo foi contactado.",
       "dockerHub": "Docker Hub",
-      "tokenHint": "Um token de acesso, não a palavra-passe da sua conta. No Docker Hub: Definições da conta, e depois Personal access tokens, com acesso de leitura.",
       "tokenHintEdit": "Deixe vazio para manter o token guardado. Escreva um novo para o substituir.",
       "usedBySites": "{count, plural, one {# site} other {# sites}}",
       "usedByNone": "Nenhum site",
@@ -6459,7 +6458,8 @@
         "name": "Nome",
         "registry": "Endereço do registo",
         "username": "Nome de usuário",
-        "token": "Token de acesso"
+        "token": "Token de acesso",
+        "provider": "Onde está alojada a imagem?"
       },
       "placeholders": {
         "name": "GHCR",
@@ -6487,6 +6487,49 @@
         "title": "Excluir {name}?",
         "body": "A credencial é eliminada deste servidor. Nenhum site a está a usar.",
         "bodyInUse": "{count, plural, one {# site está} other {# sites estão}} configurado(s) para obter imagens com esta credencial. Não são eliminados e continuam a funcionar, mas a próxima obtenção será anónima e falhará se a imagem for privada."
+      },
+      "emptyTitle": "Ainda não há credenciais de registo",
+      "emptyBody": "Só precisa de uma para executar uma imagem privada. Tenha à mão o seu utilizador do registo e um token de acesso — não a palavra-passe da conta. As imagens públicas não precisam de nada aqui.",
+      "registryHint": "Apenas o host — sem https://, sem namespace, sem repositório. Acrescente uma porta se o seu usar uma.",
+      "registryHintFixed": "Fixo para este fornecedor. O Docker guarda as credenciais com este endereço exato, e qualquer outra escrita é ignorada em vez de recusada.",
+      "howTo": {
+        "title": "Como obter isto",
+        "step3": "Cole abaixo e prima Testar ligação — o painel pergunta ao registo de imediato, em vez de o deixar descobrir no primeiro deploy."
+      },
+      "temporaryToken": "Este registo emite credenciais de curta duração — as do AWS ECR duram doze horas. Um token colado aqui funcionará agora e começará a falhar quando expirar, porque o painel não o renova. Use um registo com token de longa duração, ou conte com atualizá-lo à mão.",
+      "providers": {
+        "dockerhub": {
+          "label": "Docker Hub",
+          "step1": "No Docker Hub, abra Definições da conta → Personal access tokens e crie um token com acesso Read.",
+          "step2": "O seu utilizador é o seu Docker ID — o nome no URL do seu perfil, não o seu e-mail.",
+          "usernameHint": "O seu Docker ID, não o e-mail com que entra.",
+          "tokenHint": "Um token de acesso pessoal com acesso Read. A palavra-passe da conta não funciona se a autenticação de dois fatores estiver ativa.",
+          "linkLabel": "Abrir os tokens de acesso do Docker Hub"
+        },
+        "ghcr": {
+          "label": "GitHub Container Registry",
+          "step1": "No GitHub, abra Settings → Developer settings → Personal access tokens → Tokens (classic) e crie um com o âmbito read:packages.",
+          "step2": "Tem de ser um token clássico. Um token fine-grained não consegue levar read:packages, por isso é recusado mesmo parecendo válido.",
+          "usernameHint": "O seu nome de utilizador do GitHub.",
+          "tokenHint": "Um token de acesso pessoal clássico com read:packages. Tokens fine-grained não funcionam aqui.",
+          "linkLabel": "Abrir os tokens de acesso pessoal do GitHub"
+        },
+        "gitlab": {
+          "label": "GitLab Container Registry",
+          "step1": "No seu projeto GitLab, abra Settings → Repository → Deploy tokens e crie um com o âmbito read_registry.",
+          "step2": "O utilizador é o do próprio deploy token, que o GitLab mostra uma única vez ao criá-lo — não o nome da sua conta GitLab.",
+          "usernameHint": "O utilizador do deploy token, não a sua conta GitLab.",
+          "tokenHint": "Um deploy token de projeto ou grupo com read_registry. Um token de acesso pessoal também serve, com o mesmo âmbito.",
+          "linkLabel": "Ler o guia de deploy tokens do GitLab"
+        },
+        "other": {
+          "label": "Outro registo ou registo auto-alojado",
+          "step1": "Indique o host do registo, com porta se usar uma — por exemplo registry.example.com:5000.",
+          "step2": "Use o utilizador e o token ou palavra-passe que esse registo aceita num docker login. Basta uma conta só de leitura; esta credencial apenas obtém imagens.",
+          "usernameHint": "O que esse registo aceita para docker login.",
+          "tokenHint": "O token ou palavra-passe dessa conta. Basta acesso só de leitura — o painel apenas obtém.",
+          "linkLabel": ""
+        }
       }
     }
   }

@@ -4,7 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { KeyRound, Plus, Trash2, PlugZap, Check, X, Clock } from "lucide-react";
+import {
+  KeyRound,
+  Plus,
+  Trash2,
+  PlugZap,
+  Check,
+  X,
+  Clock,
+  ExternalLink,
+  Info,
+} from "lucide-react";
 import {
   createRegistry,
   deleteRegistry,
@@ -12,6 +22,12 @@ import {
   updateRegistry,
 } from "@/lib/api/docker";
 import { registryFormSchema } from "@/lib/schemas/docker";
+import {
+  REGISTRY_PROVIDERS,
+  registryProvider,
+  providerForAddress,
+  issuesTemporaryTokens,
+} from "@/lib/docker/registry-providers";
 import { apiMessage } from "@/lib/api/error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,6 +101,10 @@ export function RegistriesCard({ initialRegistries, canManage }) {
   function open(registry) {
     setEditing(registry?.id ?? "new");
     setErrors({});
+    // Editing opens on the provider the saved address looks like, so the
+    // instructions match the row rather than defaulting to Docker Hub and telling
+    // somebody with a GHCR credential to go and read Docker Hub's settings page.
+    setProvider(registry ? providerForAddress(registry.registry) : "dockerhub");
     setForm({
       name: registry?.name ?? "",
       registry: registry?.registry ?? "",
@@ -94,6 +114,35 @@ export function RegistriesCard({ initialRegistries, canManage }) {
       // length is a meaningful hint about the token.
       token: "",
     });
+  }
+
+  /**
+   * Choosing a provider fills the address and names the credential it wants.
+   *
+   * The name is filled too, but only when the user has not typed one — a prefill
+   * that overwrites something they wrote is worse than no prefill.
+   */
+  function chooseProvider(id) {
+    const preset = registryProvider(id);
+    const previous = registryProvider(provider);
+
+    setProvider(id);
+    setErrors({});
+    setForm((current) => ({
+      ...current,
+      // Replaced only when the box is empty or still holds the last preset's
+      // value, so a hand-typed self-hosted host survives a mis-click.
+      registry:
+        current.registry === "" || current.registry === previous.address
+          ? preset.address
+          : current.registry,
+      name:
+        current.name === "" || current.name === t(`providers.${provider}.label`)
+          ? id === "other"
+            ? ""
+            : t(`providers.${id}.label`)
+          : current.name,
+    }));
   }
 
   async function submit(event) {
@@ -188,13 +237,63 @@ export function RegistriesCard({ initialRegistries, canManage }) {
           ) : null}
         </CardHeader>
         <CardContent>
-          <p className="mb-4 text-sm text-muted-foreground">{t("hint")}</p>
+          <p className="mb-4 max-w-prose text-sm text-muted-foreground">
+            {t("hint")}
+          </p>
 
           {editing !== null ? (
             <form
               className="mb-6 grid gap-4 rounded-md border p-4 sm:grid-cols-2"
               onSubmit={submit}
             >
+              {/* The first field, because it decides what the other three mean.
+                  Before this the form was three text boxes and a placeholder, and
+                  none of the answers are guessable: Docker Hub's host is
+                  `docker.io` and not the address in your browser, GHCR needs a
+                  CLASSIC token carrying read:packages, and GitLab wants a deploy
+                  token whose username is the token's own name. */}
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor="registry-provider">
+                  {t("fields.provider")}
+                </Label>
+                <Select value={provider} onValueChange={chooseProvider}>
+                  <SelectTrigger id="registry-provider">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REGISTRY_PROVIDERS.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {t(`providers.${option.id}.label`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Where to get the token, and which scope. The whole reason the
+                  picker exists — a scope that is merely plausible produces a
+                  credential the registry refuses, which reads as a panel bug. */}
+              <div className="sm:col-span-2">
+                <Note icon={Info} title={t("howTo.title")}>
+                  <ol className="ml-4 list-decimal space-y-1">
+                    <li>{t(`providers.${provider}.step1`)}</li>
+                    <li>{t(`providers.${provider}.step2`)}</li>
+                    <li>{t("howTo.step3")}</li>
+                  </ol>
+                  {registryProvider(provider).docsUrl ? (
+                    <a
+                      href={registryProvider(provider).docsUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="mt-2 inline-flex items-center gap-1 font-medium text-primary underline"
+                    >
+                      {t(`providers.${provider}.linkLabel`)}
+                      <ExternalLink className="size-3" />
+                    </a>
+                  ) : null}
+                </Note>
+              </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="registry-name">{t("fields.name")}</Label>
                 <Input
@@ -222,7 +321,26 @@ export function RegistriesCard({ initialRegistries, canManage }) {
                   }
                   placeholder={t("placeholders.registry")}
                   className="font-mono text-xs"
+                  // Read-only for the hosted providers rather than merely
+                  // prefilled. Their address is not a preference, and a typo in it
+                  // is the worst failure this feature has: Docker ignores a
+                  // credential stored under an address it does not recognise, and
+                  // the pull then fails exactly as if none existed.
+                  readOnly={registryProvider(provider).addressFixed}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {registryProvider(provider).addressFixed
+                    ? t("registryHintFixed")
+                    : t("registryHint")}
+                </p>
+                {issuesTemporaryTokens(form.registry) ? (
+                  // AWS ECR, Google Artifact Registry and Azure ACR issue
+                  // credentials that expire in hours — ECR's in twelve. A token
+                  // pasted here authenticates once and then starts failing, and the
+                  // panel does not refresh it. Said at the form rather than
+                  // discovered on tomorrow's deploy.
+                  <Caution size="md">{t("temporaryToken")}</Caution>
+                ) : null}
                 {/* Names the mistake rather than saying "invalid": a namespace here
                     is the common one, and it is the one that would otherwise be
                     accepted and silently never apply. */}
@@ -243,8 +361,15 @@ export function RegistriesCard({ initialRegistries, canManage }) {
                   onChange={(event) =>
                     setForm({ ...form, username: event.target.value })
                   }
+                  placeholder={registryProvider(provider).usernamePlaceholder}
                   autoComplete="off"
                 />
+                {/* Whose username, which is not obvious for two of the four: a
+                    GitLab deploy token's username is the token's own name, not the
+                    account that made it. */}
+                <p className="text-xs text-muted-foreground">
+                  {t(`providers.${provider}.usernameHint`)}
+                </p>
                 {errors.username ? (
                   <p className="text-xs text-destructive">
                     {t("invalid.username")}
@@ -261,11 +386,18 @@ export function RegistriesCard({ initialRegistries, canManage }) {
                   onChange={(event) =>
                     setForm({ ...form, token: event.target.value })
                   }
+                  placeholder={registryProvider(provider).tokenPlaceholder}
                   autoComplete="new-password"
                   className="font-mono text-xs"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {editing === "new" ? t("tokenHint") : t("tokenHintEdit")}
+                  {/* On edit the field is empty and empty means KEEP, so that
+                      sentence replaces the provider guidance rather than sitting
+                      under it — a box that silently preserves needs saying more
+                      than a scope does. */}
+                  {editing === "new"
+                    ? t(`providers.${provider}.tokenHint`)
+                    : t("tokenHintEdit")}
                 </p>
                 {errors.token ? (
                   <p className="text-xs text-destructive">
@@ -291,7 +423,29 @@ export function RegistriesCard({ initialRegistries, canManage }) {
           ) : null}
 
           {initialRegistries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("empty")}</p>
+            /* Was one sentence, which told somebody the shelf was empty and
+               nothing about how to fill it. An empty state is the only
+               instruction most people will read, so it carries the two facts
+               that decide whether they can proceed: what to have ready, and
+               that public images need none of this. */
+            <div className="rounded-lg border border-dashed p-6 text-center">
+              <KeyRound className="mx-auto size-6 text-muted-foreground" />
+              <p className="mt-3 text-sm font-medium">{t("emptyTitle")}</p>
+              <p className="mx-auto mt-1 max-w-prose text-sm text-muted-foreground">
+                {t("emptyBody")}
+              </p>
+              {canManage ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => open(null)}
+                >
+                  <Plus className="size-4" />
+                  {t("add")}
+                </Button>
+              ) : null}
+            </div>
           ) : (
             <Table>
               <TableHeader>

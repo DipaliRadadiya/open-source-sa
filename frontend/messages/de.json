@@ -6443,7 +6443,7 @@
       "edit": "Bearbeiten",
       "remove": "Entfernen",
       "test": "Verbindung testen",
-      "hint": "Gespeicherte Anmeldedaten zum Laden privater Images. Eine Site wählt eine bei der Erstellung oder später in ihren Container-Einstellungen. Bleibt die Registry einer Site leer, lädt sie anonym — richtig für jedes öffentliche Image.",
+      "hint": "Legen Sie hier Anmeldedaten an und wählen Sie sie dann auf einer Container-Site — im Anlegen-Formular oder später in den Container-Einstellungen der Site. Sites, die auf „Keine“ stehen, laden anonym, was für jedes öffentliche Image richtig ist.",
       "empty": "Es sind keine Registry-Anmeldedaten gespeichert. Fügen Sie welche hinzu, um ein privates Image auszuführen.",
       "failed": "Das hat nicht funktioniert.",
       "created": "{name} wurde hinzugefügt.",
@@ -6451,7 +6451,6 @@
       "removed": "{name} wurde gelöscht.",
       "tested": "Die Registry wurde kontaktiert.",
       "dockerHub": "Docker Hub",
-      "tokenHint": "Ein Access-Token, nicht Ihr Kontopasswort. Bei Docker Hub: Kontoeinstellungen, dann Personal access tokens, mit Lesezugriff.",
       "tokenHintEdit": "Leer lassen, um das gespeicherte Token zu behalten. Ein neues eingeben, um es zu ersetzen.",
       "usedBySites": "{count, plural, one {# Site} other {# Sites}}",
       "usedByNone": "Keine Sites",
@@ -6459,7 +6458,8 @@
         "name": "Name",
         "registry": "Registry-Adresse",
         "username": "Benutzername",
-        "token": "Access-Token"
+        "token": "Access-Token",
+        "provider": "Wo liegt das Image?"
       },
       "placeholders": {
         "name": "GHCR",
@@ -6487,6 +6487,49 @@
         "title": "{name} löschen?",
         "body": "Die Anmeldedaten werden von diesem Server gelöscht. Keine Site verwendet sie.",
         "bodyInUse": "{count, plural, one {# Site lädt} other {# Sites laden}} mit diesen Anmeldedaten. Sie werden nicht gelöscht und laufen weiter, ihr nächster Pull ist jedoch anonym und schlägt fehl, wenn das Image privat ist."
+      },
+      "emptyTitle": "Noch keine Registry-Anmeldedaten",
+      "emptyBody": "Sie brauchen sie nur, um ein privates Image auszuführen. Halten Sie Ihren Registry-Benutzernamen und ein Access-Token bereit — nicht Ihr Kontopasswort. Öffentliche Images brauchen hier nichts.",
+      "registryHint": "Nur der Host — kein https://, kein Namespace, kein Repository. Mit Port, falls Ihrer einen nutzt.",
+      "registryHintFixed": "Für diesen Anbieter fest. Docker speichert Anmeldedaten unter genau dieser Adresse; jede andere Schreibweise wird ignoriert statt abgelehnt.",
+      "howTo": {
+        "title": "So bekommen Sie das",
+        "step3": "Unten einfügen und auf Verbindung testen drücken — das Panel fragt die Registry sofort, statt es Sie beim ersten Deploy herausfinden zu lassen."
+      },
+      "temporaryToken": "Diese Registry gibt kurzlebige Anmeldedaten aus — die von AWS ECR halten zwölf Stunden. Ein hier eingefügtes Token funktioniert jetzt und schlägt nach Ablauf fehl, denn das Panel erneuert es nicht. Nutzen Sie eine Registry mit langlebigem Token, oder rechnen Sie damit, dies von Hand zu aktualisieren.",
+      "providers": {
+        "dockerhub": {
+          "label": "Docker Hub",
+          "step1": "Öffnen Sie in Docker Hub Kontoeinstellungen → Personal access tokens und erstellen Sie ein Token mit Read-Zugriff.",
+          "step2": "Ihr Benutzername ist Ihre Docker-ID — der Name in Ihrer Profil-URL, nicht Ihre E-Mail-Adresse.",
+          "usernameHint": "Ihre Docker-ID, nicht die E-Mail zum Anmelden.",
+          "tokenHint": "Ein Personal Access Token mit Read-Zugriff. Das Kontopasswort funktioniert nicht, wenn Zwei-Faktor-Authentifizierung aktiv ist.",
+          "linkLabel": "Docker-Hub-Access-Tokens öffnen"
+        },
+        "ghcr": {
+          "label": "GitHub Container Registry",
+          "step1": "Öffnen Sie in GitHub Settings → Developer settings → Personal access tokens → Tokens (classic) und erstellen Sie eines mit dem Scope read:packages.",
+          "step2": "Es muss ein klassisches Token sein. Ein Fine-grained-Token kann read:packages nicht tragen und wird daher abgelehnt, obwohl es gültig aussieht.",
+          "usernameHint": "Ihr GitHub-Benutzername.",
+          "tokenHint": "Ein klassisches Personal Access Token mit read:packages. Fine-grained-Tokens funktionieren hier nicht.",
+          "linkLabel": "GitHub Personal Access Tokens öffnen"
+        },
+        "gitlab": {
+          "label": "GitLab Container Registry",
+          "step1": "Öffnen Sie in Ihrem GitLab-Projekt Settings → Repository → Deploy tokens und erstellen Sie eines mit dem Scope read_registry.",
+          "step2": "Der Benutzername ist der des Deploy-Tokens, den GitLab nur einmal beim Erstellen anzeigt — nicht Ihr GitLab-Kontoname.",
+          "usernameHint": "Der Benutzername des Deploy-Tokens, nicht Ihr GitLab-Konto.",
+          "tokenHint": "Ein Projekt- oder Gruppen-Deploy-Token mit read_registry. Ein Personal Access Token mit demselben Scope geht auch.",
+          "linkLabel": "GitLabs Anleitung zu Deploy-Tokens lesen"
+        },
+        "other": {
+          "label": "Andere oder selbst gehostete Registry",
+          "step1": "Geben Sie den Host der Registry an, mit Port falls nötig — zum Beispiel registry.example.com:5000.",
+          "step2": "Nutzen Sie Benutzername und Token oder Passwort, die diese Registry für ein docker login akzeptiert. Ein Konto mit Nur-Lese-Rechten reicht; diese Anmeldedaten laden nur.",
+          "usernameHint": "Was diese Registry für docker login akzeptiert.",
+          "tokenHint": "Das Token oder Passwort dieses Kontos. Nur-Lese-Zugriff reicht — das Panel lädt nur.",
+          "linkLabel": ""
+        }
       }
     }
   }

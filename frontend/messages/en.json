@@ -6443,7 +6443,7 @@
       "edit": "Edit",
       "remove": "Remove",
       "test": "Test connection",
-      "hint": "Stored credentials for pulling private images. A site chooses one when it is created, or later in its container settings. Leave a site's registry empty and it pulls anonymously, which is right for every public image.",
+      "hint": "Add a credential here, then choose it on a container site — on the create form, or later in the site's Container settings. Sites left on “None” pull anonymously, which is correct for every public image.",
       "empty": "No registry credentials are stored. Add one to run a private image.",
       "failed": "That did not work.",
       "created": "{name} was added.",
@@ -6451,7 +6451,6 @@
       "removed": "{name} was deleted.",
       "tested": "The registry was contacted.",
       "dockerHub": "Docker Hub",
-      "tokenHint": "An access token, not your account password. On Docker Hub: Account settings, then Personal access tokens, with read access.",
       "tokenHintEdit": "Leave empty to keep the stored token. Type a new one to replace it.",
       "usedBySites": "{count, plural, one {# site} other {# sites}}",
       "usedByNone": "No sites",
@@ -6459,7 +6458,8 @@
         "name": "Name",
         "registry": "Registry address",
         "username": "Username",
-        "token": "Access token"
+        "token": "Access token",
+        "provider": "Where is the image hosted?"
       },
       "placeholders": {
         "name": "GHCR",
@@ -6487,6 +6487,49 @@
         "title": "Delete {name}?",
         "body": "The credential is deleted from this server. No site is using it.",
         "bodyInUse": "{count, plural, one {# site is} other {# sites are}} set to pull with this credential. They are not deleted and keep running — but their next pull will be anonymous, and will fail if the image is private."
+      },
+      "emptyTitle": "No registry credentials yet",
+      "emptyBody": "You only need one to run a private image. Have your registry username and an access token ready — not your account password. Public images need nothing here.",
+      "registryHint": "The host on its own — no https://, no namespace, no repository. Add a port if yours uses one.",
+      "registryHintFixed": "Fixed for this provider. Docker stores credentials under this exact address, and any other spelling is ignored rather than rejected.",
+      "howTo": {
+        "title": "How to get this",
+        "step3": "Paste it below and press Test connection — the panel asks the registry straight away rather than leaving you to find out on your first deploy."
+      },
+      "temporaryToken": "This registry issues short-lived credentials — AWS ECR's last twelve hours. A token pasted here will authenticate now and start failing once it expires, because the panel does not refresh it. Use a registry with a long-lived token, or expect to update this by hand.",
+      "providers": {
+        "dockerhub": {
+          "label": "Docker Hub",
+          "step1": "In Docker Hub, open Account settings → Personal access tokens and create a token with Read access.",
+          "step2": "Your username is your Docker ID — the name in your profile URL, not your email address.",
+          "usernameHint": "Your Docker ID, not the email you sign in with.",
+          "tokenHint": "A personal access token with Read access. Your account password will not work if two-factor authentication is on.",
+          "linkLabel": "Open Docker Hub access tokens"
+        },
+        "ghcr": {
+          "label": "GitHub Container Registry",
+          "step1": "In GitHub, open Settings → Developer settings → Personal access tokens → Tokens (classic) and create one with the read:packages scope.",
+          "step2": "It must be a classic token. A fine-grained token cannot carry read:packages, so it is refused even though it looks valid.",
+          "usernameHint": "Your GitHub username.",
+          "tokenHint": "A classic personal access token with read:packages. Fine-grained tokens do not work here.",
+          "linkLabel": "Open GitHub personal access tokens"
+        },
+        "gitlab": {
+          "label": "GitLab Container Registry",
+          "step1": "In your GitLab project, open Settings → Repository → Deploy tokens and create one with the read_registry scope.",
+          "step2": "The username is the deploy token's own username, which GitLab shows you once when the token is created — not your GitLab account name.",
+          "usernameHint": "The deploy token's username, not your GitLab account.",
+          "tokenHint": "A project or group deploy token with read_registry. A personal access token also works, with the same scope.",
+          "linkLabel": "Read GitLab's deploy token guide"
+        },
+        "other": {
+          "label": "Other or self-hosted registry",
+          "step1": "Enter the registry's host, with a port if it uses one — for example registry.example.com:5000.",
+          "step2": "Use whatever username and token or password that registry accepts for a docker login. A read-only account is enough; this credential only pulls.",
+          "usernameHint": "Whatever this registry accepts for docker login.",
+          "tokenHint": "The token or password for that account. Read-only access is enough — the panel only pulls.",
+          "linkLabel": ""
+        }
       }
     }
   }

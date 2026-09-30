@@ -6443,7 +6443,7 @@
       "edit": "編集",
       "remove": "解除",
       "test": "接続をテスト",
-      "hint": "非公開イメージを取得するために保存した認証情報です。サイトは作成時、または後からコンテナ設定で選びます。サイトのレジストリを空のままにすると匿名で取得し、公開イメージならそれが正しい設定です。",
+      "hint": "ここに認証情報を追加し、コンテナサイトで選びます — 作成フォーム、または後からサイトのコンテナ設定で。「なし」のままのサイトは匿名で取得し、公開イメージならそれが正しい設定です。",
       "empty": "レジストリ認証情報は保存されていません。非公開イメージを動かすには追加してください。",
       "failed": "うまくいきませんでした。",
       "created": "{name} を追加しました。",
@@ -6451,7 +6451,6 @@
       "removed": "{name} を削除しました。",
       "tested": "レジストリに接続しました。",
       "dockerHub": "Docker Hub",
-      "tokenHint": "アカウントのパスワードではなく、アクセストークンです。Docker Hub では アカウント設定 から Personal access tokens で、読み取り権限のものを作成します。",
       "tokenHintEdit": "保存済みのトークンを保持するには空のままにしてください。置き換えるには新しいものを入力します。",
       "usedBySites": "{count, plural, other {# 件のサイト}}",
       "usedByNone": "サイトなし",
@@ -6459,7 +6458,8 @@
         "name": "名前",
         "registry": "レジストリのアドレス",
         "username": "ユーザー名",
-        "token": "アクセストークン"
+        "token": "アクセストークン",
+        "provider": "イメージはどこにありますか？"
       },
       "placeholders": {
         "name": "GHCR",
@@ -6487,6 +6487,49 @@
         "title": "{name} を削除しますか?",
         "body": "この認証情報をサーバーから削除します。使用しているサイトはありません。",
         "bodyInUse": "{count, plural, other {# 件のサイト}}がこの認証情報で取得する設定になっています。サイトは削除されず動き続けますが、次回の取得は匿名になり、イメージが非公開なら失敗します。"
+      },
+      "emptyTitle": "レジストリ認証情報はまだありません",
+      "emptyBody": "非公開イメージを動かすときだけ必要です。レジストリのユーザー名とアクセストークンを用意してください — アカウントのパスワードではありません。公開イメージにはここでの設定は不要です。",
+      "registryHint": "ホストだけ — https:// も名前空間もリポジトリも含めません。ポートを使う場合は付けてください。",
+      "registryHintFixed": "このプロバイダーでは固定です。Docker はこの正確なアドレスで認証情報を保存し、別の書き方は拒否されるのではなく無視されます。",
+      "howTo": {
+        "title": "取得方法",
+        "step3": "下に貼り付けて「接続をテスト」を押してください。パネルがその場でレジストリに問い合わせるので、最初のデプロイで気づくことにはなりません。"
+      },
+      "temporaryToken": "このレジストリは短命の認証情報を発行します — AWS ECR のものは 12 時間です。ここに貼ったトークンは今は通り、期限切れ後は失敗し始めます。パネルは更新しません。長期間有効なトークンを使えるレジストリを選ぶか、手動で更新する前提で運用してください。",
+      "providers": {
+        "dockerhub": {
+          "label": "Docker Hub",
+          "step1": "Docker Hub で アカウント設定 → Personal access tokens を開き、Read 権限のトークンを作成します。",
+          "step2": "ユーザー名は Docker ID です — プロフィール URL に含まれる名前で、メールアドレスではありません。",
+          "usernameHint": "サインインに使うメールではなく、Docker ID です。",
+          "tokenHint": "Read 権限のパーソナルアクセストークン。二要素認証が有効な場合、アカウントのパスワードでは通りません。",
+          "linkLabel": "Docker Hub のアクセストークンを開く"
+        },
+        "ghcr": {
+          "label": "GitHub Container Registry",
+          "step1": "GitHub で Settings → Developer settings → Personal access tokens → Tokens (classic) を開き、read:packages スコープ付きで作成します。",
+          "step2": "classic トークンである必要があります。fine-grained トークンは read:packages を持てないため、正しく見えても拒否されます。",
+          "usernameHint": "GitHub のユーザー名。",
+          "tokenHint": "read:packages を持つ classic パーソナルアクセストークン。fine-grained トークンはここでは使えません。",
+          "linkLabel": "GitHub のパーソナルアクセストークンを開く"
+        },
+        "gitlab": {
+          "label": "GitLab Container Registry",
+          "step1": "GitLab のプロジェクトで Settings → Repository → Deploy tokens を開き、read_registry スコープ付きで作成します。",
+          "step2": "ユーザー名はデプロイトークン自身のもので、作成時に一度だけ GitLab が表示します — あなたのアカウント名ではありません。",
+          "usernameHint": "GitLab アカウントではなく、デプロイトークンのユーザー名。",
+          "tokenHint": "read_registry を持つプロジェクトまたはグループのデプロイトークン。同じスコープのパーソナルアクセストークンでも動きます。",
+          "linkLabel": "GitLab のデプロイトークンのガイドを読む"
+        },
+        "other": {
+          "label": "その他・自己ホストのレジストリ",
+          "step1": "レジストリのホストを入力します。ポートを使う場合は付けてください — 例: registry.example.com:5000。",
+          "step2": "そのレジストリが docker login で受け付けるユーザー名とトークン（またはパスワード）を使います。読み取り専用アカウントで十分です。この認証情報は取得にしか使いません。",
+          "usernameHint": "そのレジストリが docker login で受け付けるもの。",
+          "tokenHint": "そのアカウントのトークンまたはパスワード。読み取り専用で十分です — パネルは取得のみ行います。",
+          "linkLabel": ""
+        }
       }
     }
   }

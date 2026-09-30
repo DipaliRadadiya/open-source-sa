@@ -167,7 +167,7 @@ return [
     'help' => [
         'compose' => 'Optional. Paste your own compose file and everything Compose supports is supported — multiple services, named volumes, healthchecks. Leave it empty and the panel writes one from the fields above. Ports must publish to 127.0.0.1 and bind mounts must stay inside this application\'s directory; anything else is refused with the reason.',
         'image' => 'The image to run, with an explicit tag — `nginx:1.27-alpine`. A bare name pulls `latest`, which makes a deploy unreproducible and a rollback meaningless.',
-        'registry_id' => 'Leave this empty for a public image. Choose a stored credential to pull from a private registry — add one on the Docker page first. It applies to a pasted compose file too, since any image it names can be private.',
+        'registry_id' => 'Leave this empty for a public image — that is the normal case. To run a private one, add a credential on the Docker page under Registry credentials, then choose it here. It applies to a pasted compose file too, since any image it names can be private.',
         'container_port' => 'The port your application listens on inside the container. The panel allocates the port on the server itself and points nginx at it.',
         'docker_network' => 'Join a Docker network so this container and others on it can reach each other by name. Leave empty for Docker\'s default bridge, where they cannot. Create networks on the Docker page.',
         'docker_mode' => 'Simple gives you an image and a port and the panel writes the compose file. Compose file is for anything else — you write it, and the panel still enforces loopback publishing, a memory ceiling and bounded logs.',

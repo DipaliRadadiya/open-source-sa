@@ -6443,7 +6443,7 @@
       "edit": "Modifier",
       "remove": "Retirer",
       "test": "Tester la connexion",
-      "hint": "Identifiants enregistrés pour récupérer des images privées. Un site en choisit un à sa création, ou plus tard dans ses réglages de conteneur. Laissez le registre d’un site vide et il récupère l’image de façon anonyme, ce qui convient à toute image publique.",
+      "hint": "Ajoutez un identifiant ici, puis choisissez-le sur un site conteneur — au moment de la création, ou plus tard dans les réglages Conteneur du site. Les sites laissés sur « Aucun » récupèrent l’image de façon anonyme, ce qui est correct pour toute image publique.",
       "empty": "Aucun identifiant de registre n’est enregistré. Ajoutez-en un pour exécuter une image privée.",
       "failed": "Cela n’a pas fonctionné.",
       "created": "{name} a été ajouté.",
@@ -6451,7 +6451,6 @@
       "removed": "{name} a été supprimé.",
       "tested": "Le registre a été contacté.",
       "dockerHub": "Docker Hub",
-      "tokenHint": "Un jeton d’accès, pas le mot de passe de votre compte. Sur Docker Hub : Paramètres du compte, puis Jetons d’accès personnels, en lecture.",
       "tokenHintEdit": "Laissez vide pour conserver le jeton enregistré. Saisissez-en un nouveau pour le remplacer.",
       "usedBySites": "{count, plural, one {# site} other {# sites}}",
       "usedByNone": "Aucun site",
@@ -6459,7 +6458,8 @@
         "name": "Nom",
         "registry": "Adresse du registre",
         "username": "Nom d'utilisateur",
-        "token": "Jeton d’accès"
+        "token": "Jeton d’accès",
+        "provider": "Où l’image est-elle hébergée ?"
       },
       "placeholders": {
         "name": "GHCR",
@@ -6487,6 +6487,49 @@
         "title": "Supprimer {name} ?",
         "body": "L’identifiant est supprimé de ce serveur. Aucun site ne l’utilise.",
         "bodyInUse": "{count, plural, one {# site est} other {# sites sont}} configuré(s) pour récupérer les images avec cet identifiant. Ils ne sont pas supprimés et continuent de fonctionner, mais leur prochaine récupération sera anonyme et échouera si l’image est privée."
+      },
+      "emptyTitle": "Aucun identifiant de registre",
+      "emptyBody": "Vous n’en avez besoin que pour exécuter une image privée. Préparez votre nom d’utilisateur de registre et un jeton d’accès — pas le mot de passe de votre compte. Les images publiques ne nécessitent rien ici.",
+      "registryHint": "L’hôte seul — pas de https://, pas d’espace de noms, pas de dépôt. Ajoutez un port si le vôtre en utilise un.",
+      "registryHintFixed": "Fixe pour ce fournisseur. Docker enregistre les identifiants sous cette adresse exacte ; toute autre écriture est ignorée plutôt que refusée.",
+      "howTo": {
+        "title": "Comment l’obtenir",
+        "step3": "Collez-le ci-dessous et appuyez sur Tester la connexion — le panneau interroge le registre immédiatement, au lieu de vous laisser le découvrir au premier déploiement."
+      },
+      "temporaryToken": "Ce registre délivre des identifiants de courte durée — ceux d’AWS ECR durent douze heures. Un jeton collé ici fonctionnera maintenant puis échouera à son expiration, car le panneau ne le renouvelle pas. Utilisez un registre avec un jeton de longue durée, ou prévoyez de le mettre à jour à la main.",
+      "providers": {
+        "dockerhub": {
+          "label": "Docker Hub",
+          "step1": "Dans Docker Hub, ouvrez Paramètres du compte → Jetons d’accès personnels et créez un jeton avec l’accès Read.",
+          "step2": "Votre nom d’utilisateur est votre Docker ID — le nom dans l’URL de votre profil, pas votre adresse e-mail.",
+          "usernameHint": "Votre Docker ID, pas l’e-mail de connexion.",
+          "tokenHint": "Un jeton d’accès personnel avec l’accès Read. Le mot de passe du compte ne fonctionnera pas si l’authentification à deux facteurs est active.",
+          "linkLabel": "Ouvrir les jetons d’accès Docker Hub"
+        },
+        "ghcr": {
+          "label": "GitHub Container Registry",
+          "step1": "Dans GitHub, ouvrez Settings → Developer settings → Personal access tokens → Tokens (classic) et créez-en un avec la portée read:packages.",
+          "step2": "Ce doit être un jeton « classic ». Un jeton fine-grained ne peut pas porter read:packages : il est donc refusé même s’il paraît valide.",
+          "usernameHint": "Votre nom d’utilisateur GitHub.",
+          "tokenHint": "Un jeton d’accès personnel classique avec read:packages. Les jetons fine-grained ne fonctionnent pas ici.",
+          "linkLabel": "Ouvrir les jetons d’accès personnels GitHub"
+        },
+        "gitlab": {
+          "label": "GitLab Container Registry",
+          "step1": "Dans votre projet GitLab, ouvrez Settings → Repository → Deploy tokens et créez-en un avec la portée read_registry.",
+          "step2": "Le nom d’utilisateur est celui du jeton de déploiement, que GitLab n’affiche qu’une fois à sa création — pas le nom de votre compte GitLab.",
+          "usernameHint": "Le nom d’utilisateur du jeton de déploiement, pas votre compte GitLab.",
+          "tokenHint": "Un jeton de déploiement de projet ou de groupe avec read_registry. Un jeton d’accès personnel convient aussi, avec la même portée.",
+          "linkLabel": "Lire le guide GitLab sur les jetons de déploiement"
+        },
+        "other": {
+          "label": "Autre registre ou registre auto-hébergé",
+          "step1": "Saisissez l’hôte du registre, avec un port s’il en utilise un — par exemple registry.example.com:5000.",
+          "step2": "Utilisez le nom d’utilisateur et le jeton ou mot de passe que ce registre accepte pour un docker login. Un compte en lecture seule suffit : cet identifiant ne fait que récupérer des images.",
+          "usernameHint": "Ce que ce registre accepte pour docker login.",
+          "tokenHint": "Le jeton ou mot de passe de ce compte. Un accès en lecture seule suffit — le panneau ne fait que récupérer.",
+          "linkLabel": ""
+        }
       }
     }
   }
