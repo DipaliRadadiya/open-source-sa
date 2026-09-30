@@ -649,14 +649,24 @@ it('tells BookStack its url, which it refuses to start without', function () {
         ->and($environment['DB_HOST'])->toBe('db');
 });
 
-it('pins both images to a line rather than to latest', function () {
-    // `latest` moves a running site onto a new major the day upstream tags one,
-    // and because the rendered compose is stored per site that only ever reaches
-    // NEW sites — so the old ones silently diverge from the card's promise.
-    foreach (['grafana', 'bookstack'] as $app) {
+it('gives every Docker app an explicitly tagged image', function () {
+    // An untagged reference is `latest` by omission, which is the one form nobody
+    // reading the config would notice.
+    //
+    // NOT asserting "never `latest`", which is what this test said first and was
+    // wrong about: Metabase, NocoDB and BookStack all use it deliberately, because
+    // upstream publishes only immutable exact versions and `latest`. There is no
+    // line to track, and an exact pin stops being noticed while every new site
+    // gets an old release.
+    //
+    // What this cannot check is that the tag EXISTS — that needs the registry, and
+    // the one time it was skipped a bare `26.09` was invented from BookStack's
+    // version pattern and the install died at `docker pull`.
+    foreach (array_keys((array) config('server.docker_apps')) as $app) {
         $image = (string) config("server.docker_apps.{$app}.image");
 
-        expect($image)->not->toEndWith(':latest')
-            ->and($image)->toContain(':');
+        expect($image)->not->toBe('')
+            ->and(str_contains($image, ':'))
+            ->toBeTrue("{$app} has no explicit tag");
     }
 });

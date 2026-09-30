@@ -1684,11 +1684,21 @@ return [
         ],
 
         'bookstack' => [
-            // BookStack versions by year.month and publishes no major line, so
-            // `26.09` is the closest thing to a patch-tracking tag — the same
-            // trade as `5-alpine` for Ghost. `latest` would carry a running site
-            // across feature releases.
-            'image' => env('DOCKER_APP_BOOKSTACK_IMAGE', 'lscr.io/linuxserver/bookstack:26.09'),
+            // `latest`, like Metabase and NocoDB above, and for the same reason
+            // they have it: linuxserver publishes only immutable
+            // `version-vX.Y.Z` tags and `latest` — there is no minor line to
+            // track. An exact pin here would stop being noticed and every site
+            // created afterwards would get an old release, which is the failure
+            // this list's comment warns about. A running site is unaffected
+            // either way: its compose file is stored, so a moving tag reaches
+            // only NEW sites.
+            //
+            // `26.09` was here first and does not exist. The repository was
+            // verified alive and the tag was then assumed from the version
+            // pattern — `26.09.1` and `26.09.20260929` are real, a bare `26.09`
+            // is not, and the install failed at `docker pull`. Check the tag,
+            // not just the repository.
+            'image' => env('DOCKER_APP_BOOKSTACK_IMAGE', 'lscr.io/linuxserver/bookstack:latest'),
             // 11.4 is the current MariaDB LTS, supported to 2029 and comfortably
             // above BookStack's 10.6 floor. Matomo pins 10.11 because Matomo's own
             // documentation does; there is no such constraint here.
