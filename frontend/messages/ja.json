@@ -67,7 +67,8 @@
     "permissionDenied": {
       "title": "{feature} にアクセスする権限がありません",
       "description": "このロールにはこれを表示する権限が含まれていません。管理者に権限の付与を依頼してください。"
-    }
+    },
+    "serverNavigation": "サーバーメニュー"
   },
   "systemUsers": {
     "title": "システムユーザー",
@@ -320,7 +321,8 @@
       "errors": "エラーログを表示",
       "users": "ユーザーを管理",
       "central": "Central を設定"
-    }
+    },
+    "navigationLabel": "管理メニュー"
   },
   "users": {
     "title": "ユーザー",
@@ -644,7 +646,8 @@
     "total": "合計 {total} 件",
     "pageAria": "{page} ページへ移動",
     "prev": "前へ",
-    "next": "次へ"
+    "next": "次へ",
+    "label": "ページ"
   },
   "auth": {
     "loginTitle": "ログイン",

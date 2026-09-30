@@ -130,7 +130,7 @@ export function AppSidebar({ items }) {
   const activeItem = findActiveNavItem(visible, pathname);
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" label={t("serverNavigation")}>
       <SidebarHeader className="h-16 justify-center border-b px-3">
         <Link
           href="/dashboard"
@@ -233,7 +233,7 @@ export function AppSidebar({ items }) {
         {groups.map((group) => (
           <SidebarGroup key={group.key} className="py-1">
             {group.key && (
-              <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+              <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 {group.title}
               </SidebarGroupLabel>
             )}

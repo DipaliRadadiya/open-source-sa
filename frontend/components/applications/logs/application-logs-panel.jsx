@@ -10,7 +10,7 @@ import {
 } from "@/lib/api/application-logs";
 import { LINE_OPTIONS } from "@/lib/schemas/log";
 import { matchesSeverity } from "@/lib/logs/severity";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { LogToolbar } from "@/components/logs/log-toolbar";
 import { LogViewer } from "@/components/logs/log-viewer";
@@ -369,6 +369,10 @@ export function ApplicationLogsPanel({
         </TabsList>
       </ScrollFade>
 
+      {/* The panel the source tabs control: without it every tab's
+          aria-controls pointed at nothing. Its own text size and flex are
+          reset so the console below looks exactly as it did. */}
+      <TabsContent value={current ?? ""} className="flex-none text-[length:inherit]">
       <section className="flex h-[calc(100svh-16rem)] min-h-[34rem] flex-col overflow-hidden rounded-xl border bg-card shadow-sm lg:min-h-[24rem]">
         <LogToolbar
           label={source?.label ?? t("noSource")}
@@ -448,6 +452,7 @@ export function ApplicationLogsPanel({
           onCopyLine={(text) => copy(text, t("copiedLine"))}
         />
       </section>
+      </TabsContent>
 
       {/* Names the log, because "Clear log?" beside a tab strip is ambiguous
           about which one — and this cannot be undone. `destructive` for the

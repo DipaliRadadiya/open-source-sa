@@ -12,6 +12,7 @@ import { useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/data-table/empty-state";
 import { SearchInput } from "@/components/data-table/search-input";
 import { ClearFiltersButton } from "@/components/data-table/clear-filters-button";
+import { engineLogo } from "@/lib/databases/engine-logo";
 import { EngineLogo } from "@/components/databases/engine-logo";
 import { FilterX } from "lucide-react";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
@@ -55,7 +56,13 @@ function EngineCell({ row, table }) {
           sortable and searchable on it, and because an engine we have no
           artwork for — PostgreSQL — would otherwise be a bare glyph. */}
       <EngineLogo engine={row.original.engine} />
-      <span className="sr-only">{name}</span>
+      {/* PostgreSQL's logo is the elephant alone: without the printed name
+          its rows were the only ones that never said which engine. */}
+      {engineLogo(row.original.engine)?.wordmark ? (
+        <span className="sr-only">{name}</span>
+      ) : (
+        <span className="text-xs font-medium text-foreground">{name}</span>
+      )}
     </span>
   );
 }

@@ -67,7 +67,8 @@
     "permissionDenied": {
       "title": "Vous n'avez pas accès à {feature}",
       "description": "Votre rôle n'inclut pas l'autorisation de voir ceci. Demandez-la à un administrateur."
-    }
+    },
+    "serverNavigation": "Menu du serveur"
   },
   "systemUsers": {
     "title": "Utilisateurs système",
@@ -320,7 +321,8 @@
       "errors": "Voir le journal d'erreurs",
       "users": "Gérer les utilisateurs",
       "central": "Configurer Central"
-    }
+    },
+    "navigationLabel": "Menu d'administration"
   },
   "users": {
     "title": "Utilisateurs",
@@ -644,7 +646,8 @@
     "total": "{total} au total",
     "pageAria": "Aller à la page {page}",
     "prev": "Précédent",
-    "next": "Suivant"
+    "next": "Suivant",
+    "label": "Pages"
   },
   "auth": {
     "loginTitle": "Se connecter",

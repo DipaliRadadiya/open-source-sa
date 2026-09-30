@@ -67,7 +67,8 @@
     "permissionDenied": {
       "title": "No tienes acceso a {feature}",
       "description": "Tu rol no incluye permiso para ver esto. Pide a un administrador que te lo conceda."
-    }
+    },
+    "serverNavigation": "Menú del servidor"
   },
   "auth": {
     "loginTitle": "Iniciar sesión",
@@ -371,7 +372,8 @@
       "errors": "Ver registro de errores",
       "users": "Gestionar usuarios",
       "central": "Configurar Central"
-    }
+    },
+    "navigationLabel": "Menú de administración"
   },
   "activity": {
     "title": "Registro de actividad",
@@ -419,7 +421,8 @@
     "total": "{total} en total",
     "pageAria": "Ir a la página {page}",
     "prev": "Anterior",
-    "next": "Siguiente"
+    "next": "Siguiente",
+    "label": "Páginas"
   },
   "impersonation": {
     "banner": {

@@ -102,7 +102,8 @@
     --accent: oklch(0.962 0.018 260);
     --accent-foreground: oklch(0.32 0.09 260);
     --destructive: oklch(0.577 0.245 27.325);
-    --success: oklch(0.62 0.16 150);
+    /* 0.52, like --warning: 0.62 read 3.0:1 on its own badge tint (WCAG AA needs 4.5). */
+    --success: oklch(0.52 0.14 150);
     /* Dark enough to read on its own tint. At 0.68 the amber badges and
        banners sat at 2.96:1 on a card and 2.56:1 on `bg-warning/15` — the
        colour was bright enough to read AS amber and not bright enough to read

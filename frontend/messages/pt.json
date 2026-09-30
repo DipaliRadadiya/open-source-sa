@@ -67,7 +67,8 @@
     "permissionDenied": {
       "title": "Você não tem acesso a {feature}",
       "description": "Sua função não inclui permissão para ver isto. Peça a um administrador para conceder."
-    }
+    },
+    "serverNavigation": "Menu do servidor"
   },
   "systemUsers": {
     "title": "Usuários do sistema",
@@ -320,7 +321,8 @@
       "errors": "Ver log de erros",
       "users": "Gerenciar usuários",
       "central": "Configurar Central"
-    }
+    },
+    "navigationLabel": "Menu de administração"
   },
   "users": {
     "title": "Usuários",
@@ -644,7 +646,8 @@
     "total": "{total} no total",
     "pageAria": "Ir para a página {page}",
     "prev": "Anterior",
-    "next": "Próximo"
+    "next": "Próximo",
+    "label": "Páginas"
   },
   "auth": {
     "loginTitle": "Entrar",

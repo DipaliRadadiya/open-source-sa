@@ -67,7 +67,8 @@
     "permissionDenied": {
       "title": "आपके पास {feature} तक पहुँच नहीं है",
       "description": "आपकी भूमिका में इसे देखने की अनुमति शामिल नहीं है। किसी प्रशासक से यह अनुमति माँगें।"
-    }
+    },
+    "serverNavigation": "सर्वर मेनू"
   },
   "auth": {
     "loginTitle": "साइन इन करें",
@@ -371,7 +372,8 @@
       "errors": "त्रुटि लॉग देखें",
       "users": "उपयोगकर्ता प्रबंधित करें",
       "central": "Central कॉन्फ़िगर करें"
-    }
+    },
+    "navigationLabel": "एडमिन मेनू"
   },
   "activity": {
     "title": "गतिविधि लॉग",
@@ -419,7 +421,8 @@
     "total": "कुल {total}",
     "pageAria": "पृष्ठ {page} पर जाएं",
     "prev": "पिछला",
-    "next": "अगला"
+    "next": "अगला",
+    "label": "पृष्ठ"
   },
   "impersonation": {
     "banner": {

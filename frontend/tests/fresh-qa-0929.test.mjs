@@ -503,3 +503,22 @@ test("Fail2ban ban rules refuse out-of-range numbers on the field, not with the 
   assert.match(src, /: maxretryError \|\| findtimeError;/);
   for (const l of locales) { const s = JSON.parse(read(`messages/${l}.json`)).fail2ban.settings; assert.ok(s.maxretryRange && s.findtimeRange, l); }
 });
+
+test("Page frame a11y: one main landmark, named navigation, readable group labels, named per-page and pager", () => {
+  const sidebar = read("components/ui/sidebar.jsx");
+  assert.match(sidebar, /return \(\s*<div\s+data-slot="sidebar-inset"/);
+  assert.match(sidebar, /role="navigation"\s+aria-label=\{label\}/);
+  assert.doesNotMatch(sidebar, /Displays the mobile sidebar/);
+  assert.match(read("components/sections/app-sidebar.jsx"), /<Sidebar collapsible="icon" label=\{t\("serverNavigation"\)\}>/);
+  assert.match(read("components/sections/admin-sidebar.jsx"), /<Sidebar collapsible="icon" label=\{t\("navigationLabel"\)\}>/);
+  for (const f of ["components/sections/app-sidebar.jsx", "components/sections/admin-sidebar.jsx"]) assert.doesNotMatch(read(f), /SidebarGroupLabel className="[^"]*text-muted-foreground\/70/, f);
+  assert.match(read("components/data-table/per-page-select.jsx"), /aria-labelledby=\{labelId\}/);
+  assert.match(read("components/data-table/pager.jsx"), /<nav aria-label=\{t\("label"\)\}/);
+  assert.match(read("components/databases/databases-table.jsx"), /engineLogo\(row\.original\.engine\)\?\.wordmark \?/);
+  assert.match(read("components/dashboard/process-table.jsx"), /@container\/procs/);
+  for (const l of locales) { const m = JSON.parse(read(`messages/${l}.json`)); assert.ok(m.common.serverNavigation && m.admin.navigationLabel && m.pagination.label, l); }
+});
+
+test("Success green is dark enough to read on its own tint (Krishna OK, 30 Sep)", () => {
+  assert.match(read("app/globals.css"), /--success: oklch\(0\.52 0\.14 150\);/);
+});

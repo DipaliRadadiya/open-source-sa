@@ -67,7 +67,8 @@
     "permissionDenied": {
       "title": "You don't have access to {feature}",
       "description": "Your role doesn't include permission to view this. Ask an administrator to grant it."
-    }
+    },
+    "serverNavigation": "Server menu"
   },
   "systemUsers": {
     "title": "System Users",
@@ -320,7 +321,8 @@
       "errors": "View error log",
       "users": "Manage users",
       "central": "Configure Central"
-    }
+    },
+    "navigationLabel": "Admin menu"
   },
   "users": {
     "title": "Users",
@@ -644,7 +646,8 @@
     "total": "{total} total",
     "pageAria": "Go to page {page}",
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "label": "Pages"
   },
   "auth": {
     "loginTitle": "Sign in",

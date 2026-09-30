@@ -29,7 +29,7 @@ export function AdminSidebar() {
   const iconOnly = state === "collapsed" && !isMobile;
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" label={t("navigationLabel")}>
       <SidebarHeader className="h-16 justify-center border-b px-3">
         <Link href="/admin" className="flex items-center">
           {iconOnly ? (
@@ -41,7 +41,7 @@ export function AdminSidebar() {
       </SidebarHeader>
       <SidebarContent className="gap-0 py-2">
         <SidebarGroup className="py-1">
-          <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+          <SidebarGroupLabel className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             {t("breadcrumbRoot")}
           </SidebarGroupLabel>
           <SidebarMenu className="gap-1.5">

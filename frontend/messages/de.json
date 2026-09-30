@@ -67,7 +67,8 @@
     "permissionDenied": {
       "title": "Sie haben keinen Zugriff auf {feature}",
       "description": "Ihre Rolle enthält keine Berechtigung, dies anzusehen. Bitten Sie einen Administrator darum."
-    }
+    },
+    "serverNavigation": "Server-Menü"
   },
   "systemUsers": {
     "title": "Systembenutzer",
@@ -320,7 +321,8 @@
       "errors": "Fehlerprotokoll ansehen",
       "users": "Benutzer verwalten",
       "central": "Central konfigurieren"
-    }
+    },
+    "navigationLabel": "Admin-Menü"
   },
   "users": {
     "title": "Benutzer",
@@ -644,7 +646,8 @@
     "total": "{total} gesamt",
     "pageAria": "Zu Seite {page} gehen",
     "prev": "Zurück",
-    "next": "Weiter"
+    "next": "Weiter",
+    "label": "Seiten"
   },
   "auth": {
     "loginTitle": "Anmelden",

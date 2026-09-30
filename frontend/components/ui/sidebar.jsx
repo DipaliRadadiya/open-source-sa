@@ -13,7 +13,6 @@ import { Separator } from "@/components/ui/separator"
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
@@ -135,6 +134,9 @@ function Sidebar({
   className,
   children,
   dir,
+  // The translated name of this navigation, for screen readers: the desktop
+  // rail is announced as a navigation landmark, the phone drawer as a dialog.
+  label,
   ...props
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
@@ -179,10 +181,10 @@ function Sidebar({
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE
             }
           }
-          side={side}>
+          side={side}
+          aria-describedby={undefined}>
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>{label}</SheetTitle>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -192,6 +194,8 @@ function Sidebar({
 
   return (
     <div
+      role="navigation"
+      aria-label={label}
       className="group peer hidden text-sidebar-foreground md:block"
       data-state={state}
       data-collapsible={state === "collapsed" && !peeking ? collapsible : ""}
@@ -320,8 +324,10 @@ function SidebarInset({
   className,
   ...props
 }) {
+  // A div: each layout puts its own <main id="main-content"> inside, and two
+  // nested main landmarks leave a screen reader with no single "main".
   return (
-    <main
+    <div
       data-slot="sidebar-inset"
       className={cn(
         "relative flex w-full flex-1 flex-col bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
