@@ -147,9 +147,8 @@ export function TrashPanel({
                     this and the per-batch one — competed for the eye, and the
                     one you want most of the time is Restore. */}
                 <Button
-                  variant="outline"
+                  variant="destructive"
                   size="sm"
-                  className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                   disabled={!canManage}
                   onClick={() => setConfirming({ batch: null })}
                 >

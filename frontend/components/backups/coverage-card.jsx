@@ -167,6 +167,7 @@ export function CoverageCard({
             still leads the page — it just stops shouting over the table it is
             meant to introduce. */}
         <div
+          data-slot="notice"
           className={`flex flex-col items-start gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:gap-4 ${
             allCovered ? "border-success/30 bg-success/5" : "border-warning/30 bg-warning/5"
           }`}

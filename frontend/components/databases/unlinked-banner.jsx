@@ -26,7 +26,7 @@ export async function UnlinkedBanner({ count = 0, filtered = false }) {
   if (count < 1 || filtered) return null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <div data-slot="notice" className="flex flex-col gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex items-start gap-2.5">
         <DatabaseZap className="mt-0.5 size-4 shrink-0 text-warning" />
         <div className="space-y-0.5">

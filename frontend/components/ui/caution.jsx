@@ -48,6 +48,7 @@ export function Caution({
     // second paragraph, and a <p> wrapping those is invalid. Same call, same
     // reason, as `ui/note.jsx`.
     <div
+      data-slot="caution"
       className={cn(
         "flex rounded-lg border",
         // With an action the row centres (one line of text beside a button)

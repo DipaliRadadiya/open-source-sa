@@ -7,12 +7,15 @@ import { Slot } from "radix-ui"
 import { ReasonTooltip, useDisabledReason } from "@/components/ui/reason-tooltip";
 import { cn } from "@/lib/utils"
 
-// A light brand tint with brand text (Krishna, 30 Sep): white or grey with a
-// border looked exactly like the white outlined cards and the grey badges
-// around it, so nothing said "this is clickable". The text is mixed towards the
-// foreground so it clears 4.5:1 on its own tint whatever the brand colour is.
-const TINT =
-  "bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] dark:bg-primary/15 dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] dark:hover:bg-primary/25 dark:aria-expanded:bg-primary/25";
+// A light brand tint with brand text, only for buttons inside a box — a card
+// or list card (anything on `bg-card`), a Caution, or a notice marked
+// `data-slot="notice"` — where a white or grey outline button looked like the
+// cards and grey badges around it (Krishna, 30 Sep). Dialog buttons (dialogs
+// are `bg-popover`), page toolbars, filters and the header stay neutral.
+// Written out per scope because Tailwind only generates classes it finds
+// literally in the source.
+const TINT_IN_CARDS =
+  "in-[.bg-card]:border-transparent in-[.bg-card]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-[.bg-card]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-[.bg-card]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-[.bg-card]:dark:bg-primary/15 in-[.bg-card]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-[.bg-card]:dark:hover:bg-primary/25 in-[.bg-card]:dark:aria-expanded:bg-primary/25 in-data-[slot=caution]:border-transparent in-data-[slot=caution]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-data-[slot=caution]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-data-[slot=caution]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=caution]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=caution]:dark:bg-primary/15 in-data-[slot=caution]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-data-[slot=caution]:dark:hover:bg-primary/25 in-data-[slot=caution]:dark:aria-expanded:bg-primary/25 in-data-[slot=notice]:border-transparent in-data-[slot=notice]:bg-[color-mix(in_oklch,var(--primary)_9%,var(--background))] in-data-[slot=notice]:text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))] in-data-[slot=notice]:hover:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=notice]:aria-expanded:bg-[color-mix(in_oklch,var(--primary)_16%,var(--background))] in-data-[slot=notice]:dark:bg-primary/15 in-data-[slot=notice]:dark:text-[color-mix(in_oklch,var(--primary)_70%,white)] in-data-[slot=notice]:dark:hover:bg-primary/25 in-data-[slot=notice]:dark:aria-expanded:bg-primary/25";
 
 // Icon-only buttons (Refresh, pager, copy, reveal) stay neutral: a row of blue
 // squares beside every table reads as noise, not as actions (Krishna, 30 Sep).
@@ -44,8 +47,8 @@ const buttonVariants = cva(
          * for the same thing — "a button that is not the primary action" — and
          * that is one decision, not 240.
          */
-        // Colour comes from compoundVariants below: tinted with text, neutral
-        // when icon-only.
+        // Colour comes from compoundVariants below: neutral, tinted only when a
+        // labelled button sits inside a card or notice.
         outline: "",
         // The same neutral look for header chrome that has a label (the
         // language switcher), which sits beside icon-only controls.
@@ -86,7 +89,7 @@ const buttonVariants = cva(
       },
     },
     compoundVariants: [
-      { variant: "outline", size: ["default", "xs", "sm", "lg"], className: TINT },
+      { variant: "outline", size: ["default", "xs", "sm", "lg"], className: `${NEUTRAL} ${TINT_IN_CARDS}` },
       { variant: "outline", size: ["icon", "icon-xs", "icon-sm", "icon-lg"], className: NEUTRAL },
     ],
     defaultVariants: {

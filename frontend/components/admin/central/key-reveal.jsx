@@ -20,7 +20,7 @@ export function KeyReveal({ token, onDone }) {
   const t = useTranslations("central");
 
   return (
-    <div className="space-y-4 rounded-xl border border-warning/40 bg-warning/5 p-4">
+    <div data-slot="notice" className="space-y-4 rounded-xl border border-warning/40 bg-warning/5 p-4">
       <div className="flex items-start gap-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
           <KeyRound className="size-5" aria-hidden />

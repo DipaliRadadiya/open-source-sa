@@ -30,9 +30,8 @@ export function DeleteDatabaseCard({ database, application = null, canManage }) 
 
         <ReasonTooltip reason={canManage ? null : t("noPermission")}>
           <Button
-            variant="outline"
+            variant="destructive"
             disabled={!canManage}
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => setOpen(true)}
           >
             <Trash2 className="size-4" />

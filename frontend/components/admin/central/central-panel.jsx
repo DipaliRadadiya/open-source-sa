@@ -143,9 +143,8 @@ export function CentralPanel({ status }) {
                 {t("actions.regenerate")}
               </Button>
               <Button
-                variant="outline"
+                variant="destructive"
                 size="sm"
-                className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 disabled={pending !== null}
                 onClick={() => setConfirming("disconnect")}
               >

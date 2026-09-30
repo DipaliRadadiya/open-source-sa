@@ -37,7 +37,8 @@ export function DestinationHealth({ destinations, inUse }) {
       // Stacks below `sm`. As a wrapping row the text column carried
       // `flex-1 min-w-0`, so it shrank to nothing rather than wrapping the
       // BUTTON — one word per line beside a button that never moved.
-      className={`flex flex-col items-start gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:gap-4 ${
+      data-slot="notice"
+          className={`flex flex-col items-start gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:gap-4 ${
         broken ? "border-destructive/30 bg-destructive/5" : "border-warning/30 bg-warning/5"
       }`}
     >

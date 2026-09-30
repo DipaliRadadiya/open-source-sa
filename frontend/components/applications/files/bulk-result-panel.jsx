@@ -24,6 +24,7 @@ export function BulkResultPanel({ result, onDismiss }) {
   return (
     <div
       role="status"
+      data-slot="notice"
       className="space-y-2 rounded-xl border border-warning/40 bg-warning/5 p-4"
     >
       <div className="flex items-start justify-between gap-3">
