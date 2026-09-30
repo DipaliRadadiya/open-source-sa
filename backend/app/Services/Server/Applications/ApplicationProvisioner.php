@@ -531,8 +531,11 @@ class ApplicationProvisioner
      * Files are only deleted when explicitly asked for — losing a user's code
      * must never be a side effect of removing a panel record.
      */
-    public function deprovision(Application $application, bool $removeFiles = false): void
-    {
+    public function deprovision(
+        Application $application,
+        bool $removeFiles = false,
+        bool $removeDockerVolumes = false,
+    ): void {
         // Off for good, whether the files go or stay: `rm -rf` cannot remove an
         // immutable directory, and files left to the user must be the user's
         // to tidy up — an immutable directory in their home that nothing
@@ -546,7 +549,14 @@ class ApplicationProvisioner
         $this->supervisor->remove($application);
 
         if ($application->serving_profile === 'docker') {
-            $this->containers->remove($application, $this->documentRoot($application));
+            // The volumes flag rides along here rather than being a second pass,
+            // because `compose down` is the only thing that knows which volumes a
+            // PASTED file declared — the panel never recorded those.
+            $this->containers->remove(
+                $application,
+                $this->documentRoot($application),
+                $removeDockerVolumes,
+            );
         }
 
         // Then everything else the panel wrote outside the site's own

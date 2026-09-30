@@ -57,6 +57,31 @@ function dockerStack(): void
     // permission tests read better saying which stack they assume.
 }
 
+/**
+ * Every command that ran, with the `sudo -n`/`env` wrapper stripped so assertions
+ * are about the real command rather than about ServerOps' prefixing.
+ *
+ * @param  list<list<string>>  $ran
+ */
+function recordCompose(array &$ran): void
+{
+    Process::fake(function ($process) use (&$ran) {
+        $args = $process->command;
+
+        while (in_array($args[0] ?? '', ['sudo', '-n', 'env'], true) || str_contains($args[0] ?? '', '=')) {
+            array_shift($args);
+        }
+
+        $ran[] = $args;
+
+        if (($args[0] ?? '') === 'docker' && in_array('ps', $args, true)) {
+            return Process::result(output: "abc123\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+}
+
 function composeHeaders(): array
 {
     return ['Authorization' => 'Bearer '.test()->admin->createToken('t')->plainTextToken];
@@ -566,4 +591,43 @@ it('keeps the credentials endpoint reachable on a one-click app', function () {
         ->getJson('/api/applications/'.$ghost->id.'/container/secrets')
         ->assertOk()
         ->assertJsonPath('secrets.GHOST_DB_PASSWORD', 'b');
+});
+
+/*
+ * Deleting a site whose compose file declared its own volumes.
+ *
+ * The panel records the volumes IT creates on `volume_mounts` and removes those
+ * itself, after checking no other site mounts them. A volume declared inside a
+ * pasted compose file was nobody's job: Compose created it, the panel never knew
+ * about it, and it outlived the site as an orphan named after a project that no
+ * longer existed.
+ *
+ * Measured on a real box before this was fixed — `sv-app-7_mfdata` survived a
+ * delete that explicitly asked for the site's Docker objects to go.
+ */
+
+it('passes --volumes to compose down when the delete opted in', function () {
+    $ran = [];
+    recordCompose($ran);
+
+    $this->withHeaders(composeHeaders())
+        ->deleteJson('/api/applications/'.$this->application->id, ['remove_docker_resources' => true]);
+
+    $down = collect($ran)->first(fn (array $args) => ($args[0] ?? '') === 'docker' && in_array('down', $args, true));
+
+    expect($down)->not->toBeNull()->and($down)->toContain('--volumes');
+});
+
+it('does not pass --volumes to a plain delete', function () {
+    // The default has to stay data-preserving: a delete that did not ask about
+    // Docker objects must not destroy the volume holding somebody's database.
+    $ran = [];
+    recordCompose($ran);
+
+    $this->withHeaders(composeHeaders())
+        ->deleteJson('/api/applications/'.$this->application->id);
+
+    $down = collect($ran)->first(fn (array $args) => ($args[0] ?? '') === 'docker' && in_array('down', $args, true));
+
+    expect($down)->not->toBeNull()->and($down)->not->toContain('--volumes');
 });

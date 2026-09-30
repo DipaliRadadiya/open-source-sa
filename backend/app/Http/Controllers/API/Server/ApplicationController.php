@@ -314,7 +314,14 @@ class ApplicationController extends Controller
             ? $dockerResources->plan($application)
             : null;
 
-        $deprovision->execute($application, $request->boolean('remove_files'));
+        // The Docker opt-in reaches `compose down` as `--volumes`. Without it a
+        // pasted compose file's own named volumes survive the delete they were
+        // explicitly included in — found on a real box, see ContainerSupervisor.
+        $deprovision->execute(
+            $application,
+            $request->boolean('remove_files'),
+            $request->boolean('remove_docker_resources'),
+        );
         $action->execute($application);
 
         if ($dockerPlan !== null) {

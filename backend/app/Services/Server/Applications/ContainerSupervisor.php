@@ -384,9 +384,28 @@ class ContainerSupervisor
      * database inside it; a container's volumes outliving it is recoverable,
      * and the reverse is not.
      */
-    public function remove(Application $application, string $documentRoot): void
+    public function remove(Application $application, string $documentRoot, bool $withVolumes = false): void
     {
-        $this->compose($application, $documentRoot, ['down', '--remove-orphans'], 'compose_down');
+        $arguments = ['down', '--remove-orphans'];
+
+        // `--volumes` only when the caller opted in, and it removes a different set
+        // from the panel's own cleanup — the two are complementary, not overlapping.
+        //
+        // The panel's volumes are declared `external: true` in the generated file,
+        // so `down --volumes` does not touch them; `DeleteApplicationDockerResources`
+        // removes those, and only after checking no other site mounts them.
+        // What compose declares in a PASTED file is the panel's blind spot: it never
+        // recorded those on `volume_mounts`, so nothing knew to remove them and they
+        // outlived the site as orphans named after a project that no longer exists.
+        //
+        // Measured on a real box: a Miniflux site pasted with its own `mfdata:`
+        // volume was deleted with "remove this site's Docker objects" ticked, and
+        // `sv-app-7_mfdata` was still there afterwards.
+        if ($withVolumes) {
+            $arguments[] = '--volumes';
+        }
+
+        $this->compose($application, $documentRoot, $arguments, 'compose_down');
     }
 
     /**
