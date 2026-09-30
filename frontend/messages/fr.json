@@ -3116,7 +3116,8 @@
     "restartForRemote": {
       "title": "Redémarrer le serveur de bases de données ?",
       "cancel": "Annuler",
-      "confirm": "Redémarrer et continuer"
+      "confirm": "Redémarrer et continuer",
+      "description": "Le serveur de bases de données doit redémarrer pour accepter des connexions depuis d'autres adresses. Les applications qui l'utilisent perdent leur connexion un instant."
     }
   },
   "git": {

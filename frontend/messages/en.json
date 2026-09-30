@@ -3116,7 +3116,8 @@
     "restartForRemote": {
       "title": "Restart the database server?",
       "cancel": "Cancel",
-      "confirm": "Restart and continue"
+      "confirm": "Restart and continue",
+      "description": "The database server has to restart to accept connections from other addresses. Applications using it lose their connection for a moment."
     }
   },
   "git": {

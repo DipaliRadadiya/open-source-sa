@@ -3116,7 +3116,8 @@
     "restartForRemote": {
       "title": "Reiniciar o servidor de banco de dados?",
       "cancel": "Cancelar",
-      "confirm": "Reiniciar e continuar"
+      "confirm": "Reiniciar e continuar",
+      "description": "O servidor de banco de dados precisa reiniciar para aceitar conexões de outros endereços. As aplicações que o usam perdem a conexão por um instante."
     }
   },
   "git": {
