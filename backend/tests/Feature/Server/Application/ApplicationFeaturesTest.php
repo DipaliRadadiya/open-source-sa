@@ -135,9 +135,12 @@ it('still returns every application permission for the role form', function () {
             ->json('permissions')
     )->pluck('name');
 
-    expect($all)->toHaveCount(16)
+    expect($all)->toHaveCount(17)
         ->and($all)->toContain('app_deployment')
         ->and($all)->toContain('app_staging')
+        // Container sites only, and filtered out per site type like the rest — but
+        // grantable here, because a role is assigned without a site in mind.
+        ->and($all)->toContain('app_compose')
         // Including the one that is not a screen. `app_magic_login` has a null
         // url so the sidebar skips it, but an admin assigning a role must still
         // be able to grant it — that separation is the whole reason the url is

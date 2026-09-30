@@ -5301,9 +5301,6 @@
       "title": "Compose file",
       "hint": "The file this site runs. Environment variables, extra services and volumes all live here — a container has no separate Environment screen.",
       "description": "Edited with Docker's own parser checking it. The panel refuses a file that publishes off 127.0.0.1 or mounts anything outside this site's own directory.",
-      "edit": "Edit compose file",
-      "view": "View compose file",
-      "loading": "Reading the file…",
       "loadFailed": "The compose file could not be read.",
       "safety": "Saving recreates this site's container, so it is briefly down. If the new file will not come up, the panel puts the previous one back and starts the site on that — you will not be left with a stopped site.",
       "takeover": "This site currently runs a file the panel generates from the Image and Container port fields above. Saving here takes the file over: from then on this text is what runs, and those fields stop driving it. There is no way back to the generated file except clearing this one.",
@@ -5312,7 +5309,8 @@
       "saved": "The compose file was applied and the container recreated.",
       "failed": "The compose file could not be applied.",
       "copy": "Copy",
-      "close": "Close"
+      "revert": "Revert",
+      "unsaved": "Unsaved changes"
     }
   },
   "panelUpdate": {

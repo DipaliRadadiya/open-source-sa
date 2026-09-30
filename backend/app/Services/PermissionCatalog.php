@@ -128,6 +128,16 @@ class PermissionCatalog
             ['name' => 'app_domain', 'title' => 'Domains & SSL', 'icon' => 'globe', 'url' => '/domains'],
             ['name' => 'app_deployment', 'title' => 'Deployments', 'icon' => 'git-branch', 'url' => '/deployment'],
             ['name' => 'app_environment', 'title' => 'Environment', 'icon' => 'file-key', 'url' => '/environment'],
+            // The compose file, for container sites only — the site-type filter in
+            // `VisiblePermissions` drops it everywhere else, the same way it drops
+            // `app_environment` from a WordPress install.
+            //
+            // Its own screen rather than a dialog on the Dashboard, because this
+            // file IS the site: its image, its ports, its volumes and its
+            // environment variables are all in here. A container has no Environment
+            // screen precisely because its variables live in this file instead, so
+            // this sits where that one would.
+            ['name' => 'app_compose', 'title' => 'Compose File', 'icon' => 'file-code-2', 'url' => '/compose'],
             // Supervisor workers and a Node process are the same question —
             // "what is running in the background?" — so they are one screen
             // with different tooling underneath, not two menu items.

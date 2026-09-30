@@ -29,6 +29,7 @@ return [
     'app_domain' => 'डोमेन और SSL',
     'app_deployment' => 'डिप्लॉयमेंट्स',
     'app_environment' => 'एनवायरनमेंट',
+    'app_compose' => 'compose फ़ाइल',
     'app_worker' => 'वर्कर्स',
     'app_file' => 'फ़ाइलें',
     'app_log' => 'लॉग',

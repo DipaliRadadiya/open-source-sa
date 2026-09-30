@@ -400,3 +400,70 @@ it('records that the file changed without recording what it said', function () {
         ->and($row->properties['applied'])->toBeTrue()
         ->and(json_encode($row->properties))->not->toContain('nginx:1.27-alpine');
 });
+
+/*
+ * The screen's placement, which is a permission question.
+ *
+ * It was a dialog on the Dashboard's Container card. It is now its own item in the
+ * application sidebar, which means its own `app_compose` permission — the sidebar
+ * row IS the permission row — and that permission must be offered for containers
+ * and for nothing else.
+ */
+
+it('offers a Compose File item in a container site\'s sidebar', function () {
+    $items = collect(
+        $this->withHeaders(composeHeaders())
+            ->getJson('/api/permissions?level=application&application_id='.$this->application->id)
+            ->json('permissions')
+    );
+
+    $compose = $items->firstWhere('name', 'app_compose');
+
+    expect($compose)->not->toBeNull()
+        ->and($compose['url'])->toBe('/compose');
+});
+
+it('offers it for no other site type', function () {
+    // The site-type filter drops a screen that would be about nothing — the same
+    // way it drops Environment from a WordPress install. A PHP site has no compose
+    // file, so the item must not be there to click.
+    $php = Application::forceCreate([
+        'system_user_id' => $this->systemUser->id,
+        'name' => 'Plain', 'slug' => 'plain', 'domain' => 'plain.test',
+        'site_type' => 'php', 'serving_profile' => 'php', 'web_root' => 'public_html',
+        'status' => 'active',
+    ]);
+
+    $items = collect(
+        $this->withHeaders(composeHeaders())
+            ->getJson('/api/permissions?level=application&application_id='.$php->id)
+            ->json('permissions')
+    )->pluck('name');
+
+    expect($items)->not->toContain('app_compose');
+
+    // Deliberately NOT asserting that Environment appears instead. A hand-rolled
+    // PHP site gets neither, on purpose — `AbstractSiteType` adds Environment only
+    // for git-deployed and Node sites, because a site with no framework reading a
+    // `.env` would be offered a convention the panel invented for it. The pairing
+    // holds for a container, not universally, and the first version of this test
+    // asserted otherwise and failed.
+});
+
+it('does not offer Environment on a container, since the file replaced it', function () {
+    $items = collect(
+        $this->withHeaders(composeHeaders())
+            ->getJson('/api/permissions?level=application&application_id='.$this->application->id)
+            ->json('permissions')
+    )->pluck('name');
+
+    expect($items)->not->toContain('app_environment')->toContain('app_compose');
+});
+
+it('has the sidebar label translated in every locale', function () {
+    foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
+        $line = __('nav.app_compose', [], $locale);
+
+        expect($line)->not->toBe('nav.app_compose')->and($line)->not->toBeEmpty();
+    }
+});

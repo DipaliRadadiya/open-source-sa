@@ -99,7 +99,15 @@ class DockerSiteType extends AbstractSiteType
      */
     public function features(): array
     {
-        return array_values(array_diff(parent::features(), ['app_clone', 'app_backup']));
+        return array_values([
+            ...array_diff(parent::features(), ['app_clone', 'app_backup']),
+            // The compose file, which for a container replaces the Environment
+            // screen it does not get: a container's variables are in this file, not
+            // in a `.env` the panel owns. Added by the type rather than by the
+            // parent for the reason `app_staging` is — only the type that has the
+            // thing advertises it.
+            'app_compose',
+        ]);
     }
 
     /**

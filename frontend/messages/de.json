@@ -5301,9 +5301,6 @@
       "title": "Compose-Datei",
       "hint": "Die Datei, mit der diese Site läuft. Umgebungsvariablen, weitere Dienste und Volumes stehen alle hier — ein Container hat keinen separaten Umgebungs-Bildschirm.",
       "description": "Wird von Dockers eigenem Parser geprüft. Das Panel lehnt eine Datei ab, die außerhalb von 127.0.0.1 veröffentlicht oder etwas außerhalb des Verzeichnisses dieser Site einbindet.",
-      "edit": "Compose-Datei bearbeiten",
-      "view": "Compose-Datei ansehen",
-      "loading": "Datei wird gelesen…",
       "loadFailed": "Die Compose-Datei konnte nicht gelesen werden.",
       "safety": "Beim Speichern wird der Container dieser Site neu erstellt, sie ist also kurz offline. Startet die neue Datei nicht, legt das Panel die vorherige zurück und startet die Site damit — Sie bleiben nicht mit einer gestoppten Site zurück.",
       "takeover": "Diese Site läuft derzeit mit einer Datei, die das Panel aus den Feldern Image und Container-Port oben erzeugt. Speichern übernimmt die Datei: ab dann läuft dieser Text, und jene Felder steuern sie nicht mehr. Zurück zur erzeugten Datei geht es nur, indem Sie diese löschen.",
@@ -5312,7 +5309,8 @@
       "saved": "Die Compose-Datei wurde angewendet und der Container neu erstellt.",
       "failed": "Die Compose-Datei konnte nicht angewendet werden.",
       "copy": "Kopieren",
-      "close": "Schließen"
+      "revert": "Zurücksetzen",
+      "unsaved": "Nicht gespeicherte Änderungen"
     }
   },
   "panelUpdate": {

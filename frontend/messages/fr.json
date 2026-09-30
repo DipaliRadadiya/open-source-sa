@@ -5301,9 +5301,6 @@
       "title": "Fichier compose",
       "hint": "Le fichier que ce site exécute. Variables d’environnement, services supplémentaires et volumes vivent ici — un conteneur n’a pas d’écran Environnement séparé.",
       "description": "Édité avec le parseur de Docker lui-même pour vérification. Le panneau refuse un fichier qui publie ailleurs que sur 127.0.0.1 ou qui monte quelque chose en dehors du répertoire de ce site.",
-      "edit": "Modifier le fichier compose",
-      "view": "Voir le fichier compose",
-      "loading": "Lecture du fichier…",
       "loadFailed": "Le fichier compose n’a pas pu être lu.",
       "safety": "L’enregistrement recrée le conteneur de ce site, qui est donc brièvement indisponible. Si le nouveau fichier ne démarre pas, le panneau remet le précédent et redémarre le site avec celui-ci — vous ne resterez pas avec un site arrêté.",
       "takeover": "Ce site exécute actuellement un fichier que le panneau génère à partir des champs Image et Port du conteneur ci-dessus. Enregistrer ici reprend le fichier à votre compte : à partir de là, c’est ce texte qui s’exécute et ces champs ne le pilotent plus. Il n’y a pas de retour au fichier généré, sauf en effaçant celui-ci.",
@@ -5312,7 +5309,8 @@
       "saved": "Le fichier compose a été appliqué et le conteneur recréé.",
       "failed": "Le fichier compose n’a pas pu être appliqué.",
       "copy": "Copier",
-      "close": "Fermer"
+      "revert": "Rétablir",
+      "unsaved": "Modifications non enregistrées"
     }
   },
   "panelUpdate": {

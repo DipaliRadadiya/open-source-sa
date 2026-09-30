@@ -29,6 +29,7 @@ return [
     'app_domain' => 'Domaines et SSL',
     'app_deployment' => 'Déploiements',
     'app_environment' => 'Environnement',
+    'app_compose' => 'Fichier compose',
     'app_worker' => 'Workers',
     'app_file' => 'Fichiers',
     'app_log' => 'Journaux',

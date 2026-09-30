@@ -5301,9 +5301,6 @@
       "title": "Ficheiro compose",
       "hint": "O ficheiro com que este site funciona. Variáveis de ambiente, serviços adicionais e volumes estão todos aqui — um contentor não tem um ecrã de Ambiente separado.",
       "description": "Editado com o próprio analisador do Docker a verificá-lo. O painel recusa um ficheiro que publique fora de 127.0.0.1 ou que monte algo fora do diretório deste site.",
-      "edit": "Editar o ficheiro compose",
-      "view": "Ver o ficheiro compose",
-      "loading": "A ler o ficheiro…",
       "loadFailed": "Não foi possível ler o ficheiro compose.",
       "safety": "Guardar recria o contentor deste site, pelo que fica brevemente em baixo. Se o novo ficheiro não arrancar, o painel repõe o anterior e inicia o site com esse — não ficará com um site parado.",
       "takeover": "Este site funciona atualmente com um ficheiro que o painel gera a partir dos campos Imagem e Porta do contentor acima. Guardar aqui assume o ficheiro: a partir daí é este texto que corre e esses campos deixam de o comandar. Não há regresso ao ficheiro gerado a não ser apagando este.",
@@ -5312,7 +5309,8 @@
       "saved": "O ficheiro compose foi aplicado e o contentor recriado.",
       "failed": "Não foi possível aplicar o ficheiro compose.",
       "copy": "Copiar",
-      "close": "Fechar"
+      "revert": "Reverter",
+      "unsaved": "Alterações não salvas"
     }
   },
   "panelUpdate": {

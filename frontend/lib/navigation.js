@@ -35,6 +35,7 @@ const BUILT_APPLICATION_URLS = new Set([
   "/domains",
   "/deployment",
   "/environment",
+  "/compose",
   "/logs",
   "/workers",
   "/files",

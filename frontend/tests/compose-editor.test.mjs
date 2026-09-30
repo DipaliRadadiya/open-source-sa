@@ -73,14 +73,40 @@ test("a viewer gets a read-only textarea and no save button", () => {
   // The GET is allowed for `view` because reading the file is how somebody
   // diagnoses their own site; the PUT is not.
   assert.match(editor, /readOnly=\{!canManage\}/);
-  assert.match(editor, /canManage \? \(\s*<Button/);
+  assert.match(editor, /canManage \? \(/);
 });
 
-test("validator refusals are shown in the dialog, not as a toast", () => {
-  // They are read line by line and acted on, and the dialog stays open so the file
-  // can be fixed without being retyped. A toast clears itself in four seconds.
+test("it is a page, not a dialog — the save control cannot be pushed off screen", () => {
+  // Reported as the Save button hiding on a desktop: a sixty-line YAML box inside
+  // a modal put the footer below the fold, so the control you opened it for was
+  // the one you could not reach. A page has no fold to fall off.
+  assert.doesNotMatch(editor, /<Dialog/);
+  assert.doesNotMatch(editor, /DialogFooter/);
+
+  // And the file arrives with the page rather than after a spinner.
+  assert.match(editor, /initialCompose/);
+});
+
+test("long YAML lines get horizontal room rather than wrapping", () => {
+  // An image reference, a bind mount and a published port are all long, and
+  // wrapping them is what makes YAML unreadable. Width, not height.
+  assert.match(editor, /wrap="off"/);
+  assert.match(editor, /overflow-x-auto/);
+});
+
+test("save is offered only when something changed", () => {
+  // A live Save button on an untouched file invites a pointless container
+  // recreation, which is real downtime for the site.
+  assert.match(editor, /const dirty = contents !== initialCompose/);
+});
+
+test("validator refusals are shown on the page, not as a toast", () => {
+  // They are read line by line and acted on, and the text stays on screen so the
+  // file can be fixed without being retyped. A toast clears itself in four seconds.
   assert.match(editor, /error\.response\?\.data\?\.errors\?\.compose/);
-  assert.match(editor, /setErrors\(fieldErrors\)/);
+  // The rewrite made this a ternary inside setErrors rather than a branch, so
+  // assert the choice is still made rather than pinning the shape it is made in.
+  assert.match(editor, /fieldErrors\s*\n?\s*:\s*\[apiMessage/);
 });
 
 test("a successful save refreshes the server-rendered facts", () => {
