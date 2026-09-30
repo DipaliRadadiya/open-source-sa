@@ -38,6 +38,7 @@ return [
     'container_not_running' => 'Ce conteneur n’est pas en cours d’exécution, il n’y a donc rien à mettre à jour. Provisionnez ou activez d’abord le site.',
     'container_pull_failed' => 'L’image n’a pas pu être récupérée. Référence :reference.',
     'container_apply_failed' => 'Les réglages ont été enregistrés, mais le conteneur n’a pas pu être démarré avec eux. Référence :reference.',
+    'compose_apply_failed' => 'Le fichier compose n’a pas pu être appliqué ; le site a été remis sur celui qu’il utilisait auparavant. Référence :reference.',
     'docker_removal_not_permitted' => 'Vous n\'avez pas la permission de supprimer des réseaux ou des volumes Docker. Supprimez le site sans eux, ou demandez à quelqu\'un ayant accès à Docker.',
     'no_database_engine' => 'Aucun moteur de base de données disponible. Installez et configurez MySQL ou MariaDB avant de créer cette application.',
     'no_process' => '« :name » n\'exécute pas de processus propre.',

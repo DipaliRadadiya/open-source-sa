@@ -141,6 +141,19 @@ export const registryFormSchema = z.object({
     .refine((value) => !/\s/.test(value)),
 });
 
+/**
+ * The compose file, as the editor reads it.
+ *
+ * `generated` is the load-bearing half: true means the site has no stored file and
+ * this text was rendered from its fields, so saving it converts the site to a
+ * hand-managed file and the fields stop driving it. The UI has to say that before
+ * the first save, not after.
+ */
+export const composeFileResponseSchema = z.object({
+  compose: z.string(),
+  generated: z.boolean(),
+});
+
 export const dockerNetworksResponseSchema = z.object({
   networks: z.array(dockerNetworkSchema),
 });

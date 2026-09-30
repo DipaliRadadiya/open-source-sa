@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\API\Server;
 
 use App\Actions\Server\Application\PullContainerImage;
+use App\Actions\Server\Application\UpdateContainerCompose;
 use App\Actions\Server\Application\UpdateContainerSettings;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Server\Application\UpdateComposeRequest;
 use App\Http\Requests\Server\Application\UpdateContainerRequest;
 use App\Http\Resources\ApplicationResource;
 use App\Models\Application;
 use App\Services\ActivityLogger;
+use App\Services\Server\Applications\ApplicationProvisioner;
+use App\Services\Server\Applications\ContainerSupervisor;
 use Illuminate\Http\JsonResponse;
 
 class ApplicationContainerController extends Controller
@@ -42,6 +46,86 @@ class ApplicationContainerController extends Controller
 
         return response()->json([
             'secrets' => (array) ($application->docker_secrets ?? []),
+        ]);
+    }
+
+    /**
+     * The compose file this site runs, for the editor.
+     *
+     * A site created in Simple mode has no stored file — the panel renders one from
+     * its fields on every deploy — so this hands back what that render produces and
+     * says the file is `generated`. Editing then takes it over, which is one-way:
+     * the stored text wins from that point and the fields stop being the source.
+     * The UI says so before the first save rather than after it.
+     *
+     * Read-only, deliberately: the pasted-file path in the supervisor records the
+     * published port as a side effect, and a GET that rewrote the server on the way
+     * past would be indefensible.
+     */
+    public function compose(
+        Application $application,
+        ContainerSupervisor $containers,
+        ApplicationProvisioner $provisioner,
+    ): JsonResponse {
+        abort_unless(
+            $application->serving_profile === 'docker',
+            422,
+            __('errors/application.not_a_container'),
+        );
+
+        $stored = (string) $application->compose;
+        $generated = trim($stored) === '';
+
+        return response()->json([
+            'compose' => $generated
+                ? $containers->generated($application, $provisioner->documentRoot($application))
+                : $stored,
+            // Which of the two the user is looking at, so the editor can warn that
+            // saving takes the file over instead of quietly converting the site.
+            'generated' => $generated,
+        ]);
+    }
+
+    /**
+     * Replace the compose file and bring the site up on it.
+     *
+     * Synchronous, like the two endpoints below, and for the same reason: the caller
+     * should get the real failure rather than a 202 and a site that quietly stayed
+     * as it was. A file that will not come up is rolled back by the action, so a
+     * 422 here means the site is still running what it was running before.
+     */
+    public function updateCompose(
+        UpdateComposeRequest $request,
+        Application $application,
+        UpdateContainerCompose $action,
+    ): JsonResponse {
+        abort_unless(
+            $application->serving_profile === 'docker',
+            422,
+            __('errors/application.not_a_container'),
+        );
+
+        try {
+            $updated = $action->execute($application, (string) $request->validated('compose'));
+        } catch (ProvisioningFailedException $e) {
+            return response()->json([
+                'message' => $e->reason !== null
+                    ? __('application.failure_reason.'.$e->reason)
+                    : ($e->getMessage() !== '' && $e->step === 'compose_invalid'
+                        ? $e->getMessage()
+                        : __('errors/application.compose_apply_failed')),
+                'step' => $e->step,
+                'reason' => $e->reason,
+                'reference' => $e->reference,
+                // The site is running the file it was running before this request.
+                // Said explicitly, because "it failed" leaves somebody wondering
+                // whether their site is down.
+                'rolled_back' => true,
+            ], 422);
+        }
+
+        return response()->json([
+            'application' => ApplicationResource::make($updated)->resolve(),
         ]);
     }
 

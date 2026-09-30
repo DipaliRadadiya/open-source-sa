@@ -61,6 +61,27 @@ export function pullContainerImage(id) {
 }
 
 /**
+ * The compose file this site runs.
+ *
+ * A site created in Simple mode has none stored — the panel renders one from its
+ * fields — so this answers with what that render produces and says so, because
+ * saving it back is what takes the file over.
+ */
+export function getContainerCompose(id) {
+  return api.get(`/applications/${id}/container/compose`);
+}
+
+/**
+ * Replace it, and bring the site up on the new one.
+ *
+ * A 422 here means the site is still running the file it was running before: the
+ * server rolls back rather than leaving it down holding the text that broke it.
+ */
+export function saveContainerCompose(id, compose) {
+  return api.put(`/applications/${id}/container/compose`, { compose });
+}
+
+/**
  * A container site's structured fields.
  *
  * Its own endpoint, not the generic application update: applying it rewrites

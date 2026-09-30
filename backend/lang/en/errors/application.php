@@ -38,6 +38,7 @@ return [
     'container_not_running' => 'This container is not running, so there is nothing to update. Provision or enable the site first.',
     'container_pull_failed' => 'The image could not be pulled. Reference :reference.',
     'container_apply_failed' => 'The settings were saved, but the container could not be brought up on them. Reference :reference.',
+    'compose_apply_failed' => 'The compose file could not be applied, so the site was put back on the one it was running before. Reference :reference.',
     'docker_removal_not_permitted' => 'You don\'t have permission to delete Docker networks or volumes. Remove the site without them, or ask someone with Docker access.',
     'no_database_engine' => 'No database engine is available. Install and configure MySQL or MariaDB before creating this application.',
     'no_process' => '\":name\" does not run a process of its own.',

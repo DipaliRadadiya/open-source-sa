@@ -5296,6 +5296,23 @@
       "detectAction": "Comprobar qué hay instalado",
       "changeTo": "Tratar como {type} en su lugar",
       "menuHint": "Opciones del tipo de aplicación"
+    },
+    "compose": {
+      "title": "Archivo compose",
+      "hint": "El archivo con el que funciona este sitio. Las variables de entorno, los servicios adicionales y los volúmenes están todos aquí: un contenedor no tiene una pantalla de Entorno aparte.",
+      "description": "Se edita con el propio analizador de Docker comprobándolo. El panel rechaza un archivo que publique fuera de 127.0.0.1 o que monte algo fuera del directorio de este sitio.",
+      "edit": "Editar el archivo compose",
+      "view": "Ver el archivo compose",
+      "loading": "Leyendo el archivo…",
+      "loadFailed": "No se pudo leer el archivo compose.",
+      "safety": "Guardar recrea el contenedor de este sitio, así que estará brevemente caído. Si el nuevo archivo no arranca, el panel restaura el anterior y levanta el sitio con ese: no se quedará con un sitio parado.",
+      "takeover": "Este sitio funciona ahora con un archivo que el panel genera a partir de los campos Imagen y Puerto del contenedor de arriba. Guardar aquí pasa el archivo a su cargo: desde ese momento se ejecuta este texto y esos campos dejan de gobernarlo. No hay vuelta al archivo generado salvo borrando este.",
+      "acknowledge": "Entiendo que guardar reemplaza el archivo generado de forma permanente.",
+      "save": "Guardar y aplicar",
+      "saved": "Se aplicó el archivo compose y se recreó el contenedor.",
+      "failed": "No se pudo aplicar el archivo compose.",
+      "copy": "Copiar",
+      "close": "Cerrar"
     }
   },
   "panelUpdate": {

@@ -227,6 +227,20 @@ class ContainerSupervisor
             return $verdict['compose'];
         }
 
+        return $this->generated($application, $documentRoot);
+    }
+
+    /**
+     * The compose file the panel would write from this site's fields.
+     *
+     * Public and side-effect free, because the compose editor has to show a
+     * simple-mode site its current file before anybody edits it — and a GET that
+     * quietly rewrote `app_port` on the way past would be a read that changes the
+     * server. That is what the pasted-file branch above does, deliberately, and it
+     * is exactly why the two are separate methods now.
+     */
+    public function generated(Application $application, string $documentRoot): string
+    {
         return View::make('server.docker.compose', [
             'project' => $this->project($application),
             'image' => (string) $application->image,

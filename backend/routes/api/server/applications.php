@@ -75,6 +75,20 @@ Route::put('/applications/{application}/web-root', [ApplicationWebRootController
 Route::put('/applications/{application}/container', [ApplicationContainerController::class, 'update'])
     ->middleware(['permission:application,manage', 'throttle:10,1']);
 
+// The compose file this site runs.
+//
+// `view` to read it and `manage` to replace it, unlike the settings endpoint which
+// is manage-only: reading the file is how somebody diagnoses their own site, and it
+// carries nothing the application payload does not already imply. Writing it is a
+// different matter — it can stop the site.
+Route::get('/applications/{application}/container/compose', [ApplicationContainerController::class, 'compose'])
+    ->middleware(['permission:application', 'throttle:60,1']);
+
+// Throttled like the other apply paths: each save recreates the container, and a
+// form that can be spammed is a site that can be restarted in a loop.
+Route::put('/applications/{application}/container/compose', [ApplicationContainerController::class, 'updateCompose'])
+    ->middleware(['permission:application,manage', 'throttle:10,1']);
+
 // Pull a newer image and recreate the container on it.
 //
 // `manage` on the application, not `docker,manage`: this changes what one site

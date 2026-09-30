@@ -19,6 +19,7 @@ import { Note } from "@/components/ui/note";
 import { Button } from "@/components/ui/button";
 import { ContainerVolumes } from "@/components/applications/container-volumes";
 import { ContainerCredentials } from "@/components/applications/container-credentials";
+import { ComposeEditor } from "@/components/applications/compose-editor";
 import {
   Select,
   SelectContent,
@@ -400,6 +401,13 @@ export function ContainerCard({
               volumes={volumes}
               canManage={canManage}
             />
+
+            {/* The compose file itself, which is where a container's environment
+                variables live — a container gets no Environment screen, because its
+                variables are not in a `.env` the panel owns. Rendered for a viewer
+                too, unlike the credentials below: reading the file is how somebody
+                diagnoses their own site, and the endpoint allows it. */}
+            <ComposeEditor application={application} canManage={canManage} />
 
             {/* Only for a site the panel generated credentials for, and only for
                 somebody who can manage it — the endpoint is gated on `manage`, so
