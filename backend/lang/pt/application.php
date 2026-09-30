@@ -27,6 +27,7 @@ return [
         'wikijs' => ['title' => 'Wiki.js', 'tagline' => 'Wiki de documentação — funciona com o seu próprio PostgreSQL'],
         'grafana' => ['title' => 'Grafana', 'tagline' => 'Painéis e alertas sobre as suas métricas — a palavra-passe de administrador é gerada por site'],
         'bookstack' => ['title' => 'BookStack', 'tagline' => 'Documentação em estantes, livros e páginas — funciona com a sua própria MariaDB'],
+        'wordpress_container' => ['title' => 'WordPress', 'tagline' => 'Criação de blogues e sites — corre como contentor com a sua própria MariaDB'],
         'wordpress' => ['title' => 'WordPress', 'tagline' => 'Criador de blogs e sites'],
         'phpmyadmin' => ['title' => 'phpMyAdmin', 'tagline' => 'Faça a gestão das suas bases de dados no navegador'],
         'uptimekuma' => ['title' => 'Uptime Kuma', 'tagline' => 'Monitorização de disponibilidade e páginas de estado'],

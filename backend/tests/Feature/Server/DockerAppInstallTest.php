@@ -124,6 +124,7 @@ dataset('docker apps', [
     // only. See GrafanaSiteType::composeTemplate().
     'grafana' => ['grafana', 3000, ['data']],
     'bookstack' => ['bookstack', 80, ['config', 'db']],
+    'wordpress_container' => ['wordpress_container', 80, ['app', 'db']],
     // Strapi was the intended second app and publishes NO official image —
     // `strapi/strapi` and `strapi/base` are both gone from Docker Hub, and
     // upstream's own guidance is to build your own from a `create-strapi-app`
@@ -668,5 +669,76 @@ it('gives every Docker app an explicitly tagged image', function () {
         expect($image)->not->toBe('')
             ->and(str_contains($image, ':'))
             ->toBeTrue("{$app} has no explicit tag");
+    }
+});
+
+/*
+ * The container WordPress, and the two things that make it more than a template.
+ */
+
+it('teaches WordPress that the request arrived over HTTPS', function () {
+    // nginx terminates TLS and proxies over plain HTTP, so PHP sees no `HTTPS` in
+    // `$_SERVER`. WordPress then writes every asset URL as `http://` — blocked as
+    // mixed content — and if `siteurl` says `https` the two disagree and every
+    // request becomes a redirect loop. The container vhost sends the header; this
+    // is the half that reads it.
+    $application = installDockerApp(dockerAppSite('wordpress_container', 20101));
+    $extra = Yaml::parse((string) $application->compose)['services']['app']['environment']['WORDPRESS_CONFIG_EXTRA'];
+
+    expect($extra)->toContain('HTTP_X_FORWARDED_PROTO')
+        ->and($extra)->toContain("\$_SERVER['HTTPS'] = 'on'");
+});
+
+it('makes the panel domain the one source for the WordPress url', function () {
+    // WordPress normally owns `siteurl` in its database, and a panel-side domain
+    // change then leaves it redirecting to the old host — the lockout everybody
+    // has had once. WP_HOME and WP_SITEURL come from the environment instead.
+    $application = installDockerApp(dockerAppSite('wordpress_container', 20101));
+    $environment = Yaml::parse((string) $application->compose)['services']['app']['environment'];
+
+    expect($environment['WORDPRESS_SITE_URL'])->toBe('https://'.$application->domain)
+        ->and($environment['WORDPRESS_CONFIG_EXTRA'])->toContain("define('WP_HOME'")
+        ->and($environment['WORDPRESS_CONFIG_EXTRA'])->toContain("define('WP_SITEURL'");
+});
+
+it('follows a domain change through to the WordPress url', function () {
+    // The reason `urlEnvKey()` is a real variable and not a marker: `syncUrl()`
+    // returns early for a type that declares none, so the baked URL would go stale
+    // and the site would keep serving the old host.
+    $application = installDockerApp(dockerAppSite('wordpress_container', 20101));
+
+    app(DockerAppInstaller::class)->syncUrl($application, 'https://moved.example.com');
+
+    $environment = Yaml::parse((string) $application->fresh()->compose)['services']['app']['environment'];
+
+    expect($environment['WORDPRESS_SITE_URL'])->toBe('https://moved.example.com');
+});
+
+it('does not collide with the PHP WordPress it sits beside', function () {
+    // `name()` is the identifier: `find()` resolves by it and the catalog's
+    // translation keys are built from it, so two types called `wordpress` would be
+    // one type with the other shadowed.
+    $php = app(SiteTypeManager::class)->find('wordpress');
+    $container = app(SiteTypeManager::class)->find('wordpress_container');
+
+    expect($php)->not->toBeNull()->and($container)->not->toBeNull()
+        ->and($php->servingProfile())->toBe('php')
+        ->and($container->servingProfile())->toBe('docker')
+        // Same product, same title — they are never offered together, because each
+        // is filtered out of the other's stack.
+        ->and(__('application.types.wordpress.title'))->toBe('WordPress')
+        ->and(__('application.types.wordpress_container.title'))->toBe('WordPress');
+});
+
+it('leaves the WordPress salts to the image', function () {
+    // The entrypoint generates the eight keys from /dev/urandom when they are
+    // absent and writes them into wp-config.php, which lives in the volume — so
+    // they are unique per site and stable. Generating them here would add eight
+    // rows to the Credentials panel to replace something already correct.
+    $application = installDockerApp(dockerAppSite('wordpress_container', 20101));
+    $environment = Yaml::parse((string) $application->compose)['services']['app']['environment'];
+
+    foreach (['WORDPRESS_AUTH_KEY', 'WORDPRESS_SECURE_AUTH_KEY', 'WORDPRESS_NONCE_SALT'] as $key) {
+        expect($environment)->not->toHaveKey($key);
     }
 });

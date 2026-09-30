@@ -33,6 +33,7 @@ use App\Services\Applications\Types\StirlingPdfSiteType;
 use App\Services\Applications\Types\UptimeKumaSiteType;
 use App\Services\Applications\Types\VaultwardenSiteType;
 use App\Services\Applications\Types\WikiJsSiteType;
+use App\Services\Applications\Types\WordPressContainerSiteType;
 use App\Services\Applications\Types\WordPressSiteType;
 use App\Services\Git\BitbucketProvider;
 use App\Services\Git\GithubProvider;
@@ -1424,6 +1425,10 @@ return [
             'driver' => DockerAppInstaller::class,
         ],
 
+        'wordpress_container' => [
+            'driver' => DockerAppInstaller::class,
+        ],
+
         'mattermost' => [
             'driver' => DockerAppInstaller::class,
         ],
@@ -1705,6 +1710,20 @@ return [
             'db_image' => env('DOCKER_APP_BOOKSTACK_DB_IMAGE', 'mariadb:11.4'),
         ],
 
+        'wordpress_container' => [
+            // 7.1-apache: the current line, and the apache variant because it
+            // serves HTTP itself — the fpm variants need a second container in
+            // front, which is a web server inside a container behind the web
+            // server on the host.
+            //
+            // Tag verified against the registry's per-tag endpoint, not by reading
+            // a page of recent tags: that page is the 60 most recently UPDATED and
+            // gives false negatives, which is how `mariadb:11.4` looked missing
+            // while pulling fine.
+            'image' => env('DOCKER_APP_WORDPRESS_IMAGE', 'wordpress:7.1-apache'),
+            'db_image' => env('DOCKER_APP_WORDPRESS_DB_IMAGE', 'mariadb:11.4'),
+        ],
+
         'mattermost' => [
             'image' => env('DOCKER_APP_MATTERMOST_IMAGE', 'mattermost/mattermost-team-edition:release-10'),
             'db_image' => env('DOCKER_APP_MATTERMOST_DB_IMAGE', 'postgres:16-alpine'),
@@ -1793,6 +1812,7 @@ return [
         WikiJsSiteType::class,
         GrafanaSiteType::class,
         BookStackSiteType::class,
+        WordPressContainerSiteType::class,
         WordPressSiteType::class,
         NextcloudSiteType::class,
         JoomlaSiteType::class,
