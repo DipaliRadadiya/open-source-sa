@@ -9,7 +9,9 @@
  * Three rules, in the order they matter:
  *
  *   - digits only, so a stray letter or minus never reaches the value
- *   - above 100 clamps to 100, rather than being rejected after the fact
+ *   - no clamping: 150 used to become 100 without a word, and "above 100%"
+ *     never happens, so the schedule showed On and never ran. The card says
+ *     what is allowed instead (`thresholdProblem`).
  *   - `0` empties the field, because "run when usage is above 0%" is what an
  *     empty box already means. Mapping it to nothing keeps the two ways of
  *     saying "always" as one state instead of one valid and one refused.
@@ -24,5 +26,12 @@ export function clampPercent(input) {
   const value = Number(digits.slice(0, 3));
   if (value <= 0) return "";
 
-  return String(Math.min(value, 100));
+  return String(value);
+}
+
+/** Usage is never above 100%, and "above 100" can never fire: 1–99. */
+export function thresholdProblem(value) {
+  if (value === "" || value === null || value === undefined) return null;
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 1 && number <= 99 ? null : "range";
 }

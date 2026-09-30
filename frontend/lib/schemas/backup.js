@@ -367,7 +367,17 @@ export function backupTargetFormSchema(options) {
       .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "scheduleTime")
       .default(BACKUP_DEFAULT_TIME),
     enabled: z.boolean().default(true),
-    file_excludes: z.array(z.string().max(255, "max255")).max(100, "maxLines100").default([]),
+    // Relative to the site folder; `..` or an absolute path points outside it,
+    // where there is nothing of this site's to leave out.
+    file_excludes: z
+      .array(
+        z
+          .string()
+          .max(255, "max255")
+          .refine((v) => !v.trim().startsWith("/") && !/(^|\/)\.\.(\/|$)/.test(v.trim()), "excludeInsideSite"),
+      )
+      .max(100, "maxLines100")
+      .default([]),
     database_excludes: z.array(z.string().max(64, "max64")).max(100, "maxLines100").default([]),
   });
 }

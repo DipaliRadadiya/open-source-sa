@@ -115,7 +115,7 @@ export function Combobox({
           ref={triggerRef}
           type="button"
           id={id}
-          variant="outline"
+          variant="field"
           role="combobox"
           aria-label={ariaLabel}
           aria-expanded={open}

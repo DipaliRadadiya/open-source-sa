@@ -43,12 +43,40 @@ const commandField = z
   // Preset commands ship with a {path} placeholder; the API 422s if it survives.
   .refine((v) => !v.includes(PATH_TOKEN), "unresolvedPath");
 
+/*
+ * Each job is a file in /etc/cron.d named after it, so a name can land on a
+ * file that is already there: "panel-scheduler" replaced the panel's own
+ * scheduler, and deleting the job deleted it. `RESERVED` is the backend's
+ * `NotReservedCronFile` list; the panel-* names are the panel's own files,
+ * which that list does not include yet.
+ */
+const RESERVED_CRON_FILES = [
+  "php", "e2scrub_all", "sysstat", "anacron", "certbot", "mdadm",
+  "popularity-contest", "ntpsec", "plocate", "mlocate", "apt-compat",
+  "dpkg", "cron", "crontab", "apport", "update-notifier-common",
+];
+
+// Laravel's Str::slug, closely enough for the comparison above.
+function cronSlug(value) {
+  return String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_\s-]/g, "")
+    .replace(/[\s_-]+/g, (match) => (match.includes("_") && !/[\s-]/.test(match) ? "_" : "-"))
+    .replace(/^-+|-+$/g, "");
+}
+
 const nameField = z
   .string()
   .trim()
   .min(1, "required_name")
   .max(255, "max255")
-  .refine((v) => !/[\r\n]/.test(v), "noLineBreaks");
+  .refine((v) => !/[\r\n]/.test(v), "noLineBreaks")
+  .refine((v) => {
+    const slug = cronSlug(v);
+    return !RESERVED_CRON_FILES.includes(slug) && !/^panel(-|$)/.test(slug);
+  }, "cronNameReserved");
 
 export const createCronjobSchema = z
   .object({
@@ -63,6 +91,12 @@ export const createCronjobSchema = z
   .refine(
     (d) => d.run_as !== OTHER_USER || linuxUsername.safeParse(d.username ?? "").success,
     { message: "linuxUsername", path: ["username"] },
+  )
+  // A cron job is a way to run any command; as root that is the whole server
+  // for anyone who can manage cron jobs.
+  .refine(
+    (d) => d.run_as !== OTHER_USER || (d.username ?? "").trim() !== "root",
+    { message: "cronRootRefused", path: ["username"] },
   );
 
 // Run-as is editable: the API re-points the job at the new account, checking

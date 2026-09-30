@@ -37,6 +37,7 @@ import { RestoreDialog } from "@/components/backups/restore-dialog";
 import { SetupBackupsDialog } from "@/components/backups/setup-backups-dialog";
 import { TurnOffBackupsDialog } from "@/components/applications/backups/turn-off-backups-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { hasNoDatabase } from "@/lib/backups/database-availability";
 
 /**
  * This site's backups: whether it is protected, how, and what has run.
@@ -72,6 +73,7 @@ export function BackupsPanel({
   unattachedDatabases = [],
   engines = [],
   needsDatabase = false,
+  siteTypes = null,
   canManageDatabases = false,
   // The history request came back empty because it failed, not because the
   // site has never been backed up.
@@ -330,6 +332,8 @@ export function BackupsPanel({
         target={target}
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
+        siteTypes={siteTypes}
+        siteType={application.site_type}
         options={backupOptions}
         // "Back up now" in the saved step starts the same invisible queue
         // window as the card's button, so it needs the same bookkeeping —
@@ -349,6 +353,14 @@ export function BackupsPanel({
           application={application}
           target={target}
           count={backupsFailed ? null : total}
+          // Every destination this site's archives sit in, not just the one
+          // it uses now: two of three were on another bucket and the dialog
+          // named only the current one.
+          destinationNames={[
+            ...new Set(
+              [target?.storage_destination_name, ...(backups ?? []).map((backup) => backup.storage_destination_name)].filter(Boolean),
+            ),
+          ]}
         />
       ) : null}
 
@@ -373,6 +385,12 @@ export function BackupsPanel({
                 ...restoring,
                 application_domain: application.domain,
                 application_name: application.name,
+                // A type that never has a database: its "files and database"
+                // archives hold files only, so "Database only" restores nothing.
+                files_only:
+                  Boolean(siteTypes?.length) &&
+                  !needsDatabase &&
+                  hasNoDatabase(databaseCounts, databasesKnown, application.id) === true,
               }
             : null
         }

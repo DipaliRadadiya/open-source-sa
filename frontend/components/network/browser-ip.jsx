@@ -24,18 +24,29 @@ const SOURCES = {
 const BrowserIpContext = createContext(null);
 
 export function BrowserIpProvider({ source, children }) {
-  const [ip, setIp] = useState(null);
+  const [state, setState] = useState({ ip: null, settled: false });
   useEffect(() => {
     const controller = new AbortController();
     const { load, pick } = SOURCES[source];
     load({ signal: controller.signal })
-      .then(({ data }) => setIp(pick(data) ?? null))
-      .catch(() => {});
+      .then(({ data }) => setState({ ip: pick(data) ?? null, settled: true }))
+      .catch(() => {
+        if (!controller.signal.aborted) setState({ ip: null, settled: true });
+      });
     return () => controller.abort();
   }, [source]);
-  return <BrowserIpContext.Provider value={ip}>{children}</BrowserIpContext.Provider>;
+  return <BrowserIpContext.Provider value={state}>{children}</BrowserIpContext.Provider>;
 }
 
 export function useBrowserIp() {
-  return useContext(BrowserIpContext);
+  return useContext(BrowserIpContext)?.ip ?? null;
+}
+
+/**
+ * Whether the lookup has answered. An action that adds "your" address must
+ * wait for it: "Set up protection" clicked in the second before it arrived
+ * sent no address at all, and the API refused with its lock-out warning.
+ */
+export function useBrowserIpSettled() {
+  return useContext(BrowserIpContext)?.settled ?? true;
 }

@@ -61,8 +61,10 @@ export function Caution({
     >
       <Icon className={cn("shrink-0", scale.icon, action && "mt-0 self-start sm:self-center", MARK[tone] ?? MARK.warning)} aria-hidden />
       {/* max-w-prose so a long consequence wraps at a readable measure rather
-          than running the full width of a very wide card. */}
-      <div className={cn("flex-1 space-y-2 [&>p]:max-w-prose", action ? "min-w-48" : "min-w-0")}>{children}</div>
+          than running the full width of a very wide card — but not beside a
+          button: there it wrapped a one-line notice at 60% of the row and left
+          the space next to it empty. */}
+      <div className={cn("flex-1 space-y-2", action ? "min-w-48" : "min-w-0 [&>p]:max-w-prose")}>{children}</div>
       {/* A secondary action sits at the end of the line, not under the text,
           so the notice stays one row where there is room. */}
       {action ? <div className="shrink-0">{action}</div> : null}

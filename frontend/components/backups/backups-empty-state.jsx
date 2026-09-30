@@ -27,6 +27,7 @@ export function BackupsEmptyState({
   canManage,
   databaseCounts = null,
   databasesKnown = false,
+  siteTypes = null,
   backupOptions = null,
 }) {
   const t = useTranslations("backups.empty");
@@ -105,6 +106,7 @@ export function BackupsEmptyState({
         applications={applications}
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
+        siteTypes={siteTypes}
         destinations={destinations}
         options={backupOptions}
       />

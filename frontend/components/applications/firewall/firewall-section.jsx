@@ -316,6 +316,10 @@ export function FirewallSection({ appId, application, categories: catalog, modes
                             disabled={locked}
                             placeholder={t("exceptionsPlaceholder")}
                             emptyText={t("exceptionsEmpty")}
+                            // An exception skips every check, and "a" is in
+                            // every browser name: one letter turned the whole
+                            // firewall off. Refused, not just warned about.
+                            minLength={4}
                           />
                         </div>
   

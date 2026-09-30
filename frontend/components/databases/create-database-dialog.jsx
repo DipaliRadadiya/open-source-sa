@@ -141,7 +141,12 @@ export function CreateDatabaseDialog({
   const charsetNames = Object.keys(charsets);
   // A collation from the wrong charset is a 422, so the second list is always
   // derived from the first rather than offering everything.
-  const collations = values.charset ? (charsets[values.charset] ?? []) : [];
+  // The `_0900_` collations are MySQL 8's; MariaDB has none of them, and the
+  // API's list for the mysql driver offers them to both — picking one failed
+  // with a bare 500.
+  const collations = (values.charset ? (charsets[values.charset] ?? []) : []).filter(
+    (collation) => engine?.engine !== "mariadb" || !/_0900_/.test(collation),
+  );
 
   async function onSubmit(submitted) {
     const payload = {

@@ -25,7 +25,7 @@ test("Live on a source without a cursor re-reads and replaces, never appends", (
   assert.match(PANEL, /const appends = source\?\.follow !== false/);
   const branch = PANEL.slice(PANEL.indexOf("if (!appends) {"), PANEL.indexOf("{ after: cursor.current }"));
   assert.match(branch, /readLog\(sourceKey, \{ lines: lineCount \}\)/);
-  assert.match(branch, /setLines\(data\?\.log\?\.lines \?\? \[\]\)/);
+  assert.match(branch, /setLines\(cleanLines\(data\?\.log\?\.lines\)\)/);
   assert.doesNotMatch(branch, /\.\.\.prev/);
 });
 

@@ -41,6 +41,7 @@ export function CoverageCard({
   canManage,
   databaseCounts = null,
   databasesKnown = false,
+  siteTypes = null,
   backupOptions = null,
 }) {
   const t = useTranslations("backups.coverage");
@@ -295,6 +296,7 @@ export function CoverageCard({
         applicationId={setupFor}
         databaseCounts={databaseCounts}
         databasesKnown={databasesKnown}
+        siteTypes={siteTypes}
         options={backupOptions}
         onStarted={() => setJustStarted(true)}
       />

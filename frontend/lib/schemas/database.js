@@ -236,7 +236,12 @@ export function databaseUsernameProblem(value) {
 // IPv4 or IPv4/CIDR, as the API accepts; it refuses hostnames and IPv6.
 export function hostProblem(value) {
   if (!value) return "required_host";
-  if (!/^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/.test(value)) return "databaseHost";
+  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?:\/(\d{1,2}))?$/.exec(value);
+  // The shape alone let 999.999.999.999 and 1.2.3.4/99 through to a 500 and a
+  // firewall rule nobody could delete.
+  if (!match) return "databaseHost";
+  if (match.slice(1, 5).some((octet) => Number(octet) > 255)) return "databaseHost";
+  if (match[5] !== undefined && Number(match[5]) > 32) return "databaseHost";
   return null;
 }
 

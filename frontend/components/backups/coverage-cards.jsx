@@ -86,12 +86,12 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
             <CardFacts>
               <CardFact
                 label={t("columns.type")}
-                className={cn(!target && "text-muted-foreground/70")}
+                className={cn(!target && "text-muted-foreground")}
                 value={target ? (target.type_title ?? target.type) : t("placeholders.type")}
               />
               <CardFact
                 label={t("columns.schedule")}
-                className={cn(!target && "text-muted-foreground/70")}
+                className={cn(!target && "text-muted-foreground")}
                 /* The hour too, same as the table — a fact row has the width
                    for it, and the phone layout falling behind the desktop one
                    is how this column went a month without it. */
@@ -99,12 +99,12 @@ export function CoverageCards({ rows, options = null, canManage, onSetUp, onBack
               />
               <CardFact
                 label={t("columns.storage")}
-                className={cn(!target && "text-muted-foreground/70")}
+                className={cn(!target && "text-muted-foreground")}
                 value={target?.storage_destination_name ?? t("placeholders.storage")}
               />
               <CardFact
                 label={t("columns.lastRun")}
-                className={cn(!target && "text-muted-foreground/70")}
+                className={cn(!target && "text-muted-foreground")}
               >
                 <span className="block truncate">
                   {/* Same fallback as the table: a run that crashed leaves

@@ -56,6 +56,13 @@ import {
 import { AddDomainDialog } from "@/components/applications/domains/add-domain-dialog";
 import { EditDomainDialog } from "@/components/applications/domains/edit-domain-dialog";
 
+// Site types whose installer rewrites the application's own stored address
+// when the primary domain changes (`syncUrl` in the backend installers).
+const ADDRESS_SYNCED_TYPES = new Set([
+  "wordpress", "akaunting", "craftcms", "mautic", "moodle",
+  "n8n", "nextcloud", "nodebb", "prestashop", "statamic",
+]);
+
 const TYPE_VARIANT = {
   primary: "default",
   alias: "secondary",
@@ -80,20 +87,32 @@ const TYPE_VARIANT = {
  *   - The confirm dialogs stay quiet when unknown. Guessing the other way puts
  *     a scary warning on every dialog the moment a field goes missing.
  *
- * `missing_domains` is preferred because it is the backend's own answer to
- * exactly this question and needs no wildcard matching here; `domains` is the
- * fallback for a payload that carries only the positive list.
+ * `domains` (the names on the certificate) is read first; `missing_domains`
+ * is the fallback for a payload that carries only that list.
  *
  * Only an active certificate counts. A pending or failed one secures nothing,
  * so its coverage is not a fact about what visitors get.
  */
 function certificateCoverage(certificate, domain) {
   if (certificate?.status !== "active") return "unknown";
+  /*
+   * The certificate's own list first. `missing_domains` is only as fresh as
+   * the last time it was worked out, and a name added since was in neither
+   * list — so it read "Secured" until the next reissue. The names on the
+   * certificate cannot be stale about what the certificate covers.
+   */
+  if (certificate.domains?.length) {
+    const name = String(domain ?? "").toLowerCase();
+    const covered = certificate.domains.some((entry) => {
+      const on = String(entry).toLowerCase();
+      if (on === name) return true;
+      // *.example.com covers one label, not the apex and not deeper names.
+      return on.startsWith("*.") && name.endsWith(on.slice(1)) && !name.slice(0, -on.length + 1).includes(".");
+    });
+    return covered ? "covered" : "uncovered";
+  }
   if (certificate.missing_domains?.length) {
     return certificate.missing_domains.includes(domain) ? "uncovered" : "covered";
-  }
-  if (certificate.domains?.length) {
-    return certificate.domains.includes(domain) ? "covered" : "uncovered";
   }
   return "unknown";
 }
@@ -576,15 +595,15 @@ export function DomainsSection({
               {t("promote.keepsServing", { domain: promoteTarget.from })}
             </li>
           ) : null}
-          <li>{t("promote.renamesFiles")}</li>
+          {/* The installer's syncUrl rewrites the stored address for these
+              types (WordPress's siteurl and home, checked with wp-cli). The
+              dialog used to warn it would NOT, and that files get renamed —
+              the vhost and logs are named after the application, so nothing
+              is. Both lines described something that does not happen. */}
+          {promoteTarget && ADDRESS_SYNCED_TYPES.has(siteType) ? (
+            <li>{t("promote.updatesAddress", { domain: promoteTarget.domain })}</li>
+          ) : null}
         </ul>
-
-        {/* Only WordPress stores its own address, so only WordPress is warned.
-            Shown to every site type, this line trained people to skip the
-            dialog. */}
-        {siteType === "wordpress" ? (
-          <Caution>{t("promote.cmsWarning")}</Caution>
-        ) : null}
 
         {/* The name about to become the application's canonical address is not
             on the certificate, so from the moment this is confirmed the

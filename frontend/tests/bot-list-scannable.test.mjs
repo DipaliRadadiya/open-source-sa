@@ -31,7 +31,7 @@ test("sorting is display-only and does not touch grouping", () => {
    * would silently move names between groups; sorting in the leaf that renders
    * them cannot.
    */
-  assert.match(code, /function BotList\(\{ bots \}\) \{\s*\n\s*const sorted/);
+  assert.match(code, /function BotList\(\{ bots \}\) \{\s*\n(\s*const t = [^\n]*\n)?\s*const sorted/);
 
   // Sliced to the function body. A window-of-N-characters regex runs straight
   // past the closing brace into BotList's own sort and fails on it — which is

@@ -16,7 +16,7 @@ import { DeleteDatabaseDialog } from "@/components/databases/delete-database-dia
  * bottom rather than a button in the header: destructive actions live at the
  * end of a page, past everything that might change your mind.
  */
-export function DeleteDatabaseCard({ database, canManage }) {
+export function DeleteDatabaseCard({ database, application = null, canManage }) {
   const t = useTranslations("databases.delete");
   const [open, setOpen] = useState(false);
 
@@ -44,6 +44,7 @@ export function DeleteDatabaseCard({ database, canManage }) {
       {canManage ? (
         <DeleteDatabaseDialog
           database={database}
+          application={application}
           open={open}
           onOpenChange={(next) => !next && setOpen(false)}
           // Nothing to come back to once it's gone.

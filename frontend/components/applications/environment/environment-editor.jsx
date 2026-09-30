@@ -24,6 +24,31 @@ import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { RestoreBackupDialog } from "@/components/applications/environment/restore-backup-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+
+/**
+ * Keys the panel writes and the app depends on staying put. A new
+ * N8N_ENCRYPTION_KEY makes every credential n8n saved unreadable — the file's
+ * own first line says it must never change — and the port and folder must
+ * match the service and proxy the panel set up. The API only checks syntax.
+ */
+const GUARDED_KEYS = ["N8N_ENCRYPTION_KEY", "N8N_PORT", "N8N_USER_FOLDER"];
+
+function envValues(text) {
+  const values = new Map();
+  for (const line of String(text ?? "").split("\n")) {
+    const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
+    if (match) values.set(match[1], match[2].replace(/^(["'])(.*)\1$/, "$2"));
+  }
+  return values;
+}
+
+/** Guarded keys the saved file has and the edit changes or removes. */
+function guardedChanges(saved, next) {
+  const before = envValues(saved);
+  const after = envValues(next);
+  return GUARDED_KEYS.filter((key) => before.has(key) && before.get(key) !== after.get(key));
+}
 
 // Rewrite (or append) a KEY's line to the suggested value — the one-click fix
 // behind a check. Matches an optional `export ` and leading indent; leaves the
@@ -64,6 +89,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
   const [saving, setSaving] = useState(false);
   const [syntaxError, setSyntaxError] = useState(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const [guarded, setGuarded] = useState([]);
 
   // The file changed underneath this component.
   //
@@ -116,8 +142,14 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
       ? t("saveApply")
       : t("save");
 
-  async function onSave() {
+  async function onSave({ confirmed = false } = {}) {
     if (!dirty || saving || tooLarge) return;
+    const touched = guardedChanges(env.raw, contents);
+    if (touched.length && !confirmed) {
+      setGuarded(touched);
+      return;
+    }
+    setGuarded([]);
     const sent = contents;
     setSaving(true);
     setSyntaxError(null);
@@ -317,7 +349,7 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
               </Button>
             </ReasonTooltip>
             <ReasonTooltip reason={tooLarge ? t("tooLarge") : !dirty && !saving ? tc("nothingToSave") : null}>
-            <Button onClick={onSave} disabled={!dirty || saving || tooLarge}>
+            <Button onClick={() => onSave()} disabled={!dirty || saving || tooLarge}>
               {saving ? <Loader2 className="size-4 animate-spin" /> : null}
               {saveLabel}
               {saving ? null : (
@@ -328,6 +360,18 @@ export function EnvironmentEditor({ appId, initialEnv, canManage = false }) {
           </div>
         </CardFooter>
       ) : null}
+
+      <ConfirmDialog
+        open={guarded.length > 0}
+        onOpenChange={(next) => !next && setGuarded([])}
+        icon={TriangleAlert}
+        tone="destructive"
+        title={t("guarded.title")}
+        description={t("guarded.description", { keys: guarded.join(", ") })}
+        cancelLabel={t("guarded.cancel")}
+        confirmLabel={t("guarded.confirm")}
+        onConfirm={() => onSave({ confirmed: true })}
+      />
 
       {canManage && env.backups?.length ? (
         <RestoreBackupDialog

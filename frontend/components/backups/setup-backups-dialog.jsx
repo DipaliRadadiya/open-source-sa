@@ -57,6 +57,9 @@ export function SetupBackupsDialog({
   // The site's name when the dialog is fixed to one site (the application
   // page), which passes no `applications` list to look it up in.
   applicationName = null,
+  // Site type catalogue, and the fixed site's type — see BackupSettingsFields.
+  siteTypes = null,
+  siteType = null,
   // Called after the saved step's "Back up now" is accepted.
   onStarted,
 }) {
@@ -359,6 +362,8 @@ export function SetupBackupsDialog({
           target={target}
           databaseCounts={databaseCounts}
           databasesKnown={databasesKnown}
+          siteTypes={siteTypes}
+          siteType={siteType}
           options={options}
           onRetryOptions={retryOptions}
           retryingOptions={loadingOptions}

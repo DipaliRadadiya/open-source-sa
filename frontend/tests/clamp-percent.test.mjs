@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { clampPercent } from "../lib/disk-cleaner/clamp-percent.js";
+import { clampPercent, thresholdProblem } from "../lib/disk-cleaner/clamp-percent.js";
 
 /**
  * The threshold box took any three digits while the API accepts 1–100, so
@@ -13,9 +13,13 @@ test("a normal value passes through", () => {
   assert.equal(clampPercent("100"), "100");
 });
 
-test("above the maximum clamps rather than being refused later", () => {
-  assert.equal(clampPercent("150"), "100");
-  assert.equal(clampPercent("999"), "100");
+test("above the maximum is kept as typed and refused with a reason, never silently changed (bug list, 30 Sep)", () => {
+  assert.equal(clampPercent("150"), "150");
+  assert.equal(thresholdProblem("150"), "range");
+  assert.equal(thresholdProblem("100"), "range");
+  assert.equal(thresholdProblem("99"), null);
+  assert.equal(thresholdProblem("1"), null);
+  assert.equal(thresholdProblem(""), null);
 });
 
 test("nothing but digits survives", () => {

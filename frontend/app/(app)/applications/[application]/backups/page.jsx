@@ -129,6 +129,7 @@ export default async function ApplicationBackupsPage({ params }) {
           siteDatabasesKnown={!siteDbs.failed}
           databaseCounts={databases.counts}
           databasesKnown={databases.known}
+          siteTypes={siteTypes.siteTypes}
           activeRestore={activeRestore}
           canManage={canManage}
           canRestore={canRestore}

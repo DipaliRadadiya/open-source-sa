@@ -24,7 +24,7 @@ import {
   Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { budgetWith, phpSettingsFormSchema, phpSizeToBytes } from "@/lib/schemas/php-settings";
+import { budgetWith, phpSettingsFormSchemaFor, phpSizeToBytes } from "@/lib/schemas/php-settings";
 import {
   isolateApplicationPhp,
   resetApplicationPhpFields,
@@ -131,7 +131,7 @@ const TAB_FIELDS = {
  * group rather than one per field, and the header keeps a live count of what
  * the site is actually set to.
  */
-export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", timezones = [], canManage }) {
+export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", applicationPath = "", timezones = [], canManage }) {
   const t = useTranslations("applications.php");
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -178,6 +178,7 @@ export function PhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", time
             php={php}
             phpRange={phpRange}
             siteTypeTitle={siteTypeTitle}
+            applicationPath={applicationPath}
             timezones={timezones}
             canManage={canManage}
             saving={saving}
@@ -374,7 +375,7 @@ function SharedPhpState({ php, phpRange = null, siteTypeTitle = "", canManage, b
 
 // ─── Dedicated PHP mode ──────────────────────────────────────────────────────
 
-function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", timezones, canManage, saving, setSaving }) {
+function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", applicationPath = "", timezones, canManage, saving, setSaving }) {
   const t = useTranslations("applications.php");
   const tCommon = useTranslations("common");
   const router = useRouter();
@@ -413,7 +414,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
   };
 
   const form = useForm({
-    resolver: zodResolver(phpSettingsFormSchema),
+    resolver: zodResolver(phpSettingsFormSchemaFor(php.memory?.total ?? 0, applicationPath)),
     mode: "onBlur",
     defaultValues: defaults,
   });
@@ -884,7 +885,7 @@ function DedicatedPhpPanel({ appId, php, phpRange = null, siteTypeTitle = "", ti
                 <TextField
                   form={form}
                   name="auto_prepend_file"
-                  placeholder={t("autoPrependPlaceholder")}
+                  placeholder={applicationPath ? `${applicationPath.replace(/\/+$/, "")}/prepend.php` : t("autoPrependPlaceholder")}
                   label={t("fields.autoPrepend")}
                   directive="auto_prepend_file"
                   explain={t("hints.autoPrepend")}
@@ -1062,6 +1063,9 @@ function ValueSelect({
             <FormControl>
               <Input
                 {...field}
+                // A typed size goes through the same path as a picked one, so
+                // "Largest upload" raises post_max_size with it either way.
+                onChange={onPick && !numeric ? (event) => onPick(event.target.value) : field.onChange}
                 type={numeric ? "number" : "text"}
                 inputMode={numeric ? "numeric" : undefined}
                 placeholder={placeholder}

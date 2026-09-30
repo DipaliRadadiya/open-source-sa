@@ -85,7 +85,7 @@ export default async function NodePage({ searchParams }) {
               />
             }
           />
-          <SystemNodeNote system={node?.system} />
+          <SystemNodeNote system={node?.system} versions={node?.versions} />
         </div>
       ) : (
         <div className="max-w-5xl space-y-4">
@@ -148,7 +148,7 @@ export default async function NodePage({ searchParams }) {
               finished one. Shared with PHP so the two cannot drift. */}
           <RuntimeStatusNotice version={current} versionLabel={selected} namespace="node" />
 
-          <SystemNodeNote system={node?.system} />
+          <SystemNodeNote system={node?.system} versions={node?.versions} />
         </div>
       )}
     </div>

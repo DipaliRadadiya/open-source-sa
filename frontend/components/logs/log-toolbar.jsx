@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { LINE_OPTIONS, MAX_LINES, MIN_LINES, normalizeLineCount } from "@/lib/schemas/log";
 import { SEVERITY_FILTERS } from "@/lib/logs/severity";
+import { toast } from "sonner";
 
 // Not a line count, so it can never collide with one.
 const CUSTOM_LINES = "custom";
@@ -309,6 +310,10 @@ export function LogToolbar({
                 // then 50, then 500.
                 onBlur={(event) => {
                   const next = normalizeLineCount(event.target.value);
+                  // 6000 quietly became "Last 5,000 lines"; say so.
+                  if (Number.parseInt(event.target.value, 10) > MAX_LINES) {
+                    toast.info(t("linesCapped", { max: MAX_LINES }));
+                  }
                   if (next !== null && next !== lines) onLinesChange(next);
                   setCustomLines(false);
                 }}

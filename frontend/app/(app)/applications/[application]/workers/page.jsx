@@ -95,6 +95,7 @@ export default async function ApplicationWorkersPage({ params }) {
           supervisorMissing={supervisorMissing}
           canManage={canManage}
           siteUser={application.system_user?.username ?? null}
+          appRoot={(application.path ?? "").replace(/\/public_html\/?$/, "")}
           canViewLogs={can(permissions, "logs", "view")}
         />
       )}

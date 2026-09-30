@@ -6,6 +6,7 @@ import { CircleStop, TriangleAlert } from "lucide-react";
 import { killProcess } from "@/lib/api/server-metrics";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Caution } from "@/components/ui/caution";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import {
   Tooltip,
@@ -33,6 +34,7 @@ export function KillProcessButton({ process, canManage }) {
   const [pending, setPending] = useState(false);
   // Only offered once TERM has been tried and the process is still there.
   const [offerForce, setOfferForce] = useState(false);
+  const engine = databaseEngine(process.command);
 
   async function run(signal) {
     setPending(true);
@@ -138,9 +140,29 @@ export function KillProcessButton({ process, canManage }) {
         confirmVariant="destructive"
         pending={pending}
         onConfirm={() => run(offerForce ? "KILL" : "TERM")}
-      />
+      >
+        {/* A database stopped here stays down — nothing restarts it — and
+            every application using it fails until someone starts it again
+            from Services. The API still allows it, so the dialog says so. */}
+        {engine && !offerForce ? (
+          <Caution tone="destructive" size="md">
+            {t("kill.databaseWarning", { engine })}
+          </Caution>
+        ) : null}
+      </ConfirmDialog>
     </>
   );
+}
+
+const DATABASE_PROCESSES = [
+  [/^(mysqld|mariadbd|mysqld_safe|mariadbd-safe)$/, "MariaDB / MySQL"],
+  [/^mongod$/, "MongoDB"],
+  [/^(postgres|postmaster)$/, "PostgreSQL"],
+];
+
+function databaseEngine(command) {
+  const name = shortCommand(command).replace(/:$/, "");
+  return DATABASE_PROCESSES.find(([pattern]) => pattern.test(name))?.[1] ?? null;
 }
 
 // The full command line can be hundreds of characters; a dialog title needs the

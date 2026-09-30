@@ -14,6 +14,7 @@ import { SupervisorMissingAlert } from "@/components/applications/workers/superv
 import { WorkersTable } from "@/components/applications/workers/workers-table";
 import { WorkersCards } from "@/components/applications/workers/workers-cards";
 import { CreateWorkerDialog } from "@/components/applications/workers/create-worker-dialog";
+import { WorkerSiteProvider } from "@/components/applications/workers/worker-site-context";
 
 // Status is read from supervisord on every GET — nothing is cached server-side, so
 // the "refresh" here is just re-fetching, same as the Services page.
@@ -35,7 +36,7 @@ const STATE_DOT = {
   stopped: "bg-muted-foreground/50",
 };
 
-export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChecks, supervisorMissing = false, canManage, siteUser = null, canViewLogs = false }) {
+export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChecks, supervisorMissing = false, canManage, siteUser = null, appRoot = "", canViewLogs = false }) {
   const t = useTranslations("applications.workers");
   const [workers, setWorkers] = useState(initialWorkers);
   const [presets, setPresets] = useState(initialPresets);
@@ -130,6 +131,7 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
   }
 
   return (
+    <WorkerSiteProvider value={{ appRoot }}>
     <div className="space-y-4">
       {/* Above the config warnings: nothing below matters on a server that
           cannot run a worker at all. */}
@@ -228,5 +230,6 @@ export function WorkersPanel({ appId, initialWorkers, initialPresets, initialChe
         />
       ) : null}
     </div>
+    </WorkerSiteProvider>
   );
 }

@@ -836,7 +836,21 @@
     "pathNoTraversal": "Le chemin ne peut pas contenir ..",
     "securityUsernameSpaces": "Ne peut pas contenir d'espaces.",
     "databaseUsernameReserved": "Ce nom appartient au serveur de base de données. Choisissez-en un autre.",
-    "databaseHost": "Saisissez une adresse IPv4 comme 203.0.113.5, ou une plage comme 203.0.113.0/24."
+    "databaseHost": "Saisissez une adresse IPv4 comme 203.0.113.5, ou une plage comme 203.0.113.0/24.",
+    "phpSizeUnit": "Utilisez un nombre avec une unité, comme 128M, 1G ou 512K.",
+    "phpMemoryMin": "Utilisez au moins 16M : en dessous, PHP ne peut pas démarrer la plupart des applications.",
+    "phpMemoryMax": "C'est plus de mémoire que ce serveur n'en possède.",
+    "postBelowUpload": "Doit être au moins égal à la taille d'envoi maximale, sinon les envois entre les deux échouent.",
+    "prependOutsideSite": "Utilisez un fichier situé dans le dossier de cette application.",
+    "prefixTraversal": "Le dossier ne peut pas contenir . ou .. comme nom de dossier.",
+    "passwordSameAsCurrent": "Choisissez un mot de passe différent de l'actuel.",
+    "cronNameReserved": "Ce nom est déjà pris par un fichier du serveur ou du panneau. Choisissez-en un autre.",
+    "cronRootRefused": "Les tâches ne peuvent pas s'exécuter en tant que root. Choisissez un utilisateur système.",
+    "directivesPhpOnly": "Uniquement des réglages PHP, un par ligne, comme php_admin_value[short_open_tag] = On. Les lignes de pool comme user = ou listen = ne sont pas acceptées ici.",
+    "noManagedWorkerKeys": "user, command, directory et les fichiers de journal sont définis par le panneau. Modifiez-les dans les champs ci-dessus, pas ici.",
+    "insideApplication": "Utilisez un chemin situé dans le dossier de cette application.",
+    "securityUsernameAscii": "Utilisez uniquement des lettres anglaises, des chiffres et . _ - @ : les navigateurs n'envoient pas les autres lettres de la même façon.",
+    "excludeInsideSite": "Utilisez un chemin situé dans le dossier de l'application, comme storage/logs, sans / ni .."
   },
   "serverDashboard": {
     "title": "Tableau de bord",
@@ -938,7 +952,8 @@
       "stopped": "{command} arrêté",
       "alreadyGone": "Ce processus n'est plus en cours — rien n'a été arrêté.",
       "refused": "Ce processus ne peut pas être arrêté depuis ici.",
-      "failed": "Le processus n'a pas pu être arrêté."
+      "failed": "Le processus n'a pas pu être arrêté.",
+      "databaseWarning": "Il s'agit du serveur de bases de données {engine}. Il restera arrêté — rien ne le redémarre — et toutes les applications qui l'utilisent cesseront de fonctionner jusqu'à ce que vous le démarriez dans Services."
     },
     "diskUnknown": "Non signalé",
     "measuring": "Mesure…",
@@ -1289,7 +1304,8 @@
     "clearDone": "{label} vidé.",
     "clearFailed": "Le journal n'a pas pu être vidé.",
     "clearBodyAudit": "Ce journal fait partie de la manière dont le serveur enregistre ce qui s'y passe : connexions, requêtes bloquées, bannissements. Le vider détruit des preuves dont vous pourriez avoir besoin après une intrusion, et c'est irréversible. Le fichier continue d'enregistrer à partir de maintenant.",
-    "loadingSource": "Chargement de {label}…"
+    "loadingSource": "Chargement de {label}…",
+    "linesCapped": "Affichage du maximum possible : {max, number} lignes."
   },
   "services": {
     "title": "Services",
@@ -1591,7 +1607,8 @@
       "bodyWithIp": "{count, plural, one {Active le # jail et ajoute {ip} à la liste des adresses jamais bannies, pour que vous ne puissiez pas vous verrouiller l'accès.} other {Active les # jails et ajoute {ip} à la liste des adresses jamais bannies, pour que vous ne puissiez pas vous verrouiller l'accès.}}",
       "action": "Configurer la protection",
       "done": "La protection est activée.",
-      "failed": "Impossible de configurer cela."
+      "failed": "Impossible de configurer cela.",
+      "checkingIp": "Vérification de votre adresse, pour qu'elle ne soit jamais bannie…"
     },
     "noPermission": "Votre rôle n'inclut pas Fail2ban avec l'accès Gérer. Demandez à un administrateur de vous l'accorder."
   },
@@ -1920,7 +1937,9 @@
         "memoryTotal": "Ce serveur dispose de {size} de mémoire.",
         "custom": "Personnalisé",
         "recommended": "recommandé",
-        "save": "Enregistrer le swap"
+        "save": "Enregistrer le swap",
+        "noRoom": "Cela utiliserait plus de la moitié de l'espace disque libre ({free} de libre). Choisissez une taille plus petite.",
+        "tight": "Un fichier swap de {size} ne laisse que {left} de libre sur le disque, alors que les applications et les sauvegardes en ont aussi besoin."
       },
       "redis": {
         "passwordUnknownShort": "Impossible de vérifier",
@@ -2234,7 +2253,61 @@
       "xsl": "Transforme du XML avec des feuilles XSLT",
       "yaml": "Lit et écrit des fichiers YAML",
       "zip": "Crée et ouvre les archives .zip",
-      "zstd": "Compression rapide, utilisée pour le cache et les sauvegardes"
+      "zstd": "Compression rapide, utilisée pour le cache et les sauvegardes",
+      "amqp": "Envoie et reçoit des messages via RabbitMQ",
+      "apcu": "Garde des données en cache en mémoire pour des pages plus rapides",
+      "ast": "Lit le code PHP sous forme d'arbre syntaxique, pour les outils d'analyse",
+      "decimal": "Calculs décimaux exacts, pour l'argent",
+      "dio": "Accès bas niveau aux fichiers et aux ports série",
+      "ds": "Listes, tables et files plus rapides pour le code PHP",
+      "enchant": "Vérification orthographique",
+      "excimer": "Mesure où PHP passe son temps, pour le profilage",
+      "gearman": "Confie du travail à des processus en arrière-plan via Gearman",
+      "gmagick": "Retouche d'images avec GraphicsMagick",
+      "gnupg": "Chiffre et signe des données avec GnuPG",
+      "grpc": "Appelle des services gRPC, utilisé par certaines bibliothèques Google Cloud",
+      "http": "Outils supplémentaires pour créer et lire des requêtes HTTP",
+      "inotify": "Détecte quand des fichiers changent sur le disque",
+      "interbase": "Se connecte aux bases Firebird et InterBase",
+      "lz4": "Compression rapide pour les données en cache",
+      "mcrypt": "Anciennes fonctions de chiffrement, pour les vieilles applications",
+      "memcache": "Stocke le cache dans un serveur Memcached (ancien client)",
+      "opentelemetry": "Envoie les traces de chaque requête aux outils de supervision",
+      "phalcon": "Le framework Phalcon, intégré à PHP",
+      "pq": "Une autre façon de se connecter à PostgreSQL",
+      "protobuf": "Lit et écrit des données Protocol Buffers",
+      "ps": "Crée des fichiers PostScript",
+      "pspell": "Vérification orthographique avec Aspell",
+      "raphf": "Garde les connexions ouvertes entre les requêtes, requis par http",
+      "rdkafka": "Envoie et reçoit des messages via Kafka",
+      "readline": "Édition de ligne pour PHP en ligne de commande",
+      "rrd": "Lit et écrit des données de graphiques RRDtool",
+      "stomp": "Communique avec des files de messages via STOMP",
+      "sybase": "Se connecte aux bases Sybase et SQL Server",
+      "uopz": "Modifie le code PHP pendant l'exécution, utilisé par les outils de test",
+      "uploadprogress": "Indique l'avancement d'un envoi de fichier",
+      "xhprof": "Mesure quelles fonctions sont lentes, pour le profilage",
+      "xlswriter": "Écrit rapidement de gros fichiers Excel",
+      "xmlrpc": "Communique avec des services XML-RPC, comme l'ancienne API distante de WordPress",
+      "yac": "Cache en mémoire partagée sans verrous",
+      "zmq": "Envoie des messages via ZeroMQ",
+      "apcu-bc": "Permet à du vieux code d'appeler APCu par les anciens noms apc_",
+      "facedetect": "Détecte les visages sur les photos",
+      "geoip": "Trouve le pays d'un visiteur à partir de son adresse IP",
+      "json": "Lit et écrit du JSON (intégré depuis PHP 8)",
+      "lua": "Exécute des scripts Lua depuis PHP",
+      "mongo": "Ancien pilote MongoDB, pour les vieilles applications",
+      "mysqlnd-ms": "Répartit les requêtes MySQL sur plusieurs serveurs",
+      "phalcon3": "Le framework Phalcon 3, intégré à PHP",
+      "phalcon4": "Le framework Phalcon 4, intégré à PHP",
+      "phalcon5": "Le framework Phalcon 5, intégré à PHP",
+      "pinba": "Envoie des statistiques de durée à un serveur Pinba",
+      "propro": "Complément requis par l'ancienne extension http",
+      "radius": "Vérifie les connexions auprès d'un serveur RADIUS",
+      "recode": "Convertit du texte entre jeux de caractères",
+      "sass": "Compile du Sass en CSS",
+      "tideways": "Mesure où PHP passe son temps, pour le profilage",
+      "xcache": "Ancien cache de code, remplacé par OPcache"
     },
     "ioncube": {
       "title": "ionCube Loader",
@@ -2448,7 +2521,8 @@
       "enableHint": "Lance le nettoyage selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
       "onlyWhenHint": "Ne nettoie que lorsque le disque est au moins rempli à ce niveau, pour qu’un nettoyage de routine ne se déclenche pas sur un disque presque vide.",
       "nextRun": "Prochain nettoyage {when}",
-      "nextRunAtZone": "Prochain nettoyage {when} · {time} {timezone}"
+      "nextRunAtZone": "Prochain nettoyage {when} · {time} {timezone}",
+      "thresholdRange": "Saisissez un nombre de 1 à 99. L'utilisation du disque ne dépasse jamais 100 % : avec un nombre plus élevé, le nettoyage ne s'exécute jamais."
     },
     "runs": {
       "title": "Nettoyages récents",
@@ -2690,7 +2764,9 @@
       "cardTitle": "Supprimer cette base",
       "cardDescription": "Supprime la base, tout son contenu et ses utilisateurs.",
       "noPermission": "Votre rôle n'inclut pas Bases de données avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
-      "copyName": "Copier le nom de la base"
+      "copyName": "Copier le nom de la base",
+      "usedBy": "{application} utilise cette base et cessera de fonctionner une fois qu'elle sera supprimée.",
+      "usedByUnknown": "Une application utilise cette base et cessera de fonctionner une fois qu'elle sera supprimée."
     },
     "adopt": {
       "title": "{count, plural, one {# base de ce serveur n'est pas gérée ici} other {# bases de ce serveur ne sont pas gérées ici}}",
@@ -3123,7 +3199,7 @@
       "subtitle": "Collez un jeton. {brand} lit vos dépôts et vos branches et ajoute le webhook de déploiement — il n'envoie jamais de code.",
       "scopeHint_github": "Cochez les portées <scope>repo</scope> et <scope>admin:repo_hook</scope>. La seconde permet au panneau d'ajouter lui-même le webhook de déploiement à votre dépôt.",
       "scopeHint_gitlab": "Cochez <scope>api</scope> et <scope>read_repository</scope>, et choisissez <option>Jeton hérité</option>.",
-      "scopeHint_bitbucket": "Cochez <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope> et <scope>write:webhook:bitbucket</scope>. Celles du webhook permettent au panneau d'ajouter lui-même le webhook de déploiement.",
+      "scopeHint_bitbucket": "Cochez <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope>, <scope>write:webhook:bitbucket</scope> et <scope>delete:webhook:bitbucket</scope>. Celles du webhook permettent au panneau d'ajouter lui-même le webhook de déploiement, et de le retirer quand vous désactivez le déploiement au push.",
       "nameLabel": "Nom",
       "namePlaceholder": "Compte {provider}",
       "nameHelp": "Un nom pour vous. C'est ainsi qu'apparaît ce compte quand vous créez une application.",
@@ -3289,7 +3365,13 @@
       "pageSubtitleReadOnly": "Consultez le fichier .env de cette application.",
       "emptyFilePlaceholder": "# Ce fichier est vide — ajoutez des variables et enregistrez",
       "tooLargeTitle": "Non enregistré — fichier trop volumineux",
-      "tooLarge": "Le fichier ne peut pas dépasser 256 Ko. Supprimez du contenu pour pouvoir l'enregistrer."
+      "tooLarge": "Le fichier ne peut pas dépasser 256 Ko. Supprimez du contenu pour pouvoir l'enregistrer.",
+      "guarded": {
+        "title": "Modifier des réglages gérés par le panneau ?",
+        "description": "Vous avez modifié ou supprimé {keys}. Le panneau les a configurés et l'application en dépend : une nouvelle clé de chiffrement rend illisibles tous les identifiants enregistrés, et un autre port ou dossier ne correspond plus au service que le panneau exécute.",
+        "cancel": "Continuer à modifier",
+        "confirm": "Enregistrer quand même"
+      }
     },
     "title": "Applications",
     "subtitle": "Applications et services exécutés sur ce serveur.",
@@ -3573,7 +3655,8 @@
       "systemUserPasswordHint": "Généré pour vous. Conservez-le, modifiez-le ou effacez-le. Vous pourrez le revoir plus tard sur la page Utilisateurs système.",
       "systemUserNew": "{username} (nouveau)",
       "systemUserCreateFailed": "L'utilisateur système n'a pas pu être créé, l'application n'a donc pas été créée non plus.",
-      "systemUserLeftBehind": "L'utilisateur système {username} a été créé mais n'a pas pu être supprimé. Choisissez-le dans « Utiliser un utilisateur système existant » ou supprimez-le depuis Utilisateurs système."
+      "systemUserLeftBehind": "L'utilisateur système {username} a été créé mais n'a pas pu être supprimé. Choisissez-le dans « Utiliser un utilisateur système existant » ou supprimez-le depuis Utilisateurs système.",
+      "tablePrefixInvalid": "Commencez par une lettre, utilisez uniquement des lettres et des chiffres et terminez par un tiret bas (par exemple jml_)."
     },
     "actions": {
       "label": "Actions",
@@ -3726,8 +3809,7 @@
         "nowLabel": "Actuel",
         "afterLabel": "Après",
         "keepsServing": "{domain} reste attaché en tant qu'alias et continue de servir cette application.",
-        "renamesFiles": "Les fichiers de configuration et de logs de l'application sont renommés.",
-        "cmsWarning": "WordPress a encore l'ancienne adresse enregistrée, donc les visiteurs peuvent être redirigés tant que vous ne la modifiez pas dans l'application.",
+        "updatesAddress": "L'adresse enregistrée dans l'application est mise à jour vers {domain}.",
         "notOnCertificate": "Le certificat SSL ne couvre pas {domain}. Les visiteurs dirigés vers la nouvelle adresse verront un avertissement de sécurité jusqu’à ce que vous le réémettiez."
       },
       "removeConfirm": {
@@ -4654,7 +4736,8 @@
           "tooBroad": "Cela correspondrait aussi aux crawlers classiques, y compris Google. Utilisez le nom complet du bot.",
           "searchEngine": "C'est un moteur de recherche, pas un crawler IA — le bloquer retirerait l'application des résultats de recherche.",
           "duplicate": "Ce bot est déjà dans la liste.",
-          "limit": "La liste ne peut pas contenir plus de bots."
+          "limit": "La liste ne peut pas contenir plus de bots.",
+          "browserWord": "Ce mot fait partie du nom des navigateurs ordinaires : il bloquerait de vrais visiteurs. Utilisez le nom complet du bot, comme GPTBot."
         },
         "noPermission": "Votre rôle n'inclut pas Bloqueur de bots IA pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder."
       },
@@ -4666,7 +4749,9 @@
       "saved": "Paramètres des bots IA enregistrés.",
       "saveFailed": "Impossible d'enregistrer.",
       "noPermission": "Votre rôle n'inclut pas Bloqueur de bots IA pour cette application avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
-      "nothingToSave": "Rien à enregistrer"
+      "nothingToSave": "Rien à enregistrer",
+      "robotsTxtOnly": "robots.txt uniquement",
+      "robotsTxtOnlyNote": "{names} ne visitent jamais votre site : Google et Apple entraînent leur IA avec leurs robots habituels et ne lisent ces noms que dans robots.txt. Les bloquer ici n'y change rien ; ajoutez-les plutôt à robots.txt avec Disallow: /."
     },
     "firewall": {
       "pageTitle": "Pare-feu web",
@@ -4692,7 +4777,7 @@
       "categoryHints": {
         "query_string": "Code d'attaque caché dans la partie d'un lien après le signe ?.",
         "request_uri": "Requêtes pour des fichiers et chemins que seuls les attaquants recherchent.",
-        "user_agent": "Visiteurs se déclarant comme scanners et outils d'attaque connus.",
+        "user_agent": "Visiteurs qui se présentent comme des scanners et outils d'attaque connus — ainsi que les outils en ligne de commande et bibliothèques HTTP comme curl et Go : les moniteurs de disponibilité, scripts et webhooks envoyés ainsi sont bloqués aussi.",
         "referrer": "Trafic prétendant provenir de sites de spam et de logiciels malveillants.",
         "cookie": "Cookies altérés utilisés pour faire passer du code devant votre application.",
         "method": "Façons d'envoyer une requête qu'un navigateur normal n'utilise jamais."
@@ -4711,6 +4796,7 @@
       "remove": "Retirer {value}",
       "countOf": "{count} sur {max}",
       "tooLong": "Restez sous {max} caractères.",
+      "tooShort": "Utilisez au moins {min} caractères : un mot plus court correspond à presque toutes les requêtes.",
       "listFull": "Vous avez atteint la limite de {max}.",
       "shortTermWarning": "Les mots courts correspondent n'importe où dans une adresse — « conf » bloquerait aussi « confirm.js ». Soyez le plus spécifique possible.",
       "unsaved": "Pas encore enregistré",
@@ -5184,7 +5270,9 @@
       "submit": "Modifier la racine web",
       "cancel": "Annuler",
       "saved": "Racine web modifiée.",
-      "failed": "La racine web n'a pas pu être modifiée."
+      "failed": "La racine web n'a pas pu être modifiée.",
+      "resolved": "Le site sera servi depuis <code>{path}</code>.",
+      "missingFolder": "Le dossier {path} n'existe pas. Créez-le d'abord dans Fichiers, ou vérifiez l'orthographe."
     },
     "missing": {
       "title": "Cette application n'est plus là",
@@ -5635,28 +5723,29 @@
     "alreadyInstalledHint": "Déjà présent sur ce serveur. Rien à faire ici.",
     "chooseEngineFirst": "Choisissez d'abord un moteur de base de données",
     "oneSqlOnly": "Un serveur n'exécute qu'un seul moteur SQL. Une fois celui-ci installé, passer à l'autre implique de reconstruire le serveur.",
-    "purposePostgresql": "Pour les applications qui demandent Postgres par son nom"
+    "purposePostgresql": "Pour les applications qui demandent Postgres par son nom",
+    "fail2banOff": "Installé, mais rien n'est encore protégé. <link>Activez la protection SSH dans Fail2ban</link>."
   },
   "storage": {
     "title": "Stockage",
-    "subtitle": "Où les sauvegardes sont envoyées. Connectez un bucket ici, puis choisissez-le pour une application.",
+    "subtitle": "L'endroit où les sauvegardes sont envoyées. Connectez une destination ici, puis choisissez-la sur une application.",
     "loadFailed": "Impossible de charger ces données.",
     "noPermission": "Votre rôle n'inclut pas le Stockage avec l'accès Gestion. Demandez à un administrateur de l'accorder.",
     "card": {
       "title": "Destinations de stockage",
-      "subtitle": "Buckets compatibles S3 sur lesquels ce serveur peut écrire des sauvegardes.",
+      "subtitle": "Où ce serveur peut envoyer ses sauvegardes : un bucket S3, un serveur FTP ou SFTP, ou Google Drive.",
       "add": "Ajouter une destination",
       "whatTestDoes": "Que fait le test ?",
-      "testExplained": "Il écrit un petit fichier dans le bucket, le relit puis le supprime. Cela prouve que les clés fonctionnent ET qu'elles permettent d'écrire — une clé en lecture seule échouera toujours."
+      "testExplained": "Il écrit un petit fichier dans la destination, le relit puis le supprime. Cela prouve que l'accès fonctionne ET qu'il peut écrire : un compte en lecture seule échouera toujours."
     },
     "empty": {
       "title": "Aucun stockage connecté",
-      "body": "Les sauvegardes ont besoin d'une destination. Connectez un bucket compatible S3 et n'importe quelle application pourra y envoyer ses sauvegardes.",
+      "body": "Les sauvegardes ont besoin d'un endroit où aller. Connectez une destination de stockage et chaque application pourra y envoyer ses sauvegardes.",
       "reassurance": "Les clés sont stockées chiffrées et ne servent qu'à envoyer les sauvegardes de ce serveur et à supprimer les anciennes.",
       "stepsTitle": "Pour commencer, suivez ces trois étapes :",
-      "step1": "Créez un bucket chez votre fournisseur — ou choisissez-en un que vous avez déjà.",
-      "step2": "Créez une clé d'accès pouvant téléverser, télécharger et supprimer des objets dans ce bucket.",
-      "step3": "Collez le nom du bucket, sa région et les clés dans le formulaire ici."
+      "step1": "Choisissez où iront les sauvegardes : un bucket S3, un serveur FTP ou SFTP, ou Google Drive.",
+      "step2": "Obtenez un accès qui peut envoyer, télécharger et supprimer des fichiers à cet endroit : une clé d'accès, ou un identifiant et un mot de passe.",
+      "step3": "Saisissez ces informations dans le formulaire ici."
     },
     "row": {
       "credentialsSet": "Identifiants définis",
@@ -5678,7 +5767,7 @@
       "neverTested": "Jamais testé — personne n'a vérifié que ces identifiants fonctionnent.",
       "lastTestedOk": "Testé {when}",
       "failedCredentials": "Le dernier test a échoué {when} — les identifiants ont été refusés.",
-      "failedUnreachable": "Le dernier test a échoué {when} — le bucket est injoignable.",
+      "failedUnreachable": "Le dernier test a échoué {when} : la destination était injoignable.",
       "failed": "Le dernier test a échoué {when}.",
       "failedHostKey": "Le dernier test a échoué {when} — le serveur a présenté une clé d’hôte différente de celle enregistrée, la connexion a donc été interrompue.",
       "failedPrivateKey": "Le dernier test a échoué {when} — la clé privée n’a pas pu être lue.",
@@ -5695,7 +5784,7 @@
     },
     "form": {
       "provider": "Fournisseur",
-      "providerHint": "Ne change que l'exemple affiché ci-dessous — tout fournisseur compatible S3 fonctionne.",
+      "providerHint": "L'endroit où les sauvegardes sont stockées. Les champs ci-dessous s'adaptent à ce choix.",
       "providers": {
         "aws": "Amazon S3",
         "r2": "Cloudflare R2",
@@ -5716,7 +5805,7 @@
       "endpointAws": "Laissez vide pour Amazon S3 — la région détermine le point de terminaison.",
       "prefix": "Dossier",
       "prefixPlaceholder": "backups/",
-      "prefixHint": "Optionnel. Conserve les sauvegardes dans leur propre dossier à l'intérieur du bucket.",
+      "prefixHint": "Facultatif. Range les sauvegardes dans leur propre dossier à la destination.",
       "prefixChangeWarning": "Modifier ceci ne déplace rien. Les sauvegardes déjà stockées dans l'ancien dossier ne seront plus trouvées.",
       "fields": {
         "bucket": "Bucket",
@@ -5767,14 +5856,14 @@
     },
     "connect": {
       "title": "Ajouter une destination de stockage",
-      "subtitle": "Un bucket compatible S3 pour envoyer les sauvegardes.",
+      "subtitle": "Un endroit où envoyer les sauvegardes.",
       "credentialsNote": "Les clés sont stockées chiffrées et ne sont plus jamais affichées — pour les modifier plus tard, il faut les remplacer.",
       "cancel": "Annuler",
       "submit": "Ajouter une destination",
       "saving": "Ajout…",
       "added": "Destination ajoutée.",
       "testPassed": "Connexion testée — elle fonctionne.",
-      "testFailed": "Enregistré, mais le test de connexion a échoué. Vérifiez les clés et le bucket.",
+      "testFailed": "Enregistré, mais le test de connexion a échoué. Vérifiez les identifiants et la cible.",
       "permissionsNote": "La clé doit avoir les permissions pour téléverser, télécharger et supprimer des objets dans ce bucket. La suppression est importante — les sauvegardes effacent les anciennes archives une fois la limite de rétention dépassée.",
       "keyDocs": "Où trouver ces clés ?",
       "permissionsNoteRemote": "Le compte doit pouvoir créer, lire et supprimer des fichiers dans ce répertoire — les sauvegardes suppriment les anciennes archives au-delà de la limite de rétention, un accès en lecture seule ne peut donc pas fonctionner.",
@@ -5982,7 +6071,7 @@
       "applicationPlaceholder": "Choisissez une application",
       "applicationSearch": "Rechercher des applications",
       "applicationEmpty": "Aucune application trouvée",
-      "noDestinations": "Les sauvegardes ont besoin d'une destination. Connectez d'abord un stockage compatible S3 — il suffit d'un bucket et d'une clé.",
+      "noDestinations": "Les sauvegardes ont besoin d'un endroit où aller. Connectez d'abord une destination de stockage.",
       "addDestination": "Configurer le stockage",
       "checkAgain": "Vérifier à nouveau",
       "manageStorage": "Gérer le stockage",
@@ -6031,7 +6120,8 @@
       "destinationFailing": "Le dernier test de connexion vers {name} a échoué, les sauvegardes envoyées là-bas ne seront pas écrites tant que ce n'est pas corrigé.",
       "noDatabase": {
         "blocked": "Cette application n'a pas de base de données",
-        "filesOnly": "Cette application n'a pas de base de données, donc seuls ses fichiers seront sauvegardés."
+        "filesOnly": "Cette application n'a pas de base de données, donc seuls ses fichiers seront sauvegardés.",
+        "typeHasNone": "Ce type d'application n'a pas de base de données : seuls ses fichiers sont sauvegardés."
       },
       "automaticHint": "Lance la sauvegarde selon un planning au lieu de seulement quand vous appuyez sur le bouton.",
       "fileExcludesHint": "Chemins à exclure de la sauvegarde, un par ligne. Les caches et les logs méritent de l’être ; les téléversements, non.",
@@ -6137,7 +6227,7 @@
           }
         }
       },
-      "copyUid": "Copier le nom de fichier de cette archive dans le bucket",
+      "copyUid": "Copier le nom de fichier de cette archive à la destination",
       "uploadProgress": "{done} sur {total}",
       "uploadProgressBare": "{done} envoyés",
       "retryConfirm": {
@@ -6336,7 +6426,7 @@
         "offsite": "Stocké hors de ce serveur"
       },
       "stepsTitle": "Comment se configurer",
-      "step1": "Connectez une destination de stockage — le bucket dans lequel vos sauvegardes sont écrites.",
+      "step1": "Connectez une destination de stockage : l'endroit où vos sauvegardes sont écrites.",
       "step2": "Choisissez une application, ce qu'il faut copier, et à quelle fréquence.",
       "step3": "Restaurez depuis n'importe quelle sauvegarde vérifiée, dans l'onglet Historique.",
       "action": "Configurer les sauvegardes",
@@ -6377,7 +6467,7 @@
       },
       "unknownApplication": "Application supprimée",
       "unknownReason": "La raison n'a pas été enregistrée.",
-      "noSafetyCopy": "Aucune prise",
+      "noSafetyCopy": "Aucune disponible",
       "findSafetyCopy": "Trouver la copie de sécurité",
       "allApplications": "Toutes les applications",
       "allStatuses": "Tout statut",
@@ -6508,7 +6598,7 @@
     "title": "Gestion centralisée",
     "pageSubtitle": "Laissez un panel central gérer ce serveur pour vous.",
     "subtitle": "Générez une clé ici, puis collez-la dans votre panel central pour y connecter ce serveur.",
-    "connected": "Connecté",
+    "keyActive": "Clé active",
     "disconnected": "Ce serveur n'est plus connecté à Central.",
     "cancel": "Annuler",
     "power": {

@@ -27,10 +27,12 @@ const badgeVariants = cva(
         secondary: "rounded-md px-1 text-muted-foreground [a]:hover:text-foreground",
         destructive:
           "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
+        // Text mixed towards the foreground in light mode: on a tinted card
+        // the plain token fell to 4.4:1 (dashboard, 30 Sep).
         success:
-          "bg-success/10 text-success dark:bg-success/20",
+          "bg-success/10 text-[color-mix(in_oklch,var(--success)_80%,var(--foreground))] dark:bg-success/20 dark:text-success",
         warning:
-          "bg-warning/15 text-warning dark:bg-warning/20",
+          "bg-warning/15 text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))] dark:bg-warning/20 dark:text-warning",
         // A status that is filled like its siblings but carries no alarm.
         // `secondary` is a quiet LABEL — no fill at all — so a Pending
         // application sat in a column of coloured pills with nothing around it

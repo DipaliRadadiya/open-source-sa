@@ -836,7 +836,21 @@
     "pathNoTraversal": "The path can't contain ..",
     "securityUsernameSpaces": "Can't contain spaces.",
     "databaseUsernameReserved": "That name belongs to the database server. Choose another.",
-    "databaseHost": "Enter an IPv4 address like 203.0.113.5, or a range like 203.0.113.0/24."
+    "databaseHost": "Enter an IPv4 address like 203.0.113.5, or a range like 203.0.113.0/24.",
+    "phpSizeUnit": "Use a number with a unit, like 128M, 1G or 512K.",
+    "phpMemoryMin": "Use at least 16M — less than that and PHP can't start most applications.",
+    "phpMemoryMax": "That is more memory than this server has.",
+    "postBelowUpload": "Must be at least the largest upload size, or uploads between the two fail.",
+    "prependOutsideSite": "Use a file inside this application's folder.",
+    "prefixTraversal": "The folder can't contain . or .. as a folder name.",
+    "passwordSameAsCurrent": "Choose a password different from your current one.",
+    "cronNameReserved": "That name is taken by a file the server or the panel already uses. Choose another.",
+    "cronRootRefused": "Jobs can't run as root. Choose a system user.",
+    "directivesPhpOnly": "Only PHP settings, one per line, like php_admin_value[short_open_tag] = On. Pool lines such as user = or listen = aren't allowed here.",
+    "noManagedWorkerKeys": "user, command, directory and the log files are set by the panel. Change them in the fields above, not here.",
+    "insideApplication": "Use a path inside this application's folder.",
+    "securityUsernameAscii": "Use only English letters, numbers and . _ - @ — browsers don't send other letters the same way.",
+    "excludeInsideSite": "Use a path inside the application's folder, like storage/logs — not / or .."
   },
   "serverDashboard": {
     "title": "Dashboard",
@@ -938,7 +952,8 @@
       "stopped": "{command} stopped",
       "alreadyGone": "That process is no longer running — nothing was stopped.",
       "refused": "This process cannot be stopped from here.",
-      "failed": "The process could not be stopped."
+      "failed": "The process could not be stopped.",
+      "databaseWarning": "This is the {engine} database server. It stays stopped — nothing starts it again — and every application that uses it stops working until you start it in Services."
     },
     "diskUnknown": "Not reported",
     "measuring": "Measuring…",
@@ -1289,7 +1304,8 @@
     "clearDone": "{label} cleared.",
     "clearFailed": "The log could not be cleared.",
     "clearBodyAudit": "This log is part of how the server records what happened to it — sign-ins, blocked requests, bans. Clearing it destroys evidence you may need after a break-in, and it cannot be undone. The file keeps recording from now on.",
-    "loadingSource": "Loading {label}…"
+    "loadingSource": "Loading {label}…",
+    "linesCapped": "Showing the most there can be: {max, number} lines."
   },
   "services": {
     "title": "Services",
@@ -1591,7 +1607,8 @@
       "bodyWithIp": "{count, plural, one {Switches on the # jail and adds {ip} to the never-ban list, so you cannot lock yourself out.} other {Switches on all # jails and adds {ip} to the never-ban list, so you cannot lock yourself out.}}",
       "action": "Set up protection",
       "done": "Protection is on.",
-      "failed": "That could not be set up."
+      "failed": "That could not be set up.",
+      "checkingIp": "Checking your address first, so it can be kept off the ban list…"
     },
     "noPermission": "Your role does not include Fail2ban with Manage access. Ask an administrator to grant it."
   },
@@ -1920,7 +1937,9 @@
         "memoryTotal": "This server has {size} of memory.",
         "custom": "Custom",
         "recommended": "recommended",
-        "save": "Save swap"
+        "save": "Save swap",
+        "noRoom": "That would use more than half of the free disk space ({free} free). Choose a smaller size.",
+        "tight": "A {size} swap file leaves only {left} free on the disk, and applications and backups need that space too."
       },
       "redis": {
         "passwordUnknownShort": "Cannot check",
@@ -2234,7 +2253,61 @@
       "xsl": "Transforms XML with XSLT stylesheets",
       "yaml": "Reads and writes YAML files",
       "zip": "Creates and opens .zip archives",
-      "zstd": "Fast compression, used for caching and backups"
+      "zstd": "Fast compression, used for caching and backups",
+      "amqp": "Sends and receives messages through RabbitMQ",
+      "apcu": "Keeps cached data in memory for faster pages",
+      "ast": "Reads PHP code as a syntax tree, used by code analysis tools",
+      "decimal": "Exact decimal maths, used for money",
+      "dio": "Low-level access to files and serial ports",
+      "ds": "Faster lists, maps and queues for PHP code",
+      "enchant": "Spell checking",
+      "excimer": "Measures where PHP spends its time, for profiling",
+      "gearman": "Hands work to background workers through Gearman",
+      "gmagick": "Image editing with GraphicsMagick",
+      "gnupg": "Encrypts and signs data with GnuPG",
+      "grpc": "Calls gRPC services, used by some Google Cloud libraries",
+      "http": "Extra tools for building and reading HTTP requests",
+      "inotify": "Notices when files change on disk",
+      "interbase": "Connects to Firebird and InterBase databases",
+      "lz4": "Fast compression for cached data",
+      "mcrypt": "Old encryption functions, only for legacy applications",
+      "memcache": "Stores cache in a Memcached server (older client)",
+      "opentelemetry": "Sends traces of each request to monitoring tools",
+      "phalcon": "The Phalcon framework, built into PHP",
+      "pq": "Another way to connect to PostgreSQL",
+      "protobuf": "Reads and writes Protocol Buffers data",
+      "ps": "Creates PostScript files",
+      "pspell": "Spell checking with Aspell",
+      "raphf": "Keeps connections open between requests, needed by http",
+      "rdkafka": "Sends and receives messages through Kafka",
+      "readline": "Line editing for PHP on the command line",
+      "rrd": "Reads and writes RRDtool graph data",
+      "stomp": "Talks to message queues over STOMP",
+      "sybase": "Connects to Sybase and SQL Server databases",
+      "uopz": "Changes PHP code while it runs, used by test tools",
+      "uploadprogress": "Shows how far a file upload has got",
+      "xhprof": "Measures which functions are slow, for profiling",
+      "xlswriter": "Writes large Excel files quickly",
+      "xmlrpc": "Talks to XML-RPC services, like WordPress's old remote API",
+      "yac": "Shared memory cache without locks",
+      "zmq": "Sends messages through ZeroMQ",
+      "apcu-bc": "Lets old code call APCu by its former apc_ names",
+      "facedetect": "Finds faces in photos",
+      "geoip": "Looks up a visitor's country from their IP address",
+      "json": "Reads and writes JSON (built in from PHP 8)",
+      "lua": "Runs Lua scripts from PHP",
+      "mongo": "Old MongoDB driver, only for legacy applications",
+      "mysqlnd-ms": "Spreads MySQL queries across several servers",
+      "phalcon3": "The Phalcon 3 framework, built into PHP",
+      "phalcon4": "The Phalcon 4 framework, built into PHP",
+      "phalcon5": "The Phalcon 5 framework, built into PHP",
+      "pinba": "Sends timing statistics to a Pinba server",
+      "propro": "Helper needed by the older http extension",
+      "radius": "Checks logins against a RADIUS server",
+      "recode": "Converts text between character sets",
+      "sass": "Compiles Sass into CSS",
+      "tideways": "Measures where PHP spends its time, for profiling",
+      "xcache": "Old code cache, replaced by OPcache"
     },
     "ioncube": {
       "title": "ionCube Loader",
@@ -2448,7 +2521,8 @@
       "enableHint": "Runs the cleanup on a schedule instead of only when you press the button.",
       "onlyWhenHint": "Only clean up once the disk is at least this full, so a routine cleanup does not run on a mostly empty disk.",
       "nextRun": "Next clean {when}",
-      "nextRunAtZone": "Next clean {when} · {time} {timezone}"
+      "nextRunAtZone": "Next clean {when} · {time} {timezone}",
+      "thresholdRange": "Enter a number from 1 to 99. Disk usage never goes above 100%, so a higher number means the cleanup never runs."
     },
     "runs": {
       "title": "Recent cleanups",
@@ -2690,7 +2764,9 @@
       "cardTitle": "Delete this database",
       "cardDescription": "Removes the database, everything in it, and its users.",
       "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
-      "copyName": "Copy database name"
+      "copyName": "Copy database name",
+      "usedBy": "{application} uses this database and will stop working once it is deleted.",
+      "usedByUnknown": "An application uses this database and will stop working once it is deleted."
     },
     "adopt": {
       "title": "{count, plural, one {# database on this server isn't managed here} other {# databases on this server aren't managed here}}",
@@ -3123,7 +3199,7 @@
       "subtitle": "Paste a token. {brand} reads your repositories and branches and adds the deploy webhook — it never pushes code.",
       "scopeHint_github": "Tick <scope>repo</scope> and <scope>admin:repo_hook</scope>. The second lets the panel add the deploy webhook to your repository for you.",
       "scopeHint_gitlab": "Tick <scope>api</scope> and <scope>read_repository</scope>, and choose <option>Legacy token</option>.",
-      "scopeHint_bitbucket": "Tick <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope> and <scope>write:webhook:bitbucket</scope>. The webhook ones let the panel add the deploy webhook for you.",
+      "scopeHint_bitbucket": "Tick <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope>, <scope>write:webhook:bitbucket</scope> and <scope>delete:webhook:bitbucket</scope>. The webhook ones let the panel add the deploy webhook for you, and remove it again when you turn deploy on push off.",
       "nameLabel": "Name",
       "namePlaceholder": "Work {provider}",
       "nameHelp": "A name for you. It is how this account appears when you create an application.",
@@ -3289,7 +3365,13 @@
       "pageSubtitleReadOnly": "View this application's .env file.",
       "emptyFilePlaceholder": "# This file is empty — add variables and save",
       "tooLargeTitle": "Not saved — file too large",
-      "tooLarge": "The file can be at most 256 KB. Remove something to save it."
+      "tooLarge": "The file can be at most 256 KB. Remove something to save it.",
+      "guarded": {
+        "title": "Change settings the panel manages?",
+        "description": "You changed or removed {keys}. The panel set these up and the application depends on them: a new encryption key makes every saved credential unreadable, and a different port or folder no longer matches the service the panel runs.",
+        "cancel": "Keep editing",
+        "confirm": "Save anyway"
+      }
     },
     "title": "Applications",
     "subtitle": "Applications and services running on this server.",
@@ -3573,7 +3655,8 @@
       "systemUserPasswordHint": "Generated for you. Keep it, change it or clear it. You can see it again later on the System Users page.",
       "systemUserNew": "{username} (new)",
       "systemUserCreateFailed": "The system user couldn’t be created, so the application wasn’t created either.",
-      "systemUserLeftBehind": "The system user {username} was created but couldn’t be removed. Choose it under “Use an existing system user”, or delete it on System Users."
+      "systemUserLeftBehind": "The system user {username} was created but couldn’t be removed. Choose it under “Use an existing system user”, or delete it on System Users.",
+      "tablePrefixInvalid": "Start with a letter, use only letters and numbers, and end with an underscore (for example jml_)."
     },
     "actions": {
       "label": "Actions",
@@ -3726,8 +3809,7 @@
         "nowLabel": "Now",
         "afterLabel": "After",
         "keepsServing": "{domain} stays attached as an alias and keeps serving this application.",
-        "renamesFiles": "The application's config and log files are renamed.",
-        "cmsWarning": "WordPress still has the old address saved, so visitors may be redirected back until you change it in the application.",
+        "updatesAddress": "The application's own address setting is updated to {domain}.",
         "notOnCertificate": "The SSL certificate does not cover {domain}. Visitors sent to the new address will get a security warning until you reissue it."
       },
       "removeConfirm": {
@@ -4654,7 +4736,8 @@
           "tooBroad": "That would match ordinary crawlers too, including Google's. Use the bot's full name.",
           "searchEngine": "That's a search engine, not an AI crawler — blocking it would take the application out of search results.",
           "duplicate": "That bot is already on this list.",
-          "limit": "That's the most bots this list can hold."
+          "limit": "That's the most bots this list can hold.",
+          "browserWord": "That word is part of ordinary browsers' names, so it would block real visitors. Use the bot's full name, like GPTBot."
         },
         "noPermission": "Your role does not include AI Bot Blocker for this application with Manage access. Ask an administrator to grant it."
       },
@@ -4666,7 +4749,9 @@
       "saved": "AI bot settings saved.",
       "saveFailed": "That couldn't be saved.",
       "noPermission": "Your role does not include AI Bot Blocker for this application with Manage access. Ask an administrator to grant it.",
-      "nothingToSave": "Nothing to save"
+      "nothingToSave": "Nothing to save",
+      "robotsTxtOnly": "robots.txt only",
+      "robotsTxtOnlyNote": "{names} never visit your site — Google and Apple train AI with their normal crawlers and only read these names in robots.txt. Blocking them here doesn't stop that; add them to robots.txt with Disallow: / instead."
     },
     "firewall": {
       "pageTitle": "Web Firewall",
@@ -4692,7 +4777,7 @@
       "categoryHints": {
         "query_string": "Attack code hidden in the part of a link after the ? sign.",
         "request_uri": "Requests for files and paths that only attackers go looking for.",
-        "user_agent": "Visitors identifying themselves as known scanners and attack tools.",
+        "user_agent": "Visitors identifying themselves as known scanners and attack tools — and also command-line tools and HTTP libraries such as curl and Go, so uptime monitors, scripts and webhooks sent that way are blocked too.",
         "referrer": "Traffic claiming to arrive from spam and malware websites.",
         "cookie": "Tampered cookies used to slip code past your application.",
         "method": "Ways of sending a request that a normal browser never uses."
@@ -4711,6 +4796,7 @@
       "remove": "Remove {value}",
       "countOf": "{count} of {max}",
       "tooLong": "Keep this under {max} characters.",
+      "tooShort": "Use at least {min} characters — a shorter word matches almost every request.",
       "listFull": "You've reached the limit of {max}.",
       "shortTermWarning": "Short words match anywhere in an address — \"conf\" would also block \"confirm.js\". Be as specific as you can.",
       "unsaved": "Not saved yet",
@@ -5184,7 +5270,9 @@
       "submit": "Change web root",
       "cancel": "Cancel",
       "saved": "Web root changed.",
-      "failed": "The web root could not be changed."
+      "failed": "The web root could not be changed.",
+      "resolved": "The site will be served from <code>{path}</code>.",
+      "missingFolder": "There is no folder {path}. Create it in Files first, or check the spelling."
     },
     "missing": {
       "title": "This application is no longer here",
@@ -5635,28 +5723,29 @@
     "alreadyInstalledHint": "Already on this server. Nothing to do here.",
     "chooseEngineFirst": "Pick a database engine first",
     "oneSqlOnly": "A server runs one SQL engine. Once this installs, switching to the other means rebuilding the server.",
-    "purposePostgresql": "For apps that ask for Postgres by name"
+    "purposePostgresql": "For apps that ask for Postgres by name",
+    "fail2banOff": "Installed, but nothing is protected yet. <link>Turn on SSH protection in Fail2ban</link>."
   },
   "storage": {
     "title": "Storage",
-    "subtitle": "Where backups are sent. Connect a bucket here, then choose it on an application.",
+    "subtitle": "Where backups are sent. Connect a destination here, then choose it on an application.",
     "loadFailed": "This couldn't be loaded.",
     "noPermission": "Your role does not include Storage with Manage access. Ask an administrator to grant it.",
     "card": {
       "title": "Storage destinations",
-      "subtitle": "S3-compatible buckets this server can write backups to.",
+      "subtitle": "Where this server can send backups: an S3 bucket, an FTP or SFTP server, or Google Drive.",
       "add": "Add destination",
       "whatTestDoes": "What does Test do?",
-      "testExplained": "It writes a small file to the bucket, reads it back and deletes it. That proves the keys work AND that they can write — a read-only key will always fail this."
+      "testExplained": "It writes a small file to the destination, reads it back and deletes it. That proves the login works AND that it can write — a read-only account will always fail this."
     },
     "empty": {
       "title": "No storage connected yet",
-      "body": "Backups need somewhere to go. Connect an S3-compatible bucket and any application can send its backups there.",
+      "body": "Backups need somewhere to go. Connect a storage destination and any application can send its backups there.",
       "reassurance": "The keys are stored encrypted and are only ever used to upload this server's backups and remove old ones.",
       "stepsTitle": "To get started, follow these three steps:",
-      "step1": "Create a bucket at your provider — or pick one you already have.",
-      "step2": "Create an access key that can upload, download and delete objects in that bucket.",
-      "step3": "Paste the bucket name, its region and the keys into the form here."
+      "step1": "Pick where backups should go: an S3 bucket, an FTP or SFTP server, or Google Drive.",
+      "step2": "Get a login that can upload, download and delete files there — an access key, or a username and password.",
+      "step3": "Enter those details in the form here."
     },
     "row": {
       "credentialsSet": "Credentials set",
@@ -5678,7 +5767,7 @@
       "neverTested": "Never tested — nobody has checked these credentials work.",
       "lastTestedOk": "Tested {when}",
       "failedCredentials": "The last test failed {when} — the credentials were rejected.",
-      "failedUnreachable": "The last test failed {when} — the bucket could not be reached.",
+      "failedUnreachable": "The last test failed {when} — the destination could not be reached.",
       "failed": "The last test failed {when}.",
       "failedHostKey": "The last test failed {when} — the server presented a different host key than the one recorded, so the connection was stopped.",
       "failedPrivateKey": "The last test failed {when} — the private key could not be read.",
@@ -5695,7 +5784,7 @@
     },
     "form": {
       "provider": "Provider",
-      "providerHint": "Only changes the example shown below — any S3-compatible provider works.",
+      "providerHint": "Where the backups are stored. The fields below change to match it.",
       "providers": {
         "aws": "Amazon S3",
         "r2": "Cloudflare R2",
@@ -5716,7 +5805,7 @@
       "endpointAws": "Leave empty for Amazon S3 — the region decides the endpoint.",
       "prefix": "Folder",
       "prefixPlaceholder": "backups/",
-      "prefixHint": "Optional. Keeps backups in their own folder inside the bucket.",
+      "prefixHint": "Optional. Keeps backups in their own folder at the destination.",
       "prefixChangeWarning": "Changing this does not move anything. Backups already stored under the old folder stop being found.",
       "fields": {
         "bucket": "Bucket",
@@ -5767,14 +5856,14 @@
     },
     "connect": {
       "title": "Add a storage destination",
-      "subtitle": "An S3-compatible bucket to send backups to.",
+      "subtitle": "Somewhere to send backups to.",
       "credentialsNote": "Keys are stored encrypted and never shown again — to change them later you replace them.",
       "cancel": "Cancel",
       "submit": "Add destination",
       "saving": "Adding…",
       "added": "Destination added.",
       "testPassed": "Connection tested — it works.",
-      "testFailed": "Saved, but the connection test failed. Check the keys and bucket.",
+      "testFailed": "Saved, but the connection test failed. Check the login details and where it points.",
       "permissionsNote": "The key needs permission to upload, download and delete objects in this bucket. Delete matters too — backups remove old archives once they pass the retention limit you set.",
       "keyDocs": "Where do I find these keys?",
       "permissionsNoteRemote": "The account needs to create, read and delete files in that directory — backups remove old archives when they pass the retention limit, so read-only access cannot work.",
@@ -5982,7 +6071,7 @@
       "applicationPlaceholder": "Choose an application",
       "applicationSearch": "Search applications",
       "applicationEmpty": "No applications found",
-      "noDestinations": "Backups need somewhere to go. Connect an S3-compatible storage destination first — it only takes a bucket and a key.",
+      "noDestinations": "Backups need somewhere to go. Connect a storage destination first.",
       "addDestination": "Set up storage",
       "checkAgain": "Check again",
       "manageStorage": "Manage storage",
@@ -6031,7 +6120,8 @@
       "destinationFailing": "The last connection test to {name} failed, so backups sent there will not be written until it is fixed.",
       "noDatabase": {
         "blocked": "This application has no database",
-        "filesOnly": "This application has no database, so only its files will be backed up."
+        "filesOnly": "This application has no database, so only its files will be backed up.",
+        "typeHasNone": "This type of application has no database, so only its files are backed up."
       },
       "automaticHint": "Runs the backup on a schedule instead of only when you press the button.",
       "fileExcludesHint": "Paths to leave out of the backup, one per line. Caches and logs are worth excluding; uploads are not.",
@@ -6137,7 +6227,7 @@
           }
         }
       },
-      "copyUid": "Copy this archive's file name in the bucket",
+      "copyUid": "Copy this archive's file name at the destination",
       "uploadProgress": "{done} of {total}",
       "uploadProgressBare": "{done} uploaded",
       "retryConfirm": {
@@ -6336,7 +6426,7 @@
         "offsite": "Stored off this server"
       },
       "stepsTitle": "How to get set up",
-      "step1": "Connect a storage destination — the bucket your backups are written to.",
+      "step1": "Connect a storage destination — where your backups are written to.",
       "step2": "Choose an application, what to copy, and how often.",
       "step3": "Restore from any verified backup, on the History tab.",
       "action": "Set up backups",
@@ -6377,7 +6467,7 @@
       },
       "unknownApplication": "Deleted application",
       "unknownReason": "The reason was not recorded.",
-      "noSafetyCopy": "None taken",
+      "noSafetyCopy": "None available",
       "findSafetyCopy": "Find safety copy",
       "allApplications": "All applications",
       "allStatuses": "Any status",
@@ -6508,7 +6598,7 @@
     "title": "Central management",
     "pageSubtitle": "Let a central panel manage this server on your behalf.",
     "subtitle": "Generate a key here, then paste it into your central panel to connect this server to it.",
-    "connected": "Connected",
+    "keyActive": "Key active",
     "disconnected": "This server is no longer connected to Central.",
     "cancel": "Cancel",
     "power": {

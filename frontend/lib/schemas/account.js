@@ -26,6 +26,10 @@ export const changePasswordSchema = z
     password: passwordField,
     password_confirmation: z.string().min(1, "confirmPassword"),
   })
+  .refine((d) => !d.password || d.password !== d.current_password, {
+    message: "passwordSameAsCurrent",
+    path: ["password"],
+  })
   .refine((d) => d.password === d.password_confirmation, {
     message: "passwordsMismatch",
     path: ["password_confirmation"],

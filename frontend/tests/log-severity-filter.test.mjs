@@ -42,7 +42,7 @@ test("the severity filter is separate toggles, not a segmented tray", () => {
 
 test("the active filter is tinted, not dressed as a selected tab", () => {
   const chrome = read("lib/theme/filter-toggle.js");
-  assert.match(chrome, /border-primary\/40 bg-primary\/10 font-medium text-primary/);
+  assert.match(chrome, /border-primary\/40 bg-primary\/10 font-medium text-\[color-mix\(in_oklch,var\(--primary\)_80%,var\(--foreground\)\)\]/);
   // `bg-secondary` is the tab strip's active cell — the exact collision.
   assert.doesNotMatch(code, /bg-secondary font-medium text-secondary-foreground/);
 });

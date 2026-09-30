@@ -283,7 +283,21 @@
     "pathNoTraversal": "La ruta no puede contener ..",
     "securityUsernameSpaces": "No puede contener espacios.",
     "databaseUsernameReserved": "Ese nombre pertenece al servidor de base de datos. Elige otro.",
-    "databaseHost": "Introduce una dirección IPv4 como 203.0.113.5, o un rango como 203.0.113.0/24."
+    "databaseHost": "Introduce una dirección IPv4 como 203.0.113.5, o un rango como 203.0.113.0/24.",
+    "phpSizeUnit": "Usa un número con unidad, como 128M, 1G o 512K.",
+    "phpMemoryMin": "Usa al menos 16M: con menos, PHP no puede iniciar la mayoría de las aplicaciones.",
+    "phpMemoryMax": "Es más memoria de la que tiene este servidor.",
+    "postBelowUpload": "Debe ser al menos el tamaño de subida máximo, o fallarán las subidas entre ambos valores.",
+    "prependOutsideSite": "Usa un archivo dentro de la carpeta de esta aplicación.",
+    "prefixTraversal": "La carpeta no puede contener . ni .. como nombre de carpeta.",
+    "passwordSameAsCurrent": "Elige una contraseña distinta de la actual.",
+    "cronNameReserved": "Ese nombre lo usa un archivo del servidor o del panel. Elige otro.",
+    "cronRootRefused": "Las tareas no pueden ejecutarse como root. Elige un usuario del sistema.",
+    "directivesPhpOnly": "Solo ajustes de PHP, uno por línea, como php_admin_value[short_open_tag] = On. Aquí no se permiten líneas del pool como user = o listen =.",
+    "noManagedWorkerKeys": "user, command, directory y los archivos de registro los fija el panel. Cámbialos en los campos de arriba, no aquí.",
+    "insideApplication": "Usa una ruta dentro de la carpeta de esta aplicación.",
+    "securityUsernameAscii": "Usa solo letras inglesas, números y . _ - @: los navegadores no envían otras letras de la misma forma.",
+    "excludeInsideSite": "Usa una ruta dentro de la carpeta de la aplicación, como storage/logs, sin / ni .. al principio"
   },
   "admin": {
     "switchToAdmin": "Panel de administración",
@@ -938,7 +952,8 @@
       "stopped": "{command} detenido",
       "alreadyGone": "Ese proceso ya no se está ejecutando: no se detuvo nada.",
       "refused": "Este proceso no se puede detener desde aquí.",
-      "failed": "No se pudo detener el proceso."
+      "failed": "No se pudo detener el proceso.",
+      "databaseWarning": "Este es el servidor de bases de datos {engine}. Permanecerá detenido —nada lo vuelve a iniciar— y todas las aplicaciones que lo usan dejarán de funcionar hasta que lo inicies en Servicios."
     },
     "diskUnknown": "No informado",
     "measuring": "Midiendo…",
@@ -1289,7 +1304,8 @@
     "clearDone": "{label} vaciado.",
     "clearFailed": "No se pudo vaciar el registro.",
     "clearBodyAudit": "Este registro forma parte de cómo el servidor anota lo que le ha pasado: inicios de sesión, peticiones bloqueadas, bloqueos. Vaciarlo destruye pruebas que podrías necesitar tras una intrusión y no se puede deshacer. El archivo sigue grabando desde ahora.",
-    "loadingSource": "Cargando {label}…"
+    "loadingSource": "Cargando {label}…",
+    "linesCapped": "Se muestra el máximo posible: {max, number} líneas."
   },
   "services": {
     "title": "Servicios",
@@ -1591,7 +1607,8 @@
       "bodyWithIp": "{count, plural, one {Activa la # jaula y añade {ip} a la lista de nunca bloquear, para que no te quedes fuera.} other {Activa las # jaulas y añade {ip} a la lista de nunca bloquear, para que no te quedes fuera.}}",
       "action": "Configurar protección",
       "done": "La protección está activa.",
-      "failed": "No se pudo configurar."
+      "failed": "No se pudo configurar.",
+      "checkingIp": "Primero se comprueba tu dirección para dejarla fuera de los bloqueos…"
     },
     "noPermission": "Tu rol no incluye Fail2ban con acceso de gestión. Pide a un administrador que te lo conceda."
   },
@@ -1920,7 +1937,9 @@
         "memoryTotal": "Este servidor tiene {size} de memoria.",
         "custom": "Personalizado",
         "recommended": "recomendado",
-        "save": "Guardar swap"
+        "save": "Guardar swap",
+        "noRoom": "Eso usaría más de la mitad del espacio libre en disco ({free} libres). Elige un tamaño menor.",
+        "tight": "Un archivo swap de {size} deja solo {left} libres en el disco, y las aplicaciones y las copias también necesitan ese espacio."
       },
       "redis": {
         "passwordUnknownShort": "No se puede comprobar",
@@ -2234,7 +2253,61 @@
       "xsl": "Transforma XML con hojas de estilo XSLT",
       "yaml": "Lee y escribe archivos YAML",
       "zip": "Crea y abre archivos .zip",
-      "zstd": "Compresión rápida, usada en caché y copias de seguridad"
+      "zstd": "Compresión rápida, usada en caché y copias de seguridad",
+      "amqp": "Envía y recibe mensajes a través de RabbitMQ",
+      "apcu": "Guarda datos en caché en memoria para páginas más rápidas",
+      "ast": "Lee código PHP como árbol de sintaxis; lo usan herramientas de análisis",
+      "decimal": "Matemáticas decimales exactas, para dinero",
+      "dio": "Acceso de bajo nivel a archivos y puertos serie",
+      "ds": "Listas, mapas y colas más rápidos para código PHP",
+      "enchant": "Corrección ortográfica",
+      "excimer": "Mide dónde gasta PHP su tiempo, para perfilar",
+      "gearman": "Reparte trabajo a procesos en segundo plano con Gearman",
+      "gmagick": "Edición de imágenes con GraphicsMagick",
+      "gnupg": "Cifra y firma datos con GnuPG",
+      "grpc": "Llama a servicios gRPC; lo usan algunas bibliotecas de Google Cloud",
+      "http": "Herramientas extra para crear y leer peticiones HTTP",
+      "inotify": "Detecta cuándo cambian archivos en el disco",
+      "interbase": "Conecta con bases de datos Firebird e InterBase",
+      "lz4": "Compresión rápida para datos en caché",
+      "mcrypt": "Funciones de cifrado antiguas, solo para aplicaciones heredadas",
+      "memcache": "Guarda la caché en un servidor Memcached (cliente antiguo)",
+      "opentelemetry": "Envía trazas de cada petición a herramientas de monitorización",
+      "phalcon": "El framework Phalcon, integrado en PHP",
+      "pq": "Otra forma de conectar con PostgreSQL",
+      "protobuf": "Lee y escribe datos Protocol Buffers",
+      "ps": "Crea archivos PostScript",
+      "pspell": "Corrección ortográfica con Aspell",
+      "raphf": "Mantiene conexiones abiertas entre peticiones; lo necesita http",
+      "rdkafka": "Envía y recibe mensajes a través de Kafka",
+      "readline": "Edición de líneas para PHP en la línea de comandos",
+      "rrd": "Lee y escribe datos de gráficos de RRDtool",
+      "stomp": "Se comunica con colas de mensajes mediante STOMP",
+      "sybase": "Conecta con bases de datos Sybase y SQL Server",
+      "uopz": "Cambia código PHP mientras se ejecuta; lo usan herramientas de pruebas",
+      "uploadprogress": "Muestra cuánto lleva una subida de archivo",
+      "xhprof": "Mide qué funciones son lentas, para perfilar",
+      "xlswriter": "Escribe archivos Excel grandes rápidamente",
+      "xmlrpc": "Se comunica con servicios XML-RPC, como la antigua API remota de WordPress",
+      "yac": "Caché en memoria compartida sin bloqueos",
+      "zmq": "Envía mensajes a través de ZeroMQ",
+      "apcu-bc": "Permite que código antiguo use APCu con los nombres apc_ de antes",
+      "facedetect": "Encuentra caras en fotos",
+      "geoip": "Averigua el país de un visitante a partir de su IP",
+      "json": "Lee y escribe JSON (integrado desde PHP 8)",
+      "lua": "Ejecuta scripts Lua desde PHP",
+      "mongo": "Controlador antiguo de MongoDB, solo para aplicaciones heredadas",
+      "mysqlnd-ms": "Reparte consultas MySQL entre varios servidores",
+      "phalcon3": "El framework Phalcon 3, integrado en PHP",
+      "phalcon4": "El framework Phalcon 4, integrado en PHP",
+      "phalcon5": "El framework Phalcon 5, integrado en PHP",
+      "pinba": "Envía estadísticas de tiempos a un servidor Pinba",
+      "propro": "Complemento que necesita la extensión http antigua",
+      "radius": "Comprueba inicios de sesión con un servidor RADIUS",
+      "recode": "Convierte texto entre juegos de caracteres",
+      "sass": "Compila Sass en CSS",
+      "tideways": "Mide dónde gasta PHP su tiempo, para perfilar",
+      "xcache": "Caché de código antigua, sustituida por OPcache"
     },
     "ioncube": {
       "title": "ionCube Loader",
@@ -2448,7 +2521,8 @@
       "enableHint": "Ejecuta la limpieza de forma programada en lugar de solo cuando presiona el botón.",
       "onlyWhenHint": "Solo limpia cuando el disco esté al menos así de lleno, para que una limpieza rutinaria no se ejecute en un disco casi vacío.",
       "nextRun": "Próxima limpieza {when}",
-      "nextRunAtZone": "Próxima limpieza {when} · {time} {timezone}"
+      "nextRunAtZone": "Próxima limpieza {when} · {time} {timezone}",
+      "thresholdRange": "Escribe un número del 1 al 99. El uso del disco nunca supera el 100 %, así que un número mayor hace que la limpieza no se ejecute nunca."
     },
     "runs": {
       "title": "Limpiezas recientes",
@@ -2690,7 +2764,9 @@
       "cardTitle": "Eliminar esta base de datos",
       "cardDescription": "Elimina la base de datos, todo su contenido y sus usuarios.",
       "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
-      "copyName": "Copiar nombre de la base de datos"
+      "copyName": "Copiar nombre de la base de datos",
+      "usedBy": "{application} usa esta base de datos y dejará de funcionar cuando se elimine.",
+      "usedByUnknown": "Una aplicación usa esta base de datos y dejará de funcionar cuando se elimine."
     },
     "adopt": {
       "title": "{count, plural, one {# base de datos de este servidor no se gestiona aquí} other {# bases de datos de este servidor no se gestionan aquí}}",
@@ -3123,7 +3199,7 @@
       "subtitle": "Pega un token. {brand} lee tus repositorios y ramas y añade el webhook de despliegue: nunca envía código.",
       "scopeHint_github": "Marca los permisos <scope>repo</scope> y <scope>admin:repo_hook</scope>. El segundo permite que el panel añada por ti el webhook de despliegue a tu repositorio.",
       "scopeHint_gitlab": "Marca <scope>api</scope> y <scope>read_repository</scope>, y elige <option>Token heredado</option>.",
-      "scopeHint_bitbucket": "Marca <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope> y <scope>write:webhook:bitbucket</scope>. Los de webhook permiten que el panel añada por ti el webhook de despliegue.",
+      "scopeHint_bitbucket": "Marca <scope>read:repository:bitbucket</scope>, <scope>read:webhook:bitbucket</scope>, <scope>write:webhook:bitbucket</scope> y <scope>delete:webhook:bitbucket</scope>. Los de webhook permiten que el panel añada por ti el webhook de despliegue y lo quite al desactivar el despliegue al hacer push.",
       "nameLabel": "Nombre",
       "namePlaceholder": "{provider} del trabajo",
       "nameHelp": "Un nombre para ti. Así aparecerá esta cuenta al crear una aplicación.",
@@ -3289,7 +3365,13 @@
       "pageSubtitleReadOnly": "Consulta el archivo .env de esta aplicación.",
       "emptyFilePlaceholder": "# Este archivo está vacío — añade variables y guarda",
       "tooLargeTitle": "No guardado — archivo demasiado grande",
-      "tooLarge": "El archivo puede tener como máximo 256 KB. Quita algo para poder guardarlo."
+      "tooLarge": "El archivo puede tener como máximo 256 KB. Quita algo para poder guardarlo.",
+      "guarded": {
+        "title": "¿Cambiar ajustes que gestiona el panel?",
+        "description": "Cambiaste o eliminaste {keys}. El panel los configuró y la aplicación depende de ellos: una nueva clave de cifrado deja ilegibles todas las credenciales guardadas, y otro puerto o carpeta ya no coincide con el servicio que ejecuta el panel.",
+        "cancel": "Seguir editando",
+        "confirm": "Guardar de todos modos"
+      }
     },
     "title": "Aplicaciones",
     "subtitle": "Aplicaciones y servicios que se ejecutan en este servidor.",
@@ -3573,7 +3655,8 @@
       "systemUserPasswordHint": "Generada automáticamente. Consérvala, cámbiala o bórrala. Podrás volver a verla más tarde en la página Usuarios del sistema.",
       "systemUserNew": "{username} (nuevo)",
       "systemUserCreateFailed": "No se pudo crear el usuario del sistema, así que tampoco se creó la aplicación.",
-      "systemUserLeftBehind": "El usuario del sistema {username} se creó, pero no se pudo eliminar. Elígelo en «Usar un usuario del sistema existente» o elimínalo en Usuarios del sistema."
+      "systemUserLeftBehind": "El usuario del sistema {username} se creó, pero no se pudo eliminar. Elígelo en «Usar un usuario del sistema existente» o elimínalo en Usuarios del sistema.",
+      "tablePrefixInvalid": "Empieza con una letra, usa solo letras y números y termina con un guion bajo (por ejemplo jml_)."
     },
     "actions": {
       "label": "Acciones",
@@ -3726,8 +3809,7 @@
         "nowLabel": "Ahora",
         "afterLabel": "Después",
         "keepsServing": "{domain} queda como alias y sigue sirviendo esta aplicación.",
-        "renamesFiles": "Se renombran los archivos de configuración y de registro de la aplicación.",
-        "cmsWarning": "WordPress conserva guardada la dirección anterior, así que puede redirigir a los visitantes de vuelta hasta que la cambies en la aplicación.",
+        "updatesAddress": "El ajuste de dirección de la propia aplicación se actualiza a {domain}.",
         "notOnCertificate": "El certificado SSL no cubre {domain}. Quienes visiten la nueva dirección verán una advertencia de seguridad hasta que lo reemitas."
       },
       "removeConfirm": {
@@ -4654,7 +4736,8 @@
           "tooBroad": "Eso también afectaría a rastreadores normales, incluido el de Google. Usa el nombre completo del bot.",
           "searchEngine": "Eso es un buscador, no un rastreador de IA: bloquearlo sacaría la aplicación de los resultados de búsqueda.",
           "duplicate": "Ese bot ya está en esta lista.",
-          "limit": "Esta lista no admite más bots."
+          "limit": "Esta lista no admite más bots.",
+          "browserWord": "Esa palabra forma parte del nombre de los navegadores normales, así que bloquearía a visitantes reales. Usa el nombre completo del bot, como GPTBot."
         },
         "noPermission": "Tu rol no incluye Bloqueador de bots de IA de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda."
       },
@@ -4666,7 +4749,9 @@
       "saved": "Ajustes de bots de IA guardados.",
       "saveFailed": "No se pudo guardar.",
       "noPermission": "Tu rol no incluye Bloqueador de bots de IA de esta aplicación con acceso de gestión. Pide a un administrador que te lo conceda.",
-      "nothingToSave": "Nada que guardar"
+      "nothingToSave": "Nada que guardar",
+      "robotsTxtOnly": "solo robots.txt",
+      "robotsTxtOnlyNote": "{names} nunca visitan tu sitio: Google y Apple entrenan su IA con sus rastreadores normales y solo leen estos nombres en robots.txt. Bloquearlos aquí no lo impide; añádelos a robots.txt con Disallow: /."
     },
     "firewall": {
       "pageTitle": "Firewall web",
@@ -4692,7 +4777,7 @@
       "categoryHints": {
         "query_string": "Código de ataque oculto en la parte del enlace posterior al signo ?.",
         "request_uri": "Solicitudes de archivos y rutas que solo buscan los atacantes.",
-        "user_agent": "Visitantes que se identifican como escáneres y herramientas de ataque conocidas.",
+        "user_agent": "Visitantes que se identifican como escáneres y herramientas de ataque conocidos, y también herramientas de línea de comandos y bibliotecas HTTP como curl y Go, así que también se bloquean los monitores de disponibilidad, scripts y webhooks enviados así.",
         "referrer": "Tráfico que dice venir de sitios de spam y malware.",
         "cookie": "Cookies manipuladas para colar código en tu aplicación.",
         "method": "Formas de enviar una solicitud que un navegador normal nunca usa."
@@ -4711,6 +4796,7 @@
       "remove": "Quitar {value}",
       "countOf": "{count} de {max}",
       "tooLong": "Debe tener menos de {max} caracteres.",
+      "tooShort": "Usa al menos {min} caracteres: una palabra más corta coincide con casi todas las peticiones.",
       "listFull": "Has alcanzado el límite de {max}.",
       "shortTermWarning": "Las palabras cortas coinciden en cualquier parte de una dirección: \"conf\" también bloquearía \"confirm.js\". Sé lo más concreto posible.",
       "unsaved": "Sin guardar",
@@ -5184,7 +5270,9 @@
       "submit": "Cambiar la raíz web",
       "cancel": "Cancelar",
       "saved": "Raíz web cambiada.",
-      "failed": "No se pudo cambiar la raíz web."
+      "failed": "No se pudo cambiar la raíz web.",
+      "resolved": "El sitio se servirá desde <code>{path}</code>.",
+      "missingFolder": "No existe la carpeta {path}. Créala primero en Archivos o revisa cómo está escrita."
     },
     "missing": {
       "title": "Esta aplicación ya no existe",
@@ -5635,28 +5723,29 @@
     "alreadyInstalledHint": "Ya están en este servidor. Aquí no hay nada que hacer.",
     "chooseEngineFirst": "Elige primero un motor de base de datos",
     "oneSqlOnly": "Un servidor ejecuta un solo motor SQL. Una vez instalado, cambiar al otro implica reconstruir el servidor.",
-    "purposePostgresql": "Para apps que piden Postgres expresamente"
+    "purposePostgresql": "Para apps que piden Postgres expresamente",
+    "fail2banOff": "Instalado, pero todavía no protege nada. <link>Activa la protección de SSH en Fail2ban</link>."
   },
   "storage": {
     "title": "Almacenamiento",
-    "subtitle": "Adónde se envían las copias de seguridad. Conecta un bucket aquí y luego elígelo en una aplicación.",
+    "subtitle": "Dónde se envían las copias. Conecta un destino aquí y luego elígelo en una aplicación.",
     "loadFailed": "No se pudo cargar esto.",
     "noPermission": "Tu rol no incluye Almacenamiento con acceso de gestión. Pide a un administrador que te lo conceda.",
     "card": {
       "title": "Destinos de almacenamiento",
-      "subtitle": "Buckets compatibles con S3 donde este servidor puede escribir copias de seguridad.",
+      "subtitle": "Dónde puede enviar copias este servidor: un bucket S3, un servidor FTP o SFTP, o Google Drive.",
       "add": "Añadir destino",
       "whatTestDoes": "¿Qué hace Probar?",
-      "testExplained": "Escribe un archivo pequeño en el bucket, lo vuelve a leer y lo elimina. Eso demuestra que las claves funcionan Y que pueden escribir: una clave de solo lectura siempre fallará."
+      "testExplained": "Escribe un archivo pequeño en el destino, lo lee y lo borra. Así se comprueba que el acceso funciona Y que puede escribir: una cuenta de solo lectura siempre fallará."
     },
     "empty": {
       "title": "Todavía no hay almacenamiento conectado",
-      "body": "Las copias de seguridad necesitan un destino. Conecta un bucket compatible con S3 y cualquier aplicación podrá enviar allí sus copias.",
+      "body": "Las copias necesitan un lugar al que ir. Conecta un destino de almacenamiento y cualquier aplicación podrá enviar allí sus copias.",
       "reassurance": "Las claves se guardan cifradas y solo se usan para subir las copias de este servidor y borrar las antiguas.",
       "stepsTitle": "Para empezar, sigue estos tres pasos:",
-      "step1": "Crea un bucket en tu proveedor, o elige uno que ya tengas.",
-      "step2": "Crea una clave de acceso que pueda subir, descargar y eliminar objetos en ese bucket.",
-      "step3": "Pega aquí el nombre del bucket, su región y las claves."
+      "step1": "Elige a dónde irán las copias: un bucket S3, un servidor FTP o SFTP, o Google Drive.",
+      "step2": "Consigue un acceso que pueda subir, descargar y borrar archivos allí: una clave de acceso, o un usuario y contraseña.",
+      "step3": "Introduce esos datos en el formulario de aquí."
     },
     "row": {
       "credentialsSet": "Credenciales guardadas",
@@ -5678,7 +5767,7 @@
       "neverTested": "Nunca probado: nadie ha comprobado que estas credenciales funcionen.",
       "lastTestedOk": "Probado {when}",
       "failedCredentials": "La última prueba falló {when}: se rechazaron las credenciales.",
-      "failedUnreachable": "La última prueba falló {when}: no se pudo acceder al bucket.",
+      "failedUnreachable": "La última prueba falló {when}: no se pudo llegar al destino.",
       "failed": "La última prueba falló {when}.",
       "failedHostKey": "La última prueba falló {when}: el servidor presentó una clave distinta de la registrada, así que se detuvo la conexión.",
       "failedPrivateKey": "La última prueba falló {when}: no se pudo leer la clave privada.",
@@ -5695,7 +5784,7 @@
     },
     "form": {
       "provider": "Proveedor",
-      "providerHint": "Solo cambia el ejemplo de abajo: funciona cualquier proveedor compatible con S3.",
+      "providerHint": "Dónde se guardan las copias. Los campos de abajo cambian según la opción.",
       "providers": {
         "aws": "Amazon S3",
         "r2": "Cloudflare R2",
@@ -5716,7 +5805,7 @@
       "endpointAws": "Déjalo vacío para Amazon S3: la región determina el endpoint.",
       "prefix": "Carpeta",
       "prefixPlaceholder": "backups/",
-      "prefixHint": "Opcional. Mantiene las copias en su propia carpeta dentro del bucket.",
+      "prefixHint": "Opcional. Guarda las copias en su propia carpeta dentro del destino.",
       "prefixChangeWarning": "Cambiarlo no mueve nada. Las copias ya guardadas en la carpeta anterior dejan de encontrarse.",
       "fields": {
         "bucket": "Bucket",
@@ -5767,14 +5856,14 @@
     },
     "connect": {
       "title": "Añadir un destino de almacenamiento",
-      "subtitle": "Un bucket compatible con S3 al que enviar las copias.",
+      "subtitle": "Un lugar al que enviar las copias.",
       "credentialsNote": "Las claves se guardan cifradas y no se vuelven a mostrar: para cambiarlas más adelante hay que reemplazarlas.",
       "cancel": "Cancelar",
       "submit": "Añadir destino",
       "saving": "Añadiendo…",
       "added": "Destino añadido.",
       "testPassed": "Conexión probada: funciona.",
-      "testFailed": "Guardado, pero la prueba de conexión falló. Revisa las claves y el bucket.",
+      "testFailed": "Guardado, pero la prueba de conexión falló. Revisa los datos de acceso y a dónde apunta.",
       "permissionsNote": "La clave necesita permiso para subir, descargar y eliminar objetos en este bucket. Eliminar también importa: las copias antiguas se borran cuando superan el límite de retención que definas.",
       "keyDocs": "¿Dónde encuentro estas claves?",
       "permissionsNoteRemote": "La cuenta necesita crear, leer y eliminar archivos en ese directorio: las copias eliminan archivos antiguos al superar el límite de retención, así que el acceso de solo lectura no funciona.",
@@ -5982,7 +6071,7 @@
       "applicationPlaceholder": "Elige una aplicación",
       "applicationSearch": "Buscar aplicaciones",
       "applicationEmpty": "No se encontraron aplicaciones",
-      "noDestinations": "Las copias necesitan un destino. Conecta primero un almacenamiento compatible con S3: solo hace falta un bucket y una clave.",
+      "noDestinations": "Las copias necesitan un lugar al que ir. Conecta primero un destino de almacenamiento.",
       "addDestination": "Configurar almacenamiento",
       "checkAgain": "Comprobar de nuevo",
       "manageStorage": "Gestionar almacenamiento",
@@ -6031,7 +6120,8 @@
       "destinationFailing": "La última prueba de conexión con {name} falló, así que las copias enviadas allí no se escribirán hasta que se corrija.",
       "noDatabase": {
         "blocked": "Esta aplicación no tiene base de datos",
-        "filesOnly": "Esta aplicación no tiene base de datos, por lo que solo se respaldarán sus archivos."
+        "filesOnly": "Esta aplicación no tiene base de datos, por lo que solo se respaldarán sus archivos.",
+        "typeHasNone": "Este tipo de aplicación no tiene base de datos, así que solo se copian sus archivos."
       },
       "automaticHint": "Ejecuta la copia de seguridad de forma programada en lugar de solo cuando presiona el botón.",
       "fileExcludesHint": "Rutas a excluir de la copia de seguridad, una por línea. Vale la pena excluir cachés y registros; los archivos subidos, no.",
@@ -6137,7 +6227,7 @@
           }
         }
       },
-      "copyUid": "Copiar el nombre de archivo de esta copia en el bucket",
+      "copyUid": "Copiar el nombre de archivo de esta copia en el destino",
       "uploadProgress": "{done} de {total}",
       "uploadProgressBare": "{done} subidos",
       "retryConfirm": {
@@ -6336,7 +6426,7 @@
         "offsite": "Guardadas fuera de este servidor"
       },
       "stepsTitle": "Cómo empezar",
-      "step1": "Conecta un destino de almacenamiento: el bucket donde se escriben las copias.",
+      "step1": "Conecta un destino de almacenamiento: donde se guardan tus copias.",
       "step2": "Elige una aplicación, qué copiar y con qué frecuencia.",
       "step3": "Restaura desde cualquier copia verificada, en la pestaña Historial.",
       "action": "Configurar copias de seguridad",
@@ -6377,7 +6467,7 @@
       },
       "unknownApplication": "Aplicación eliminada",
       "unknownReason": "No se registró el motivo.",
-      "noSafetyCopy": "No se tomó ninguna",
+      "noSafetyCopy": "No disponible",
       "findSafetyCopy": "Buscar copia previa",
       "allApplications": "Todas las aplicaciones",
       "allStatuses": "Cualquier estado",
@@ -6508,7 +6598,7 @@
     "title": "Gestión central",
     "pageSubtitle": "Permite que un panel central gestione este servidor en tu nombre.",
     "subtitle": "Genera una clave aquí y pégala en tu panel central para conectar este servidor.",
-    "connected": "Conectado",
+    "keyActive": "Clave activa",
     "disconnected": "Este servidor ya no está conectado a Central.",
     "cancel": "Cancelar",
     "power": {

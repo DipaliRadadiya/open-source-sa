@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Pencil, ChevronDown, TriangleAlert } from "lucide-react";
-import { workerFormSchema } from "@/lib/schemas/worker";
+import { workerFormSchemaFor } from "@/lib/schemas/worker";
 import { updateWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { useRefresh } from "@/hooks/use-refresh";
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/form";
 import { WorkerCommandField } from "@/components/applications/workers/worker-command-field";
 import { WorkerKindField } from "@/components/applications/workers/worker-kind-field";
+import { useWorkerSite } from "@/components/applications/workers/worker-site-context";
 
 function valuesFrom(worker) {
   return {
@@ -56,8 +57,9 @@ export function EditWorkerDialog({ worker, appId, presets = [], workers = [], op
   const t = useTranslations("applications.workers");
   const { pending: refreshing, refresh, refreshThen } = useRefresh();
 
+  const { appRoot } = useWorkerSite();
   const form = useForm({
-    resolver: zodResolver(workerFormSchema),
+    resolver: zodResolver(workerFormSchemaFor(appRoot)),
     defaultValues: valuesFrom(worker),
   });
 

@@ -63,7 +63,7 @@ export async function BotTrafficCard({ appId, traffic, failed, days }) {
                  look like static text. The active one is tinted rather than
                  filled grey — same rule as the log viewer's severity filter,
                  from one definition so the two cannot drift apart. */
-              variant="outline"
+              variant="field"
               className={cn("h-8 px-2.5 text-xs", filterToggleClass(range === days))}
             >
               <Link

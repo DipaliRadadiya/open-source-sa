@@ -93,6 +93,9 @@ export default async function ApplicationPhpPage({ params }) {
           php={phpResult.php}
           phpRange={phpRange}
           siteTypeTitle={application.site_type_title ?? application.site_type ?? ""}
+          // The application's own folder, one above the public_html that
+          // `path` names — a prepend file kept outside the web root is normal.
+          applicationPath={(application.path ?? "").replace(/\/public_html\/?$/, "")}
           timezones={timezones}
           canManage={canManage}
         />

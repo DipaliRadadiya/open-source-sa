@@ -24,7 +24,7 @@ import {
   timeUsage,
   withMinute,
 } from "@/lib/backups/frequency";
-import { hasNoDatabase } from "@/lib/backups/database-availability";
+import { hasNoDatabase, siteNeedsDatabase } from "@/lib/backups/database-availability";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -114,6 +114,10 @@ export function BackupSettingsFields({
   options = null,
   onRetryOptions = null,
   retryingOptions = false,
+  // The site type catalogue, and the type of the one site when the form is
+  // fixed to it. Together they say which sites never have a database at all.
+  siteTypes = null,
+  siteType = null,
 }) {
   const t = useTranslations("backups.form");
   const tv = useTranslations("validation");
@@ -196,15 +200,25 @@ export function BackupSettingsFields({
   // must stay silent. See `hasNoDatabase`.
   const noDatabase = hasNoDatabase(databaseCounts, databasesKnown, applicationId);
 
+  // n8n, Node-RED, Uptime Kuma, static: no database now and none expected. For
+  // them "Files and database" is a files backup under the wrong name, and
+  // "Database only" failed with a misleading out-of-disk-space error.
+  const chosenType =
+    siteType ?? (applications ?? []).find((application) => String(application.id) === String(applicationId))?.site_type;
+  const knownType = Boolean(chosenType) && (siteTypes ?? []).some((entry) => entry.name === chosenType);
+  const filesOnly = noDatabase === true && knownType && !siteNeedsDatabase(siteTypes, chosenType);
+
   // Switching the picker to a database-less site while "Database only" is
   // chosen would leave a selected option that is also blocked, and save a
   // backup guaranteed to be empty. Fall back to the full option, which is what
   // that site can actually produce.
   useEffect(() => {
-    if (noDatabase && type === "database") {
+    if (filesOnly && type !== "filesystem") {
+      form.setValue("type", "filesystem", { shouldDirty: true });
+    } else if (noDatabase && type === "database") {
       form.setValue("type", "full", { shouldDirty: true });
     }
-  }, [noDatabase, type, form]);
+  }, [filesOnly, noDatabase, type, form]);
   // Lowering retention prunes when the settings are SAVED (SaveBackupTarget
   // applies it in the same request), not on the next run.
   const pruning =
@@ -283,7 +297,11 @@ export function BackupSettingsFields({
                     // reports success while holding nothing is discovered at
                     // the worst possible moment.
                     disabledReason:
-                      option === "database" && noDatabase ? t("noDatabase.blocked") : undefined,
+                      filesOnly && option !== "filesystem"
+                        ? t("noDatabase.typeHasNone")
+                        : option === "database" && noDatabase
+                          ? t("noDatabase.blocked")
+                          : undefined,
                   }))}
                 />
               </FormControl>
@@ -291,7 +309,7 @@ export function BackupSettingsFields({
                   because a site can gain a database later and the backend is
                   happy to run it — but today it copies files and nothing else,
                   and that is exactly what looked like a bug. */}
-              {noDatabase && type === "full" ? (
+              {filesOnly ? null : noDatabase && type === "full" ? (
                 <Caution className="mt-2">{t("noDatabase.filesOnly")}</Caution>
               ) : null}
               <FormMessage />
@@ -458,13 +476,17 @@ export function BackupSettingsFields({
                   </FormControl>
                   {/* It counts backups, not days: on an hourly schedule seven
                       is seven hours of history, and the hint says so. */}
-                  <FormDescription>
-                    {span?.unit === "hours"
-                      ? t("retentionHintHours", { hours: span.amount })
-                      : span
-                        ? t("retentionHint", { days: span.amount })
-                        : t("retentionHintCount", { count: Number(retention) || 0 })}
-                  </FormDescription>
+                  {/* Hidden while the number is refused: "Keeps the newest -1
+                      backup" beside the error read as a second, wrong answer. */}
+                  {form.formState.errors.retention_count ? null : (
+                    <FormDescription>
+                      {span?.unit === "hours"
+                        ? t("retentionHintHours", { hours: span.amount })
+                        : span
+                          ? t("retentionHint", { days: span.amount })
+                          : t("retentionHintCount", { count: Number(retention) || 0 })}
+                    </FormDescription>
+                  )}
                   <FormMessage>
                     {form.formState.errors.retention_count?.message === "retentionRange"
                       ? tv("retentionRange", options.retention)

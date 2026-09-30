@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,9 +39,15 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [awaitingPage, setAwaitingPage] = useState(false);
+  // The success toast waits for the dialog to go: shown on the API's answer,
+  // it sat beside a dialog still saying "Creating…" for seconds.
+  const announce = useRef(null);
+  useEffect(() => () => announce.current?.(), []);
   useEffect(() => {
     if (!awaitingPage) return undefined;
     const timer = window.setTimeout(() => {
+      announce.current?.();
+      announce.current = null;
       setPending(false);
       onOpenChange(false);
     }, 20000);
@@ -67,7 +73,7 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
       // Open on "Creating…" until the page shows the copy — this dialog lives
       // in the no-staging state, so it goes when that state does. Closing
       // first uncovered "Create staging" for the length of the refresh.
-      toast.success(t("done", { domain: values.domain }));
+      announce.current = () => toast.success(t("done", { domain: values.domain }));
       router.refresh();
       setAwaitingPage(true);
       return;
@@ -90,7 +96,7 @@ export function CreateStagingDialog({ appId, production, open, onOpenChange }) {
         open={open}
         onOpenChange={pending ? undefined : onOpenChange}
         asForm
-        onSubmit={form.handleSubmit(submit)}
+        onSubmit={(event) => form.handleSubmit(submit)(event)}
         icon={FlaskConical}
         title={t("title")}
         description={t("description", { domain: production?.domain ?? "" })}

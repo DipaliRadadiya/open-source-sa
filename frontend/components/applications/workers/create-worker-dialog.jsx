@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Loader2, Cog, ChevronDown, TriangleAlert } from "lucide-react";
 import { Caution } from "@/components/ui/caution";
-import { workerFormSchema, WORKER_FORM_DEFAULTS } from "@/lib/schemas/worker";
+import { workerFormSchemaFor, WORKER_FORM_DEFAULTS } from "@/lib/schemas/worker";
 import { createWorker } from "@/lib/api/workers";
 import { handleValidationError } from "@/lib/api/handle-validation-error";
 import { apiMessage } from "@/lib/api/error-message";
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/form";
 import { WorkerCommandField } from "@/components/applications/workers/worker-command-field";
 import { WorkerKindField } from "@/components/applications/workers/worker-kind-field";
+import { useWorkerSite } from "@/components/applications/workers/worker-site-context";
 
 /**
  * Presets prefill both name and command, but stay a starting point, not a
@@ -46,8 +47,9 @@ export function CreateWorkerDialog({ open, onOpenChange, appId, presets = [], wo
   // the next attempt. Null when there is nothing to say.
   const [installing, setInstalling] = useState(null);
 
+  const { appRoot } = useWorkerSite();
   const form = useForm({
-    resolver: zodResolver(workerFormSchema),
+    resolver: zodResolver(workerFormSchemaFor(appRoot)),
     defaultValues: WORKER_FORM_DEFAULTS,
   });
 

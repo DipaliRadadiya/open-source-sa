@@ -6,6 +6,7 @@ import {
   budgetWith,
   memoryCeilingBytes,
   phpSettingsFormSchema,
+  phpSettingsFormSchemaFor,
   phpSizeToBytes,
 } from "../lib/schemas/php-settings.js";
 
@@ -64,20 +65,41 @@ const sizeError = (value) => {
   return result.success ? null : result.error.issues[0].message;
 };
 
-test("accepts the sizes the API accepts and refuses the rest", () => {
-  for (const value of ["128M", "1G", "512K", "-1", "268435456"]) {
+test("memory takes a size with a unit, from 16M up — not -1, 0 or a bare number of bytes (bug list, 30 Sep)", () => {
+  for (const value of ["128M", "1G", "16384K", "16M"]) {
     assert.equal(sizeError(value), null, value);
   }
   for (const value of ["128 M", "128MB", "1.5G", "M", "-2"]) {
-    assert.equal(sizeError(value), "phpSize", value);
+    assert.equal(sizeError(value), "phpSizeUnit", value);
   }
+  for (const value of ["-1", "0", "64", "268435456"]) {
+    assert.notEqual(sizeError(value), null, value);
+  }
+  assert.equal(sizeError("8M"), "phpMemoryMin");
+});
+
+test("memory above the server and post below upload are refused (bug list, 30 Sep)", () => {
+  const base = { php_version: "8.4", memory_limit: "256M", upload_max_filesize: "64M", post_max_size: "64M", max_execution_time: 30, max_input_time: 60, max_input_vars: 1000, session_gc_maxlifetime: 1440, pm_type: "ondemand", pm_max_children: 5, pm_max_requests: 500 };
+  const schema = phpSettingsFormSchemaFor(4 * 1024 ** 3);
+  assert.equal(schema.safeParse(base).success, true);
+  assert.equal(schema.safeParse({ ...base, memory_limit: "99999G" }).error?.issues[0]?.message, "phpMemoryMax");
+  assert.equal(schema.safeParse({ ...base, upload_max_filesize: "100000M", post_max_size: "1M" }).error?.issues[0]?.message, "postBelowUpload");
+  assert.equal(schema.safeParse({ ...base, upload_max_filesize: "0" }).error?.issues[0]?.message, "phpSizeUnit");
 });
 
 test("a [section] header is refused — it would start a second pool", () => {
   const field = phpSettingsFormSchema.shape.additional_directives;
-  assert.equal(field.safeParse("opcache.enable = 1").success, true);
-  assert.equal(field.safeParse("[www]\nopcache.enable = 1").success, false);
-  assert.equal(field.safeParse("opcache.enable = 1\n [pool]").success, false);
+  assert.equal(field.safeParse("php_admin_value[opcache.enable] = 1").success, true);
+  assert.equal(field.safeParse("[www]\nphp_admin_value[opcache.enable] = 1").success, false);
+  assert.equal(field.safeParse("php_admin_value[opcache.enable] = 1\n [pool]").success, false);
+});
+
+test("extra directives take PHP settings only — no pool lines like user = root (bug list, 30 Sep)", () => {
+  const field = phpSettingsFormSchema.shape.additional_directives;
+  assert.equal(field.safeParse("php_flag[display_errors] = off\n; a comment").success, true);
+  for (const line of ["user = root", "listen = /tmp/x", "short_open_tag = On", "pm.max_children = 50"]) {
+    assert.equal(field.safeParse(line).error?.issues[0]?.message, "directivesPhpOnly", line);
+  }
 });
 
 test("disable_functions takes function names and nothing else", () => {

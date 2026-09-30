@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 import { fetchSetup, runSetupAction } from "@/lib/api/setup";
 import { apiMessage } from "@/lib/api/error-message";
 import { SetupComponent } from "@/components/setup/setup-component";
@@ -21,7 +22,7 @@ const SLOW_AFTER_MS = 3 * 60 * 1000;
 // will never stop.
 const GIVE_UP_MS = 10 * 60 * 1000;
 
-export function SetupChecklist({ initialSetup, versions = {}, canInstall = {} }) {
+export function SetupChecklist({ initialSetup, versions = {}, canInstall = {}, fail2banProtection = "unknown" }) {
   const t = useTranslations("setup");
   const router = useRouter();
   const [setup, setSetup] = useState(initialSetup);
@@ -163,6 +164,22 @@ export function SetupChecklist({ initialSetup, versions = {}, canInstall = {} })
       locked={anyInstalling && component.state !== "installing" && !busy[component.key]}
       denied={canInstall[component.key] === false}
       onInstall={install}
+      note={
+        component.key === "fail2ban" && component.state === "installed" && fail2banProtection === "off" ? (
+          <span className="inline-flex items-start gap-1.5 text-foreground">
+            <TriangleAlert className="mt-px size-3.5 shrink-0 text-warning" aria-hidden />
+            <span>
+            {t.rich("fail2banOff", {
+              link: (chunks) => (
+                <Link href="/fail2ban" className="font-medium underline underline-offset-2">
+                  {chunks}
+                </Link>
+              ),
+            })}
+            </span>
+          </span>
+        ) : null
+      }
     />
   );
 

@@ -19,6 +19,7 @@ import { writeCookie } from "@/lib/logs/app-log-prefs";
 import { apiMessage } from "@/lib/api/error-message";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Eraser } from "lucide-react";
+import { cleanLines } from "@/lib/logs/clean-lines";
 
 const POLL_MS = 3000;
 // Long tailing sessions must not grow without bound.
@@ -73,7 +74,7 @@ export function LogsPanel({
   const readable = Boolean(source?.readable);
   const appends = source?.follow !== false;
 
-  const [lines, setLines] = useState(initial?.log?.lines ?? []);
+  const [lines, setLines] = useState(() => cleanLines(initial?.log?.lines));
   const [status, setStatus] = useState(initial?.status ?? "ok");
   const [failedMessage, setFailedMessage] = useState(initial?.message ?? null);
   // Read inside `load`'s catch: a first read that fails shows its box, a
@@ -145,7 +146,7 @@ export function LogsPanel({
   if (renderedSource !== selected) {
     setRenderedSource(selected);
     setCurrent(selected);
-    setLines(initial?.log?.lines ?? []);
+    setLines(cleanLines(initial?.log?.lines));
     setStatus(initial?.status ?? "ok");
     setFailedMessage(initial?.message ?? null);
     setTruncated(Boolean(initial?.log?.truncated));
@@ -215,7 +216,7 @@ export function LogsPanel({
           grep: debouncedTerm || undefined,
           signal: ctrl.signal,
         });
-        setLines(data?.log?.lines ?? []);
+        setLines(cleanLines(data?.log?.lines));
         setTruncated(Boolean(data?.log?.truncated));
         setStatus("ok");
         setFailedMessage(null);
@@ -263,7 +264,7 @@ export function LogsPanel({
           // viewer tells new lines from the ones it already holds.
           const { data } = await readLog(sourceKey, { lines: lineCount });
           if (!active) return;
-          setLines(data?.log?.lines ?? []);
+          setLines(cleanLines(data?.log?.lines));
           setTruncated(Boolean(data?.log?.truncated));
           failures = 0;
           setTailState("live");
@@ -272,7 +273,7 @@ export function LogsPanel({
         const { data } = await readLog(sourceKey, { after: cursor.current });
         if (!active) return;
         const next = data?.log?.cursor ?? 0;
-        const fresh = data?.log?.lines ?? [];
+        const fresh = cleanLines(data?.log?.lines);
         // Rotation: the file shrank, so what we hold is history of a file that
         // no longer exists — replace rather than append.
         if (next < cursor.current) setLines(fresh);

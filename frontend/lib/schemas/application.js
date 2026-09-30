@@ -438,6 +438,10 @@ export const securityFormSchema = z
       ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameSpaces" });
     } else if (username.length > 255) {
       ctx.addIssue({ path: ["username"], code: "custom", message: "max255" });
+    } else if (!/^[A-Za-z0-9._@-]+$/.test(username)) {
+      // Browsers send a non-ASCII name in different encodings (UTF-8 or
+      // Latin-1), so ünïcode could be saved and then never sign in.
+      ctx.addIssue({ path: ["username"], code: "custom", message: "securityUsernameAscii" });
     }
     if (!data.password) {
       ctx.addIssue({ path: ["password"], code: "custom", message: "required_password" });
@@ -464,6 +468,9 @@ export function isValidApplicationDomain(value) {
     return false;
 
   const labels = domain.split(".");
+  // An all-digit last label is an IP address, never a name: 127.0.0.1 and the
+  // server's own IP passed the label rule and were added as domains.
+  if (/^\d+$/.test(labels[labels.length - 1])) return false;
   return labels.length >= 2 && labels.every((label) => applicationDomainLabel.test(label));
 }
 

@@ -120,7 +120,7 @@ function StatusPill({ state, recommended, detail }) {
  * is the pill, and the next action is the button — three separate reads so the
  * row is scannable. Failure UI is gated strictly on `state === "failed"`.
  */
-export function SetupComponent({ component, versions = [], busy = false, locked = false, denied = false, tier = "secondary", onInstall }) {
+export function SetupComponent({ component, versions = [], busy = false, locked = false, denied = false, tier = "secondary", note = null, onInstall }) {
   const t = useTranslations("setup");
   const { state, action, options } = component;
   const isRuntime = RUNTIME_KEYS.has(component.key) && Boolean(action);
@@ -182,6 +182,7 @@ export function SetupComponent({ component, versions = [], busy = false, locked 
           {component.description ? (
             <p className="text-xs text-muted-foreground">{component.description}</p>
           ) : null}
+          {note ? <p className="text-xs">{note}</p> : null}
         </div>
         {/* Status and version share one right-hand column across every row, so
             the eye reads a single edge down the list instead of hunting for the

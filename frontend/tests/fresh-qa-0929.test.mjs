@@ -181,7 +181,7 @@ test("Creating or removing a staging copy keeps the dialog open until the page s
   assert.match(create, /await createApplicationStaging\(appId, values\.domain\);[\s\S]{0,500}router\.refresh\(\);\s*setAwaitingPage\(true\);/);
   assert.doesNotMatch(create, /refreshThen/);
   assert.match(read("components/applications/staging/staging-panel.jsx"), /<DeleteApplicationDialog [^>]*closeWhenGone \/>/);
-  assert.match(read("components/applications/delete-application-dialog.jsx"), /if \(closeWhenGone\) \{\s*say\(\);\s*router\.refresh\(\);\s*setAwaitingPage\(true\);/);
+  assert.match(read("components/applications/delete-application-dialog.jsx"), /if \(closeWhenGone\) \{\s*announce\.current = say;\s*router\.refresh\(\);\s*setAwaitingPage\(true\);/);
 });
 
 test("Worker form errors, from the form or the server, are scrolled into view", () => {
@@ -233,7 +233,7 @@ test("The SSH-not-enforced notice is one soft row with its action at the end", (
   assert.match(caution, /\{action \? <div className="shrink-0">\{action\}<\/div> : null\}/);
   // flex-1 beside a shrink-0 button squeezed the text to a word per line on a phone.
   assert.match(caution, /action \? "flex-wrap items-center" : "items-start"/);
-  assert.match(caution, /action \? "min-w-48" : "min-w-0"/);
+  assert.match(caution, /action \? "min-w-48" : "min-w-0 /);
   assert.match(read("components/system-users/system-users-table.jsx"), /<Caution\s+size="md"\s+action=\{/);
 });
 
@@ -575,4 +575,25 @@ test("Activity types are translated; the English-only Event badge and Action fil
   }
   const types = ["application","backup","build_tools","central","cronjob","database","disk_cleaner","fail2ban","firewall","git_account","log","node","panel_update","permission","php","role","server","service","setting","storage_destination","sync","system_user","user"];
   for (const l of locales) { const tt = JSON.parse(read(`messages/${l}.json`)).activity.types; for (const ty of types) assert.ok(tt[ty], `${l} ${ty}`); }
+});
+
+test("Staging: the toast waits for the dialog to go, and neither dialog reopens after the page swaps (Krishna, 30 Sep)", () => {
+  const panel = read("components/applications/staging/staging-panel.jsx");
+  assert.match(panel, /if \(seenCopy !== hasCopy\) \{\s*setSeenCopy\(hasCopy\);\s*setCreating\(false\);\s*setRemoving\(false\);\s*setPushing\(false\);/);
+  const create = read("components/applications/staging/create-staging-dialog.jsx");
+  assert.match(create, /announce\.current = \(\) => toast\.success\(t\("done"/);
+  assert.match(create, /useEffect\(\(\) => \(\) => announce\.current\?\.\(\), \[\]\);/);
+  assert.match(read("components/applications/delete-application-dialog.jsx"), /useEffect\(\(\) => \(\) => announce\.current\?\.\(\), \[\]\);/);
+});
+
+test("Caution with an action: text uses the whole row (Krishna, 30 Sep)", () => {
+  assert.match(read("components/ui/caution.jsx"), /action \? "min-w-48" : "min-w-0 \[&>p\]:max-w-prose"/);
+});
+
+test("Secondary buttons are a brand tint; icon-only ones and the language switcher stay neutral (Krishna, 30 Sep)", () => {
+  const src = read("components/ui/button.jsx");
+  assert.match(src, /const TINT =\s*"bg-\[color-mix\(in_oklch,var\(--primary\)_9%,var\(--background\)\)\] text-\[color-mix\(in_oklch,var\(--primary\)_80%,var\(--foreground\)\)\]/);
+  assert.match(src, /\{ variant: "outline", size: \["default", "xs", "sm", "lg"\], className: TINT \}/);
+  assert.match(src, /\{ variant: "outline", size: \["icon", "icon-xs", "icon-sm", "icon-lg"\], className: NEUTRAL \}/);
+  assert.match(read("components/sections/locale-switcher.jsx"), /<Button\s+variant="neutral"/);
 });

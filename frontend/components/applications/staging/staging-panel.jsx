@@ -33,6 +33,19 @@ export function StagingPanel({ appId, production, staging, canManage, canDelete 
   const [removing, setRemoving] = useState(false);
   const ready = staging?.status === "active";
 
+  // The create and remove dialogs close by being swapped out with the view
+  // they belong to, so their flags were never cleared: after a create, the
+  // next delete brought the page back to "no copy" with Create already open
+  // (and the reverse). Clear all three whenever the copy appears or goes.
+  const hasCopy = Boolean(staging);
+  const [seenCopy, setSeenCopy] = useState(hasCopy);
+  if (seenCopy !== hasCopy) {
+    setSeenCopy(hasCopy);
+    setCreating(false);
+    setRemoving(false);
+    setPushing(false);
+  }
+
   // This site IS the copy. Offering to stage it would make a staging site of
   // a staging site — the API would allow it, and nothing about it is useful.
   // What the reader actually wants from here is the way back to the original.

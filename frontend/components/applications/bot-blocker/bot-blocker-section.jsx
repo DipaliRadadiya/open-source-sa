@@ -57,6 +57,16 @@ function sameList(a, b) {
 }
 
 /*
+ * robots.txt product tokens, not crawlers: Google and Apple train with
+ * Googlebot and Applebot and never send these names, so a user-agent rule on
+ * them blocks nothing. They stay visible — the policy lists them — but marked,
+ * and not counted as blocked.
+ */
+const ROBOTS_TXT_ONLY = new Set(["google-extended", "applebot-extended"]);
+const isRobotsTxtOnly = (bot) => ROBOTS_TXT_ONLY.has(String(bot).toLowerCase());
+const enforceableCount = (bots) => bots.filter((bot) => !isRobotsTxtOnly(bot)).length;
+
+/*
  * The config lists `Meta-ExternalAgent` and `meta-externalagent`, which the
  * vhost matches case-insensitively as one bot. Counted as sent, the badge said
  * 23, the button 22 and the list showed 23 chips for the same choice.
@@ -65,7 +75,7 @@ function dedupedPolicies(policies) {
   return Object.fromEntries(
     Object.entries(policies).map(([key, option]) => {
       const bots = effectiveBlockedBots(option?.blocked_bots ?? []);
-      return [key, { ...option, blocked_bots: bots, blocked_count: bots.length }];
+      return [key, { ...option, blocked_bots: bots, blocked_count: enforceableCount(bots) }];
     }),
   );
 }
@@ -124,25 +134,43 @@ function botGroups(keys, policies, selected) {
  * order to dedupe, so what appears in which group is unchanged.
  */
 function BotList({ bots }) {
+  const t = useTranslations("applications.botBlocker");
   const sorted = [...bots].sort((a, b) =>
     a.localeCompare(b, undefined, { sensitivity: "base" }),
   );
+  const robotsOnly = sorted.filter(isRobotsTxtOnly);
 
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {sorted.map((bot) => (
-        <Badge
-          key={bot}
-          variant="outline"
-          /* Accent-tinted rather than white-on-grey: outline-only chips on the
-             panel's own tint had almost no edge, so 23 names read as one wash.
-             These are reference data, not a status — the tint gives them a
-             surface without claiming anything about each bot. */
-          className="h-auto max-w-full border-primary/20 bg-primary/5 font-mono font-normal break-all whitespace-normal text-primary"
-        >
-          {bot}
-        </Badge>
-      ))}
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        {sorted.map((bot) =>
+          isRobotsTxtOnly(bot) ? (
+            <Badge
+              key={bot}
+              variant="outline"
+              className="h-auto max-w-full font-mono font-normal break-all whitespace-normal text-muted-foreground"
+            >
+              {bot}
+              <span className="font-sans text-xs">· {t("robotsTxtOnly")}</span>
+            </Badge>
+          ) : (
+            <Badge
+              key={bot}
+              variant="outline"
+              /* Accent-tinted rather than white-on-grey: outline-only chips on the
+                 panel's own tint had almost no edge, so 23 names read as one wash.
+                 These are reference data, not a status — the tint gives them a
+                 surface without claiming anything about each bot. */
+              className="h-auto max-w-full border-primary/20 bg-primary/5 font-mono font-normal break-all whitespace-normal text-primary"
+            >
+              {bot}
+            </Badge>
+          ),
+        )}
+      </div>
+      {robotsOnly.length ? (
+        <p className="text-xs text-muted-foreground">{t("robotsTxtOnlyNote", { names: robotsOnly.join(", ") })}</p>
+      ) : null}
     </div>
   );
 }
@@ -606,7 +634,7 @@ export function BotBlockerSection({
                     className="h-auto max-w-full py-1.5 text-left whitespace-normal"
                   >
                     <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", showBots && "rotate-180")} />
-                    {showBots ? t("hideBots") : t("showBots", { count: effective.length })}
+                    {showBots ? t("hideBots") : t("showBots", { count: enforceableCount(effective) })}
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">

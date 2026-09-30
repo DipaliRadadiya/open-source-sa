@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { getLiveMetrics } from "@/lib/api/server-metrics";
+import { formatBytes } from "@/lib/format/bytes";
+import { Caution } from "@/components/ui/caution";
 import { DisabledReasonProvider } from "@/components/ui/reason-tooltip";
 import { HardDriveDownload } from "lucide-react";
 import { swapFormSchema } from "@/lib/schemas/settings";
@@ -57,6 +60,32 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   });
 
   const sizeMb = useWatch({ control: form.control, name: "size_mb" });
+  const format = useFormatter();
+
+  /*
+   * Free disk space, for the one question the API does not ask: does this
+   * swap file fit? 64 GB was accepted on a disk with 80 GB free and took most
+   * of it. Read once; if it cannot be read the form says nothing, as before.
+   */
+  const [diskFree, setDiskFree] = useState(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    getLiveMetrics(controller.signal)
+      .then((metrics) => {
+        const free = metrics?.disk?.free;
+        if (Number.isFinite(free)) setDiskFree(free);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  // Only the growth needs new space: the current file is replaced.
+  const growth = Math.max(0, Number(sizeMb) * MB - (swap?.size ?? 0));
+  const left = diskFree === null ? null : diskFree - growth;
+  // Refused past half the free space, not only when it cannot fit: 64 GB on a
+  // disk with 80 GB free "fit", and left the server 6 GB for everything else.
+  const noRoom = diskFree !== null && growth > 0 && growth > diskFree * 0.5;
+  const tight = diskFree !== null && growth > 0 && !noRoom && (left < 10 * 1024 * MB || left < diskFree * 0.6);
   const matchesPreset = PRESETS.includes(Number(sizeMb));
   // Custom stays open once chosen, so the field doesn't vanish under the cursor
   // the moment a typed value happens to equal a preset.
@@ -79,6 +108,10 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
   }
 
   function onSubmit(values) {
+    if (noRoom) {
+      form.setError("size_mb", { type: "manual", message: t("swap.noRoom", { free: formatBytes(diskFree, format) }) });
+      return;
+    }
     // Turning swap off while it's in use is the one change here that can end
     // with the kernel killing processes.
     if (Number(values.size_mb) === 0 && swap?.enabled) {
@@ -207,6 +240,15 @@ export function SwapForm({ swap, memoryTotal, canManage, changedBy }) {
                         {t("swap.megabytes")}
                       </span>
                     </div>
+                  ) : null}
+
+                  {tight ? (
+                    <Caution className="mt-2">
+                      {t("swap.tight", {
+                        size: formatBytes(Number(sizeMb) * MB, format),
+                        left: formatBytes(left, format),
+                      })}
+                    </Caution>
                   ) : null}
                 </Row>
               )}

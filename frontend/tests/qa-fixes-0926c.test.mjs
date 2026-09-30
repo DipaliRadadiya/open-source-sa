@@ -10,7 +10,7 @@ const traffic = read("components/applications/bot-blocker/bot-traffic-card.jsx")
 test("one choice shows one count: the policy lists are de-duplicated before anything counts them", () => {
   // Found live: badge 23, button 22, 23 chips (Meta-ExternalAgent twice).
   assert.match(section, /const policies = dedupedPolicies\(sentPolicies\);/);
-  assert.match(section, /blocked_count: bots\.length/);
+  assert.match(section, /blocked_count: enforceableCount\(bots\)/);
 });
 
 test("a saved choice is not called unsaved while the refresh is on its way", () => {

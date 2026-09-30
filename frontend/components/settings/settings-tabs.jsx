@@ -24,7 +24,7 @@ const SECTIONS = [
 // route: back works, a section can be pasted to someone, and opening the
 // timezone form doesn't also load the SSH one.
 const TAB =
-  "relative inline-flex h-auto flex-none items-center justify-center gap-2 rounded-md border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all hover:bg-background/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none [&_svg]:size-4 [&_svg]:shrink-0";
+  "relative inline-flex h-auto flex-none items-center justify-center gap-2 rounded-md border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all hover:bg-background/60 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none [&_svg]:size-4 [&_svg]:shrink-0";
 const TAB_ACTIVE =
   "bg-background text-foreground shadow-sm dark:border-input dark:bg-input/30";
 

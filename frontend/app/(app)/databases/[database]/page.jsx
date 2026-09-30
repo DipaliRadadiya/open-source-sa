@@ -20,6 +20,7 @@ import { DatabaseTabs } from "@/components/databases/database-tabs";
 import { UsedByCard } from "@/components/databases/used-by-card";
 import { DatabaseTables } from "@/components/databases/database-tables";
 import { DatabaseExports } from "@/components/databases/database-exports";
+import { applicationById } from "@/lib/backups/database-availability";
 import { DeleteDatabaseCard } from "@/components/databases/delete-database-card";
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -190,7 +191,11 @@ export default async function DatabasePage({ params, searchParams }) {
         {/* Outside the tabs: deleting the database is not one of its sections,
             and it belongs at the end of the page past everything that might
             change your mind. */}
-        <DeleteDatabaseCard database={data} canManage={canManage} />
+        <DeleteDatabaseCard
+          database={data}
+          application={applicationById(appList.applications, data.application_id)}
+          canManage={canManage}
+        />
       </div>
     </div>
   );

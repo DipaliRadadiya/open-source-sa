@@ -24,6 +24,7 @@ import {
   serializeFollowPrefs,
   writeCookie,
 } from "@/lib/logs/app-log-prefs";
+import { cleanLines } from "@/lib/logs/clean-lines";
 
 const POLL_MS = 3000;
 const TAIL_FAILURES_BEFORE_PAUSE = 3;
@@ -82,7 +83,7 @@ export function ApplicationLogsPanel({
   // that need it.
   const hasAppOutput = sources.some((s) => s.key.startsWith("application"));
 
-  const [lines, setLines] = useState(initial?.log?.lines ?? []);
+  const [lines, setLines] = useState(() => cleanLines(initial?.log?.lines));
   const [status, setStatus] = useState(initial?.status ?? "ok");
   const [failedMessage, setFailedMessage] = useState(initial?.message ?? null);
   // Read inside `load`'s catch: a first read that fails shows its box, a
@@ -153,7 +154,7 @@ export function ApplicationLogsPanel({
           grep: debouncedTerm || undefined,
           signal: ctrl.signal,
         });
-        setLines(data?.log?.lines ?? []);
+        setLines(cleanLines(data?.log?.lines));
         setTruncated(Boolean(data?.log?.truncated));
         setSearchCapped(Boolean(data?.log?.search_window_capped));
         setStatus("ok");

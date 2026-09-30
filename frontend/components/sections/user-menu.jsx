@@ -92,7 +92,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
           aria-label={t("openUserMenu")}
         >
           <Avatar className="size-8">
-            <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
+            <AvatarFallback className="bg-primary/10 text-xs font-medium text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))]">
               {initials(user?.name)}
             </AvatarFallback>
           </Avatar>
@@ -102,7 +102,7 @@ export function UserMenu({ extraItems, impersonating = false }) {
         {/* Identity header */}
         <div className="flex items-center gap-2.5 p-2.5">
           <Avatar className="size-9">
-            <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
+            <AvatarFallback className="bg-primary/10 text-xs font-medium text-[color-mix(in_oklch,var(--primary)_80%,var(--foreground))]">
               {initials(user?.name)}
             </AvatarFallback>
           </Avatar>

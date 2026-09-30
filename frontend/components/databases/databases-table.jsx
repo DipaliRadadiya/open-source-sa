@@ -491,6 +491,7 @@ function DatabasesList({
           />
           <DeleteDatabaseDialog
             database={deleting}
+            application={applicationById(applications, deleting?.application_id)}
             open={deleting !== null}
             onOpenChange={(next) => !next && setDeleting(null)}
           />

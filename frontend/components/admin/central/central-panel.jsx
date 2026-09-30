@@ -85,7 +85,7 @@ export function CentralPanel({ status }) {
               {t("cardTitle")}
               {connected ? (
                 <Badge variant="success" className="font-normal">
-                  {t("connected")}
+                  {t("keyActive")}
                 </Badge>
               ) : null}
             </CardTitle>

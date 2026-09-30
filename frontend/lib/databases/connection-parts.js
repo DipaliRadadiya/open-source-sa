@@ -13,7 +13,13 @@ const PANEL_PREFIX = "panel_";
  */
 export function primaryUser(database) {
   const users = database?.users ?? [];
-  return users.find((user) => !user.username.startsWith(PANEL_PREFIX)) ?? users[0] ?? null;
+  // The oldest, not the first in the response: the API does not order the
+  // list, and adding a second user swapped the card over to it. On PostgreSQL
+  // the first user is the owner — the only one with rights on existing tables.
+  const own = users
+    .filter((user) => !user.username.startsWith(PANEL_PREFIX))
+    .sort((a, b) => a.id - b.id);
+  return own[0] ?? users[0] ?? null;
 }
 
 /**

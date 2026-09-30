@@ -110,6 +110,16 @@ const COMMON_FIELD_NAMES = new Set([
   "branch",
 ]);
 
+/**
+ * Joomla refuses a table prefix that does not start with a letter and end with
+ * an underscore, and the install then stops at "install_app" with no reason.
+ */
+const FIELD_PATTERNS = {
+  joomla: {
+    table_prefix: { pattern: /^[A-Za-z][A-Za-z0-9]*_$/, message: "form.tablePrefixInvalid" },
+  },
+};
+
 // The API is meant to send a display-ready `label`, but for some one-click app
 // fields it returns the untranslated key itself (`application.fields.shop_name`)
 // when the backend has no translation for it. Never show a raw key to a user —
@@ -995,7 +1005,9 @@ export function CreateApplicationForm({
     )
     .map((config) => {
       const value = values?.[config.name];
-      const ready = !config.required || hasConfigValue(config, value);
+      const rule = FIELD_PATTERNS[values?.site_type]?.[config.name];
+      const breaksRule = Boolean(rule) && String(value ?? "").trim() !== "" && !rule.pattern.test(String(value).trim());
+      const ready = (!config.required || hasConfigValue(config, value)) && !breaksRule;
       return {
         key: `configuration-${config.name}`,
         target: config.name,
@@ -1009,7 +1021,7 @@ export function CreateApplicationForm({
             ? toggleValue(value)
               ? t("form.toggleOn")
               : t("form.toggleOff")
-            : ready
+            : ready || breaksRule
               ? summariseValue(String(value), t)
               : "—",
         ready,
@@ -1506,6 +1518,23 @@ export function CreateApplicationForm({
         }),
       );
       revealErrors([...missingFields, ...missingGitFields].map((field) => field.name));
+      return;
+    }
+    // Rules the API does not check yet but the installer does, so a value that
+    // passes here is one the install will not fail on half way through.
+    const badPatterns = visibleFields.filter((config) => {
+      const rule = FIELD_PATTERNS[values.site_type]?.[config.name];
+      const value = String(values[config.name] ?? "").trim();
+      return rule && value && !rule.pattern.test(value);
+    });
+    if (badPatterns.length) {
+      badPatterns.forEach((config) =>
+        form.setError(config.name, {
+          type: "manual",
+          message: t(FIELD_PATTERNS[values.site_type][config.name].message),
+        }),
+      );
+      revealErrors(badPatterns.map((config) => config.name));
       return;
     }
     const payload = {

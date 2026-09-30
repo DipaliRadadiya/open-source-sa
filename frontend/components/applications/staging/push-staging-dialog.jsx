@@ -47,11 +47,10 @@ import {
  * domain before the button unlocks — because the two actions carry the same
  * weight and should not feel different.
  *
- * The mode has no preselected value on purpose. `PushStagingRequest` calls
- * `files` "the only mode that cannot lose data" and asks the form to default
- * to it; it deletes production-only files, and defaulting to it would turn a
- * claim the code makes about itself into the click most people never think
- * about. Each option says what it destroys and the reader picks one.
+ * Files is chosen to begin with (Krishna, 2026-09-30): it is the mode that
+ * leaves production's database — its orders, comments and users — alone. Its
+ * own consequence (production-only files are deleted, uploads kept) shows as
+ * soon as the dialog opens, and the domain still has to be typed.
  *
  * Callers MUST pass a `key` that changes when this opens. A dialog opened
  * from its own button never fires `onOpenChange` on the way in, so a mode
@@ -62,7 +61,7 @@ export function PushStagingDialog({ appId, production, staging, open, onOpenChan
   const t = useTranslations("applications.staging.pushDialog");
   const router = useRouter();
   const { refreshAndWait } = useRefresh();
-  const [mode, setMode] = useState("");
+  const [mode, setMode] = useState("files");
   const [confirm, setConfirm] = useState("");
   const [pending, setPending] = useState(false);
 

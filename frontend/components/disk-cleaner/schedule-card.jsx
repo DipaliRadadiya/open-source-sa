@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { CalendarClock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { deleteCleanerSchedule, saveCleanerSchedule } from "@/lib/api/disk-cleaner";
-import { clampPercent } from "@/lib/disk-cleaner/clamp-percent";
+import { clampPercent, thresholdProblem } from "@/lib/disk-cleaner/clamp-percent";
 import { clockTimeOf } from "@/lib/disk-cleaner/next-run";
 import { scheduleTimeLabel } from "@/lib/backups/schedule-time";
 import { apiMessage } from "@/lib/api/error-message";
@@ -71,7 +71,10 @@ export function ScheduleCard({ schedule, categories, canManage }) {
     setThreshold(schedule?.threshold_percent != null ? String(schedule.threshold_percent) : "");
   }
 
+  const thresholdInvalid = enabled && thresholdProblem(threshold) !== null;
+
   async function save() {
+    if (thresholdInvalid) return;
     setPending(true);
     try {
       /*
@@ -258,7 +261,7 @@ export function ScheduleCard({ schedule, categories, canManage }) {
                   write happens, so a button that only greys out reads as a
                   click that did not land. Same spinner-and-label as every
                   other save in the panel. */}
-              <Button onClick={save} disabled={pending || (enabled && picked.size === 0)}>
+              <Button onClick={save} disabled={pending || (enabled && picked.size === 0) || thresholdInvalid}>
                 {pending ? <Loader2 className="size-4 animate-spin" /> : null}
                 {pending ? t("schedule.saving") : t("schedule.save")}
               </Button>
@@ -323,6 +326,8 @@ export function ScheduleCard({ schedule, categories, canManage }) {
                   // directly above it — "run when usage is above Always".
                   placeholder={t("schedule.thresholdPlaceholder")}
                   onChange={(e) => setThreshold(clampPercent(e.target.value))}
+                  aria-invalid={thresholdInvalid || undefined}
+                  aria-describedby={thresholdInvalid ? "cleaner-threshold-error" : undefined}
                 />
                 {/* Always rendered, not only once something is typed. The unit
                     is the one thing an empty box has to communicate, and it
@@ -331,7 +336,13 @@ export function ScheduleCard({ schedule, categories, canManage }) {
                   %
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">{t("schedule.thresholdHint")}</p>
+              {thresholdInvalid ? (
+                <p id="cleaner-threshold-error" role="alert" className="text-sm text-destructive">
+                  {t("schedule.thresholdRange")}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">{t("schedule.thresholdHint")}</p>
+              )}
             </div>
           </div>
 

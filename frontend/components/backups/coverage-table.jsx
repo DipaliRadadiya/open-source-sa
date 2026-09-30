@@ -92,7 +92,7 @@ function StatusCell({ row }) {
  * extra colour on the row.
  */
 function Placeholder({ children }) {
-  return <span className="text-sm text-muted-foreground/70">{children}</span>;
+  return <span className="text-sm text-muted-foreground">{children}</span>;
 }
 
 function TypeCell({ row }) {

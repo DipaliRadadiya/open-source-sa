@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -97,9 +97,16 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     onOpenChange?.(next);
   }
 
+  // With closeWhenGone the toast waits for the page to drop this dialog;
+  // announced on the API's answer it sat beside "Deleting…" for seconds.
+  const announce = useRef(null);
+  useEffect(() => () => announce.current?.(), []);
+
   useEffect(() => {
     if (!awaitingPage) return undefined;
     const timer = window.setTimeout(() => {
+      announce.current?.();
+      announce.current = null;
       setAwaitingPage(false);
       setPending(false);
       onOpenChange?.(false);
@@ -179,7 +186,7 @@ export function DeleteApplicationDialog({ application, open, onOpenChange, after
     // than trusting the refresh to land before the dialog closes — it did not
     // on a real server, and the old card showed for a moment.
     if (closeWhenGone) {
-      say();
+      announce.current = say;
       router.refresh();
       setAwaitingPage(true);
       return;

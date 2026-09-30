@@ -21,7 +21,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
  * `count` is null when the history read failed: the box then names no number
  * rather than claiming there are none.
  */
-export function TurnOffBackupsDialog({ open, onOpenChange, application, target, count }) {
+export function TurnOffBackupsDialog({ open, onOpenChange, application, target, count, destinationNames = [] }) {
   const t = useTranslations("backups.application.turnOff");
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -128,7 +128,11 @@ export function TurnOffBackupsDialog({ open, onOpenChange, application, target, 
                 {count === null ? t("deleteAll") : t("deleteCount", { count })}
               </Label>
               <p className="text-xs leading-5 text-muted-foreground">
-                {t("deleteHint", { destination: target?.storage_destination_name ?? t("storage") })}
+                {t("deleteHint", {
+                  destination: destinationNames.length
+                    ? destinationNames.join(", ")
+                    : (target?.storage_destination_name ?? t("storage")),
+                })}
               </p>
             </div>
           </div>
