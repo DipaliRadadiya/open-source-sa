@@ -685,8 +685,13 @@ it('teaches WordPress that the request arrived over HTTPS', function () {
     $application = installDockerApp(dockerAppSite('wordpress_container', 20101));
     $extra = Yaml::parse((string) $application->compose)['services']['app']['environment']['WORDPRESS_CONFIG_EXTRA'];
 
+    // Escaped as `$$`, which is what reaches PHP as one `$`. Written plainly,
+    // Compose interpolates it away and the container gets `['HTTPS'] = 'on'` —
+    // wp-config's eval() then dies and every request is a 500. Found on a real
+    // box, because the YAML looks correct either way.
     expect($extra)->toContain('HTTP_X_FORWARDED_PROTO')
-        ->and($extra)->toContain("\$_SERVER['HTTPS'] = 'on'");
+        ->and($extra)->toContain("\$\$_SERVER['HTTPS'] = 'on'")
+        ->and($extra)->not->toContain("\n    \$_SERVER");
 });
 
 it('makes the panel domain the one source for the WordPress url', function () {
@@ -742,3 +747,19 @@ it('leaves the WordPress salts to the image', function () {
         expect($environment)->not->toHaveKey($key);
     }
 });
+
+it('escapes every dollar sign, because Compose interpolates its own file', function (string $type, int $port, array $roles) {
+    // A general guard, not a WordPress one. `$NAME` and `${NAME}` are substituted
+    // by Compose wherever they appear in the file, and the substitution is silent
+    // — an unset variable becomes an empty string with no warning. So any template
+    // that writes a shell or PHP variable has to double the dollar.
+    //
+    // This cost a 500 on a real WordPress site: the file said `$_SERVER[...]` and
+    // the container received `[...]`.
+    $compose = (string) installDockerApp(dockerAppSite($type, $port))->compose;
+
+    // A `$` that is neither preceded nor followed by another `$`, and which starts
+    // an identifier or a brace — exactly what Compose would consume.
+    expect(preg_match('/(?<!\$)\$(?!\$)[A-Za-z_{]/', $compose))
+        ->toBe(0, "{$type} writes an unescaped \$variable that Compose will interpolate away");
+})->with('docker apps');

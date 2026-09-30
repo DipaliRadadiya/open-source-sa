@@ -37,9 +37,18 @@ services:
       {{ $key }}: "{{ $value }}"
 @endforeach
       WORDPRESS_DB_PASSWORD: "{{ $secrets['DATABASE_PASSWORD'] }}"
+      {{-- `$$` and not `$`. Compose interpolates `$NAME` in its own file, so a PHP
+           variable written plainly is REPLACED — silently, with no warning: the
+           file said `$_SERVER['HTTP_X_FORWARDED_PROTO']` and the container
+           received `['HTTP_X_FORWARDED_PROTO']`, so wp-config's eval() died on
+           "Cannot use isset() on the result of an expression" and every request
+           was a 500. `$$` is compose's escape and reaches PHP as one `$`.
+
+           Measured on a real box. Nothing in the rendered YAML looks wrong, which
+           is why the test for this reads the CONTAINER's environment. --}}
       WORDPRESS_CONFIG_EXTRA: |
-        if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-            $_SERVER['HTTPS'] = 'on';
+        if (isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            $$_SERVER['HTTPS'] = 'on';
         }
         if (getenv('WORDPRESS_SITE_URL')) {
             define('WP_HOME', getenv('WORDPRESS_SITE_URL'));
