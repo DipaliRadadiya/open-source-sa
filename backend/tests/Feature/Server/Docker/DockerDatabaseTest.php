@@ -55,6 +55,14 @@ beforeEach(function () {
             return Process::result(output: "abc123\n");
         }
 
+        // The readiness wait asks Docker for the engine's health. Answered
+        // explicitly rather than left to the blanket exit-0 above, because a blank
+        // answer is what the wait treats as "nothing to wait for" — so a test
+        // relying on that would pass for the wrong reason.
+        if (($args[0] ?? '') === 'docker' && ($args[1] ?? '') === 'inspect') {
+            return Process::result(output: "healthy\n");
+        }
+
         return Process::result(exitCode: 0);
     });
 });
@@ -399,4 +407,90 @@ it('records the engine and the port, never a credential', function () {
     expect(json_encode($row->properties))
         ->not->toContain(DockerDatabase::find($id)->credential('password'))
         ->and($row->properties['engine'])->toBe('postgres');
+});
+
+/*
+ * Readiness, which is what makes the connection details usable rather than merely
+ * correct.
+ */
+
+it('waits for the engine to answer before reporting success', function () {
+    // `up -d` returns as soon as the container is created, which for a database is
+    // well before it accepts connections. Measured on a real box: the endpoint
+    // replied 201, and a connection made immediately with the credentials it had
+    // just handed over was refused — Postgres was still initialising.
+    $asked = [];
+
+    Process::fake(function ($process) use (&$asked) {
+        $args = $process->command;
+        while (in_array($args[0] ?? '', ['sudo', '-n'], true)) {
+            array_shift($args);
+        }
+
+        if (($args[0] ?? '') === 'docker' && ($args[1] ?? '') === 'inspect') {
+            $asked[] = $args;
+
+            // Starting, then healthy — the shape of a real first boot.
+            return Process::result(output: count($asked) < 2 ? "starting\n" : "healthy\n");
+        }
+
+        if (($args[0] ?? '') === 'docker' && in_array('ps', $args, true)) {
+            return Process::result(output: "abc123\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    createDb(['name' => 'waitdb'])[0]->assertCreated();
+
+    expect(count($asked))->toBeGreaterThanOrEqual(2, 'it should have polled until healthy');
+});
+
+it('rolls back a database that never becomes ready', function () {
+    // Two minutes of `starting` is not slow, it is broken — a bad volume
+    // permission, an OOM, an image that cannot initialise. Leaving the row would
+    // leave connection details that connect to nothing, and a port the allocator
+    // keeps reserving.
+    config(['server.docker_databases.ready_timeout' => 0]);
+
+    Process::fake(function ($process) {
+        $args = $process->command;
+        while (in_array($args[0] ?? '', ['sudo', '-n'], true)) {
+            array_shift($args);
+        }
+
+        if (($args[0] ?? '') === 'docker' && ($args[1] ?? '') === 'inspect') {
+            return Process::result(output: "starting\n");
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    [$response] = createDb(['name' => 'neverready']);
+
+    $response->assertStatus(422)->assertJsonPath('step', 'not_ready');
+
+    expect(DockerDatabase::count())->toBe(0);
+});
+
+it('does not hang when the health status cannot be read', function () {
+    // The rule is "only `starting` and `unhealthy` mean wait". Written the other
+    // way round — wait unless healthy — an unanswered inspect is
+    // indistinguishable from starting and the whole timeout elapses on every
+    // call. That is exactly what happened, which is why this asserts the
+    // permissive direction.
+    Process::fake(function ($process) {
+        $args = $process->command;
+        while (in_array($args[0] ?? '', ['sudo', '-n'], true)) {
+            array_shift($args);
+        }
+
+        if (($args[0] ?? '') === 'docker' && ($args[1] ?? '') === 'inspect') {
+            return Process::result(output: '');
+        }
+
+        return Process::result(exitCode: 0);
+    });
+
+    createDb(['name' => 'unreadable'])[0]->assertCreated();
 });

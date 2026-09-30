@@ -80,6 +80,71 @@ class DatabaseContainerManager
         if ($result->failed()) {
             throw new DatabaseContainerFailedException('container_start', $result->reference);
         }
+
+        // `up -d` returns as soon as the container is created, which for a database
+        // is well before it answers. Measured on a real box: the create endpoint
+        // replied 201 and a connection made immediately with the credentials it
+        // had just handed over was refused with "is the server running on that
+        // host" — Postgres was still initialising its data directory.
+        //
+        // So the call waits for the engine's own healthcheck. A database that has
+        // not become healthy in two minutes is not slow, it is broken — a bad
+        // volume permission, an OOM, an image that cannot initialise — and the
+        // caller rolls it back rather than leaving connection details that connect
+        // to nothing.
+        if (! $this->waitUntilHealthy($database)) {
+            throw new DatabaseContainerFailedException('not_ready', '');
+        }
+    }
+
+    /**
+     * Wait for the engine to report itself healthy.
+     *
+     * Every template defines a healthcheck that asks the ENGINE rather than the
+     * port — `pg_isready`, `mysqladmin ping`, `redis-cli ping` — because the port
+     * is open while the server is still replaying WAL and refusing connections.
+     *
+     * A container with no health status at all answers true immediately. That is
+     * not a loophole: it means the image defines no healthcheck and the panel's
+     * template did not add one, in which case there is nothing to wait for and
+     * blocking for two minutes would be a hang with no diagnosis.
+     */
+    private function waitUntilHealthy(DockerDatabase $database): bool
+    {
+        $deadline = time() + (int) config('server.docker_databases.ready_timeout', 120);
+        $container = $database->project().'-db-1';
+
+        while (time() < $deadline) {
+            $result = $this->serverOps->run(
+                ['docker', 'inspect', '--format', '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}', $container],
+                ['feature' => 'docker', 'op' => 'db_health', 'docker_database' => $database->id],
+                timeout: 20,
+            );
+
+            $status = trim($result->output());
+
+            // Only two statuses mean "not yet". Everything else — `healthy`,
+            // `none` for an image with no healthcheck, an unanswered inspect, a
+            // format Docker changes in some future release — means there is
+            // nothing to wait for.
+            //
+            // Written the other way round first (wait unless healthy) and it hung:
+            // an unreadable status is indistinguishable from "starting", so the
+            // whole timeout elapsed on every call. Same rule as the site
+            // crash-loop check, for the same reason — a check that cannot read the
+            // box must not be the thing that fails the operation.
+            //
+            // `unhealthy` IS transitional here: Docker marks it after the first
+            // failed probe, and a database initialising its data directory fails
+            // several before it starts answering.
+            if (! in_array($status, ['starting', 'unhealthy'], true)) {
+                return true;
+            }
+
+            sleep(3);
+        }
+
+        return false;
     }
 
     /**

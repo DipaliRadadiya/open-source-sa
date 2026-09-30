@@ -1705,6 +1705,14 @@ return [
         // updater ships code rather than directories.
         'directory' => env('DOCKER_DATABASE_DIR', '/var/lib/panel/docker-databases'),
 
+        // How long to wait for a new engine to report itself healthy before
+        // treating it as broken. Generous on purpose: MySQL's first start
+        // initialises a data directory and can take half a minute on a small box,
+        // and a create that gave up early would roll back a database that was
+        // about to work. Two minutes is well past any healthy first start and
+        // well short of leaving somebody watching a spinner.
+        'ready_timeout' => (int) env('DOCKER_DATABASE_READY_TIMEOUT', 120),
+
         'engines' => [
             'postgres' => [
                 'label' => 'PostgreSQL',
