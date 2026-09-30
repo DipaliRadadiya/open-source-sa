@@ -4,10 +4,12 @@ use App\Models\Application;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
+use App\Services\Server\Applications\ApplicationFail2banManager;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Per-application fail2ban: the commercial-style raw-INI variant.
@@ -810,4 +812,57 @@ it('leaves a filter the user edited alone on fail2ban:resync', function () {
 
     expect($this->application->fresh()->fail2ban_filter_content)->toBe($edited)
         ->and($writes)->not->toHaveKey($this->filterD.'/panel-site-shop.conf');
+});
+
+describe('the settings a site jail may use', function () {
+    it('refuses a setting outside the allowlist, before anything is written', function (string $line) {
+        $this->application = createFail2banApp('Shop', 'shop.test');
+        fakeAppFail2ban();
+
+        $this->withHeaders(appFail2banHeaders())
+            ->postJson(appFail2banUrl(), [
+                'jail_config_content' => "[{name}]\nenabled = true\nfilter = {filter}\n{$line}\n",
+                'filter_config_content' => "[Definition]\nfailregex = ^<HOST>\n",
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('jail_config_content');
+
+        // Refused at validation: no config file was ever written.
+        Process::assertNotRan(fn ($p) => in_array('tee', (array) $p->command, true));
+    })->with([
+        'action' => ['action = example'],
+        'banaction' => ['banaction = example'],
+        'upper case' => ['BANACTION = example'],
+        'colon separator' => ['action: example'],
+    ]);
+
+    it('accepts the panel\'s own default jail, and multi-line values of allowed settings', function () {
+        $manager = app(ApplicationFail2banManager::class);
+
+        expect($manager->disallowedJailKeys($manager->defaultJailContent()))->toBe([])
+            ->and($manager->disallowedJailKeys("[{name}]\nignoreip = 127.0.0.1\n           10.0.0.0/8\n# action = commented out\n; banaction = also a comment\n"))->toBe([])
+            // fail2ban reads setting names case-insensitively.
+            ->and($manager->disallowedJailKeys("[{name}]\nMAXRETRY = 5\nEnabled = true\n"))->toBe([])
+            // An indented line continues the value above it, even with an `=`.
+            ->and($manager->disallowedJailKeys("[{name}]\nlogpath = /home/a/logs/access.log\n          /home/a/logs/x=y.log\n"))->toBe([]);
+    });
+
+    it('refuses a disallowed setting on every write path, not only the form', function () {
+        $app = createFail2banApp('guarded', 'guarded.test');
+
+        app(ApplicationFail2banManager::class)
+            ->enableForApp($app, "[{name}]\nenabled = true\naction = example\n", "[Definition]\nfailregex = ^<HOST>\n");
+    })->throws(ValidationException::class);
+
+    it('reports older saved jails that use one, without rewriting them', function () {
+        fakeAppFail2ban();
+        $app = createFail2banApp('older', 'older.test');
+        $app->forceFill(['fail2ban_jail_name' => 'panel-site-older', 'fail2ban_jail_content' => "[{name}]\nenabled = true\naction = example\n"])->save();
+
+        $this->artisan('fail2ban:resync')
+            ->expectsOutputToContain('sets action, which site jails may no longer set')
+            ->assertSuccessful();
+
+        expect($app->fresh()->fail2ban_jail_content)->toContain('action = example');
+    });
 });

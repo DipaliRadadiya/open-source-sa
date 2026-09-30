@@ -25,5 +25,6 @@ return [
         'filter_content_max' => 'La configuration du filtre est trop volumineuse (max. 65535 caractères).',
         'foreign_jail' => 'Cette jail ne peut configurer que la jail propre à ce site. Remplacez [:section] par [{name}] (devient :name).',
         'foreign_filter' => 'Cette jail ne peut utiliser que le filtre propre à ce site. Remplacez filter = :filter par filter = {filter} (devient :name).',
+        'disallowed_setting' => 'Le réglage « :setting » n\'est pas autorisé dans la jail d\'un site. Autorisés : :allowed.',
     ],
 ];

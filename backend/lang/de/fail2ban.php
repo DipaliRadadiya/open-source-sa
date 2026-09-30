@@ -25,5 +25,6 @@ return [
         'filter_content_max' => 'Die Filter-Konfiguration ist zu groß (max. 65535 Zeichen).',
         'foreign_jail' => 'Dieser Jail darf nur den eigenen Jail dieser Website konfigurieren. Ersetzen Sie [:section] durch [{name}] (wird zu :name).',
         'foreign_filter' => 'Dieser Jail darf nur den eigenen Filter dieser Website verwenden. Ersetzen Sie filter = :filter durch filter = {filter} (wird zu :name).',
+        'disallowed_setting' => 'Die Einstellung „:setting" ist in einem Website-Jail nicht erlaubt. Erlaubt: :allowed.',
     ],
 ];

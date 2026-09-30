@@ -8,6 +8,7 @@ use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Per-application fail2ban.
@@ -165,6 +166,46 @@ class ApplicationFail2banManager
      * again. This is the second time this file has shipped a jail that looked
      * enabled and banned nobody; see `defaultFilterContent()` for the first.
      */
+    /**
+     * The only settings a site's own jail may set. Tuning and scope — what to
+     * watch, how many failures, for how long — and nothing that chooses what
+     * fail2ban *does* about a ban: that stays the server's default action.
+     * Everything in defaultJailContent() is here.
+     */
+    public const ALLOWED_JAIL_KEYS = [
+        'enabled', 'port', 'filter', 'logpath', 'maxretry', 'findtime', 'bantime', 'ignoreip', 'backend',
+    ];
+
+    /**
+     * Settings in a jail that are not in ALLOWED_JAIL_KEYS, lowercased, in
+     * order of appearance. Continuation lines (indented) belong to the key
+     * above them and are not keys of their own.
+     *
+     * @return array<int, string>
+     */
+    public function disallowedJailKeys(string $jail): array
+    {
+        $found = [];
+
+        foreach (preg_split('/\r?\n/', $jail) ?: [] as $line) {
+            if ($line === '' || ctype_space($line[0]) || preg_match('/^\s*[#;\[]/', $line) === 1) {
+                continue;
+            }
+
+            if (preg_match('/^([^=:]+?)\s*[=:]/', $line, $m) !== 1) {
+                continue;
+            }
+
+            $key = strtolower(trim($m[1]));
+
+            if (! in_array($key, self::ALLOWED_JAIL_KEYS, true)) {
+                $found[] = $key;
+            }
+        }
+
+        return array_values(array_unique($found));
+    }
+
     public function defaultJailContent(): string
     {
         return <<<'INI'
@@ -334,6 +375,18 @@ class ApplicationFail2banManager
      */
     public function enableForApp(Application $application, string $jailContent, string $filterContent): void
     {
+        // Every path that writes a site jail comes through here, including
+        // re-enabling one saved before the allowlist existed — refused with
+        // the same message the form gives.
+        $disallowed = $this->disallowedJailKeys($jailContent);
+
+        if ($disallowed !== []) {
+            throw ValidationException::withMessages(['jail_config_content' => __('fail2ban.validation.disallowed_setting', [
+                'setting' => $disallowed[0],
+                'allowed' => implode(', ', self::ALLOWED_JAIL_KEYS),
+            ])]);
+        }
+
         $configs = $this->renderConfigs($application, $jailContent, $filterContent);
         $files = [
             $this->getJailPath($application) => $configs['jail'],
