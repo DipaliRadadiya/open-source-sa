@@ -225,4 +225,5 @@ return [
     'docker_database.created' => ':engine データベース :name をポート :port に作成しました',
     'docker_database.deleted' => ':engine データベース :name を削除しました',
     'docker_database.credentials_viewed' => ':engine データベース :name の認証情報を表示しました',
+    'application.credentials_acknowledged' => ':name の生成された認証情報を保存したことを確認しました',
 ];

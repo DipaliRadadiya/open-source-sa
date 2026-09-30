@@ -113,6 +113,17 @@ Route::post('/applications/{application}/container/pull', [ApplicationContainerC
 Route::get('/applications/{application}/container/secrets', [ApplicationContainerController::class, 'secrets'])
     ->middleware(['permission:app_container,manage', 'throttle:6,1']);
 
+// "I have saved these." Its own endpoint because the panel cannot rotate a
+// generated credential — that means rewriting the compose file and the credential
+// inside the running database — so hiding the first-run card as a side effect of
+// rendering it would lose an unrecoverable password to a page refresh. Only a
+// person can say they have it.
+//
+// Same permission as reading them: acknowledging is a statement about values you
+// were only allowed to see under `manage`.
+Route::post('/applications/{application}/container/secrets/acknowledge', [ApplicationContainerController::class, 'acknowledgeSecrets'])
+    ->middleware(['permission:app_container,manage', 'throttle:20,1']);
+
 // Site type. Read the disk to find out what is installed, then relabel the
 // site to match.
 //

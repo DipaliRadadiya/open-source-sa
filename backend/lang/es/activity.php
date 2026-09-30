@@ -225,4 +225,5 @@ return [
     'docker_database.created' => 'Creó la base de datos :engine :name en el puerto :port',
     'docker_database.deleted' => 'Eliminó la base de datos :engine :name',
     'docker_database.credentials_viewed' => 'Consultó las credenciales de la base de datos :engine :name',
+    'application.credentials_acknowledged' => 'Confirmó haber guardado las credenciales generadas de :name',
 ];

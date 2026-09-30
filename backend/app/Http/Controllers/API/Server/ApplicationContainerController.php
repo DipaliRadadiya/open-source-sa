@@ -50,6 +50,44 @@ class ApplicationContainerController extends Controller
     }
 
     /**
+     * Record that somebody has saved this site's generated credentials.
+     *
+     * Its own endpoint rather than a side effect of `secrets()`, and that is the
+     * whole design. These values cannot be rotated from the panel — changing one
+     * means rewriting the compose file AND the credential inside the running
+     * database — so a card that vanished the moment it rendered would lose an
+     * unrecoverable password to a stray page refresh. Marking them seen has to be
+     * something a person did, not something a browser did.
+     *
+     * Idempotent, and it keeps the FIRST acknowledgement: the interesting fact is
+     * when these stopped being unseen, and overwriting that on every later click
+     * would erase it.
+     */
+    public function acknowledgeSecrets(Application $application, ActivityLogger $log): JsonResponse
+    {
+        abort_unless(
+            $application->serving_profile === 'docker',
+            422,
+            __('errors/application.not_a_container'),
+        );
+
+        if ($application->credentials_seen_at === null) {
+            $application->forceFill(['credentials_seen_at' => now()])->save();
+
+            // Logged, because "nobody ever confirmed they had these" is a real
+            // answer to give somebody who has lost them, and it is not the same as
+            // the view that `secrets()` records — a page can be opened and closed.
+            $log->log('application.credentials_acknowledged', $application, [
+                'name' => $application->name,
+            ]);
+        }
+
+        return response()->json([
+            'application' => new ApplicationResource($application->fresh(['systemUser', 'registry'])),
+        ]);
+    }
+
+    /**
      * The compose file this site runs, for the editor.
      *
      * A site created in Simple mode has no stored file — the panel renders one from

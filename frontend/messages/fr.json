@@ -3545,6 +3545,15 @@
         "shownWarning": "Toute personne pouvant gérer ce site peut les lire. Ce sont les véritables identifiants de base de données de l'application : les modifier ici est impossible, car la base de données en cours d'exécution conserverait l'ancienne valeur.",
         "failed": "Impossible de charger les identifiants."
       },
+      "firstRun": {
+        "title": "Enregistrez ces identifiants maintenant",
+        "body": "Le panneau les a générés à l'installation de cette application. Ils ne peuvent pas être modifiés ici — l'application les stocke dans sa propre base de données — copiez-les donc en lieu sûr avant de fermer ce message.",
+        "acknowledge": "Je les ai enregistrés",
+        "acknowledgeFailed": "Impossible d'enregistrer cette confirmation. Les identifiants sont inchangés.",
+        "laterHint": "Ils restent disponibles via Conteneur → Afficher.",
+        "loading": "Chargement des identifiants",
+        "failed": "Impossible de charger les identifiants. Ne fermez pas ce message — rechargez la page."
+      },
       "registry": "Registre",
       "noRegistry": "Aucun — récupération anonyme",
       "registryHint": "L’identifiant enregistré avec lequel ce site récupère son image. Laissez Aucun pour une image publique.",
@@ -5069,6 +5078,7 @@
     },
     "size": {
       "notMeasured": "Non mesuré",
+      "inVolumes": "dont {size} dans des volumes Docker",
       "measuring": "Mesure…",
       "measured": "Taille mesurée.",
       "measureFailed": "La taille n'a pas pu être mesurée.",

@@ -189,6 +189,15 @@ export const applicationSchema = z.object({
     .array(z.string())
     .nullish()
     .transform((keys) => keys ?? []),
+  // Whether a person has confirmed they saved them. **Defaults to true when
+  // absent**, which is the safe direction: a missing field must not put a
+  // first-run card full of passwords on the dashboard of a site that has been
+  // running for a year. Zod strips what it does not declare, so this being here
+  // at all is what makes the card possible.
+  credentials_acknowledged: z
+    .boolean()
+    .nullish()
+    .transform((seen) => seen ?? true),
   rendering_type: z.string().nullish(),
   status: z
     .enum(["pending", "provisioning", "active", "failed"])
@@ -319,6 +328,9 @@ export const applicationSchema = z.object({
   // server whose sizes were all measured and stored, because the number never
   // survived parsing. Third time in this file: see `disk_io` above.
   directory_size_bytes: z.number().nullish(),
+  // The volumes' share of the total. Nullish is meaningful: absent means the site
+  // has no volumes to measure, and the dashboard says nothing about them.
+  volume_size_bytes: z.number().nullish(),
   directory_size_measured_at: z.string().nullish(),
   directory_size_measured_at_human: z.string().nullish(),
   created_at: z.string().nullish(),

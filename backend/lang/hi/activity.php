@@ -225,4 +225,5 @@ return [
     'docker_database.created' => ':engine डेटाबेस :name पोर्ट :port पर बनाया',
     'docker_database.deleted' => ':engine डेटाबेस :name हटाया',
     'docker_database.credentials_viewed' => ':engine डेटाबेस :name के क्रेडेंशियल देखे',
+    'application.credentials_acknowledged' => ':name के लिए जनरेट किए गए क्रेडेंशियल सहेजने की पुष्टि की',
 ];

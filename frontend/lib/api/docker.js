@@ -101,3 +101,15 @@ export function updateContainerSettings(id, payload) {
 export function getContainerSecrets(id) {
   return api.get(`/applications/${id}/container/secrets`);
 }
+
+/**
+ * "I have saved these."
+ *
+ * Separate from reading them on purpose: the panel cannot rotate a generated
+ * credential — that means rewriting the compose file and the credential inside the
+ * running database — so dismissing the first-run card as a side effect of showing it
+ * would lose an unrecoverable password to a page refresh.
+ */
+export function acknowledgeContainerSecrets(id) {
+  return api.post(`/applications/${id}/container/secrets/acknowledge`);
+}

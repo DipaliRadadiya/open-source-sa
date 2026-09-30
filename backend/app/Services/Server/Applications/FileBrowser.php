@@ -10,6 +10,7 @@ use App\Models\Application;
 use App\Models\FileArchiveJob;
 use App\Rules\SafeRelativePath;
 use App\Services\Server\Compression\ArchiveCompressor;
+use App\Services\Server\Docker\VolumeSizes;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
 use App\Support\Bytes;
@@ -106,6 +107,7 @@ class FileBrowser
     public function __construct(
         private ServerOps $serverOps,
         private PanelDirectory $panelDirectory,
+        private VolumeSizes $volumeSizes,
         private ArchiveCompressor $compressor = new ArchiveCompressor,
     ) {}
 
@@ -311,44 +313,24 @@ class FileBrowser
         $target = $this->resolve($application, $path);
         $this->assertType($application, $target, 'd');
 
-        // Trailing slashes on either side, as everywhere else in this class
-        // that compares against the root.
-        $isRoot = rtrim($target, '/') === $this->root($application);
-
-        // Only the site's own root is cached, and only that is served from the
-        // cache. `directory_size_bytes` is the *application's* size: asking for
-        // one subfolder used to write that subfolder's total into it, so a
-        // glance at `wp-content/uploads` permanently redefined how big the site
-        // was — smaller, and never corrected.
-        if ($isRoot && ! $refresh && $application->directory_size_bytes !== null) {
-            $bytes = (int) $application->directory_size_bytes;
-
-            return [
-                'size' => $bytes,
-                'size_human' => Bytes::human($bytes),
-                'measured_at' => $application->directory_size_updated_at?->format('d-m-Y H:i:s'),
-            ];
-        }
-
+        // **This answers about a DIRECTORY, and no longer about the site.** It used
+        // to read and write `directory_size_bytes` when the path was the root, which
+        // was right while the two meant the same thing. They do not any more: the
+        // site's size now includes its Docker volumes, so serving that figure here
+        // would tell the File Manager a nearly-empty folder is 284 MB, and writing
+        // this figure there would silently drop the volumes back out again on the
+        // next click.
+        //
+        // `applicationSize()` owns that column. The only thing lost is a free
+        // refresh when somebody happened to ask for the root folder's size —
+        // `sizeChanged()` already queues a real measurement whenever the contents
+        // change, which is the event that actually matters.
         $bytes = $this->measure($application, $target);
-
-        if ($isRoot) {
-            // There is no expiry. Nothing walks the disk on a timer — the size
-            // is what it was when somebody last asked, which is why the time it
-            // was taken is stored and returned beside it. The comment here used
-            // to promise a one-hour freshness window that no code implemented,
-            // so a size read once was returned unchanged for as long as the row
-            // lived.
-            $application->updateQuietly([
-                'directory_size_bytes' => $bytes,
-                'directory_size_updated_at' => now(),
-            ]);
-        }
 
         return [
             'size' => $bytes,
             'size_human' => Bytes::human($bytes),
-            'measured_at' => $isRoot ? now()->format('d-m-Y H:i:s') : null,
+            'measured_at' => now()->format('d-m-Y H:i:s'),
         ];
     }
 
@@ -357,9 +339,66 @@ class FileBrowser
      *
      * @return array{size: int, size_human: string, measured_at: string}
      */
+    /**
+     * The whole site: its document root, plus the Docker volumes it keeps data in.
+     *
+     * **No longer just `folderSize('/')`, and that was the bug.** A container site's
+     * document root holds a compose file and nothing else — everything the site
+     * actually owns lives in named volumes under `/var/lib/docker/volumes`, which
+     * the site's own user cannot even read. Measured on the test box: a Mattermost
+     * install reported 6,468 bytes while its six volumes held about 284 MB, one of
+     * them 164 MB of plugins. The sites list sorts by this figure, so it was
+     * ordering container sites by the length of their compose files.
+     *
+     * The two halves are stored separately as well as summed, because a total with
+     * no breakdown is unexplainable: 284 MB against a directory the File Manager
+     * shows as almost empty reads as a bug in the panel.
+     *
+     * `volume_size_bytes` stays **null** for a site with no volumes to measure, and
+     * that is not the same as 0. Null means the question does not apply — every PHP,
+     * Node and static site — while 0 is a container site whose volumes are empty.
+     */
     public function applicationSize(Application $application, bool $refresh = false): array
     {
-        return $this->folderSize($application, '/', $refresh);
+        if (! $refresh && $application->directory_size_bytes !== null) {
+            $bytes = (int) $application->directory_size_bytes;
+
+            return [
+                'size' => $bytes,
+                'size_human' => Bytes::human($bytes),
+                'volume_size' => $application->volume_size_bytes === null
+                    ? null
+                    : (int) $application->volume_size_bytes,
+                'measured_at' => $application->directory_size_updated_at?->format('d-m-Y H:i:s'),
+            ];
+        }
+
+        $this->assertRootExists($application);
+
+        $directory = $this->measure($application, $this->root($application));
+
+        // Only for a site that has volumes at all. Asking Docker about a WordPress
+        // site would be a shell-out per measurement on every server in order to be
+        // told nothing, and on a box with no Docker it would be a shell-out that
+        // fails.
+        $volumes = $application->serving_profile === 'docker'
+            ? $this->volumeSizes->forApplication($application)
+            : null;
+
+        $total = $directory + (int) $volumes;
+
+        $application->updateQuietly([
+            'directory_size_bytes' => $total,
+            'volume_size_bytes' => $volumes,
+            'directory_size_updated_at' => now(),
+        ]);
+
+        return [
+            'size' => $total,
+            'size_human' => Bytes::human($total),
+            'volume_size' => $volumes,
+            'measured_at' => now()->format('d-m-Y H:i:s'),
+        ];
     }
 
     /**

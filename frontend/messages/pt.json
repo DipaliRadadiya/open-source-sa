@@ -3545,6 +3545,15 @@
         "shownWarning": "Qualquer pessoa que possa gerir este site consegue lê-las. São as credenciais reais da base de dados da aplicação — alterá-las aqui não é possível, porque a base de dados em execução manteria o valor antigo.",
         "failed": "Não foi possível carregar as credenciais."
       },
+      "firstRun": {
+        "title": "Salve estas credenciais agora",
+        "body": "O painel as gerou ao instalar esta aplicação. Elas não podem ser alteradas aqui — a aplicação as guarda no próprio banco de dados — então copie-as para um lugar seguro antes de fechar este aviso.",
+        "acknowledge": "Eu as salvei",
+        "acknowledgeFailed": "Não foi possível registrar. As credenciais não mudaram.",
+        "laterHint": "Elas continuam disponíveis em Contêiner → Mostrar.",
+        "loading": "Carregando credenciais",
+        "failed": "Não foi possível carregar as credenciais. Não feche este aviso — recarregue a página."
+      },
       "registry": "Registo",
       "noRegistry": "Nenhum — obter anonimamente",
       "registryHint": "A credencial guardada com que este site obtém a sua imagem. Deixe em Nenhum para uma imagem pública.",
@@ -5069,6 +5078,7 @@
     },
     "size": {
       "notMeasured": "Não medido",
+      "inVolumes": "dos quais {size} estão em volumes Docker",
       "measuring": "Medindo…",
       "measured": "Tamanho medido.",
       "measureFailed": "Não foi possível medir o tamanho.",

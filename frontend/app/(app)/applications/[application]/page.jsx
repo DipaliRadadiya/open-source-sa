@@ -14,6 +14,7 @@ import {
   getApplicationCertificate,
 } from "@/lib/applications/get-application-domains";
 import { ProvisioningCard } from "@/components/applications/provisioning-card";
+import { FirstRunCredentials } from "@/components/applications/first-run-credentials";
 import { ApplicationRowActions } from "@/components/applications/application-row-actions";
 import { SiteFactsCard } from "@/components/applications/site-facts-card";
 import { SourceCard } from "@/components/applications/source-card";
@@ -81,6 +82,22 @@ export default async function ApplicationDetailPage({ params }) {
   // Only a serving site has domains, a certificate or a running process. While
   // it is still being built, saying anything about them would be invention.
   const settled = application.status === "active";
+
+  /*
+   * The generated credentials, until somebody says they have saved them.
+   *
+   * Gated on `app_container` manage, the same permission the values themselves are
+   * behind — the card fetches them, so offering it to anyone else would be a card
+   * whose only outcome is a 403.
+   *
+   * `credentials_acknowledged` is a fact about a PERSON, not about the data: a site
+   * whose credentials were rendered and never confirmed still shows the card, which
+   * is the whole point. These cannot be rotated from the panel.
+   */
+  const showFirstRunCredentials =
+    !application.credentials_acknowledged &&
+    (application.container_secret_keys ?? []).length > 0 &&
+    can(appPermissions, "app_container", "manage", "application");
 
   // For any git-linked site, not only a broken one. It feeds two things: the
   // repair dialog's list, and the provider name on the source card — the
@@ -423,6 +440,24 @@ export default async function ApplicationDetailPage({ params }) {
          * to one column on a phone.
          */
         <div className="grid items-stretch gap-6 lg:grid-cols-2 xl:grid-cols-3">
+          {/* Above the facts, once, and full width.
+
+              A one-click container app generates its own admin password, and the
+              only route to it was a Reveal button on the Container screen — two
+              clicks in, on a screen nobody visits the day they install something.
+              A password generated and never read is an account nobody can sign
+              into, and these cannot be rotated from the panel.
+
+              First, because it is the one thing on this page with a deadline. It
+              disappears for good once somebody says they have saved them, so it
+              cannot earn a permanent place lower down. */}
+          {showFirstRunCredentials ? (
+            <FirstRunCredentials
+              application={application}
+              className="lg:col-span-2 xl:col-span-3"
+            />
+          ) : null}
+
           {/* Full width, like the server dashboard identity band. Eight short
               facts stacked two-up in a half-width card was a tall narrow column
               of "8.4" and "/" — the same content across the row is one glance

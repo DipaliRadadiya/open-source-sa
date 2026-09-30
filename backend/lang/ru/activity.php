@@ -225,4 +225,5 @@ return [
     'docker_database.created' => 'Создана база данных :engine :name на порту :port',
     'docker_database.deleted' => 'Удалена база данных :engine :name',
     'docker_database.credentials_viewed' => 'Просмотрены учётные данные базы данных :engine :name',
+    'application.credentials_acknowledged' => 'Подтвердил сохранение сгенерированных учётных данных для :name',
 ];

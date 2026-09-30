@@ -649,3 +649,142 @@ test("every locale carries a cpu hint with the cores placeholder", () => {
     );
   }
 });
+
+/*
+ * The generated credentials, shown once where the user lands.
+ *
+ * A one-click container app generates its own admin password and the only route to
+ * it was a Reveal button two clicks into the site. A password generated and never
+ * read is an account nobody can sign into — and these cannot be rotated from the
+ * panel, because changing one means rewriting the compose file AND the credential
+ * inside the running database.
+ *
+ * So the card's contract is unusual and worth pinning: it SHOWS the values rather
+ * than masking them, and it is dismissed only by a person saying so.
+ */
+
+const firstRun = read("components/applications/first-run-credentials.jsx");
+const appDashboard = read("app/(app)/applications/[application]/page.jsx");
+
+test("the first-run card fetches the values instead of hiding them behind a button", () => {
+  // The opposite contract from `ContainerCredentials`, on purpose: there the
+  // values are masked because that screen is somewhere you return to, and here the
+  // entire point is that the first view happens.
+  assert.match(firstRun, /useEffect\(/);
+  assert.match(firstRun, /getContainerSecrets\(application\.id\)/);
+  // No reveal affordance: no `reveal()` handler and no Eye icon, which is what
+  // `ContainerCredentials` uses to gate its fetch behind a click. Asserted on the
+  // control rather than on the word "Reveal" — this file's own docblock says the
+  // values stay available under Container → Reveal, and the first version of this
+  // test failed on its own prose.
+  assert.doesNotMatch(firstRun, /function reveal\(/);
+  assert.doesNotMatch(firstRun, /\bEye\b/);
+});
+
+test("it is dismissed only by an explicit acknowledgement", () => {
+  // Never as a side effect of rendering. If showing the card marked it seen, a
+  // refresh before somebody finished copying would lose an unrecoverable password.
+  assert.match(firstRun, /acknowledgeContainerSecrets\(application\.id\)/);
+  // And the acknowledgement is a POST of its own, not a flag on the read.
+  assert.match(read("lib/api/docker.js"), /container\/secrets\/acknowledge/);
+});
+
+test("the dismiss button waits for the values to be on screen", () => {
+  // A dismiss beside a row of spinners invites the one click that cannot be undone.
+  assert.match(firstRun, /disabled=\{saving \|\| !secrets\}/);
+});
+
+test("dismissing refreshes the server-rendered dashboard", () => {
+  // Visibility comes from a server-rendered field, so without this the card sits
+  // there after a successful dismiss until the next navigation.
+  assert.match(firstRun, /router\.refresh\(\)/);
+});
+
+test("the card is gated on the permission its own request needs", () => {
+  // It fetches the secrets, and that endpoint is `app_container` manage — offering
+  // the card to anyone else is a card whose only outcome is a 403.
+  assert.match(
+    appDashboard,
+    /can\(appPermissions, "app_container", "manage", "application"\)/,
+  );
+  assert.match(appDashboard, /!application\.credentials_acknowledged/);
+});
+
+test("an unknown acknowledgement state hides the card rather than showing it", () => {
+  // The safe direction. A missing field must not put a card full of passwords on
+  // the dashboard of a site that has been running for a year.
+  const schema = read("lib/schemas/application.js");
+  assert.match(schema, /credentials_acknowledged: z/);
+  assert.match(schema, /\.transform\(\(seen\) => seen \?\? true\)/);
+});
+
+test("a load failure says so instead of rendering an empty card", () => {
+  // The one thing the user must not conclude is that there was nothing to save.
+  assert.match(
+    firstRun,
+    /setError\(apiMessage\(requestError, t\("failed"\)\)\)/,
+  );
+  assert.match(
+    messages.en.applications.container.firstRun.failed,
+    /Don't dismiss this/,
+  );
+});
+
+test("every first-run string exists in every locale", () => {
+  const reference = Object.keys(messages.en.applications.container.firstRun);
+  for (const locale of LOCALES) {
+    const keys = Object.keys(
+      messages[locale].applications.container.firstRun ?? {},
+    );
+    assert.deepEqual(
+      keys.slice().sort(),
+      reference.slice().sort(),
+      `${locale} disagrees with en on applications.container.firstRun`,
+    );
+  }
+});
+
+/*
+ * A container site's size is mostly not in its directory.
+ */
+
+test("the dashboard explains what share of the size is in volumes", () => {
+  // A total with no breakdown is unexplainable: 284 MB against a document root the
+  // File Manager shows as almost empty reads as a bug in the panel.
+  const facts = read("components/applications/site-facts-card.jsx");
+
+  assert.match(facts, /application\.volume_size_bytes/);
+  assert.match(facts, /t\("size\.inVolumes", \{ size: volumeSize \}\)/);
+  // Null, not 0, means "no volumes to measure" — so a PHP site gets no second
+  // line rather than "0 B in volumes".
+  assert.match(
+    facts,
+    /=== null \|\|\s*\n?\s*application\.volume_size_bytes === undefined/,
+  );
+  // And nothing is said until there is a measurement to break down.
+  assert.match(facts, /size && volumeSize \?/);
+});
+
+test("the size breakdown is declared in the schema, or Zod drops it", () => {
+  assert.match(
+    read("lib/schemas/application.js"),
+    /volume_size_bytes: z\.number\(\)\.nullish\(\)/,
+  );
+});
+
+test("every size string exists in every locale", () => {
+  const reference = Object.keys(messages.en.applications.size);
+  for (const locale of LOCALES) {
+    const keys = Object.keys(messages[locale].applications.size ?? {});
+    assert.deepEqual(
+      keys.slice().sort(),
+      reference.slice().sort(),
+      `${locale} disagrees with en on applications.size`,
+    );
+    assert.match(
+      messages[locale].applications.size.inVolumes,
+      /\{size\}/,
+      `${locale} inVolumes lost the size placeholder`,
+    );
+  }
+});

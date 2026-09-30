@@ -183,6 +183,11 @@ class ApplicationResource extends JsonResource
             // not in every application payload, every list response and every
             // browser cache along the way.
             'container_secret_keys' => array_keys((array) ($this->docker_secrets ?? [])),
+            // Whether anybody has confirmed they saved them. False is what puts the
+            // first-run card on the dashboard, so this is a flag about a PERSON
+            // rather than about the data — a site whose credentials were rendered
+            // and never acknowledged still answers false, deliberately.
+            'credentials_acknowledged' => $this->credentials_seen_at !== null,
 
             // Whether this application runs a process of its own, and what
             // systemd says about it *right now*. Null for PHP and static sites,
@@ -291,7 +296,16 @@ class ApplicationResource extends JsonResource
             // machine serving the sites. It is set when a deploy happens and
             // when somebody asks for it, which is why the time it was taken
             // travels with it. A size with no date reads as current.
+            // The site's TOTAL — document root plus its Docker volumes. The name
+            // is historical; for a container site the document root alone holds a
+            // compose file, and reporting that as the site's size ordered the
+            // list by the length of people's YAML.
             'directory_size_bytes' => $this->directory_size_bytes,
+            // The volumes' share of it, so the total is explainable. Null means
+            // the site has no volumes to measure, which is a different statement
+            // from 0 — every PHP, Node and static site answers null, and the UI
+            // says nothing about volumes for them.
+            'volume_size_bytes' => $this->volume_size_bytes,
             'directory_size_measured_at' => $this->directory_size_updated_at?->format('d-m-Y H:i:s'),
             'directory_size_measured_at_human' => $this->directory_size_updated_at?->diffForHumans(),
 

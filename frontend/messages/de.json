@@ -3545,6 +3545,15 @@
         "shownWarning": "Jede Person, die diese Website verwalten darf, kann diese Werte lesen. Es sind die echten Datenbank-Zugangsdaten der Anwendung — sie hier zu ändern ist nicht möglich, weil die laufende Datenbank den alten Wert behielte.",
         "failed": "Die Zugangsdaten konnten nicht geladen werden."
       },
+      "firstRun": {
+        "title": "Speichern Sie diese Zugangsdaten jetzt",
+        "body": "Das Panel hat sie bei der Installation dieser Anwendung erzeugt. Sie lassen sich hier nicht ändern — die Anwendung speichert sie in ihrer eigenen Datenbank — kopieren Sie sie also an einen sicheren Ort, bevor Sie dies schließen.",
+        "acknowledge": "Ich habe sie gespeichert",
+        "acknowledgeFailed": "Das konnte nicht vermerkt werden. Die Zugangsdaten sind unverändert.",
+        "laterHint": "Sie bleiben unter Container → Anzeigen verfügbar.",
+        "loading": "Zugangsdaten werden geladen",
+        "failed": "Die Zugangsdaten konnten nicht geladen werden. Schließen Sie dies nicht — laden Sie die Seite neu."
+      },
       "registry": "Registry",
       "noRegistry": "Keine — anonym laden",
       "registryHint": "Die gespeicherten Anmeldedaten, mit denen diese Site ihr Image lädt. Für ein öffentliches Image auf Keine lassen.",
@@ -5069,6 +5078,7 @@
     },
     "size": {
       "notMeasured": "Nicht gemessen",
+      "inVolumes": "davon {size} in Docker-Volumes",
       "measuring": "Misst…",
       "measured": "Größe ermittelt.",
       "measureFailed": "Die Größe konnte nicht gemessen werden.",

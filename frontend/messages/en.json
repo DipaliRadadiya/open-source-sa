@@ -3545,6 +3545,15 @@
         "shownWarning": "Anyone who can manage this site can read these. They are the app's real database credentials — changing one here is not possible, because the running database would keep the old value.",
         "failed": "Couldn't load the credentials."
       },
+      "firstRun": {
+        "title": "Save these credentials now",
+        "body": "The panel generated these when it installed this app. They cannot be changed from here — the app stores them inside its own database — so copy them somewhere safe before you dismiss this.",
+        "acknowledge": "I've saved these",
+        "acknowledgeFailed": "Couldn't record that. The credentials are unchanged.",
+        "laterHint": "They stay available under Container → Reveal.",
+        "loading": "Loading credentials",
+        "failed": "Couldn't load the credentials. Don't dismiss this — try reloading the page."
+      },
       "registry": "Registry",
       "noRegistry": "None — pull anonymously",
       "registryHint": "The stored credential this site pulls its image with. Leave it as None for a public image.",
@@ -5069,6 +5078,7 @@
     },
     "size": {
       "notMeasured": "Not measured",
+      "inVolumes": "{size} of this is in Docker volumes",
       "measuring": "Measuring…",
       "measured": "Size measured.",
       "measureFailed": "The size could not be measured.",
