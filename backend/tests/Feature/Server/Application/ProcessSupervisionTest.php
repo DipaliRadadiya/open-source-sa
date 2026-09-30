@@ -278,6 +278,32 @@ describe('ports', function () {
             ->assertOk();
     });
 
+    it('keeps its own port while it is running and listening on it', function () {
+        // The case above with nothing listening never happens for a live
+        // site: the app itself is on its port, and `ss` cannot say whose
+        // socket it is. Every save of a running Node site's runtime was
+        // refused (found live on nodebb, 2026-09-29).
+        Process::fake(fn () => Process::result(output: "LISTEN 0 511 127.0.0.1:3500 0.0.0.0:*\n"));
+        $app = nodeApp(['app_port' => 3500, 'domain' => 'running.test']);
+
+        $this->withHeaders(supervisorHeaders())
+            ->putJson("/api/applications/{$app->id}", ['app_port' => 3500])
+            ->assertOk();
+
+        $this->withHeaders(supervisorHeaders())
+            ->getJson("/api/applications/port-check?port=3500&application_id={$app->id}")
+            ->assertOk()->assertJsonPath('port_check.available', true);
+    });
+
+    it('still refuses moving to a port something else is listening on', function () {
+        Process::fake(fn () => Process::result(output: "LISTEN 0 511 127.0.0.1:3500 0.0.0.0:*\nLISTEN 0 511 127.0.0.1:3600 0.0.0.0:*\n"));
+        $app = nodeApp(['app_port' => 3500, 'domain' => 'mover.test']);
+
+        $this->withHeaders(supervisorHeaders())
+            ->putJson("/api/applications/{$app->id}", ['app_port' => 3600])
+            ->assertJsonValidationErrors('app_port');
+    });
+
     it('skips a port /etc/services has spoken for, even with nothing on it', function () {
         config(['server.applications.port_range' => ['from' => 3306, 'to' => 3310]]);
         Process::fake(fn () => Process::result(output: ''));
