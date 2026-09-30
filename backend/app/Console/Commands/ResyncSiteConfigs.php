@@ -3,12 +3,15 @@
 namespace App\Console\Commands;
 
 use App\Models\Application;
+use App\Models\ApplicationPhpSettings;
 use App\Models\SystemUser;
 use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Applications\ProcessSupervisor;
 use App\Services\Server\Applications\SecretFilePrivacy;
 use App\Services\Server\Applications\SiteConfigResyncer;
 use App\Services\Server\Applications\SiteRootLock;
+use App\Services\Server\Php\AdditionalDirectives;
+use App\Services\Server\Php\PoolManager;
 use App\Services\Server\SystemUsers\HomeDirectoryAccess;
 use Illuminate\Console\Command;
 
@@ -68,6 +71,7 @@ class ResyncSiteConfigs extends Command
         $this->call('panel:close-directory');
         $this->refreshUnits(app(ProcessSupervisor::class), app(ApplicationProvisioner::class));
         $this->narrowSecretFiles(app(SecretFilePrivacy::class));
+        $this->reportSkippedDirectives();
 
         return self::SUCCESS;
     }
@@ -92,6 +96,54 @@ class ResyncSiteConfigs extends Command
         }
 
         $this->info("Secret files (.env, wp-config.php and the like): narrowed where present ({$count} site(s) checked).");
+    }
+
+    /**
+     * Additional directives saved before only PHP settings were accepted.
+     * Those were written into the PHP-FPM pool verbatim, and a pool is only
+     * rewritten when its settings are saved — so a pool whose text differs
+     * from what is written today is rewritten here, through the same apply
+     * (config test before reload) a save uses. OpenLiteSpeed's site php.ini
+     * was already rewritten by the resync above. A line that is not a PHP
+     * setting at all is named so the owner can review what was dropped.
+     */
+    private function reportSkippedDirectives(): void
+    {
+        $directives = app(AdditionalDirectives::class);
+        $pools = app(PoolManager::class);
+        $rewritten = 0;
+
+        ApplicationPhpSettings::query()
+            ->whereNotNull('additional_directives')
+            ->with('application.systemUser')
+            ->each(function (ApplicationPhpSettings $settings) use ($directives, $pools, &$rewritten) {
+                $text = (string) $settings->additional_directives;
+                $application = $settings->application;
+
+                if ($application === null || $directives->forFpm($text) === trim($text)) {
+                    return;
+                }
+
+                $line = $directives->firstInvalidLine($text);
+
+                if ($pools->supported() && $pools->exists($application) === true) {
+                    if (! $pools->apply($application, $settings)['ok']) {
+                        $this->error("PHP pool for application #{$application->id} still holds additional directives written before only PHP settings were accepted, and rewriting it failed. Save its PHP settings to retry.");
+
+                        return;
+                    }
+
+                    $rewritten++;
+                }
+
+                if ($line !== null) {
+                    $this->warn("PHP additional directives for application #{$application->id}: \"{$line}\" is not a PHP setting and is no longer applied. Review and save them again.");
+                }
+            });
+
+        if ($rewritten > 0) {
+            $this->info("PHP pools rewritten with additional directives as PHP settings only: {$rewritten}.");
+        }
     }
 
     /**

@@ -31,6 +31,7 @@ return [
         'missing_account' => 'Das Linux-Konto, unter dem diese Seite läuft, existiert auf dem Server nicht, daher wurde kein PHP-Pool geschrieben. PHP-FPM startet mit einem Pool, dessen Benutzer sich nicht auflösen lässt, überhaupt nicht.',
         'version_not_installed' => 'PHP :version ist auf diesem Server nicht installiert. Installieren Sie es zuerst und wählen Sie es dann hier aus.',
         'version_busy' => 'PHP :version wird noch installiert oder entfernt. Warten Sie, bis das abgeschlossen ist, und ändern Sie dann die Version.',
+        'directive_invalid' => '„:line" ist keine PHP-Einstellung. Eine Einstellung pro Zeile, z. B. memory_limit = 256M.',
         'unsupported_stack' => 'Dieser Server nutzt OpenLiteSpeed, das keine PHP-FPM-Pools verwendet.',
         'not_php_site' => 'Diese Website liefert kein PHP aus, daher gibt es keinen Pool, den sie bekommen könnte. Ändern Sie zuerst, wie sie ausgeliefert wird.',
         'already_isolated' => 'Diese Seite hat bereits einen eigenen PHP-Pool.',

@@ -2354,7 +2354,7 @@ The shared `www-data` pool is **no longer a choice**: asking for it answers `405
 
 **`managed: null` means the panel could not check** (the pool file could not be probed or read). Say "could not verify the pool file" — do not treat it as `true` (a save may overwrite hand edits) or as `false` (there may be none).
 
-**`open_basedir` has three answers on purpose, and they are all different questions.** `additional_directives` is appended to the pool config raw, so a directive a user writes there lands *after* the panel's and wins.
+**`open_basedir` has three answers on purpose, and they are all different questions.** `additional_directives` accepts **PHP settings only**, one per line — `name = value` or the FPM form `php_[admin_]value|flag[name] = value`; `;`/`#` comments and blank lines are allowed. Any other line is a 422 naming it (`php_settings.errors.directive_invalid`). In a PHP-FPM pool each line is written as `php_admin_value[...]`/`php_admin_flag[...]` (an FPM-form line keeps its own directive), after the panel's own, so it wins; on OpenLiteSpeed it goes into the site's php.ini as `name = value`. It can never set a setting of the pool itself.
 
 | field | question it answers |
 |---|---|
@@ -2425,7 +2425,7 @@ are different requests.
 
 On a **migrated server**, the first time the panel takes ownership of a site's pool (`POST .../php/isolate` or `php artisan php:isolate-all`) it adopts whatever `open_basedir` was already there: the old panel's paths are kept as `open_basedir_paths` and the setting is switched on. A server-wide session directory (`/var/lib/php/sessions` and friends) is deliberately **not** carried over — importing it would let that site read every other site's sessions, and the site's own session directory is in the base paths already. The command prints what it kept and what it dropped, per site.
 
-`live` differs from `effective` when someone hand-edited the pool file, or set their own `open_basedir` through `additional_directives` (which is appended raw and wins, since FPM takes the last of a repeated key). When they differ, show `live` — that is what PHP is enforcing — and `managed` will also be `false`.
+`live` differs from `effective` when someone hand-edited the pool file, or set their own `open_basedir` through `additional_directives` (written after the panel's own, and FPM takes the last of a repeated key). When they differ, show `live` — that is what PHP is enforcing — and `managed` will also be `false`.
 
 `open_basedir_paths` holds **additional** directories, one per line (`:` and `,` also accepted). The app root, the site's own session directory and `/tmp` are always included and cannot be removed — without them the site cannot read its own code or keep anyone logged in. Read `open_basedir_effective` from `GET .../php` to show the exact value the pool file will contain.
 

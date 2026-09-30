@@ -355,7 +355,9 @@ class PoolManager
                 ? $this->openBasedir($application, (string) ($effective['open_basedir_paths'] ?? ''))
                 : null,
             'disableFunctions' => $effective['disable_functions'],
-            'additionalDirectives' => $effective['additional_directives'],
+            // PHP settings only, each as php_admin_value/flag — see
+            // AdditionalDirectives. Never the owner's text as pool config.
+            'additionalDirectives' => app(AdditionalDirectives::class)->forFpm((string) $effective['additional_directives']),
         ])->render();
     }
 

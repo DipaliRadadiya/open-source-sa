@@ -8,6 +8,7 @@ use App\Models\ApplicationPhpSettings;
 use App\Rules\SupportedPhpVersion;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Runtime\InstallTracker;
+use App\Services\Server\Php\AdditionalDirectives;
 use App\Services\Server\Php\PhpVersionManager;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -128,7 +129,16 @@ class SavePhpSettingsRequest extends FormRequest
             // The escape hatch, and the only free-text field. Newlines are
             // allowed because it is ini; a `[section]` header is not, because
             // that would silently start a second pool inside this file.
-            'additional_directives' => ['sometimes', 'nullable', 'string', 'max:4000', 'not_regex:/^\s*\[/m'],
+            'additional_directives' => ['sometimes', 'nullable', 'string', 'max:4000', 'not_regex:/^\s*\[/m',
+                // PHP settings only, one per line — see AdditionalDirectives.
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    $line = app(AdditionalDirectives::class)->firstInvalidLine((string) $value);
+
+                    if ($line !== null) {
+                        $fail(__('php_settings.errors.directive_invalid', ['line' => mb_strimwidth($line, 0, 80, '…')]));
+                    }
+                },
+            ],
         ];
     }
 

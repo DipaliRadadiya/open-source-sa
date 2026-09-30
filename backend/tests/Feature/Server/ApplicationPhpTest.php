@@ -10,6 +10,7 @@ use App\Services\Server\Applications\ApplicationProvisioner;
 use App\Services\Server\Php\PhpVersionManager;
 use App\Services\Server\Php\PoolIsolator;
 use App\Services\Server\Php\PoolManager;
+use App\Services\Server\Php\SitePhpIni;
 use App\Services\Server\ServerOpsResult;
 use App\Services\Server\WebServers\WebServerManager;
 use Database\Seeders\PermissionSeeder;
@@ -386,6 +387,94 @@ describe('settings', function () {
             ->putJson(phpUrl(), ['additional_directives' => "[another]\nuser = root"])
             ->assertStatus(422)
             ->assertJsonValidationErrors('additional_directives');
+    });
+
+    it('refuses a line that is not a PHP setting, and names it', function (string $text) {
+        fakePhpServer();
+
+        $this->actingAs($this->admin)
+            ->putJson(phpUrl(), ['additional_directives' => "memory_limit = 256M\n{$text}"])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('additional_directives');
+    })->with(['no equals sign here', 'php_admin_value[a] = [b]', 'weird key! = 1']);
+
+    it('writes additional directives into an OpenLiteSpeed site php.ini as settings only', function () {
+        $settings = new ApplicationPhpSettings([
+            'application_id' => $this->application->id,
+            'additional_directives' => "php_admin_value[memory_limit] = 300M\nthis is not a setting\n",
+        ]);
+
+        $ini = app(SitePhpIni::class)->render($this->application->load('systemUser'), $settings);
+
+        expect($ini)->toContain("\nmemory_limit = 300M")
+            ->not->toContain('php_admin_value[')
+            ->not->toContain('this is not a setting');
+    });
+
+    it('writes additional directives into the pool as PHP settings only', function () {
+        $settings = new ApplicationPhpSettings([
+            'application_id' => $this->application->id,
+            'additional_directives' => "memory_limit = 300M\ndisplay_errors = Off\nphp_value[max_input_nesting_level] = 128\n; a comment\nlisten = /tmp/other.sock\n",
+        ]);
+
+        $pool = app(PoolManager::class)->render($this->application->load('systemUser'), $settings);
+        $section = substr($pool, strpos($pool, '---- Additional directives'));
+
+        expect($section)
+            ->toContain('php_admin_value[memory_limit] = 300M')
+            ->toContain('php_admin_flag[display_errors] = Off')
+            ->toContain('php_value[max_input_nesting_level] = 128')
+            // A pool setting's name is only ever a PHP setting name here.
+            ->toContain('php_admin_value[listen] = /tmp/other.sock')
+            ->not->toMatch('/^listen\s*=/m')
+            ->not->toContain('; a comment');
+    });
+
+    it('rewrites a pool still carrying a line saved before only PHP settings were accepted', function () {
+        fakePhpServer();
+
+        $settings = ApplicationPhpSettings::forceCreate([
+            'application_id' => $this->application->id,
+            'additional_directives' => "memory_limit = 300M\nlisten = /tmp/other.sock",
+        ]);
+        $path = app(PoolManager::class)->poolPath($this->application);
+        PoolFake::$files[$path] = "[shop]\nlisten = /tmp/other.sock\n";
+
+        $this->artisan('sites:resync')
+            ->expectsOutputToContain('PHP pools rewritten with additional directives as PHP settings only: 1.')
+            ->assertSuccessful();
+
+        expect(PoolFake::$files[$path])
+            ->toBe(app(PoolManager::class)->render($this->application->load('systemUser'), $settings))
+            ->not->toMatch('/^listen = \/tmp\/other\.sock/m');
+    });
+
+    it('names a saved line that is not a PHP setting at all', function () {
+        fakePhpServer();
+
+        ApplicationPhpSettings::forceCreate([
+            'application_id' => $this->application->id,
+            'additional_directives' => "memory_limit = 300M\nnot a setting",
+        ]);
+
+        $this->artisan('sites:resync')
+            ->expectsOutputToContain('"not a setting" is not a PHP setting and is no longer applied')
+            ->assertSuccessful();
+    });
+
+    it('writes no pool for a site that has none', function () {
+        fakePhpServer();
+
+        ApplicationPhpSettings::forceCreate([
+            'application_id' => $this->application->id,
+            'additional_directives' => 'memory_limit = 300M',
+        ]);
+
+        $this->artisan('sites:resync')
+            ->doesntExpectOutputToContain('PHP pools rewritten')
+            ->assertSuccessful();
+
+        expect(poolFile())->toBeNull();
     });
 
     it('refuses anything that is not a function list', function () {
