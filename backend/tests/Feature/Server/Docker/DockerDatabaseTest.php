@@ -90,6 +90,16 @@ it('offers every engine the panel can actually render', function () {
         ->and($engines['redis']['port'])->toBe(6379)
         ->and($engines['mongodb']['port'])->toBe(27017);
 
+    // Every version is a STRING. PHP keys `'18'` as an int and `'8.4'` as a
+    // string, so without a cast the same field is a number for one engine and a
+    // string for another — and a client echoing the number back fails a `string`
+    // rule with a message about a type it never picked.
+    foreach ($engines as $engine) {
+        foreach ($engine['versions'] as $version) {
+            expect($version)->toBeString();
+        }
+    }
+
     // Every advertised version resolves to an image, or the form offers a choice
     // that fails minutes later at `docker pull` — which is exactly how a bad
     // BookStack tag reached a real box.

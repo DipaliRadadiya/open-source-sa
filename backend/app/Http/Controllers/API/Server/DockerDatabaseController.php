@@ -49,7 +49,13 @@ class DockerDatabaseController extends Controller
                     'name' => $key,
                     'label' => (string) $engine['label'],
                     'port' => (int) $engine['port'],
-                    'versions' => array_keys((array) $engine['versions']),
+                    // Cast to strings, because PHP turns a numeric array key into
+                    // an int: `'18' => ...` keys as 18 while `'8.4' => ...` stays a
+                    // string, so the same field would arrive as a number for
+                    // Postgres and a string for MySQL. A client echoing `18` back
+                    // as a number then fails a `string` rule with a message about
+                    // a type it never chose.
+                    'versions' => array_map('strval', array_keys((array) $engine['versions'])),
                 ])
                 ->values()
                 ->all(),
