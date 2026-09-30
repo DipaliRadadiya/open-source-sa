@@ -76,11 +76,11 @@ export function CreateReadinessPanel({ items = [], onSelectItem }) {
                   onClick={() => onSelectItem(item.target ?? item.key)}
                   className="rounded-sm text-left font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {t("readiness.complete", { field: item.label })}
+                  {t(item.invalid ? "readiness.fix" : "readiness.complete", { field: item.label })}
                 </button>
               ) : (
                 <p className="font-medium">
-                  {t("readiness.complete", { field: item.label })}
+                  {t(item.invalid ? "readiness.fix" : "readiness.complete", { field: item.label })}
                 </p>
               )}
               {item.ready ? <p className="truncate text-muted-foreground">{item.value}</p> : null}

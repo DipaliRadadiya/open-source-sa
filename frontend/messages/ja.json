@@ -3552,7 +3552,8 @@
       "readyHint": "設定を確認し、アプリケーションを作成してください。",
       "complete": "{field} を追加",
       "configured": "設定済み",
-      "progress": "{total} 件中 {done} 件完了"
+      "progress": "{total} 件中 {done} 件完了",
+      "fix": "{field} を修正"
     },
     "form": {
       "detailsTitle": "アプリケーションの詳細",

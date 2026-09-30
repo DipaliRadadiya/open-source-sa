@@ -3552,7 +3552,8 @@
       "readyHint": "इस कॉन्फ़िगरेशन की समीक्षा करें, फिर ऐप्लिकेशन बनाएँ।",
       "complete": "{field} जोड़ें",
       "configured": "कॉन्फ़िगर किया गया",
-      "progress": "{total} में से {done} तैयार"
+      "progress": "{total} में से {done} तैयार",
+      "fix": "ठीक करें: {field}"
     },
     "form": {
       "detailsTitle": "ऐप्लिकेशन विवरण",

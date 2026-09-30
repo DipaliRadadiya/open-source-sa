@@ -337,6 +337,10 @@ function ConfigField({
   phpRange,
   nodeRange,
   timezones,
+  // A FIELD_PATTERNS rule for this field, said while typing: the review panel
+  // holds Create back on it, and a disabled button with no reason on screen
+  // reads as broken.
+  patternRule = null,
 }) {
   const t = useTranslations("applications");
   const isAccount = config.source === "git_accounts";
@@ -694,6 +698,12 @@ function ConfigField({
               />
             </FormControl>
           )}
+          {patternRule &&
+          !form.formState.errors?.[config.name] &&
+          String(field.value ?? "").trim() !== "" &&
+          !patternRule.pattern.test(String(field.value).trim()) ? (
+            <p className="text-sm text-destructive">{t(patternRule.message)}</p>
+          ) : null}
           {isPort ? null : runtimeFailed ? (
             <FormDescription className="text-destructive">
               {t("loadFailed")}
@@ -1025,6 +1035,8 @@ export function CreateApplicationForm({
               ? summariseValue(String(value), t)
               : "—",
         ready,
+        // Filled in but refused: "Missing" would be untrue.
+        invalid: breaksRule,
       };
     });
   const missingGitTarget = !isGit
@@ -2337,6 +2349,7 @@ export function CreateApplicationForm({
                           phpRange={selected?.php_version_range ?? null}
                           nodeRange={selected?.node_version_range ?? null}
                           timezones={timezones}
+                          patternRule={FIELD_PATTERNS[selected?.name]?.[config.name] ?? null}
                         />
                       ))}
                     </div>
@@ -2382,6 +2395,7 @@ export function CreateApplicationForm({
                             nodeVersions={typeNodeVersions}
                             nodeVersionsFailed={nodeVersionsFailed}
                             timezones={timezones}
+                            patternRule={FIELD_PATTERNS[selected?.name]?.[config.name] ?? null}
                           />
                         ))}
                       </CollapsibleContent>

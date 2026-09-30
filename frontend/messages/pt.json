@@ -3552,7 +3552,8 @@
       "readyHint": "Revise esta configuração e crie a aplicação.",
       "complete": "Falta: {field}",
       "configured": "Configurado",
-      "progress": "{done} de {total} prontos"
+      "progress": "{done} de {total} prontos",
+      "fix": "Corrigir: {field}"
     },
     "form": {
       "detailsTitle": "Detalhes da aplicação",

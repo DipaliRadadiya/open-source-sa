@@ -3552,7 +3552,8 @@
       "readyHint": "Review this configuration, then create the application.",
       "complete": "Missing: {field}",
       "configured": "Configured",
-      "progress": "{done} of {total} ready"
+      "progress": "{done} of {total} ready",
+      "fix": "Fix: {field}"
     },
     "form": {
       "detailsTitle": "Application details",

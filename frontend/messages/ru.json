@@ -3552,7 +3552,8 @@
       "readyHint": "Проверьте конфигурацию и создайте приложение.",
       "complete": "Не указано: {field}",
       "configured": "Настроено",
-      "progress": "Готово {done} из {total}"
+      "progress": "Готово {done} из {total}",
+      "fix": "Исправьте: {field}"
     },
     "form": {
       "detailsTitle": "Сведения о приложении",

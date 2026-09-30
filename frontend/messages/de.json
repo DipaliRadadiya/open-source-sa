@@ -3552,7 +3552,8 @@
       "readyHint": "Prüfen Sie diese Konfiguration und erstellen Sie dann die Anwendung.",
       "complete": "{field} angeben",
       "configured": "Konfiguriert",
-      "progress": "{done} von {total} bereit"
+      "progress": "{done} von {total} bereit",
+      "fix": "{field} korrigieren"
     },
     "form": {
       "detailsTitle": "Angaben zur Anwendung",

@@ -3552,7 +3552,8 @@
       "readyHint": "Vérifiez cette configuration, puis créez l'application.",
       "complete": "Manquant : {field}",
       "configured": "Configuré",
-      "progress": "{done} sur {total} prêts"
+      "progress": "{done} sur {total} prêts",
+      "fix": "À corriger : {field}"
     },
     "form": {
       "detailsTitle": "Détails de l'application",
