@@ -21,4 +21,8 @@ return [
         ],
     ],
 
+
+    'robots_txt' => [
+        'note' => 'Google (Gemini) et Apple entraînent leur IA sur les pages récupérées par leurs robots de recherche habituels : aucun blocage de bot ne peut l\'empêcher sans vous retirer aussi des résultats de recherche. Pour refuser leur entraînement IA, ajoutez ces lignes au robots.txt de votre site :',
+    ],
 ];

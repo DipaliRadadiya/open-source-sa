@@ -200,3 +200,23 @@ it('refuses without manage permission', function () {
         ->putJson(botBlockerUrl(), ['policy' => 'block_training'])
         ->assertStatus(403);
 });
+
+describe('the opt-outs a user-agent block cannot do', function () {
+    it('keeps robots.txt-only tokens out of every blocked list', function () {
+        foreach (AiBotPolicy::cases() as $policy) {
+            expect($policy->blockedBots())->not->toContain('Google-Extended')->not->toContain('Applebot-Extended');
+        }
+    });
+
+    it('hands the owner the robots.txt lines instead, for every policy that blocks training', function () {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin)->getJson('/api/ai-bot-policies')->assertOk();
+
+        expect($response->json('robots_txt.lines'))->toBe("User-agent: Google-Extended\nDisallow: /\n\nUser-agent: Applebot-Extended\nDisallow: /\n")
+            ->and($response->json('robots_txt.note'))->toContain('robots.txt')
+            ->and($response->json('ai_bot_policies.allow_all.robots_txt_recommended'))->toBeFalse()
+            ->and($response->json('ai_bot_policies.block_training.robots_txt_recommended'))->toBeTrue()
+            ->and($response->json('ai_bot_policies.block_all.robots_txt_recommended'))->toBeTrue();
+    });
+});

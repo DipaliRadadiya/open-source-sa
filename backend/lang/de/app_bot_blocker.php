@@ -21,4 +21,8 @@ return [
         ],
     ],
 
+
+    'robots_txt' => [
+        'note' => 'Google (Gemini) und Apple trainieren ihre KI mit Seiten, die ihre normalen Such-Crawler abrufen – eine Bot-Sperre kann das also nicht verhindern, ohne dich auch aus der Suche zu entfernen. Um dem KI-Training zu widersprechen, füge diese Zeilen in die robots.txt deiner Website ein:',
+    ],
 ];
