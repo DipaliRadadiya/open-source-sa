@@ -447,6 +447,34 @@ describe('settings', function () {
         expect(PoolFake::$files[$path])
             ->toBe(app(PoolManager::class)->render($this->application->load('systemUser'), $settings))
             ->not->toMatch('/^listen = \/tmp\/other\.sock/m');
+
+        // The saved text is unchanged, so only the file can say it is done:
+        // a second run must not rewrite and reload the pool again.
+        PoolFake::$ran = [];
+        app()->forgetInstance(PoolManager::class);
+
+        $this->artisan('sites:resync')
+            ->doesntExpectOutputToContain('PHP pools rewritten')
+            ->assertSuccessful();
+
+        expect(collect(PoolFake::$ran)->filter(fn ($c) => str_starts_with($c, 'systemctl reload php'))->all())->toBe([]);
+    });
+
+    it('leaves a hand-edited pool alone when it holds nothing the old writer produced', function () {
+        fakePhpServer();
+
+        ApplicationPhpSettings::forceCreate([
+            'application_id' => $this->application->id,
+            'additional_directives' => 'memory_limit = 300M',
+        ]);
+        $path = app(PoolManager::class)->poolPath($this->application);
+        PoolFake::$files[$path] = "[shop]\n; edited by hand\n";
+
+        $this->artisan('sites:resync')
+            ->doesntExpectOutputToContain('PHP pools rewritten')
+            ->assertSuccessful();
+
+        expect(PoolFake::$files[$path])->toBe("[shop]\n; edited by hand\n");
     });
 
     it('names a saved line that is not a PHP setting at all', function () {

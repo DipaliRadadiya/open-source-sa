@@ -53,16 +53,38 @@ class AdditionalDirectives
 
     public function forFpm(string $text): string
     {
-        return implode("\n", array_map(function (array $s): string {
-            $directive = ($s['admin'] ? 'php_admin_' : 'php_').($s['flag'] ? 'flag' : 'value');
+        return implode("\n", array_map(fn (array $s): string => $this->fpmLine($s), $this->parse($text)));
+    }
 
-            return "{$directive}[{$s['name']}] = {$s['value']}";
-        }, $this->parse($text)));
+    /**
+     * Lines a pool written before 2026-09-30 held as the owner typed them,
+     * and one written today does not — so finding any of them in a pool file
+     * means that file still predates this class.
+     *
+     * @return array<int, string>
+     */
+    public function legacyFpmLines(string $text): array
+    {
+        return array_values(array_filter($this->lines($text), function (string $line): bool {
+            $setting = $this->parseLine($line);
+
+            return $setting === null || $this->fpmLine($setting) !== $line;
+        }));
     }
 
     public function forIni(string $text): string
     {
         return implode("\n", array_map(fn (array $s): string => "{$s['name']} = {$s['value']}", $this->parse($text)));
+    }
+
+    /**
+     * @param  array{name: string, value: string, flag: bool, admin: bool}  $setting
+     */
+    private function fpmLine(array $setting): string
+    {
+        $directive = ($setting['admin'] ? 'php_admin_' : 'php_').($setting['flag'] ? 'flag' : 'value');
+
+        return "{$directive}[{$setting['name']}] = {$setting['value']}";
     }
 
     /**

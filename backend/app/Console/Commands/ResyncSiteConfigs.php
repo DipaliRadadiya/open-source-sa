@@ -120,13 +120,13 @@ class ResyncSiteConfigs extends Command
                 $text = (string) $settings->additional_directives;
                 $application = $settings->application;
 
-                if ($application === null || $directives->forFpm($text) === trim($text)) {
+                if ($application === null) {
                     return;
                 }
 
                 $line = $directives->firstInvalidLine($text);
 
-                if ($pools->supported() && $pools->exists($application) === true) {
+                if ($pools->supported() && $this->poolPredatesDirectives($pools, $directives, $application, $text)) {
                     if (! $pools->apply($application, $settings)['ok']) {
                         $this->error("PHP pool for application #{$application->id} still holds additional directives written before only PHP settings were accepted, and rewriting it failed. Save its PHP settings to retry.");
 
@@ -144,6 +144,27 @@ class ResyncSiteConfigs extends Command
         if ($rewritten > 0) {
             $this->info("PHP pools rewritten with additional directives as PHP settings only: {$rewritten}.");
         }
+    }
+
+    /**
+     * Whether this site's pool file still holds a directive as it was typed,
+     * which only the pre-2026-09-30 writer produced. Asked of the file, not
+     * the saved text — the text keeps a dropped line until the owner saves
+     * again, so asking it would rewrite (and reload) the pool on every run.
+     * A pool someone hand-edited is left alone, as a save would warn first.
+     */
+    private function poolPredatesDirectives(PoolManager $pools, AdditionalDirectives $directives, Application $application, string $text): bool
+    {
+        $path = $pools->poolPath($application);
+        $legacy = $directives->legacyFpmLines($text);
+
+        if ($path === null || $legacy === [] || $pools->exists($application) !== true) {
+            return false;
+        }
+
+        $lines = array_map('trim', explode("\n", (string) $pools->readPool($path)));
+
+        return array_intersect($legacy, $lines) !== [];
     }
 
     /**
