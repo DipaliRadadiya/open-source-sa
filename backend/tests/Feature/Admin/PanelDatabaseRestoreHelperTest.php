@@ -80,7 +80,9 @@ it('keeps the failed state rather than deleting it', function () {
         ->query("SELECT name FROM sqlite_master WHERE type = 'table'")->fetchAll(PDO::FETCH_COLUMN);
 
     expect($failed)->toContain('qa_rollback_probe')
-        ->and(file_exists($this->backup))->toBeTrue();
+        ->and(file_exists($this->backup))->toBeTrue()
+        // It holds the whole panel database, like any other backup.
+        ->and(fileperms($this->failed) & 0777)->toBe(0640);
 });
 
 it('undoes a migration that was recorded', function () {

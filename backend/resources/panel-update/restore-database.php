@@ -68,6 +68,11 @@ try {
     $liveDb->exec('PRAGMA wal_checkpoint(TRUNCATE)');
     $liveDb->exec('VACUUM INTO '.$liveDb->quote($failedCopy));
     $liveDb = null;
+
+    // Same as every other panel backup: it holds the whole panel database.
+    // VACUUM INTO creates it with the umask, which left it 0644 on the test
+    // server.
+    @chmod($failedCopy, 0640);
 } catch (Throwable $e) {
     fwrite(STDERR, 'could not read the live database: '.$e->getMessage()."\n");
     exit(4);
