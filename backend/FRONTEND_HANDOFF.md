@@ -6,9 +6,9 @@ moved and why it matters**, so nobody has to diff the reference to find out.
 
 ---
 
-## 2026-08-12
+## 2026-09-30
 
-### 0. AI Bot Blocker — show the robots.txt lines (2026-09-30)
+### AI Bot Blocker — show the robots.txt lines
 
 `GET /ai-bot-policies` now also returns:
 
@@ -25,6 +25,10 @@ opt-out is a robots.txt token; no user-agent block can do it. `Google-Extended`
 and `Applebot-Extended` were in the training list doing nothing, and are gone
 from `blocked_bots`. Typing either into the custom block list now returns 422
 with an explanation.
+
+---
+
+## 2026-08-12
 
 ### 1. 8G Firewall — renamed, and hidden where it cannot work
 
