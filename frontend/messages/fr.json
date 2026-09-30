@@ -3073,12 +3073,10 @@
       "failed": "phpMyAdmin n'a pas pu être ouvert.",
       "noPermission": "Votre rôle n'inclut pas Bases de données avec l'accès Gérer. Demandez à un administrateur de vous l'accorder.",
       "blocked": "Votre navigateur a bloqué le nouvel onglet.",
-      "openAnyway": "Ouvrir phpMyAdmin",
       "install": "Installer phpMyAdmin",
       "needsUser": "Ajoutez d'abord un utilisateur de base de données — phpMyAdmin se connecte en tant qu'utilisateur.",
       "choose": "Quel phpMyAdmin ?",
-      "signingShort": "Connexion en cours…",
-      "linkReady": "Votre lien de connexion phpMyAdmin est prêt."
+      "signingShort": "Connexion en cours…"
     },
     "usedBy": {
       "title": "Utilisé par",
@@ -3940,11 +3938,8 @@
       "none": "Cette application n'a aucun compte administrateur.",
       "listFailed": "Impossible de lire les administrateurs de cette application.",
       "failed": "Impossible de créer le lien de connexion.",
-      "popupBlocked": "Votre navigateur a bloqué le nouvel onglet. Autorisez les fenêtres pop-up pour ce panneau et réessayez.",
       "redirecting": "Connexion en cours…",
       "auditNote": "Le lien ne fonctionne qu'une fois et expire au bout d'une minute. Le compte sous lequel vous vous connectez est inscrit au journal d'activité.",
-      "linkReady": "Votre lien de connexion WordPress est prêt.",
-      "openAdmin": "Ouvrir l'administration WordPress",
       "fetchingUsers": "Récupération des utilisateurs…"
     },
     "markers": {

@@ -3073,12 +3073,10 @@
       "failed": "phpMyAdmin を開けませんでした。",
       "noPermission": "現在のロールには、データベースの管理権限が含まれていません。管理者に付与を依頼してください。",
       "blocked": "ブラウザが新しいタブをブロックしました。",
-      "openAnyway": "phpMyAdmin を開く",
       "install": "phpMyAdmin をインストール",
       "needsUser": "先にデータベースユーザーを追加してください — phpMyAdmin はそのユーザーでサインインします。",
       "choose": "どちらの phpMyAdmin を使用しますか？",
-      "signingShort": "ログインしています…",
-      "linkReady": "phpMyAdmin のログインリンクの準備ができました。"
+      "signingShort": "ログインしています…"
     },
     "usedBy": {
       "title": "使用箇所",
@@ -3940,11 +3938,8 @@
       "none": "このアプリケーションには管理者アカウントがありません。",
       "listFailed": "このアプリケーションの管理者を読み取れませんでした。",
       "failed": "ログインリンクを作成できませんでした。",
-      "popupBlocked": "ブラウザーが新しいタブをブロックしました。このパネルのポップアップを許可して、もう一度お試しください。",
       "redirecting": "ログインしています…",
       "auditNote": "このリンクは一度だけ有効で、1 分で期限切れになります。どの管理者としてログインしたかは操作履歴に記録されます。",
-      "linkReady": "WordPress のログインリンクの準備ができました。",
-      "openAdmin": "WordPress 管理画面を開く",
       "fetchingUsers": "ユーザーを取得しています…"
     },
     "markers": {

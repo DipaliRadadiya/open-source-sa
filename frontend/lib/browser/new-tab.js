@@ -6,20 +6,15 @@
  * whole round trip (Krishna, 2026-09-29). The tab now opens straight onto the
  * real address, so its first page is the destination.
  *
- * The browser still requires a recent click. Where it reports that the click
- * has expired — the round trip took too long — both helpers return false
- * without trying, and the caller offers a button, which is a fresh click.
+ * The tab opens when the answer arrives and nothing is offered in its place
+ * (Krishna, 2026-09-30): a second "Open" button in a toast was one click too
+ * many. When a slow answer lands after the browser's ~5 s window, the browser
+ * shows its own pop-up notice, and allowing pop-ups for the panel once makes
+ * every later sign-in open directly.
  */
-
-/** Whether the browser would still let this page open a tab. */
-export function canOpenTab() {
-  const activation = typeof navigator === "undefined" ? null : navigator.userActivation;
-  return activation ? activation.isActive : true;
-}
 
 /** A GET address in a new tab. False when the browser refused. */
 export function openUrlInNewTab(url) {
-  if (!canOpenTab()) return false;
   const tab = window.open(url, "_blank");
   if (!tab) return false;
   // The site runs its own code in that tab; without this it could reach back
@@ -38,7 +33,6 @@ export function openUrlInNewTab(url) {
  * navigation is the POST itself.
  */
 export function postInNewTab(url, fields) {
-  if (!canOpenTab()) return false;
   const form = document.createElement("form");
   form.method = "POST";
   form.action = url;

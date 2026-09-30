@@ -124,8 +124,7 @@ export function PhpmyadminButton({
      * No tab until the login URL exists, and then straight onto it (Krishna,
      * 2026-09-29) — never an empty tab filled in later. The button carries
      * the wait ("Signing you in…").
-     * Chrome and Firefox still count the click for ~5 s, which the SSO call
-     * fits inside; when it does not, the toast's button is a fresh click.
+     * No fallback toast (Krishna, 2026-09-30) — see lib/browser/new-tab.js.
      */
     setOpening(true);
     try {
@@ -133,17 +132,7 @@ export function PhpmyadminButton({
       const url = data?.redirect_url;
       if (!url) throw new Error("no url");
 
-      if (openUrlInNewTab(url)) return;
-
-      // The browser no longer treats the click as permission. The token is good
-      // for the rest of its minute, so offer a click it will honour.
-      toast(t("linkReady"), {
-        duration: 55000,
-        action: {
-          label: t("openAnyway"),
-          onClick: () => openUrlInNewTab(url),
-        },
-      });
+      openUrlInNewTab(url);
     } catch (error) {
       // The API's own sentence: it names which of the two reasons applies —
       // no phpMyAdmin site on this server, or an engine it cannot talk to.

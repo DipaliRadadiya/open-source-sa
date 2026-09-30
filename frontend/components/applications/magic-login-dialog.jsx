@@ -30,7 +30,7 @@ export function MagicLoginDialog({ appId, admins, open, onOpenChange }) {
     setPendingId(admin.id);
     try {
       const session = await createMagicLogin(appId, admin.id);
-      launchMagicLogin(session, t);
+      launchMagicLogin(session);
       onOpenChange?.(false);
     } catch (e) {
       toast.error(apiMessage(e, t("failed")));

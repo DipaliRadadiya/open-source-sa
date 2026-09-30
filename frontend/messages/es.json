@@ -3073,12 +3073,10 @@
       "failed": "No se pudo abrir phpMyAdmin.",
       "noPermission": "Tu rol no incluye Base de datos con acceso de gestión. Pide a un administrador que te lo conceda.",
       "blocked": "Tu navegador bloqueó la nueva pestaña.",
-      "openAnyway": "Abrir phpMyAdmin",
       "install": "Instalar phpMyAdmin",
       "needsUser": "Añade primero un usuario de la base de datos — phpMyAdmin inicia sesión como uno.",
       "choose": "¿Qué phpMyAdmin?",
-      "signingShort": "Iniciando su sesión…",
-      "linkReady": "Tu enlace de acceso a phpMyAdmin está listo."
+      "signingShort": "Iniciando su sesión…"
     },
     "usedBy": {
       "title": "Usada por",
@@ -3940,11 +3938,8 @@
       "none": "Esta aplicación no tiene cuentas de administrador.",
       "listFailed": "No se pudieron leer los administradores de esta aplicación.",
       "failed": "No se pudo crear el enlace de acceso.",
-      "popupBlocked": "Su navegador bloqueó la pestaña nueva. Permita las ventanas emergentes de este panel e inténtelo de nuevo.",
       "redirecting": "Iniciando su sesión…",
       "auditNote": "El enlace funciona una sola vez y caduca en un minuto. La cuenta con la que entre queda registrada en el historial de actividad.",
-      "linkReady": "Tu enlace de acceso a WordPress está listo.",
-      "openAdmin": "Abrir el administrador de WordPress",
       "fetchingUsers": "Obteniendo usuarios…"
     },
     "markers": {

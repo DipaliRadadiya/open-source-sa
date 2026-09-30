@@ -9,21 +9,11 @@ import { apiMessage } from "@/lib/api/error-message";
 import { openMagicLogin } from "@/lib/applications/magic-login-window";
 
 /**
- * Open WordPress with a minted session, or — when the browser has stopped
- * treating the original click as permission to open a tab — offer a button
- * that does, for as long as the one-minute token lasts.
+ * Open WordPress with a minted session, once the answer is here. No fallback
+ * button — see `lib/browser/new-tab.js`.
  */
-export function launchMagicLogin(session, t) {
-  if (openMagicLogin(session)) return;
-  toast(t("linkReady"), {
-    duration: 55000,
-    action: {
-      label: t("openAdmin"),
-      onClick: () => {
-        if (!openMagicLogin(session)) toast.error(t("popupBlocked"));
-      },
-    },
-  });
+export function launchMagicLogin(session) {
+  openMagicLogin(session);
 }
 
 /**
@@ -67,7 +57,7 @@ export function useMagicLogin(appId) {
       if (admins.length === 1) {
         setPhase("signing");
         const session = await createMagicLogin(appId, admins[0].id);
-        launchMagicLogin(session, t);
+        launchMagicLogin(session);
         return;
       }
 

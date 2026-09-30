@@ -3073,12 +3073,10 @@
       "failed": "phpMyAdmin could not be opened.",
       "noPermission": "Your role does not include Database with Manage access. Ask an administrator to grant it.",
       "blocked": "Your browser blocked the new tab.",
-      "openAnyway": "Open phpMyAdmin",
       "install": "Install phpMyAdmin",
       "needsUser": "Add a database user first — phpMyAdmin signs in as one.",
       "choose": "Which phpMyAdmin?",
-      "signingShort": "Signing you in…",
-      "linkReady": "Your phpMyAdmin login link is ready."
+      "signingShort": "Signing you in…"
     },
     "usedBy": {
       "title": "Used by",
@@ -3940,11 +3938,8 @@
       "none": "This application has no administrator accounts.",
       "listFailed": "Couldn't read this application's administrators.",
       "failed": "Couldn't create the login link.",
-      "popupBlocked": "Your browser blocked the new tab. Allow pop-ups for this panel and try again.",
       "redirecting": "Signing you in…",
       "auditNote": "The link works once and expires in a minute. Whoever you sign in as is recorded in the activity log.",
-      "linkReady": "Your WordPress login link is ready.",
-      "openAdmin": "Open WordPress admin",
       "fetchingUsers": "Fetching users…"
     },
     "markers": {
