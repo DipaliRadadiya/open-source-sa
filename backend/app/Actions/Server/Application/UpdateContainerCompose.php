@@ -120,6 +120,7 @@ class UpdateContainerCompose
         bool $rolledBack,
     ): void {
         $this->activityLogger->log('application.compose_updated', $application, [
+            'name' => $application->name,
             'bytes' => strlen($compose),
             'previous_bytes' => strlen($previous),
             // True when the site was running the panel's generated file until now.

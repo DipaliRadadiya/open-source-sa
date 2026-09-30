@@ -215,4 +215,14 @@ return [
     'application.supervisor_install_started' => 'Se inició la instalación de supervisor para :name',
     'application.supervisor_installed' => 'Se instaló supervisor',
     'application.supervisor_install_failed' => 'No se pudo instalar supervisor (:reference)',
+
+    'registry.created' => 'Añadió la credencial de registro :name para :registry',
+    'registry.updated' => 'Actualizó la credencial de registro :name para :registry',
+    'registry.deleted' => 'Eliminó la credencial de registro :name para :registry (:applications_detached sitios desvinculados)',
+    'registry.tested' => 'Probó la credencial de registro :name para :registry',
+    'application.container_pulled' => 'Descargó :image de nuevo y recreó el contenedor de :name',
+    'application.compose_updated' => 'Actualizó el archivo compose de :name',
+    'docker_database.created' => 'Creó la base de datos :engine :name en el puerto :port',
+    'docker_database.deleted' => 'Eliminó la base de datos :engine :name',
+    'docker_database.credentials_viewed' => 'Consultó las credenciales de la base de datos :engine :name',
 ];

@@ -215,4 +215,14 @@ return [
     'application.supervisor_install_started' => ':name के लिए supervisor इंस्टॉल करना शुरू किया',
     'application.supervisor_installed' => 'supervisor इंस्टॉल किया',
     'application.supervisor_install_failed' => 'supervisor इंस्टॉल नहीं हो सका (:reference)',
+
+    'registry.created' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name जोड़ा',
+    'registry.updated' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name अपडेट किया',
+    'registry.deleted' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name हटाया (:applications_detached साइटें अलग की गईं)',
+    'registry.tested' => ':registry के लिए रजिस्ट्री क्रेडेंशियल :name जाँचा',
+    'application.container_pulled' => ':image दोबारा खींचा और :name का कंटेनर फिर बनाया',
+    'application.compose_updated' => ':name की compose फ़ाइल अपडेट की',
+    'docker_database.created' => ':engine डेटाबेस :name पोर्ट :port पर बनाया',
+    'docker_database.deleted' => ':engine डेटाबेस :name हटाया',
+    'docker_database.credentials_viewed' => ':engine डेटाबेस :name के क्रेडेंशियल देखे',
 ];

@@ -215,4 +215,14 @@ return [
     'application.supervisor_install_started' => ':name のために supervisor のインストールを開始しました',
     'application.supervisor_installed' => 'supervisor をインストールしました',
     'application.supervisor_install_failed' => 'supervisor をインストールできませんでした (:reference)',
+
+    'registry.created' => ':registry のレジストリ認証情報 :name を追加しました',
+    'registry.updated' => ':registry のレジストリ認証情報 :name を更新しました',
+    'registry.deleted' => ':registry のレジストリ認証情報 :name を削除しました（:applications_detached 件のサイトの紐付けを解除）',
+    'registry.tested' => ':registry のレジストリ認証情報 :name をテストしました',
+    'application.container_pulled' => ':image を再取得し、:name のコンテナを作り直しました',
+    'application.compose_updated' => ':name の compose ファイルを更新しました',
+    'docker_database.created' => ':engine データベース :name をポート :port に作成しました',
+    'docker_database.deleted' => ':engine データベース :name を削除しました',
+    'docker_database.credentials_viewed' => ':engine データベース :name の認証情報を表示しました',
 ];

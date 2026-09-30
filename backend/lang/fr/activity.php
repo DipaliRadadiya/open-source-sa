@@ -215,4 +215,14 @@ return [
     'application.supervisor_install_started' => 'Installation de supervisor démarrée pour :name',
     'application.supervisor_installed' => 'Supervisor installé',
     'application.supervisor_install_failed' => 'Supervisor n\'a pas pu être installé (:reference)',
+
+    'registry.created' => 'Identifiants de registre :name ajoutés pour :registry',
+    'registry.updated' => 'Identifiants de registre :name mis à jour pour :registry',
+    'registry.deleted' => 'Identifiants de registre :name supprimés pour :registry (:applications_detached sites détachés)',
+    'registry.tested' => 'Identifiants de registre :name testés pour :registry',
+    'application.container_pulled' => ':image récupérée de nouveau et conteneur de :name recréé',
+    'application.compose_updated' => 'Fichier compose de :name mis à jour',
+    'docker_database.created' => 'Base de données :engine :name créée sur le port :port',
+    'docker_database.deleted' => 'Base de données :engine :name supprimée',
+    'docker_database.credentials_viewed' => 'Identifiants de la base de données :engine :name consultés',
 ];

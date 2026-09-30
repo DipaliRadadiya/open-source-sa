@@ -38,6 +38,7 @@ class PullContainerImage
         // takes the site down is the one somebody will be looking for in the log,
         // and an entry written only on success is an entry missing exactly then.
         $this->activityLogger->log('application.container_pulled', $application, [
+            'name' => $application->name,
             'image' => $application->image,
             'registry_id' => $application->registry_id,
         ]);

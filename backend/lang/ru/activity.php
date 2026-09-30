@@ -215,4 +215,14 @@ return [
     'application.supervisor_install_started' => 'Начата установка supervisor для :name',
     'application.supervisor_installed' => 'Supervisor установлен',
     'application.supervisor_install_failed' => 'Не удалось установить supervisor (:reference)',
+
+    'registry.created' => 'Добавлены учётные данные реестра :name для :registry',
+    'registry.updated' => 'Обновлены учётные данные реестра :name для :registry',
+    'registry.deleted' => 'Удалены учётные данные реестра :name для :registry (отвязано сайтов: :applications_detached)',
+    'registry.tested' => 'Проверены учётные данные реестра :name для :registry',
+    'application.container_pulled' => 'Образ :image загружен заново, контейнер сайта :name пересоздан',
+    'application.compose_updated' => 'Обновлён файл compose для :name',
+    'docker_database.created' => 'Создана база данных :engine :name на порту :port',
+    'docker_database.deleted' => 'Удалена база данных :engine :name',
+    'docker_database.credentials_viewed' => 'Просмотрены учётные данные базы данных :engine :name',
 ];
