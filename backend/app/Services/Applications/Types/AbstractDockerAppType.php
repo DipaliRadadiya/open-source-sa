@@ -3,6 +3,9 @@
 namespace App\Services\Applications\Types;
 
 use App\Models\Application;
+use App\Rules\ContainerMemoryLimit;
+use App\Rules\WithinHostCpus;
+use App\Services\Server\HostCpus;
 
 /**
  * A one-click application that runs as containers.
@@ -194,21 +197,73 @@ abstract class AbstractDockerAppType extends AbstractSiteType
     }
 
     /**
-     * Nothing to ask. The app decides its image, its port and its volumes; the
-     * create form needs the domain and the system user, which every type gets.
+     * How big to run it, and nothing else.
+     *
+     * The app decides its image, its port and its volumes — a field offering to
+     * change any of those would be offering to break the compose file the panel
+     * is about to write, which is why this returned an empty list for as long as
+     * there were one-click apps.
+     *
+     * **Size is a different kind of question and it belongs here.** It is not a
+     * fact about the software the way the image is; it is a fact about this
+     * server and what else is on it, so only the person deploying can answer it.
+     * Without these, a one-click installed at the app's floor and had to be
+     * resized afterwards on a second screen — which is where they were, and where
+     * nobody looked.
+     *
+     * The declared floor is what an empty memory field resolves to, so the help
+     * text names THAT rather than the server default: telling somebody installing
+     * Metabase that an empty field means 512m would be wrong, and wrong in the
+     * direction that makes the app fail to start.
      *
      * @return array<int, array<string, mixed>>
      */
     public function fields(): array
     {
-        return [];
+        $floor = $this->defaultMemoryLimit();
+        $effective = $floor ?? (string) config('server.docker.default_memory_limit', '512m');
+
+        return [
+            $this->field('memory_limit', 'text', extra: [
+                'placeholder' => $effective,
+                // Two sentences apart, and the difference matters: an app with a
+                // declared floor needs that figure, and somebody lowering it is
+                // overriding a measurement rather than choosing a preference.
+                // Metabase inside 512m reported 123.8 MB to the JVM and wrote a
+                // crash log; NocoDB exited with `Aborted (core dumped)`. Both
+                // failed as a 502 with nothing about memory in the panel.
+                'help' => __(
+                    $floor !== null
+                        ? 'application.help.memory_limit_app_floor'
+                        : 'application.help.memory_limit_app',
+                    ['default' => $effective],
+                ),
+            ]),
+
+            $this->field('cpu_limit', 'text', extra: [
+                'placeholder' => __('application.placeholders.cpu_limit'),
+                'help' => __('application.help.cpu_limit_app', [
+                    'cores' => app(HostCpus::class)->count(),
+                ]),
+            ]),
+        ];
     }
 
     /**
+     * The same two rules the Docker card and the Container screen use.
+     *
+     * Shared deliberately: a size accepted by one form and refused by another is
+     * the panel disagreeing with itself, and the CPU bound in particular has to be
+     * here or an over-provisioned one-click is a site that installs, fails at
+     * `compose up`, and has to be deleted and made again.
+     *
      * @return array<string, mixed>
      */
     public function rules(): array
     {
-        return [];
+        return [
+            'memory_limit' => ['nullable', 'string', 'max:20', new ContainerMemoryLimit],
+            'cpu_limit' => ['nullable', 'string', 'max:16', new WithinHostCpus],
+        ];
     }
 }

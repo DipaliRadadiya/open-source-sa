@@ -8,10 +8,12 @@ use App\Services\Applications\SiteTypeManager;
 use App\Services\Applications\Types\AbstractDockerAppType;
 use App\Services\Server\Applications\ComposeValidator;
 use App\Services\Server\Applications\Installers\DockerAppInstaller;
+use App\Services\Server\HostCpus;
 use App\Services\Server\ServerOps;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Validator;
 use Symfony\Component\Yaml\Yaml;
 
 uses(RefreshDatabase::class);
@@ -335,16 +337,69 @@ it('is offered on a Docker box and refused on a LEMP one', function (string $typ
     expect($card === null || $card['available'] === false)->toBeTrue();
 })->with('docker apps');
 
-it('asks for no fields, because the app has already answered', function (string $type, int $port, array $roles) {
+it('asks only how big to run it, because the app has answered everything else', function (string $type, int $port, array $roles) {
     // `DockerSiteType` asks for an image and a port because the user is choosing
     // what to run. Here a field offering to change either would be offering to
-    // break the compose file the panel is about to write.
+    // break the compose file the panel is about to write — so the list is still
+    // closed, and this test is what keeps it closed.
+    //
+    // **Size is the exception, and it is one on purpose.** The image is a fact
+    // about the software; how much of this particular server it may have is not,
+    // so it is the only question the app cannot answer on the user's behalf. This
+    // asserted `[]` until the two limit fields were added, and loosening it to
+    // "some fields" would have thrown away the guarantee it exists for.
     $siteType = app(SiteTypeManager::class)->find($type);
 
     expect($siteType)->toBeInstanceOf(AbstractDockerAppType::class)
-        ->and($siteType->fields())->toBe([])
+        ->and(collect($siteType->fields())->pluck('name')->all())->toBe(['memory_limit', 'cpu_limit'])
         ->and($siteType->needsDatabase())->toBeFalse();
 })->with('docker apps');
+
+it('tells the user the memory figure their app actually needs', function (string $type, int $port, array $roles) {
+    // The placeholder and the help name the EFFECTIVE default — the app's declared
+    // floor where it has one, the server default where it does not. Naming the
+    // server's 512m to somebody installing Metabase would be wrong in the
+    // direction that makes the app fail to start: it reported 123.8 MB to the JVM
+    // inside that ceiling and wrote a crash log, as a 502 with nothing about
+    // memory in the panel.
+    $siteType = app(SiteTypeManager::class)->find($type);
+    $expected = $siteType->defaultMemoryLimit() ?? (string) config('server.docker.default_memory_limit');
+
+    $memory = collect($siteType->fields())->firstWhere('name', 'memory_limit');
+
+    expect($memory['placeholder'])->toBe($expected)
+        ->and($memory['help'])->toContain($expected)
+        // Never pre-filled. A value in the field is a value the user chose, and
+        // the app floor applying is the EMPTY state — which is what lets a later
+        // change to that floor reach a site that never overrode it.
+        ->and($memory['default'] ?? null)->toBeNull();
+
+    // An app with a measured floor says so; one without it must not claim a
+    // measurement it does not have.
+    expect(str_contains($memory['help'], 'measured'))
+        ->toBe($siteType->defaultMemoryLimit() !== null, "{$type} misstates where its default comes from");
+})->with('docker apps');
+
+it('bounds a one-click cpu limit by the box, like every other form', function () {
+    // Otherwise an over-provisioned one-click is a site that installs, fails at
+    // `compose up`, and has to be deleted and created again.
+    app()->instance(HostCpus::class, new class extends HostCpus
+    {
+        public function count(): int
+        {
+            return 2;
+        }
+    });
+
+    $rules = app(SiteTypeManager::class)->find('ghost')->rules();
+
+    $validator = Validator::make(['cpu_limit' => '8', 'memory_limit' => '512'], $rules);
+
+    expect($validator->fails())->toBeTrue()
+        ->and($validator->errors()->first('cpu_limit'))->toContain('2 CPUs')
+        // And the unit trap is refused here too, with the message that names it.
+        ->and($validator->errors()->first('memory_limit'))->toContain('bytes to Docker');
+});
 
 it('keeps the same secrets when the url changes', function (string $type, int $port, array $roles) {
     // The bug this column exists to prevent. Recovering secrets by scanning the
