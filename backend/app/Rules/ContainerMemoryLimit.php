@@ -45,7 +45,24 @@ class ContainerMemoryLimit implements ValidationRule
             return;
         }
 
-        $bytes = (int) $matches[1] * match (strtolower($matches[2] ?? 'b')) {
+        $unit = strtolower($matches[2] ?? '');
+
+        // A bare number is a UNIT mistake, and it has to be told as one. Docker
+        // reads `512` as 512 bytes, so it fails the size check below as well —
+        // and answering "less than 6m of memory" to somebody who meant 512
+        // megabytes describes the consequence while hiding the cause. Measured on
+        // the box: that was the message `512` got, and it is the most common thing
+        // anybody will type here.
+        //
+        // `512b` is left to the size check. Spelling the unit out is a claim about
+        // bytes rather than a value with the unit missing.
+        if ($unit === '') {
+            $fail(__('validation.custom.memory_limit.format'));
+
+            return;
+        }
+
+        $bytes = (int) $matches[1] * match ($unit) {
             'k' => 1024,
             'm' => 1024 * 1024,
             'g' => 1024 * 1024 * 1024,

@@ -560,9 +560,15 @@ it('refuses a memory ceiling Docker would not start', function () {
     $tooSmall->assertStatus(422)->assertJsonValidationErrors('memory_limit');
 
     // And a bare number is BYTES to Docker, not megabytes — the mistake the
-    // message exists to name.
+    // message exists to name, and it has to be the message that actually fires.
+    // 512 bytes is also below the 6m floor, so the size check would answer first
+    // and describe the consequence while hiding the cause. Measured on the box
+    // before this was split: `512` got "less than 6m of memory", to somebody who
+    // plainly meant 512 megabytes.
     [$noUnit] = createDb(['name' => 'nounit', 'memory_limit' => '512']);
     $noUnit->assertStatus(422)->assertJsonValidationErrors('memory_limit');
+
+    expect($noUnit->json('errors.memory_limit.0'))->toContain('bytes to Docker, not megabytes');
 });
 
 it('records the size it was created at', function () {
