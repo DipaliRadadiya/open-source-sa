@@ -154,7 +154,9 @@ class SecretFilePrivacy
                 continue;
             }
 
-            if (! $ownUser) {
+            // reset() hands the group back in both directions: a site moved
+            // back to its own user otherwise kept `www-data` as the group.
+            if (! $ownUser || $reset) {
                 // `-h`: a link at the path is changed itself, never followed.
                 $record($this->serverOps->run(['chown', '-h', "{$user}:{$group}", $path], $this->context($application)));
             }

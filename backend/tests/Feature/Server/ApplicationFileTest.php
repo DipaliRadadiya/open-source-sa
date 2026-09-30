@@ -165,7 +165,9 @@ it('makes .env private to the site user when the site runs as that user', functi
 
     // As the site user: root's chmod followed a `.env` that was a link.
     expect(FixPermissionsFake::$ran)->toContain('runuser -u siteowner -- chmod 0600 /home/siteowner/shop/.env')
-        ->and(collect(FixPermissionsFake::$ran)->contains(fn (string $c) => str_starts_with($c, 'chown -h')))->toBeFalse();
+        // The group back to the user's own, in case it was the web server's
+        // before the site got a pool of its own.
+        ->and(FixPermissionsFake::$ran)->toContain('chown -h siteowner:siteowner /home/siteowner/shop/.env');
 });
 
 it('leaves .env readable by PHP where PHP runs as the web server account', function () {
