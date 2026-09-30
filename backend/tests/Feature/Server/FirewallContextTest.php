@@ -235,11 +235,28 @@ describe('the database warning on a port two engines share', function () {
     });
 });
 
-it('labels the 3306 preset for both MySQL and MariaDB', function () {
-    $mysql = collect(FirewallPresets::all())->firstWhere('key', 'mysql');
+it('names the 3306 preset for the database this server runs', function (bool $mariadb, string $label) {
+    $preset = collect(FirewallPresets::all(mariadb: $mariadb))->firstWhere('key', 'mysql');
 
-    expect($mysql['label'])->toBe('MySQL / MariaDB')
-        ->and($mysql['port'])->toBe(3306);
+    // One name, the right one; the key and the rule are the same either way.
+    expect($preset['label'])->toBe($label)
+        ->and($preset['port'])->toBe(3306);
+})->with([
+    'MariaDB server' => [true, 'MariaDB'],
+    'MySQL server, or neither' => [false, 'MySQL'],
+]);
+
+it('asks the server which one it runs when listing the presets', function () {
+    $manager = Mockery::mock(DatabaseManager::class);
+    $engine = Mockery::mock(DatabaseEngine::class);
+    $engine->shouldReceive('available')->andReturn(true);
+    $manager->shouldReceive('engine')->with('mariadb')->andReturn($engine);
+    app()->instance(DatabaseManager::class, $manager);
+
+    $presets = $this->withHeader('Authorization', 'Bearer '.$this->token)
+        ->getJson('/api/firewall/presets')->assertOk()->json('presets');
+
+    expect(collect($presets)->firstWhere('key', 'mysql')['label'])->toBe('MariaDB');
 });
 
 it('finds the 3306 rules when searching for mariadb', function () {

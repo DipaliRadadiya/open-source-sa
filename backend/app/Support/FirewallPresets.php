@@ -28,16 +28,21 @@ class FirewallPresets
     /**
      * Presets with localized labels, in display order.
      *
+     * @param  bool  $mariadb  MariaDB is installed here, and names the 3306 preset
      * @return array<int, array{key: string, label: string, port: int|null, protocol: string}>
      */
-    public static function all(): array
+    public static function all(bool $mariadb = false): array
     {
         $presets = [];
 
         foreach (self::PRESETS as $key => $preset) {
             $presets[] = [
                 'key' => $key,
-                'label' => __('firewall.presets.'.$key),
+                // The 3306 preset is named for the engine on this server —
+                // MariaDB is a drop-in for MySQL on the same port, and a
+                // MariaDB server's owner reads "MySQL" as the wrong database.
+                // The key stays `mysql`: the rule is the same either way.
+                'label' => __('firewall.presets.'.($key === 'mysql' && $mariadb ? 'mariadb' : $key)),
                 'port' => $preset['port'],
                 'protocol' => $preset['protocol'],
             ];
