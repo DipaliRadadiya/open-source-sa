@@ -57,6 +57,11 @@ class TmpTarget extends AbstractCleanupTarget
         return array_values(array_filter(['/tmp', '/var/tmp'], 'is_dir'));
     }
 
+    private function olsRuntimeDir(): string
+    {
+        return rtrim((string) config('server.web_server_drivers.openlitespeed.tmp_dir', '/tmp/lshttpd'), '/');
+    }
+
     /**
      * @return array<int, string>
      */
@@ -65,7 +70,18 @@ class TmpTarget extends AbstractCleanupTarget
         $days = (int) config('server.disk_cleaner.tmp_days', 7);
         // `-xdev` for the same reason as the rotated logs: /tmp is a common
         // mount point, and anything mounted under it belongs to something else.
-        $base = ['find', ...$this->dirs(), '-xdev', '-type', 'f', '-mtime', "+{$days}"];
+        $base = [
+            'find', ...$this->dirs(), '-xdev', '-type', 'f', '-mtime', "+{$days}",
+            // OpenLiteSpeed's runtime directory. Its pid file is written at
+            // start and never touched again, so on a server up for more than a
+            // week it is "old"; without it `lswsctrl restart` takes its "not
+            // running" path — a start that logs fatal "address already in
+            // use" errors before a new server takes over (measured on the OLS
+            // test box, 2026-09-30: the reload still happened, but only by
+            // luck of that fallback). Nothing in there is junk while
+            // OpenLiteSpeed runs.
+            '!', '-path', $this->olsRuntimeDir().'/*',
+        ];
 
         return [...$base, ...($delete ? ['-delete'] : ['-printf', "%s\n"])];
     }
