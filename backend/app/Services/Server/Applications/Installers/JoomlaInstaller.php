@@ -163,6 +163,10 @@ class JoomlaInstaller extends AbstractPhpInstaller
     {
         $prefix = (string) ($settings['table_prefix'] ?? '');
 
-        return $prefix !== '' ? $prefix : Str::lower(Str::random(5)).'_';
+        // A letter first: Joomla refuses a prefix that starts with a digit
+        // ("must start with a letter"), and `Str::random()` draws one about
+        // one time in six — so that share of Joomla installs failed at
+        // install_app (seen live on 2026-09-30 with `42k4p_`).
+        return $prefix !== '' ? $prefix : chr(random_int(ord('a'), ord('z'))).Str::lower(Str::random(4)).'_';
     }
 }
