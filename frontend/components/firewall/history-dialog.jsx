@@ -5,8 +5,7 @@ import { History, Loader2, ExternalLink } from "lucide-react";
 import { getMyActivityByType, getServerActivityByType } from "@/lib/api/activity-log";
 import { myActivityResponseSchema } from "@/lib/schemas/account";
 import { activityResponseSchema } from "@/lib/schemas/activity";
-import { humanizeActivity, actionBadgeVariant } from "@/lib/activity-log/labels";
-import { Badge } from "@/components/ui/badge";
+import { humanizeActivity } from "@/lib/activity-log/labels";
 import { Button } from "@/components/ui/button";
 import { FormModal } from "@/components/ui/form-modal";
 import { LoadFailed } from "@/components/data-table/load-failed";
@@ -142,9 +141,6 @@ export function HistoryDialog({ everyone = false }) {
                     <p className="text-sm leading-snug">
                       {entry.description || humanizeActivity(entry.action)}
                     </p>
-                    <Badge variant={actionBadgeVariant(entry.action)} className="font-normal">
-                      {humanizeActivity(entry.action)}
-                    </Badge>
                   </div>
                   <span className="shrink-0 space-y-0.5 text-right text-xs text-muted-foreground">
                     {everyone ? (

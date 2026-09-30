@@ -546,3 +546,33 @@ test("Red and grey tokens are dark enough for AA on their tints (Krishna OK, 30 
   assert.match(css, /--destructive: oklch\(0\.54 0\.22 27\.3\);/);
   assert.match(css, /--muted-foreground: oklch\(0\.53 0\.012 264\);/);
 });
+
+test("Fail2ban full pass: tab panels show focus, jail names translated, Russian tabs don't clash", () => {
+  assert.match(read("components/ui/tabs.jsx"), /focus-visible:outline-2 focus-visible:outline-solid/);
+  assert.match(read("lib/fail2ban/jail-label.js"), /t\.has\(key\) \? t\(key\)/);
+  const jails = read("components/fail2ban/jails-card.jsx");
+  assert.doesNotMatch(jails, /jail\.label/);
+  assert.match(read("components/fail2ban/ban-ip-dialog.jsx"), /\{jailLabel\(t, j\)\}/);
+  for (const l of locales) assert.ok(JSON.parse(read(`messages/${l}.json`)).fail2ban.jails.names.recidive, l);
+  const ru = JSON.parse(read("messages/ru.json")).fail2ban;
+  assert.equal(ru.tabs.settings, "Параметры блокировки");
+});
+
+test("Activity Log full pass: named filters, readable type badges, fits a phone in Russian", () => {
+  const bar = read("components/activity-log/activity-toolbar.jsx");
+  assert.match(bar, /aria-label=\{t\("table\.type"\)\}/);
+  assert.doesNotMatch(bar, /selectedAction/);
+  assert.match(read("lib/activity-log/labels.js"), /text-\[color-mix\(in_oklch,var\(--chart-5\)_55%,var\(--foreground\)\)\]/);
+  assert.match(read("components/activity-log/my-activity-table.jsx"), /meta: \{ className: "whitespace-normal sm:whitespace-nowrap" \}/);
+});
+
+test("Activity types are translated; the English-only Event badge and Action filter are gone (Krishna A)", () => {
+  assert.match(read("lib/activity-log/labels.js"), /export function typeLabel\(t, type\)/);
+  for (const f of ["components/activity-log/my-activity-table.jsx", "components/account/account-activity.jsx", "components/admin/activity/activity-table.jsx", "components/firewall/history-dialog.jsx", "components/activity-log/activity-toolbar.jsx"]) {
+    const src = read(f);
+    assert.doesNotMatch(src, /humanizeActivity\((row\.original|entry)\.action\)\}\s*<\/Badge>/, f);
+    assert.doesNotMatch(src, /humanizeActivity\((row\.original\.type|type|v)\)/, f);
+  }
+  const types = ["application","backup","build_tools","central","cronjob","database","disk_cleaner","fail2ban","firewall","git_account","log","node","panel_update","permission","php","role","server","service","setting","storage_destination","sync","system_user","user"];
+  for (const l of locales) { const tt = JSON.parse(read(`messages/${l}.json`)).activity.types; for (const ty of types) assert.ok(tt[ty], `${l} ${ty}`); }
+});

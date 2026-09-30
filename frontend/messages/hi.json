@@ -413,6 +413,31 @@
       "loadFailed": "हम गतिविधि लॉग लोड नहीं कर पाए।",
       "empty": "इस सर्वर पर अभी तक कुछ नहीं हुआ है।",
       "searchPlaceholder": "गतिविधि खोजें…"
+    },
+    "types": {
+      "application": "ऐप्लिकेशन",
+      "backup": "बैकअप",
+      "build_tools": "बिल्ड टूल्स",
+      "central": "सेंट्रल",
+      "cronjob": "क्रॉन जॉब",
+      "database": "डेटाबेस",
+      "disk_cleaner": "डिस्क क्लीनर",
+      "fail2ban": "Fail2ban",
+      "firewall": "फ़ायरवॉल",
+      "git_account": "Git खाता",
+      "log": "लॉग",
+      "node": "Node.js",
+      "panel_update": "पैनल अपडेट",
+      "permission": "अनुमतियाँ",
+      "php": "PHP",
+      "role": "भूमिका",
+      "server": "सर्वर",
+      "service": "सेवा",
+      "setting": "सेटिंग्स",
+      "storage_destination": "स्टोरेज",
+      "sync": "सर्वर सिंक",
+      "system_user": "सिस्टम उपयोगकर्ता",
+      "user": "उपयोगकर्ता"
     }
   },
   "pagination": {
@@ -1442,7 +1467,10 @@
       "stateFailing": "{count, plural, one {# पता अभी असफल हो रहा है} other {# पते अभी असफल हो रहे हैं}}",
       "stateBanned": "{count, plural, one {# पता रोका गया} other {# पते रोके गए}}",
       "stateUnknown": "नज़र रखी जा रही है",
-      "totalsTooltip": "Fail2ban शुरू होने के बाद से: {failed} गलत कोशिशें, {banned} रोक।"
+      "totalsTooltip": "Fail2ban शुरू होने के बाद से: {failed} गलत कोशिशें, {banned} रोक।",
+      "names": {
+        "recidive": "बार-बार हमला करने वाले"
+      }
     },
     "lockout": {
       "title": "इससे आप बाहर हो सकते हैं",

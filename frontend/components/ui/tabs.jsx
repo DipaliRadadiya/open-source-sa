@@ -72,7 +72,12 @@ function TabsContent({
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
+      className={cn(
+        // Radix makes the panel a Tab stop; without a visible outline keyboard
+        // users landed on an invisible element between the tabs and the content.
+        "flex-1 rounded-md text-sm outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-ring/60",
+        className
+      )}
       {...props} />
   );
 }

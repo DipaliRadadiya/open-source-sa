@@ -638,6 +638,31 @@
       "loadFailed": "Impossible de charger le journal d'activité.",
       "empty": "Rien ne s'est encore passé sur ce serveur.",
       "searchPlaceholder": "Rechercher dans l'activité…"
+    },
+    "types": {
+      "application": "Application",
+      "backup": "Sauvegardes",
+      "build_tools": "Outils de compilation",
+      "central": "Central",
+      "cronjob": "Tâches cron",
+      "database": "Base de données",
+      "disk_cleaner": "Nettoyeur de disque",
+      "fail2ban": "Fail2ban",
+      "firewall": "Pare-feu",
+      "git_account": "Compte Git",
+      "log": "Journaux",
+      "node": "Node.js",
+      "panel_update": "Mise à jour du panneau",
+      "permission": "Autorisations",
+      "php": "PHP",
+      "role": "Rôle",
+      "server": "Serveur",
+      "service": "Service",
+      "setting": "Paramètres",
+      "storage_destination": "Stockage",
+      "sync": "Synchronisation du serveur",
+      "system_user": "Utilisateur système",
+      "user": "Utilisateur"
     }
   },
   "pagination": {
@@ -1442,7 +1467,10 @@
       "stateFailing": "{count, plural, one {# adresse en échec actuellement} other {# adresses en échec actuellement}}",
       "stateBanned": "{count, plural, one {# adresse bannie} other {# adresses bannies}}",
       "stateUnknown": "Actif",
-      "totalsTooltip": "Depuis le démarrage de Fail2ban : {failed} tentatives erronées, {banned} bannissements."
+      "totalsTooltip": "Depuis le démarrage de Fail2ban : {failed} tentatives erronées, {banned} bannissements.",
+      "names": {
+        "recidive": "Récidivistes"
+      }
     },
     "lockout": {
       "title": "Risque de vous verrouiller l'accès",

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { humanizeActivity, actionBadgeVariant, typeBadgeClass } from "@/lib/activity-log/labels";
+import { typeBadgeClass, typeLabel } from "@/lib/activity-log/labels";
 
 // Backend timestamps may be ISO or MySQL-style ("YYYY-MM-DD HH:mm:ss"); parse
 // both, return null if neither is valid so we skip the tooltip instead of
@@ -28,7 +28,7 @@ function WhenCell({ row }) {
   const format = useFormatter();
   const { created_at, created_at_human } = row.original;
   const label = (
-    <span className="whitespace-nowrap tabular-nums text-muted-foreground">
+    <span className="tabular-nums text-muted-foreground sm:whitespace-nowrap">
       {created_at_human}
     </span>
   );
@@ -47,21 +47,14 @@ function WhenCell({ row }) {
 }
 
 function TypeCell({ row }) {
+  const t = useTranslations("activity");
   const { type } = row.original;
   if (!type) return <span className="text-muted-foreground">—</span>;
   // Colour by family (people / security / runtimes / sites / housekeeping) so a
   // long page can be scanned without reading every word.
   return (
     <Badge variant="outline" className={cn("font-normal whitespace-nowrap", typeBadgeClass(type))}>
-      {humanizeActivity(type)}
-    </Badge>
-  );
-}
-
-function EventCell({ row }) {
-  return (
-    <Badge variant={actionBadgeVariant(row.original.action)} className="font-normal">
-      {humanizeActivity(row.original.action)}
+      {typeLabel(t, type)}
     </Badge>
   );
 }
@@ -75,6 +68,10 @@ function UserCell({ row }) {
     <span className="text-muted-foreground">{t("system")}</span>
   );
 }
+
+const wrap = (label) => function WrappingHeader() {
+  return <span className="whitespace-normal">{label}</span>;
+};
 
 function DescriptionCell({ row }) {
   return <span>{row.original.description || "—"}</span>;
@@ -95,7 +92,9 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
   // and the sentence is the one worth keeping; without this it is the column
   // that scrolls out of sight.
   const columns = [
-    { accessorKey: "created_at_human", header: t("table.when"), cell: WhenCell },
+    // Headers may wrap: at 390 in Russian the unbroken headers and "1 час
+    // назад" made the table 43px wider than the phone.
+    { accessorKey: "created_at_human", header: wrap(t("table.when")), cell: WhenCell, meta: { className: "whitespace-normal sm:whitespace-nowrap" } },
     ...(showUser ? [{ id: "user", header: t("columns.user"), cell: UserCell }] : []),
     {
       accessorKey: "type",
@@ -104,14 +103,8 @@ export function MyActivityTable({ data, emptyMessage, hasFilters = false, showUs
       meta: { className: "hidden md:table-cell" },
     },
     {
-      accessorKey: "action",
-      header: t("table.event"),
-      cell: EventCell,
-      meta: { className: "hidden md:table-cell" },
-    },
-    {
       accessorKey: "description",
-      header: t("table.description"),
+      header: wrap(t("table.description")),
       cell: DescriptionCell,
       // TableCell is whitespace-nowrap for everything, which suits short values
       // and ruins this one: at 320 the sentence ran straight off the card with

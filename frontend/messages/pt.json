@@ -638,6 +638,31 @@
       "loadFailed": "Não foi possível carregar o registro de atividades.",
       "empty": "Nada aconteceu neste servidor ainda.",
       "searchPlaceholder": "Buscar atividade…"
+    },
+    "types": {
+      "application": "Aplicação",
+      "backup": "Backups",
+      "build_tools": "Ferramentas de build",
+      "central": "Central",
+      "cronjob": "Tarefas cron",
+      "database": "Banco de dados",
+      "disk_cleaner": "Disk Cleaner",
+      "fail2ban": "Fail2ban",
+      "firewall": "Firewall",
+      "git_account": "Conta Git",
+      "log": "Logs",
+      "node": "Node.js",
+      "panel_update": "Atualização do painel",
+      "permission": "Permissões",
+      "php": "PHP",
+      "role": "Função",
+      "server": "Servidor",
+      "service": "Serviço",
+      "setting": "Configurações",
+      "storage_destination": "Armazenamento",
+      "sync": "Sincronização do servidor",
+      "system_user": "Usuário do sistema",
+      "user": "Usuário"
     }
   },
   "pagination": {
@@ -1442,7 +1467,10 @@
       "stateFailing": "{count, plural, one {# endereço falhando agora} other {# endereços falhando agora}}",
       "stateBanned": "{count, plural, one {# endereço banido} other {# endereços banidos}}",
       "stateUnknown": "Monitorando",
-      "totalsTooltip": "Desde que o Fail2ban iniciou: {failed} tentativas erradas, {banned} banimentos."
+      "totalsTooltip": "Desde que o Fail2ban iniciou: {failed} tentativas erradas, {banned} banimentos.",
+      "names": {
+        "recidive": "Reincidentes"
+      }
     },
     "lockout": {
       "title": "Isso pode bloquear seu acesso",

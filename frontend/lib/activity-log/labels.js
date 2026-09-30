@@ -56,11 +56,14 @@ export function actionDotClass(action) {
  */
 // Full class strings, not built from a variable: Tailwind scans source text, so
 // a composed `bg-${family}/12` is never generated and the badge comes out bare.
-const PEOPLE = "border-transparent bg-chart-5/12 text-chart-5";
-const SECURITY = "border-transparent bg-chart-4/12 text-chart-4";
-const RUNTIME = "border-transparent bg-chart-1/12 text-chart-1";
-const SITES = "border-transparent bg-chart-2/12 text-chart-2";
-const HOUSEKEEPING = "border-transparent bg-chart-3/12 text-chart-3";
+// Text is the chart colour mixed with the foreground: the chart colours are
+// made for fills, and as 12px text they read 2.4–3.4:1. Mixing towards the
+// foreground darkens them in light mode and lightens them in dark mode.
+const PEOPLE = "border-transparent bg-chart-5/12 text-[color-mix(in_oklch,var(--chart-5)_55%,var(--foreground))]";
+const SECURITY = "border-transparent bg-chart-4/12 text-[color-mix(in_oklch,var(--chart-4)_55%,var(--foreground))]";
+const RUNTIME = "border-transparent bg-chart-1/12 text-[color-mix(in_oklch,var(--chart-1)_55%,var(--foreground))]";
+const SITES = "border-transparent bg-chart-2/12 text-[color-mix(in_oklch,var(--chart-2)_55%,var(--foreground))]";
+const HOUSEKEEPING = "border-transparent bg-chart-3/12 text-[color-mix(in_oklch,var(--chart-3)_55%,var(--foreground))]";
 
 const TYPE_FAMILY = {
   user: PEOPLE,
@@ -86,6 +89,13 @@ const TYPE_FAMILY = {
   setting: HOUSEKEEPING,
   server: HOUSEKEEPING,
 };
+
+// The type's name in the reader's language (`activity.types.*`); a type the
+// panel has no key for falls back to its humanised id.
+export function typeLabel(t, type) {
+  if (!type) return "";
+  return t.has(`types.${type}`) ? t(`types.${type}`) : humanizeActivity(type);
+}
 
 export function typeBadgeClass(type) {
   return TYPE_FAMILY[type] ?? "border-border text-muted-foreground";

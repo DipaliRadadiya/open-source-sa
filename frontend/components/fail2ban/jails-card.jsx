@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { jailLabel } from "@/lib/fail2ban/jail-label";
 import { toast } from "sonner";
 import { ShieldAlert, TriangleAlert, Info, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -106,7 +107,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
         ...(acknowledged ? { acknowledged: true } : null),
       });
       toast.success(
-        enabled ? t("jails.enabled", { name: jail.label }) : t("jails.disabled", { name: jail.label }),
+        enabled ? t("jails.enabled", { name: jailLabel(t, jail) }) : t("jails.disabled", { name: jailLabel(t, jail) }),
       );
       setGuarding(null);
       router.refresh();
@@ -211,7 +212,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
                     switch can't sit beside a block of numbers. */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <span className="font-medium">{jail.label}</span>
+                    <span className="font-medium">{jailLabel(t, jail)}</span>
                     <span className="font-mono text-xs text-muted-foreground">{jail.name}</span>
                     {jail.lockout_risk ? (
                       <Tooltip>
@@ -233,7 +234,7 @@ export function JailsCard({ jails, settings, yourIp, ignoreIps = [], canManage, 
                       pending={pending === jail.name}
                       disabled={!canManage}
                       onCheckedChange={(next) => toggle(jail, next)}
-                      aria-label={t("jails.toggle", { name: jail.label })}
+                      aria-label={t("jails.toggle", { name: jailLabel(t, jail) })}
                     />
                   </ReasonTooltip>
                 </div>

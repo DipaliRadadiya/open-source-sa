@@ -638,6 +638,31 @@
       "loadFailed": "アクティビティログを読み込めませんでした。",
       "empty": "このサーバーではまだ何も行われていません。",
       "searchPlaceholder": "アクティビティを検索…"
+    },
+    "types": {
+      "application": "アプリケーション",
+      "backup": "バックアップ",
+      "build_tools": "ビルドツール",
+      "central": "セントラル",
+      "cronjob": "Cronジョブ",
+      "database": "データベース",
+      "disk_cleaner": "ディスククリーナー",
+      "fail2ban": "Fail2ban",
+      "firewall": "ファイアウォール",
+      "git_account": "Git アカウント",
+      "log": "ログ",
+      "node": "Node.js",
+      "panel_update": "パネルの更新",
+      "permission": "権限",
+      "php": "PHP",
+      "role": "ロール",
+      "server": "サーバー",
+      "service": "サービス",
+      "setting": "設定",
+      "storage_destination": "ストレージ",
+      "sync": "サーバー同期",
+      "system_user": "システムユーザー",
+      "user": "ユーザー"
     }
   },
   "pagination": {
@@ -1442,7 +1467,10 @@
       "stateFailing": "{count, plural, one {現在 # 件のアドレスが誤入力中} other {現在 # 件のアドレスが誤入力中}}",
       "stateBanned": "{count, plural, one {# 件のアドレスがブロックされています} other {# 件のアドレスがブロックされています}}",
       "stateUnknown": "監視中",
-      "totalsTooltip": "Fail2ban 起動以降: 誤入力 {failed} 回、ブロック {banned} 件。"
+      "totalsTooltip": "Fail2ban 起動以降: 誤入力 {failed} 回、ブロック {banned} 件。",
+      "names": {
+        "recidive": "常習者"
+      }
     },
     "lockout": {
       "title": "サーバーにアクセスできなくなる可能性があります",

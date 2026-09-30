@@ -638,6 +638,31 @@
       "loadFailed": "We couldn't load the activity log.",
       "empty": "Nothing has happened on this server yet.",
       "searchPlaceholder": "Search activity…"
+    },
+    "types": {
+      "application": "Application",
+      "backup": "Backups",
+      "build_tools": "Build tools",
+      "central": "Central",
+      "cronjob": "Cron Jobs",
+      "database": "Database",
+      "disk_cleaner": "Disk Cleaner",
+      "fail2ban": "Fail2ban",
+      "firewall": "Firewall",
+      "git_account": "Git account",
+      "log": "Logs",
+      "node": "Node.js",
+      "panel_update": "Panel update",
+      "permission": "Permissions",
+      "php": "PHP",
+      "role": "Role",
+      "server": "Server",
+      "service": "Service",
+      "setting": "Settings",
+      "storage_destination": "Storage",
+      "sync": "Server Sync",
+      "system_user": "System user",
+      "user": "User"
     }
   },
   "pagination": {
@@ -1442,7 +1467,10 @@
       "stateFailing": "{count, plural, one {# address failing right now} other {# addresses failing right now}}",
       "stateBanned": "{count, plural, one {# address banned} other {# addresses banned}}",
       "stateUnknown": "Watching",
-      "totalsTooltip": "Since Fail2ban started: {failed} wrong tries, {banned} bans."
+      "totalsTooltip": "Since Fail2ban started: {failed} wrong tries, {banned} bans.",
+      "names": {
+        "recidive": "Repeat offenders"
+      }
     },
     "lockout": {
       "title": "This could lock you out",

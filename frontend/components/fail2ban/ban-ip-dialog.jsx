@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { jailLabel } from "@/lib/fail2ban/jail-label";
 import { toast } from "sonner";
 import { Loader2, Plus, ShieldBan, TriangleAlert } from "lucide-react";
 import { banIp } from "@/lib/api/fail2ban";
@@ -189,7 +190,7 @@ export function BanIpDialog({ jails = [], canManage, yourIp = null }) {
             <SelectContent>
               {activeJails.map((j) => (
                 <SelectItem key={j.name} value={j.name}>
-                  {j.label}
+                  {jailLabel(t, j)}
                 </SelectItem>
               ))}
             </SelectContent>

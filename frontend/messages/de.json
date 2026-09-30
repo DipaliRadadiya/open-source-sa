@@ -638,6 +638,31 @@
       "loadFailed": "Das Aktivitätsprotokoll konnte nicht geladen werden.",
       "empty": "Auf diesem Server ist noch nichts passiert.",
       "searchPlaceholder": "Aktivität durchsuchen…"
+    },
+    "types": {
+      "application": "Anwendung",
+      "backup": "Backups",
+      "build_tools": "Build-Tools",
+      "central": "Central",
+      "cronjob": "Cronjobs",
+      "database": "Datenbank",
+      "disk_cleaner": "Datenträgerbereinigung",
+      "fail2ban": "Fail2ban",
+      "firewall": "Firewall",
+      "git_account": "Git-Konto",
+      "log": "Protokolle",
+      "node": "Node.js",
+      "panel_update": "Panel-Update",
+      "permission": "Berechtigungen",
+      "php": "PHP",
+      "role": "Rolle",
+      "server": "Server",
+      "service": "Dienst",
+      "setting": "Einstellungen",
+      "storage_destination": "Speicher",
+      "sync": "Server-Sync",
+      "system_user": "Systembenutzer",
+      "user": "Benutzer"
     }
   },
   "pagination": {
@@ -1442,7 +1467,10 @@
       "stateFailing": "{count, plural, one {# Adresse scheitert gerade} other {# Adressen scheitern gerade}}",
       "stateBanned": "{count, plural, one {# Adresse gesperrt} other {# Adressen gesperrt}}",
       "stateUnknown": "Überwacht",
-      "totalsTooltip": "Seit dem Start von Fail2ban: {failed} Fehlversuche, {banned} Sperren."
+      "totalsTooltip": "Seit dem Start von Fail2ban: {failed} Fehlversuche, {banned} Sperren.",
+      "names": {
+        "recidive": "Wiederholungstäter"
+      }
     },
     "lockout": {
       "title": "Das könnte Sie aussperren",

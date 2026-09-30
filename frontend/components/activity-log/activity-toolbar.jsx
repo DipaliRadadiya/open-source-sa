@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { SearchInput } from "@/components/data-table/search-input";
 import { RefreshButton } from "@/components/data-table/refresh-button";
 import { useSetQuery } from "@/hooks/use-set-query";
-import { humanizeActivity } from "@/lib/activity-log/labels";
+import { typeLabel } from "@/lib/activity-log/labels";
 import {
   Select,
   SelectContent,
@@ -22,23 +22,19 @@ import {
  * `extraQuery` is merged into every navigation: the account page keeps its tab
  * in the URL, and filtering must not drop it.
  */
-export function ActivityToolbar({ types, actions, searchKey = "searchPlaceholder", extraQuery }) {
+// No action filter: the server can only filter by an exact event id, and the
+// 166 ids were English in every language. Type and search stay.
+export function ActivityToolbar({ types, searchKey = "searchPlaceholder", extraQuery }) {
   const t = useTranslations("activity");
   const setQuery = useSetQuery();
   const searchParams = useSearchParams();
 
   const selectedType = searchParams.get("type") ?? "all";
-  const selectedAction = searchParams.get("action") ?? "all";
-
-  // Action options depend on the selected type: `all` verbs by default, or the
-  // type's own verbs once a type is picked.
-  const actionList =
-    (selectedType !== "all" && actions[selectedType]) || actions.all || [];
 
   // Own-history filters are built from rows that actually exist, so an empty
   // list means this user has no activity — offering "All types" over nothing
   // is a control that can only disappoint.
-  const hasFilters = types.length > 0 || (actions.all?.length ?? 0) > 0;
+  const hasFilters = types.length > 0;
 
   const apply = (updates) => setQuery({ ...updates, ...extraQuery }, { resetPage: true });
 
@@ -57,31 +53,14 @@ export function ActivityToolbar({ types, actions, searchKey = "searchPlaceholder
               apply({ type: v === "all" ? undefined : v, action: undefined })
             }
           >
-            <SelectTrigger className="w-full sm:w-40">
+            <SelectTrigger className="w-full sm:w-40" aria-label={t("table.type")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper">
               <SelectItem value="all">{t("filter.allTypes")}</SelectItem>
               {types.map((v) => (
                 <SelectItem key={v} value={v}>
-                  {humanizeActivity(v)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={selectedAction}
-            onValueChange={(v) => apply({ action: v === "all" ? undefined : v })}
-          >
-            <SelectTrigger className="w-full sm:w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value="all">{t("filter.allActions")}</SelectItem>
-              {actionList.map((v) => (
-                <SelectItem key={v} value={v}>
-                  {humanizeActivity(v)}
+                  {typeLabel(t, v)}
                 </SelectItem>
               ))}
             </SelectContent>
