@@ -277,7 +277,9 @@ it('schedules its background jobs on the site\'s own PHP, and only once', functi
     // The version's binary, not `php` — that is the server default.
     expect($job->command)->toBe('/usr/bin/php8.4 -f '.$this->application->documentRoot().'/cron.php')
         ->and($job->expression)->toBe('*/5 * * * *')
-        ->and($job->application_id)->toBe($this->application->id);
+        ->and($job->application_id)->toBe($this->application->id)
+        // The panel's own job for the site, so it goes with the site.
+        ->and($job->application_owned)->toBeTrue();
 
     // Retry Setup runs the installer again.
     installNextcloud();

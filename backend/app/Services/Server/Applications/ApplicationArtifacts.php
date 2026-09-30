@@ -4,10 +4,12 @@ namespace App\Services\Server\Applications;
 
 use App\Actions\Server\Application\RemoveCertificate;
 use App\Actions\Server\Backup\DeleteBackup;
+use App\Actions\Server\Cronjob\DeleteCronjob;
 use App\Enums\CertificateType;
 use App\Exceptions\Server\Application\ProvisioningFailedException;
 use App\Models\Application;
 use App\Models\Backup;
+use App\Models\Cronjob;
 use App\Models\Worker;
 use App\Services\Server\Certificates\CertbotClient;
 use App\Services\Server\Certificates\CertificateFiles;
@@ -17,8 +19,8 @@ use Throwable;
 
 /**
  * Everything the panel wrote for an application that is *not* its vhost and not
- * its files: the PHP-FPM pool, worker units, the fail2ban jail, and the
- * certificate's renewal.
+ * its files: the PHP-FPM pool, worker units, its own background cron job, the
+ * fail2ban jail, and the certificate's renewal.
  *
  * Collected here because they share one failure mode and it is not obvious.
  * Each of these lives outside the application's own directory, so removing the
@@ -114,6 +116,24 @@ class ApplicationArtifacts
             // for the sake of one loop.
             foreach (Worker::where('application_id', $application->id)->get() as $worker) {
                 $workers->remove($worker);
+            }
+        });
+
+        $this->attempt($application, 'cronjobs', function () use ($application) {
+            // Only the jobs the panel created for this site — an installer's
+            // background job, which runs the site's own `cron.php` and fails
+            // every tick once the site is gone. A job the user added is kept:
+            // it may be something they still want running
+            // (`cronjobs.application_id` is nullOnDelete for that reason).
+            //
+            // Through the Cronjobs screen's own delete, so the file, the log
+            // and the row go in the order that keeps disk and panel agreeing,
+            // and the activity log shows it. Resolved lazily for the same
+            // container-cycle reason as WorkerSupervisor.
+            $delete = app(DeleteCronjob::class);
+
+            foreach (Cronjob::where('application_id', $application->id)->where('application_owned', true)->get() as $cronjob) {
+                $delete->execute($cronjob);
             }
         });
 

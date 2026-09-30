@@ -58,6 +58,9 @@ class DeleteSystemUser
 
             foreach ($cronjobs as $cronjob) {
                 $this->crontab->remove($cronjob);
+                // The output log too — it outlived every user deletion, with
+                // nothing left in the panel pointing at it.
+                $this->crontab->removeLog($cronjob);
             }
 
             // Record how many cron jobs went with the user (audit breadcrumb).

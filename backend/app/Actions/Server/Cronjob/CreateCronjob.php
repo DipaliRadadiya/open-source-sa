@@ -17,7 +17,7 @@ class CreateCronjob
     ) {}
 
     /**
-     * @param  array{name: string, command: string, expression: string, system_user_id?: int|null, username?: string|null, application_id?: int|null, active?: bool}  $data
+     * @param  array{name: string, command: string, expression: string, system_user_id?: int|null, username?: string|null, application_id?: int|null, application_owned?: bool, active?: bool}  $data
      */
     public function execute(array $data): Cronjob
     {
@@ -31,6 +31,10 @@ class CreateCronjob
             // Set when the job was created from a site's own Cronjobs screen;
             // null for a server-level job.
             'application_id' => $data['application_id'] ?? null,
+            // The panel's own job for the site (an installer's background
+            // job), removed with the site. Never from a request: the
+            // FormRequest does not accept it.
+            'application_owned' => $data['application_owned'] ?? false,
             'command' => $data['command'],
             'expression' => $data['expression'],
             'active' => $data['active'] ?? true,

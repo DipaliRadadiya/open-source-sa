@@ -147,6 +147,7 @@ abstract class AbstractPhpInstaller extends AbstractSiteInstaller
                 'name' => Str::limit($application->name, 200, '').' background jobs #'.$application->id,
                 'system_user_id' => $application->system_user_id,
                 'application_id' => $application->id,
+                'application_owned' => true,
                 'command' => $command,
                 'expression' => $expression,
             ]);

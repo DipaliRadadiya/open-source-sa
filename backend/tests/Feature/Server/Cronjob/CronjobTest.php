@@ -413,6 +413,8 @@ it('removes the cron.d files when the owning system user is deleted via the API'
 
     // both the file and the row are gone
     Process::assertRan(fn ($p) => $p->command === ['rm', '-f', '/etc/cron.d/owned-job']);
+    // …and its output log, which outlived every user deletion before.
+    Process::assertRan(fn ($p) => $p->command === ['rm', '-f', rtrim((string) config('server.cronjob_log_dir'), '/').'/owned-job.log']);
     expect(Cronjob::find($job->id))->toBeNull();
 
     // the deletion is recorded with how many cron jobs went with the user
