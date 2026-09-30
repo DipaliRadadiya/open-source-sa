@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useWatch } from "react-hook-form";

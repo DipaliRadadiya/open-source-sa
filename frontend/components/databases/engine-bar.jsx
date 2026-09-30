@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Activity, Loader2, Plus, TriangleAlert } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { Badge } from "@/components/ui/badge";
 import { EngineLogo } from "@/components/databases/engine-logo";
 import { engineLogo } from "@/lib/databases/engine-logo";

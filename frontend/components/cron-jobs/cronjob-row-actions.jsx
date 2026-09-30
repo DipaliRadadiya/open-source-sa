@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useRef, useState } from "react";
 import { MoreHorizontal, Pencil, Copy, Trash2, ScrollText, SquareArrowOutUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";

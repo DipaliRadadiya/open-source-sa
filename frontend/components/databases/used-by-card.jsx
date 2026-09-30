@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { Link2 } from "lucide-react";
 import { applicationById } from "@/lib/backups/database-availability";

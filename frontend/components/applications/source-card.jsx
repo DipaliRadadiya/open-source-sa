@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { isDeployIncomplete, liveCommit } from "@/lib/applications/code-on-disk";
 import { provisionStepLabel } from "@/lib/applications/provision-steps";

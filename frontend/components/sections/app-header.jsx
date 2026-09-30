@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { Shield, UserCog } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useUser } from "@/hooks/use-user";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
 import { Database, TriangleAlert } from "lucide-react";
 import { DatabaseCardActions } from "@/components/applications/database-card-actions";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getTranslations, getFormatter } from "next-intl/server";
 import { ArrowRight, ShieldCheck, UserRoundCog, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";

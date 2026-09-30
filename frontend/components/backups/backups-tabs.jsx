@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { History, RotateCcw, ShieldCheck } from "lucide-react";

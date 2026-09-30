@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { Folder, ChevronRight } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";

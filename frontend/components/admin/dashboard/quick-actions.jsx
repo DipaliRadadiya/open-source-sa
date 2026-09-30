@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
 import { ArrowUpCircle, Bug, PlugZap, Stethoscope, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";

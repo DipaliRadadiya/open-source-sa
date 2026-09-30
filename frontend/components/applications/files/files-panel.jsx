@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { FolderPlus, FilePlus, UploadCloud, Folder, SearchX, Globe, Trash2, Eye, EyeOff, MousePointerClick } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";

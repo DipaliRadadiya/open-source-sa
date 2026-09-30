@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";

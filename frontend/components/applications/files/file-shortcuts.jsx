@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { ReasonTooltip } from "@/components/ui/reason-tooltip";
 import { useTranslations } from "next-intl";
 import { Image as ImageIcon, Palette, Plug, FileCog } from "lucide-react";

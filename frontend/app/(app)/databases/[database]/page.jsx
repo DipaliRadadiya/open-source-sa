@@ -25,7 +25,7 @@ import { DeleteDatabaseCard } from "@/components/databases/delete-database-card"
 import { PageCrumb } from "@/components/sections/page-crumb";
 import { LoadFailed } from "@/components/data-table/load-failed";
 import { PermissionDenied } from "@/components/sections/permission-denied";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { Button } from "@/components/ui/button";
 import { Caution } from "@/components/ui/caution";
 

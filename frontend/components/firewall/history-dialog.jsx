@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { History, Loader2, ExternalLink } from "lucide-react";
 import { getMyActivityByType, getServerActivityByType } from "@/lib/api/activity-log";

@@ -1,5 +1,5 @@
 import { useFormatter, useTranslations } from "next-intl";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { Folder, Link2, Loader2, TriangleAlert, Unlink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseApiWallClock } from "@/lib/format/api-date";

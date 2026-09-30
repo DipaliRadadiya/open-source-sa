@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
+import { useLinkStatus } from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { SiteTypeLogo } from "@/components/applications/site-type-logo";
 import { cn } from "@/lib/utils";
 import {
@@ -91,6 +92,14 @@ function MobileNavLink({ item, built, active, children, className }) {
       {children}
     </SidebarMenuButton>
   )
+}
+
+// The click point is where the eye is, so the wait shows there as well as in
+// the top bar.
+function PendingNavIcon({ name }) {
+  const { pending } = useLinkStatus();
+
+  return pending ? <Loader2 className="size-4 animate-spin" /> : <NavIcon name={name} />;
 }
 
 export function AppSidebar({ items }) {
@@ -261,10 +270,11 @@ export function AppSidebar({ items }) {
                           — and the whole menu is on screen at all times. Left
                           on, opening one page fired ~16 background renders and
                           burned most of the API's per-minute budget before the
-                          user clicked anything. Intent (hover/touch) still
-                          prefetches; `loading.jsx` covers the rest. */}
+                          user clicked anything. With no prefetch the click
+                          waits on the server, so the item spins until the
+                          page arrives. */}
                       <Link href={item.href} prefetch={false}>
-                        <NavIcon name={item.icon} />
+                        <PendingNavIcon name={item.icon} />
                         <span>{navTitle(item, t)}</span>
                       </Link>
                     </MobileNavLink>

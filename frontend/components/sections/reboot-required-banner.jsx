@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Power, RotateCcw } from "lucide-react";

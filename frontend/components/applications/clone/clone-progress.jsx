@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowRight, Check, CircleAlert, CircleCheck, Clock3, Copy, Loader2 } from "lucide-react";

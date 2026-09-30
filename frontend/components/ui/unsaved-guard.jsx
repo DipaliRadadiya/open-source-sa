@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { trackPush } from "@/lib/browser/navigation-pending";
 
 /**
  * Knows whether any panel surface has edits that were never saved.
@@ -61,6 +62,7 @@ export function UnsavedProvider({ children }) {
     (href, afterConfirm) =>
       guardAction(() => {
         afterConfirm?.();
+        trackPush();
         router.push(href);
       }),
     [guardAction, router],

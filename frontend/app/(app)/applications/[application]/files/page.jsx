@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { FolderSearch, FolderX } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { redirect } from "next/navigation";

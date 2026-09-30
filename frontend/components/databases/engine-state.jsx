@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { Database, Loader2, Plug, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

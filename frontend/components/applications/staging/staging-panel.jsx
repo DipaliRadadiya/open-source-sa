@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { ArrowUpFromLine, ExternalLink, FlaskConical, Trash2, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

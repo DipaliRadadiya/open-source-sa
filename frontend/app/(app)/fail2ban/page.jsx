@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
 import { CircleCheck, CircleAlert } from "lucide-react";
 import { getPermissions } from "@/lib/permissions/get-permissions";

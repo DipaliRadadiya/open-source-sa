@@ -289,7 +289,28 @@
   100% { transform: translateX(350%); }
 }
 
+/*
+ * The page-change bar: creeps towards 90% and stops there, because it cannot
+ * know how long the server will take. It disappears when the page arrives.
+ */
+@keyframes nav-progress {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(0.9); }
+}
+
 @layer utilities {
+  .animate-nav-progress {
+    transform-origin: left;
+    animation: nav-progress 8s cubic-bezier(0.1, 0.6, 0.3, 1) forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-nav-progress {
+      animation: none;
+      transform: none;
+    }
+  }
+
   .animate-progress-sweep {
     animation: progress-sweep 1.4s ease-in-out infinite;
   }

@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { getBasicInfo } from "@/lib/basic-info/get-basic-info";
 import { PanelUnavailableCard } from "@/components/sections/panel-unavailable";

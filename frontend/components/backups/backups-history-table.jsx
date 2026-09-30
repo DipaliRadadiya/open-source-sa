@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { CopyButton } from "@/components/ui/copy-button";
 import { CircleAlert, History, RotateCw, Trash2 } from "lucide-react";

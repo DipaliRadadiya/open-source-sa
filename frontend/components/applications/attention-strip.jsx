@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { getTranslations } from "next-intl/server";
 import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 import { SectionJumpLink } from "@/components/ui/section-jump-link";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { scheduleWhen } from "@/lib/backups/schedule-time";
 import { History, PlayCircle, Settings2, ShieldCheck } from "lucide-react";

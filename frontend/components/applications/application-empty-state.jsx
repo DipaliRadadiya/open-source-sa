@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { CheckCircle2, CircleDot, Globe2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";

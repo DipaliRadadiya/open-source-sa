@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { RotateCcw, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";

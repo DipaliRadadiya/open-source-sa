@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { ArrowRight, Globe2, Loader2, ShieldCheck, ShieldOff } from "lucide-react";
 import { AutoRefresh } from "@/components/ui/auto-refresh";

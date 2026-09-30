@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 
 import { useMemo, useRef, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";

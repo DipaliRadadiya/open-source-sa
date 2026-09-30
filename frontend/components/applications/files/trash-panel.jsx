@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePendingKeys } from "@/hooks/use-pending-keys";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowLeft, File as FileIcon, RotateCcw, Trash2, TriangleAlert, Undo2 } from "lucide-react";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { HardDrive, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";

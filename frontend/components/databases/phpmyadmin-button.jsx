@@ -5,7 +5,7 @@ import {
   ReasonTooltip,
 } from "@/components/ui/reason-tooltip";
 import { toast } from "sonner";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { ChevronDown, Download, Loader2, TableProperties } from "lucide-react";
 import { phpmyadminSso } from "@/lib/api/databases";
 import { phpmyadminState, userCount } from "@/lib/databases/phpmyadmin-state";

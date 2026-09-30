@@ -4,7 +4,7 @@ import { useRefresh } from "@/hooks/use-refresh";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { ShieldOff, Ban, ScrollText } from "lucide-react";
 import { unbanIp, unbanAll } from "@/lib/api/fail2ban";
 import { Badge } from "@/components/ui/badge";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { Folder, Link2, Loader2, Unlink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";

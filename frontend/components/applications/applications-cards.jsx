@@ -1,5 +1,5 @@
 import { phpVersionShown } from "@/lib/applications/php-version-shown";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useFormatter, useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
 import { formatBytes } from "@/lib/format/bytes";

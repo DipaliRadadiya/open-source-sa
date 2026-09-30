@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/ui/app-link";
 import { useTranslations } from "next-intl";
 import { Folder, Link2, Loader2, SearchX } from "lucide-react";
 import { cn } from "@/lib/utils";
