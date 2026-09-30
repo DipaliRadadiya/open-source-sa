@@ -92,6 +92,12 @@ errorlog $VH_ROOT/logs/error.log {
 
 accesslog $VH_ROOT/logs/access.log {
   useServer               0
+@if ($waf && $waf['mode'] === 'detect')
+  {{-- OLS allows one access log per site, so detect mode marks the lines
+       here (`waf=1`) instead of writing waf-detect.log; the log screen
+       filters on it. Combined format otherwise, as OLS writes by default. --}}
+  logFormat               %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i" waf=%{waf_would}e
+@endif
   rollingSize             10M
   keepDays                30
 }
@@ -123,12 +129,44 @@ errorpage 503 {
 }
 
 @endif
-@if (! $certificate || $redirects->isNotEmpty() || $forceHttps || $botBlock || $disabled)
+@if (! $certificate || $redirects->isNotEmpty() || $forceHttps || $botBlock || $disabled || $waf)
 rewrite {
   enable                  1
 @if (! $certificate)
   RewriteCond %{HTTPS} =on
   RewriteRule ^ - [F,L]
+@endif
+@if ($waf)
+  {{-- 8G Firewall, before the bot block and everything else. Each category
+       and custom rule marks the request (`waf_block`); an exception marks it
+       too (`waf_exception`); one rule at the end blocks — or, in detect mode,
+       only marks it for the access log — when it is blocked and not excepted.
+       Conditions are printed raw: they are already escaped for this syntax
+       (OlsDriver::wafPattern, and the 8G file's own patterns). --}}
+@foreach ($waf['exceptions'] as $exception)
+  RewriteCond %{REQUEST_URI} {!! $exception !!} [NC,OR]
+  RewriteCond %{QUERY_STRING} {!! $exception !!} [NC,OR]
+  RewriteCond %{HTTP_USER_AGENT} {!! $exception !!} [NC]
+  RewriteRule ^ - [E=waf_exception:1]
+@endforeach
+@foreach ($wafRules as $category => $conditions)
+@foreach ($conditions as [$variable, $pattern])
+  RewriteCond {!! '%{'.$variable.'}' !!} {!! $pattern !!} [NC{{ $loop->last ? '' : ',OR' }}]
+@endforeach
+  RewriteRule ^ - [E=waf_block:1]
+@endforeach
+@foreach ($waf['customRules'] as $rule)
+  RewriteCond %{REQUEST_URI} {!! $rule !!} [NC,OR]
+  RewriteCond %{QUERY_STRING} {!! $rule !!} [NC]
+  RewriteRule ^ - [E=waf_block:1]
+@endforeach
+  RewriteCond %{ENV:waf_exception} !=1
+  RewriteCond %{ENV:waf_block} =1
+@if ($waf['mode'] === 'enforce')
+  RewriteRule ^ - [F,L]
+@else
+  RewriteRule ^ - [E=waf_would:1]
+@endif
 @endif
 @if ($botBlock)
   {{-- Checked first — a blocked bot gets [F] (403) immediately, ahead of

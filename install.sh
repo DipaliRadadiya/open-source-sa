@@ -96,10 +96,10 @@ DRY_RUN=0          # --dry-run
 #   * The panel's own vhost is written OUTSIDE the panel-managed markers in
 #     httpd_config.conf — see configure_ols() for why that is load-bearing.
 #
-# Two capability differences remain, and the installer says both at selection:
-# the WAF cannot be enforced on OLS (OlsDriver::supportsWaf() returns false),
-# and there is no per-site PHP isolation. Neither is a defect in this script.
-# The bot blocker is NOT one of them — both OLS templates render its rules.
+# One capability difference remains, and the installer says it at selection:
+# there is no per-site PHP isolation. It is not a defect in this script. The
+# 8G firewall and the bot blocker both work on OLS — the templates render
+# their rules into each site's vhconf (the WAF since 2026-09-30).
 STACK=""           # --stack=lemp|lamp|mern|ols  (prompted, or lemp)
 WEB_SERVER=""      # derived from STACK
 
@@ -377,9 +377,8 @@ resolve_stack() {
             # only to whoever reads the source. Not a warning about the stack
             # any more — a capability difference they would otherwise find out
             # about from a control that refuses to switch on.
-            say "     note: the WAF (8G firewall) is not available on OpenLiteSpeed,"
-            say "     and there is no per-site PHP isolation (no per-site pools)."
-            say "     The bot blocker does work."
+            say "     note: there is no per-site PHP isolation on OpenLiteSpeed"
+            say "     (no per-site pools). The 8G firewall and bot blocker work."
             ;;
         *) die "unknown stack: ${STACK}  (expected lemp, lamp, mern or ols)" ;;
     esac

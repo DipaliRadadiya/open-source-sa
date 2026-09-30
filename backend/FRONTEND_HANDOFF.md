@@ -14,6 +14,15 @@ moved and why it matters**, so nobody has to diff the reference to find out.
 already render nav labels from the API, so nothing to do — but the screen's own
 heading should match.
 
+**Update 2026-09-30: OpenLiteSpeed supports it now.** The 8G rules are rendered
+into each OLS site's vhconf, so `app_firewall` appears on OLS servers like on
+nginx and Apache, with the same endpoints and fields. One difference: in detect
+mode the `waf_detect` log is the site's access log filtered to the marked lines,
+and `DELETE …/logs/waf_detect` answers **422** there (clearing it would empty the
+access log) — hide or disable that button when it fails, the message says why.
+The paragraph below describes the mechanism, which still applies to any future
+web server without a WAF.
+
 **Hidden on unsupported web servers.** OpenLiteSpeed has no WAF rules in its
 vhost templates, so on an OLS server `app_firewall` is **dropped from the
 application's feature list**. It never appears in

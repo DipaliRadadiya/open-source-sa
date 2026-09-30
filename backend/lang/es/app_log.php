@@ -11,5 +11,6 @@ return [
 
     'errors' => [
         'unknown_source' => 'Ese registro no existe para esta aplicación.',
+        'clear_shared' => 'En OpenLiteSpeed las detecciones del cortafuegos forman parte del registro de acceso del sitio. Vacíe el registro de acceso en su lugar.',
     ],
 ];

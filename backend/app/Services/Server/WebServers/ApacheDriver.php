@@ -106,12 +106,16 @@ class ApacheDriver extends AbstractWebServerDriver
     /**
      * Apache: the pattern sits inside `m#...#` in a quoted `SetEnvIfExpr`.
      * `#` is the regex delimiter; `preg_quote` escapes it anyway since PHP 7.3,
-     * and it is named as the delimiter only to say so. Apache's config
-     * parser only unescapes `\"`, so the quote is the one thing to escape
-     * for the directive itself and every other backslash reaches the regex.
+     * and it is named as the delimiter only to say so.
+     *
+     * Apache's config parser turns `\\` into `\` and `\"` into `"` before
+     * the regex is compiled (httpd `substring_conf`), so both are written
+     * doubled/escaped here. Escaping only the quote left a backslash the user
+     * typed — `c:\tmp` — reaching the regex as an escape of the next
+     * character. Found while porting 8G to OpenLiteSpeed, 2026-09-30.
      */
     public function wafPattern(string $value): string
     {
-        return str_replace('"', '\\"', preg_quote($value, '#'));
+        return str_replace(['\\', '"'], ['\\\\', '\\"'], preg_quote($value, '#'));
     }
 }

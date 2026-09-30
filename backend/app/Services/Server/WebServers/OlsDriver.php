@@ -12,6 +12,7 @@ use App\Services\Server\ManagedFile;
 use App\Services\Server\Php\SitePhpIni;
 use App\Services\Server\ServerOps;
 use App\Services\Server\ServerOpsResult;
+use App\Services\Server\Waf\OlsWafRuleset;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -104,6 +105,9 @@ class OlsDriver extends AbstractWebServerDriver
 
         return [
             ...$data,
+            // The 8G conditions for the categories this site has on; the
+            // exceptions and custom rules are already in `$data['waf']`.
+            'wafRules' => $data['waf'] === null ? [] : app(OlsWafRuleset::class)->for($data['waf']['categories']),
             // Site types whose cache or rewrite integration goes through
             // .htaccess. WordPress is the one that matters: LiteSpeed Cache
             // talks to the OLS cache module through that file and nothing else.
@@ -175,14 +179,28 @@ class OlsDriver extends AbstractWebServerDriver
     }
 
     /**
-     * Not yet. OpenLiteSpeed needs the rules as rewrite directives inside each
-     * site's `vhconf.conf` — `.htaccess` would need a restart, not a reload —
-     * and none of the three OLS templates carry them. Answering `false` here is
-     * what turns "enabled and doing nothing" into a refusal the user can see.
+     * The 8G rules are rendered as rewrite directives inside each site's
+     * `vhconf.conf` (never `.htaccess`, which OLS only reads after a restart),
+     * from the same file the Apache version uses — see OlsWafRuleset. v7 had
+     * 8G on OpenLiteSpeed; this closes that gap (2026-09-30).
      */
     public function supportsWaf(): bool
     {
-        return false;
+        return true;
+    }
+
+    /**
+     * An exception or custom rule for an *unquoted* OLS `RewriteCond`.
+     *
+     * `preg_quote` makes it literal and also covers what a condition pattern
+     * would otherwise read as an operator at its start (`!`, `<`, `>`, `=`,
+     * `-`). Whitespace would end the pattern and a quote could start a quoted
+     * one, so those are written as hex escapes, which PCRE reads as the same
+     * characters.
+     */
+    public function wafPattern(string $value): string
+    {
+        return str_replace([' ', '"', "'"], ['\\x20', '\\x22', '\\x27'], preg_quote($value));
     }
 
     public function name(): string
