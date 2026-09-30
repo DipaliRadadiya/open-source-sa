@@ -258,9 +258,36 @@ class InstalledPanelInfo
             return null;
         }
 
-        $hash = $this->readGitFile(trim($matches[1]));
+        $ref = trim($matches[1]);
+        // Loose first, then packed. `git gc` and `git pack-refs` — both run
+        // on their own as git housekeeping — move a branch into
+        // `.git/packed-refs` and delete its loose file, and after that this
+        // read nothing: the update screen lost the installed commit (seen on
+        // 2026-09-24 and again on 2026-09-30 in this repository).
+        $hash = $this->readGitFile($ref) ?? $this->packedRef($ref);
 
         return $hash !== null && preg_match('/^[0-9a-f]{40}$/i', $hash) === 1 ? $hash : null;
+    }
+
+    /**
+     * A ref's hash from `.git/packed-refs`: `<hash> <ref>` lines, `#` comment
+     * lines, and `^<hash>` lines that peel the annotated tag above them.
+     */
+    private function packedRef(string $ref): ?string
+    {
+        $packed = $this->readGitFile('packed-refs');
+
+        if ($packed === null) {
+            return null;
+        }
+
+        foreach (preg_split('/\r?\n/', $packed) ?: [] as $line) {
+            if (preg_match('/^([0-9a-f]{40}) (\S+)$/i', trim($line), $m) === 1 && $m[2] === $ref) {
+                return $m[1];
+            }
+        }
+
+        return null;
     }
 
     /**
