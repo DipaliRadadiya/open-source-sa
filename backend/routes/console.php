@@ -86,6 +86,11 @@ Schedule::command(sprintf(
     (int) config('server.application_size.per_run', 0),
 ))->everyMinute()->withoutOverlapping();
 
+// Joomla and Nextcloud loosen their own config file whenever their settings
+// are saved (Joomla to 0444, every time); resync only runs on deploy. Five
+// minutes bounds how long the web server account can read it.
+Schedule::command('sites:narrow-app-secrets')->everyFiveMinutes()->withoutOverlapping();
+
 // File manager trash. Every delete keeps a full copy, so without a sweep this
 // is a slow disk-space leak on a machine whose whole job is running out of
 // disk quietly. Daily because the unit is days — and scheduled at all because

@@ -124,6 +124,16 @@ class NextcloudInstaller extends AbstractPhpInstaller
             '--value='.$application->domain,
         ], null, $documentRoot);
 
+        // Nextcloud chmods config.php to this on every write, defaulting to
+        // 0640 — group-readable, which on OpenLiteSpeed is the web server
+        // account (it is in every site user's group). Its own setting, so
+        // Nextcloud keeps the file private itself rather than the panel
+        // sweeping up after it. An integer: `chmod()` is handed it as is.
+        $this->runAsSiteUser('configure', $application, [
+            ...$php, 'occ', 'config:system:set', 'configfilemode',
+            '--value='.octdec($this->ownership->secretFileMode($application)), '--type=integer',
+        ], null, $documentRoot);
+
         // Background jobs and generated links need to know the site's own
         // address; from the CLI there is nothing to infer it from.
         $this->runAsSiteUser('trust_domain', $application, [

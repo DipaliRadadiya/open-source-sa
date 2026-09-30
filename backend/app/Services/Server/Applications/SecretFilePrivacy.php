@@ -58,6 +58,25 @@ class SecretFilePrivacy
     ];
 
     /**
+     * Types whose application rewrites its secret file on its own, loosening
+     * it again, so a pass at install and deploy time is not enough. Swept
+     * every five minutes by `sites:narrow-app-secrets`.
+     *
+     *  - Joomla sets `configuration.php` to 0444 on **every** save of Global
+     *    Configuration, unconditionally (`ApplicationModel::writeConfigFile()`,
+     *    read in 6.1). Not an option, and no hook the panel can reach.
+     *  - Nextcloud writes `config.php` at its `configfilemode`, default 0640 —
+     *    readable on OpenLiteSpeed, where the web server account is in every
+     *    site user's group. New installs set that option (NextcloudInstaller);
+     *    this covers the ones installed before.
+     *
+     * Not PrestaShop: Symfony's dumpFile() keeps the existing file's mode.
+     *
+     * @var array<int, string>
+     */
+    public const REWRITTEN_BY_APP = ['joomla', 'nextcloud'];
+
+    /**
      * Directories of secret files, with the name pattern inside them. A
      * Statamic user is a YAML file holding their password hash, one per
      * account, created with the default umask.
@@ -133,17 +152,34 @@ class SecretFilePrivacy
         };
 
         foreach ($this->directories($application) as $directory => $pattern) {
-            // `find` as the user never follows a link (-P is its default), so
-            // one planted in the directory is skipped rather than chmodded.
             // Own-user sites only: the other kind would need each file's
             // group handed to the web server first, and Statamic — the one
             // type with such a directory — always runs as its own user.
-            if ($ownUser) {
-                $record($this->serverOps->run(
-                    ['runuser', '-u', $user, '--', 'find', $directory, '-maxdepth', '1', '-type', 'f', '-name', $pattern, '-exec', 'chmod', $mode, '{}', '+'],
-                    $this->context($application),
-                ));
+            //
+            // Absent is ordinary (Statamic can keep its users in the
+            // database), and `find` on a missing directory exits non-zero —
+            // which reset() would report as Fix permissions failing.
+            if (! $ownUser || ! $this->serverOps->run(['runuser', '-u', $user, '--', 'test', '-d', $directory], $this->context($application))->ok) {
+                continue;
             }
+
+            // The directory itself first. The application creates each file
+            // with the default umask — a new Statamic user is 0644 until the
+            // next pass — so closing the directory is what keeps a file
+            // private from the moment it exists, whatever its own mode.
+            // `-maxdepth 0 -type d`: a link planted in its place is not a
+            // directory to `find -P`, so it is skipped rather than followed.
+            $record($this->serverOps->run(
+                ['runuser', '-u', $user, '--', 'find', $directory, '-maxdepth', '0', '-type', 'd', '-exec', 'chmod', $reset ? '0700' : 'go-rwx', '{}', '+'],
+                $this->context($application),
+            ));
+
+            // `find` as the user never follows a link (-P is its default), so
+            // one planted in the directory is skipped rather than chmodded.
+            $record($this->serverOps->run(
+                ['runuser', '-u', $user, '--', 'find', $directory, '-maxdepth', '1', '-type', 'f', '-name', $pattern, '-exec', 'chmod', $mode, '{}', '+'],
+                $this->context($application),
+            ));
         }
 
         foreach ($this->paths($application) as $path) {

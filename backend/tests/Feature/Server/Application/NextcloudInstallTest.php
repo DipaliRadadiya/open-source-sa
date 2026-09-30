@@ -162,6 +162,20 @@ it('trusts the site\'s own domain, or the site refuses every visitor', function 
     expect($cliUrl['command'])->toContain('--value=http://cloud.example.com');
 });
 
+it('tells Nextcloud to write its config.php private to the site user', function () {
+    // Nextcloud chmods config.php to `configfilemode` on every write, 0640 by
+    // default — readable by the web server account on OpenLiteSpeed.
+    $this->application->forceFill(['isolated_at' => now()])->save();
+    $runs = installNextcloud();
+
+    $mode = occRun($runs, 'configfilemode');
+
+    expect($mode)->not->toBeNull()
+        ->and($mode['command'])->toContain('--value=384') // 0600
+        ->and($mode['command'])->toContain('--type=integer')
+        ->and($mode['path'])->toBe($this->docRoot);
+});
+
 it('takes the zip, not the bzip2 tarball', function () {
     $runs = installNextcloud();
 

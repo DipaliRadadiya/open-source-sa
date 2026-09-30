@@ -7,6 +7,7 @@ use App\Models\SystemUser;
 use App\Services\Server\Applications\GitDeployer;
 use App\Services\Server\Applications\SecretFilePrivacy;
 use App\Services\Server\Php\RuntimeOwnership;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Process;
 
 /*
@@ -185,4 +186,81 @@ it('covers Statamic user files, which hold password hashes, at the project root'
     expect($users)->not->toContain('/public/')
         ->and(collect($ran)->contains(['runuser', '-u', 'envuser', '--', 'find', $users, '-maxdepth', '1', '-type', 'f',
             '-name', '*.yaml', '-exec', 'chmod', 'go-rwx', '{}', '+']))->toBeTrue();
+});
+
+describe('the Statamic users directory', function () {
+    beforeEach(function () {
+        $this->application->forceFill(['site_type' => 'statamic', 'web_root' => '/public'])->save();
+        $this->users = rtrim($this->application->fresh()->codePath(), '/').'/users';
+    });
+
+    it('closes the directory itself, so a new user file is private from the start', function () {
+        // Statamic creates each user 0644; the file mode alone waits for the
+        // next pass, a closed directory does not.
+        $ran = fakeEnvServer();
+
+        app(SecretFilePrivacy::class)->narrow($this->application->fresh());
+
+        expect(collect($ran)->contains(['runuser', '-u', 'envuser', '--', 'find', $this->users, '-maxdepth', '0', '-type', 'd',
+            '-exec', 'chmod', 'go-rwx', '{}', '+']))->toBeTrue();
+    });
+
+    it('sets it to exactly 0700 on Fix permissions', function () {
+        $ran = fakeEnvServer();
+
+        expect(app(SecretFilePrivacy::class)->reset($this->application->fresh()))->toBeNull()
+            ->and(collect($ran)->contains(['runuser', '-u', 'envuser', '--', 'find', $this->users, '-maxdepth', '0', '-type', 'd',
+                '-exec', 'chmod', '0700', '{}', '+']))->toBeTrue();
+    });
+
+    it('does not fail Fix permissions for a site that keeps its users elsewhere', function () {
+        // `find` on a missing directory exits non-zero; reset() would have
+        // reported that as the button failing.
+        $ran = new ArrayObject;
+        Process::fake(function ($process) use ($ran) {
+            $args = $process->command[0] === 'sudo' ? array_slice($process->command, 2) : $process->command;
+            $ran->append($args);
+
+            return in_array('-d', $args, true) || in_array('find', $args, true)
+                ? Process::result(errorOutput: 'No such file or directory', exitCode: 1)
+                : Process::result();
+        });
+
+        expect(app(SecretFilePrivacy::class)->reset($this->application->fresh()))->toBeNull()
+            ->and(collect($ran)->contains(fn (array $c) => in_array('find', $c, true)))->toBeFalse();
+    });
+});
+
+describe('sites:narrow-app-secrets', function () {
+    it('narrows only the types that loosen their own file, and only active sites', function () {
+        $make = fn (string $slug, string $type, string $status) => Application::forceCreate([
+            'system_user_id' => $this->su->id, 'name' => $slug, 'slug' => $slug, 'domain' => "{$slug}.example.com",
+            'site_type' => $type, 'serving_profile' => 'php', 'php_version' => '8.4', 'web_root' => '/',
+            'status' => $status, 'isolated_at' => now(),
+        ]);
+        $joomla = $make('jsite', 'joomla', 'active');
+        $cloud = $make('ncsite', 'nextcloud', 'active');
+        $wordpress = $make('wpsite', 'wordpress', 'active');
+        $pending = $make('jpending', 'joomla', 'pending');
+        $ran = fakeEnvServer();
+
+        $this->artisan('sites:narrow-app-secrets')->assertSuccessful();
+
+        $chmodded = fn (Application $app, string $file) => collect($ran)->contains(
+            ['runuser', '-u', 'envuser', '--', 'chmod', 'go-rwx', rtrim($app->codePath(), '/').'/'.$file]
+        );
+
+        expect($chmodded($joomla, 'configuration.php'))->toBeTrue()
+            ->and($chmodded($cloud, 'config/config.php'))->toBeTrue()
+            ->and($chmodded($wordpress, 'wp-config.php'))->toBeFalse()
+            ->and($chmodded($pending, 'configuration.php'))->toBeFalse();
+    });
+
+    it('runs every five minutes', function () {
+        $event = collect(app(Schedule::class)->events())
+            ->first(fn ($e) => str_contains((string) $e->command, 'sites:narrow-app-secrets'));
+
+        expect($event)->not->toBeNull()
+            ->and($event->expression)->toBe('*/5 * * * *');
+    });
 });
