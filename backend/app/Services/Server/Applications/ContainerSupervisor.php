@@ -115,6 +115,109 @@ class ContainerSupervisor
         if (! $this->running($application, $documentRoot)) {
             throw new ProvisioningFailedException('container_exited', $result->reference);
         }
+
+        // And "running" at one instant is not running, either.
+        //
+        // A container that starts, exits and is restarted by its policy spends part
+        // of every cycle in the `running` state, so a single sample of `compose ps
+        // --status running` can catch it mid-bounce and call the site healthy. The
+        // site then answers 502 while the panel reports it active — measured with a
+        // real image (`curlimages/curl`, which prints usage and exits): the panel
+        // said `active` and the container was on its tenth restart.
+        if ($this->crashLooping($application, $documentRoot)) {
+            throw new ProvisioningFailedException('container_restarting', $result->reference, 'container_restarting');
+        }
+    }
+
+    /**
+     * Is any of this project's containers bouncing rather than staying up?
+     *
+     * Two signals, because one alone is either blind or wrong:
+     *
+     *  - **State `restarting`.** Direct, and what Docker calls a container between
+     *    a crash and its next attempt. Docker's backoff grows, so a loop spends an
+     *    increasing share of its time here — but early in a loop the windows are
+     *    short, and a single sample can miss them.
+     *  - **A restart count above zero on a container that has just started.** The
+     *    timing qualifier is what makes this safe: `apply()` also runs on a site
+     *    that has been up for weeks, and a container that crashed once last month
+     *    has a non-zero count forever. Measured on a real box, a host reboot does
+     *    NOT inflate it — containers that came back after one read zero — so a
+     *    fresh container with restarts on the clock has restarted for its own
+     *    reasons.
+     *
+     * Unreadable output answers false. This runs after a successful `up`, and
+     * failing a deploy because a status query did not parse would turn a working
+     * site into a reported failure — the opposite of the mistake it exists to stop.
+     */
+    private function crashLooping(Application $application, string $documentRoot): bool
+    {
+        $result = $this->compose($application, $documentRoot, ['ps', '--format', 'json'], 'compose_ps_state');
+
+        if (! $result->answered) {
+            return false;
+        }
+
+        foreach (preg_split('/\r?\n/', trim($result->output())) ?: [] as $line) {
+            $line = trim($line);
+
+            if ($line === '') {
+                continue;
+            }
+
+            $row = json_decode($line, true);
+
+            if (! is_array($row)) {
+                continue;
+            }
+
+            if (strtolower((string) ($row['State'] ?? '')) === 'restarting') {
+                return true;
+            }
+
+            // `compose ps --format json` does not carry a restart count, so the
+            // per-container question is asked of Docker directly and only for the
+            // containers this project actually has.
+            $name = (string) ($row['Name'] ?? '');
+
+            if ($name !== '' && $this->restartedSinceStarting($name)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Has this container restarted since it was created?
+     *
+     * `RestartCount` and `StartedAt` in one call, because two calls to inspect the
+     * same container is two chances for the answer to change underneath.
+     */
+    private function restartedSinceStarting(string $name): bool
+    {
+        $result = $this->serverOps->run(
+            ['docker', 'inspect', '--format', '{{.RestartCount}} {{.State.StartedAt}}', $name],
+            ['feature' => 'application', 'op' => 'container_restarts'],
+            timeout: 20,
+        );
+
+        if (! $result->answered) {
+            return false;
+        }
+
+        $parts = preg_split('/\s+/', trim($result->output()));
+        $count = (int) ($parts[0] ?? 0);
+
+        if ($count < 1) {
+            return false;
+        }
+
+        $startedAt = strtotime($parts[1] ?? '');
+
+        // Only a container that started recently. An older one's restarts are
+        // history, not a loop — see the note on the caller.
+        return $startedAt !== false && (time() - $startedAt) < 120;
     }
 
     /**
