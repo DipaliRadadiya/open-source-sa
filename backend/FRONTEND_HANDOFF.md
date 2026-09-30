@@ -6,6 +6,28 @@ moved and why it matters**, so nobody has to diff the reference to find out.
 
 ---
 
+## 2026-09-30
+
+### AI Bot Blocker — show the robots.txt lines
+
+`GET /ai-bot-policies` now also returns:
+
+```json
+"robots_txt": { "note": "<localised sentence>", "lines": "User-agent: Google-Extended\nDisallow: /\n\nUser-agent: Applebot-Extended\nDisallow: /\n" }
+```
+
+and each policy has `robots_txt_recommended` (true for every policy except
+`allow_all`). Please show `note` + `lines` (a copyable code block) on the Bot
+Blocker screen when the selected policy has `robots_txt_recommended: true`.
+
+Why: Google (Gemini) and Apple train on what Googlebot/Applebot fetch. Their only
+opt-out is a robots.txt token; no user-agent block can do it. `Google-Extended`
+and `Applebot-Extended` were in the training list doing nothing, and are gone
+from `blocked_bots`. Typing either into the custom block list now returns 422
+with an explanation.
+
+---
+
 ## 2026-08-12
 
 ### 1. 8G Firewall — renamed, and hidden where it cannot work

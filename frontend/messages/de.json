@@ -3126,7 +3126,8 @@
     "restartForRemote": {
       "title": "Datenbankserver neu starten?",
       "cancel": "Abbrechen",
-      "confirm": "Neu starten und fortfahren"
+      "confirm": "Neu starten und fortfahren",
+      "description": "Der Datenbankserver muss neu starten, um Verbindungen von anderen Adressen anzunehmen. Anwendungen, die ihn nutzen, verlieren kurz die Verbindung."
     },
     "unavailable": {
       "title": "Datenbanken werden auf diesem Server nicht verwaltet",
@@ -3566,7 +3567,8 @@
       "readyHint": "Prüfen Sie diese Konfiguration und erstellen Sie dann die Anwendung.",
       "complete": "{field} angeben",
       "configured": "Konfiguriert",
-      "progress": "{done} von {total} bereit"
+      "progress": "{done} von {total} bereit",
+      "fix": "{field} korrigieren"
     },
     "form": {
       "detailsTitle": "Angaben zur Anwendung",

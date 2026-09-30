@@ -71,6 +71,19 @@ class CustomFail2banRequest extends FormRequest
                     }
                 }
 
+                // An allowlist of settings, checked first: a site's jail tunes
+                // when to ban, never what a ban does — that stays the server's.
+                $disallowed = app(ApplicationFail2banManager::class)->disallowedJailKeys($jail);
+
+                if ($disallowed !== []) {
+                    $validator->errors()->add('jail_config_content', __('fail2ban.validation.disallowed_setting', [
+                        'setting' => $disallowed[0],
+                        'allowed' => implode(', ', ApplicationFail2banManager::ALLOWED_JAIL_KEYS),
+                    ]));
+
+                    return;
+                }
+
                 preg_match_all('/^\s*filter\s*=\s*([^\s\[]*)/mi', $jail, $filters);
 
                 foreach ($filters[1] as $filter) {

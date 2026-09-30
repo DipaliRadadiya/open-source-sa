@@ -25,5 +25,6 @@ return [
         'filter_content_max' => 'Конфигурация фильтра слишком большая (макс. 65535 символов).',
         'foreign_jail' => 'Этот jail может настраивать только собственный jail этого сайта. Замените [:section] на [{name}] (станет :name).',
         'foreign_filter' => 'Этот jail может использовать только собственный фильтр этого сайта. Замените filter = :filter на filter = {filter} (станет :name).',
+        'disallowed_setting' => 'Параметр «:setting» недопустим в jail сайта. Разрешены: :allowed.',
     ],
 ];

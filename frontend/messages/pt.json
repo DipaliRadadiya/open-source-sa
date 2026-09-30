@@ -3126,7 +3126,8 @@
     "restartForRemote": {
       "title": "Reiniciar o servidor de banco de dados?",
       "cancel": "Cancelar",
-      "confirm": "Reiniciar e continuar"
+      "confirm": "Reiniciar e continuar",
+      "description": "O servidor de banco de dados precisa reiniciar para aceitar conexões de outros endereços. As aplicações que o usam perdem a conexão por um instante."
     },
     "unavailable": {
       "title": "As bases de dados não são geridas neste servidor",
@@ -3566,7 +3567,8 @@
       "readyHint": "Revise esta configuração e crie a aplicação.",
       "complete": "Falta: {field}",
       "configured": "Configurado",
-      "progress": "{done} de {total} prontos"
+      "progress": "{done} de {total} prontos",
+      "fix": "Corrigir: {field}"
     },
     "form": {
       "detailsTitle": "Detalhes da aplicação",

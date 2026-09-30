@@ -35,7 +35,9 @@ export function useRestartConfirm() {
       icon={RotateCw}
       tone="warning"
       title={t("title")}
-      description={pending?.message ?? ""}
+      // Our sentence, not the API's: its message ends "Send the request again
+      // with restart_cluster to go ahead", written for a developer.
+      description={t("description")}
       cancelLabel={t("cancel")}
       confirmLabel={t("confirm")}
       onConfirm={() => answer(true)}

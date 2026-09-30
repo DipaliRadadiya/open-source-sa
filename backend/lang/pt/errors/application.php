@@ -59,6 +59,7 @@ return [
     'bot_agent_invalid' => 'Introduza um único nome de bot, como GPTBot ou SemrushBot — apenas letras, números, pontos e hífenes.',
     'bot_agent_too_broad' => 'Isso é demasiado geral — bloquearia também motores de pesquisa como o Google e o Bing. Use o nome completo do bot.',
     'bot_agent_search_engine' => 'Isso é um motor de pesquisa, não um rastreador de IA. Bloqueá-lo removeria o seu site dos resultados de pesquisa.',
+    'bot_agent_robots_only' => 'Esse nome só funciona no robots.txt — nenhum bot visita com ele, por isso bloqueá-lo não faria nada. Use antes as linhas de robots.txt indicadas acima.',
     'web_root_failed' => 'Não foi possível alterar a raiz web no servidor.',
     'web_root_not_found' => 'O diretório raiz web não foi encontrado no servidor. Verifique a raiz web nas definições da aplicação e volte a aprovisioná-la se nunca foi criada.',
     'waf_unsupported' => 'A Firewall 8G ainda não está disponível no :server.',

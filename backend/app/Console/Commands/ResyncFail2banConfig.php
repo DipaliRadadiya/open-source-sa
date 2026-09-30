@@ -50,6 +50,7 @@ class ResyncFail2banConfig extends Command
 
         $this->moveSiteJails($sites);
         $this->repairDefaultFilters($sites);
+        $this->reportDisallowedJailSettings($sites);
 
         $jails = $fail2ban->configuredJails();
 
@@ -96,6 +97,26 @@ class ResyncFail2banConfig extends Command
      * default alone would have fixed only jails enabled from now on. Per site
      * and never fatal, like the move below; an edited filter is left alone.
      */
+    /**
+     * Site jails saved before the settings allowlist existed. Reported, not
+     * rewritten: the file is the user's, and changing what it does during a
+     * deploy is not this command's call. Re-saving it through the panel
+     * applies the allowlist.
+     */
+    private function reportDisallowedJailSettings(ApplicationFail2banManager $sites): void
+    {
+        Application::query()
+            ->whereNotNull('fail2ban_jail_content')
+            ->orderBy('id')
+            ->each(function (Application $application) use ($sites) {
+                $disallowed = $sites->disallowedJailKeys((string) $application->fail2ban_jail_content);
+
+                if ($disallowed !== []) {
+                    $this->components->warn("Site jail for {$application->name} (#{$application->id}) sets ".implode(', ', $disallowed).', which site jails may no longer set. Review it and save it again from the panel.');
+                }
+            });
+    }
+
     private function repairDefaultFilters(ApplicationFail2banManager $sites): void
     {
         $repaired = 0;

@@ -68,9 +68,17 @@ class BotUserAgent implements ValidationRule
             return;
         }
 
-        // `applebot` is a search engine, but `Applebot-Extended` is the
-        // training opt-out token and blocking it is legitimate — so this
-        // compares the whole value rather than a prefix.
+        // A robots.txt-only token (`Google-Extended`, `Applebot-Extended`) is
+        // never sent as a user agent, so a block on it would do nothing while
+        // looking like it worked.
+        if (in_array($lower, array_map('mb_strtolower', (array) config('ai_bots.robots_only')), true)) {
+            $fail('errors/application.bot_agent_robots_only')->translate();
+
+            return;
+        }
+
+        // Whole value, not a prefix: `applebot` is a search engine, and a
+        // longer name that starts with it is a different agent.
         if (in_array($lower, self::SEARCH_ENGINES, true)) {
             $fail('errors/application.bot_agent_search_engine')->translate();
         }

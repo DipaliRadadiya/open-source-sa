@@ -3126,7 +3126,8 @@
     "restartForRemote": {
       "title": "データベースサーバーを再起動しますか？",
       "cancel": "キャンセル",
-      "confirm": "再起動して続行"
+      "confirm": "再起動して続行",
+      "description": "他のアドレスからの接続を受け付けるには、データベースサーバーの再起動が必要です。これを使うアプリケーションの接続は一瞬切れます。"
     },
     "unavailable": {
       "title": "このサーバーではデータベースを管理しません",
@@ -3566,7 +3567,8 @@
       "readyHint": "設定を確認し、アプリケーションを作成してください。",
       "complete": "{field} を追加",
       "configured": "設定済み",
-      "progress": "{total} 件中 {done} 件完了"
+      "progress": "{total} 件中 {done} 件完了",
+      "fix": "{field} を修正"
     },
     "form": {
       "detailsTitle": "アプリケーションの詳細",

@@ -31,12 +31,10 @@ return [
     'training' => [
         'GPTBot',
         'ClaudeBot',
-        'Google-Extended',
         'CCBot',
         'Bytespider',
         'Meta-ExternalAgent',
         'meta-externalagent',
-        'Applebot-Extended',
         'Amazonbot',
         'anthropic-ai',
         'cohere-ai',
@@ -76,4 +74,17 @@ return [
         'Perplexity-User',
     ],
 
+    /*
+     * Names that exist only inside robots.txt, never as a visitor's user
+     * agent. Google and Apple train on what their ordinary crawlers
+     * (Googlebot, Applebot) fetch, and these tokens are how a site says "index
+     * me, don't train on me". A user-agent block on them can never match, so
+     * they were in `training` doing nothing while the screen said Gemini and
+     * Apple AI training were blocked (found 2026-09-30). The bot blocker
+     * returns the robots.txt lines for them instead.
+     */
+    'robots_only' => [
+        'Google-Extended',
+        'Applebot-Extended',
+    ],
 ];

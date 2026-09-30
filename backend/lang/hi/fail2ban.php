@@ -25,5 +25,6 @@ return [
         'filter_content_max' => 'फ़िल्टर कॉन्फ़िगरेशन बहुत बड़ा है (अधिकतम 65535 अक्षर)।',
         'foreign_jail' => 'यह जेल केवल इसी साइट का अपना जेल कॉन्फ़िगर कर सकता है। [:section] को [{name}] से बदलें (यह :name बन जाएगा)।',
         'foreign_filter' => 'यह जेल केवल इसी साइट का अपना फ़िल्टर इस्तेमाल कर सकता है। filter = :filter को filter = {filter} से बदलें (यह :name बन जाएगा)।',
+        'disallowed_setting' => 'साइट jail में ":setting" सेटिंग की अनुमति नहीं है। अनुमत: :allowed।',
     ],
 ];

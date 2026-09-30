@@ -241,7 +241,21 @@ it('still accepts the real crawler names people actually type', function (string
     $this->withHeaders(botRuleHeaders())
         ->putJson(botRuleUrl(), ['policy' => 'allow_all', 'blocked' => [$value]])
         ->assertOk();
-})->with(['SemrushBot', 'AhrefsBot', 'BLEXBot', 'Google-Extended', 'anthropic-ai', 'SemrushBot-OCOB', 'GPTBot/1.3', 'Applebot-Extended']);
+})->with(['SemrushBot', 'AhrefsBot', 'BLEXBot', 'anthropic-ai', 'SemrushBot-OCOB', 'GPTBot/1.3']);
+
+it('refuses a robots.txt-only token, which no visitor ever sends', function (string $value) {
+    // Google-Extended and Applebot-Extended were accepted here, and in the
+    // training list, on the belief that blocking them opts a site out of
+    // Gemini/Apple AI training. They are robots.txt tokens: Google and Apple
+    // crawl as Googlebot/Applebot, so a user-agent block on them never matches.
+    fakeBotRuleServer();
+
+    $this->withHeaders(botRuleHeaders())
+        ->putJson(botRuleUrl(), ['policy' => 'allow_all', 'blocked' => [$value]])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('blocked.0')
+        ->assertJsonPath('errors', fn ($errors) => str_contains(json_encode($errors), 'robots.txt'));
+})->with(['Google-Extended', 'applebot-extended']);
 
 it('refuses more than fifty rules', function () {
     fakeBotRuleServer();
