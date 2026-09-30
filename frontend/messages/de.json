@@ -3548,7 +3548,8 @@
       "pullHint": "Lädt das Image erneut und erstellt den Container neu. Ein Neustart der Site prüft die Registry nicht erneut — ein verschobener Tag braucht dies.",
       "pull": "Laden und neu ausrollen",
       "pulled": "Das Image wurde geladen und der Container neu erstellt.",
-      "pullFailed": "Das Image konnte nicht geladen werden."
+      "pullFailed": "Das Image konnte nicht geladen werden.",
+      "pageSubtitle": "Netzwerk, Ports, Speicherobergrenze und Volumes, mit denen dieser Container läuft."
     },
     "domains": {
       "title": "Domains und SSL",

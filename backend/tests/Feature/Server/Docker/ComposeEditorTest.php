@@ -2,6 +2,7 @@
 
 use App\Models\ActivityLog;
 use App\Models\Application;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\ServerCapability;
 use App\Models\SystemUser;
@@ -47,6 +48,13 @@ beforeEach(function () {
         'status' => 'active',
     ]);
 });
+
+/** This suite's beforeEach already records a docker box; this names that fact. */
+function dockerStack(): void
+{
+    // Deliberately a no-op: the capability row is written in `beforeEach`, and the
+    // permission tests read better saying which stack they assume.
+}
 
 function composeHeaders(): array
 {
@@ -465,5 +473,60 @@ it('has the sidebar label translated in every locale', function () {
         $line = __('nav.app_compose', [], $locale);
 
         expect($line)->not->toBe('nav.app_compose')->and($line)->not->toBeEmpty();
+    }
+});
+
+/*
+ * The container's own settings, likewise moved off the Dashboard.
+ */
+
+it('offers a Container item in a container site\'s sidebar', function () {
+    $items = collect(
+        $this->withHeaders(composeHeaders())
+            ->getJson('/api/permissions?level=application&application_id='.$this->application->id)
+            ->json('permissions')
+    );
+
+    $container = $items->firstWhere('name', 'app_container');
+
+    expect($container)->not->toBeNull()->and($container['url'])->toBe('/container');
+});
+
+it('gates the container endpoints on their own permission', function () {
+    // They were on `application,manage`, which is the grant for renaming a site and
+    // enabling it. Recreating a container on a new network is a different act, and
+    // the sidebar row needs a permission of its own anyway.
+    dockerStack();
+
+    $role = Role::create(['name' => 'Sitewrangler', 'slug' => 'sitewrangler']);
+    $role->permissions()->attach(
+        Permission::where('name', 'application')->sole()->id,
+        ['view' => true, 'manage' => true],
+    );
+
+    $user = User::factory()->create();
+    $user->roles()->attach($role);
+    $headers = ['Authorization' => 'Bearer '.$user->createToken('t')->plainTextToken];
+
+    // Can manage the site itself...
+    $this->withHeaders($headers)->getJson('/api/applications/'.$this->application->id)->assertOk();
+
+    // ...and not its container's runtime, nor the credentials it was built with.
+    $this->withHeaders($headers)
+        ->putJson('/api/applications/'.$this->application->id.'/container', ['container_port' => 8080])
+        ->assertForbidden();
+    $this->withHeaders($headers)
+        ->getJson('/api/applications/'.$this->application->id.'/container/secrets')
+        ->assertForbidden();
+    $this->withHeaders($headers)
+        ->postJson('/api/applications/'.$this->application->id.'/container/pull')
+        ->assertForbidden();
+});
+
+it('has the Container label translated in every locale', function () {
+    foreach (['en', 'es', 'de', 'fr', 'pt', 'ja', 'ru', 'hi'] as $locale) {
+        $line = __('nav.app_container', [], $locale);
+
+        expect($line)->not->toBe('nav.app_container')->and($line)->not->toBeEmpty();
     }
 });

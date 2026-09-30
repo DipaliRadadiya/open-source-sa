@@ -175,12 +175,19 @@ it('clears the network when asked, and rewrites the file', function () {
 it('is refused for a site that is not a container', function () {
     // The fields have no meaning for a PHP site, and storing them would look
     // exactly like a feature that works.
+    //
+    // **404, not 422, since these routes moved onto `app_container`.**
+    // `CheckPermission` refuses an `app_*` permission the site's type does not
+    // support, and its own comment gives the reason: for this site the screen does
+    // not exist at all, which is a different statement from "you may not". That is
+    // a better answer than the controller's 422 and it arrives earlier, so the
+    // controller's own check is now belt-and-braces rather than the gate.
     fakeDockerBox();
     $this->application->forceFill(['site_type' => 'php', 'serving_profile' => 'php'])->save();
 
     $this->withHeaders(containerHeaders())
         ->putJson(containerUrl(), ['docker_network' => 'ghost-net'])
-        ->assertStatus(422);
+        ->assertStatus(404);
 
     expect($this->application->fresh()->docker_network)->toBeNull();
 });
@@ -438,10 +445,11 @@ it('refuses a user without manage', function () {
 });
 
 it('refuses a site that is not a container', function () {
+    // 404 rather than 422 — see the note on the settings endpoint above.
     fakeDockerBox();
     $this->application->forceFill(['site_type' => 'php', 'serving_profile' => 'php'])->save();
 
-    $this->withHeaders(containerHeaders())->getJson(containerUrl2())->assertStatus(422);
+    $this->withHeaders(containerHeaders())->getJson(containerUrl2())->assertStatus(404);
 });
 
 it('answers with an empty set rather than failing when there are none', function () {

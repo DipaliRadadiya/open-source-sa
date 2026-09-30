@@ -29,6 +29,7 @@ return [
     'app_domain' => 'Domains & SSL',
     'app_deployment' => 'Deployments',
     'app_environment' => 'Umgebung',
+    'app_container' => 'Container',
     'app_compose' => 'Compose-Datei',
     'app_worker' => 'Worker',
     'app_file' => 'Dateien',

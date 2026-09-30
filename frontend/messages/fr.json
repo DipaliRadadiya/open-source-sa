@@ -3548,7 +3548,8 @@
       "pullHint": "Récupère l’image à nouveau et recrée le conteneur. Redémarrer le site ne revérifie pas le registre : un tag déplacé nécessite ceci.",
       "pull": "Récupérer et redéployer",
       "pulled": "L’image a été récupérée et le conteneur recréé.",
-      "pullFailed": "L’image n’a pas pu être récupérée."
+      "pullFailed": "L’image n’a pas pu être récupérée.",
+      "pageSubtitle": "Le réseau, les ports, le plafond mémoire et les volumes avec lesquels ce conteneur s’exécute."
     },
     "domains": {
       "title": "Domaines et SSL",

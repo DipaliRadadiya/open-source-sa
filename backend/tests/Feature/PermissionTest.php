@@ -13,7 +13,7 @@ it('creates the Administrator system role with every permission, idempotently', 
     expect($admin)->toHaveCount(1);
     expect($admin->first()->is_system)->toBeTrue();
     // holds every permission at both levels, view+manage
-    expect($admin->first()->permissions()->count())->toBe(37);
+    expect($admin->first()->permissions()->count())->toBe(38);
     foreach ($admin->first()->permissions as $permission) {
         expect((bool) $permission->pivot->view)->toBeTrue();
         expect((bool) $permission->pivot->manage)->toBeTrue();
@@ -23,9 +23,9 @@ it('creates the Administrator system role with every permission, idempotently', 
 it('seeds the server and application permission items in order', function () {
     $this->seed(PermissionSeeder::class);
 
-    expect(Permission::count())->toBe(37);
+    expect(Permission::count())->toBe(38);
     expect(Permission::where('level', 'server')->count())->toBe(20);
-    expect(Permission::where('level', 'application')->count())->toBe(17);
+    expect(Permission::where('level', 'application')->count())->toBe(18);
 
     $server = Permission::where('level', 'server')->orderBy('order');
     expect($server->pluck('name')->first())->toBe('dashboard');
@@ -109,7 +109,7 @@ it('shows an admin every permission with full view+manage access', function () {
     // `ServerCapabilities::DEFAULT_PROFILES`, which is php/node/static. That is the
     // same answer the Docker endpoints have always given on an unknown box, so it
     // is the consistent one rather than a gap.
-    $response->assertOk()->assertJsonCount(36, 'permissions');
+    $response->assertOk()->assertJsonCount(37, 'permissions');
     foreach ($response->json('permissions') as $permission) {
         expect($permission['permissions']['view'])->toBeTrue();
         expect($permission['permissions']['manage'])->toBeTrue();
@@ -173,7 +173,7 @@ it('filters the check endpoint by level', function () {
     $this->withHeader('Authorization', "Bearer {$token}")
         ->getJson('/api/permissions/check?level=application')
         ->assertOk()
-        ->assertJsonCount(17, 'permissions')
+        ->assertJsonCount(18, 'permissions')
         ->assertJsonPath('permissions.0.name', 'app_dashboard');
 });
 

@@ -29,6 +29,7 @@ return [
     'app_domain' => 'ドメインとSSL',
     'app_deployment' => 'デプロイ',
     'app_environment' => '環境変数',
+    'app_container' => 'コンテナ',
     'app_compose' => 'compose ファイル',
     'app_worker' => 'ワーカー',
     'app_file' => 'ファイル',

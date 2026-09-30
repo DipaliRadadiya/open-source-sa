@@ -106,6 +106,10 @@ class DockerSiteType extends AbstractSiteType
             // in a `.env` the panel owns. Added by the type rather than by the
             // parent for the reason `app_staging` is — only the type that has the
             // thing advertises it.
+            // What it runs as, and the file it runs. Two screens because they are
+            // two questions — a chooser and three fields, versus sixty lines of
+            // YAML — and one of them is the other's escape hatch.
+            'app_container',
             'app_compose',
         ]);
     }

@@ -3548,7 +3548,8 @@
       "pullHint": "Fetches the image again and recreates the container. Bringing the site up on its own does not re-check the registry, so a moved tag needs this.",
       "pull": "Pull and redeploy",
       "pulled": "The image was pulled and the container recreated.",
-      "pullFailed": "The image could not be pulled."
+      "pullFailed": "The image could not be pulled.",
+      "pageSubtitle": "The network, ports, memory ceiling and volumes this container runs with."
     },
     "domains": {
       "title": "Domains and SSL",

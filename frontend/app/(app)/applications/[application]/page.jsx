@@ -9,7 +9,6 @@ import { can } from "@/lib/permissions/can";
 import { getApplication, getApplicationIssues } from "@/lib/applications/get-applications";
 import { getBackupTarget, getBackups } from "@/lib/backups/get-backups";
 import { getGitAccounts } from "@/lib/git/get-git";
-import { getDockerNetworks, getDockerVolumes, getRegistries } from "@/lib/docker/get-docker";
 import {
   getApplicationDomains,
   getApplicationCertificate,
@@ -19,7 +18,6 @@ import { ApplicationRowActions } from "@/components/applications/application-row
 import { SiteFactsCard } from "@/components/applications/site-facts-card";
 import { SourceCard } from "@/components/applications/source-card";
 import { ProcessCard } from "@/components/applications/process-card";
-import { ContainerCard } from "@/components/applications/container-card";
 import { DomainsCard } from "@/components/applications/domains-card";
 import { ProtectionCard } from "@/components/applications/protection-card";
 import { AttentionStrip } from "@/components/applications/attention-strip";
@@ -80,14 +78,6 @@ export default async function ApplicationDetailPage({ params }) {
   const canSeeBackups = can(appPermissions, "app_backup", "view", "application");
   const canRunBackup = can(appPermissions, "app_backup", "manage", "application");
   const isGit = Boolean(application.repository || application.repository_url);
-  const isContainer = application.serving_profile === "docker";
-  // Only for a container, and only once it is serving: the endpoint is gated on
-  // the same profile, and asking a LEMP box for Docker networks is a 409 to
-  // build a chooser for a card that is not rendered.
-  const [dockerNetworks, dockerVolumes, registries] =
-    isContainer && application.status === "active"
-      ? await Promise.all([getDockerNetworks(), getDockerVolumes(), getRegistries()])
-      : [[], [], []];
   // Only a serving site has domains, a certificate or a running process. While
   // it is still being built, saying anything about them would be invention.
   const settled = application.status === "active";
@@ -515,21 +505,10 @@ export default async function ApplicationDetailPage({ params }) {
               className={isGit ? undefined : "lg:col-span-2 xl:col-span-3"}
             />
           ) : null}
-          {/* Containers only. A PHP site has no image and no network, and the
-              endpoint refuses the fields anyway — a card whose only outcome is
-              422 is worse than its absence. Full width: it holds a chooser and
-              two inputs with help text under each, which in a third of a row is
-              three soft-wrapped lines of hint per field. */}
-          {isContainer ? (
-            <ContainerCard
-              application={application}
-              networks={dockerNetworks}
-              volumes={dockerVolumes}
-              registries={registries}
-              canManage={canManage}
-              className="lg:col-span-2 xl:col-span-3"
-            />
-          ) : null}
+          {/* The container's own settings live on their own screen now. They
+              were a full-width card here, under the domains and the backups,
+              which is a long way from where anybody looks for "what is this
+              container doing" — see the Container item in this site's sidebar. */}
         </div>
       )}
     </div>

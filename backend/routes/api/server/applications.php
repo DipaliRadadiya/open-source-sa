@@ -73,7 +73,7 @@ Route::put('/applications/{application}/web-root', [ApplicationWebRootController
 // `docker compose up -d`, and a form that can be spammed is a site that can be
 // restarted in a loop.
 Route::put('/applications/{application}/container', [ApplicationContainerController::class, 'update'])
-    ->middleware(['permission:application,manage', 'throttle:10,1']);
+    ->middleware(['permission:app_container,manage', 'throttle:10,1']);
 
 // The compose file this site runs.
 //
@@ -100,7 +100,7 @@ Route::put('/applications/{application}/container/compose', [ApplicationContaine
 // download, so this is the one container endpoint where a spammed form costs
 // bandwidth rather than a restart.
 Route::post('/applications/{application}/container/pull', [ApplicationContainerController::class, 'pull'])
-    ->middleware(['permission:application,manage', 'throttle:6,1']);
+    ->middleware(['permission:app_container,manage', 'throttle:6,1']);
 
 // The generated credentials, behind `manage` rather than `view`: reading a
 // database password is not a read-only act in any sense that matters, and the
@@ -111,7 +111,7 @@ Route::post('/applications/{application}/container/pull', [ApplicationContainerC
 // a GET that returns every password on a site is worth rate-limiting against a
 // token that has leaked.
 Route::get('/applications/{application}/container/secrets', [ApplicationContainerController::class, 'secrets'])
-    ->middleware(['permission:application,manage', 'throttle:6,1']);
+    ->middleware(['permission:app_container,manage', 'throttle:6,1']);
 
 // Site type. Read the disk to find out what is installed, then relabel the
 // site to match.

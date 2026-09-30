@@ -28,7 +28,7 @@ class UpdateContainerRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->canManage('application') ?? false;
+        return $this->user()?->canManage('app_container') ?? false;
     }
 
     /**

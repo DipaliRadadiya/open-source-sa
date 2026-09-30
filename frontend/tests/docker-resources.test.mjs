@@ -102,6 +102,10 @@ test("the busy-volume warning says what is lost, not just 'are you sure'", () =>
 
 const card = read("components/applications/container-card.jsx");
 const appPage = read("app/(app)/applications/[application]/page.jsx");
+// The container's settings moved off the Dashboard onto their own sidebar screen —
+// they were a full-width card under the domains and the backups, which is a long
+// way from where anybody looks for "what is this container doing".
+const containerPage = read("app/(app)/applications/[application]/container/page.jsx");
 const schemas = read("lib/schemas/docker.js");
 
 test("the networks table shows which sites joined a network", () => {
@@ -137,10 +141,15 @@ test("the network schema declares sites, or Zod drops it", () => {
 });
 
 test("the container card is offered only to containers", () => {
-  // The endpoint refuses the fields for any other profile, so rendering it
-  // elsewhere would be a card whose only outcome is a 422.
-  assert.match(appPage, /const isContainer = application\.serving_profile === "docker"/);
-  assert.match(appPage, /\{isContainer \? \(\s*<ContainerCard/);
+  // Gated by the PERMISSION now, not by a profile string read in the page. The
+  // grant is only issued for container site types, so the screen cannot exist for
+  // anything else — and a PHP site reaching the URL is told no rather than shown an
+  // empty card whose only outcome would be a 422.
+  assert.match(containerPage, /can\(appPermissions, "app_container", "view", "application"\)/);
+  assert.match(containerPage, /<ContainerCard/);
+
+  // And it is gone from the Dashboard, so there is one home for it.
+  assert.doesNotMatch(appPage, /<ContainerCard/);
 });
 
 test("the empty network choice is one constant, not three strings", () => {
@@ -240,8 +249,11 @@ test("a mount carries both a volume and a path", () => {
 });
 
 test("the volumes list is offered only on a container site", () => {
-  assert.match(appPage, /volumes=\{dockerVolumes\}/);
-  assert.match(appPage, /getDockerVolumes/);
+  // Fetched by the container screen rather than the Dashboard, which no longer asks
+  // the box for Docker objects it has nothing to render them in.
+  assert.match(containerPage, /volumes=\{volumes\}/);
+  assert.match(containerPage, /getDockerVolumes/);
+  assert.doesNotMatch(appPage, /getDockerVolumes/);
 });
 
 test("a volume already mounted is still offered, at another path", () => {

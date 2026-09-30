@@ -137,6 +137,16 @@ class PermissionCatalog
             // environment variables are all in here. A container has no Environment
             // screen precisely because its variables live in this file instead, so
             // this sits where that one would.
+            // What the container runs as: its network, the port inside it, its
+            // memory ceiling, the volumes it mounts, the registry it pulls with,
+            // and the credentials the panel generated for it.
+            //
+            // Its own screen for the reason Compose got one — these controls were a
+            // full-width card at the bottom of the Dashboard, under the domains and
+            // the backups, which is a long way from where somebody goes looking for
+            // "what is this container doing". Structured settings here, the raw file
+            // next door; two questions, two screens.
+            ['name' => 'app_container', 'title' => 'Container', 'icon' => 'box', 'url' => '/container'],
             ['name' => 'app_compose', 'title' => 'Compose File', 'icon' => 'file-code-2', 'url' => '/compose'],
             // Supervisor workers and a Node process are the same question —
             // "what is running in the background?" — so they are one screen

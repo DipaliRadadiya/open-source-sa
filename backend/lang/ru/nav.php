@@ -29,6 +29,7 @@ return [
     'app_domain' => 'Домены и SSL',
     'app_deployment' => 'Развёртывания',
     'app_environment' => 'Окружение',
+    'app_container' => 'Контейнер',
     'app_compose' => 'Файл compose',
     'app_worker' => 'Воркеры',
     'app_file' => 'Файлы',

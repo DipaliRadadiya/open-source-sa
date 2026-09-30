@@ -3548,7 +3548,8 @@
       "pullHint": "Descarga la imagen otra vez y recrea el contenedor. Reiniciar el sitio no vuelve a consultar el registro, así que una etiqueta movida necesita esto.",
       "pull": "Descargar y volver a desplegar",
       "pulled": "Se descargó la imagen y se recreó el contenedor.",
-      "pullFailed": "No se pudo descargar la imagen."
+      "pullFailed": "No se pudo descargar la imagen.",
+      "pageSubtitle": "La red, los puertos, el techo de memoria y los volúmenes con los que se ejecuta este contenedor."
     },
     "domains": {
       "title": "Dominios y SSL",
