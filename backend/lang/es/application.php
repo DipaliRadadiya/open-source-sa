@@ -68,6 +68,8 @@ return [
     ],
 
     'fields' => [
+        'memory_limit' => 'Límite de memoria',
+        'cpu_limit' => 'Límite de CPU',
         'compose' => 'Archivo compose',
         'image' => 'Imagen',
         'registry_id' => 'Registro',
@@ -137,6 +139,7 @@ return [
     | example if it is in a language they read.
     */
     'placeholders' => [
+        'cpu_limit' => 'Sin límite',
         'mailer_host' => 'smtp.ejemplo.com',
         'mailer_port' => '587',
         'site_title' => 'Mi sitio',
@@ -163,6 +166,8 @@ return [
     ],
 
     'help' => [
+        'memory_limit' => 'Opcional. La memoria máxima que este contenedor puede usar, por ejemplo 512m o 2g. Un número sin unidad significa bytes para Docker, no megabytes. Si se deja vacío recibe el valor por defecto del servidor: :default. Es un techo, no una reserva — no se aparta nada — y superarlo hace que el contenedor se mate y se reinicie.',
+        'cpu_limit' => 'Opcional. Cuántos núcleos de CPU puede usar este contenedor — 1 para un núcleo completo, 0.5 para la mitad. Este servidor tiene :cores, y Docker no arrancará un contenedor que pida más. Si se deja vacío no hay límite de CPU alguno. Superar este no mata nada: el contenedor espera, así que el síntoma es lentitud y no un error.',
         'compose' => 'Opcional. Pega tu propio archivo compose y todo lo que Compose admite estará disponible: varios servicios, volúmenes con nombre, healthchecks. Déjalo vacío y el panel escribirá uno a partir de los campos anteriores. Los puertos deben publicarse en 127.0.0.1 y los montajes deben permanecer dentro del directorio de esta aplicación; cualquier otra cosa se rechaza indicando el motivo.',
         'image' => 'La imagen a ejecutar, con una etiqueta explícita: `nginx:1.27-alpine`. Un nombre sin etiqueta usa `latest`, lo que hace que un despliegue no sea reproducible y que revertirlo no signifique nada.',
         'registry_id' => 'Déjelo vacío para una imagen pública: es el caso normal. Para ejecutar una privada, añada una credencial en la página de Docker, en «Credenciales de registro», y elíjala aquí. También se aplica a un compose pegado, ya que cualquier imagen que nombre puede ser privada.',

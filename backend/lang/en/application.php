@@ -73,6 +73,8 @@ return [
     ],
 
     'fields' => [
+        'memory_limit' => 'Memory limit',
+        'cpu_limit' => 'CPU limit',
         'compose' => 'Compose file',
         'image' => 'Image',
         'registry_id' => 'Registry',
@@ -142,6 +144,7 @@ return [
     | example if it is in a language they read.
     */
     'placeholders' => [
+        'cpu_limit' => 'No limit',
         'mailer_host' => 'smtp.example.com',
         'mailer_port' => '587',
         'site_title' => 'My Site',
@@ -168,6 +171,8 @@ return [
     ],
 
     'help' => [
+        'memory_limit' => 'Optional. The most memory this container may use, for example 512m or 2g. A bare number means bytes to Docker, not megabytes. Left empty it gets the server default of :default. This is a ceiling, not a reservation — nothing is set aside — and going past it gets the container killed and restarted.',
+        'cpu_limit' => 'Optional. How many CPU cores this container may use — 1 for one full core, 0.5 for half. This server has :cores, and Docker will not start a container asking for more. Left empty there is no CPU limit at all. Going past this one does not kill anything; the container waits, so the symptom is slowness rather than an error.',
         'compose' => 'Optional. Paste your own compose file and everything Compose supports is supported — multiple services, named volumes, healthchecks. Leave it empty and the panel writes one from the fields above. Ports must publish to 127.0.0.1 and bind mounts must stay inside this application\'s directory; anything else is refused with the reason.',
         'image' => 'The image to run, with an explicit tag — `nginx:1.27-alpine`. A bare name pulls `latest`, which makes a deploy unreproducible and a rollback meaningless.',
         'registry_id' => 'Leave this empty for a public image — that is the normal case. To run a private one, add a credential on the Docker page under Registry credentials, then choose it here. It applies to a pasted compose file too, since any image it names can be private.',

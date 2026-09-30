@@ -68,6 +68,8 @@ return [
     ],
 
     'fields' => [
+        'memory_limit' => 'Speicherlimit',
+        'cpu_limit' => 'CPU-Limit',
         'compose' => 'Compose-Datei',
         'image' => 'Image',
         'registry_id' => 'Registry',
@@ -137,6 +139,7 @@ return [
     | example if it is in a language they read.
     */
     'placeholders' => [
+        'cpu_limit' => 'Kein Limit',
         'mailer_host' => 'smtp.beispiel.de',
         'mailer_port' => '587',
         'site_title' => 'Meine Website',
@@ -163,6 +166,8 @@ return [
     ],
 
     'help' => [
+        'memory_limit' => 'Optional. Der maximale Speicher, den dieser Container nutzen darf, zum Beispiel 512m oder 2g. Eine Zahl ohne Einheit bedeutet für Docker Bytes, nicht Megabytes. Leer gelassen gilt der Serverstandard :default. Das ist eine Obergrenze, keine Reservierung — es wird nichts freigehalten — und wer sie überschreitet, dessen Container wird beendet und neu gestartet.',
+        'cpu_limit' => 'Optional. Wie viele CPU-Kerne dieser Container nutzen darf — 1 für einen ganzen Kern, 0.5 für die Hälfte. Dieser Server hat :cores, und Docker startet keinen Container, der mehr verlangt. Leer gelassen gibt es überhaupt kein CPU-Limit. Dieses zu überschreiten beendet nichts: der Container wartet, das Symptom ist also Langsamkeit und kein Fehler.',
         'compose' => 'Optional. Fügen Sie Ihre eigene Compose-Datei ein — alles, was Compose unterstützt, wird unterstützt: mehrere Dienste, benannte Volumes, Healthchecks. Lassen Sie sie leer, schreibt das Panel eine aus den Feldern oben. Ports müssen auf 127.0.0.1 veröffentlicht werden und Bind-Mounts innerhalb des Verzeichnisses dieser Anwendung bleiben; alles andere wird mit Begründung abgelehnt.',
         'image' => 'Das auszuführende Image, mit ausdrücklichem Tag — `nginx:1.27-alpine`. Ein Name ohne Tag zieht `latest`, was ein Deployment nicht reproduzierbar und ein Rollback bedeutungslos macht.',
         'registry_id' => 'Für ein öffentliches Image leer lassen — das ist der Normalfall. Für ein privates legen Sie auf der Docker-Seite unter „Registry-Anmeldedaten“ welche an und wählen sie dann hier. Das gilt auch für eine eingefügte Compose-Datei, denn jedes darin genannte Image kann privat sein.',

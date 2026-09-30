@@ -5,6 +5,7 @@ use App\Models\ServerCapability;
 use App\Models\User;
 use App\Services\Applications\SiteTypeManager;
 use App\Services\Server\Capabilities\ServerCapabilities;
+use App\Services\Server\HostCpus;
 use App\Services\Server\Setup\SetupCatalog;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -312,4 +313,43 @@ it('stores the mode nowhere, because the site already records how it was made', 
     // Named as a deliberate exception rather than silently dropped — which is what
     // the "every declared field is handled" guard exists to force.
     expect($create)->toContain("\$formOnly = ['docker_mode']");
+});
+
+it('offers the size fields in both modes, and not behind Advanced', function () {
+    // Two decisions pinned here, both of which read as inconsistent next to the
+    // fields around them and are not.
+    //
+    // **No `depends_on`.** Every other simple-mode field declares one, but the
+    // panel's compose override applies `mem_limit` and `cpus` to every service in
+    // a PASTED file too — so gating these on `docker_mode:simple` would take
+    // sizing away from the mode most likely to need it. `registry_id` is here for
+    // the same reason.
+    //
+    // **Not advanced**, unlike the network and volume fields. Those are advanced
+    // because the common case is a container that talks to nobody, so asking on
+    // the front of the form implies a decision most people do not have to make. A
+    // size is the opposite: it is the first thing anybody deploying a container
+    // looks for, and it was not on this form at all until it was reported missing.
+    recordStack('docker');
+
+    Process::fake(fn () => Process::result(output: ''));
+
+    $docker = collect(app(SiteTypeManager::class)->catalog())->firstWhere('name', 'docker');
+    $fields = collect($docker['fields'])->keyBy('name');
+
+    foreach (['memory_limit', 'cpu_limit'] as $name) {
+        $field = $fields->get($name);
+
+        expect($field)->not->toBeNull("{$name} is not offered on the create form")
+            ->and($field['advanced'])->toBeFalse("{$name} is hidden behind Advanced")
+            ->and($field['depends_on'] ?? null)->toBeNull("{$name} is gated to one mode")
+            // No default on either. A pre-filled CPU value would be a default by
+            // another name, capping every site made through this form.
+            ->and($field['default'] ?? null)->toBeNull("{$name} arrives pre-filled");
+    }
+
+    // The CPU help names what the machine has, rather than describing the rule —
+    // the bound is the host's core count, and "no more than this server has" is
+    // not something anybody can act on without leaving the page.
+    expect($fields->get('cpu_limit')['help'])->toContain((string) app(HostCpus::class)->count());
 });

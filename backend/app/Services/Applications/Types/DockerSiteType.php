@@ -3,11 +3,14 @@
 namespace App\Services\Applications\Types;
 
 use App\Models\Registry;
+use App\Rules\ContainerMemoryLimit;
 use App\Rules\ContainerMountPath;
 use App\Rules\ExistingDockerNetwork;
 use App\Rules\NewDockerName;
+use App\Rules\WithinHostCpus;
 use App\Services\Server\Capabilities\ServerCapabilities;
 use App\Services\Server\Docker\DockerResources;
+use App\Services\Server\HostCpus;
 
 /**
  * An application that is a container.
@@ -171,6 +174,44 @@ class DockerSiteType extends AbstractSiteType
                 'required_without' => 'compose',
             ]),
 
+            // How big this container is allowed to be.
+            //
+            // **Not advanced**, unlike the network and volume fields below, and the
+            // difference is what the field is for rather than how often it is used.
+            // A network picker is advanced because the common case is one container
+            // that talks to nobody, so putting it on the front of the form implies
+            // a decision most people do not have to make. A size is the opposite:
+            // everybody has an opinion about how much memory their app needs, and
+            // it was the first thing looked for here and not found.
+            //
+            // **No `depends_on`**, unlike `image` and `container_port`, and for the
+            // same reason `registry_id` has none: the panel's compose override
+            // applies both limits to every service in a PASTED file too, so hiding
+            // them in compose mode would take sizing away from the mode most likely
+            // to need it.
+            //
+            // No `default` on either. Left empty, memory falls back to the
+            // configured server default and CPU means no quota at all — and a
+            // pre-filled CPU value would be a default by another name, capping
+            // every site created through this form.
+            $this->field('memory_limit', 'text', extra: [
+                'placeholder' => (string) config('server.docker.default_memory_limit', '512m'),
+                'help' => __('application.help.memory_limit', [
+                    'default' => (string) config('server.docker.default_memory_limit', '512m'),
+                ]),
+            ]),
+
+            // Cores, as Docker counts them. The help text names what this machine
+            // actually has, because the bound is the host's core count and a
+            // sentence describing the rule cannot be acted on — the form would be
+            // telling somebody to go and find out how big their own server is.
+            $this->field('cpu_limit', 'text', extra: [
+                'placeholder' => __('application.placeholders.cpu_limit'),
+                'help' => __('application.help.cpu_limit', [
+                    'cores' => app(HostCpus::class)->count(),
+                ]),
+            ]),
+
             // The network to join, chosen from the ones on the Docker page.
             //
             // This is the one field here that is not "an option Docker takes" —
@@ -264,6 +305,13 @@ class DockerSiteType extends AbstractSiteType
             // and shell metacharacters, because the value reaches a command.
             'image' => ['required_without:compose', 'nullable', 'string', 'max:255', 'regex:/^[A-Za-z0-9][A-Za-z0-9._\/:@-]*$/'],
             'container_port' => ['required_without:compose', 'nullable', 'integer', 'min:1', 'max:65535'],
+            // The same two rules the Container settings screen uses, because a
+            // limit refused after the site exists and accepted while creating it
+            // would be one form contradicting the other. `WithinHostCpus` matters
+            // more here: at create time the refusal would otherwise land as a
+            // failed provision rather than a field error.
+            'memory_limit' => ['nullable', 'string', 'max:20', new ContainerMemoryLimit],
+            'cpu_limit' => ['nullable', 'string', 'max:16', new WithinHostCpus],
             // Bounded, because it reaches a parser and then a file. 128 KB is
             // far past any real compose file and far short of a problem.
             'compose' => ['nullable', 'string', 'max:131072'],

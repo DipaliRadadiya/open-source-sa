@@ -68,6 +68,8 @@ return [
     ],
 
     'fields' => [
+        'memory_limit' => 'Limite de memória',
+        'cpu_limit' => 'Limite de CPU',
         'compose' => 'Ficheiro compose',
         'image' => 'Imagem',
         'registry_id' => 'Registo',
@@ -137,6 +139,7 @@ return [
     | example if it is in a language they read.
     */
     'placeholders' => [
+        'cpu_limit' => 'Sem limite',
         'mailer_host' => 'smtp.exemplo.pt',
         'mailer_port' => '587',
         'site_title' => 'O meu site',
@@ -163,6 +166,8 @@ return [
     ],
 
     'help' => [
+        'memory_limit' => 'Opcional. A memória máxima que este contêiner pode usar, por exemplo 512m ou 2g. Um número sem unidade significa bytes para o Docker, não megabytes. Se ficar vazio, recebe o padrão do servidor: :default. É um teto, não uma reserva — nada é separado — e passar dele faz o contêiner ser encerrado e reiniciado.',
+        'cpu_limit' => 'Opcional. Quantos núcleos de CPU este contêiner pode usar — 1 para um núcleo inteiro, 0.5 para metade. Este servidor tem :cores, e o Docker não inicia um contêiner que peça mais. Se ficar vazio, não há limite de CPU algum. Passar deste não encerra nada: o contêiner espera, então o sintoma é lentidão e não um erro.',
         'compose' => 'Opcional. Cole o seu próprio ficheiro compose e tudo o que o Compose suporta é suportado: vários serviços, volumes nomeados, healthchecks. Deixe vazio e o painel escreve um a partir dos campos acima. As portas têm de ser publicadas em 127.0.0.1 e os bind mounts permanecer dentro do diretório desta aplicação; o resto é recusado com o motivo.',
         'image' => 'A imagem a executar, com uma etiqueta explícita — `nginx:1.27-alpine`. Um nome sem etiqueta puxa `latest`, o que torna uma implementação não reproduzível e uma reversão sem significado.',
         'registry_id' => 'Deixe vazio para uma imagem pública — é o caso normal. Para executar uma privada, adicione uma credencial na página Docker, em «Credenciais de registo», e escolha-a aqui. Aplica-se também a um compose colado, pois qualquer imagem que ele indique pode ser privada.',

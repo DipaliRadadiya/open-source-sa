@@ -6,6 +6,7 @@ use App\Models\ServerCapability;
 use App\Models\SystemUser;
 use App\Models\User;
 use App\Services\Server\Docker\DockerResources;
+use App\Services\Server\HostCpus;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Process;
 
@@ -314,4 +315,79 @@ it('refuses a registry that does not exist', function () {
         ->postJson('/api/applications', dockerCreatePayload(['registry_id' => 4242]))
         ->assertStatus(422)
         ->assertJsonValidationErrors('registry_id');
+});
+
+/*
+ * The size of the container, chosen while deploying it.
+ *
+ * Both limits were reachable only from the Container screen after the site
+ * existed — so the first thing anybody sizing a container went looking for was
+ * not on the form that creates one. They are real columns, so declaring them as
+ * type fields is all that is needed to persist them (`CreateApplication::
+ * typeColumns()` writes any declared field that is fillable); these tests exist
+ * because that is an easy thing to half-do and impossible to see.
+ */
+
+it('creates a site at the size the form asked for', function () {
+    fakeDockerBoxFor();
+
+    $this->withHeaders(dockerCreateHeaders())
+        ->postJson('/api/applications', dockerCreatePayload([
+            'memory_limit' => '1g',
+            'cpu_limit' => '1.5',
+        ]))
+        ->assertCreated();
+
+    $application = Application::where('name', 'Shop')->first();
+
+    expect($application->memory_limit)->toBe('1g')
+        ->and($application->cpu_limit)->toBe('1.5');
+});
+
+it('creates a site with no limits when both were left empty', function () {
+    // The important half. An empty CPU field has to stay null rather than become
+    // a zero or an empty string: null means no quota, and anything else renders a
+    // `cpus` key — which for `0` means *unlimited*, and for `""` is invalid YAML
+    // the site would not come up on.
+    fakeDockerBoxFor();
+
+    $this->withHeaders(dockerCreateHeaders())
+        ->postJson('/api/applications', dockerCreatePayload())
+        ->assertCreated();
+
+    $application = Application::where('name', 'Shop')->first();
+
+    expect($application->memory_limit)->toBeNull()
+        ->and($application->cpu_limit)->toBeNull();
+});
+
+it('refuses more CPUs than the box has at create time, not at provision time', function () {
+    // Docker would refuse it too, at `compose up` — which here means a site that
+    // is created, fails to provision, and has to be deleted and made again. The
+    // form is where that belongs.
+    fakeDockerBoxFor();
+
+    app()->instance(HostCpus::class, new class extends HostCpus
+    {
+        public function count(): int
+        {
+            return 2;
+        }
+    });
+
+    $this->withHeaders(dockerCreateHeaders())
+        ->postJson('/api/applications', dockerCreatePayload(['cpu_limit' => '8']))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('cpu_limit');
+
+    expect(Application::where('name', 'Shop')->exists())->toBeFalse();
+});
+
+it('refuses a memory limit the container could not start with', function () {
+    fakeDockerBoxFor();
+
+    $this->withHeaders(dockerCreateHeaders())
+        ->postJson('/api/applications', dockerCreatePayload(['memory_limit' => '512']))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('memory_limit');
 });

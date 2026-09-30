@@ -68,6 +68,8 @@ return [
     ],
 
     'fields' => [
+        'memory_limit' => 'Limite de mémoire',
+        'cpu_limit' => 'Limite de CPU',
         'compose' => 'Fichier compose',
         'image' => 'Image',
         'registry_id' => 'Registre',
@@ -137,6 +139,7 @@ return [
     | example if it is in a language they read.
     */
     'placeholders' => [
+        'cpu_limit' => 'Aucune limite',
         'mailer_host' => 'smtp.exemple.fr',
         'mailer_port' => '587',
         'site_title' => 'Mon site',
@@ -163,6 +166,8 @@ return [
     ],
 
     'help' => [
+        'memory_limit' => 'Facultatif. La mémoire maximale que ce conteneur peut utiliser, par exemple 512m ou 2g. Un nombre seul signifie des octets pour Docker, pas des mégaoctets. Laissé vide, il reçoit la valeur par défaut du serveur : :default. C\'est un plafond, pas une réservation — rien n\'est mis de côté — et le dépasser fait tuer puis redémarrer le conteneur.',
+        'cpu_limit' => 'Facultatif. Combien de cœurs CPU ce conteneur peut utiliser — 1 pour un cœur entier, 0.5 pour la moitié. Ce serveur en a :cores, et Docker ne démarrera pas un conteneur qui en demande plus. Laissé vide, il n\'y a aucune limite de CPU. Dépasser celle-ci ne tue rien : le conteneur attend, donc le symptôme est la lenteur et non une erreur.',
         'compose' => 'Facultatif. Collez votre propre fichier compose et tout ce que Compose gère est géré : plusieurs services, volumes nommés, healthchecks. Laissez-le vide et le panel en écrira un à partir des champs ci-dessus. Les ports doivent être publiés sur 127.0.0.1 et les montages rester dans le répertoire de cette application ; tout le reste est refusé avec la raison.',
         'image' => 'L\'image à exécuter, avec une étiquette explicite : `nginx:1.27-alpine`. Un nom sans étiquette utilise `latest`, ce qui rend un déploiement non reproductible et un retour arrière vide de sens.',
         'registry_id' => 'Laissez vide pour une image publique — c’est le cas normal. Pour exécuter une image privée, ajoutez un identifiant sur la page Docker, section « Identifiants de registre », puis choisissez-le ici. Cela s’applique aussi à un fichier compose collé, car n’importe quelle image qu’il nomme peut être privée.',
